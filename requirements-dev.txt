@@ -1,0 +1,8 @@
+coverage==4.0.3
+flake8==2.5.0
+tox==2.2.1
+wheel==0.26.0
+doc8==0.7.0
+pylint==1.5.5
+pytest-cov==2.2.1
+-rrequirements-test.txt

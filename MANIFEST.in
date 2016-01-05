@@ -1,0 +1,8 @@
+include CONTRIBUTING.rst
+include CHANGELOG.rst
+include LICENSE
+include NOTICE
+include README.rst
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

@@ -1,0 +1,82 @@
+"""Policy generator based on allowed API calls.
+
+This module will take a set of API calls for services
+and make a best effort attempt to generate an IAM policy
+for you.
+
+It's magic, so it only works maybe 51 percent of the time?
+Probably less.
+
+"""
+import os
+import json
+import uuid
+
+import botocore.session
+
+
+def policy_from_source_code(source_code):
+    from chalice.analyzer import get_client_calls
+    client_calls = get_client_calls(source_code)
+    builder = PolicyBuilder()
+    policy = builder.build_policy_from_api_calls(client_calls)
+    return policy
+
+
+def load_policy_actions():
+    policy_json = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'policies.json')
+    assert os.path.isfile(policy_json), policy_json
+    with open(policy_json) as f:
+        return json.loads(f.read())
+
+
+class PolicyBuilder(object):
+    VERSION = '2012-10-17'
+
+    def __init__(self, session=None, policy_actions=None):
+        if session is None:
+            session = botocore.session.get_session()
+        if policy_actions is None:
+            policy_actions = load_policy_actions()
+        self._session = session
+        self._policy_actions = policy_actions
+
+    def build_policy_from_api_calls(self, client_calls):
+        statements = self._build_statements_from_client_calls(client_calls)
+        policy = {
+            'Version': self.VERSION,
+            'Statement': statements
+        }
+        return policy
+
+    def _build_statements_from_client_calls(self, client_calls):
+        statements = []
+        # client_calls = service_name -> set([method_calls])
+        for service in sorted(client_calls):
+            if service not in self._policy_actions:
+                print "Unsupported service:", service
+                continue
+            service_actions = self._policy_actions[service]
+            method_calls = client_calls[service]
+            # Next thing we need to do is convert the method_name to
+            # MethodName.  To this reliable we're going to use
+            # botocore clients.
+            client = self._session.create_client(service)
+            mapping = client.meta.method_to_api_mapping
+            actions = [service_actions[mapping[method_name]] for
+                       method_name in method_calls
+                       if mapping.get(method_name) in service_actions]
+            actions.sort()
+            if actions:
+                statements.append({
+                    'Effect': 'Allow',
+                    'Action': actions,
+                    # Probably impossible, but it would be nice
+                    # to even keep track of what resources are used
+                    # so we can create ARNs and further restrict the policies.
+                    'Resource': ['*'],
+                    'Sid': str(uuid.uuid4()).replace('-', ''),
+                })
+        return statements

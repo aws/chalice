@@ -1,0 +1,535 @@
+==========================================
+chalice - A Microframework For API Gateway
+==========================================
+
+Chalice is a python microframework that allows
+you to quickly create and deploy applications that
+use Amazon API Gateway and AWS Lambda.
+It allow you to:
+
+* Quickly create rest APIs in python
+* Deploy your API using API Gateway and AWS Lambda.
+  No servers necessary.
+
+::
+
+    $ chalice new-project && cd new-project
+    $ cat app.py
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    @app.route("/")
+    def index():
+        return {"hello": "world"}
+
+	$ chalice deploy
+	...
+    Your application is available at: https://endpoint/dev
+
+	$ curl https://endpoint/dev
+    {"hello": "world"}
+
+
+Quickstart
+==========
+
+In this tutorial, you'll create and deploy a chalice application.
+First, you'll need to install chalice.  Note, using a virtualenv
+is recommended::
+
+    $ pip install virtualenv
+    $ virtualenv ~/.virtualenvs/chalice-demo
+    $ source ~/.virtualenvs/chalice-demo/bin/activate
+
+Next, in your virtualenv, install ``chalice``::
+
+    $ pip install chalice
+
+You can verify you have chalice installed by running::
+
+    $ chalice --help
+    Usage: chalice [OPTIONS] COMMAND [ARGS]...
+    ...
+
+The next thing we'll do is create a chalice project::
+
+    $ chalice new-project helloworld
+
+This will create a ``helloworld`` directory.  Cd into this
+directory.  You'll see several files have been created for you::
+
+    $ cd helloworld
+	$ ls -la
+	drwxr-xr-x   .chalice
+	-rw-r--r--   app.py
+	-rw-r--r--   requirements.txt
+
+You can ignore the ``.chalice`` directory for now, the two main files
+we'll focus on is ``app.py`` and ``requirements.txt``.
+
+Let's take a look at the ``app.py`` file::
+
+	$ cat app.py
+	from chalice import Chalice
+
+	app = Chalice(app_name='helloworld')
+
+
+	@app.route('/')
+	def index():
+	    return {'hello': 'world'}
+
+
+The ``new-project`` command created a sample app that defines a
+single view, ``/``, that when called will return the JSON body
+``{"hello": "world"}``.
+
+Let's deploy this app.  Make sure you're in the ``helloworld``
+directory and run ``chalice deploy``::
+
+    $ chalice deploy
+    ...
+    Initiating first time deployment...
+    https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+
+You now have an API up and running using API Gateway and Lambda:
+
+    $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+    {"hello": "world"}
+
+For the rest of these tutorials, we'll be using the ``httpie`` instead
+of ``curl`` (https://github.com/jkbrzt/httpie).  You can install
+``httpie`` using ``pip install httpie``, or if you're on Mac, you can
+run ``brew install httpie``.  The Github link has more information on
+installation instructions.  Here's an example of using ``httpie`` to
+request the root resource of the API we just created.  Note that
+the command name is ``http``::
+
+
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+    HTTP/1.1 200 OK
+    Connection: keep-alive
+    Content-Length: 18
+    Content-Type: application/json
+    Date: Mon, 30 May 2016 17:55:50 GMT
+    X-Cache: Miss from cloudfront
+
+    {
+        "hello": "world"
+    }
+
+
+You've now created your first chalice app.
+
+The next few sections will build on this quickstart section and introduce
+you to additional features of chalice including: URL parameter capturing,
+error handling, advanced routing, current request metadata, and automatic
+policy generation.
+
+
+Tutorial: URL Parameters
+========================
+
+Now we're going to make a few changes to our ``app.py`` file that
+demonstrate additional capabilities that chalice has.
+
+Our application so far has a single view that allows you to make
+an HTTP GET request to ``/``.  Now let's suppose we want to capture
+parts of the URI::
+
+    $ cat app.py
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
+
+    CITIES_TO_STATE = {
+        'seattle': 'WA',
+        'portland': 'OR',
+    }
+
+
+    @app.route('/')
+    def index():
+        return {'hello': 'world'}
+
+    @app.route('/cities/{city}')
+    def state_of_city(name):
+        return {'state': CITIES_TO_STATE[name]}
+
+
+In the example above we've now added a ``state_of_city`` view that allows
+a user to specify a city name.  The view function takes the city
+name and returns name of the state the city is in.  Notice that the
+``@app.route`` decorator has a URL pattern of ``/cities/{city}``.  This
+means that the value of ``{city}`` is captured and passed to the view
+function.  You can also see that the ``state_of_city`` takes a single
+argument.  This argument is the name of the city provided by the user.
+For example::
+
+    GET /cities/seattle   --> state_of_city('seattle')
+    GET /cities/portland  --> state_of_city('portland')
+
+Now that we've updated our ``app.py`` file with this new view function,
+let's redeploy our application.  You can run ``chalice deploy`` from
+the ``helloworld`` directory and chalice will deploy your application::
+
+    $ chalice deploy
+
+Let's try it out.  Note the examples below use the ``http`` command
+from the ``httpie`` package.  You can install this using ``pip install httpie``::
+
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/seattle
+    HTTP/1.1 200 OK
+
+    {
+        "state": "WA"
+    }
+
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/portland
+    HTTP/1.1 200 OK
+
+    {
+        "state": "OR"
+    }
+
+
+Notice what happens if we try to request a city that's not in our
+``CITIES_TO_STATE`` map:
+
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
+    HTTP/1.1 500 Internal Server Error
+    Content-Type: application/json
+    X-Cache: Error from cloudfront
+
+    {
+        "Code": "ChaliceViewError",
+        "Message": "ChaliceViewError: An internal server error occurred."
+    }
+
+
+In the next section, we'll see how to fix this and provide better
+error messages.
+
+
+Tutorial: Error Messages
+========================
+
+In the example above, you'll notice that when our chalice app raised
+an uncaught exception, a 500 internal server error was returned.
+
+In this section, we're going to show how you can debug and improve
+these error messages.
+
+The first thing we're going to look at is how we can debug this
+issue.  By default, chalice has debugging turned off, but you can
+enable debugging to get more information::
+
+    $ cat app.py
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
+    app.debug = True
+
+
+The ``app.debug = True`` enables debugging for your chalice app.
+Save this file and redeploy your changes::
+
+    $ chalice deploy
+    ...
+    https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+
+When you now request the same URL that returned an internal
+server error, you'll now get back the original stack trace::
+
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
+    {
+        "errorMessage": "u'vancouver'",
+        "errorType": "KeyError",
+        "stackTrace": [
+            [
+                "/var/task/chalice/__init__.py",
+                134,
+                "__call__",
+                "raise e"
+            ]
+        ]
+    }
+
+(TODO: The above uses the default error structuring code from lambda.  I'm
+considering just handling this in Chalice to get a standard ``Code`` and
+``Message``, with a standard looking traceback instead of showing a stack
+trace as a list).
+
+We can see that the error is caused from an uncaught ``KeyError`` resulting
+from trying to access the ``vancouver`` key.
+
+Now that we know the error, we can fix our code.  What we'd like to do is
+catch this exception and instead return a more helpful error message
+to the user.  Here's the updated code::
+
+    from chalice import BadRequestError
+
+    @app.route('/cities/{city}')
+    def state_of_city(name):
+        try:
+            return {'state': CITIES_TO_STATE[name]}
+        except KeyError:
+            raise BadRequestError("Unknown city '%s', valid choices are: %s" % (
+                name, ', '.join(CITIES_TO_STATE.keys())))
+
+
+Save and deploy these changes::
+
+    $ chalice deploy
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
+    HTTP/1.1 400 Bad Request
+
+    {
+        "Code": "BadRequestError",
+        "Message": "BadRequestError: Unknown city 'vancouver', valid choices are: portland, seattle"
+    }
+
+We can see now that we can a ``Code`` and ``Message`` key, with the message
+being the value we passed to ``BadRequestError``.  Whenver you raise
+a ``BadRequestError`` from your view function, chalice will return an
+HTTP status code of 400 along with a JSON body with a ``Code`` and ``Message``.
+There's a few additional exceptions you can raise from chalice::
+
+* ChaliceViewError - return a status code of 500
+* NotFoundError - return a status code of 404
+
+Tutorial: Additional Routing
+============================
+
+So for, our examples have only allowed GET requests.
+It's actually possible to support additional HTTP methods.
+Here's an example of a view function that supports PUT::
+
+    @app.route('/resource/{value}', methods=['PUT'])
+    def put_test(value):
+        return {"value": value}
+
+We can test this method using the ``http`` command::
+
+    $ http PUT https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/resource/foo
+    HTTP/1.1 200 OK
+
+    {
+        "value": "foo"
+    }
+
+Note that the ``methods`` kwarg accepts a list of methods.  Your view function
+will be called when any of the HTTP methods you specify are used for the
+specified resource.  For example::
+
+    @app.route('/myview', methods=['POST', 'PUT'])
+    def myview():
+        pass
+
+The above view function will be called when either an HTTP POST or
+PUT is sent to ``/myview``.  In the next section we'll go over
+how you can introspect the given request in order to differentiate between
+various HTTP methods.
+
+Tutorial: Request Metadata
+==========================
+
+In the examples above, you saw how to create a view function that supports
+an HTTP PUT request as well as a view function that supports both POST and
+PUT via the same view function.  However, there's more information we
+might need about a given request:
+
+* In a PUT/POST, you frequently send a request body.  We need some
+  way of accessing the contents of the request body.
+* For view functions that support multiple HTTP methods, we'd like
+  to detect which HTTP method was used so we can have different
+  code paths for PUTs vs. POSTs.
+
+All of this and more is handled by the current request object that
+chalice makes available to each view function when it's called.
+
+Let's see an example of this.  Suppose we want to create a view function
+that allowed you to PUT data to an object and retrieve that data
+via a corresponding GET.  We could accomplish that with the
+following view function::
+
+
+    OBJECTS = {
+    }
+
+    @app.route('/objects/{key}', methods=['GET', 'PUT'])
+    def myobject(key):
+        request = app.current_request
+        if request.method == 'PUT':
+            OBJECTS[key] = request.json_body
+        elif request.method == 'GET':
+            try:
+                return {key: OBJECTS[key]}
+            except KeyError:
+                raise NotFoundError(key)
+
+
+Save this in your ``app.py`` file and rerun ``chalice deploy``.
+Now, you can make a PUT request to ``/objects/your-key`` with a request
+body, and retrieve the value of that body by making a subsequent
+``GET`` request to the same resource.  Here's an example of its usage::
+
+    # First, trying to retrieve the key will return a 404.
+    $ http GET https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/objects/mykey
+    HTTP/1.1 404 Not Found
+
+    {
+        "Code": "NotFoundError",
+        "Message": "NotFoundError: mykey"
+    }
+
+    # Next, we'll create that key be sending a PUT request.
+    $ echo '{"foo": "bar"}' | http PUT https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/objects/mykey
+    HTTP/1.1 200 OK
+
+    null
+
+    # And now we no longer get a 404, we instead get the value we previously
+    # put.
+    $ http GET https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/objects/mykey
+    HTTP/1.1 200 OK
+
+    {
+        "mykey": {
+            "foo": "bar"
+        }
+    }
+
+You might see a problem with storing the objects in a module level
+``OBJECTS`` variable.  We address this in the next section.
+
+The ``app.current_request`` object also has the following properties.
+
+
+::
+
+* ``current_request.query_params`` - A dict of the query params for the request.
+* ``current_request.headers`` - A dict of the request headers.
+* ``current_request.uri_params`` - A dict of the captured URI params.
+* ``current_request.method`` -  The HTTP method (as a string).
+* ``current_request.json_body`` - The parsed JSON body (``json.loads(raw_body)``)
+* ``current_request.context`` - A dict of additional context information
+* ``current_request.stage_vars`` - Configuration for the API Gateway stage
+
+Don't worry about the ``context`` and ``stage_vars`` for now.  We haven't
+discussed those concepts yet.  The ``current_request`` object also
+has a ``to_dict`` method, which returns all the information about the
+current request as a dictionary.  Let's use this method to write a view
+function that returns everything it knows about the request::
+
+
+    @app.route('/introspect')
+    def introspect():
+        return app.current_request.to_dict()
+
+
+Save this to your ``app.py`` file and redeploy with ``chalice deploy``.
+Here's an example of hitting the ``/introspect`` URL.  Note how we're
+sending a query string as well as a custom ``X-TestHeader`` header::
+
+
+    $ http 'https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/introspect?query1=value1&query2=value2' 'X-TestHeader: Foo'
+    HTTP/1.1 200 OK
+
+    {
+        "context": {
+            ...
+            "resource-path": "/introspect",
+            "stage": "dev",
+            "user-agent": "HTTPie/0.9.3",
+            "user-arn": ""
+        },
+        "headers": {
+            "Accept": "*/*",
+             ...
+            "X-TestHeader": "Foo"
+        },
+        "json_body": {},
+        "method": "GET",
+        "query_params": {
+            "query1": "value1",
+            "query2": "value2"
+        },
+        "stage_vars": {},
+        "uri_params": {}
+    }
+
+Tutorial: Policy Generation
+===========================
+
+In the previous section we created a basic rest API that
+allowed you to store JSON objects by sending the JSON
+in the body of an HTTP PUT request to ``/objects/{name}``.
+You could then retrieve objects by sending a GET request to
+``/objects/{name}``.
+
+However, there's a problem with the code we wrote::
+
+    OBJECTS = {
+    }
+
+    @app.route('/objects/{key}', methods=['GET', 'PUT'])
+    def myobject(key):
+        request = app.current_request
+        if request.method == 'PUT':
+            OBJECTS[key] = request.json_body
+        elif request.method == 'GET':
+            try:
+                return {key: OBJECTS[key]}
+            except KeyError:
+                raise NotFoundError(key)
+
+
+We're storing the key value pairs in a module level ``OBJECTS``
+variable.  We can't rely on local storage like this persisting
+across requests.
+
+A better solution would be to store this information in Amazon S3.
+To do this, we're going to use boto3, the AWS SDK for Python.
+First, install boto3::
+
+    $ pip install boto3
+
+Next, add ``boto3`` to your requirements.txt file::
+
+    $ echo 'boto3==1.3.1' >> requirements.txt
+
+The requirements.txt file should be in the same directory that contains
+your ``app.py`` file.  Next, let's update our view code to use boto3::
+
+    import json
+    import boto3
+    from botocore.exceptions import ClientError
+
+
+    S3 = boto3.client('s3', region_name='us-west-2')
+    BUCKET = 'your-bucket-name'
+
+
+    @app.route('/objects/{key}', methods=['GET', 'PUT'])
+    def s3objects(key):
+        request = app.current_request
+        if request.method == 'PUT':
+            S3.put_object(Bucket=BUCKET, Key=key,
+                          Body=json.dumps(request.json_body))
+        elif request.method == 'GET':
+            try:
+                response = S3.get_object(Bucket=BUCKET, Key=key)
+                return json.loads(response['Body'].read())
+            except ClientError as e:
+                raise NotFoundError(key)
+
+Make sure to change ``BUCKET`` with the name of an S3 bucket
+you own.  Redeploy your changes with ``chalice deploy``.
+Now whenver we make a ``PUT`` request to ``/objects/keyname``, the
+data send will be stored in S3.  Subsequent ``GET`` requests will
+retrieve this data from S3.
