@@ -53,6 +53,33 @@ You can verify you have chalice installed by running::
     Usage: chalice [OPTIONS] COMMAND [ARGS]...
     ...
 
+Credentials
+-----------
+
+Before you can deploy a chalice application, be sure you have
+credentials configured.  If you have previously configured your
+machine to run boto3 (the AWS SDK for Python) or the AWS CLI then
+you can skip this section.
+
+If this is your first time configuring credentials for AWS you
+can follow these steps to quickly get started::
+
+    $ mkdir ~/.aws
+    $ cat >> ~/.aws/config
+    [default]
+    aws_access_key_id=YOUR_ACCESS_KEY_HERE
+    aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+    region=YOUR_REGION (such as us-west-2, us-west-1, etc)
+
+If you want more information on all the supported methods for
+configuring credentials, see the
+`boto3 docs
+<http://boto3.readthedocs.io/en/latest/guide/configuration.html>`__.
+
+
+Creating Your Project
+---------------------
+
 The next thing we'll do is create a chalice project::
 
     $ chalice new-project helloworld
@@ -87,6 +114,10 @@ The ``new-project`` command created a sample app that defines a
 single view, ``/``, that when called will return the JSON body
 ``{"hello": "world"}``.
 
+
+Deploying
+---------
+
 Let's deploy this app.  Make sure you're in the ``helloworld``
 directory and run ``chalice deploy``::
 
@@ -100,13 +131,16 @@ You now have an API up and running using API Gateway and Lambda::
     $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
     {"hello": "world"}
 
-For the rest of these tutorials, we'll be using the ``httpie`` instead
-of ``curl`` (https://github.com/jkbrzt/httpie).  You can install
-``httpie`` using ``pip install httpie``, or if you're on Mac, you can
-run ``brew install httpie``.  The Github link has more information on
-installation instructions.  Here's an example of using ``httpie`` to
-request the root resource of the API we just created.  Note that
-the command name is ``http``::
+Try making a change to the returned dictionary from the ``index()``
+function.  You can then redeploy your changes by running ``chalice deploy``.
+
+
+For the rest of these tutorials, we'll be using ``httpie`` instead of ``curl``
+(https://github.com/jkbrzt/httpie) to test our API.  You can install ``httpie``
+using ``pip install httpie``, or if you're on Mac, you can run ``brew install
+httpie``.  The Github link has more information on installation instructions.
+Here's an example of using ``httpie`` to request the root resource of the API
+we just created.  Note that the command name is ``http``::
 
 
     $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
