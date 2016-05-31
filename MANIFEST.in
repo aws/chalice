@@ -3,6 +3,7 @@ include CHANGELOG.rst
 include LICENSE
 include NOTICE
 include README.rst
+recursive-include chalice *.json
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
