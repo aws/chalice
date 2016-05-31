@@ -122,6 +122,15 @@ the command name is ``http``::
     }
 
 
+Additionally, the API Gateway endpoints will be shortened to
+``https://endpoint/dev/`` for brevity.  By sure to substitue
+``https://endpoint/dev/`` for the actual endpoint that chalice displays
+when you deploy your API (it will look something like
+``https://abcdefg.execute-api.us-west-2.amazonaws.com/dev/``.
+
+Next Steps
+----------
+
 You've now created your first chalice app.
 
 The next few sections will build on this quickstart section and introduce
@@ -182,14 +191,14 @@ the ``helloworld`` directory and chalice will deploy your application::
 Let's try it out.  Note the examples below use the ``http`` command
 from the ``httpie`` package.  You can install this using ``pip install httpie``::
 
-    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/seattle
+    $ http https://endpoint/dev/cities/seattle
     HTTP/1.1 200 OK
 
     {
         "state": "WA"
     }
 
-    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/portland
+    $ http https://endpoint/dev/cities/portland
     HTTP/1.1 200 OK
 
     {
@@ -200,7 +209,7 @@ from the ``httpie`` package.  You can install this using ``pip install httpie``:
 Notice what happens if we try to request a city that's not in our
 ``CITIES_TO_STATE`` map::
 
-    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
+    $ http https://endpoint/dev/cities/vancouver
     HTTP/1.1 500 Internal Server Error
     Content-Type: application/json
     X-Cache: Error from cloudfront
@@ -241,12 +250,12 @@ Save this file and redeploy your changes::
 
     $ chalice deploy
     ...
-    https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+    https://endpoint/dev/
 
 When you now request the same URL that returned an internal
 server error, you'll now get back the original stack trace::
 
-    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
+    $ http https://endpoint/dev/cities/vancouver
     {
         "errorMessage": "u'vancouver'",
         "errorType": "KeyError",
@@ -288,7 +297,7 @@ to the user.  Here's the updated code:
 Save and deploy these changes::
 
     $ chalice deploy
-    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
+    $ http https://endpoint/dev/cities/vancouver
     HTTP/1.1 400 Bad Request
 
     {
@@ -320,7 +329,7 @@ Here's an example of a view function that supports PUT:
 
 We can test this method using the ``http`` command::
 
-    $ http PUT https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/resource/foo
+    $ http PUT https://endpoint/dev/resource/foo
     HTTP/1.1 200 OK
 
     {
@@ -387,7 +396,7 @@ body, and retrieve the value of that body by making a subsequent
 ``GET`` request to the same resource.  Here's an example of its usage::
 
     # First, trying to retrieve the key will return a 404.
-    $ http GET https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/objects/mykey
+    $ http GET https://endpoint/dev/objects/mykey
     HTTP/1.1 404 Not Found
 
     {
@@ -396,14 +405,14 @@ body, and retrieve the value of that body by making a subsequent
     }
 
     # Next, we'll create that key be sending a PUT request.
-    $ echo '{"foo": "bar"}' | http PUT https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/objects/mykey
+    $ echo '{"foo": "bar"}' | http PUT https://endpoint/dev/objects/mykey
     HTTP/1.1 200 OK
 
     null
 
     # And now we no longer get a 404, we instead get the value we previously
     # put.
-    $ http GET https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/objects/mykey
+    $ http GET https://endpoint/dev/objects/mykey
     HTTP/1.1 200 OK
 
     {
@@ -416,9 +425,6 @@ You might see a problem with storing the objects in a module level
 ``OBJECTS`` variable.  We address this in the next section.
 
 The ``app.current_request`` object also has the following properties.
-
-
-::
 
 * ``current_request.query_params`` - A dict of the query params for the request.
 * ``current_request.headers`` - A dict of the request headers.
@@ -445,7 +451,7 @@ Here's an example of hitting the ``/introspect`` URL.  Note how we're
 sending a query string as well as a custom ``X-TestHeader`` header::
 
 
-    $ http 'https://bsy4izx4uk.execute-api.us-west-2.amazonaws.com/dev/introspect?query1=value1&query2=value2' 'X-TestHeader: Foo'
+    $ http 'https://endpoint/dev/introspect?query1=value1&query2=value2' 'X-TestHeader: Foo'
     HTTP/1.1 200 OK
 
     {
