@@ -24,11 +24,11 @@ It allow you to:
     def index():
         return {"hello": "world"}
 
-	$ chalice deploy
-	...
+    $ chalice deploy
+    ...
     Your application is available at: https://endpoint/dev
 
-	$ curl https://endpoint/dev
+    $ curl https://endpoint/dev
     {"hello": "world"}
 
 
@@ -61,25 +61,26 @@ This will create a ``helloworld`` directory.  Cd into this
 directory.  You'll see several files have been created for you::
 
     $ cd helloworld
-	$ ls -la
-	drwxr-xr-x   .chalice
-	-rw-r--r--   app.py
-	-rw-r--r--   requirements.txt
+    $ ls -la
+    drwxr-xr-x   .chalice
+    -rw-r--r--   app.py
+    -rw-r--r--   requirements.txt
 
 You can ignore the ``.chalice`` directory for now, the two main files
 we'll focus on is ``app.py`` and ``requirements.txt``.
 
-Let's take a look at the ``app.py`` file::
+Let's take a look at the ``app.py`` file:
 
-	$ cat app.py
-	from chalice import Chalice
+.. code-block:: python
 
-	app = Chalice(app_name='helloworld')
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
 
 
-	@app.route('/')
-	def index():
-	    return {'hello': 'world'}
+    @app.route('/')
+    def index():
+        return {'hello': 'world'}
 
 
 The ``new-project`` command created a sample app that defines a
@@ -94,7 +95,7 @@ directory and run ``chalice deploy``::
     Initiating first time deployment...
     https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
 
-You now have an API up and running using API Gateway and Lambda:
+You now have an API up and running using API Gateway and Lambda::
 
     $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
     {"hello": "world"}
@@ -137,9 +138,9 @@ demonstrate additional capabilities that chalice has.
 
 Our application so far has a single view that allows you to make
 an HTTP GET request to ``/``.  Now let's suppose we want to capture
-parts of the URI::
+parts of the URI:
 
-    $ cat app.py
+.. code-block:: python
 
     from chalice import Chalice
 
@@ -197,7 +198,7 @@ from the ``httpie`` package.  You can install this using ``pip install httpie``:
 
 
 Notice what happens if we try to request a city that's not in our
-``CITIES_TO_STATE`` map:
+``CITIES_TO_STATE`` map::
 
     $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/cities/vancouver
     HTTP/1.1 500 Internal Server Error
@@ -225,9 +226,9 @@ these error messages.
 
 The first thing we're going to look at is how we can debug this
 issue.  By default, chalice has debugging turned off, but you can
-enable debugging to get more information::
+enable debugging to get more information:
 
-    $ cat app.py
+.. code-block:: python
 
     from chalice import Chalice
 
@@ -269,7 +270,9 @@ from trying to access the ``vancouver`` key.
 
 Now that we know the error, we can fix our code.  What we'd like to do is
 catch this exception and instead return a more helpful error message
-to the user.  Here's the updated code::
+to the user.  Here's the updated code:
+
+.. code-block:: python
 
     from chalice import BadRequestError
 
@@ -307,7 +310,9 @@ Tutorial: Additional Routing
 
 So for, our examples have only allowed GET requests.
 It's actually possible to support additional HTTP methods.
-Here's an example of a view function that supports PUT::
+Here's an example of a view function that supports PUT:
+
+.. code-block:: python
 
     @app.route('/resource/{value}', methods=['PUT'])
     def put_test(value):
@@ -324,7 +329,9 @@ We can test this method using the ``http`` command::
 
 Note that the ``methods`` kwarg accepts a list of methods.  Your view function
 will be called when any of the HTTP methods you specify are used for the
-specified resource.  For example::
+specified resource.  For example:
+
+.. code-block:: python
 
     @app.route('/myview', methods=['POST', 'PUT'])
     def myview():
@@ -355,8 +362,9 @@ chalice makes available to each view function when it's called.
 Let's see an example of this.  Suppose we want to create a view function
 that allowed you to PUT data to an object and retrieve that data
 via a corresponding GET.  We could accomplish that with the
-following view function::
+following view function:
 
+.. code-block:: python
 
     OBJECTS = {
     }
@@ -472,7 +480,9 @@ in the body of an HTTP PUT request to ``/objects/{name}``.
 You could then retrieve objects by sending a GET request to
 ``/objects/{name}``.
 
-However, there's a problem with the code we wrote::
+However, there's a problem with the code we wrote:
+
+.. code-block:: python
 
     OBJECTS = {
     }
@@ -504,7 +514,9 @@ Next, add ``boto3`` to your requirements.txt file::
     $ echo 'boto3==1.3.1' >> requirements.txt
 
 The requirements.txt file should be in the same directory that contains
-your ``app.py`` file.  Next, let's update our view code to use boto3::
+your ``app.py`` file.  Next, let's update our view code to use boto3:
+
+.. code-block:: python
 
     import json
     import boto3
