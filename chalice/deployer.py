@@ -14,6 +14,7 @@ import inspect
 import time
 
 import botocore.session
+import botocore.exceptions
 import chalice
 from chalice import app
 from chalice import policy
@@ -144,6 +145,9 @@ def node(name, uri_path, is_route=False):
 
 
 class Deployer(object):
+
+    LAMBDA_CREATE_ATTEMPTS = 3
+
     def __init__(self, session=None):
         if session is None:
             session = botocore.session.get_session()
@@ -224,21 +228,44 @@ class Deployer(object):
         # First we need to create a deployment package.
         print "Initial creation of lambda function."
         app_name = config['config']['app_name']
-        client = self._client('lambda')
         role_arn = self._get_or_create_lambda_role_arn(config)
         zip_filename = self._packager.create_deployment_package(
             config['project_dir'])
         with open(zip_filename, 'rb') as f:
             zip_contents = f.read()
-        response = client.create_function(
-            FunctionName=app_name,
-            Runtime='python2.7',
-            Code={'ZipFile': zip_contents},
-            Handler='app.app',
-            Role=role_arn,
-            Timeout=60
-        )
-        return response['FunctionArn']
+        return self._create_function(app_name, role_arn, zip_contents)
+
+    def _create_function(self, app_name, role_arn, zip_contents):
+        # The first time we create a role, there's a delay between
+        # role creation and being able to use the role in the
+        # creat_function call.  If we see this error, we'll retry
+        # a few times.
+        client = self._client('lambda')
+        last_response = None
+        for _ in range(self.LAMBDA_CREATE_ATTEMPTS):
+            try:
+                response = client.create_function(
+                    FunctionName=app_name,
+                    Runtime='python2.7',
+                    Code={'ZipFile': zip_contents},
+                    Handler='app.app',
+                    Role=role_arn,
+                    Timeout=60
+                )
+            except botocore.exceptions.ClientError as e:
+                code = e.response['Error'].get('Code')
+                message = e.response['Error'].get('Message', '')
+                if code == 'InvalidParameterValueException':
+                    # We're assuming that if we receive an
+                    # InvalidParameterValueException, it's because
+                    # the role we just created can't be used by
+                    # Lambda.
+                    time.sleep(2)
+                    last_response = e
+                    continue
+                raise
+            return response['FunctionArn']
+        raise last_response
 
     def _get_or_create_lambda_role_arn(self, config):
         app_name = config['config']['app_name']
@@ -248,12 +275,6 @@ class Deployer(object):
         except ValueError:
             print "Creating role"
             role_arn = self._create_role_from_source_code(config)
-            # XXX: After creating a role, I've noticed if you
-            # immediately try to use it, you'll sometimes
-            # get an error from lambda saying that it doesn't have
-            # permission to assume the role.  So we unfortunately have
-            # to sleep for a bit to let things propogate :(.
-            time.sleep(5)
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
