@@ -8,6 +8,7 @@ import json
 import datetime
 
 import click
+import botocore.exceptions
 
 from chalice import deployer
 
@@ -96,7 +97,15 @@ def deploy(ctx, project_dir):
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
     d = deployer.Deployer()
-    d.deploy(ctx.obj)
+    try:
+        d.deploy(ctx.obj)
+    except botocore.exceptions.NoRegionError:
+        e = click.ClickException("No region configured. "
+                                 "Either export the AWS_DEFAULT_REGION "
+                                 "environment variable or set the "
+                                 "region value in our ~/.aws/config file.")
+        e.exit_code = 2
+        raise e
 
 
 @cli.command()
