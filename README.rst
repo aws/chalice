@@ -585,3 +585,15 @@ you own.  Redeploy your changes with ``chalice deploy``.
 Now whenver we make a ``PUT`` request to ``/objects/keyname``, the
 data send will be stored in S3.  Subsequent ``GET`` requests will
 retrieve this data from S3.
+
+API Gateway Stages
+==================
+
+So far, we've been creating a single Lambda function that's deployed
+to a single API gateway stage.  This is sufficient when you're just
+getting started and prototyping new ideas, but you'll eventually
+want to leverage API Gateway stages.
+
+To deploy to a different stage::
+
+    $ chalice deploy prod

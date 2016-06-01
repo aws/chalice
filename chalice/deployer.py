@@ -173,10 +173,10 @@ class Deployer(object):
 
         """
         self._deploy_lambda(config)
-        rest_api_id, region_name = self._deploy_api_gateway(config)
+        rest_api_id, region_name, stage = self._deploy_api_gateway(config)
         print (
-            "https://{api_id}.execute-api.{region}.amazonaws.com/dev/".format(
-                api_id=rest_api_id, region=region_name)
+            "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
+            .format(api_id=rest_api_id, region=region_name, stage=stage)
         )
 
     def _deploy_lambda(self, config):
@@ -393,11 +393,13 @@ class Deployer(object):
         route_builder.build_resources(url_trie)
         # And finally, you need an actual deployment to deploy the changes to
         # API gateway.
+        stage = config['config'].get('stage', 'dev')
+        print "Deploying to:", stage
         client.create_deployment(
             restApiId=rest_api_id,
-            stageName='dev'
+            stageName=stage,
         )
-        return rest_api_id, client.meta.region_name
+        return rest_api_id, client.meta.region_name, stage
 
 
 class APIGatewayResourceCreator(object):

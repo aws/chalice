@@ -81,8 +81,9 @@ def local(ctx):
 @cli.command()
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
+@click.argument('stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, project_dir):
+def deploy(ctx, project_dir, stage):
     if project_dir is None:
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
@@ -94,6 +95,8 @@ def deploy(ctx, project_dir):
         click.echo("Unable to load the project config file. "
                    "Are you sure this is a chalice project?")
         raise click.Abort()
+    if stage is not None:
+        config['stage'] = stage
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
     d = deployer.Deployer()
@@ -142,7 +145,8 @@ def new_project(ctx, project_name):
     os.makedirs(chalice_dir)
     config = os.path.join(project_name, '.chalice', 'config.json')
     with open(config, 'w') as f:
-        f.write(json.dumps({'app_name': project_name}, indent=2))
+        f.write(json.dumps({'app_name': project_name,
+                            'stage': 'dev'}, indent=2))
     with open(os.path.join(project_name, 'requirements.txt'), 'w') as f:
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
