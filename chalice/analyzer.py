@@ -1,8 +1,11 @@
 """Source code analyzer for chalice app."""
 import ast
 
+from typing import Dict, Set  # noqa
+
 
 def get_client_calls(source_code):
+    # type: (str) -> Dict[str, Set[str]]
     """Return all clients calls made in the application.
 
     :returns: A dict of service_name -> set([client calls]).
@@ -19,7 +22,7 @@ class AWSOperationTracker(ast.NodeVisitor):
     def __init__(self):
         # Mapping of AWS clients created to method
         # calls used. client_name -> [methods_called]
-        self.clients = {}
+        self.clients = {} # type: Dict[str, Set[str]]
         # These are the names bound in the module
         # scope for clients that are created.
         self._client_identifiers = {}
