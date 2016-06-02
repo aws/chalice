@@ -13,8 +13,10 @@ import hashlib
 import inspect
 import time
 
+from typing import Any, Tuple, Callable  # noqa
 import botocore.session
 import botocore.exceptions
+
 import chalice
 from chalice import app
 from chalice import policy
@@ -97,6 +99,7 @@ ERROR_MAPPING = (
 
 
 def build_url_trie(routes):
+    # type: (Dict[str, app.RouteEntry]) -> Dict[str, Any]
     """Create a URL trie based on request routes.
 
     :type routes: dict
@@ -133,6 +136,7 @@ def build_url_trie(routes):
 
 
 def node(name, uri_path, is_route=False):
+    # type: (str, str, bool) -> Dict[str, Any]
     return {
         'name': name,
         'uri_path': uri_path,
@@ -149,19 +153,25 @@ class Deployer(object):
     LAMBDA_CREATE_ATTEMPTS = 3
 
     def __init__(self, session=None):
+        # type: (botocore.session.Session) -> None
         if session is None:
             session = botocore.session.get_session()
         self._session = session
         self._client_cache = {}
+        # type: Dict[str, Any]
+        # Note: I'm using "Any" for clients until we figure out
+        # a way to have concrete types for botocore clients.
         self._packager = LambdaDeploymentPackager()
 
     def _client(self, service_name):
+        # type: (str) -> Any
         if service_name not in self._client_cache:
             self._client_cache[service_name] = self._session.create_client(
                 service_name)
         return self._client_cache[service_name]
 
     def deploy(self, config):
+        # type: (Dict[str, Any]) -> str
         """Deploy chalice application to AWS.
 
         :type config: dict
@@ -180,6 +190,7 @@ class Deployer(object):
         )
 
     def _deploy_lambda(self, config):
+        # type: (Dict[str, Any]) -> None
         app_config = config['config']
         app_name = app_config['app_name']
         client = self._client('lambda')
@@ -197,6 +208,7 @@ class Deployer(object):
         print "Lambda deploy done."
 
     def _update_lambda_function(self, config):
+        # type: (Dict[str, Any]) -> None
         print "Updating lambda function..."
         project_dir = config['project_dir']
         packager = self._packager
@@ -217,12 +229,14 @@ class Deployer(object):
                 ZipFile=zip_contents)
 
     def _write_config_to_disk(self, config):
+        # type: (Dict[str, Any]) -> None
         config_filename = os.path.join(config['project_dir'],
                                        '.chalice', 'config.json')
         with open(config_filename, 'w') as f:
             f.write(json.dumps(config['config'], indent=2))
 
     def _first_time_lambda_create(self, config):
+        # type: (Dict[str, Any]) -> str
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
@@ -236,6 +250,7 @@ class Deployer(object):
         return self._create_function(app_name, role_arn, zip_contents)
 
     def _create_function(self, app_name, role_arn, zip_contents):
+        # type: (str, str, str) -> str
         # The first time we create a role, there's a delay between
         # role creation and being able to use the role in the
         # creat_function call.  If we see this error, we'll retry
@@ -268,6 +283,7 @@ class Deployer(object):
         raise last_response
 
     def _get_or_create_lambda_role_arn(self, config):
+        # type: (Dict[str, Any]) -> str
         app_name = config['config']['app_name']
         try:
             role_arn = self._find_role_arn(app_name)
@@ -278,6 +294,7 @@ class Deployer(object):
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
+        # type: (str, Dict[str, Any]) -> None
         app_py = os.path.join(config['project_dir'], 'app.py')
         assert os.path.isfile(app_py)
         with open(app_py) as f:
@@ -292,6 +309,7 @@ class Deployer(object):
                             PolicyDocument=json.dumps(app_policy, indent=2))
 
     def _create_role_from_source_code(self, config):
+        # type: (Dict[str, Any]) -> str
         app_name = config['config']['app_name']
         app_py = os.path.join(config['project_dir'], 'app.py')
         assert os.path.isfile(app_py)
@@ -309,6 +327,7 @@ class Deployer(object):
         return role_arn
 
     def _find_role_arn(self, role_name):
+        # type: (str) -> str
         response = self._client('iam').list_roles()
         for role in response.get('Roles', []):
             if role['RoleName'] == role_name:
@@ -316,6 +335,7 @@ class Deployer(object):
         raise ValueError("No role ARN found for: %s" % role_name)
 
     def _deploy_api_gateway(self, config):
+        # type: (Dict[str, Any]) -> Tuple[str, str, str]
         # Perhaps move this into APIGatewayResourceCreator.
         app_name = config['config']['app_name']
         client = self._client('apigateway')
@@ -331,6 +351,7 @@ class Deployer(object):
             return self._create_resources_for_api(config, rest_api_id)
 
     def _remove_all_resources(self, rest_api_id):
+        # type: (str) -> None
         client = self._client('apigateway')
         all_resources = client.get_resources(restApiId=rest_api_id)['items']
         first_tier_ids = [r['id'] for r in all_resources
@@ -347,6 +368,7 @@ class Deployer(object):
         print "Done deleting existing resources."
 
     def _delete_root_methods(self, rest_api_id, root_resource):
+        # type: (str, Dict[str, Any]) -> None
         client = self._client('apigateway')
         methods = list(root_resource.get('resourceMethods', []))
         for method in methods:
@@ -355,6 +377,7 @@ class Deployer(object):
                                  httpMethod=method)
 
     def _lambda_uri(self, lambda_function_arn):
+        # type: (str) -> str
         region_name = self._client('apigateway').meta.region_name
         api_version = '2015-03-31'
         return (
@@ -366,12 +389,14 @@ class Deployer(object):
         )
 
     def _first_time_deploy(self, config):
+        # type: (Dict[str, Any]) -> Tuple[str, str, str]
         app_name = config['config']['app_name']
         client = self._client('apigateway')
         rest_api_id = client.create_rest_api(name=app_name)['id']
         return self._create_resources_for_api(config, rest_api_id)
 
     def _create_resources_for_api(self, config, rest_api_id):
+        # type: (Dict[str, Any], str) -> Tuple[str, str, str]
         client = self._client('apigateway')
         url_trie = build_url_trie(config['chalice_app'].routes)
         root_resource = client.get_resources(restApiId=rest_api_id)['items'][0]
@@ -406,6 +431,7 @@ class APIGatewayResourceCreator(object):
     """Create hierarchical resources in API gateway from chalice routes."""
     def __init__(self, client, lambda_client, rest_api_id, lambda_arn,
                  random_id_generator=lambda: str(uuid.uuid4())):
+        # type: (Any, Any, str, str, Callable[[], str]) -> None
         #: botocore client for API gateway.
         self.client = client
         self.region_name = self.client.meta.region_name
@@ -421,6 +447,7 @@ class APIGatewayResourceCreator(object):
         :param chalice_trie: The trie of URLs from ``build_url_trie()``.
 
         """
+        # type: Dict[str, Any] -> None
         # We need to create the parent resource before we can create
         # child resources, so we'll do a pre-order depth first traversal.
         stack = [chalice_trie]
@@ -461,6 +488,7 @@ class APIGatewayResourceCreator(object):
         )
 
     def _configure_resource_route(self, node, http_method):
+        # type: (Dict[str, Any], str) -> None
         c = self.client
         c.put_method(
             restApiId=self.rest_api_id,
@@ -513,6 +541,7 @@ class APIGatewayResourceCreator(object):
             )
 
     def _lambda_uri(self):
+        # type: () -> str
         region_name = self.client.meta.region_name
         api_version = '2015-03-31'
         return (
@@ -537,6 +566,7 @@ class LambdaDeploymentPackager(object):
                                "'pip install virtualenv'")
 
     def create_deployment_package(self, project_dir):
+        # type: (str) -> str
         print "Creating deployment package."
         # pip install -t doesn't work out of the box with homebrew and
         # python, so we're using virtualenvs instead which works in
@@ -570,6 +600,7 @@ class LambdaDeploymentPackager(object):
         return deployment_package_filename
 
     def deployment_package_filename(self, project_dir):
+        # type: (str) -> str
         # Computes the name of the deployment package zipfile
         # based on a hash of the requirements file.
         # This is done so that we only "pip install -r requirements.txt"
@@ -581,6 +612,7 @@ class LambdaDeploymentPackager(object):
         return deployment_package_filename
 
     def _add_py_deps(self, zip, deps_dir):
+        # type: (zipfile.ZipFile, str) -> None
         prefix_len = len(deps_dir) + 1
         for root, _, filenames in os.walk(deps_dir):
             for filename in filenames:
@@ -589,6 +621,7 @@ class LambdaDeploymentPackager(object):
                 zip.write(full_path, zip_path)
 
     def _add_app_files(self, zip, project_dir):
+        # type: (zipfile.ZipFile, str) -> None
         # TODO: This will need to change in the future, but
         # for now we're just supporting an app.py file.
         chalice_router = inspect.getfile(app)
@@ -605,6 +638,7 @@ class LambdaDeploymentPackager(object):
                   'app.py')
 
     def _hash_requirements_file(self, filename):
+        # type: (str) -> str
         if not os.path.isfile(filename):
             contents = ''
         else:
@@ -613,6 +647,7 @@ class LambdaDeploymentPackager(object):
         return hashlib.md5(contents).hexdigest()
 
     def inject_latest_app(self, deployment_package_filename, project_dir):
+        # type: (str, str) -> None
         """Inject latest version of chalice app into a zip package.
 
         This method takes a pre-created deployment package and injects
