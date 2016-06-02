@@ -43,6 +43,9 @@ pylint:
 test:
 	py.test -v tests/unit/ tests/functional/
 
+typecheck:
+	mypy --py2 --silent-import -p chalice
+
 coverage:
 	py.test --cov chalice --cov-report term-missing tests/
 
