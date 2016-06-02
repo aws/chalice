@@ -12,10 +12,13 @@ import os
 import json
 import uuid
 
+from typing import Any, List, Dict, Set  # noqa
+
 import botocore.session
 
 
 def policy_from_source_code(source_code):
+    # type: (str) -> Dict[str, Any]
     from chalice.analyzer import get_client_calls
     client_calls = get_client_calls(source_code)
     builder = PolicyBuilder()
@@ -24,6 +27,7 @@ def policy_from_source_code(source_code):
 
 
 def load_policy_actions():
+    # type: () -> Dict[str, str]
     policy_json = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         'policies.json')
@@ -36,6 +40,7 @@ class PolicyBuilder(object):
     VERSION = '2012-10-17'
 
     def __init__(self, session=None, policy_actions=None):
+        # type: (Any, Dict[str, str]) -> None
         if session is None:
             session = botocore.session.get_session()
         if policy_actions is None:
@@ -44,6 +49,7 @@ class PolicyBuilder(object):
         self._policy_actions = policy_actions
 
     def build_policy_from_api_calls(self, client_calls):
+        # type: (Dict[str, Set[str]]) -> Dict[str, Any]
         statements = self._build_statements_from_client_calls(client_calls)
         policy = {
             'Version': self.VERSION,
@@ -52,6 +58,7 @@ class PolicyBuilder(object):
         return policy
 
     def _build_statements_from_client_calls(self, client_calls):
+        # type: (Dict[str, Set[str]]) -> List[Dict[str, Any]]
         statements = []
         # client_calls = service_name -> set([method_calls])
         for service in sorted(client_calls):
