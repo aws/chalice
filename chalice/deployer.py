@@ -256,8 +256,8 @@ class Deployer(object):
         # creat_function call.  If we see this error, we'll retry
         # a few times.
         client = self._client('lambda')
-        last_response = None
-        for _ in range(self.LAMBDA_CREATE_ATTEMPTS):
+        current = 0
+        while True:
             try:
                 response = client.create_function(
                     FunctionName=app_name,
@@ -269,18 +269,18 @@ class Deployer(object):
                 )
             except botocore.exceptions.ClientError as e:
                 code = e.response['Error'].get('Code')
-                message = e.response['Error'].get('Message', '')
                 if code == 'InvalidParameterValueException':
                     # We're assuming that if we receive an
                     # InvalidParameterValueException, it's because
                     # the role we just created can't be used by
                     # Lambda.
                     time.sleep(2)
-                    last_response = e
+                    current += 1
+                    if current >= self.LAMBDA_CREATE_ATTEMPTS:
+                        raise
                     continue
                 raise
             return response['FunctionArn']
-        raise last_response
 
     def _get_or_create_lambda_role_arn(self, config):
         # type: (Dict[str, Any]) -> str

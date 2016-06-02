@@ -22,7 +22,7 @@ class AWSOperationTracker(ast.NodeVisitor):
     def __init__(self):
         # Mapping of AWS clients created to method
         # calls used. client_name -> [methods_called]
-        self.clients = {} # type: Dict[str, Set[str]]
+        self.clients = {}  # type: Dict[str, Set[str]]
         # These are the names bound in the module
         # scope for clients that are created.
         self._client_identifiers = {}
