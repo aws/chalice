@@ -4,9 +4,6 @@ This module will take a set of API calls for services
 and make a best effort attempt to generate an IAM policy
 for you.
 
-It's magic, so it only works maybe 51 percent of the time?
-Probably less.
-
 """
 import os
 import json
@@ -19,8 +16,8 @@ import botocore.session
 
 def policy_from_source_code(source_code):
     # type: (str) -> Dict[str, Any]
-    from chalice.analyzer import get_client_calls
-    client_calls = get_client_calls(source_code)
+    from chalice.analyzer import get_client_calls_for_app
+    client_calls = get_client_calls_for_app(source_code)
     builder = PolicyBuilder()
     policy = builder.build_policy_from_api_calls(client_calls)
     return policy
