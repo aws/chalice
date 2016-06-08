@@ -37,7 +37,11 @@ LAMBDA_TRUST_POLICY = {
 
 CLOUDWATCH_LOGS = {
     "Effect": "Allow",
-    "Action": "*",
+    "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+    ],
     "Resource": "arn:aws:logs:*:*:*"
 }
 
