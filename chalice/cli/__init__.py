@@ -11,6 +11,8 @@ import click
 import botocore.exceptions
 
 from chalice import deployer
+from chalice.logs import LogRetriever
+
 
 TEMPLATE_APP = """\
 from chalice import Chalice
@@ -49,11 +51,10 @@ def index():
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
     shown = 0
-    import boto3
-    from chalice import logs
+    import botocore.session
     lambda_arn = config['config']['lambda_arn']
-    client = boto3.client('logs')
-    retriever = logs.LogRetriever.create_from_arn(client, lambda_arn)
+    client = botocore.session.get_session().create_client('logs')
+    retriever = LogRetriever.create_from_arn(client, lambda_arn)
     events = retriever.retrieve_logs(
         include_lambda_messages=include_lambda_messages,
         max_entries=max_entries)
