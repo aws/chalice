@@ -13,7 +13,7 @@ It allow you to:
 
 ::
 
-    $ chalice new-project && cd new-project
+    $ chalice new-project helloworld && cd new-project
     $ cat app.py
 
     from chalice import Chalice
