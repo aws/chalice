@@ -50,6 +50,7 @@ FULL_PASSTHROUGH = """
 #set($allParams = $input.params())
 {
 "body-json" : $input.json('$'),
+"base64-body": "$util.base64Encode($input.body)",
 "params" : {
 #foreach($type in $allParams.keySet())
   #set($params = $allParams.get($type))
