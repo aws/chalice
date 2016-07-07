@@ -25,25 +25,18 @@ def index():
 """
 
 
-def show_lambda_logs(config, max_entries):
+def show_lambda_logs(config, max_entries, include_lambda_messages):
     shown = 0
     import boto3
-    lambda_name = config['config']['lambda_arn'].split(':')[6]
+    from chalice import logs
+    lambda_arn = config['config']['lambda_arn']
     client = boto3.client('logs')
-    group = '/aws/lambda/%s' % lambda_name
-    response = client.describe_log_streams(
-        logGroupName=group)['logStreams']
-    for stream in sorted(response,
-                         key=lambda x: x['creationTime'], reverse=True):
-        response = client.get_log_events(logGroupName=group,
-                                         logStreamName=stream['logStreamName'])
-        for event in response['events']:
-            timestamp = datetime.datetime.fromtimestamp(
-                event['timestamp'] / 1000.0)
-            print timestamp, event['message'].strip()
-            shown += 1
-            if shown >= max_entries:
-                break
+    retriever = logs.LogRetriever.create_from_arn(client, lambda_arn)
+    events = retriever.retrieve_logs(
+        include_lambda_messages=include_lambda_messages,
+        max_entries=max_entries)
+    for event in events:
+        print event['timestamp'], event['logShortId'], event['message'].strip()
 
 
 def load_project_config(project_dir):
@@ -114,10 +107,13 @@ def deploy(ctx, project_dir, stage):
 @cli.command()
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
-@click.option('--num-entries', default=100,
-              help='The project directory.  Defaults to CWD')
+@click.option('--num-entries', default=None, type=int,
+              help='Max number of log entries to show.')
+@click.option('--include-lambda-messages/--no-include-lambda-messages',
+              default=True,
+              help='Controls whether or not lambda log messages are included.')
 @click.pass_context
-def logs(ctx, project_dir, num_entries):
+def logs(ctx, project_dir, num_entries, include_lambda_messages):
     if project_dir is None:
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
@@ -131,7 +127,7 @@ def logs(ctx, project_dir, num_entries):
         raise click.Abort()
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
-    show_lambda_logs(ctx.obj, num_entries)
+    show_lambda_logs(ctx.obj, num_entries, include_lambda_messages)
 
 
 @cli.command('new-project')
