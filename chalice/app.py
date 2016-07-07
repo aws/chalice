@@ -1,5 +1,6 @@
 """Chalice app and routing code."""
 import re
+import base64
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -38,15 +39,27 @@ ALL_ERRORS = [
 class Request(object):
     """The current request from API gateway."""
     def __init__(self, query_params, headers, uri_params, method, body,
-                 context, stage_vars):
+                 base64_body, context, stage_vars):
         self.query_params = query_params
         self.headers = headers
         self.uri_params = uri_params
         self.method = method
         #: The parsed JSON from the body.
         self.json_body = body
+        # This is the raw base64 body.
+        # We'll only bother decoding this if the user
+        # actually requests this via the `.raw_body` property.
+        self._base64_body = base64_body
+        self._raw_body = None
         self.context = context
         self.stage_vars = stage_vars
+
+    @property
+    def raw_body(self):
+        # Return the raw request body as bytes.
+        if self._raw_body is None:
+            self._raw_body = base64.b64decode(self._base64_body)
+        return self._raw_body
 
     def to_dict(self):
         return self.__dict__.copy()
@@ -122,6 +135,7 @@ class Chalice(object):
                                        params['path'],
                                        event['context']['http-method'],
                                        event['body-json'],
+                                       event['base64-body'],
                                        event['context'],
                                        event['stage-variables'])
         try:

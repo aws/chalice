@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 from pytest import fixture
 from chalice import app
@@ -15,6 +17,7 @@ def create_event(uri, method, path):
             'querystring': {},
         },
         'body-json': {},
+        'base64-body': "",
         'stage-variables': {},
     }
 
@@ -97,3 +100,18 @@ def test_no_view_function_found(sample_app):
     bad_path = create_event('/noexist', 'GET', {})
     with pytest.raises(app.ChaliceError):
         sample_app(bad_path, context=None)
+
+
+def test_can_access_raw_body():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        return {'rawbody': demo.current_request.raw_body}
+
+
+    event = create_event('/index', 'GET', {})
+    event['base64-body'] = base64.b64encode('{"hello": "world"}')
+
+    result = demo(event, context=None)
+    assert result == {'rawbody': '{"hello": "world"}'}
