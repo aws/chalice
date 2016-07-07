@@ -584,7 +584,7 @@ class LambdaDeploymentPackager(object):
         requirements_file = os.path.join(project_dir, 'requirements.txt')
         deployment_package_filename = self.deployment_package_filename(
             project_dir)
-        if os.path.isfile(requirements_file) and not \
+        if self._has_at_least_one_package(requirements_file) and not \
                 os.path.isfile(deployment_package_filename):
             p = subprocess.Popen([pip_exe, 'install', '-r', requirements_file],
                                  stdout=subprocess.PIPE)
@@ -602,6 +602,21 @@ class LambdaDeploymentPackager(object):
             self._add_py_deps(z, deps_dir)
             self._add_app_files(z, project_dir)
         return deployment_package_filename
+
+    def _has_at_least_one_package(self, filename):
+        # type: (str) -> bool
+        if not os.path.isfile(filename):
+            return False
+        with open(filename, 'r') as f:
+            # This is meant to be a best effort attempt.
+            # This can return True and still have no packages
+            # actually being specified, but those aren't common
+            # cases.
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    return True
+        return False
 
     def deployment_package_filename(self, project_dir):
         # type: (str) -> str
