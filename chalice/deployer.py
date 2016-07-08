@@ -507,6 +507,10 @@ class APIGatewayResourceCreator(object):
             type='AWS',
             httpMethod=http_method,
             integrationHttpMethod='POST',
+            # Request body will never be passed through to
+            # the integration, if the Content-Type header
+            # is not application/json.
+            passthroughBehavior="NEVER",
             requestTemplates={
                 'application/json': FULL_PASSTHROUGH,
             },

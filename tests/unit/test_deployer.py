@@ -123,6 +123,7 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
         expected_params={
             'httpMethod': 'POST',
             'integrationHttpMethod': 'POST',
+            'passthroughBehavior': 'NEVER',
             'requestTemplates': {
                 'application/json': FULL_PASSTHROUGH,
             },
