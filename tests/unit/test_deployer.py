@@ -1,8 +1,10 @@
+import pytest
 from pytest import fixture
 
 from chalice.deployer import build_url_trie
 from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
+from chalice.deployer import ResourceQuery
 from chalice.app import RouteEntry
 
 from botocore.stub import Stubber
@@ -250,3 +252,92 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
     gateway_stub.activate()
     lambda_stub.activate()
     g.build_resources(route_trie)
+
+
+def test_can_query_lambda_function_exists(stubbed_lambda):
+    client, stub = stubbed_lambda
+    query = ResourceQuery(client, None)
+    stub.add_response('get_function',
+                      service_response={'Code': {}, 'Configuration': {}},
+                      expected_params={'FunctionName': 'myappname'})
+    stub.activate()
+    assert query.lambda_function_exists(name='myappname')
+    stub.assert_no_pending_responses()
+
+
+def test_lambda_function_does_not_exist(stubbed_lambda):
+    client, stub = stubbed_lambda
+    query = ResourceQuery(client, None)
+    stub.add_client_error(
+        'get_function', service_error_code='ResourceNotFoundException',
+        service_message='ResourceNotFound'
+    )
+    stub.activate()
+
+    assert query.lambda_function_exists(name='noexist') == False
+    stub.assert_no_pending_responses()
+
+
+def test_lambda_function_bad_error_propagates(stubbed_lambda):
+    client, stub = stubbed_lambda
+    query = ResourceQuery(client, None)
+    stub.add_client_error(
+        'get_function',
+        service_error_code='SomeOtherBadException',
+        service_message='Internal Error',
+        http_status_code=500
+    )
+    stub.activate()
+
+    with pytest.raises(botocore.exceptions.ClientError):
+        query.lambda_function_exists(name='noexist')
+    stub.assert_no_pending_responses()
+
+
+def test_rest_api_exists(stubbed_api_gateway):
+    client, stub = stubbed_api_gateway
+    query = ResourceQuery(None, apigateway_client=client)
+    stub.add_response(
+        'get_rest_apis',
+        service_response={
+            "items": [
+                {"createdDate": 1468102497,
+                 "id": "first_id",
+                 "name": "notmyapp"},
+                {"createdDate": 1468102497,
+                 "id": "second_id",
+                 "name": "myappname"},
+                {"createdDate": 1468102497,
+                 "id": "third_id",
+                 "name": "notmyappaswell"},
+            ]
+        },
+        expected_params={},
+    )
+    stub.activate()
+
+    assert query.get_rest_api_id('myappname') == 'second_id'
+    stub.assert_no_pending_responses()
+
+
+def test_rest_api_does_not_exist(stubbed_api_gateway):
+    client, stub = stubbed_api_gateway
+    query = ResourceQuery(None, apigateway_client=client)
+    stub.add_response(
+        'get_rest_apis',
+        service_response={
+            "items": [
+                {"createdDate": 1468102497,
+                 "id": "first_id",
+                 "name": "notmyapp"},
+                {"createdDate": 1468102497,
+                 "id": "third_id",
+                 "name": "notmyappaswell"},
+            ]
+        },
+        expected_params={},
+    )
+    stub.activate()
+
+    assert query.get_rest_api_id('myappname') is None
+    stub.assert_no_pending_responses()

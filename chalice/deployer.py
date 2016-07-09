@@ -13,7 +13,7 @@ import hashlib
 import inspect
 import time
 
-from typing import Any, Tuple, Callable  # noqa
+from typing import Any, Tuple, Callable, Optional  # noqa
 import botocore.session
 import botocore.exceptions
 
@@ -168,6 +168,10 @@ class Deployer(object):
         # Note: I'm using "Any" for clients until we figure out
         # a way to have concrete types for botocore clients.
         self._packager = LambdaDeploymentPackager()
+        self._query = ResourceQuery(
+            self._client('lambda'),
+            self._client('apigateway'),
+        )
 
     def _client(self, service_name):
         # type: (str) -> Any
@@ -199,11 +203,7 @@ class Deployer(object):
         # type: (Dict[str, Any]) -> None
         app_config = config['config']
         app_name = app_config['app_name']
-        client = self._client('lambda')
-        functions = client.list_functions()
-        if any([f['FunctionName'] == app_name
-                for f in functions['Functions']]):
-            # Lambda function already exists
+        if self._query.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
         else:
@@ -344,14 +344,11 @@ class Deployer(object):
         # type: (Dict[str, Any]) -> Tuple[str, str, str]
         # Perhaps move this into APIGatewayResourceCreator.
         app_name = config['config']['app_name']
-        client = self._client('apigateway')
-        rest_apis = client.get_rest_apis()['items']
-        api_names = [api['name'] for api in rest_apis]
-        if app_name not in api_names:
+        rest_api_id = self._query.get_rest_api_id(app_name)
+        if rest_api_id is None:
             print "Initiating first time deployment..."
             return self._first_time_deploy(config)
         else:
-            rest_api_id = [api['id'] for api in rest_apis][0]
             print "API Gateway rest API already found."
             self._remove_all_resources(rest_api_id)
             return self._create_resources_for_api(config, rest_api_id)
@@ -712,3 +709,47 @@ class LambdaDeploymentPackager(object):
                 assert os.path.isfile(app_py), app_py
                 outzip.write(app_py, 'app.py')
         shutil.move(tmpzip, deployment_package_filename)
+
+
+class ResourceQuery(object):
+    def __init__(self, lambda_client, apigateway_client):
+        self._lambda_client = lambda_client
+        self._apigateway_client = apigateway_client
+
+    def lambda_function_exists(self, name):
+        # type: (str) -> bool
+        """Check if lambda function exists.
+
+        :type name: str
+        :param name: The name of the lambda function
+
+        :rtype: bool
+        :return: Returns true if a lambda function with the given
+            name exists.
+
+        """
+        try:
+            self._lambda_client.get_function(FunctionName=name)
+        except botocore.exceptions.ClientError as e:
+            error = e.response['Error']
+            if error['Code'] == 'ResourceNotFoundException':
+                return False
+            raise
+        return True
+
+    def get_rest_api_id(self, name):
+        # type: (str) -> Optional[str]
+        """Get rest api id associated with an API name.
+
+        :type name: str
+        :param name: The name of the rest api.
+
+        :rtype: str
+        :return: If the rest api exists, then the restApiId
+            is returned, otherwise None.
+
+        """
+        rest_apis = self._apigateway_client.get_rest_apis()['items']
+        for api in rest_apis:
+            if api['name'] == name:
+                return api['id']
