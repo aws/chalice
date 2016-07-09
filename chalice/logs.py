@@ -79,7 +79,8 @@ class LogRetriever(object):
                                        interleaved=True):
             events = page['events']
             for event in events:
-                if not include_lambda_messages and self._is_lambda_message(event):
+                if not include_lambda_messages and \
+                        self._is_lambda_message(event):
                     continue
                 # timestamp is modeled as a 'long', so we'll
                 # convert to a datetime to make it easier to use
@@ -94,7 +95,7 @@ class LogRetriever(object):
                 identifier = event['logStreamName']
                 if ']' in identifier:
                     index = identifier.find(']')
-                    identifier = identifier[index+1:index+7]
+                    identifier = identifier[index + 1:index + 7]
                 event['logShortId'] = identifier
                 yield event
                 shown += 1

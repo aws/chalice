@@ -23,5 +23,6 @@ below.
 
 Please enter the project name"""
 
+
 def getting_started_prompt(click):
     return click.prompt(WELCOME_PROMPT)

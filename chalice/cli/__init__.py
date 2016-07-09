@@ -5,7 +5,6 @@ Contains commands for deploying chalice.
 """
 import os
 import json
-import datetime
 
 import click
 import botocore.exceptions
@@ -51,7 +50,6 @@ def index():
 
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
-    shown = 0
     import botocore.session
     lambda_arn = config['config']['lambda_arn']
     client = botocore.session.get_session().create_client('logs')

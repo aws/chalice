@@ -53,6 +53,6 @@ def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Foo')
     appdir.join('requirements.txt').write('\n')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    chalice_deployer.create_deployment_package(str(appdir))
     out, err = capfd.readouterr()
     assert err.strip() == ''
