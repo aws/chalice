@@ -639,7 +639,11 @@ class LambdaDeploymentPackager(object):
     def _add_py_deps(self, zip, deps_dir):
         # type: (zipfile.ZipFile, str) -> None
         prefix_len = len(deps_dir) + 1
-        for root, _, filenames in os.walk(deps_dir):
+        for root, dirnames, filenames in os.walk(deps_dir):
+            if root == deps_dir and 'chalice' in dirnames:
+                # Don't include any chalice deps.  We cherry pick
+                # what we want to include in _add_app_files.
+                dirnames.remove('chalice')
             for filename in filenames:
                 full_path = os.path.join(root, filename)
                 zip_path = full_path[prefix_len:]
