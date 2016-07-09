@@ -56,3 +56,10 @@ def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
     chalice_deployer.create_deployment_package(str(appdir))
     out, err = capfd.readouterr()
     assert err.strip() == ''
+
+
+def test_can_create_deployer_with_no_args(monkeypatch):
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
+    d = deployer.Deployer()
+    assert isinstance(d, deployer.Deployer)
