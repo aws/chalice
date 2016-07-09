@@ -155,7 +155,8 @@ def node(name, uri_path, is_route=False):
 
 class Deployer(object):
 
-    LAMBDA_CREATE_ATTEMPTS = 3
+    LAMBDA_CREATE_ATTEMPTS = 5
+    DELAY_TIME = 3
 
     def __init__(self, session=None):
         # type: (botocore.session.Session) -> None
@@ -279,7 +280,7 @@ class Deployer(object):
                     # InvalidParameterValueException, it's because
                     # the role we just created can't be used by
                     # Lambda.
-                    time.sleep(2)
+                    time.sleep(self.DELAY_TIME)
                     current += 1
                     if current >= self.LAMBDA_CREATE_ATTEMPTS:
                         raise
