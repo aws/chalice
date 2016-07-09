@@ -351,6 +351,7 @@ class Deployer(object):
             print "Initiating first time deployment..."
             return self._first_time_deploy(config)
         else:
+            # TODO: BUG BUG BUG, indexing 0!?!? seriously??
             rest_api_id = [api['id'] for api in rest_apis][0]
             print "API Gateway rest API already found."
             self._remove_all_resources(rest_api_id)

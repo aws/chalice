@@ -1,19 +1,15 @@
 WELCOME_PROMPT = r"""
 
-      ___          ___          ___          ___               ___          ___
-     /\  \        /\__\        /\  \        /\__\   ___       /\  \        /\  \
-    /::\  \      /:/  /       /::\  \      /:/  /  /\  \     /::\  \      /::\  \
-   /:/\:\  \    /:/__/       /:/\:\  \    /:/  /   \:\  \   /:/\:\  \    /:/\:\  \
-  /:/  \:\  \  /::\  \ ___  /::\~\:\  \  /:/  /    /::\__\ /:/  \:\  \  /::\~\:\  \
- /:/__/ \:\__\/:/\:\  /\__\/:/\:\ \:\__\/:/__/  __/:/\/__//:/__/ \:\__\/:/\:\ \:\__\
- \:\  \  \/__/\/__\:\/:/  /\/__\:\/:/  /\:\  \ /\/:/  /   \:\  \  \/__/\:\~\:\ \/__/
-  \:\  \           \::/  /      \::/  /  \:\  \\::/__/     \:\  \       \:\ \:\__\
-   \:\  \          /:/  /       /:/  /    \:\  \\:\__\      \:\  \       \:\ \/__/
-    \:\__\        /:/  /       /:/  /      \:\__\\/__/       \:\__\       \:\__\
-     \/__/        \/__/        \/__/        \/__/             \/__/        \/__/
+   ___  _  _    _    _     ___  ___  ___
+  / __|| || |  /_\  | |   |_ _|/ __|| __|
+ | (__ | __ | / _ \ | |__  | || (__ | _|
+  \___||_||_|/_/ \_\|____||___|\___||___|
 
 
-Chalice is a serverless microframework for python.
+The python serverless microframework for AWS allows
+you to quickly create and deploy applications using
+Amazon API Gateway and AWS Lambda.
+
 Right now it's under developer preview and we're looking
 for customer feedback.
 Be aware that there are several features missing:
