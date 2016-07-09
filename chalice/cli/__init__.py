@@ -12,6 +12,7 @@ import botocore.exceptions
 
 from chalice import deployer
 from chalice.logs import LogRetriever
+from chalice import prompts
 
 
 TEMPLATE_APP = """\
@@ -154,9 +155,11 @@ def logs(ctx, project_dir, num_entries, include_lambda_messages):
 
 
 @cli.command('new-project')
-@click.argument('project_name')
+@click.argument('project_name', required=False)
 @click.pass_context
 def new_project(ctx, project_name):
+    if project_name is None:
+        project_name = prompts.getting_started_prompt(click)
     if os.path.isdir(project_name):
         click.echo("Directory already exists: %s" % project_name)
         raise click.Abort()
