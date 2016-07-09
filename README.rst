@@ -1,18 +1,19 @@
-==========================================
-chalice - A Microframework For API Gateway
-==========================================
+========================================
+Python Serverless Microframework for AWS
+========================================
 
-Chalice is a python microframework that allows
-you to quickly create and deploy applications that
-use Amazon API Gateway and AWS Lambda.
-It allow you to:
+The python serverless microframework for AWS allows you to quickly create and
+deploy applications that use Amazon API Gateway and AWS Lambda.
+It provides:
 
-* Quickly create rest APIs in python
-* Deploy your API using API Gateway and AWS Lambda.
-  No servers necessary.
+* A command line tool for creating, deploying, and managing your app
+* A familiar and easy to use API for declaring views in python code
+* Automatic IAM policy generation
+
 
 ::
 
+    $ pip install chalice
     $ chalice new-project helloworld && cd new-project
     $ cat app.py
 
@@ -31,12 +32,14 @@ It allow you to:
     $ curl https://endpoint/dev
     {"hello": "world"}
 
+Up and running in less than 30 seconds.
 
 Quickstart
 ==========
 
-In this tutorial, you'll create and deploy a chalice application.
-First, you'll need to install chalice.  Note, using a virtualenv
+In this tutorial, you'll use the ``chalice`` command line utility
+to create and deploy a basic REST API.
+First, you'll need to installl ``chalice``.  Using a virtualenv
 is recommended::
 
     $ pip install virtualenv
@@ -56,7 +59,7 @@ You can verify you have chalice installed by running::
 Credentials
 -----------
 
-Before you can deploy a chalice application, be sure you have
+Before you can deploy an application, be sure you have
 credentials configured.  If you have previously configured your
 machine to run boto3 (the AWS SDK for Python) or the AWS CLI then
 you can skip this section.
@@ -80,7 +83,8 @@ configuring credentials, see the
 Creating Your Project
 ---------------------
 
-The next thing we'll do is create a chalice project::
+The next thing we'll do is use the ``chalice`` command to create a new
+project::
 
     $ chalice new-project helloworld
 
@@ -158,17 +162,17 @@ we just created.  Note that the command name is ``http``::
 
 Additionally, the API Gateway endpoints will be shortened to
 ``https://endpoint/dev/`` for brevity.  By sure to substitue
-``https://endpoint/dev/`` for the actual endpoint that chalice displays
-when you deploy your API (it will look something like
+``https://endpoint/dev/`` for the actual endpoint that the ``chalice``
+CLI displays when you deploy your API (it will look something like
 ``https://abcdefg.execute-api.us-west-2.amazonaws.com/dev/``.
 
 Next Steps
 ----------
 
-You've now created your first chalice app.
+You've now created your first app using ``chalice``.
 
 The next few sections will build on this quickstart section and introduce
-you to additional features of chalice including: URL parameter capturing,
+you to additional features including: URL parameter capturing,
 error handling, advanced routing, current request metadata, and automatic
 policy generation.
 
@@ -177,7 +181,8 @@ Tutorial: URL Parameters
 ========================
 
 Now we're going to make a few changes to our ``app.py`` file that
-demonstrate additional capabilities that chalice has.
+demonstrate additional capabilities provided by the python serverless
+microframework for AWS.
 
 Our application so far has a single view that allows you to make
 an HTTP GET request to ``/``.  Now let's suppose we want to capture
@@ -218,7 +223,7 @@ For example::
 
 Now that we've updated our ``app.py`` file with this new view function,
 let's redeploy our application.  You can run ``chalice deploy`` from
-the ``helloworld`` directory and chalice will deploy your application::
+the ``helloworld`` directory and it will deploy your application::
 
     $ chalice deploy
 
@@ -261,14 +266,14 @@ error messages.
 Tutorial: Error Messages
 ========================
 
-In the example above, you'll notice that when our chalice app raised
+In the example above, you'll notice that when our app raised
 an uncaught exception, a 500 internal server error was returned.
 
 In this section, we're going to show how you can debug and improve
 these error messages.
 
 The first thing we're going to look at is how we can debug this
-issue.  By default, chalice has debugging turned off, but you can
+issue.  By default, debugging is turned off, but you can
 enable debugging to get more information:
 
 .. code-block:: python
@@ -279,7 +284,7 @@ enable debugging to get more information:
     app.debug = True
 
 
-The ``app.debug = True`` enables debugging for your chalice app.
+The ``app.debug = True`` enables debugging for your app.
 Save this file and redeploy your changes::
 
     $ chalice deploy
@@ -303,10 +308,6 @@ server error, you'll now get back the original stack trace::
         ]
     }
 
-(TODO: The above uses the default error structuring code from lambda.  I'm
-considering just handling this in Chalice to get a standard ``Code`` and
-``Message``, with a standard looking traceback instead of showing a stack
-trace as a list).
 
 We can see that the error is caused from an uncaught ``KeyError`` resulting
 from trying to access the ``vancouver`` key.
@@ -341,9 +342,9 @@ Save and deploy these changes::
 
 We can see now that we can a ``Code`` and ``Message`` key, with the message
 being the value we passed to ``BadRequestError``.  Whenver you raise
-a ``BadRequestError`` from your view function, chalice will return an
+a ``BadRequestError`` from your view function, the framework will return an
 HTTP status code of 400 along with a JSON body with a ``Code`` and ``Message``.
-There's a few additional exceptions you can raise from chalice::
+There's a few additional exceptions you can raise from your python code::
 
 * ChaliceViewError - return a status code of 500
 * NotFoundError - return a status code of 404
@@ -399,8 +400,8 @@ might need about a given request:
   to detect which HTTP method was used so we can have different
   code paths for PUTs vs. POSTs.
 
-All of this and more is handled by the current request object that
-chalice makes available to each view function when it's called.
+All of this and more is handled by the current request object that the
+``chalice`` library makes available to each view function when it's called.
 
 Let's see an example of this.  Suppose we want to create a view function
 that allowed you to PUT data to an object and retrieve that data
