@@ -168,6 +168,7 @@ class Deployer(object):
         # Note: I'm using "Any" for clients until we figure out
         # a way to have concrete types for botocore clients.
         self._packager = LambdaDeploymentPackager()
+        self._query = ResourceQuery(self._client('lambda'))
 
     def _client(self, service_name):
         # type: (str) -> Any
@@ -199,11 +200,7 @@ class Deployer(object):
         # type: (Dict[str, Any]) -> None
         app_config = config['config']
         app_name = app_config['app_name']
-        client = self._client('lambda')
-        functions = client.list_functions()
-        if any([f['FunctionName'] == app_name
-                for f in functions['Functions']]):
-            # Lambda function already exists
+        if self._query.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
         else:
@@ -351,7 +348,6 @@ class Deployer(object):
             print "Initiating first time deployment..."
             return self._first_time_deploy(config)
         else:
-            # TODO: BUG BUG BUG, indexing 0!?!? seriously??
             rest_api_id = [api['id'] for api in rest_apis][0]
             print "API Gateway rest API already found."
             self._remove_all_resources(rest_api_id)
@@ -713,3 +709,29 @@ class LambdaDeploymentPackager(object):
                 assert os.path.isfile(app_py), app_py
                 outzip.write(app_py, 'app.py')
         shutil.move(tmpzip, deployment_package_filename)
+
+
+class ResourceQuery(object):
+    def __init__(self, lambda_client):
+        self._lambda_client = lambda_client
+
+    def lambda_function_exists(self, name):
+        # type: (str) -> bool
+        """Check if lambda function exists.
+
+        :type name: str
+        :param name: The name of the lambda function
+
+        :rtype: bool
+        :return: Returns true if a lambda function with the given
+            name exists.
+
+        """
+        try:
+            self._lambda_client.get_function(FunctionName=name)
+        except botocore.exceptions.ClientError as e:
+            error = e.response['Error']
+            if error['Code'] == 'ResourceNotFoundException':
+                return False
+            raise
+        return True
