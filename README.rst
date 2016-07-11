@@ -34,6 +34,11 @@ It provides:
 
 Up and running in less than 30 seconds.
 
+**This project is published as a preview project and is not yet recommended for
+production APIs.**  Give this project a try and share your feedback with us
+here on github.
+
+
 Quickstart
 ==========
 
