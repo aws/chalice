@@ -96,9 +96,12 @@ def local(ctx):
 @cli.command()
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
+@click.option('--autogen-policy/--no-autogen-policy',
+              default=True,
+              help='Automatically generate IAM policy for app code.')
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, project_dir, stage):
+def deploy(ctx, project_dir, autogen_policy, stage):
     if project_dir is None:
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
@@ -114,6 +117,7 @@ def deploy(ctx, project_dir, stage):
         config['stage'] = stage
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
+    ctx.obj['autogen_policy'] = autogen_policy
     d = deployer.Deployer(prompter=click)
     try:
         d.deploy(ctx.obj)

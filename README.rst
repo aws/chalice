@@ -587,6 +587,44 @@ Now whenver we make a ``PUT`` request to ``/objects/keyname``, the
 data send will be stored in S3.  Subsequent ``GET`` requests will
 retrieve this data from S3.
 
+Manually Providing Policies
+---------------------------
+
+Whenever your application is deployed using ``chalice``, the
+auto generated policy is written to disk at
+``<projectdir>/.chalice/policy.json``.  When you run the
+``chalice deploy`` command, you can also specify the
+``--no-autogen-policy`` option.  Doing so will result in the
+``chalice`` CLI loading the ``<projectdir>/.chalice/policy.json``
+file and using that file as the policy for the IAM role.
+You can manually edit this file and specify ``--no-autogen-policy``
+if you'd like to have full control over what IAM policy to associate
+with the IAM role.
+
+You can also run the ``chalice gen-policy`` command from your project
+directory to print the auto generated policy to stdout.  You can
+then use this as a starting point for your policy.
+
+Experimental Status
+-------------------
+
+The automatic policy generation is still in the early stages, it should
+be considered experiemental.  You can always disable policy
+generation with ``--no-autogen-policy`` for complete control.
+
+Additionally, you will be prompted for confirmation whenever the
+auto policy generator detects actions that it would like to add or remove::
+
+
+    $ chalice deploy
+    Updating IAM policy.
+
+    The following action will be added to the execution policy:
+
+    s3:ListBucket
+
+    Would you like to continue?  [Y/n]:
+
 
 Backlog
 =======

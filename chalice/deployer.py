@@ -335,11 +335,15 @@ class Deployer(object):
         self._record_policy(config, app_policy)
 
     def _get_policy_from_source_code(self, config):
-        app_py = os.path.join(config['project_dir'], 'app.py')
-        assert os.path.isfile(app_py)
-        with open(app_py) as f:
-            app_policy = policy.policy_from_source_code(f.read())
-            app_policy['Statement'].append(CLOUDWATCH_LOGS)
+        if config['autogen_policy']:
+            app_py = os.path.join(config['project_dir'], 'app.py')
+            assert os.path.isfile(app_py)
+            with open(app_py) as f:
+                app_policy = policy.policy_from_source_code(f.read())
+                app_policy['Statement'].append(CLOUDWATCH_LOGS)
+                return app_policy
+        else:
+            app_policy = self._load_last_policy(config)
             return app_policy
 
     def _create_role_from_source_code(self, config):
