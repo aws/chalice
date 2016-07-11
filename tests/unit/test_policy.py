@@ -1,4 +1,5 @@
 from chalice.policy import PolicyBuilder
+from chalice.policy import diff_policies
 
 
 def iam_policy(client_calls):
@@ -87,3 +88,37 @@ def test_not_one_to_one_mapping():
             ]
         },
     ])
+
+
+def test_can_diff_policy_removed():
+    first = iam_policy({'s3': {'list_buckets', 'list_objects'}})
+    second = iam_policy({'s3': {'list_buckets'}})
+    assert diff_policies(first, second) == {'removed': {'s3:ListBucket'}}
+
+
+def test_can_diff_policy_added():
+    first = iam_policy({'s3': {'list_buckets'}})
+    second = iam_policy({'s3': {'list_buckets', 'list_objects'}})
+    assert diff_policies(first, second) == {'added': {'s3:ListBucket'}}
+
+
+def test_can_diff_multiple_services():
+    first = iam_policy({
+        's3': {'list_buckets'},
+        'dynamodb': {'create_table'},
+        'cloudformation': {'create_stack', 'delete_stack'},
+    })
+    second = iam_policy({
+        's3': {'list_buckets', 'list_objects'},
+        'cloudformation': {'create_stack', 'update_stack'},
+    })
+    assert diff_policies(first, second) == {
+        'added': {'s3:ListBucket', 'cloudformation:UpdateStack'},
+        'removed': {'cloudformation:DeleteStack', 'dynamodb:CreateTable'},
+    }
+
+
+def test_no_changes():
+    first = iam_policy({'s3': {'list_buckets', 'list_objects'}})
+    second = iam_policy({'s3': {'list_buckets', 'list_objects'}})
+    assert diff_policies(first, second) == {}

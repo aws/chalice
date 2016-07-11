@@ -33,6 +33,28 @@ def load_policy_actions():
         return json.loads(f.read())
 
 
+def diff_policies(old, new):
+    diff = {}
+    old = _create_simple_format(old)
+    new = _create_simple_format(new)
+    removed = old - new
+    added = new - old
+    if removed:
+        diff['removed'] = removed
+    if added:
+        diff['added'] = added
+    return diff
+
+
+def _create_simple_format(policy):
+    # This won't be sufficient is the analyzer is ever able
+    # to work out which resources you're accessing.
+    actions = set()
+    for statement in policy['Statement']:
+        actions.update(statement['Action'])
+    return actions
+
+
 class PolicyBuilder(object):
     VERSION = '2012-10-17'
 
