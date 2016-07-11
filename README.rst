@@ -161,7 +161,7 @@ we just created.  Note that the command name is ``http``::
 
 
 Additionally, the API Gateway endpoints will be shortened to
-``https://endpoint/dev/`` for brevity.  By sure to substitue
+``https://endpoint/dev/`` for brevity.  Be sure to substitute
 ``https://endpoint/dev/`` for the actual endpoint that the ``chalice``
 CLI displays when you deploy your API (it will look something like
 ``https://abcdefg.execute-api.us-west-2.amazonaws.com/dev/``.
@@ -410,6 +410,8 @@ following view function:
 
 .. code-block:: python
 
+    from chalice import NotFoundError
+
     OBJECTS = {
     }
 
@@ -466,6 +468,7 @@ The ``app.current_request`` object also has the following properties.
 * ``current_request.uri_params`` - A dict of the captured URI params.
 * ``current_request.method`` -  The HTTP method (as a string).
 * ``current_request.json_body`` - The parsed JSON body (``json.loads(raw_body)``)
+* ``current_request.raw_body`` - The raw HTTP body as bytes.
 * ``current_request.context`` - A dict of additional context information
 * ``current_request.stage_vars`` - Configuration for the API Gateway stage
 
@@ -473,8 +476,9 @@ Don't worry about the ``context`` and ``stage_vars`` for now.  We haven't
 discussed those concepts yet.  The ``current_request`` object also
 has a ``to_dict`` method, which returns all the information about the
 current request as a dictionary.  Let's use this method to write a view
-function that returns everything it knows about the request::
+function that returns everything it knows about the request:
 
+.. code-block:: python
 
     @app.route('/introspect')
     def introspect():
@@ -562,6 +566,8 @@ your ``app.py`` file.  Next, let's update our view code to use boto3:
     import json
     import boto3
     from botocore.exceptions import ClientError
+
+    from chalice import NotFoundError
 
 
     S3 = boto3.client('s3', region_name='us-west-2')
