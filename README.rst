@@ -14,7 +14,7 @@ It provides:
 ::
 
     $ pip install chalice
-    $ chalice new-project helloworld && cd new-project
+    $ chalice new-project helloworld && cd helloworld
     $ cat app.py
 
     from chalice import Chalice
