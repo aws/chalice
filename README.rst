@@ -611,6 +611,25 @@ You can also run the ``chalice gen-policy`` command from your project
 directory to print the auto generated policy to stdout.  You can
 then use this as a starting point for your policy.
 
+::
+
+    $ chalice gen-policy
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": [
+            "s3:ListAllMyBuckets"
+          ],
+          "Resource": [
+            "*"
+          ],
+          "Effect": "Allow",
+          "Sid": "9155de6ad1d74e4c8b1448255770e60c"
+        }
+      ]
+    }
+
 Experimental Status
 -------------------
 
