@@ -669,3 +669,33 @@ These are features that are in the backlog:
 Please share any feedback on the above issues.  We'd also love
 to hear from you.  Please create any github issues for additional
 features you'd like to see: https://github.com/awslabs/chalice/issues
+
+FAQ
+===
+
+
+**Q: How does the Python Serverless Microframework for AWS compare to other
+similar frameworks?**
+
+The biggest difference between this framework and others is that the Python
+Serverless Microframework for AWS is singularly focused on using a familiar,
+decorator-based API to write python applications that run on Amazon API Gateway
+and AWS Lambda.  You can think of it as `Flask <http://flask.pocoo.org/>`__
+/`Bottle <http://bottlepy.org/docs/dev/index.html>`__ for serverless APIs.  Its
+goal is to make writing and deploying these types of applications as simple as
+possible specifically for Python developers.
+
+To achieve this goal, it has to make certain tradeoffs.  Python will always
+remain the only supported language in this framework.  Not every feature of API
+Gateway and Lambda is exposed in the framework.  It makes assumptions about how
+applications will be deployed, and it has restrictions on how an application
+can be structured.  It does not address the creation and lifecycle of other AWS
+resources your application may need (Amazon S3 buckets, Amazon DynamoDB tables,
+etc.).  The feature set is purposefully small.
+
+Other full-stack frameworks offer a lot more features and configurability than
+what this framework has and likely will ever have.  Those frameworks are
+excellent choices for applications that need more than what is offered by this
+microframework.  If all you need is to create a simple rest API in Python that
+runs on Amazon API Gateway and AWS Lambda, consider giving the Python
+Serverless Microframework for AWS a try.
