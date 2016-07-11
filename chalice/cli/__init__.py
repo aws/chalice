@@ -152,6 +152,24 @@ def logs(ctx, project_dir, num_entries, include_lambda_messages):
     show_lambda_logs(ctx.obj, num_entries, include_lambda_messages)
 
 
+@cli.command('gen-policy')
+@click.option('--filename',
+              help='The filename to analyze.  Otherwise app.py is assumed.')
+@click.pass_context
+def gen_policy(ctx, filename):
+    from chalice import policy
+    if filename is None:
+        project_dir = os.getcwd()
+        filename = os.path.join(project_dir, 'app.py')
+    if not os.path.isfile(filename):
+        click.echo("App file does not exist: %s" % app_file)
+        raise click.Abort()
+    with open(filename) as f:
+        contents = f.read()
+        generated = policy.policy_from_source_code(contents)
+        click.echo(json.dumps(generated, indent=2))
+
+
 @cli.command('new-project')
 @click.argument('project_name', required=False)
 @click.pass_context
