@@ -587,14 +587,17 @@ Now whenver we make a ``PUT`` request to ``/objects/keyname``, the
 data send will be stored in S3.  Subsequent ``GET`` requests will
 retrieve this data from S3.
 
-API Gateway Stages
-==================
 
-So far, we've been creating a single Lambda function that's deployed
-to a single API gateway stage.  This is sufficient when you're just
-getting started and prototyping new ideas, but you'll eventually
-want to leverage API Gateway stages.
+Backlog
+=======
 
-To deploy to a different stage::
+These are features that are in the backlog:
 
-    $ chalice deploy prod
+* Adding full support for API gateway stages - `issue 20
+  <https://github.com/awslabs/chalice/issues/20>`__
+* Adding support for more than ``app.py`` - `issue 21
+  <https://github.com/awslabs/chalice/issues/21>`__
+
+Please share any feedback on the above issues.  We'd also love
+to hear from you.  Please create any github issues for additional
+features you'd like to see: https://github.com/awslabs/chalice/issues
