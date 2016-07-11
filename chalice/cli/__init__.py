@@ -33,7 +33,7 @@ def index():
 # @app.route('/hello/{name}')
 # def hello_name(name):
 #    # '/hello/james' -> {"hello": "james"}
-#    {'hello': name}
+#    return {'hello': name}
 #
 # @app.route('/users/', methods=['POST'])
 # def create_user():
