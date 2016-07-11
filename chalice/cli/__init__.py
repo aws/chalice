@@ -162,7 +162,7 @@ def gen_policy(ctx, filename):
         project_dir = os.getcwd()
         filename = os.path.join(project_dir, 'app.py')
     if not os.path.isfile(filename):
-        click.echo("App file does not exist: %s" % app_file)
+        click.echo("App file does not exist: %s" % filename)
         raise click.Abort()
     with open(filename) as f:
         contents = f.read()

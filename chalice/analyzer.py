@@ -386,8 +386,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         child_infer = self.__class__()
         child_infer.bind_types(ParsedCode(ast_node, sub_table))
         inferred_func_type = getattr(ast_node, 'inferred_type', None)
-        self._symbol_table.set_inferred_type(function_name,
-                                                inferred_func_type)
+        self._symbol_table.set_inferred_type(function_name, inferred_func_type)
         # And finally the result of this Call() node will be
         # the return type from the function we just analyzed.
         if isinstance(inferred_func_type, FunctionType):
