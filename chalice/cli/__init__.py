@@ -114,7 +114,7 @@ def deploy(ctx, project_dir, stage):
         config['stage'] = stage
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
-    d = deployer.Deployer()
+    d = deployer.Deployer(prompter=click)
     try:
         d.deploy(ctx.obj)
     except botocore.exceptions.NoRegionError:

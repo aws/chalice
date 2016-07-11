@@ -153,16 +153,24 @@ def node(name, uri_path, is_route=False):
     }
 
 
+class NoPrompt(object):
+    def confirm(self, text, default=False, abort=False):
+        return default
+
+
 class Deployer(object):
 
     LAMBDA_CREATE_ATTEMPTS = 5
     DELAY_TIME = 3
 
-    def __init__(self, session=None):
+    def __init__(self, session=None, prompter=None):
         # type: (botocore.session.Session) -> None
         if session is None:
             session = botocore.session.get_session()
+        if prompter is None:
+            prompter = NoPrompt()
         self._session = session
+        self._prompter = prompter
         self._client_cache = {}
         # type: Dict[str, Any]
         # Note: I'm using "Any" for clients until we figure out
@@ -301,27 +309,48 @@ class Deployer(object):
 
     def _update_role_with_latest_policy(self, app_name, config):
         # type: (str, Dict[str, Any]) -> None
-        app_py = os.path.join(config['project_dir'], 'app.py')
-        assert os.path.isfile(app_py)
-        with open(app_py) as f:
-            app_policy = policy.policy_from_source_code(f.read())
-            app_policy['Statement'].append(CLOUDWATCH_LOGS)
         print "Updating IAM policy."
+        app_policy = self._get_policy_from_source_code(config)
+        previous = self._load_last_policy(config)
+        diff = policy.diff_policies(previous, app_policy)
+        if diff:
+            if diff.get('added', []):
+                print ("\nThe following actions will be added to "
+                       "the execution policy:\n")
+                for action in diff['added']:
+                    print action
+            if diff.get('removed', []):
+                print ("\nThe following action will be removed from "
+                       "the execution policy:\n")
+                for action in diff['removed']:
+                    print action
+            self._prompter.confirm("\nWould you like to continue? ",
+                                   default=True, abort=True)
         iam = self._client('iam')
         iam.delete_role_policy(RoleName=app_name,
                                PolicyName=app_name)
         iam.put_role_policy(RoleName=app_name,
                             PolicyName=app_name,
                             PolicyDocument=json.dumps(app_policy, indent=2))
+        self._record_policy(config, app_policy)
 
-    def _create_role_from_source_code(self, config):
-        # type: (Dict[str, Any]) -> str
-        app_name = config['config']['app_name']
+    def _get_policy_from_source_code(self, config):
         app_py = os.path.join(config['project_dir'], 'app.py')
         assert os.path.isfile(app_py)
         with open(app_py) as f:
             app_policy = policy.policy_from_source_code(f.read())
             app_policy['Statement'].append(CLOUDWATCH_LOGS)
+            return app_policy
+
+    def _create_role_from_source_code(self, config):
+        # type: (Dict[str, Any]) -> str
+        app_name = config['config']['app_name']
+        app_policy = self._get_policy_from_source_code(config)
+        if len(app_policy['Statement']) > 1:
+            print "The following execution policy will be used:"
+            print json.dumps(app_policy, indent=2)
+            self._prompter.confirm("Would you like to continue? ",
+                                   default=True, abort=True)
         iam = self._client('iam')
         role_arn = iam.create_role(
             RoleName=app_name,
@@ -330,7 +359,22 @@ class Deployer(object):
         iam.put_role_policy(RoleName=app_name,
                             PolicyName=app_name,
                             PolicyDocument=json.dumps(app_policy, indent=2))
+        self._record_policy(config, app_policy)
         return role_arn
+
+    def _load_last_policy(self, config):
+        policy_file = os.path.join(config['project_dir'],
+                                   '.chalice', 'policy.json')
+        if not os.path.isfile(policy_file):
+            return {}
+        with open(policy_file, 'r') as f:
+            return json.loads(f.read())
+
+    def _record_policy(self, config, policy):
+        policy_file = os.path.join(config['project_dir'],
+                                   '.chalice', 'policy.json')
+        with open(policy_file, 'w') as f:
+            f.write(json.dumps(policy, indent=2))
 
     def _find_role_arn(self, role_name):
         # type: (str) -> str
