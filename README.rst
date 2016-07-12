@@ -446,7 +446,7 @@ body, and retrieve the value of that body by making a subsequent
         "Message": "NotFoundError: mykey"
     }
 
-    # Next, we'll create that key be sending a PUT request.
+    # Next, we'll create that key by sending a PUT request.
     $ echo '{"foo": "bar"}' | http PUT https://endpoint/dev/objects/mykey
     HTTP/1.1 200 OK
 
