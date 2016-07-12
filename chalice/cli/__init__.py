@@ -118,7 +118,10 @@ def deploy(ctx, project_dir, autogen_policy, stage):
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
     ctx.obj['autogen_policy'] = autogen_policy
-    d = deployer.Deployer(prompter=click)
+    try:
+        d = deployer.Deployer(prompter=click, profile=config['profile'])
+    except KeyError:
+        d = deployer.Deployer(prompter=click)
     try:
         d.deploy(ctx.obj)
     except botocore.exceptions.NoRegionError:
@@ -176,8 +179,9 @@ def gen_policy(ctx, filename):
 
 @cli.command('new-project')
 @click.argument('project_name', required=False)
+@click.option('--profile', required=False)
 @click.pass_context
-def new_project(ctx, project_name):
+def new_project(ctx, project_name, profile):
     if project_name is None:
         project_name = prompts.getting_started_prompt(click)
     if os.path.isdir(project_name):
@@ -186,9 +190,14 @@ def new_project(ctx, project_name):
     chalice_dir = os.path.join(project_name, '.chalice')
     os.makedirs(chalice_dir)
     config = os.path.join(project_name, '.chalice', 'config.json')
+    cfg = {
+        'app_name': project_name,
+        'stage': 'dev'
+    }
+    if profile:
+        cfg['profile'] = profile
     with open(config, 'w') as f:
-        f.write(json.dumps({'app_name': project_name,
-                            'stage': 'dev'}, indent=2))
+        f.write(json.dumps(cfg, indent=2))
     with open(os.path.join(project_name, 'requirements.txt'), 'w') as f:
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
