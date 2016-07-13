@@ -615,7 +615,12 @@ class LambdaDeploymentPackager(object):
     def _verify_has_virtualenv(self):
         try:
             subprocess.check_output(['virtualenv', '--version'])
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, OSError):
+            # Should we just require virtualenv as a dependency?  I think
+            # the assumption is if you're running this in a virtualenv
+            # (which is what we recommend), then you already had virtualenv
+            # installed.  Is there any downsides to requiring virtualenv
+            # as a dependency so we can avoid this check?
             raise RuntimeError("You have to have virtualenv installed.  "
                                "You can install virtualenv using: "
                                "'pip install virtualenv'")
