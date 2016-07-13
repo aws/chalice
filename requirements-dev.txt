@@ -5,5 +5,5 @@ wheel==0.26.0
 doc8==0.7.0
 pylint==1.5.5
 pytest-cov==2.3.0
-pep257==0.7.0
+pydocstyle==1.0.0
 -rrequirements-test.txt
