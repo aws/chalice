@@ -154,6 +154,7 @@ def node(name, uri_path, is_route=False):
 
 
 class NoPrompt(object):
+
     def confirm(self, text, default=False, abort=False):
         return default
 
@@ -163,10 +164,13 @@ class Deployer(object):
     LAMBDA_CREATE_ATTEMPTS = 5
     DELAY_TIME = 3
 
-    def __init__(self, session=None, prompter=None):
+    def __init__(self, session=None, prompter=None, profile=None):
         # type: (botocore.session.Session) -> None
         if session is None:
-            session = botocore.session.get_session()
+            if profile:
+                session = botocore.session.Session(profile=profile)
+            else:
+                session = botocore.session.get_session()
         if prompter is None:
             prompter = NoPrompt()
         self._session = session
@@ -480,6 +484,7 @@ class Deployer(object):
 
 class APIGatewayResourceCreator(object):
     """Create hierarchical resources in API gateway from chalice routes."""
+
     def __init__(self, client, lambda_client, rest_api_id, lambda_arn,
                  random_id_generator=lambda: str(uuid.uuid4())):
         # type: (Any, Any, str, str, Callable[[], str]) -> None
@@ -609,6 +614,7 @@ class APIGatewayResourceCreator(object):
 
 
 class LambdaDeploymentPackager(object):
+
     def __init__(self):
         pass
 
@@ -765,6 +771,7 @@ class LambdaDeploymentPackager(object):
 
 
 class ResourceQuery(object):
+
     def __init__(self, lambda_client, apigateway_client):
         self._lambda_client = lambda_client
         self._apigateway_client = apigateway_client
