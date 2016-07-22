@@ -3,7 +3,7 @@ python:
   - "2.7"
 sudo: false
 install:
-  - travis_retry pip install -r requirements-dev.txt
+  - travis_retry pip install -r requirements-test.txt
 script:
   - make test
   - make check
