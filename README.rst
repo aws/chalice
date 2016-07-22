@@ -639,7 +639,7 @@ Experimental Status
 -------------------
 
 The automatic policy generation is still in the early stages, it should
-be considered experiemental.  You can always disable policy
+be considered experimental.  You can always disable policy
 generation with ``--no-autogen-policy`` for complete control.
 
 Additionally, you will be prompted for confirmation whenever the
