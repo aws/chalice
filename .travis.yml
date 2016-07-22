@@ -4,6 +4,7 @@ python:
 sudo: false
 install:
   - travis_retry pip install -r requirements-test.txt
+  - pip install -e .
 script:
   - make test
   - make check
