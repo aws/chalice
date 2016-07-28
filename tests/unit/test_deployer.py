@@ -5,7 +5,7 @@ from chalice.deployer import build_url_trie
 from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
 from chalice.deployer import ResourceQuery
-from chalice.app import RouteEntry
+from chalice.app import RouteEntry, ALL_ERRORS
 
 from botocore.stub import Stubber
 import botocore.session
@@ -93,6 +93,34 @@ def test_multiple_routes_on_single_spine():
     )
 
 
+def add_expected_calls_to_map_error(error_cls, gateway_stub):
+    gateway_stub.add_response(
+        'put_integration_response',
+        service_response={},
+        expected_params={
+            'httpMethod': 'POST',
+            'resourceId': 'parent-id',
+            'responseTemplates': {'application/json': ERROR_MAPPING},
+            'restApiId': 'rest-api-id',
+            'selectionPattern': '%s.*' % error_cls.__name__,
+            'statusCode': str(error_cls.STATUS_CODE),
+        }
+    )
+    gateway_stub.add_response(
+        'put_method_response',
+        service_response={},
+        expected_params={
+            'httpMethod': 'POST',
+            'resourceId': 'parent-id',
+            'responseModels': {
+                'application/json': 'Empty',
+            },
+            'restApiId': 'rest-api-id',
+            'statusCode': str(error_cls.STATUS_CODE),
+        }
+    )
+
+
 def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_lambda):
     route_trie = {
         'name': '',
@@ -164,81 +192,8 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
             'statusCode': '200',
         }
     )
-    gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseTemplates': {'application/json': ERROR_MAPPING},
-            'restApiId': 'rest-api-id',
-            'selectionPattern': 'ChaliceViewError.*',
-            'statusCode': '500'
-        }
-    )
-    gateway_stub.add_response(
-        'put_method_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseModels': {
-                'application/json': 'Empty',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': '500',
-        }
-    )
-    gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseTemplates': {'application/json': ERROR_MAPPING},
-            'restApiId': 'rest-api-id',
-            'selectionPattern': 'BadRequestError.*',
-            'statusCode': '400'
-        }
-    )
-    gateway_stub.add_response(
-        'put_method_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseModels': {
-                'application/json': 'Empty',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': '400',
-        }
-    )
-    gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-			'httpMethod': 'POST',
-			'resourceId': 'parent-id',
-			'responseTemplates': {'application/json': ERROR_MAPPING},
-			'restApiId': 'rest-api-id',
-			'selectionPattern': 'NotFoundError.*',
-			'statusCode': '404',
-        }
-    )
-    gateway_stub.add_response(
-        'put_method_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseModels': {
-                'application/json': 'Empty',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': '404',
-        }
-    )
+    for error_cls in ALL_ERRORS:
+        add_expected_calls_to_map_error(error_cls, gateway_stub)
     lambda_stub.add_response(
         'add_permission',
         service_response={},
