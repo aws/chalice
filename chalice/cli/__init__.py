@@ -131,6 +131,10 @@ def deploy(ctx, project_dir, autogen_policy, stage):
                                  "region value in our ~/.aws/config file.")
         e.exit_code = 2
         raise e
+    except Exception as e:
+        e = click.ClickException("Error when deploying: %s" % e)
+        e.exit_code = 1
+        raise e
 
 
 @cli.command()

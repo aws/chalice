@@ -4,8 +4,9 @@ from pytest import fixture
 from chalice.deployer import build_url_trie
 from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
-from chalice.deployer import ResourceQuery
+from chalice.deployer import ResourceQuery, validate_configuration
 from chalice.app import RouteEntry, ALL_ERRORS
+from chalice.app import Chalice
 
 from botocore.stub import Stubber
 import botocore.session
@@ -91,6 +92,16 @@ def test_multiple_routes_on_single_spine():
                      children={'bar':  n('bar', '/foo/bar', is_route=True)})
         }
     )
+
+
+def test_trailing_slash_routes_result_in_error():
+    app = Chalice('appname')
+    app.routes = {'/trailing-slash/': None}
+    config = {
+        'chalice_app':  app,
+    }
+    with pytest.raises(ValueError):
+        validate_configuration(config)
 
 
 def add_expected_calls_to_map_error(error_cls, gateway_stub):
