@@ -115,6 +115,7 @@ def build_url_trie(routes):
     :return: A prefix trie of URL patterns.
 
     """
+    _validate_routes(routes)
     root = node('', '/')
     for route in routes:
         if route == '/':
@@ -138,6 +139,33 @@ def build_url_trie(routes):
         current['is_route'] = True
         current['route_entry'] = routes[route]
     return root['children'].values()[0]
+
+
+def validate_configuration(config):
+    # type: (Dict[str, Any]) -> None
+    """Validate app configuration.
+
+    The purpose of this method is to provide a fail fast mechanism
+    for anything we know is going to fail deployment.
+    We can detect common error cases and provide the user with helpful
+    error messages.
+
+    """
+    routes = config['chalice_app'].routes
+    _validate_routes(routes)
+
+
+def _validate_routes(routes):
+    # type: (Dict[str, Any]) -> None
+    # We're trying to validate any kind of route that will fail
+    # when we send the request to API gateway.
+    # We check for:
+    #
+    # * any routes that end with a trailing slash.
+    for route in routes:
+        if route != '/' and route.endswith('/'):
+            raise ValueError("Route cannot end with a trailing slash: %s"
+                             % route)
 
 
 def node(name, uri_path, is_route=False):
@@ -204,6 +232,7 @@ class Deployer(object):
                 project config file.
 
         """
+        validate_configuration(config)
         self._deploy_lambda(config)
         rest_api_id, region_name, stage = self._deploy_api_gateway(config)
         print (
@@ -302,8 +331,11 @@ class Deployer(object):
 
     def _get_or_create_lambda_role_arn(self, config):
         # type: (Dict[str, Any]) -> str
-        if config['config']['role_arn']:
-            return config['config']['role_arn']
+        if 'manage_iam_role' in config['config']:
+            if not config['config']['manage_iam_role']:
+                if 'iam_role_arn' not in config['config']:
+                    raise Exception('manage_iam_role is set to false in config, but, no iam_arn_role sepcified.')
+                return config['config']['iam_role_arn']
         app_name = config['config']['app_name']
         try:
             role_arn = self._find_role_arn(app_name)
