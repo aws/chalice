@@ -4,6 +4,11 @@ from pytest import fixture
 from chalice import deployer
 
 
+@fixture(autouse=True)
+def set_region(monkeypatch):
+    monkeypatch.setenv('AWS_DEFAULT_REGION', 'us-west-2')
+
+
 @fixture
 def chalice_deployer():
     d = deployer.LambdaDeploymentPackager()

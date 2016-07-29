@@ -210,8 +210,8 @@ parts of the URI:
         return {'hello': 'world'}
 
     @app.route('/cities/{city}')
-    def state_of_city(name):
-        return {'state': CITIES_TO_STATE[name]}
+    def state_of_city(city):
+        return {'state': CITIES_TO_STATE[city]}
 
 
 In the example above we've now added a ``state_of_city`` view that allows
@@ -326,12 +326,12 @@ to the user.  Here's the updated code:
     from chalice import BadRequestError
 
     @app.route('/cities/{city}')
-    def state_of_city(name):
+    def state_of_city(city):
         try:
-            return {'state': CITIES_TO_STATE[name]}
+            return {'state': CITIES_TO_STATE[city]}
         except KeyError:
             raise BadRequestError("Unknown city '%s', valid choices are: %s" % (
-                name, ', '.join(CITIES_TO_STATE.keys())))
+                city, ', '.join(CITIES_TO_STATE.keys())))
 
 
 Save and deploy these changes::
@@ -601,6 +601,11 @@ retrieve this data from S3.
 Manually Providing Policies
 ---------------------------
 
+IAM permissions can be auto generated, provided manually or can be pre-created and configured in chalice configuration. To use a pre-configured IAM role ARN for chalice, add this key to your chalice configuration:
+::
+    "role_arn":"arn:aws:iam::<account-id>:role/<role-name>"
+::
+
 Whenever your application is deployed using ``chalice``, the
 auto generated policy is written to disk at
 ``<projectdir>/.chalice/policy.json``.  When you run the
@@ -639,7 +644,7 @@ Experimental Status
 -------------------
 
 The automatic policy generation is still in the early stages, it should
-be considered experiemental.  You can always disable policy
+be considered experimental.  You can always disable policy
 generation with ``--no-autogen-policy`` for complete control.
 
 Additionally, you will be prompted for confirmation whenever the
