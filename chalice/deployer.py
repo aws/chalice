@@ -21,7 +21,6 @@ import chalice
 from chalice import app
 from chalice import policy
 
-
 LAMBDA_TRUST_POLICY = {
     "Version": "2012-10-17",
     "Statement": [{
@@ -34,7 +33,6 @@ LAMBDA_TRUST_POLICY = {
     ]
 }
 
-
 CLOUDWATCH_LOGS = {
     "Effect": "Allow",
     "Action": [
@@ -44,7 +42,6 @@ CLOUDWATCH_LOGS = {
     ],
     "Resource": "arn:aws:logs:*:*:*"
 }
-
 
 FULL_PASSTHROUGH = """
 #set($allParams = $input.params())
@@ -92,7 +89,6 @@ FULL_PASSTHROUGH = """
   }
 }
 """
-
 
 ERROR_MAPPING = (
     "#set($inputRoot = $input.path('$'))"
@@ -182,13 +178,11 @@ def node(name, uri_path, is_route=False):
 
 
 class NoPrompt(object):
-
     def confirm(self, text, default=False, abort=False):
         return default
 
 
 class Deployer(object):
-
     LAMBDA_CREATE_ATTEMPTS = 5
     DELAY_TIME = 3
 
@@ -237,7 +231,7 @@ class Deployer(object):
         rest_api_id, region_name, stage = self._deploy_api_gateway(config)
         print (
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
-            .format(api_id=rest_api_id, region=region_name, stage=stage)
+                .format(api_id=rest_api_id, region=region_name, stage=stage)
         )
 
     def _deploy_lambda(self, config):
@@ -334,7 +328,10 @@ class Deployer(object):
         if 'manage_iam_role' in config['config']:
             if not config['config']['manage_iam_role']:
                 if 'iam_role_arn' not in config['config']:
-                    raise Exception('manage_iam_role is set to false in config, but, no iam_arn_role sepcified.')
+                    raise Exception(
+                        'manage_iam_role is set to false in config, ' +
+                        'but, no iam_arn_role specified.'
+                    )
                 return config['config']['iam_role_arn']
         app_name = config['config']['app_name']
         try:
@@ -648,7 +645,6 @@ class APIGatewayResourceCreator(object):
 
 
 class LambdaDeploymentPackager(object):
-
     def __init__(self):
         pass
 
@@ -805,7 +801,6 @@ class LambdaDeploymentPackager(object):
 
 
 class ResourceQuery(object):
-
     def __init__(self, lambda_client, apigateway_client):
         self._lambda_client = lambda_client
         self._apigateway_client = apigateway_client
