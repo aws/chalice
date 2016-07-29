@@ -336,7 +336,7 @@ class Deployer(object):
                 if 'iam_role_arn' not in config['config']:
                     raise Exception(
                         'manage_iam_role is set to false in config, ' +
-                        'but, no iam_arn_role specified.'
+                        'but, no iam_role_arn specified.'
                     )
                 return config['config']['iam_role_arn']
         app_name = config['config']['app_name']
