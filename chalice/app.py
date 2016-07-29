@@ -27,17 +27,39 @@ class BadRequestError(ChaliceViewError):
     STATUS_CODE = 400
 
 
+class UnauthorizedError(ChaliceViewError):
+    STATUS_CODE = 401
+
+
+class ForbiddenError(ChaliceViewError):
+    STATUS_CODE = 403
+
+
 class NotFoundError(ChaliceViewError):
     STATUS_CODE = 404
 
 
+class ConflictError(ChaliceViewError):
+    STATUS_CODE = 409
+
+
+class TooManyRequestsError(ChaliceViewError):
+    STATUS_CODE = 429
+
+
 ALL_ERRORS = [
-    ChaliceViewError, BadRequestError, NotFoundError
-]
+    ChaliceViewError,
+    BadRequestError,
+    NotFoundError,
+    UnauthorizedError,
+    ForbiddenError,
+    ConflictError,
+    TooManyRequestsError]
 
 
 class Request(object):
     """The current request from API gateway."""
+
     def __init__(self, query_params, headers, uri_params, method, body,
                  base64_body, context, stage_vars):
         self.query_params = query_params
@@ -66,6 +88,7 @@ class Request(object):
 
 
 class RouteEntry(object):
+
     def __init__(self, view_function, view_name, path, methods):
         self.view_function = view_function
         self.view_name = view_name
@@ -93,6 +116,7 @@ class RouteEntry(object):
 
 
 class Chalice(object):
+
     def __init__(self, app_name):
         self.app_name = app_name
         self.routes = {}

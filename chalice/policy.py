@@ -89,7 +89,8 @@ class PolicyBuilder(object):
             # Next thing we need to do is convert the method_name to
             # MethodName.  To this reliable we're going to use
             # botocore clients.
-            client = self._session.create_client(service)
+            client = self._session.create_client(service,
+                                                 region_name='us-east-1')
             mapping = client.meta.method_to_api_mapping
             actions = [service_actions[mapping[method_name]] for
                        method_name in method_calls
