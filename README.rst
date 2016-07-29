@@ -601,9 +601,10 @@ retrieve this data from S3.
 Manually Providing Policies
 ---------------------------
 
-IAM permissions can be auto generated, provided manually or can be pre-created and configured in chalice configuration. To use a pre-configured IAM role ARN for chalice, add this key to your chalice configuration:
+IAM permissions can be auto generated, provided manually or can be pre-created and configured in chalice configuration. To use a pre-configured IAM role ARN for chalice, add these two keys to your chalice configuration. Setting manage_iam_role to false tells Chalice to not attempt to generate policies and create IAM role.
 ::
-    "role_arn":"arn:aws:iam::<account-id>:role/<role-name>"
+    "manage_iam_role":false
+    "iam_role_arn":"arn:aws:iam::<account-id>:role/<role-name>"
 ::
 
 Whenever your application is deployed using ``chalice``, the
