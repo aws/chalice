@@ -3,13 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Chalice's documentation!
-===================================
+Python Serverless Microframework for AWS
+========================================
 
 Contents:
 
+Getting Started
+---------------
+
 .. toctree::
    :maxdepth: 2
+
+   quickstart
 
 
 

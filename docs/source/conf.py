@@ -17,6 +17,9 @@ import os
 
 import guzzle_sphinx_theme
 
+_ROOT_SOURCE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _ROOT_SOURCE)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -33,6 +36,7 @@ import guzzle_sphinx_theme
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'chalicedocs',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

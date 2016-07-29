@@ -42,6 +42,8 @@ here on github.
 Quickstart
 ==========
 
+.. quick-start-begin
+
 In this tutorial, you'll use the ``chalice`` command line utility
 to create and deploy a basic REST API.
 First, you'll need to installl ``chalice``.  Using a virtualenv
@@ -655,6 +657,7 @@ auto policy generator detects actions that it would like to add or remove::
 
     Would you like to continue?  [Y/n]:
 
+.. quick-start-end
 
 Backlog
 =======
