@@ -1,2 +1,2 @@
 Sphinx==1.4.1
-sphinx-rtd-theme==0.1.9
+guzzle_sphinx_theme>=0.7.10,<0.8

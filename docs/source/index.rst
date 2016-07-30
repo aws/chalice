@@ -1,15 +1,70 @@
-.. Chalice documentation master file, created by
-   sphinx-quickstart on Tue May 17 14:09:17 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+========================================
+Python Serverless Microframework for AWS
+========================================
 
-Welcome to Chalice's documentation!
-===================================
+The python serverless microframework for AWS allows you to quickly create and
+deploy applications that use Amazon API Gateway and AWS Lambda.
+It provides:
 
-Contents:
+* A command line tool for creating, deploying, and managing your app
+* A familiar and easy to use API for declaring views in python code
+* Automatic IAM policy generation
+
+
+::
+
+    $ pip install chalice
+    $ chalice new-project helloworld && cd helloworld
+    $ cat app.py
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    @app.route("/")
+    def index():
+        return {"hello": "world"}
+
+    $ chalice deploy
+    ...
+    Your application is available at: https://endpoint/dev
+
+    $ curl https://endpoint/dev
+    {"hello": "world"}
+
+Up and running in less than 30 seconds.
+
+**This project is published as a preview project and is not yet recommended for
+production APIs.**  Give this project a try and share your feedback with us
+on `github <https://github.com/awslabs/chalice>`__.
+
+
+Getting Started
+---------------
 
 .. toctree::
    :maxdepth: 2
+
+   quickstart
+
+
+Topics
+------
+
+.. toctree::
+   :maxdepth: 2
+
+   topics/routing
+
+
+API Reference
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   api
+
 
 
 
@@ -17,6 +72,4 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
-

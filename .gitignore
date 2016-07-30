@@ -1,3 +1,4 @@
 sample/
 .cache
 venv
+docs/build/
