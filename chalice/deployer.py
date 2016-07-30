@@ -690,6 +690,7 @@ class LambdaDeploymentPackager(object):
             os.makedirs(os.path.dirname(deployment_package_filename))
         with zipfile.ZipFile(deployment_package_filename, 'w',
                              compression=zipfile.ZIP_DEFLATED) as z:
+            self._add_internal_requirement_files( z, project_dir )
             self._add_py_deps(z, deps_dir)
             self._add_app_files(z, project_dir)
         return deployment_package_filename
@@ -760,6 +761,42 @@ class LambdaDeploymentPackager(object):
                 contents = f.read()
         return hashlib.md5(contents).hexdigest()
 
+    def _is_dir_in_zip(self, z, name):
+        return any(x.startswith("%s/" % name.rstrip("/")) for x in z.namelist())
+
+    def _is_file_in_zip(self, z, fileName):
+        if fileName in z.namelist():
+            return True
+        return False
+
+    def _add_files_to_zip( self, outputZip, project_dir, file_or_directory ):
+        module_path = os.path.join(project_dir, file_or_directory)
+        if not os.path.isfile( module_path ):
+            if not self._is_dir_in_zip( outputZip, file_or_directory):
+                if os.path.isdir( module_path ):
+                    for dirpath,dirs,files in os.walk( module_path ):
+                        for f in files:
+                            fn = os.path.join(dirpath, f)
+                            in_zip_filename = os.path.join( file_or_directory, f )
+                            outputZip.write(fn, in_zip_filename, zipfile.ZIP_DEFLATED )
+
+        elif not self._is_file_in_zip( outputZip, file_or_directory ):
+            outputZip.write( module_path, file_or_directory, zipfile.ZIP_DEFLATED )
+
+    def _add_internal_requirement_files( self, outputZip, project_dir ):
+        for entry in self._get_internal_requirements_file_list( project_dir ):
+            self._add_files_to_zip( outputZip, project_dir, entry )
+
+    def _get_internal_requirements_file_list( self, project_dir ):
+        requiredFilesList = []
+        internal_requirements_file = os.path.join(project_dir, 'internal_requirements.txt')
+        if os.path.isfile( internal_requirements_file ):
+            with open( internal_requirements_file ) as f:
+                for line in f:
+                    line = line.strip()
+                    requiredFilesList.append( line )
+        return requiredFilesList
+
     def inject_latest_app(self, deployment_package_filename, project_dir):
         # type: (str, str) -> None
         """Inject latest version of chalice app into a zip package.
@@ -781,13 +818,14 @@ class LambdaDeploymentPackager(object):
         # a way to do this efficiently so we need to create a new
         # zip file that has all the same stuff except for the new
         # app file.
-        # TODO: support more than just an app.py file.
         print "Regen deployment package..."
         tmpzip = deployment_package_filename + '.tmp.zip'
+        requiredFilesList  = self._get_internal_requirements_file_list( project_dir )
+        requiredFilesList.append( 'app.py' )
         with zipfile.ZipFile(deployment_package_filename, 'r') as inzip:
             with zipfile.ZipFile(tmpzip, 'w') as outzip:
                 for el in inzip.infolist():
-                    if el.filename == 'app.py':
+                    if el.filename in requiredFilesList:
                         continue
                     else:
                         contents = inzip.read(el.filename)
@@ -796,6 +834,9 @@ class LambdaDeploymentPackager(object):
                 app_py = os.path.join(project_dir, 'app.py')
                 assert os.path.isfile(app_py), app_py
                 outzip.write(app_py, 'app.py')
+                # and all your internal required files
+                self._add_internal_requirement_files( outzip, project_dir )
+                                
         shutil.move(tmpzip, deployment_package_filename)
 
 

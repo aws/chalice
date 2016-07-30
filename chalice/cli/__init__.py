@@ -5,6 +5,7 @@ Contains commands for deploying chalice.
 """
 import os
 import json
+import sys
 
 import click
 import botocore.exceptions
@@ -76,8 +77,10 @@ def load_chalice_app(project_dir):
     app_py = os.path.join(project_dir, 'app.py')
     with open(app_py) as f:
         g = {}
+        sys.path.append( project_dir )
         contents = f.read()
         exec contents in g
+        sys.path.remove( project_dir )
         return g['app']
 
 
