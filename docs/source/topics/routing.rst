@@ -103,13 +103,13 @@ In the function above, if the user provides a ``?include-greeting=true`` in the
 HTTP request, then an additional ``greeting`` key will be returned::
 
     $ http https://endpoint/dev/users/bob
-    
+
     {
         "name": "bob"
     }
-    
+
     $ http https://endpoint/dev/users/bob?include-greeting=true
-    
+
     {
         "greeting": "Hello, bob",
         "name": "bob"

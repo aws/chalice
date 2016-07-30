@@ -659,6 +659,36 @@ auto policy generator detects actions that it would like to add or remove::
 
 .. quick-start-end
 
+Tutorial: Using Custom Authentication
+===========================
+
+AWS API Gateway routes can be authenticated in multiple ways:
+- API Key
+- Custom Auth Handler
+
+# API Key
+
+.. code-block:: python
+
+    @app.route('/authenticated', methods=['GET'], api_key_required=True)
+    def authenticated(key):
+        return {"secure": True}
+
+Only requests sent with a valid `X-Api-Key` header will be accepted.
+
+# Custom Auth Handler
+
+A custom Authorizer is required for this to work, details can be found here;
+http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html
+
+.. code-block:: python
+
+    @app.route('/authenticated', methods=['GET'], authorization_type='CUSTOM', authorizer_id='ab12cd')
+    def authenticated(key):
+        return {"secure": True}
+
+Only requests sent with a valid `X-Api-Key` header will be accepted.
+
 Backlog
 =======
 

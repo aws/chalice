@@ -12,6 +12,7 @@ import zipfile
 import hashlib
 import inspect
 import time
+import re
 
 from typing import Any, Tuple, Callable, Optional  # noqa
 import botocore.session
@@ -572,15 +573,29 @@ class APIGatewayResourceCreator(object):
                 rest_api_id=self.rest_api_id),
         )
 
+    def _camel_convert(self, name):
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
     def _configure_resource_route(self, node, http_method):
         # type: (Dict[str, Any], str) -> None
         c = self.client
-        c.put_method(
-            restApiId=self.rest_api_id,
-            resourceId=node['resource_id'],
-            httpMethod=http_method,
-            authorizationType='NONE'
-        )
+        put_method_cfg = {
+            'restApiId': self.rest_api_id,
+            'resourceId': node['resource_id'],
+            'httpMethod': http_method,
+            'authorizationType': 'NONE'
+        }
+
+        for attr in ['authorizationType', 'authorizerId', 'apiKeyRequired']:
+            try:
+                _attr = getattr(node['route_entry'], self._camel_convert(attr))
+                if _attr:
+                    put_method_cfg[attr] = _attr
+            except AttributeError:
+                pass
+
+        c.put_method(**put_method_cfg)
         c.put_integration(
             restApiId=self.rest_api_id,
             resourceId=node['resource_id'],

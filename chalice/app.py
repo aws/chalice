@@ -89,11 +89,22 @@ class Request(object):
 
 class RouteEntry(object):
 
-    def __init__(self, view_function, view_name, path, methods):
+    def __init__(
+            self,
+            view_function,
+            view_name,
+            path,
+            methods,
+            authorization_type=None,
+            authorizer_id=None,
+            api_key_required=False):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
         self.methods = methods
+        self.authorization_type = authorization_type
+        self.authorizer_id = authorizer_id
+        self.api_key_required = api_key_required
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
@@ -132,7 +143,18 @@ class Chalice(object):
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.get('name', view_func.__name__)
         methods = kwargs.get('methods', ['GET'])
-        self.routes[path] = RouteEntry(view_func, name, path, methods)
+        authorization_type = kwargs.get('authorization_type', None)
+        authorizer_id = kwargs.get('authorizer_id', None)
+        api_key_required = kwargs.get('api_key_required', None)
+
+        self.routes[path] = RouteEntry(
+            view_func,
+            name,
+            path,
+            methods,
+            authorization_type,
+            authorizer_id,
+            api_key_required)
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
