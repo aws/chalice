@@ -18,3 +18,5 @@ Next Release
   (`#79 <https://github.com/awslabs/chalice/issues/79>`__)
 * Ignore lambda expressions in policy analyzer
   (`#74 <https://github.com/awslabs/chalice/issues/74>`__)
+* Print original error traceback in debug mode
+  (`#50 <https://github.com/awslabs/chalice/issues/50>`__)
