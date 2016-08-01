@@ -77,7 +77,14 @@ def load_chalice_app(project_dir):
     with open(app_py) as f:
         g = {}
         contents = f.read()
-        exec contents in g
+        try:
+            exec contents in g
+        except Exception as e:
+            exception = click.ClickException(
+                "Unable to import your app.py file: %s" % e
+            )
+            exception.exit_code = 2
+            raise exception
         return g['app']
 
 
