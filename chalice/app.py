@@ -190,11 +190,11 @@ class Chalice(object):
                                        event['stage-variables'])
         try:
             response = view_function(*function_args)
-        except Exception as e:
+        except Exception:
             if self.debug:
                 # If the user has turned on debug mode,
                 # we'll let the original exception propogate so
                 # they get more information about what went wrong.
-                raise e
+                raise
             raise ChaliceViewError("An internal server error occurred.")
         return response
