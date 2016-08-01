@@ -20,3 +20,5 @@ Next Release
   (`#74 <https://github.com/awslabs/chalice/issues/74>`__)
 * Print original error traceback in debug mode
   (`#50 <https://github.com/awslabs/chalice/issues/50>`__)
+* Add support for authenticate routes
+  (`#14 <https://github.com/awslabs/chalice/issues/14>`__)
