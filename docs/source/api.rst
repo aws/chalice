@@ -30,7 +30,7 @@ Chalice
          app = Chalice(app_name="appname")
          app.debug = True
 
-   .. method:: route(path, \* , [methods [, name]])
+   .. method:: route(path, \* , [methods [, name], authorization_type, authorizer_id, api_key_required])
 
       Register a view function for a particular URI path.  This method
       is intended to be used as a decorator for a view function.  For example:
@@ -63,6 +63,16 @@ Chalice
       :param str name: Optional parameter to specify the name of the view
         function.  You generally do not need to set this value.  The name
         of the view function is used as the default value for the view name.
+
+      :param str authorization_type: Optional parameter to specify the type
+        of authorization used for the view.
+
+      :param str authorizer_id: Optional parameter to specify the identifier
+        of an Authorizer to use on this view, if the authorization_type is
+        CUSTOM.
+
+      :param boolean api_key_required: Optional parameter to specify whether
+        the method required a valid ApiKey
 
 
 Request
