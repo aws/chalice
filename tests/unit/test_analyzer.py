@@ -407,6 +407,16 @@ def test_map_string_literals_across_scopes():
     """) == {'s3': set(['list_buckets']), 'dynamodb': set(['list_tables'])}
 
 
+def test_can_handle_lambda_keyword():
+    assert aws_calls("""\
+        def foo(a):
+            return sorted(bar.values(),
+                          key=lambda x: x.baz[a - 1],
+                          reverse=True)
+        bar = {}
+        foo(12)
+    """) == {}
+
 #def test_tuple_assignment():
 #    assert aws_calls("""\
 #        import boto3
