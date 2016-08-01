@@ -4,6 +4,7 @@ Handles Lambda and API Gateway deployments.
 
 """
 import os
+import sys
 import uuid
 import shutil
 import json
@@ -17,6 +18,7 @@ import re
 from typing import Any, Tuple, Callable, Optional  # noqa
 import botocore.session
 import botocore.exceptions
+import virtualenv
 
 import chalice
 from chalice import app
@@ -662,18 +664,21 @@ class LambdaDeploymentPackager(object):
     def __init__(self):
         pass
 
-    def _verify_has_virtualenv(self):
+    def _create_virtualenv(self, venv_dir):
+        # The original implementation used Popen(['virtualenv', ...])
+        # However, it's hard to make assumptions about how a users
+        # PATH is set up.  This could result in using old versions
+        # of virtualenv that give confusing error messages.
+        # To fix this issue, we're calling directly into the
+        # virtualenv package.  The main() method doesn't accept
+        # args, so we need to patch out sys.argv with the venv
+        # dir.  The original sys.argv is replaced on exit.
+        original = sys.argv
+        sys.argv = ['', venv_dir, '--quiet']
         try:
-            subprocess.check_output(['virtualenv', '--version'])
-        except (subprocess.CalledProcessError, OSError):
-            # Should we just require virtualenv as a dependency?  I think
-            # the assumption is if you're running this in a virtualenv
-            # (which is what we recommend), then you already had virtualenv
-            # installed.  Is there any downsides to requiring virtualenv
-            # as a dependency so we can avoid this check?
-            raise RuntimeError("You have to have virtualenv installed.  "
-                               "You can install virtualenv using: "
-                               "'pip install virtualenv'")
+            virtualenv.main()
+        finally:
+            sys.argv = original
 
     def create_deployment_package(self, project_dir):
         # type: (str) -> str
@@ -682,8 +687,7 @@ class LambdaDeploymentPackager(object):
         # python, so we're using virtualenvs instead which works in
         # more cases.
         venv_dir = os.path.join(project_dir, '.chalice', 'venv')
-        self._verify_has_virtualenv()
-        subprocess.check_output(['virtualenv', venv_dir])
+        self._create_virtualenv(venv_dir)
         pip_exe = os.path.join(venv_dir, 'bin', 'pip')
         assert os.path.isfile(pip_exe)
         # Next install any requirements specified by the app.
