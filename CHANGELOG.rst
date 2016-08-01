@@ -14,3 +14,5 @@ Next Release
 * Improve error validation when routes containing a
   trailing ``/`` char
   (`#65 <https://github.com/awslabs/chalice/issues/65>`__)
+* Validate duplicate route entries
+  (`#79 <https://github.com/awslabs/chalice/issues/79>`__)

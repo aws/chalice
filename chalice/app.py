@@ -147,6 +147,10 @@ class Chalice(object):
         authorizer_id = kwargs.get('authorizer_id', None)
         api_key_required = kwargs.get('api_key_required', None)
 
+        if path in self.routes:
+            raise ValueError(
+                "Duplicate route detected: '%s'\n"
+                "URL paths must be unique." % path)
         self.routes[path] = RouteEntry(
             view_func,
             name,

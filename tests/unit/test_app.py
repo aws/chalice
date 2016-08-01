@@ -115,3 +115,16 @@ def test_can_access_raw_body():
 
     result = demo(event, context=None)
     assert result == {'rawbody': '{"hello": "world"}'}
+
+
+def test_error_on_duplicate_routes():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index', methods=['PUT'])
+    def index_view():
+        return {'foo': 'bar'}
+
+    with pytest.raises(ValueError):
+        @demo.route('/index', methods=['POST'])
+        def index_post():
+            return {'foo': 'bar'}
