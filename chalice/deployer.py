@@ -674,7 +674,7 @@ class LambdaDeploymentPackager(object):
         # args, so we need to patch out sys.argv with the venv
         # dir.  The original sys.argv is replaced on exit.
         original = sys.argv
-        sys.argv = ['', venv_dir]
+        sys.argv = ['', venv_dir, '--quiet']
         try:
             virtualenv.main()
         finally:
