@@ -368,6 +368,14 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
                 self._symbol_table.has_ast_node_for_symbol(node.func.id):
             self._infer_function_call(node)
 
+    def visit_Lambda(self, node):
+        # Lambda is going to be a bit tricky because
+        # there's a new child namespace (via .get_children()),
+        # but it's not something that will show up in the
+        # current symbol table via .lookup().
+        # For now, we're going to ignore lambda expressions.
+        pass
+
     def _infer_function_call(self, node):
         # Here we're calling a function we haven't analyzed
         # yet.  We're first going to analyze the function.

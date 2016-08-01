@@ -16,3 +16,5 @@ Next Release
   (`#65 <https://github.com/awslabs/chalice/issues/65>`__)
 * Validate duplicate route entries
   (`#79 <https://github.com/awslabs/chalice/issues/79>`__)
+* Ignore lambda expressions in policy analyzer
+  (`#74 <https://github.com/awslabs/chalice/issues/74>`__)
