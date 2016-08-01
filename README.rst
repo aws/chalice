@@ -46,11 +46,23 @@ Quickstart
 
 In this tutorial, you'll use the ``chalice`` command line utility
 to create and deploy a basic REST API.
-First, you'll need to installl ``chalice``.  Using a virtualenv
+First, you'll need to install ``chalice``.  Using a virtualenv
 is recommended::
 
     $ pip install virtualenv
     $ virtualenv ~/.virtualenvs/chalice-demo
+    $ source ~/.virtualenvs/chalice-demo/bin/activate
+
+Note: **make sure you are using python2.7**.  The ``chalice`` CLI
+as well as the ``chalice`` python package will support the versions
+of python supported by AWS Lambda.  Currently, AWS Lambda only supports
+python2.7, so this is what this project supports.  You can ensure
+you're creating a virtualenv with python2.7 by running::
+
+    # Double check you have python2.7
+    $ which python2.7
+    /usr/local/bin/python2.7
+    $ virtualenv --python $(which python2.7) ~/.virtualenvs/chalice-demo
     $ source ~/.virtualenvs/chalice-demo/bin/activate
 
 Next, in your virtualenv, install ``chalice``::
