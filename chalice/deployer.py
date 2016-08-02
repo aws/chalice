@@ -340,8 +340,6 @@ class Deployer(object):
                     )
                 return config['config']['iam_role_arn']
         app_name = config['config']['app_name']
-        if config['config']['role_arn']:
-            return config['config']['role_arn']
         try:
             role_arn = self._find_role_arn(app_name)
             self._update_role_with_latest_policy(app_name, config)
