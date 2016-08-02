@@ -3,27 +3,26 @@
 Handles Lambda and API Gateway deployments.
 
 """
-import os
-import sys
-import uuid
-import shutil
-import json
-import subprocess
-import zipfile
 import hashlib
 import inspect
-import time
+import json
+import os
 import re
+import shutil
+import subprocess
+import sys
+import time
+import uuid
+import zipfile
 
-from typing import Any, Tuple, Callable, Optional  # noqa
-import botocore.session
 import botocore.exceptions
+import botocore.session
 import virtualenv
+from typing import Any, Tuple, Callable, Optional  # noqa
 
 import chalice
 from chalice import app
 from chalice import policy
-
 
 LAMBDA_TRUST_POLICY = {
     "Version": "2012-10-17",
@@ -334,6 +333,14 @@ class Deployer(object):
 
     def _get_or_create_lambda_role_arn(self, config):
         # type: (Dict[str, Any]) -> str
+        if 'manage_iam_role' in config['config']:
+            if not config['config']['manage_iam_role']:
+                if 'iam_role_arn' not in config['config']:
+                    raise Exception(
+                        'manage_iam_role is set to false in config, ' +
+                        'but, no iam_role_arn specified.'
+                    )
+                return config['config']['iam_role_arn']
         app_name = config['config']['app_name']
         try:
             role_arn = self._find_role_arn(app_name)
