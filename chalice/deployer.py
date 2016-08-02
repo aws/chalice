@@ -254,7 +254,7 @@ class Deployer(object):
             function_arn = self._first_time_lambda_create(config)
             # Record the lambda_arn for later use.
             config['config']['lambda_arn'] = function_arn
-            self._write_config_to_disk(config)
+        self._write_config_to_disk(config)
         print "Lambda deploy done."
 
     def _update_lambda_function(self, config):
