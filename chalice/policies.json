@@ -779,6 +779,7 @@
     "CompleteMultipartUpload": "s3:PutObject",
     "ListBuckets": "s3:ListAllMyBuckets",
     "ListObjects": "s3:ListBucket",
+    "ListObjectsV2": "s3:ListBucket",
     "ListAllMyBuckets": "s3:ListAllMyBuckets",
     "ListBucket": "s3:ListBucket",
     "ListBucketMultipartUploads": "s3:ListBucketMultipartUploads",
