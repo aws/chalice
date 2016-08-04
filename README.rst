@@ -744,3 +744,14 @@ excellent choices for applications that need more than what is offered by this
 microframework.  If all you need is to create a simple rest API in Python that
 runs on Amazon API Gateway and AWS Lambda, consider giving the Python
 Serverless Microframework for AWS a try.
+
+Related Projects
+----------------
+
+* [serverless](https://github.com/serverless/serverless) - Build applications
+  comprised of microservices that run in response to events, auto-scale for
+  you, and only charge you when they run.
+* [Zappa](https://github.com/Miserlou/Zappa) - Deploy python WSGI applications
+  on AWS Lambda and API Gateway.
+* [claudia](https://github.com/claudiajs/claudia) - Deploy node.js projects
+  to AWS Lambda and API Gateway.
