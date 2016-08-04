@@ -748,10 +748,10 @@ Serverless Microframework for AWS a try.
 Related Projects
 ----------------
 
-* [serverless](https://github.com/serverless/serverless) - Build applications
+* `serverless <https://github.com/serverless/serverless>`__ - Build applications
   comprised of microservices that run in response to events, auto-scale for
   you, and only charge you when they run.
-* [Zappa](https://github.com/Miserlou/Zappa) - Deploy python WSGI applications
+* `Zappa <https://github.com/Miserlou/Zappa>`__ - Deploy python WSGI applications
   on AWS Lambda and API Gateway.
-* [claudia](https://github.com/claudiajs/claudia) - Deploy node.js projects
+* `claudia <https://github.com/claudiajs/claudia>`__ - Deploy node.js projects
   to AWS Lambda and API Gateway.
