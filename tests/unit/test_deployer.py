@@ -30,6 +30,17 @@ def stubbed_lambda():
     return stubbed_client('lambda')
 
 
+@fixture
+def sample_app():
+    app = Chalice('sample')
+
+    @app.route('/')
+    def foo():
+        return {}
+
+    return app
+
+
 def stubbed_client(service_name):
     global _SESSION
     if _SESSION is None:
@@ -99,6 +110,32 @@ def test_trailing_slash_routes_result_in_error():
     app.routes = {'/trailing-slash/': None}
     config = {
         'chalice_app':  app,
+        'config': {},
+    }
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
+def test_manage_iam_role_false_requires_role_arn(sample_app):
+    config = {
+        'chalice_app': sample_app,
+        'config': {
+            'manage_iam_role': False,
+            'iam_role_arn': 'arn:::foo',
+        }
+    }
+    assert validate_configuration(config) is None
+
+
+def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
+    config = {
+        'chalice_app': sample_app,
+        'config': {
+            # We're indicating that we should not be managing the
+            # IAM role, but we're not giving a role ARN to use.
+            # This is a validation error.
+            'manage_iam_role': False,
+        }
     }
     with pytest.raises(ValueError):
         validate_configuration(config)

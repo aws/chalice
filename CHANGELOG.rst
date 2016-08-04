@@ -22,3 +22,5 @@ Next Release
   (`#50 <https://github.com/awslabs/chalice/issues/50>`__)
 * Add support for authenticate routes
   (`#14 <https://github.com/awslabs/chalice/issues/14>`__)
+* Add ability to disable IAM role management
+  (`#61 <https://github.com/awslabs/chalice/issues/61>`__)
