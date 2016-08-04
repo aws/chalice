@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release
-============
+0.1.0
+=====
 
 * Require ``virtualenv`` as a package dependency.
   (`#33 <https://github.com/awslabs/chalice/issues/33>`__)
