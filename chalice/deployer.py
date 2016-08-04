@@ -3,26 +3,27 @@
 Handles Lambda and API Gateway deployments.
 
 """
+import os
+import sys
+import uuid
+import shutil
+import json
+import subprocess
+import zipfile
 import hashlib
 import inspect
-import json
-import os
-import re
-import shutil
-import subprocess
-import sys
 import time
-import uuid
-import zipfile
+import re
 
-import botocore.exceptions
-import botocore.session
-import virtualenv
 from typing import Any, Tuple, Callable, Optional  # noqa
+import botocore.session
+import botocore.exceptions
+import virtualenv
 
 import chalice
 from chalice import app
 from chalice import policy
+
 
 LAMBDA_TRUST_POLICY = {
     "Version": "2012-10-17",
@@ -155,6 +156,7 @@ def validate_configuration(config):
     """
     routes = config['chalice_app'].routes
     _validate_routes(routes)
+    _validate_manage_iam_role(config)
 
 
 def _validate_routes(routes):
@@ -168,6 +170,18 @@ def _validate_routes(routes):
         if route != '/' and route.endswith('/'):
             raise ValueError("Route cannot end with a trailing slash: %s"
                              % route)
+
+
+def _validate_manage_iam_role(config):
+    c = config['config']
+    if not c.get('manage_iam_role', True):
+        # If they don't want us to manage the role, they
+        # have to specify an iam_role_arn.
+        if not c.get('iam_role_arn'):
+            raise ValueError(
+                "When 'manage_iam_role' is set to false, you "
+                "must provide an 'iam_role_arn' in config.json."
+            )
 
 
 def node(name, uri_path, is_route=False):
@@ -333,14 +347,11 @@ class Deployer(object):
 
     def _get_or_create_lambda_role_arn(self, config):
         # type: (Dict[str, Any]) -> str
-        if 'manage_iam_role' in config['config']:
-            if not config['config']['manage_iam_role']:
-                if 'iam_role_arn' not in config['config']:
-                    raise Exception(
-                        'manage_iam_role is set to false in config, ' +
-                        'but, no iam_role_arn specified.'
-                    )
-                return config['config']['iam_role_arn']
+        if not config['config'].get('manage_iam_role', True):
+            # We've already validated the config, so we know
+            # if manage_iam_role==False, then they've provided a
+            # an iam_role_arn.
+            return config['config']['iam_role_arn']
         app_name = config['config']['app_name']
         try:
             role_arn = self._find_role_arn(app_name)
