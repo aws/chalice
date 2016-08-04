@@ -55,6 +55,7 @@ Topics
    :maxdepth: 2
 
    topics/routing
+   topics/configfile
 
 
 API Reference
