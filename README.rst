@@ -623,6 +623,7 @@ chalice configuration. Setting manage_iam_role to false tells
 Chalice to not attempt to generate policies and create IAM role.
 
 ::
+
     "manage_iam_role":false
     "iam_role_arn":"arn:aws:iam::<account-id>:role/<role-name>"
 
@@ -689,7 +690,8 @@ AWS API Gateway routes can be authenticated in multiple ways:
 - API Key
 - Custom Auth Handler
 
-# API Key
+API Key
+-------
 
 .. code-block:: python
 
@@ -699,7 +701,8 @@ AWS API Gateway routes can be authenticated in multiple ways:
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
-# Custom Auth Handler
+Custom Auth Handler
+-------------------
 
 A custom Authorizer is required for this to work, details can be found here;
 http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html
