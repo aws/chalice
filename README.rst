@@ -38,6 +38,8 @@ Up and running in less than 30 seconds.
 production APIs.**  Give this project a try and share your feedback with us
 here on github.
 
+The documentation is available
+`on readthedocs <http://chalice.readthedocs.io/en/latest/>`__.
 
 Quickstart
 ==========
