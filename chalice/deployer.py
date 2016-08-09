@@ -262,12 +262,15 @@ class Deployer(object):
         app_name = app_config['app_name']
         if self._query.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
-            self._update_lambda_function(config)
+            function = self._update_lambda_function(config)
         else:
-            function_arn = self._first_time_lambda_create(config)
+            function = self._first_time_lambda_create(config)
             # Record the lambda_arn for later use.
-            config['config']['lambda_arn'] = function_arn
-            self._write_config_to_disk(config)
+            config['config']['lambda_arn'] = function['FunctionArn']
+
+        self._update_or_create_lambda_alias(config, function['Version'])
+        self._write_config_to_disk(config)
+
         print "Lambda deploy done."
 
     def _update_lambda_function(self, config):
@@ -287,9 +290,12 @@ class Deployer(object):
             zip_contents = f.read()
             client = self._client('lambda')
             print "Sending changes to lambda."
-            client.update_function_code(
+            response = client.update_function_code(
                 FunctionName=config['config']['app_name'],
+                Publish=True,
                 ZipFile=zip_contents)
+
+        return response
 
     def _write_config_to_disk(self, config):
         # type: (Dict[str, Any]) -> None
@@ -328,6 +334,7 @@ class Deployer(object):
                     Code={'ZipFile': zip_contents},
                     Handler='app.app',
                     Role=role_arn,
+                    Publish=True,
                     Timeout=60
                 )
             except botocore.exceptions.ClientError as e:
@@ -343,7 +350,20 @@ class Deployer(object):
                         raise
                     continue
                 raise
-            return response['FunctionArn']
+            return response
+
+    def _update_or_create_lambda_alias(self, config, version):
+        app_name = config['config']['app_name']
+        stage = config['config'].get('stage', 'dev')
+
+        try:
+            self._find_lambda_alias(app_name, stage)
+            print "Updating Lambda %s alias to %s." % (stage, version)
+            lambda_alias = self._update_lambda_alias(app_name, stage, version)
+        except ValueError:
+            print "Creating Lambda %s alias." % stage
+            lambda_alias = self._create_lambda_alias(app_name, stage, version)
+        return lambda_alias
 
     def _get_or_create_lambda_role_arn(self, config):
         # type: (Dict[str, Any]) -> str
@@ -400,6 +420,23 @@ class Deployer(object):
             app_policy = self._load_last_policy(config)
             return app_policy
 
+    def _create_lambda_alias(self, app_name, stage, version):
+        client = self._client('lambda')
+        return client.create_alias(
+            FunctionName=app_name,
+            Name=stage,
+            FunctionVersion=version,
+            Description='Lambda version for %s stage' % stage
+        )
+
+    def _update_lambda_alias(self, app_name, stage, version):
+        client = self._client('lambda')
+        return client.update_alias(
+            FunctionName=app_name,
+            Name=stage,
+            FunctionVersion=version
+        )
+
     def _create_role_from_source_code(self, config):
         # type: (Dict[str, Any]) -> str
         app_name = config['config']['app_name']
@@ -441,6 +478,17 @@ class Deployer(object):
             if role['RoleName'] == role_name:
                 return role['Arn']
         raise ValueError("No role ARN found for: %s" % role_name)
+
+    def _find_lambda_alias(self, app_name, stage):
+        try:
+            client = self._client('lambda')
+            response = client.get_alias(FunctionName=app_name, Name=stage)
+        except botocore.exceptions.ClientError as e:
+            error = e.response['Error']
+            if error['Code'] == 'ResourceNotFoundException':
+                raise ValueError('Lambda alias %s does not exist' % stage)
+
+        return response
 
     def _deploy_api_gateway(self, config):
         # type: (Dict[str, Any]) -> Tuple[str, str, str]
@@ -507,9 +555,11 @@ class Deployer(object):
         root_resource = client.get_resources(restApiId=rest_api_id)['items'][0]
         assert root_resource['path'] == u'/'
         resource_id = root_resource['id']
-        route_builder = APIGatewayResourceCreator(
-            client, self._client('lambda'), rest_api_id,
-            config['config']['lambda_arn'])
+        stage = config['config'].get('stage', 'dev')
+        route_builder = APIGatewayResourceCreator(client,
+            self._client('lambda'), rest_api_id,
+            '%s:%s' % (config['config']['lambda_arn'], stage)
+        )
         # This is a little confusing.  You need to specify the parent
         # resource to create a subresource, but you can't create the root
         # resource because you have to specify a parent id.  So API Gateway
@@ -523,11 +573,14 @@ class Deployer(object):
         route_builder.build_resources(url_trie)
         # And finally, you need an actual deployment to deploy the changes to
         # API gateway.
-        stage = config['config'].get('stage', 'dev')
+
         print "Deploying to:", stage
         client.create_deployment(
             restApiId=rest_api_id,
             stageName=stage,
+            variables={
+                'lambdaAlias': stage
+            }
         )
         return rest_api_id, client.meta.region_name, stage
 
@@ -582,7 +635,7 @@ class APIGatewayResourceCreator(object):
         # the lambda function.
         self.lambda_client.add_permission(
             Action='lambda:InvokeFunction',
-            FunctionName=self.lambda_arn.split(':')[-1],
+            FunctionName=self.lambda_arn,
             StatementId=self._random_id(),
             Principal='apigateway.amazonaws.com',
             SourceArn=('arn:aws:execute-api:{region_name}:{account_id}'
@@ -668,12 +721,14 @@ class APIGatewayResourceCreator(object):
         # type: () -> str
         region_name = self.client.meta.region_name
         api_version = '2015-03-31'
+        lambda_arn_staged = self.lambda_arn.split(':')[0:-1]
+        lambda_arn_staged.append('${stageVariables.lambdaAlias}')
         return (
             "arn:aws:apigateway:{region_name}:lambda:path/{api_version}"
             "/functions/{lambda_arn}/invocations".format(
                 region_name=region_name,
                 api_version=api_version,
-                lambda_arn=self.lambda_arn)
+                lambda_arn=':'.join(lambda_arn_staged))
         )
 
 
