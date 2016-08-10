@@ -106,9 +106,10 @@ def local(ctx):
 @click.option('--autogen-policy/--no-autogen-policy',
               default=True,
               help='Automatically generate IAM policy for app code.')
+@click.option('--profile', help='Override profile at deploy time.')
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, project_dir, autogen_policy, stage):
+def deploy(ctx, project_dir, autogen_policy, profile, stage):
     if project_dir is None:
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
@@ -125,10 +126,8 @@ def deploy(ctx, project_dir, autogen_policy, stage):
     app_obj = load_chalice_app(project_dir)
     ctx.obj['chalice_app'] = app_obj
     ctx.obj['autogen_policy'] = autogen_policy
-    try:
-        d = deployer.Deployer(prompter=click, profile=config['profile'])
-    except KeyError:
-        d = deployer.Deployer(prompter=click)
+    profile_name = profile or config.get('profile')
+    d = deployer.Deployer(prompter=click, profile=profile_name)
     try:
         d.deploy(ctx.obj)
     except botocore.exceptions.NoRegionError:
