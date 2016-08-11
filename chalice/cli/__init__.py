@@ -35,7 +35,7 @@ def index():
 #    # '/hello/james' -> {"hello": "james"}
 #    return {'hello': name}
 #
-# @app.route('/users/', methods=['POST'])
+# @app.route('/users', methods=['POST'])
 # def create_user():
 #     # This is the JSON body the user sent in their POST request.
 #     user_as_json = app.json_body
