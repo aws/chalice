@@ -52,7 +52,8 @@ def index():
 def show_lambda_logs(config, max_entries, include_lambda_messages):
     import botocore.session
     lambda_arn = config['config']['lambda_arn']
-    client = botocore.session.get_session().create_client('logs')
+    profile = config['config']['profile']
+    client = botocore.session.Session(profile=profile).create_client('logs')
     retriever = LogRetriever.create_from_arn(client, lambda_arn)
     events = retriever.retrieve_logs(
         include_lambda_messages=include_lambda_messages,
