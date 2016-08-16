@@ -251,6 +251,10 @@ the ``helloworld`` directory and it will deploy your application::
 Let's try it out.  Note the examples below use the ``http`` command
 from the ``httpie`` package.  You can install this using ``pip install httpie``::
 
+.. image:: https://badges.gitter.im/awslabs/chalice.svg
+   :alt: Join the chat at https://gitter.im/awslabs/chalice
+   :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
     $ http https://endpoint/dev/cities/seattle
     HTTP/1.1 200 OK
 
