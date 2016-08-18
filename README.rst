@@ -38,9 +38,9 @@ It provides:
 
 Up and running in less than 30 seconds.
 
-**This project is published as a preview project and is not yet recommended for
+**This project is published as a preview project, and is not yet recommended for
 production APIs.**  Give this project a try and share your feedback with us
-here on github.
+here on Github.
 
 The documentation is available
 `on readthedocs <http://chalice.readthedocs.io/en/latest/>`__.
@@ -234,7 +234,7 @@ parts of the URI:
         return {'state': CITIES_TO_STATE[city]}
 
 
-In the example above we've now added a ``state_of_city`` view that allows
+In the example above, we've now added a ``state_of_city`` view that allows
 a user to specify a city name.  The view function takes the city
 name and returns name of the state the city is in.  Notice that the
 ``@app.route`` decorator has a URL pattern of ``/cities/{city}``.  This
@@ -316,8 +316,8 @@ Save this file and redeploy your changes::
     ...
     https://endpoint/dev/
 
-When you now request the same URL that returned an internal
-server error, you'll now get back the original stack trace::
+Now When you request the same URL that returned an internal
+server error, you'll get back the original stack trace::
 
     $ http https://endpoint/dev/cities/vancouver
     {
@@ -366,10 +366,10 @@ Save and deploy these changes::
     }
 
 We can see now that we can a ``Code`` and ``Message`` key, with the message
-being the value we passed to ``BadRequestError``.  Whenver you raise
+being the value we passed to ``BadRequestError``.  Whenever you raise
 a ``BadRequestError`` from your view function, the framework will return an
 HTTP status code of 400 along with a JSON body with a ``Code`` and ``Message``.
-There's a few additional exceptions you can raise from your python code::
+There are a few additional exceptions you can raise from your python code::
 
 * ChaliceViewError - return a status code of 500
 * NotFoundError - return a status code of 404
@@ -377,7 +377,7 @@ There's a few additional exceptions you can raise from your python code::
 Tutorial: Additional Routing
 ============================
 
-So for, our examples have only allowed GET requests.
+So far, our examples have only allowed GET requests.
 It's actually possible to support additional HTTP methods.
 Here's an example of a view function that supports PUT:
 
@@ -614,8 +614,8 @@ your ``app.py`` file.  Next, let's update our view code to use boto3:
 
 Make sure to change ``BUCKET`` with the name of an S3 bucket
 you own.  Redeploy your changes with ``chalice deploy``.
-Now whenver we make a ``PUT`` request to ``/objects/keyname``, the
-data send will be stored in S3.  Subsequent ``GET`` requests will
+Now, whenever we make a ``PUT`` request to ``/objects/keyname``, the
+data send will be stored in S3.  Any subsequent ``GET`` requests will
 retrieve this data from S3.
 
 Manually Providing Policies
@@ -732,7 +732,7 @@ These are features that are in the backlog:
   <https://github.com/awslabs/chalice/issues/21>`__
 
 Please share any feedback on the above issues.  We'd also love
-to hear from you.  Please create any github issues for additional
+to hear from you.  Please create any Github issues for additional
 features you'd like to see: https://github.com/awslabs/chalice/issues
 
 FAQ
