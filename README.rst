@@ -316,7 +316,7 @@ Save this file and redeploy your changes::
     ...
     https://endpoint/dev/
 
-Now When you request the same URL that returned an internal
+Now, when you request the same URL that returned an internal
 server error, you'll get back the original stack trace::
 
     $ http https://endpoint/dev/cities/vancouver
