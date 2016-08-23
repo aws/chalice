@@ -374,6 +374,14 @@ There are a few additional exceptions you can raise from your python code::
 * ChaliceViewError - return a status code of 500
 * NotFoundError - return a status code of 404
 
+In the ``chalice.app`` module, the following errors are also available::
+
+* UnauthorizedError - return a status code of 401
+* ForbiddenError - return a status code of 403
+* ConflictError - return a status code of 409
+* TooManyRequestsError - return a status code of 429
+
+
 Tutorial: Additional Routing
 ============================
 
