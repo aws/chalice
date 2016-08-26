@@ -1,6 +1,5 @@
 import base64
 import json
-from collections import namedtuple
 
 import pytest
 from pytest import fixture
