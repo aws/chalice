@@ -67,7 +67,10 @@ class Request(object):
         self.uri_params = uri_params
         self.method = method
         #: The parsed JSON from the body.
-        self.json_body = body
+        if self.headers.get('Content-Type', '') == "application/json":
+            self.json_body = body
+        else:
+            self.json_body = None
         # This is the raw base64 body.
         # We'll only bother decoding this if the user
         # actually requests this via the `.raw_body` property.
