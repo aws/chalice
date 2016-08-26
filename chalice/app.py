@@ -66,8 +66,15 @@ class Request(object):
         self.headers = headers
         self.uri_params = uri_params
         self.method = method
-        #: The parsed JSON from the body.
-        self.json_body = body
+        #: The parsed JSON from the body.  This value should
+        #: only be set if the Content-Type header is application/json,
+        #: which is the default content type value in chalice.
+        if self.headers.get('Content-Type') == 'application/json':
+            # We'll need to address case insensitive header lookups
+            # eventually.
+            self.json_body = body
+        else:
+            self.json_body = None
         # This is the raw base64 body.
         # We'll only bother decoding this if the user
         # actually requests this via the `.raw_body` property.
@@ -137,6 +144,10 @@ class Chalice(object):
         authorizer_id = kwargs.get('authorizer_id', None)
         api_key_required = kwargs.get('api_key_required', None)
         content_types = kwargs.get('content_types', ['application/json'])
+        if not isinstance(content_types, list):
+            raise ValueError('In view function "%s", the content_types '
+                             'value must be a list, not %s: %s'
+                             % (name, type(content_types), content_types))
 
         if path in self.routes:
             raise ValueError(

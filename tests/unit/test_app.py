@@ -1,4 +1,5 @@
 import base64
+import json
 from collections import namedtuple
 
 import pytest
@@ -6,14 +7,16 @@ from pytest import fixture
 from chalice import app
 
 
-def create_event(uri, method, path):
+def create_event(uri, method, path, content_type='application/json'):
     return {
         'context': {
             'http-method': method,
             'resource-path': uri,
         },
         'params': {
-            'header': {},
+            'header': {
+                'Content-Type': content_type,
+            },
             'path': path,
             'querystring': {},
         },
@@ -21,6 +24,17 @@ def create_event(uri, method, path):
         'base64-body': "",
         'stage-variables': {},
     }
+
+
+def create_event_with_body(body, uri='/', method='POST',
+                           content_type='application/json'):
+    event = create_event(uri, method, {}, content_type)
+    event['body-json'] = body
+    if content_type == 'application/json':
+        event['base64-body'] = base64.b64encode(json.dumps(body))
+    else:
+        event['base64-body'] = base64.b64encode(body)
+    return event
 
 
 @fixture
@@ -128,6 +142,70 @@ def test_error_on_duplicate_routes():
 
     with pytest.raises(ValueError):
         @demo.route('/index', methods=['POST'])
+        def index_post():
+            return {'foo': 'bar'}
+
+
+def test_json_body_available_with_right_content_type():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'])
+    def index():
+        return demo.current_request.json_body
+
+
+    event = create_event('/', 'POST', {})
+    event['body-json'] = {'foo': 'bar'}
+
+    result = demo(event, context=None)
+    assert result == event['body-json']
+
+
+def test_cant_access_json_body_with_wrong_content_type():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'], content_types=['application/xml'])
+    def index():
+        return (demo.current_request.json_body, demo.current_request.raw_body)
+
+    event = create_event('/', 'POST', {}, content_type='application/xml')
+    event['body-json'] = '<Message>hello</Message>'
+    event['base64-body'] = base64.b64encode('<Message>hello</Message>')
+
+    json_body, raw_body = demo(event, context=None)
+    assert json_body is None
+    assert raw_body == '<Message>hello</Message>'
+
+
+def test_json_body_available_on_multiple_content_types():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'],
+                content_types=['application/xml', 'application/json'])
+    def index():
+        return (demo.current_request.json_body, demo.current_request.raw_body)
+
+    event = create_event_with_body('<Message>hello</Message>',
+                                   content_type='application/xml')
+
+    json_body, raw_body = demo(event, context=None)
+    assert json_body is None
+    assert raw_body == '<Message>hello</Message>'
+
+    # Now if we create an event with JSON, we should be able
+    # to access .json_body as well.
+    event = create_event_with_body({'foo': 'bar'},
+                                   content_type='application/json')
+    json_body, raw_body = demo(event, context=None)
+    assert json_body == {'foo': 'bar'}
+    assert raw_body == '{"foo": "bar"}'
+
+
+def test_content_types_must_be_lists():
+    demo = app.Chalice('app-name')
+
+    with pytest.raises(ValueError):
+        @demo.route('/index', content_types='application/not-a-list')
         def index_post():
             return {'foo': 'bar'}
 
