@@ -1,4 +1,5 @@
 import base64
+from collections import namedtuple
 
 import pytest
 from pytest import fixture
@@ -51,7 +52,8 @@ def test_can_route_single_view():
         return {}
 
     assert demo.routes['/index'] == app.RouteEntry(index_view, 'index_view',
-                                                   '/index', 'GET')
+                                                   '/index', ['GET'],
+                                                   content_types=['application/json'])
 
 
 def test_can_handle_multiple_routes():
@@ -128,3 +130,46 @@ def test_error_on_duplicate_routes():
         @demo.route('/index', methods=['POST'])
         def index_post():
             return {'foo': 'bar'}
+
+
+def test_route_equality():
+    view_function = lambda: {"hello": "world"}
+    a = app.RouteEntry(
+        view_function,
+        view_name='myview', path='/',
+        methods=['GET'],
+        authorization_type='foo',
+        api_key_required=True,
+        content_types=['application/json'],
+    )
+    b = app.RouteEntry(
+        view_function,
+        view_name='myview', path='/',
+        methods=['GET'],
+        authorization_type='foo',
+        api_key_required=True,
+        content_types=['application/json'],
+    )
+    assert a == b
+
+
+def test_route_inequality():
+    view_function = lambda: {"hello": "world"}
+    a = app.RouteEntry(
+        view_function,
+        view_name='myview', path='/',
+        methods=['GET'],
+        authorization_type='foo',
+        api_key_required=True,
+        content_types=['application/json'],
+    )
+    b = app.RouteEntry(
+        view_function,
+        view_name='myview', path='/',
+        methods=['GET'],
+        authorization_type='foo',
+        api_key_required=True,
+        # Different content types
+        content_types=['application/xml'],
+    )
+    assert not a == b

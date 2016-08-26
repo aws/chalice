@@ -177,7 +177,8 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
         'resource_id': 'parent-id',
         'parent_resource_id': None,
         'is_route': True,
-        'route_entry': RouteEntry(None, 'index_view', '/', ['POST']),
+        'route_entry': RouteEntry(None, 'index_view', '/', ['POST'],
+                                  content_types=['application/json']),
     }
     gateway_client, gateway_stub = stubbed_api_gateway
     lambda_client, lambda_stub = stubbed_lambda

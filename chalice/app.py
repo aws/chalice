@@ -91,7 +91,7 @@ class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, methods,
                  authorization_type=None, authorizer_id=None,
-                 api_key_required=False, content_types=None):
+                 api_key_required=None, content_types=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -102,8 +102,6 @@ class RouteEntry(object):
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
-        if content_types is None:
-            content_types = ['application/json']
         self.content_types = content_types
 
     def _parse_view_args(self):
@@ -115,12 +113,7 @@ class RouteEntry(object):
         return results
 
     def __eq__(self, other):
-        return (
-            self.view_function == other.view_function and
-            self.view_name == other.view_name and
-            self.uri_pattern == other.uri_pattern and
-            self.view_args == other.view_args
-        )
+        return self.__dict__ == other.__dict__
 
 
 class Chalice(object):
@@ -143,7 +136,7 @@ class Chalice(object):
         authorization_type = kwargs.get('authorization_type', None)
         authorizer_id = kwargs.get('authorizer_id', None)
         api_key_required = kwargs.get('api_key_required', None)
-        content_types = kwargs.get('content_types', None)
+        content_types = kwargs.get('content_types', ['application/json'])
 
         if path in self.routes:
             raise ValueError(
