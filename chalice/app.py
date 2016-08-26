@@ -67,7 +67,10 @@ class Request(object):
         self.uri_params = uri_params
         self.method = method
         #: The parsed JSON from the body.
-        self.json_body = body
+        if self.headers.get('Content-Type', '') == "application/json":
+            self.json_body = body
+        else:
+            self.json_body = None
         # This is the raw base64 body.
         # We'll only bother decoding this if the user
         # actually requests this via the `.raw_body` property.
@@ -97,7 +100,8 @@ class RouteEntry(object):
             methods,
             authorization_type=None,
             authorizer_id=None,
-            api_key_required=False):
+            api_key_required=False,
+            content_types=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -108,6 +112,7 @@ class RouteEntry(object):
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
+        self.content_types = content_types
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -146,6 +151,7 @@ class Chalice(object):
         authorization_type = kwargs.get('authorization_type', None)
         authorizer_id = kwargs.get('authorizer_id', None)
         api_key_required = kwargs.get('api_key_required', None)
+        content_types = kwargs.get('content_types', None)
 
         if path in self.routes:
             raise ValueError(
@@ -158,7 +164,9 @@ class Chalice(object):
             methods,
             authorization_type,
             authorizer_id,
-            api_key_required)
+            api_key_required,
+            content_types,
+        )
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.

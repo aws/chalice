@@ -615,6 +615,8 @@ class APIGatewayResourceCreator(object):
             except AttributeError:
                 pass
 
+        route_entry = node['route_entry']
+        content_types = route_entry.content_types or ['application/json']
         c.put_method(**put_method_cfg)
         c.put_integration(
             restApiId=self.rest_api_id,
@@ -627,7 +629,7 @@ class APIGatewayResourceCreator(object):
             # is not application/json.
             passthroughBehavior="NEVER",
             requestTemplates={
-                'application/json': FULL_PASSTHROUGH,
+                key: FULL_PASSTHROUGH for key in content_types
             },
             uri=self._lambda_uri()
         )
