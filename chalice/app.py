@@ -89,16 +89,9 @@ class Request(object):
 
 class RouteEntry(object):
 
-    def __init__(
-            self,
-            view_function,
-            view_name,
-            path,
-            methods,
-            authorization_type=None,
-            authorizer_id=None,
-            api_key_required=False,
-            content_types=None):
+    def __init__(self, view_function, view_name, path, methods,
+                 authorization_type=None, authorizer_id=None,
+                 api_key_required=False, content_types=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -109,6 +102,8 @@ class RouteEntry(object):
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
+        if content_types is None:
+            content_types = ['application/json']
         self.content_types = content_types
 
     def _parse_view_args(self):

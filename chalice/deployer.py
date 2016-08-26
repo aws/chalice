@@ -616,7 +616,7 @@ class APIGatewayResourceCreator(object):
                 pass
 
         route_entry = node['route_entry']
-        content_types = route_entry.content_types or ['application/json']
+        content_types = route_entry.content_types
         c.put_method(**put_method_cfg)
         c.put_integration(
             restApiId=self.rest_api_id,
