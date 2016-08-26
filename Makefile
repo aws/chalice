@@ -49,6 +49,9 @@ typecheck:
 coverage:
 	py.test --cov chalice --cov-report term-missing tests/
 
+coverage-unit:
+	py.test --cov chalice --cov-report term-missing tests/unit
+
 htmlcov:
 	py.test --cov chalice --cov-report html tests/
 	rm -rf /tmp/htmlcov && mv htmlcov /tmp/

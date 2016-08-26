@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for input content types besides ``application/json``
+  (`#96 <https://github.com/awslabs/chalice/issues/96>`__)
+
+
 0.1.0
 =====
 

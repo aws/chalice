@@ -66,8 +66,15 @@ class Request(object):
         self.headers = headers
         self.uri_params = uri_params
         self.method = method
-        #: The parsed JSON from the body.
-        self.json_body = body
+        #: The parsed JSON from the body.  This value should
+        #: only be set if the Content-Type header is application/json,
+        #: which is the default content type value in chalice.
+        if self.headers.get('Content-Type') == 'application/json':
+            # We'll need to address case insensitive header lookups
+            # eventually.
+            self.json_body = body
+        else:
+            self.json_body = None
         # This is the raw base64 body.
         # We'll only bother decoding this if the user
         # actually requests this via the `.raw_body` property.
@@ -89,15 +96,9 @@ class Request(object):
 
 class RouteEntry(object):
 
-    def __init__(
-            self,
-            view_function,
-            view_name,
-            path,
-            methods,
-            authorization_type=None,
-            authorizer_id=None,
-            api_key_required=False):
+    def __init__(self, view_function, view_name, path, methods,
+                 authorization_type=None, authorizer_id=None,
+                 api_key_required=None, content_types=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -108,6 +109,7 @@ class RouteEntry(object):
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
+        self.content_types = content_types
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -118,12 +120,7 @@ class RouteEntry(object):
         return results
 
     def __eq__(self, other):
-        return (
-            self.view_function == other.view_function and
-            self.view_name == other.view_name and
-            self.uri_pattern == other.uri_pattern and
-            self.view_args == other.view_args
-        )
+        return self.__dict__ == other.__dict__
 
 
 class Chalice(object):
@@ -146,6 +143,11 @@ class Chalice(object):
         authorization_type = kwargs.get('authorization_type', None)
         authorizer_id = kwargs.get('authorizer_id', None)
         api_key_required = kwargs.get('api_key_required', None)
+        content_types = kwargs.get('content_types', ['application/json'])
+        if not isinstance(content_types, list):
+            raise ValueError('In view function "%s", the content_types '
+                             'value must be a list, not %s: %s'
+                             % (name, type(content_types), content_types))
 
         if path in self.routes:
             raise ValueError(
@@ -158,7 +160,9 @@ class Chalice(object):
             methods,
             authorization_type,
             authorizer_id,
-            api_key_required)
+            api_key_required,
+            content_types,
+        )
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
