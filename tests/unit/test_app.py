@@ -100,6 +100,19 @@ def test_can_route_api_call_to_view_function(sample_app):
     assert response == {'hello': 'world'}
 
 
+def test_can_call_to_dict_on_current_request(sample_app):
+    @sample_app.route('/todict')
+    def todict():
+        return sample_app.current_request.to_dict()
+    event = create_event('/todict', 'GET', {})
+    response = sample_app(event, context=None)
+    assert isinstance(response, dict)
+    # The dict can change over time so we'll just pick
+    # out a few keys as a basic sanity test.
+    assert response['method'] == 'GET'
+    assert response['json_body'] == {}
+
+
 def test_will_pass_captured_params_to_view(sample_app):
     event = create_event('/name/{name}', 'GET', {'name': 'james'})
     response = sample_app(event, context=None)
@@ -131,6 +144,25 @@ def test_can_access_raw_body():
 
     result = demo(event, context=None)
     assert result == {'rawbody': '{"hello": "world"}'}
+
+
+def test_raw_body_cache_returns_same_result():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        # The first raw_body decodes base64,
+        # the second value should return the cached value.
+        # Both should be the same value
+        return {'rawbody': demo.current_request.raw_body,
+                'rawbody2': demo.current_request.raw_body}
+
+
+    event = create_event('/index', 'GET', {})
+    event['base64-body'] = base64.b64encode('{"hello": "world"}')
+
+    result = demo(event, context=None)
+    assert result['rawbody'] == result['rawbody2']
 
 
 def test_error_on_duplicate_routes():
@@ -251,3 +283,33 @@ def test_route_inequality():
         content_types=['application/xml'],
     )
     assert not a == b
+
+
+def test_exceptions_raised_as_chalice_errors(sample_app):
+
+    @sample_app.route('/error')
+    def raise_error():
+        raise TypeError("Raising arbitrary error, should never see.")
+
+    event = create_event('/error', 'GET', {})
+    # This is intentional behavior.  If we're not in debug mode
+    # we don't want to surface internal errors that get raised.
+    # We should reply with a general internal server error.
+    with pytest.raises(app.ChaliceViewError):
+        sample_app(event, context=None)
+
+
+def test_original_exception_raised_in_debug_mode(sample_app):
+    sample_app.debug = True
+
+    @sample_app.route('/error')
+    def raise_error():
+        raise ValueError("You will see this error")
+
+    event = create_event('/error', 'GET', {})
+    with pytest.raises(ValueError) as e:
+        sample_app(event, context=None)
+    # In debug mode, we let the original exception propagate.
+    # This includes the original type as well as the message.
+    assert str(e.value) == 'You will see this error'
+
