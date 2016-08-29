@@ -34,11 +34,12 @@ def load_policy_actions():
 
 
 def diff_policies(old, new):
+    # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Set[str]]
     diff = {}
-    old = _create_simple_format(old)
-    new = _create_simple_format(new)
-    removed = old - new
-    added = new - old
+    old_actions = _create_simple_format(old)
+    new_actions = _create_simple_format(new)
+    removed = old_actions - new_actions
+    added = new_actions - old_actions
     if removed:
         diff['removed'] = removed
     if added:
@@ -47,9 +48,10 @@ def diff_policies(old, new):
 
 
 def _create_simple_format(policy):
+    # type: (Dict[str, Any]) -> Set[str]
     # This won't be sufficient is the analyzer is ever able
     # to work out which resources you're accessing.
-    actions = set()
+    actions = set()  # type: Set[str]
     for statement in policy['Statement']:
         actions.update(statement['Action'])
     return actions

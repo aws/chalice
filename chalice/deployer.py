@@ -209,7 +209,7 @@ class Deployer(object):
     DELAY_TIME = 3
 
     def __init__(self, session=None, prompter=None, profile=None):
-        # type: (botocore.session.Session) -> None
+        # type: (botocore.session.Session, NoPrompt, Optional[str]) -> None
         if session is None:
             if profile:
                 session = botocore.session.Session(profile=profile)
@@ -368,12 +368,12 @@ class Deployer(object):
         previous = self._load_last_policy(config)
         diff = policy.diff_policies(previous, app_policy)
         if diff:
-            if diff.get('added', []):
+            if diff.get('added', set([])):
                 print ("\nThe following actions will be added to "
                        "the execution policy:\n")
                 for action in diff['added']:
                     print action
-            if diff.get('removed', []):
+            if diff.get('removed', set([])):
                 print ("\nThe following action will be removed from "
                        "the execution policy:\n")
                 for action in diff['removed']:
