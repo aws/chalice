@@ -23,6 +23,7 @@ import virtualenv
 import chalice
 from chalice import app
 from chalice import policy
+from chalice.config import Config  # noqa
 
 
 LAMBDA_TRUST_POLICY = {
@@ -145,7 +146,7 @@ def build_url_trie(routes):
 
 
 def validate_configuration(config):
-    # type: (Dict[str, Any]) -> None
+    # type: (Config) -> None
     """Validate app configuration.
 
     The purpose of this method is to provide a fail fast mechanism
@@ -154,7 +155,7 @@ def validate_configuration(config):
     error messages.
 
     """
-    routes = config['chalice_app'].routes
+    routes = config.chalice_app.routes
     _validate_routes(routes)
     _validate_manage_iam_role(config)
 
@@ -173,11 +174,15 @@ def _validate_routes(routes):
 
 
 def _validate_manage_iam_role(config):
-    c = config['config']
-    if not c.get('manage_iam_role', True):
+    # type: (Config) -> None
+    # We need to check if manage_iam_role is None because that's the value
+    # it the user hasn't specified this value.
+    # However, if the manage_iam_role value is not None, the user set it
+    # to something, in which case we care if they set it to False.
+    if not config.manage_iam_role:
         # If they don't want us to manage the role, they
         # have to specify an iam_role_arn.
-        if not c.get('iam_role_arn'):
+        if not config.iam_role_arn:
             raise ValueError(
                 "When 'manage_iam_role' is set to false, you "
                 "must provide an 'iam_role_arn' in config.json."
@@ -200,6 +205,7 @@ def node(name, uri_path, is_route=False):
 class NoPrompt(object):
 
     def confirm(self, text, default=False, abort=False):
+        # type: (str, Optional[bool], Optional[bool]) -> bool
         return default
 
 
@@ -237,7 +243,7 @@ class Deployer(object):
         return self._client_cache[service_name]
 
     def deploy(self, config):
-        # type: (Dict[str, Any]) -> str
+        # type: (Config) -> str
         """Deploy chalice application to AWS.
 
         :type config: dict
@@ -257,23 +263,22 @@ class Deployer(object):
         )
 
     def _deploy_lambda(self, config):
-        # type: (Dict[str, Any]) -> None
-        app_config = config['config']
-        app_name = app_config['app_name']
+        # type: (Config) -> None
+        app_name = config.app_name
         if self._query.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
         else:
             function_arn = self._first_time_lambda_create(config)
             # Record the lambda_arn for later use.
-            config['config']['lambda_arn'] = function_arn
+            config.config_from_disk['lambda_arn'] = function_arn
             self._write_config_to_disk(config)
         print "Lambda deploy done."
 
     def _update_lambda_function(self, config):
-        # type: (Dict[str, Any]) -> None
+        # type: (Config) -> None
         print "Updating lambda function..."
-        project_dir = config['project_dir']
+        project_dir = config.project_dir
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
             project_dir)
@@ -288,26 +293,26 @@ class Deployer(object):
             client = self._client('lambda')
             print "Sending changes to lambda."
             client.update_function_code(
-                FunctionName=config['config']['app_name'],
+                FunctionName=config.app_name,
                 ZipFile=zip_contents)
 
     def _write_config_to_disk(self, config):
-        # type: (Dict[str, Any]) -> None
-        config_filename = os.path.join(config['project_dir'],
+        # type: (Config) -> None
+        config_filename = os.path.join(config.project_dir,
                                        '.chalice', 'config.json')
         with open(config_filename, 'w') as f:
-            f.write(json.dumps(config['config'], indent=2))
+            f.write(json.dumps(config.config_from_disk, indent=2))
 
     def _first_time_lambda_create(self, config):
-        # type: (Dict[str, Any]) -> str
+        # type: (Config) -> str
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
         print "Initial creation of lambda function."
-        app_name = config['config']['app_name']
+        app_name = config.app_name
         role_arn = self._get_or_create_lambda_role_arn(config)
         zip_filename = self._packager.create_deployment_package(
-            config['project_dir'])
+            config.project_dir)
         with open(zip_filename, 'rb') as f:
             zip_contents = f.read()
         return self._create_function(app_name, role_arn, zip_contents)
@@ -346,13 +351,14 @@ class Deployer(object):
             return response['FunctionArn']
 
     def _get_or_create_lambda_role_arn(self, config):
-        # type: (Dict[str, Any]) -> str
-        if not config['config'].get('manage_iam_role', True):
+        # type: (Config) -> str
+        if not config.manage_iam_role:
             # We've already validated the config, so we know
             # if manage_iam_role==False, then they've provided a
             # an iam_role_arn.
-            return config['config']['iam_role_arn']
-        app_name = config['config']['app_name']
+            return config.iam_role_arn
+
+        app_name = config.app_name
         try:
             role_arn = self._find_role_arn(app_name)
             self._update_role_with_latest_policy(app_name, config)
@@ -362,7 +368,7 @@ class Deployer(object):
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
-        # type: (str, Dict[str, Any]) -> None
+        # type: (str, Config) -> None
         print "Updating IAM policy."
         app_policy = self._get_policy_from_source_code(config)
         previous = self._load_last_policy(config)
@@ -389,8 +395,9 @@ class Deployer(object):
         self._record_policy(config, app_policy)
 
     def _get_policy_from_source_code(self, config):
-        if config['autogen_policy']:
-            app_py = os.path.join(config['project_dir'], 'app.py')
+        # type: (Config) -> Dict[str, Any]
+        if config.autogen_policy:
+            app_py = os.path.join(config.project_dir, 'app.py')
             assert os.path.isfile(app_py)
             with open(app_py) as f:
                 app_policy = policy.policy_from_source_code(f.read())
@@ -401,8 +408,8 @@ class Deployer(object):
             return app_policy
 
     def _create_role_from_source_code(self, config):
-        # type: (Dict[str, Any]) -> str
-        app_name = config['config']['app_name']
+        # type: (Config) -> str
+        app_name = config.app_name
         app_policy = self._get_policy_from_source_code(config)
         if len(app_policy['Statement']) > 1:
             print "The following execution policy will be used:"
@@ -421,7 +428,8 @@ class Deployer(object):
         return role_arn
 
     def _load_last_policy(self, config):
-        policy_file = os.path.join(config['project_dir'],
+        # type: (Config) -> Dict[str, Any]
+        policy_file = os.path.join(config.project_dir,
                                    '.chalice', 'policy.json')
         if not os.path.isfile(policy_file):
             return {}
@@ -429,7 +437,8 @@ class Deployer(object):
             return json.loads(f.read())
 
     def _record_policy(self, config, policy):
-        policy_file = os.path.join(config['project_dir'],
+        # type: (Config, Dict[str, Any]) -> None
+        policy_file = os.path.join(config.project_dir,
                                    '.chalice', 'policy.json')
         with open(policy_file, 'w') as f:
             f.write(json.dumps(policy, indent=2))
@@ -443,9 +452,9 @@ class Deployer(object):
         raise ValueError("No role ARN found for: %s" % role_name)
 
     def _deploy_api_gateway(self, config):
-        # type: (Dict[str, Any]) -> Tuple[str, str, str]
+        # type: (Config) -> Tuple[str, str, str]
         # Perhaps move this into APIGatewayResourceCreator.
-        app_name = config['config']['app_name']
+        app_name = config.app_name
         rest_api_id = self._query.get_rest_api_id(app_name)
         if rest_api_id is None:
             print "Initiating first time deployment..."
@@ -494,22 +503,22 @@ class Deployer(object):
         )
 
     def _first_time_deploy(self, config):
-        # type: (Dict[str, Any]) -> Tuple[str, str, str]
-        app_name = config['config']['app_name']
+        # type: (Config) -> Tuple[str, str, str]
+        app_name = config.app_name
         client = self._client('apigateway')
         rest_api_id = client.create_rest_api(name=app_name)['id']
         return self._create_resources_for_api(config, rest_api_id)
 
     def _create_resources_for_api(self, config, rest_api_id):
-        # type: (Dict[str, Any], str) -> Tuple[str, str, str]
+        # type: (Config, str) -> Tuple[str, str, str]
         client = self._client('apigateway')
-        url_trie = build_url_trie(config['chalice_app'].routes)
+        url_trie = build_url_trie(config.chalice_app.routes)
         root_resource = client.get_resources(restApiId=rest_api_id)['items'][0]
         assert root_resource['path'] == u'/'
         resource_id = root_resource['id']
         route_builder = APIGatewayResourceCreator(
             client, self._client('lambda'), rest_api_id,
-            config['config']['lambda_arn'])
+            config.lambda_arn)
         # This is a little confusing.  You need to specify the parent
         # resource to create a subresource, but you can't create the root
         # resource because you have to specify a parent id.  So API Gateway
@@ -523,7 +532,7 @@ class Deployer(object):
         route_builder.build_resources(url_trie)
         # And finally, you need an actual deployment to deploy the changes to
         # API gateway.
-        stage = config['config'].get('stage', 'dev')
+        stage = config.stage_name or 'dev'
         print "Deploying to:", stage
         client.create_deployment(
             restApiId=rest_api_id,
@@ -547,13 +556,13 @@ class APIGatewayResourceCreator(object):
         self._random_id = random_id_generator
 
     def build_resources(self, chalice_trie):
+        # type: (Dict[str, Any]) -> None
         """Create API gateway resources from chalice routes.
 
         :type chalice_trie: dict
         :param chalice_trie: The trie of URLs from ``build_url_trie()``.
 
         """
-        # type: Dict[str, Any] -> None
         # We need to create the parent resource before we can create
         # child resources, so we'll do a pre-order depth first traversal.
         stack = [chalice_trie]
@@ -594,6 +603,7 @@ class APIGatewayResourceCreator(object):
         )
 
     def _camel_convert(self, name):
+        # type: (str) -> str
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
@@ -681,10 +691,8 @@ class APIGatewayResourceCreator(object):
 
 class LambdaDeploymentPackager(object):
 
-    def __init__(self):
-        pass
-
     def _create_virtualenv(self, venv_dir):
+        # type: (str) -> None
         # The original implementation used Popen(['virtualenv', ...])
         # However, it's hard to make assumptions about how a users
         # PATH is set up.  This could result in using old versions
@@ -841,6 +849,7 @@ class LambdaDeploymentPackager(object):
 class ResourceQuery(object):
 
     def __init__(self, lambda_client, apigateway_client):
+        # type: (Any, Any) -> None
         self._lambda_client = lambda_client
         self._apigateway_client = apigateway_client
 

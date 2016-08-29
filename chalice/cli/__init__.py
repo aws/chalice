@@ -12,6 +12,7 @@ import botocore.exceptions
 from chalice import deployer
 from chalice.logs import LogRetriever
 from chalice import prompts
+from chalice.config import Config
 
 
 TEMPLATE_APP = """\
@@ -51,8 +52,8 @@ def index():
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
     import botocore.session
-    lambda_arn = config['config']['lambda_arn']
-    profile = config['config']['profile']
+    lambda_arn = config.lambda_arn
+    profile = config.profile
     client = botocore.session.Session(profile=profile).create_client('logs')
     retriever = LogRetriever.create_from_arn(client, lambda_arn)
     events = retriever.retrieve_logs(
@@ -111,26 +112,32 @@ def local(ctx):
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
 def deploy(ctx, project_dir, autogen_policy, profile, stage):
+    user_provided_params = {}
+    default_params = {}
     if project_dir is None:
         project_dir = os.getcwd()
-    ctx.obj['project_dir'] = project_dir
+        default_params['project_dir'] = project_dir
+    else:
+        user_provided_params['project_dir'] = project_dir
     os.chdir(project_dir)
     try:
-        config = load_project_config(project_dir)
-        ctx.obj['config'] = config
+        config_from_disk = load_project_config(project_dir)
     except (OSError, IOError):
         click.echo("Unable to load the project config file. "
                    "Are you sure this is a chalice project?")
         raise click.Abort()
     if stage is not None:
-        config['stage'] = stage
+        config_from_disk['stage'] = stage
+        default_params['stage'] = stage
     app_obj = load_chalice_app(project_dir)
-    ctx.obj['chalice_app'] = app_obj
-    ctx.obj['autogen_policy'] = autogen_policy
-    profile_name = profile or config.get('profile')
-    d = deployer.Deployer(prompter=click, profile=profile_name)
+    user_provided_params['chalice_app'] = app_obj
+    user_provided_params['autogen_policy'] = autogen_policy
+    if profile:
+        user_provided_params['profile'] = profile
+    config = Config(user_provided_params, config_from_disk, default_params)
+    d = deployer.Deployer(prompter=click, profile=config.profile)
     try:
-        d.deploy(ctx.obj)
+        d.deploy(config)
     except botocore.exceptions.NoRegionError:
         e = click.ClickException("No region configured. "
                                  "Either export the AWS_DEFAULT_REGION "
@@ -154,20 +161,24 @@ def deploy(ctx, project_dir, autogen_policy, profile, stage):
               help='Controls whether or not lambda log messages are included.')
 @click.pass_context
 def logs(ctx, project_dir, num_entries, include_lambda_messages):
+    user_provided_params = {}
+    default_params = {}
     if project_dir is None:
         project_dir = os.getcwd()
-    ctx.obj['project_dir'] = project_dir
+        default_params['project_dir'] = project_dir
+    else:
+        user_provided_params['project_dir'] = project_dir
     os.chdir(project_dir)
     try:
-        config = load_project_config(project_dir)
-        ctx.obj['config'] = config
+        config_from_disk = load_project_config(project_dir)
     except (OSError, IOError):
         click.echo("Unable to load the project config file. "
                    "Are you sure this is a chalice project?")
         raise click.Abort()
     app_obj = load_chalice_app(project_dir)
-    ctx.obj['chalice_app'] = app_obj
-    show_lambda_logs(ctx.obj, num_entries, include_lambda_messages)
+    user_provided_params['chalice_app'] = app_obj
+    config = Config(user_provided_params, config_from_disk, default_params)
+    show_lambda_logs(config, num_entries, include_lambda_messages)
 
 
 @cli.command('gen-policy')

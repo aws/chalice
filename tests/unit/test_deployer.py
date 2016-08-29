@@ -7,6 +7,7 @@ from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
 from chalice.deployer import ResourceQuery, validate_configuration
 from chalice.app import RouteEntry, ALL_ERRORS
 from chalice.app import Chalice
+from chalice.config import Config
 
 from botocore.stub import Stubber
 import botocore.session
@@ -108,35 +109,22 @@ def test_multiple_routes_on_single_spine():
 def test_trailing_slash_routes_result_in_error():
     app = Chalice('appname')
     app.routes = {'/trailing-slash/': None}
-    config = {
-        'chalice_app':  app,
-        'config': {},
-    }
+    config = Config.create(chalice_app=app)
     with pytest.raises(ValueError):
         validate_configuration(config)
 
 
 def test_manage_iam_role_false_requires_role_arn(sample_app):
-    config = {
-        'chalice_app': sample_app,
-        'config': {
-            'manage_iam_role': False,
-            'iam_role_arn': 'arn:::foo',
-        }
-    }
+    config = Config.create(chalice_app=sample_app, manage_iam_role=False,
+                           iam_role_arn='arn:::foo')
     assert validate_configuration(config) is None
 
 
 def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
-    config = {
-        'chalice_app': sample_app,
-        'config': {
-            # We're indicating that we should not be managing the
-            # IAM role, but we're not giving a role ARN to use.
-            # This is a validation error.
-            'manage_iam_role': False,
-        }
-    }
+    # We're indicating that we should not be managing the
+    # IAM role, but we're not giving a role ARN to use.
+    # This is a validation error.
+    config = Config.create(chalice_app=sample_app, manage_iam_role=False)
     with pytest.raises(ValueError):
         validate_configuration(config)
 
