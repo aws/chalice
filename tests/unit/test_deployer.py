@@ -1,10 +1,17 @@
 import pytest
 from pytest import fixture
+import mock
 
+from chalice.awsclient import TypedAWSClient
 from chalice.deployer import build_url_trie
+from chalice.deployer import NoPrompt
+from chalice.deployer import LambdaDeployer
+from chalice.deployer import LambdaDeploymentPackager
+from chalice.deployer import APIGatewayDeployer
 from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
-from chalice.deployer import ResourceQuery, validate_configuration
+from chalice.deployer import validate_configuration
+from chalice.deployer import Deployer
 from chalice.app import RouteEntry, ALL_ERRORS
 from chalice.app import Chalice
 from chalice.config import Config
@@ -19,6 +26,17 @@ _SESSION = None
 class SimpleStub(object):
     def __init__(self, stubber):
         pass
+
+
+class InMemoryOSUtils(object):
+    def __init__(self, filemap):
+        self.filemap = filemap
+
+    def file_exists(self, filename):
+        return filename in self.filemap
+
+    def get_file_contents(self, filename, binary=True):
+        return self.filemap[filename]
 
 
 @fixture
@@ -247,90 +265,47 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
     g.build_resources(route_trie)
 
 
-def test_can_query_lambda_function_exists(stubbed_lambda):
-    client, stub = stubbed_lambda
-    query = ResourceQuery(client, None)
-    stub.add_response('get_function',
-                      service_response={'Code': {}, 'Configuration': {}},
-                      expected_params={'FunctionName': 'myappname'})
-    stub.activate()
-    assert query.lambda_function_exists(name='myappname')
-    stub.assert_no_pending_responses()
+def test_can_deploy_apig_and_lambda(sample_app):
+    lambda_deploy = mock.Mock(spec=LambdaDeployer)
+    apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+
+    apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
+
+    d = Deployer(apig_deploy, lambda_deploy)
+    cfg = Config({'chalice_app': sample_app})
+    result = d.deploy(cfg)
+    assert result == ('api_id', 'region', 'stage')
+    lambda_deploy.deploy.assert_called_with(cfg)
+    apig_deploy.deploy.assert_called_with(cfg)
 
 
-def test_lambda_function_does_not_exist(stubbed_lambda):
-    client, stub = stubbed_lambda
-    query = ResourceQuery(client, None)
-    stub.add_client_error(
-        'get_function', service_error_code='ResourceNotFoundException',
-        service_message='ResourceNotFound'
-    )
-    stub.activate()
-
-    assert query.lambda_function_exists(name='noexist') == False
-    stub.assert_no_pending_responses()
+def test_noprompt_always_returns_default():
+    assert not NoPrompt().confirm("You sure you want to do this?", default=False)
+    assert NoPrompt().confirm("You sure you want to do this?", default=True)
+    assert NoPrompt().confirm("You sure?", default='yes') == 'yes'
 
 
-def test_lambda_function_bad_error_propagates(stubbed_lambda):
-    client, stub = stubbed_lambda
-    query = ResourceQuery(client, None)
-    stub.add_client_error(
-        'get_function',
-        service_error_code='SomeOtherBadException',
-        service_message='Internal Error',
-        http_status_code=500
-    )
-    stub.activate()
+def test_lambda_deployer_repeated_deploy():
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    packager = mock.Mock(spec=LambdaDeploymentPackager)
 
-    with pytest.raises(botocore.exceptions.ClientError):
-        query.lambda_function_exists(name='noexist')
-    stub.assert_no_pending_responses()
+    packager.deployment_package_filename.return_value = 'packages.zip'
+    # Given the lambda function already exists:
+    aws_client.lambda_function_exists.return_value = True
+    # And given we don't want chalice to manage our iam role for the lambda
+    # function:
+    cfg = Config({'chalice_app': sample_app, 'manage_iam_role': False,
+                  'app_name': 'appname', 'iam_role_arn': True,
+                  'project_dir': './myproject'})
 
+    d = LambdaDeployer(aws_client, packager, None, osutils)
+    # Doing a lambda deploy:
+    d.deploy(cfg)
 
-def test_rest_api_exists(stubbed_api_gateway):
-    client, stub = stubbed_api_gateway
-    query = ResourceQuery(None, apigateway_client=client)
-    stub.add_response(
-        'get_rest_apis',
-        service_response={
-            "items": [
-                {"createdDate": 1468102497,
-                 "id": "first_id",
-                 "name": "notmyapp"},
-                {"createdDate": 1468102497,
-                 "id": "second_id",
-                 "name": "myappname"},
-                {"createdDate": 1468102497,
-                 "id": "third_id",
-                 "name": "notmyappaswell"},
-            ]
-        },
-        expected_params={},
-    )
-    stub.activate()
+    # Should result in injecting the latest app code.
+    packager.inject_latest_app.assert_called_with('packages.zip', './myproject')
 
-    assert query.get_rest_api_id('myappname') == 'second_id'
-    stub.assert_no_pending_responses()
-
-
-def test_rest_api_does_not_exist(stubbed_api_gateway):
-    client, stub = stubbed_api_gateway
-    query = ResourceQuery(None, apigateway_client=client)
-    stub.add_response(
-        'get_rest_apis',
-        service_response={
-            "items": [
-                {"createdDate": 1468102497,
-                 "id": "first_id",
-                 "name": "notmyapp"},
-                {"createdDate": 1468102497,
-                 "id": "third_id",
-                 "name": "notmyappaswell"},
-            ]
-        },
-        expected_params={},
-    )
-    stub.activate()
-
-    assert query.get_rest_api_id('myappname') is None
-    stub.assert_no_pending_responses()
+    # And should result in the lambda function being updated with the API.
+    aws_client.update_function_code.assert_called_with(
+        'appname', 'package contents')

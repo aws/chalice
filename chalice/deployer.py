@@ -12,18 +12,17 @@ import subprocess
 import zipfile
 import hashlib
 import inspect
-import time
 import re
 
-from typing import Any, Tuple, Callable, Optional  # noqa
-import botocore.session
-import botocore.exceptions
+from typing import Any, Tuple, Callable, Optional, List, IO  # noqa
+import botocore.session  # noqa
 import virtualenv
 
 import chalice
 from chalice import app
 from chalice import policy
 from chalice.config import Config  # noqa
+from chalice.awsclient import TypedAWSClient
 
 
 LAMBDA_TRUST_POLICY = {
@@ -105,6 +104,22 @@ ERROR_MAPPING = (
     '"Message": "$inputRoot.errorMessage"'
     "}"
 )
+
+
+def create_default_deployer(session, prompter=None):
+    # type: (botocore.session.Session, NoPrompt) -> Deployer
+    if prompter is None:
+        prompter = NoPrompt()
+    aws_client = TypedAWSClient(session)
+    api_gateway_deploy = APIGatewayDeployer(
+        aws_client, session.create_client('apigateway'),
+        session.create_client('lambda'))
+
+    packager = LambdaDeploymentPackager()
+    osutils = OSUtils()
+    lambda_deploy = LambdaDeployer(
+        aws_client, packager, prompter, osutils)
+    return Deployer(api_gateway_deploy, lambda_deploy)
 
 
 def build_url_trie(routes):
@@ -211,39 +226,13 @@ class NoPrompt(object):
 
 class Deployer(object):
 
-    LAMBDA_CREATE_ATTEMPTS = 5
-    DELAY_TIME = 3
-
-    def __init__(self, session=None, prompter=None, profile=None):
-        # type: (botocore.session.Session, NoPrompt, Optional[str]) -> None
-        if session is None:
-            if profile:
-                session = botocore.session.Session(profile=profile)
-            else:
-                session = botocore.session.get_session()
-        if prompter is None:
-            prompter = NoPrompt()
-        self._session = session
-        self._prompter = prompter
-        self._client_cache = {}
-        # type: Dict[str, Any]
-        # Note: I'm using "Any" for clients until we figure out
-        # a way to have concrete types for botocore clients.
-        self._packager = LambdaDeploymentPackager()
-        self._query = ResourceQuery(
-            self._client('lambda'),
-            self._client('apigateway'),
-        )
-
-    def _client(self, service_name):
-        # type: (str) -> Any
-        if service_name not in self._client_cache:
-            self._client_cache[service_name] = self._session.create_client(
-                service_name)
-        return self._client_cache[service_name]
+    def __init__(self, apigateway_deploy, lambda_deploy):
+        # type: (APIGatewayDeployer, LambdaDeployer) -> None
+        self._apigateway_deploy = apigateway_deploy
+        self._lambda_deploy = lambda_deploy
 
     def deploy(self, config):
-        # type: (Config) -> str
+        # type: (Config) -> Tuple[str, str, str]
         """Deploy chalice application to AWS.
 
         :type config: dict
@@ -255,20 +244,14 @@ class Deployer(object):
 
         """
         validate_configuration(config)
-        lambda_deploy = LambdaDeployer(
-            self._query, self._client('iam'), self._client('lambda'),
-            self._packager, self._prompter
-        )
-        lambda_deploy.deploy(config)
-
-        api_gateway_deploy = APIGatewayDeployer(
-            self._query, self._client('apigateway'),
-            self._client('lambda'))
-        rest_api_id, region_name, stage = api_gateway_deploy.deploy(config)
+        self._lambda_deploy.deploy(config)
+        rest_api_id, region_name, stage = self._apigateway_deploy.deploy(
+            config)
         print (
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
             .format(api_id=rest_api_id, region=region_name, stage=stage)
         )
+        return rest_api_id, region_name, stage
 
 
 class APIGatewayResourceCreator(object):
@@ -576,75 +559,24 @@ class LambdaDeploymentPackager(object):
         shutil.move(tmpzip, deployment_package_filename)
 
 
-class ResourceQuery(object):
-
-    def __init__(self, lambda_client, apigateway_client):
-        # type: (Any, Any) -> None
-        self._lambda_client = lambda_client
-        self._apigateway_client = apigateway_client
-
-    def lambda_function_exists(self, name):
-        # type: (str) -> bool
-        """Check if lambda function exists.
-
-        :type name: str
-        :param name: The name of the lambda function
-
-        :rtype: bool
-        :return: Returns true if a lambda function with the given
-            name exists.
-
-        """
-        try:
-            self._lambda_client.get_function(FunctionName=name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                return False
-            raise
-        return True
-
-    def get_rest_api_id(self, name):
-        # type: (str) -> Optional[str]
-        """Get rest api id associated with an API name.
-
-        :type name: str
-        :param name: The name of the rest api.
-
-        :rtype: str
-        :return: If the rest api exists, then the restApiId
-            is returned, otherwise None.
-
-        """
-        rest_apis = self._apigateway_client.get_rest_apis()['items']
-        for api in rest_apis:
-            if api['name'] == name:
-                return api['id']
-
-
 class LambdaDeployer(object):
 
-    LAMBDA_CREATE_ATTEMPTS = 5
-    DELAY_TIME = 3
-
     def __init__(self,
-                 resource_query,  # type: ResourceQuery
-                 iam_client,      # type: Any
-                 lambda_client,   # type: Any
-                 packager,        # type: LambdaDeploymentPackager
-                 prompter         # type: NoPrompt
+                 aws_client,   # type: TypedAWSClient
+                 packager,     # type: LambdaDeploymentPackager
+                 prompter,     # type: NoPrompt
+                 osutils,      # type: OSUtils
                  ):
         # type: (...) -> None
-        self._query = resource_query
-        self._iam_client = iam_client
-        self._lambda_client = lambda_client
+        self._aws_client = aws_client
         self._packager = packager
         self._prompter = prompter
+        self._osutils = osutils
 
     def deploy(self, config):
         # type: (Config) -> None
         app_name = config.app_name
-        if self._query.lambda_function_exists(app_name):
+        if self._aws_client.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
         else:
@@ -664,20 +596,12 @@ class LambdaDeployer(object):
 
         app_name = config.app_name
         try:
-            role_arn = self._find_role_arn(app_name)
+            role_arn = self._aws_client.get_role_arn_for_name(app_name)
             self._update_role_with_latest_policy(app_name, config)
         except ValueError:
             print "Creating role"
             role_arn = self._create_role_from_source_code(config)
         return role_arn
-
-    def _find_role_arn(self, role_name):
-        # type: (str) -> str
-        response = self._iam_client.list_roles()
-        for role in response.get('Roles', []):
-            if role['RoleName'] == role_name:
-                return role['Arn']
-        raise ValueError("No role ARN found for: %s" % role_name)
 
     def _update_role_with_latest_policy(self, app_name, config):
         # type: (str, Config) -> None
@@ -698,12 +622,11 @@ class LambdaDeployer(object):
                     print action
             self._prompter.confirm("\nWould you like to continue? ",
                                    default=True, abort=True)
-        iam = self._iam_client
-        iam.delete_role_policy(RoleName=app_name,
-                               PolicyName=app_name)
-        iam.put_role_policy(RoleName=app_name,
-                            PolicyName=app_name,
-                            PolicyDocument=json.dumps(app_policy, indent=2))
+        self._aws_client.delete_role_policy(
+            role_name=app_name, policy_name=app_name)
+        self._aws_client.put_role_policy(role_name=app_name,
+                                         policy_name=app_name,
+                                         policy_document=app_policy)
         self._record_policy(config, app_policy)
 
     def _get_policy_from_source_code(self, config):
@@ -747,40 +670,8 @@ class LambdaDeployer(object):
             config.project_dir)
         with open(zip_filename, 'rb') as f:
             zip_contents = f.read()
-        return self._create_function(app_name, role_arn, zip_contents)
-
-    def _create_function(self, app_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
-        # The first time we create a role, there's a delay between
-        # role creation and being able to use the role in the
-        # creat_function call.  If we see this error, we'll retry
-        # a few times.
-        client = self._lambda_client
-        current = 0
-        while True:
-            try:
-                response = client.create_function(
-                    FunctionName=app_name,
-                    Runtime='python2.7',
-                    Code={'ZipFile': zip_contents},
-                    Handler='app.app',
-                    Role=role_arn,
-                    Timeout=60
-                )
-            except botocore.exceptions.ClientError as e:
-                code = e.response['Error'].get('Code')
-                if code == 'InvalidParameterValueException':
-                    # We're assuming that if we receive an
-                    # InvalidParameterValueException, it's because
-                    # the role we just created can't be used by
-                    # Lambda.
-                    time.sleep(self.DELAY_TIME)
-                    current += 1
-                    if current >= self.LAMBDA_CREATE_ATTEMPTS:
-                        raise
-                    continue
-                raise
-            return response['FunctionArn']
+        return self._aws_client.create_function(
+            app_name, role_arn, zip_contents)
 
     def _update_lambda_function(self, config):
         # type: (Config) -> None
@@ -789,19 +680,17 @@ class LambdaDeployer(object):
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
             project_dir)
-        if os.path.isfile(deployment_package_filename):
+        if self._osutils.file_exists(deployment_package_filename):
             packager.inject_latest_app(deployment_package_filename,
                                        project_dir)
         else:
             deployment_package_filename = packager.create_deployment_package(
                 project_dir)
-        with open(deployment_package_filename, 'rb') as f:
-            zip_contents = f.read()
-            client = self._lambda_client
-            print "Sending changes to lambda."
-            client.update_function_code(
-                FunctionName=config.app_name,
-                ZipFile=zip_contents)
+        zip_contents = self._osutils.get_file_contents(
+            deployment_package_filename, binary=True)
+        print "Sending changes to lambda."
+        self._aws_client.update_function_code(config.app_name,
+                                              zip_contents)
 
     def _write_config_to_disk(self, config):
         # type: (Config) -> None
@@ -819,14 +708,11 @@ class LambdaDeployer(object):
             print json.dumps(app_policy, indent=2)
             self._prompter.confirm("Would you like to continue? ",
                                    default=True, abort=True)
-        iam = self._iam_client
-        role_arn = iam.create_role(
-            RoleName=app_name,
-            AssumeRolePolicyDocument=json.dumps(
-                LAMBDA_TRUST_POLICY))['Role']['Arn']
-        iam.put_role_policy(RoleName=app_name,
-                            PolicyName=app_name,
-                            PolicyDocument=json.dumps(app_policy, indent=2))
+        role_arn = self._aws_client.create_role(
+            name=app_name,
+            trust_policy=LAMBDA_TRUST_POLICY,
+            policy=app_policy
+        )
         self._record_policy(config, app_policy)
         return role_arn
 
@@ -834,12 +720,12 @@ class LambdaDeployer(object):
 class APIGatewayDeployer(object):
 
     def __init__(self,
-                 resource_query,      # type: ResourceQuery
+                 aws_client,          # type: TypedAWSClient
                  api_gateway_client,  # type: Any
                  lambda_client        # type: Any
                  ):
         # type: (...) -> None
-        self._query = resource_query
+        self._aws_client = aws_client
         self._api_gateway_client = api_gateway_client
         self._lambda_client = lambda_client
 
@@ -847,7 +733,7 @@ class APIGatewayDeployer(object):
         # type: (Config) -> Tuple[str, str, str]
         # Perhaps move this into APIGatewayResourceCreator.
         app_name = config.app_name
-        rest_api_id = self._query.get_rest_api_id(app_name)
+        rest_api_id = self._aws_client.get_rest_api_id(app_name)
         if rest_api_id is None:
             print "Initiating first time deployment..."
             return self._first_time_deploy(config)
@@ -858,33 +744,23 @@ class APIGatewayDeployer(object):
 
     def _remove_all_resources(self, rest_api_id):
         # type: (str) -> None
-        client = self._api_gateway_client
-        all_resources = client.get_resources(restApiId=rest_api_id)['items']
+        all_resources = self._aws_client.get_resources_for_api(rest_api_id)
         first_tier_ids = [r['id'] for r in all_resources
                           if r['path'].count('/') == 1 and r['path'] != '/']
         print "Deleting root resource id"
         for resource_id in first_tier_ids:
-            client.delete_resource(restApiId=rest_api_id,
-                                   resourceId=resource_id)
+            self._aws_client.delete_resource_for_api(rest_api_id, resource_id)
         root_resource = [r for r in all_resources if r['path'] == '/'][0]
         # We can't delete the root resource, but we need to remove all the
         # existing methods otherwise we'll get 4xx from API gateway when we
         # try to add methods to the root resource on a redeploy.
-        self._delete_root_methods(rest_api_id, root_resource)
+        self._aws_client.delete_methods_from_root_resource(
+            rest_api_id, root_resource)
         print "Done deleting existing resources."
-
-    def _delete_root_methods(self, rest_api_id, root_resource):
-        # type: (str, Dict[str, Any]) -> None
-        client = self._api_gateway_client
-        methods = list(root_resource.get('resourceMethods', []))
-        for method in methods:
-            client.delete_method(restApiId=rest_api_id,
-                                 resourceId=root_resource['id'],
-                                 httpMethod=method)
 
     def _lambda_uri(self, lambda_function_arn):
         # type: (str) -> str
-        region_name = self._api_gateway_client.meta.region_name
+        region_name = self._aws_client.region_name
         api_version = '2015-03-31'
         return (
             "arn:aws:apigateway:{region_name}:lambda:path/{api_version}"
@@ -897,19 +773,17 @@ class APIGatewayDeployer(object):
     def _first_time_deploy(self, config):
         # type: (Config) -> Tuple[str, str, str]
         app_name = config.app_name
-        client = self._api_gateway_client
-        rest_api_id = client.create_rest_api(name=app_name)['id']
+        rest_api_id = self._aws_client.create_rest_api(name=app_name)
         return self._create_resources_for_api(config, rest_api_id)
 
     def _create_resources_for_api(self, config, rest_api_id):
         # type: (Config, str) -> Tuple[str, str, str]
-        client = self._api_gateway_client
         url_trie = build_url_trie(config.chalice_app.routes)
-        root_resource = client.get_resources(restApiId=rest_api_id)['items'][0]
+        root_resource = self._aws_client.get_root_resource_for_api(rest_api_id)
         assert root_resource['path'] == u'/'
         resource_id = root_resource['id']
         route_builder = APIGatewayResourceCreator(
-            client, self._lambda_client, rest_api_id,
+            self._api_gateway_client, self._lambda_client, rest_api_id,
             config.lambda_arn)
         # This is a little confusing.  You need to specify the parent
         # resource to create a subresource, but you can't create the root
@@ -926,8 +800,34 @@ class APIGatewayDeployer(object):
         # API gateway.
         stage = config.stage_name or 'dev'
         print "Deploying to:", stage
-        client.create_deployment(
-            restApiId=rest_api_id,
-            stageName=stage,
-        )
-        return rest_api_id, client.meta.region_name, stage
+        self._aws_client.deploy_rest_api(rest_api_id, stage)
+        return rest_api_id, self._aws_client.region_name, stage
+
+
+class OSUtils(object):
+    def open(self, filename, mode):
+        # type: (str, str) -> IO
+        return open(filename, mode)
+
+    def remove_file(self, filename):
+        # type: (str) -> None
+        """Remove a file, noop if file does not exist."""
+        # Unlike os.remove, if the file does not exist,
+        # then this method does nothing.
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+
+    def file_exists(self, filename):
+        # type: (str) -> bool
+        return os.path.isfile(filename)
+
+    def get_file_contents(self, filename, binary=True):
+        # type: (str, bool) -> str
+        if binary:
+            mode = 'rb'
+        else:
+            mode = 'r'
+        with open(filename, mode) as f:
+            return f.read()

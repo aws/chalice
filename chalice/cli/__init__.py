@@ -8,6 +8,7 @@ import json
 
 import click
 import botocore.exceptions
+import botocore.session
 
 from chalice import deployer
 from chalice.logs import LogRetriever
@@ -135,7 +136,8 @@ def deploy(ctx, project_dir, autogen_policy, profile, stage):
     if profile:
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
-    d = deployer.Deployer(prompter=click, profile=config.profile)
+    session = botocore.session.Session(profile=config.profile)
+    d = deployer.create_default_deployer(session=session, prompter=click)
     try:
         d.deploy(config)
     except botocore.exceptions.NoRegionError:
