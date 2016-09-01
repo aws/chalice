@@ -4,6 +4,7 @@ import json
 import pytest
 from pytest import fixture
 from chalice import app
+from chalice import NotFoundError
 
 
 def create_event(uri, method, path, content_type='application/json'):
@@ -312,3 +313,23 @@ def test_original_exception_raised_in_debug_mode(sample_app):
     # This includes the original type as well as the message.
     assert str(e.value) == 'You will see this error'
 
+
+def test_chalice_view_errors_propagate_in_non_debug_mode(sample_app):
+    @sample_app.route('/notfound')
+    def notfound():
+        raise NotFoundError("resource not found")
+
+    event = create_event('/notfound', 'GET', {})
+    with pytest.raises(NotFoundError):
+        sample_app(event, context=None)
+
+
+def test_chalice_view_errors_propagate_in_debug_mode(sample_app):
+    @sample_app.route('/notfound')
+    def notfound():
+        raise NotFoundError("resource not found")
+
+    sample_app.debug = True
+    event = create_event('/notfound', 'GET', {})
+    with pytest.raises(NotFoundError):
+        sample_app(event, context=None)

@@ -7,6 +7,9 @@ Next Release (TBD)
 
 * Add support for input content types besides ``application/json``
   (`#96 <https://github.com/awslabs/chalice/issues/96>`__)
+* Allow ``ChaliceViewErrors`` to propagate, so that API Gateway
+  can properly map HTTP status codes in non debug mode
+  (`#113 <https://github.com/awslabs/chalice/issues/113>`__)
 
 
 0.1.0

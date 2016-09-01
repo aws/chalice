@@ -194,6 +194,10 @@ class Chalice(object):
                                        event['stage-variables'])
         try:
             response = view_function(*function_args)
+        except ChaliceViewError:
+            # Any chalice view error should propagate.  These
+            # get mapped to various HTTP status codes in API Gateway.
+            raise
         except Exception:
             if self.debug:
                 # If the user has turned on debug mode,
