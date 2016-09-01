@@ -371,15 +371,19 @@ a ``BadRequestError`` from your view function, the framework will return an
 HTTP status code of 400 along with a JSON body with a ``Code`` and ``Message``.
 There are a few additional exceptions you can raise from your python code::
 
-* ChaliceViewError - return a status code of 500
-* NotFoundError - return a status code of 404
-
-In the ``chalice.app`` module, the following errors are also available::
-
+* BadRequestError - return a status code of 400
 * UnauthorizedError - return a status code of 401
 * ForbiddenError - return a status code of 403
+* NotFoundError - return a status code of 404
 * ConflictError - return a status code of 409
 * TooManyRequestsError - return a status code of 429
+* ChaliceViewError - return a status code of 500
+
+You can import these directly from the ``chalice`` package:
+
+.. code-block:: python
+
+    from chalice import UnauthorizedError
 
 
 Tutorial: Additional Routing
