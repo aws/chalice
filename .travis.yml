@@ -5,8 +5,13 @@ sudo: false
 env:
   - TEST_TYPE=test
   - TEST_TYPE=check
+matrix:
+  include:
+  - python: "3.5"
+  - env: TEST_TYPE=typecheck
 install:
   - pip install -e .
   - travis_retry pip install -r requirements-dev.txt
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.4; fi
 script:
   - make $TEST_TYPE
