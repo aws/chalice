@@ -1,6 +1,7 @@
 # Eventually I'll add:
 # py.test --cov chalice --cov-report term-missing --cov-fail-under 95 tests/
 # which will fail if tests are under 95%
+TESTS=tests/unit tests/functional
 
 check:
 	###### FLAKE8 #####
@@ -41,18 +42,18 @@ pylint:
 	pylint --rcfile .pylintrc chalice
 
 test:
-	py.test -v tests/unit/ tests/functional/
+	py.test -v $(TESTS)
 
 typecheck:
 	mypy --py2 --silent-import -p chalice
 
 coverage:
-	py.test --cov chalice --cov-report term-missing tests/
+	py.test --cov chalice --cov-report term-missing $(TESTS)
 
 coverage-unit:
 	py.test --cov chalice --cov-report term-missing tests/unit
 
 htmlcov:
-	py.test --cov chalice --cov-report html tests/
+	py.test --cov chalice --cov-report html $(TESTS)
 	rm -rf /tmp/htmlcov && mv htmlcov /tmp/
 	open /tmp/htmlcov/index.html

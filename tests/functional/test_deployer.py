@@ -1,12 +1,22 @@
 import zipfile
 from pytest import fixture
 
+import botocore.session
+
 from chalice import deployer
 
 
 @fixture(autouse=True)
 def set_region(monkeypatch):
     monkeypatch.setenv('AWS_DEFAULT_REGION', 'us-west-2')
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
+    monkeypatch.delenv('AWS_PROFILE', raising=False)
+    # Ensure that the existing ~/.aws/{config,credentials} file
+    # don't influence test results.
+    monkeypatch.setenv('AWS_CONFIG_FILE', '/tmp/asdfasdfaf/does/not/exist')
+    monkeypatch.setenv('AWS_SHARED_CREDENTIALS_FILE',
+                       '/tmp/asdfasdfaf/does/not/exist2')
 
 
 @fixture
@@ -63,8 +73,22 @@ def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
     assert err.strip() == ''
 
 
-def test_can_create_deployer_with_no_args(monkeypatch):
-    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
-    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
-    d = deployer.Deployer()
+def test_can_create_deployer_from_factory_function():
+    session = botocore.session.get_session()
+    d = deployer.create_default_deployer(session)
     assert isinstance(d, deployer.Deployer)
+
+def test_osutils_proxies_os_functions(tmpdir):
+    appdir = _create_app_structure(tmpdir)
+    appdir.join('app.py').write(b'hello')
+
+    osutils = deployer.OSUtils()
+
+    app_file = str(appdir.join('app.py'))
+    assert osutils.file_exists(app_file)
+    assert osutils.get_file_contents(app_file) == b'hello'
+    assert osutils.open(app_file, 'rb').read() == b'hello'
+    osutils.remove_file(app_file)
+    # Removing again doesn't raise an error.
+    osutils.remove_file(app_file)
+    assert not osutils.file_exists(app_file)

@@ -1,3 +1,6 @@
+from typing import Any  # noqa
+
+
 WELCOME_PROMPT = r"""
 
    ___  _  _    _    _     ___  ___  ___
@@ -25,4 +28,5 @@ Please enter the project name"""
 
 
 def getting_started_prompt(click):
+    # type: (Any) -> bool
     return click.prompt(WELCOME_PROMPT)
