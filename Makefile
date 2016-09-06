@@ -45,7 +45,17 @@ test:
 	py.test -v $(TESTS)
 
 typecheck:
-	mypy --py2 --silent-import -p chalice
+	mypy --py2 --silent-import -p chalice --strict-optional
+	# Set of modules that will require type hints for all methods.
+	# The eventual goal is to just --disallow-untyped-defs for
+	# the entire chalice package, but for now as modules have complete
+	# type definitions, the list below should be updated.
+	mypy --py2 --silent-import -p chalice.deployer --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.policy --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.awsclient --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.logs --disallow-untyped-defs --strict-optional
 
 coverage:
 	py.test --cov chalice --cov-report term-missing $(TESTS)
