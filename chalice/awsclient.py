@@ -135,7 +135,7 @@ class TypedAWSClient(object):
         return response['id']
 
     def get_root_resource_for_api(self, rest_api_id):
-        # type: (str) -> str
+        # type: (str) -> Dict[str, Any]
         root_resource = self._client('apigateway').get_resources(
             restApiId=rest_api_id)['items'][0]
         return root_resource

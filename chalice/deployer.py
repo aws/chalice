@@ -14,7 +14,7 @@ import hashlib
 import inspect
 import re
 
-from typing import Any, Tuple, Callable, Optional, List, IO  # noqa
+from typing import Any, Tuple, Callable, IO  # noqa
 import botocore.session  # noqa
 import virtualenv
 
