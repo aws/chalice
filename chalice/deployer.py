@@ -445,10 +445,10 @@ class LambdaDeploymentPackager(object):
             p.communicate()
         python_dir = os.listdir(os.path.join(venv_dir, 'lib'))[0]
         if os.name == 'nt':
+            deps_dir = os.path.join(venv_dir, 'Lib', 'site-packages')
+        else:
             deps_dir = os.path.join(venv_dir, 'lib', python_dir,
                                     'site-packages')
-        else:
-            deps_dir = os.path.join(venv_dir, 'Lib', 'site-packages')
         assert os.path.isdir(deps_dir)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
