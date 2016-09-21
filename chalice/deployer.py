@@ -429,7 +429,10 @@ class LambdaDeploymentPackager(object):
         # more cases.
         venv_dir = os.path.join(project_dir, '.chalice', 'venv')
         self._create_virtualenv(venv_dir)
-        pip_exe = os.path.join(venv_dir, 'bin', 'pip')
+        if os.name == 'nt':
+            pip_exe = os.path.join(venv_dir, 'Scripts', 'pip.exe')
+        else:
+            pip_exe = os.path.join(venv_dir, 'bin', 'pip')
         assert os.path.isfile(pip_exe)
         # Next install any requirements specified by the app.
         requirements_file = os.path.join(project_dir, 'requirements.txt')
@@ -441,8 +444,11 @@ class LambdaDeploymentPackager(object):
                                  stdout=subprocess.PIPE)
             p.communicate()
         python_dir = os.listdir(os.path.join(venv_dir, 'lib'))[0]
-        deps_dir = os.path.join(venv_dir, 'lib', python_dir,
-                                'site-packages')
+        if os.name == 'nt':
+            deps_dir = os.path.join(venv_dir, 'lib', python_dir,
+                                    'site-packages')
+        else:
+            deps_dir = os.path.join(venv_dir, 'Lib', 'site-packages')
         assert os.path.isdir(deps_dir)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
