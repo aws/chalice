@@ -656,7 +656,7 @@ class LambdaDeployer(object):
         policy_file = os.path.join(config.project_dir,
                                    '.chalice', 'policy.json')
         with open(policy_file, 'w') as f:
-            f.write(json.dumps(policy, indent=2))
+            f.write(json.dumps(policy, indent=2, separators=(',', ': ')))
 
     def _first_time_lambda_create(self, config):
         # type: (Config) -> str
