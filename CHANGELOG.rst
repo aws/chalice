@@ -10,6 +10,10 @@ Next Release (TBD)
 * Allow ``ChaliceViewErrors`` to propagate, so that API Gateway
   can properly map HTTP status codes in non debug mode
   (`#113 <https://github.com/awslabs/chalice/issues/113>`__)
+* Add windows compatibility
+  (`#31 <https://github.com/awslabs/chalice/issues/31>`__,
+   `#124 <https://github.com/awslabs/chalice/pull/124>`__,
+   `#103 <https://github.com/awslabs/chalice/issues/103>`__)
 
 
 0.1.0
