@@ -23,6 +23,7 @@ from chalice import app
 from chalice import policy
 from chalice.config import Config  # noqa
 from chalice.awsclient import TypedAWSClient
+from chalice import compat
 
 
 LAMBDA_TRUST_POLICY = {
@@ -429,10 +430,7 @@ class LambdaDeploymentPackager(object):
         # more cases.
         venv_dir = os.path.join(project_dir, '.chalice', 'venv')
         self._create_virtualenv(venv_dir)
-        if os.name == 'nt':
-            pip_exe = os.path.join(venv_dir, 'Scripts', 'pip.exe')
-        else:
-            pip_exe = os.path.join(venv_dir, 'bin', 'pip')
+        pip_exe = compat.pip_script_in_venv(venv_dir)
         assert os.path.isfile(pip_exe)
         # Next install any requirements specified by the app.
         requirements_file = os.path.join(project_dir, 'requirements.txt')
@@ -443,12 +441,7 @@ class LambdaDeploymentPackager(object):
             p = subprocess.Popen([pip_exe, 'install', '-r', requirements_file],
                                  stdout=subprocess.PIPE)
             p.communicate()
-        python_dir = os.listdir(os.path.join(venv_dir, 'lib'))[0]
-        if os.name == 'nt':
-            deps_dir = os.path.join(venv_dir, 'Lib', 'site-packages')
-        else:
-            deps_dir = os.path.join(venv_dir, 'lib', python_dir,
-                                    'site-packages')
+        deps_dir = compat.site_packages_dir_in_venv(venv_dir)
         assert os.path.isdir(deps_dir)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.

@@ -56,6 +56,7 @@ typecheck:
 	mypy --py2 --silent-import -p chalice.awsclient --disallow-untyped-defs --strict-optional
 	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
 	mypy --py2 --silent-import -p chalice.logs --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.compat --disallow-untyped-defs --strict-optional
 
 coverage:
 	py.test --cov chalice --cov-report term-missing $(TESTS)
