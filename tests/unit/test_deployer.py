@@ -149,18 +149,6 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
 
 def add_expected_calls_to_map_error(error_cls, gateway_stub):
     gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseTemplates': {'application/json': ERROR_MAPPING},
-            'restApiId': 'rest-api-id',
-            'selectionPattern': '%s.*' % error_cls.__name__,
-            'statusCode': str(error_cls.STATUS_CODE),
-        }
-    )
-    gateway_stub.add_response(
         'put_method_response',
         service_response={},
         expected_params={
@@ -170,6 +158,18 @@ def add_expected_calls_to_map_error(error_cls, gateway_stub):
                 'application/json': 'Empty',
             },
             'restApiId': 'rest-api-id',
+            'statusCode': str(error_cls.STATUS_CODE),
+        }
+    )
+    gateway_stub.add_response(
+        'put_integration_response',
+        service_response={},
+        expected_params={
+            'httpMethod': 'POST',
+            'resourceId': 'parent-id',
+            'responseTemplates': {'application/json': ERROR_MAPPING},
+            'restApiId': 'rest-api-id',
+            'selectionPattern': '%s.*' % error_cls.__name__,
             'statusCode': str(error_cls.STATUS_CODE),
         }
     )
@@ -222,19 +222,6 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
         }
     )
     gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseTemplates': {
-                'application/json': '',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': '200',
-        }
-    )
-    gateway_stub.add_response(
         'put_method_response',
         service_response={},
         expected_params={
@@ -242,6 +229,19 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway, stubbed_
             'resourceId': 'parent-id',
             'responseModels': {
                 'application/json': 'Empty',
+            },
+            'restApiId': 'rest-api-id',
+            'statusCode': '200',
+        }
+    )
+    gateway_stub.add_response(
+        'put_integration_response',
+        service_response={},
+        expected_params={
+            'httpMethod': 'POST',
+            'resourceId': 'parent-id',
+            'responseTemplates': {
+                'application/json': '',
             },
             'restApiId': 'rest-api-id',
             'statusCode': '200',

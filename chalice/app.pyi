@@ -49,7 +49,8 @@ class RouteEntry(object):
                  authorization_type: str=None,
                  authorizer_id: str=None,
                  api_key_required: bool=None,
-                 content_types: List[str]=None) -> None: ...
+                 content_types: List[str]=None,
+                 cors: bool) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
 
