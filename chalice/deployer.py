@@ -646,6 +646,7 @@ class LambdaDeployer(object):
         policy_file = os.path.join(config.project_dir,
                                    '.chalice', 'policy.json')
         if not os.path.isfile(policy_file):
+            # TODO: Should return at least {'Statement': []}.
             return {}
         with open(policy_file, 'r') as f:
             return json.loads(f.read())
