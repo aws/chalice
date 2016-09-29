@@ -157,7 +157,8 @@ class Chalice(object):
                 "Duplicate route detected: '%s'\n"
                 "URL paths must be unique." % path)
         entry = RouteEntry(view_func, name, path, methods, authorization_type,
-                           authorizer_id, api_key_required, content_types, cors)
+                           authorizer_id, api_key_required,
+                           content_types, cors)
         self.routes[path] = entry
 
     def __call__(self, event, context):

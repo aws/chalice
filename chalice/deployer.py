@@ -244,7 +244,7 @@ class Deployer(object):
             config)
         print (
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
-                .format(api_id=rest_api_id, region=region_name, stage=stage)
+            .format(api_id=rest_api_id, region=region_name, stage=stage)
         )
         return rest_api_id, region_name, stage
 
@@ -350,7 +350,7 @@ class APIGatewayResourceCreator(object):
             passthroughBehavior="NEVER",
             requestTemplates={
                 key: FULL_PASSTHROUGH for key in content_types
-                },
+            },
             uri=self._lambda_uri()
         )
         # Success case.
@@ -388,7 +388,8 @@ class APIGatewayResourceCreator(object):
             }
             if route_entry.cors:
                 method_response_args['responseParameters'] = {
-                    'method.response.header.Access-Control-Allow-Origin': False}
+                    'method.response.header.Access-Control-Allow-Origin':
+                        False}
             c.put_method_response(**method_response_args)
             integration_response_args = {
                 'restApiId': self.rest_api_id,
@@ -400,10 +401,12 @@ class APIGatewayResourceCreator(object):
             }
             if route_entry.cors:
                 integration_response_args['responseParameters'] = {
-                    'method.response.header.Access-Control-Allow-Origin': "'*'"}
+                    'method.response.header.Access-Control-Allow-Origin':
+                        "'*'"}
             c.put_integration_response(**integration_response_args)
 
     def _add_options_preflight_request(self, node):
+        # type: (Dict[str, Any]) -> None
         # If CORs is configured we also need to set up
         # an OPTIONS method for them for preflight requests.
         # TODO: We should probably warn/error if they've also configured
@@ -430,7 +433,7 @@ class APIGatewayResourceCreator(object):
             httpMethod='OPTIONS',
             statusCode='200',
             responseModels={'application/json': 'Empty'},
-			responseParameters={
+            responseParameters={
                 "method.response.header.Access-Control-Allow-Origin": False,
                 "method.response.header.Access-Control-Allow-Methods": False,
                 "method.response.header.Access-Control-Allow-Headers": False,
@@ -445,8 +448,11 @@ class APIGatewayResourceCreator(object):
             responseParameters={
                 "method.response.header.Access-Control-Allow-Origin": "'*'",
                 # TODO: This should be all the allowed methods in their view.
-                "method.response.header.Access-Control-Allow-Methods": "'POST,GET,PUT,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                "method.response.header.Access-Control-Allow-Methods": (
+                    "'POST,GET,PUT,OPTIONS'"),
+                "method.response.header.Access-Control-Allow-Headers": (
+                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
+                    ",X-Amz-Security-Token'")
             },
         )
 
