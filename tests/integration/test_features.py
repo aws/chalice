@@ -127,7 +127,7 @@ def test_can_raise_bad_request(smoke_test_app):
     assert response.json()['Message'] == 'Bad request.'
 
 
-def test_can_raise_bad_request(smoke_test_app):
+def test_can_raise_not_found(smoke_test_app):
     response = requests.get(smoke_test_app.url + '/notfound')
     assert response.status_code == 404
     assert response.json()['Code'] == 'NotFoundError'
@@ -155,3 +155,18 @@ def test_form_encoded_content_type(smoke_test_app):
                              data={'foo': 'bar'})
     response.raise_for_status()
     assert response.json() == {'parsed': {'foo': ['bar']}}
+
+
+def test_can_support_cors(smoke_test_app):
+    response = requests.get(smoke_test_app.url + '/cors')
+    response.raise_for_status()
+    assert response.headers['Access-Control-Allow-Origin'] == '*'
+
+    # Should also have injected an OPTIONs request.
+    response = requests.options(smoke_test_app.url + '/cors')
+    response.raise_for_status()
+    headers = response.headers
+    assert headers['Access-Control-Allow-Origin'] == '*'
+    assert headers['Access-Control-Allow-Headers'] == (
+        'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token')
+    assert headers['Access-Control-Allow-Methods'] == 'POST,GET,PUT,OPTIONS'
