@@ -293,6 +293,8 @@ class APIGatewayResourceCreator(object):
                 assert current['route_entry'] is not None, current
                 for http_method in current['route_entry'].methods:
                     self._configure_resource_route(current, http_method)
+                if current['route_entry'].cors:
+                    self._add_options_preflight_request(current)
             for child in current['children']:
                 stack.append(current['children'][child])
         # Add a catch all auth that says anything in this rest API can call
@@ -400,6 +402,53 @@ class APIGatewayResourceCreator(object):
                 integration_response_args['responseParameters'] = {
                     'method.response.header.Access-Control-Allow-Origin': "'*'"}
             c.put_integration_response(**integration_response_args)
+
+    def _add_options_preflight_request(self, node):
+        # If CORs is configured we also need to set up
+        # an OPTIONS method for them for preflight requests.
+        # TODO: We should probably warn/error if they've also configured
+        # the view function to support an OPTIONs method.
+        c = self.client
+        c.put_method(
+            restApiId=self.rest_api_id,
+            resourceId=node['resource_id'],
+            httpMethod='OPTIONS',
+            authorizationType='NONE',
+        )
+        c.put_integration(
+            restApiId=self.rest_api_id,
+            resourceId=node['resource_id'],
+            httpMethod='OPTIONS',
+            type='MOCK',
+            requestTemplates={
+                'application/json': '{"statusCode": 200}',
+            },
+        )
+        c.put_method_response(
+            restApiId=self.rest_api_id,
+            resourceId=node['resource_id'],
+            httpMethod='OPTIONS',
+            statusCode='200',
+            responseModels={'application/json': 'Empty'},
+			responseParameters={
+                "method.response.header.Access-Control-Allow-Origin": False,
+                "method.response.header.Access-Control-Allow-Methods": False,
+                "method.response.header.Access-Control-Allow-Headers": False,
+            },
+        )
+        c.put_integration_response(
+            restApiId=self.rest_api_id,
+            resourceId=node['resource_id'],
+            httpMethod='OPTIONS',
+            statusCode='200',
+            responseTemplates={'application/json': ''},
+            responseParameters={
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                # TODO: This should be all the allowed methods in their view.
+                "method.response.header.Access-Control-Allow-Methods": "'POST,GET,PUT,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            },
+        )
 
     def _lambda_uri(self):
         # type: () -> str
