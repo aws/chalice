@@ -63,15 +63,13 @@ class Request(object):
     def __init__(self, query_params, headers, uri_params, method, body,
                  base64_body, context, stage_vars):
         self.query_params = query_params
-        self.headers = headers
+        self.headers = {k.lower(): v for k, v in headers.items()}
         self.uri_params = uri_params
         self.method = method
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
-        if self.headers.get('Content-Type') == 'application/json':
-            # We'll need to address case insensitive header lookups
-            # eventually.
+        if self.headers.get('content-type') == 'application/json':
             self.json_body = body
         else:
             self.json_body = None
