@@ -376,8 +376,10 @@ class APIGatewayResourceCreator(object):
             integration_response_args['responseParameters'] = {
                 'method.response.header.Access-Control-Allow-Origin': "'*'"}
         c.put_integration_response(**integration_response_args)
+        self._add_error_responses(http_method, node, route_entry, c)
 
-        # And we have to create a pair for each error type.
+    def _add_error_responses(self, http_method, node, route_entry, client):
+        # type: (str, Dict[str, Any], app.RouteEntry, Any) -> None
         for error_cls in app.ALL_ERRORS:
             method_response_args = {
                 'restApiId': self.rest_api_id,
@@ -390,7 +392,7 @@ class APIGatewayResourceCreator(object):
                 method_response_args['responseParameters'] = {
                     'method.response.header.Access-Control-Allow-Origin':
                         False}
-            c.put_method_response(**method_response_args)
+            client.put_method_response(**method_response_args)
             integration_response_args = {
                 'restApiId': self.rest_api_id,
                 'resourceId': node['resource_id'],
@@ -403,7 +405,7 @@ class APIGatewayResourceCreator(object):
                 integration_response_args['responseParameters'] = {
                     'method.response.header.Access-Control-Allow-Origin':
                         "'*'"}
-            c.put_integration_response(**integration_response_args)
+            client.put_integration_response(**integration_response_args)
 
     def _add_options_preflight_request(self, node):
         # type: (Dict[str, Any]) -> None
