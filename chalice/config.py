@@ -6,9 +6,15 @@ class Config(object):
                  default_params=None):
         #: Params that a user provided explicitly,
         #: typically via the command line.
+        if user_provided_params is None:
+            user_provided_params = {}
         self._user_provided_params = user_provided_params
         #: The json.loads() from .chalice/config.json
+        if config_from_disk is None:
+            config_from_disk = {}
         self._config_from_disk = config_from_disk
+        if default_params is None:
+            default_params = {}
         self._default_params = default_params
 
     @classmethod
