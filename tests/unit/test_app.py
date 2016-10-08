@@ -349,3 +349,12 @@ def test_chalice_view_errors_propagate_in_debug_mode(sample_app):
     event = create_event('/notfound', 'GET', {})
     with pytest.raises(NotFoundError):
         sample_app(event, context=None)
+
+
+def test_case_insensitive_mapping():
+    mapping = app.CaseInsensitiveMapping({'HEADER': 'Value'})
+
+    assert mapping['hEAdEr']
+    assert mapping.get('hEAdEr')
+    assert 'hEAdEr' in mapping
+    assert repr({'header': 'Value'}) == repr(mapping)
