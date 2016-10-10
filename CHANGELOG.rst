@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Fix bug with case insensitive headers
+  (`#129 <https://github.com/awslabs/chalice/issues/129>`__)
+* Add initial support for CORS
+  (`#133 <https://github.com/awslabs/chalice/pull/133>`__)
+
+
 0.2.0
 =====
 

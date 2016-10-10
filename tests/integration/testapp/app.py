@@ -73,3 +73,8 @@ def supports_cors():
     # It doesn't really matter what we return here because
     # we'll be checking the response headers to verify CORS support.
     return {'cors': True}
+
+
+@app.route('/todict', methods=['GET'])
+def todict():
+    return app.current_request.to_dict()

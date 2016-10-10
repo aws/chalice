@@ -1,6 +1,7 @@
 """Chalice app and routing code."""
 import re
 import base64
+from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -57,21 +58,38 @@ ALL_ERRORS = [
     TooManyRequestsError]
 
 
+class CaseInsensitiveMapping(Mapping):
+    """Case insensitive and read-only mapping."""
+
+    def __init__(self, mapping):
+        self._dict = {k.lower(): v for k, v in mapping.items()}
+
+    def __getitem__(self, key):
+        return self._dict[key.lower()]
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __repr__(self):
+        return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
+
+
 class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
                  base64_body, context, stage_vars):
         self.query_params = query_params
-        self.headers = headers
+        self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
-        if self.headers.get('Content-Type') == 'application/json':
-            # We'll need to address case insensitive header lookups
-            # eventually.
+        if self.headers.get('content-type') == 'application/json':
             self.json_body = body
         else:
             self.json_body = None
@@ -91,7 +109,11 @@ class Request(object):
         return self._raw_body
 
     def to_dict(self):
-        return self.__dict__.copy()
+        copied = self.__dict__.copy()
+        # We want the output of `to_dict()` to be
+        # JSON serializable, so we need to remove the CaseInsensitive dict.
+        copied['headers'] = dict(copied['headers'])
+        return copied
 
 
 class RouteEntry(object):
