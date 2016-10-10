@@ -453,7 +453,6 @@ class APIGatewayResourceCreator(object):
             responseTemplates={'application/json': ''},
             responseParameters={
                 "method.response.header.Access-Control-Allow-Origin": "'*'",
-                # TODO: This should be all the allowed methods in their view.
                 "method.response.header.Access-Control-Allow-Methods": (
                     "'%s'" % allowed_methods),
                 "method.response.header.Access-Control-Allow-Headers": (
