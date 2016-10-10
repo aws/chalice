@@ -1,6 +1,7 @@
 """Chalice app and routing code."""
 import re
 import base64
+from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -57,23 +58,23 @@ ALL_ERRORS = [
     TooManyRequestsError]
 
 
-class CaseInsensitiveMapping(object):
+class CaseInsensitiveMapping(Mapping):
     """Case insensitive and read-only mapping."""
 
     def __init__(self, mapping):
-        self._dict = {k.lower(): v for k, v in mapping.iteritems()}
+        self._dict = {k.lower(): v for k, v in mapping.items()}
 
     def __getitem__(self, key):
-        return self._dict.__getitem__(key.lower())
+        return self._dict[key.lower()]
 
-    def __contains__(self, key):
-        return self._dict.__contains__(key.lower())
+    def __iter__(self):
+        return iter(self._dict)
 
-    def get(self, key, default=None):
-        return self._dict.get(key.lower(), default)
+    def __len__(self):
+        return len(self._dict)
 
     def __repr__(self):
-        return repr(self._dict)
+        return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
 
 
 class Request(object):
@@ -108,7 +109,11 @@ class Request(object):
         return self._raw_body
 
     def to_dict(self):
-        return self.__dict__.copy()
+        copied = self.__dict__.copy()
+        # We want the output of `to_dict()` to be
+        # JSON serializable, so we need to remove the CaseInsensitive dict.
+        copied['headers'] = dict(copied['headers'])
+        return copied
 
 
 class RouteEntry(object):

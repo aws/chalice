@@ -111,6 +111,10 @@ def test_can_call_to_dict_on_current_request(sample_app):
     # out a few keys as a basic sanity test.
     assert response['method'] == 'GET'
     assert response['json_body'] == {}
+    # We also want to verify that to_dict() is always
+    # JSON serializable so we check we can roundtrip
+    # the data to/from JSON.
+    assert isinstance(json.loads(json.dumps(response)), dict)
 
 
 def test_will_pass_captured_params_to_view(sample_app):
@@ -357,4 +361,4 @@ def test_case_insensitive_mapping():
     assert mapping['hEAdEr']
     assert mapping.get('hEAdEr')
     assert 'hEAdEr' in mapping
-    assert repr({'header': 'Value'}) == repr(mapping)
+    assert repr({'header': 'Value'}) in repr(mapping)

@@ -124,7 +124,7 @@ def test_can_raise_bad_request(smoke_test_app):
     response = requests.get(smoke_test_app.url + '/badrequest')
     assert response.status_code == 400
     assert response.json()['Code'] == 'BadRequestError'
-    assert response.json()['Message'] == 'Bad request.'
+    assert response.json()['Message'] == 'BadRequestError: Bad request.'
 
 
 def test_can_raise_not_found(smoke_test_app):
@@ -169,4 +169,8 @@ def test_can_support_cors(smoke_test_app):
     assert headers['Access-Control-Allow-Origin'] == '*'
     assert headers['Access-Control-Allow-Headers'] == (
         'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token')
-    assert headers['Access-Control-Allow-Methods'] == 'POST,GET,PUT,OPTIONS'
+    assert headers['Access-Control-Allow-Methods'] == 'GET,POST,PUT,OPTIONS'
+
+
+def test_to_dict_is_also_json_serializable(smoke_test_app):
+    assert 'headers' in smoke_test_app.get_json('/todict')
