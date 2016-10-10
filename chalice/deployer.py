@@ -409,7 +409,7 @@ class APIGatewayResourceCreator(object):
             client.put_integration_response(**integration_response_args)
 
     def _add_options_preflight_request(self, node, http_methods):
-        # type: (Dict[str, Any]) -> None
+        # type: (Dict[str, Any], List[str]) -> None
         # If CORs is configured we also need to set up
         # an OPTIONS method for them for preflight requests.
         # TODO: We should probably warn/error if they've also configured
