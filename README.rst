@@ -635,6 +635,50 @@ the raw body bytes:
 you will need to use ``app.current_request.raw_body`` and parse
 the request body as needed.
 
+Tutorial: CORS Support
+======================
+
+You can specify whether a view supports CORS by adding the
+``cors=True`` parameter to your ``@app.route()`` call.  By
+default this value is false:
+
+.. code-block:: python
+
+    @app.route('/supports-cors', methods=['PUT'], cors=True)
+    def supports_cors():
+        return {}
+
+
+Settings ``cors=True`` has similar behavior to enabling CORS
+using the AWS Console.  This includes:
+
+* Injecting the ``Access-Control-Allow-Origin: *`` header to your
+  responses, including all error responses you can return.
+* Automatically adding an ``OPTIONS`` method so support preflighting
+  requests.
+
+The preflight request will return a response that includes:
+
+* ``Access-Control-Allow-Origin: *``
+* The ``Access-Control-Allow-Methods`` header will return a list of all HTTP
+  methods you've called out in your view function.  In the example above,
+  this will be ``PUT,OPTIONS``.
+* ``Access-Control-Allow-Headers: Content-Type,X-Amz-Date,Authorization,
+  X-Api-Key,X-Amz-Security-Token``.
+
+There's a couple of things to keep in mind when enabling cors for a view:
+
+* An ``OPTIONS`` method for preflighting is always injected.  Ensure that
+  you don't have ``OPTIONS`` in the ``methods=[...]`` list of your
+  view function.
+* Every view function must explicitly enable CORS support.
+* There's no support for customizing the CORS configuration.
+
+The last two points will change in the future.  See
+`this issue
+<https://github.com/awslabs/chalice/issues/70#issuecomment-248787037>`_
+for more information.
+
 
 Tutorial: Policy Generation
 ===========================
@@ -785,7 +829,7 @@ auto policy generator detects actions that it would like to add or remove::
 .. quick-start-end
 
 Tutorial: Using Custom Authentication
-===========================
+=====================================
 
 AWS API Gateway routes can be authenticated in multiple ways:
 - API Key

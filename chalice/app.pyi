@@ -41,15 +41,22 @@ class RouteEntry(object):
     # TODO: How so I specify *args, where args is a tuple of strings.
     view_function = ... # type: Callable[..., Any]
     view_name = ... # type: str
-    uri_pattern = ... # type: str
     methods = ... # type: List[str]
+    uri_pattern = ... # type: str
+    authorization_type = ... # type: str
+    authorizer_id = ... # type: str
+    api_key_required = ... # type: bool
+    content_types = ... # type: List[str]
     view_args = ... # type: List[str]
+    cors = ... # type: bool
+
     def __init__(self, view_function: Callable[..., Any],
                  view_name: str, path: str, methods: List[str],
                  authorization_type: str=None,
                  authorizer_id: str=None,
                  api_key_required: bool=None,
-                 content_types: List[str]=None) -> None: ...
+                 content_types: List[str]=None,
+                 cors: bool=False) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
 

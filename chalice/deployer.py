@@ -25,7 +25,6 @@ from chalice.config import Config  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice import compat
 
-
 LAMBDA_TRUST_POLICY = {
     "Version": "2012-10-17",
     "Statement": [{
@@ -38,7 +37,6 @@ LAMBDA_TRUST_POLICY = {
     ]
 }
 
-
 CLOUDWATCH_LOGS = {
     "Effect": "Allow",
     "Action": [
@@ -48,7 +46,6 @@ CLOUDWATCH_LOGS = {
     ],
     "Resource": "arn:aws:logs:*:*:*"
 }
-
 
 FULL_PASSTHROUGH = """
 #set($allParams = $input.params())
@@ -96,7 +93,6 @@ FULL_PASSTHROUGH = """
   }
 }
 """
-
 
 ERROR_MAPPING = (
     "#set($inputRoot = $input.path('$'))"
@@ -219,14 +215,12 @@ def node(name, uri_path, is_route=False):
 
 
 class NoPrompt(object):
-
     def confirm(self, text, default=False, abort=False):
         # type: (str, bool, bool) -> bool
         return default
 
 
 class Deployer(object):
-
     def __init__(self, apigateway_deploy, lambda_deploy):
         # type: (APIGatewayDeployer, LambdaDeployer) -> None
         self._apigateway_deploy = apigateway_deploy
@@ -299,6 +293,9 @@ class APIGatewayResourceCreator(object):
                 assert current['route_entry'] is not None, current
                 for http_method in current['route_entry'].methods:
                     self._configure_resource_route(current, http_method)
+                if current['route_entry'].cors:
+                    self._add_options_preflight_request(
+                        current, current['route_entry'].methods)
             for child in current['children']:
                 stack.append(current['children'][child])
         # Add a catch all auth that says anything in this rest API can call
@@ -358,37 +355,111 @@ class APIGatewayResourceCreator(object):
             uri=self._lambda_uri()
         )
         # Success case.
-        c.put_integration_response(
+        integration_response_args = {
+            'restApiId': self.rest_api_id,
+            'resourceId': node['resource_id'],
+            'httpMethod': http_method,
+            'statusCode': '200',
+            'responseTemplates': {'application/json': ''},
+        }
+        method_response_args = {
+            'restApiId': self.rest_api_id,
+            'resourceId': node['resource_id'],
+            'httpMethod': http_method,
+            'statusCode': '200',
+            'responseModels': {'application/json': 'Empty'},
+        }
+        if route_entry.cors:
+            method_response_args['responseParameters'] = {
+                'method.response.header.Access-Control-Allow-Origin': False}
+        c.put_method_response(**method_response_args)
+        if route_entry.cors:
+            integration_response_args['responseParameters'] = {
+                'method.response.header.Access-Control-Allow-Origin': "'*'"}
+        c.put_integration_response(**integration_response_args)
+        self._add_error_responses(http_method, node, route_entry, c)
+
+    def _add_error_responses(self, http_method, node, route_entry, client):
+        # type: (str, Dict[str, Any], app.RouteEntry, Any) -> None
+        for error_cls in app.ALL_ERRORS:
+            method_response_args = {
+                'restApiId': self.rest_api_id,
+                'resourceId': node['resource_id'],
+                'httpMethod': http_method,
+                'statusCode': str(error_cls.STATUS_CODE),
+                'responseModels': {'application/json': 'Empty'},
+            }
+            if route_entry.cors:
+                method_response_args['responseParameters'] = {
+                    'method.response.header.Access-Control-Allow-Origin':
+                        False}
+            client.put_method_response(**method_response_args)
+            integration_response_args = {
+                'restApiId': self.rest_api_id,
+                'resourceId': node['resource_id'],
+                'httpMethod': http_method,
+                'statusCode': str(error_cls.STATUS_CODE),
+                'selectionPattern': error_cls.__name__ + '.*',
+                'responseTemplates': {'application/json': ERROR_MAPPING},
+            }
+            if route_entry.cors:
+                integration_response_args['responseParameters'] = {
+                    'method.response.header.Access-Control-Allow-Origin':
+                        "'*'"}
+            client.put_integration_response(**integration_response_args)
+
+    def _add_options_preflight_request(self, node, http_methods):
+        # type: (Dict[str, Any], List[str]) -> None
+        # If CORs is configured we also need to set up
+        # an OPTIONS method for them for preflight requests.
+        # TODO: We should probably warn/error if they've also configured
+        # the view function to support an OPTIONs method.
+        c = self.client
+        c.put_method(
             restApiId=self.rest_api_id,
             resourceId=node['resource_id'],
-            httpMethod=http_method,
-            statusCode='200',
-            responseTemplates={'application/json': ''},
+            httpMethod='OPTIONS',
+            authorizationType='NONE',
+        )
+        c.put_integration(
+            restApiId=self.rest_api_id,
+            resourceId=node['resource_id'],
+            httpMethod='OPTIONS',
+            type='MOCK',
+            requestTemplates={
+                'application/json': '{"statusCode": 200}',
+            },
         )
         c.put_method_response(
             restApiId=self.rest_api_id,
             resourceId=node['resource_id'],
-            httpMethod=http_method,
+            httpMethod='OPTIONS',
             statusCode='200',
             responseModels={'application/json': 'Empty'},
+            responseParameters={
+                "method.response.header.Access-Control-Allow-Origin": False,
+                "method.response.header.Access-Control-Allow-Methods": False,
+                "method.response.header.Access-Control-Allow-Headers": False,
+            },
         )
-        # And we have to create a pair for each error type.
-        for error_cls in app.ALL_ERRORS:
-            c.put_integration_response(
-                restApiId=self.rest_api_id,
-                resourceId=node['resource_id'],
-                httpMethod=http_method,
-                statusCode=str(error_cls.STATUS_CODE),
-                selectionPattern=error_cls.__name__ + '.*',
-                responseTemplates={'application/json': ERROR_MAPPING},
-            )
-            c.put_method_response(
-                restApiId=self.rest_api_id,
-                resourceId=node['resource_id'],
-                httpMethod=http_method,
-                statusCode=str(error_cls.STATUS_CODE),
-                responseModels={'application/json': 'Empty'},
-            )
+        if 'OPTIONS' not in http_methods:
+            http_methods.append('OPTIONS')
+        allowed_methods = ','.join(http_methods)
+        c.put_integration_response(
+            restApiId=self.rest_api_id,
+            resourceId=node['resource_id'],
+            httpMethod='OPTIONS',
+            statusCode='200',
+            responseTemplates={'application/json': ''},
+            responseParameters={
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": (
+                    "'%s'" % allowed_methods),
+                "method.response.header.Access-Control-Allow-Headers": (
+                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
+                    ",X-Amz-Security-Token'")
+            },
+        )
 
     def _lambda_uri(self):
         # type: () -> str
@@ -404,7 +475,6 @@ class APIGatewayResourceCreator(object):
 
 
 class LambdaDeploymentPackager(object):
-
     def _create_virtualenv(self, venv_dir):
         # type: (str) -> None
         # The original implementation used Popen(['virtualenv', ...])
@@ -505,7 +575,7 @@ class LambdaDeploymentPackager(object):
         chalice_init = inspect.getfile(chalice)
         if chalice_init.endswith('.pyc'):
             chalice_init = chalice_init[:-1]
-        zip.write(chalice_router, 'chalice/__init__.py')
+        zip.write(chalice_init, 'chalice/__init__.py')
 
         zip.write(os.path.join(project_dir, 'app.py'),
                   'app.py')
@@ -559,7 +629,6 @@ class LambdaDeploymentPackager(object):
 
 
 class LambdaDeployer(object):
-
     def __init__(self,
                  aws_client,   # type: TypedAWSClient
                  packager,     # type: LambdaDeploymentPackager
@@ -718,7 +787,6 @@ class LambdaDeployer(object):
 
 
 class APIGatewayDeployer(object):
-
     def __init__(self,
                  aws_client,          # type: TypedAWSClient
                  api_gateway_client,  # type: Any

@@ -66,3 +66,10 @@ def form_encoded():
     return {
         'parsed': parsed
     }
+
+
+@app.route('/cors', methods=['GET', 'POST', 'PUT'], cors=True)
+def supports_cors():
+    # It doesn't really matter what we return here because
+    # we'll be checking the response headers to verify CORS support.
+    return {'cors': True}

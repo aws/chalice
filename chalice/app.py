@@ -98,7 +98,8 @@ class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, methods,
                  authorization_type=None, authorizer_id=None,
-                 api_key_required=None, content_types=None):
+                 api_key_required=None, content_types=None,
+                 cors=False):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -110,6 +111,7 @@ class RouteEntry(object):
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
         self.content_types = content_types
+        self.cors = cors
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -144,6 +146,7 @@ class Chalice(object):
         authorizer_id = kwargs.get('authorizer_id', None)
         api_key_required = kwargs.get('api_key_required', None)
         content_types = kwargs.get('content_types', ['application/json'])
+        cors = kwargs.get('cors', False)
         if not isinstance(content_types, list):
             raise ValueError('In view function "%s", the content_types '
                              'value must be a list, not %s: %s'
@@ -153,16 +156,10 @@ class Chalice(object):
             raise ValueError(
                 "Duplicate route detected: '%s'\n"
                 "URL paths must be unique." % path)
-        self.routes[path] = RouteEntry(
-            view_func,
-            name,
-            path,
-            methods,
-            authorization_type,
-            authorizer_id,
-            api_key_required,
-            content_types,
-        )
+        entry = RouteEntry(view_func, name, path, methods, authorization_type,
+                           authorizer_id, api_key_required,
+                           content_types, cors)
+        self.routes[path] = entry
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
