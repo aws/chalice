@@ -9,6 +9,7 @@ from chalice.deployer import LambdaDeployer
 from chalice.deployer import LambdaDeploymentPackager
 from chalice.deployer import APIGatewayDeployer
 from chalice.deployer import APIGatewayResourceCreator
+from chalice.deployer import APIGatewayMethods
 from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
 from chalice.deployer import validate_configuration
 from chalice.deployer import Deployer
@@ -147,36 +148,28 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
         validate_configuration(config)
 
 
-def add_expected_calls_to_map_error(error_cls, gateway_stub, http_method='POST'):
-    gateway_stub.add_response(
-        'put_method_response',
-        service_response={},
-        expected_params={
-            'httpMethod': http_method,
-            'resourceId': 'parent-id',
-            'responseModels': {
-                'application/json': 'Empty',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': str(error_cls.STATUS_CODE),
-        }
-    )
-    gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': http_method,
-            'resourceId': 'parent-id',
-            'responseTemplates': {'application/json': ERROR_MAPPING},
-            'restApiId': 'rest-api-id',
-            'selectionPattern': '%s.*' % error_cls.__name__,
-            'statusCode': str(error_cls.STATUS_CODE),
-        }
-    )
+def add_expected_calls_to_map_error(error_cls, gateway_stub,
+                                    http_method='POST'):
+    gateway_stub.put_method_response(
+        httpMethod=http_method,
+        resourceId='parent-id',
+        responseModels={
+            'application/json': 'Empty',
+        },
+        restApiId='rest-api-id',
+        statusCode=str(error_cls.STATUS_CODE),
+    ).returns({})
+    gateway_stub.put_integration_response(
+        httpMethod=http_method,
+        resourceId='parent-id',
+        responseTemplates={'application/json': ERROR_MAPPING},
+        restApiId='rest-api-id',
+        selectionPattern='%s.*' % error_cls.__name__,
+        statusCode=str(error_cls.STATUS_CODE),
+    ).returns({})
 
 
-def test_can_build_resource_routes_for_single_view(stubbed_api_gateway,
-                                                   stubbed_lambda):
+def test_can_build_resource_routes_for_single_view(stubbed_session):
     route_trie = {
         'name': '',
         'uri_path': '/',
@@ -187,86 +180,68 @@ def test_can_build_resource_routes_for_single_view(stubbed_api_gateway,
         'route_entry': RouteEntry(None, 'index_view', '/', ['POST'],
                                   content_types=['application/json']),
     }
-    gateway_client, gateway_stub = stubbed_api_gateway
-    lambda_client, lambda_stub = stubbed_lambda
-    random_id = lambda: "random-id"
-    g = APIGatewayResourceCreator(gateway_client, lambda_client,
-                                  'rest-api-id',
-                                  'arn:aws:lambda:us-west-2:123:function:name',
-                                  random_id_generator=random_id)
+    gateway_client = stubbed_session.create_client('apigateway')
+    gateway_stub = stubbed_session.stub('apigateway')
+    lambda_stub = stubbed_session.stub('lambda')
+    awsclient = TypedAWSClient(stubbed_session)
+    g = APIGatewayResourceCreator(
+        awsclient, APIGatewayMethods(gateway_client, 'rest-api-id'),
+        'arn:aws:lambda:us-west-2:123:function:name',
+        random_id_generator=lambda: "random-id")
 
-    gateway_stub.add_response(
-        'put_method',
-        service_response={},
-        expected_params={
-            'resourceId': 'parent-id',
-            'authorizationType': 'NONE',
-            'restApiId': 'rest-api-id',
-            'httpMethod': 'POST',
-        })
-    gateway_stub.add_response(
-        'put_integration',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'integrationHttpMethod': 'POST',
-            'passthroughBehavior': 'NEVER',
-            'requestTemplates': {
-                'application/json': FULL_PASSTHROUGH,
-            },
-            'resourceId': 'parent-id',
-            'restApiId': 'rest-api-id',
-            'type': 'AWS',
-            'uri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                    '/2015-03-31/functions/arn:aws:lambda:us-west'
-                    '-2:123:function:name/invocations')
-        }
-    )
-    gateway_stub.add_response(
-        'put_method_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseModels': {
-                'application/json': 'Empty',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': '200',
-        }
-    )
-    gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'POST',
-            'resourceId': 'parent-id',
-            'responseTemplates': {
-                'application/json': '',
-            },
-            'restApiId': 'rest-api-id',
-            'statusCode': '200',
-        }
-    )
+    gateway_stub.put_method(
+        resourceId='parent-id',
+        authorizationType='NONE',
+        restApiId='rest-api-id',
+        httpMethod='POST',
+    ).returns({})
+    gateway_stub.put_integration(
+        httpMethod='POST',
+        integrationHttpMethod='POST',
+        passthroughBehavior='NEVER',
+        requestTemplates={
+            'application/json': FULL_PASSTHROUGH,
+        },
+        resourceId='parent-id',
+        restApiId='rest-api-id',
+        type='AWS',
+        uri=('arn:aws:apigateway:us-west-2:lambda:path'
+             '/2015-03-31/functions/arn:aws:lambda:us-west'
+             '-2:123:function:name/invocations')
+    ).returns({})
+    gateway_stub.put_method_response(
+        httpMethod='POST',
+        resourceId='parent-id',
+        responseModels={
+            'application/json': 'Empty',
+        },
+        restApiId='rest-api-id',
+        statusCode='200',
+    ).returns({})
+    gateway_stub.put_integration_response(
+        httpMethod='POST',
+        resourceId='parent-id',
+        responseTemplates={
+            'application/json': '',
+        },
+        restApiId='rest-api-id',
+        statusCode='200',
+    ).returns({})
     for error_cls in ALL_ERRORS:
         add_expected_calls_to_map_error(error_cls, gateway_stub)
-    lambda_stub.add_response(
-        'add_permission',
-        service_response={},
-        expected_params={
-            'Action': 'lambda:InvokeFunction',
-            'FunctionName': 'name',
-            'Principal': 'apigateway.amazonaws.com',
-            'SourceArn': 'arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-            'StatementId': 'random-id',
-        }
-    )
-    gateway_stub.activate()
-    lambda_stub.activate()
+    lambda_stub.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='name',
+        Principal='apigateway.amazonaws.com',
+        SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
+        StatementId='random-id',
+    ).returns({})
+    stubbed_session.activate_stubs()
     g.build_resources(route_trie)
+    stubbed_session.verify_stubs()
 
 
-def test_cors_adds_required_headers(stubbed_api_gateway, stubbed_lambda):
+def test_cors_adds_required_headers(stubbed_session):
     cors_route_entry = RouteEntry(None, 'index_view', '/', ['PUT'],
                                   cors=True,
                                   content_types=['application/json'])
@@ -279,164 +254,131 @@ def test_cors_adds_required_headers(stubbed_api_gateway, stubbed_lambda):
         'is_route': True,
         'route_entry': cors_route_entry,
     }
-    gateway_client, gateway_stub = stubbed_api_gateway
-    lambda_client, lambda_stub = stubbed_lambda
-    gateway_stub.add_response(
-        'put_method',
-        service_response={},
-        expected_params={
-            'resourceId': 'parent-id',
-            'authorizationType': 'NONE',
-            'restApiId': 'rest-api-id',
-            'httpMethod': 'PUT',
-        })
-    gateway_stub.add_response(
-        'put_integration',
-        service_response={},
-        expected_params={
-            'httpMethod': 'PUT',
-            'integrationHttpMethod': 'POST',
-            'passthroughBehavior': 'NEVER',
-            'requestTemplates': {
-                'application/json': FULL_PASSTHROUGH,
-            },
-            'resourceId': 'parent-id',
-            'restApiId': 'rest-api-id',
-            'type': 'AWS',
-            'uri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                    '/2015-03-31/functions/arn:aws:lambda:us-west'
-                    '-2:123:function:name/invocations')
-        }
-    )
-    gateway_stub.add_response(
-        'put_method_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'PUT',
-            'resourceId': 'parent-id',
-            'responseModels': {
+    gateway_client = stubbed_session.create_client('apigateway')
+    gateway_stub = stubbed_session.stub('apigateway')
+    lambda_stub = stubbed_session.stub('lambda')
+    awsclient = TypedAWSClient(stubbed_session)
+    g = APIGatewayResourceCreator(
+        awsclient, APIGatewayMethods(gateway_client, 'rest-api-id'),
+        'arn:aws:lambda:us-west-2:123:function:name',
+        random_id_generator=lambda: "random-id")
+    gateway_stub.put_method(
+        resourceId='parent-id',
+        authorizationType='NONE',
+        restApiId='rest-api-id',
+        httpMethod='PUT',
+    ).returns({})
+    gateway_stub.put_integration(
+        httpMethod='PUT',
+        integrationHttpMethod='POST',
+        passthroughBehavior='NEVER',
+        requestTemplates={
+            'application/json': FULL_PASSTHROUGH,
+        },
+        resourceId='parent-id',
+        restApiId='rest-api-id',
+        type='AWS',
+        uri=('arn:aws:apigateway:us-west-2:lambda:path'
+             '/2015-03-31/functions/arn:aws:lambda:us-west'
+             '-2:123:function:name/invocations')
+    ).returns({})
+    gateway_stub.put_method_response(
+        httpMethod='PUT',
+        resourceId='parent-id',
+        responseModels={
+            'application/json': 'Empty',
+        },
+        restApiId='rest-api-id',
+        statusCode='200',
+        responseParameters={
+            'method.response.header.Access-Control-Allow-Origin': False},
+    ).returns({})
+    gateway_stub.put_integration_response(
+        httpMethod='PUT',
+        resourceId='parent-id',
+        responseTemplates={
+            'application/json': '',
+        },
+        restApiId='rest-api-id',
+        statusCode='200',
+        responseParameters={
+            'method.response.header.Access-Control-Allow-Origin': "'*'"},
+    ).returns({})
+    for error_cls in ALL_ERRORS:
+        gateway_stub.put_method_response(
+            httpMethod='PUT',
+            resourceId='parent-id',
+            responseModels={
                 'application/json': 'Empty',
             },
-            'restApiId': 'rest-api-id',
-            'statusCode': '200',
-            'responseParameters': {'method.response.header.Access-Control-Allow-Origin': False},
+            restApiId='rest-api-id',
+            responseParameters={
+                'method.response.header.Access-Control-Allow-Origin': False},
+            statusCode=str(error_cls.STATUS_CODE),
+        ).returns({})
+        gateway_stub.put_integration_response(
+            httpMethod='PUT',
+            resourceId='parent-id',
+            responseTemplates={'application/json': ERROR_MAPPING},
+            restApiId='rest-api-id',
+            selectionPattern='%s.*' % error_cls.__name__,
+            responseParameters={
+                'method.response.header.Access-Control-Allow-Origin': "'*'"},
+            statusCode=str(error_cls.STATUS_CODE),
+        ).returns({})
+
+    gateway_stub.put_method(
+        restApiId=ANY,
+        resourceId=ANY,
+        httpMethod='OPTIONS',
+        authorizationType='NONE',
+    ).returns({})
+    gateway_stub.put_integration(
+        restApiId=ANY,
+        resourceId=ANY,
+        httpMethod='OPTIONS',
+        type='MOCK',
+        requestTemplates={'application/json': '{"statusCode": 200}'}
+    ).returns({})
+    gateway_stub.put_method_response(
+        restApiId=ANY,
+        resourceId=ANY,
+        httpMethod='OPTIONS',
+        statusCode='200',
+        responseModels=ANY,
+        responseParameters={
+            'method.response.header.Access-Control-Allow-Origin': False,
+            'method.response.header.Access-Control-Allow-Methods': False,
+            'method.response.header.Access-Control-Allow-Headers': False,
         }
-    )
-    gateway_stub.add_response(
-        'put_integration_response',
-        service_response={},
-        expected_params={
-            'httpMethod': 'PUT',
-            'resourceId': 'parent-id',
-            'responseTemplates': {
-                'application/json': '',
-            },
-            'responseParameters': {'method.response.header.Access-Control-Allow-Origin': "'*'"},
-            'restApiId': 'rest-api-id',
-            'statusCode': '200',
+    ).returns({})
+    gateway_stub.put_integration_response(
+        restApiId=ANY,
+        resourceId=ANY,
+        httpMethod='OPTIONS',
+        statusCode='200',
+        responseTemplates=ANY,
+        responseParameters={
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            'method.response.header.Access-Control-Allow-Methods': (
+                "'PUT,OPTIONS'"
+            ),
+            'method.response.header.Access-Control-Allow-Headers': (
+                "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
+                ",X-Amz-Security-Token'"
+            ),
         }
-    )
-    for error_cls in ALL_ERRORS:
-        gateway_stub.add_response(
-            'put_method_response',
-            service_response={},
-            expected_params={
-                'httpMethod': ANY,
-                'resourceId': ANY,
-                'responseModels': ANY,
-                'restApiId': ANY,
-                'statusCode': str(error_cls.STATUS_CODE),
-                'responseParameters': {
-                    'method.response.header.Access-Control-Allow-Origin': False},
-            }
-        )
-        gateway_stub.add_response(
-            'put_integration_response',
-            service_response={},
-            expected_params={
-                'httpMethod': ANY,
-                'resourceId': ANY,
-                'responseTemplates': ANY,
-                'restApiId': ANY,
-                'selectionPattern': '%s.*' % error_cls.__name__,
-                'statusCode': str(error_cls.STATUS_CODE),
-                'responseParameters': {
-                    'method.response.header.Access-Control-Allow-Origin': "'*'",
-                }
-            }
-        )
-    gateway_stub.add_response(
-        'put_method', service_response={},
-        expected_params={
-            'restApiId': ANY,
-            'resourceId': ANY,
-            'httpMethod': 'OPTIONS',
-            'authorizationType': 'NONE',
-        }
-    )
-    gateway_stub.add_response(
-        'put_integration', service_response={},
-        expected_params={
-            'restApiId': ANY,
-            'resourceId': ANY,
-            'httpMethod': 'OPTIONS',
-            'type': 'MOCK',
-            'requestTemplates': {'application/json': '{"statusCode": 200}'}
-        }
-    )
-    gateway_stub.add_response(
-        'put_method_response', service_response={},
-        expected_params={
-            'restApiId': ANY,
-            'resourceId': ANY,
-            'httpMethod': 'OPTIONS',
-            'statusCode': '200',
-            'responseModels': ANY,
-            'responseParameters': {
-                'method.response.header.Access-Control-Allow-Origin': False,
-                'method.response.header.Access-Control-Allow-Methods': False,
-                'method.response.header.Access-Control-Allow-Headers': False,
-            }
-        }
-    )
-    gateway_stub.add_response(
-        'put_integration_response', service_response={},
-        expected_params={
-            'restApiId': ANY,
-            'resourceId': ANY,
-            'httpMethod': 'OPTIONS',
-            'statusCode': '200',
-            'responseTemplates': ANY,
-            'responseParameters': {
-                'method.response.header.Access-Control-Allow-Origin': "'*'",
-                'method.response.header.Access-Control-Allow-Methods': (
-                    "'PUT,OPTIONS'"
-                ),
-                'method.response.header.Access-Control-Allow-Headers': (
-                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
-                    ",X-Amz-Security-Token'"
-                ),
-            }
-        }
-    )
-    lambda_stub.add_response(
-        'add_permission',
-        service_response={},
-        expected_params={
-            'Action': 'lambda:InvokeFunction',
-            'FunctionName': 'name',
-            'Principal': 'apigateway.amazonaws.com',
-            'SourceArn': 'arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-            'StatementId': 'random-id',
-        }
-    )
-    g = APIGatewayResourceCreator(
-        gateway_client, lambda_client,
-        'rest-api-id', 'arn:aws:lambda:us-west-2:123:function:name',
-        random_id_generator=lambda: "random-id")
-    gateway_stub.activate()
-    lambda_stub.activate()
+    ).returns({})
+    lambda_stub.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='name',
+        Principal='apigateway.amazonaws.com',
+        SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
+        StatementId='random-id',
+    ).returns({})
+    stubbed_session.activate_stubs()
     g.build_resources(route_trie)
+    stubbed_session.verify_stubs()
 
 
 def test_can_deploy_apig_and_lambda(sample_app):

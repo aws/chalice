@@ -169,6 +169,34 @@ class TypedAWSClient(object):
             stageName=stage_name,
         )
 
+    def create_rest_resource(self, rest_api_id, parent_id, path_part):
+        # type: (str, str, str) -> Dict[str, Any]
+        client = self._client('apigateway')
+        response = client.create_resource(
+            restApiId=rest_api_id,
+            parentId=parent_id,
+            pathPart=path_part,
+        )
+        return response
+
+    def add_permission_for_apigateway(self, function_name, region_name,
+                                      account_id, rest_api_id, random_id):
+        # type: (str, str, str, str, str) -> None
+        """Authorize API gateway to invoke a lambda function."""
+        client = self._client('lambda')
+        client.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_name,
+            StatementId=random_id,
+            Principal='apigateway.amazonaws.com',
+            SourceArn=('arn:aws:execute-api:{region_name}:{account_id}'
+                       ':{rest_api_id}/*').format(
+                region_name=region_name,
+                # Assuming same account id for lambda function and API gateway.
+                account_id=account_id,
+                rest_api_id=rest_api_id)
+        )
+
     @property
     def region_name(self):
         # type: () -> str
