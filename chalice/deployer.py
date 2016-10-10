@@ -294,7 +294,8 @@ class APIGatewayResourceCreator(object):
                 for http_method in current['route_entry'].methods:
                     self._configure_resource_route(current, http_method)
                 if current['route_entry'].cors:
-                    self._add_options_preflight_request(current)
+                    self._add_options_preflight_request(
+                        current, current['route_entry'].methods)
             for child in current['children']:
                 stack.append(current['children'][child])
         # Add a catch all auth that says anything in this rest API can call
@@ -407,7 +408,7 @@ class APIGatewayResourceCreator(object):
                         "'*'"}
             client.put_integration_response(**integration_response_args)
 
-    def _add_options_preflight_request(self, node):
+    def _add_options_preflight_request(self, node, http_methods):
         # type: (Dict[str, Any]) -> None
         # If CORs is configured we also need to set up
         # an OPTIONS method for them for preflight requests.
@@ -441,6 +442,9 @@ class APIGatewayResourceCreator(object):
                 "method.response.header.Access-Control-Allow-Headers": False,
             },
         )
+        if 'OPTIONS' not in http_methods:
+            http_methods.append('OPTIONS')
+        allowed_methods = ','.join(http_methods)
         c.put_integration_response(
             restApiId=self.rest_api_id,
             resourceId=node['resource_id'],
@@ -451,7 +455,7 @@ class APIGatewayResourceCreator(object):
                 "method.response.header.Access-Control-Allow-Origin": "'*'",
                 # TODO: This should be all the allowed methods in their view.
                 "method.response.header.Access-Control-Allow-Methods": (
-                    "'POST,GET,PUT,OPTIONS'"),
+                    "'%s'" % allowed_methods),
                 "method.response.header.Access-Control-Allow-Headers": (
                     "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
                     ",X-Amz-Security-Token'")
