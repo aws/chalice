@@ -57,21 +57,38 @@ ALL_ERRORS = [
     TooManyRequestsError]
 
 
+class CaseInsensitiveMapping(object):
+    """Case insensitive and read-only mapping."""
+
+    def __init__(self, mapping):
+        self._dict = {k.lower(): v for k, v in mapping.iteritems()}
+
+    def __getitem__(self, key):
+        return self._dict.__getitem__(key.lower())
+
+    def __contains__(self, key):
+        return self._dict.__contains__(key.lower())
+
+    def get(self, key, default=None):
+        return self._dict.get(key.lower(), default)
+
+    def __repr__(self):
+        return repr(self._dict)
+
+
 class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
                  base64_body, context, stage_vars):
         self.query_params = query_params
-        self.headers = headers
+        self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
-        if self.headers.get('Content-Type') == 'application/json':
-            # We'll need to address case insensitive header lookups
-            # eventually.
+        if self.headers.get('content-type') == 'application/json':
             self.json_body = body
         else:
             self.json_body = None

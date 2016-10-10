@@ -233,6 +233,22 @@ def test_json_body_available_on_multiple_content_types():
     assert raw_body == '{"foo": "bar"}'
 
 
+def test_json_body_available_with_lowercase_content_type_key():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'])
+    def index():
+        return (demo.current_request.json_body, demo.current_request.raw_body)
+
+    event = create_event_with_body({'foo': 'bar'})
+    del event['params']['header']['Content-Type']
+    event['params']['header']['content-type'] = 'application/json'
+
+    json_body, raw_body = demo(event, context=None)
+    assert json_body == {'foo': 'bar'}
+    assert raw_body == '{"foo": "bar"}'
+
+
 def test_content_types_must_be_lists():
     demo = app.Chalice('app-name')
 
@@ -333,3 +349,12 @@ def test_chalice_view_errors_propagate_in_debug_mode(sample_app):
     event = create_event('/notfound', 'GET', {})
     with pytest.raises(NotFoundError):
         sample_app(event, context=None)
+
+
+def test_case_insensitive_mapping():
+    mapping = app.CaseInsensitiveMapping({'HEADER': 'Value'})
+
+    assert mapping['hEAdEr']
+    assert mapping.get('hEAdEr')
+    assert 'hEAdEr' in mapping
+    assert repr({'header': 'Value'}) == repr(mapping)
