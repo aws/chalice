@@ -102,6 +102,8 @@ ERROR_MAPPING = (
     "}"
 )
 
+NULLARY = Callable[[], str]
+
 
 def create_default_deployer(session, prompter=None):
     # type: (botocore.session.Session, NoPrompt) -> Deployer
@@ -252,14 +254,13 @@ class Deployer(object):
 class APIGatewayResourceCreator(object):
     """Create hierarchical resources in API gateway from chalice routes."""
 
-    def __init__(self, client, lambda_client, rest_api_id, lambda_arn,
+    def __init__(self, awsclient, apig_methods, lambda_arn,
                  random_id_generator=lambda: str(uuid.uuid4())):
-        # type: (Any, Any, str, str, Callable[[], str]) -> None
-        #: botocore client for API gateway.
-        self.client = client
-        self.region_name = self.client.meta.region_name
-        self.lambda_client = lambda_client
-        self.rest_api_id = rest_api_id
+        # type: (TypedAWSClient, APIGatewayMethods, str, NULLARY) -> None
+        self.awsclient = awsclient
+        self._apig_methods = apig_methods
+        self.region_name = self.awsclient.region_name
+        self.rest_api_id = apig_methods.rest_api_id
         self.lambda_arn = lambda_arn
         self._random_id = random_id_generator
 
@@ -279,10 +280,9 @@ class APIGatewayResourceCreator(object):
             # If there's no resource_id we need to create it.
             if current['resource_id'] is None:
                 assert current['parent_resource_id'] is not None, current
-                response = self.client.create_resource(
-                    restApiId=self.rest_api_id,
-                    parentId=current['parent_resource_id'],
-                    pathPart=current['name']
+                response = self.awsclient.create_rest_resource(
+                    self.rest_api_id, current['parent_resource_id'],
+                    current['name']
                 )
                 new_resource_id = response['id']
                 current['resource_id'] = new_resource_id
@@ -294,23 +294,18 @@ class APIGatewayResourceCreator(object):
                 for http_method in current['route_entry'].methods:
                     self._configure_resource_route(current, http_method)
                 if current['route_entry'].cors:
-                    self._add_options_preflight_request(
-                        current, current['route_entry'].methods)
+                    self._apig_methods.create_preflight_method(
+                        current['resource_id'], current['route_entry'].methods)
             for child in current['children']:
                 stack.append(current['children'][child])
         # Add a catch all auth that says anything in this rest API can call
         # the lambda function.
-        self.lambda_client.add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=self.lambda_arn.split(':')[-1],
-            StatementId=self._random_id(),
-            Principal='apigateway.amazonaws.com',
-            SourceArn=('arn:aws:execute-api:{region_name}:{account_id}'
-                       ':{rest_api_id}/*').format(
-                region_name=self.region_name,
-                # Assuming same account id for lambda function and API gateway.
-                account_id=self.lambda_arn.split(':')[4],
-                rest_api_id=self.rest_api_id),
+        self.awsclient.add_permission_for_apigateway(
+            self.lambda_arn.split(':')[-1],
+            self.region_name,
+            self.lambda_arn.split(':')[4],
+            self.rest_api_id,
+            self._random_id(),
         )
 
     def _camel_convert(self, name):
@@ -320,150 +315,26 @@ class APIGatewayResourceCreator(object):
 
     def _configure_resource_route(self, node, http_method):
         # type: (Dict[str, Any], str) -> None
-        c = self.client
-        put_method_cfg = {
-            'restApiId': self.rest_api_id,
-            'resourceId': node['resource_id'],
-            'httpMethod': http_method,
-            'authorizationType': 'NONE'
-        }
-
-        for attr in ['authorizationType', 'authorizerId', 'apiKeyRequired']:
-            try:
-                _attr = getattr(node['route_entry'], self._camel_convert(attr))
-                if _attr:
-                    put_method_cfg[attr] = _attr
-            except AttributeError:
-                pass
-
         route_entry = node['route_entry']
-        content_types = route_entry.content_types
-        c.put_method(**put_method_cfg)
-        c.put_integration(
-            restApiId=self.rest_api_id,
-            resourceId=node['resource_id'],
-            type='AWS',
-            httpMethod=http_method,
-            integrationHttpMethod='POST',
-            # Request body will never be passed through to
-            # the integration, if the Content-Type header
-            # is not application/json.
-            passthroughBehavior="NEVER",
-            requestTemplates={
-                key: FULL_PASSTHROUGH for key in content_types
-            },
-            uri=self._lambda_uri()
+        resource_id = node['resource_id']
+        self._apig_methods.create_method_request(
+            resource_id, http_method, route_entry.authorization_type,
+            route_entry.authorizer_id, route_entry.api_key_required,
         )
-        # Success case.
-        integration_response_args = {
-            'restApiId': self.rest_api_id,
-            'resourceId': node['resource_id'],
-            'httpMethod': http_method,
-            'statusCode': '200',
-            'responseTemplates': {'application/json': ''},
-        }
-        method_response_args = {
-            'restApiId': self.rest_api_id,
-            'resourceId': node['resource_id'],
-            'httpMethod': http_method,
-            'statusCode': '200',
-            'responseModels': {'application/json': 'Empty'},
-        }
-        if route_entry.cors:
-            method_response_args['responseParameters'] = {
-                'method.response.header.Access-Control-Allow-Origin': False}
-        c.put_method_response(**method_response_args)
-        if route_entry.cors:
-            integration_response_args['responseParameters'] = {
-                'method.response.header.Access-Control-Allow-Origin': "'*'"}
-        c.put_integration_response(**integration_response_args)
-        self._add_error_responses(http_method, node, route_entry, c)
-
-    def _add_error_responses(self, http_method, node, route_entry, client):
-        # type: (str, Dict[str, Any], app.RouteEntry, Any) -> None
-        for error_cls in app.ALL_ERRORS:
-            method_response_args = {
-                'restApiId': self.rest_api_id,
-                'resourceId': node['resource_id'],
-                'httpMethod': http_method,
-                'statusCode': str(error_cls.STATUS_CODE),
-                'responseModels': {'application/json': 'Empty'},
-            }
-            if route_entry.cors:
-                method_response_args['responseParameters'] = {
-                    'method.response.header.Access-Control-Allow-Origin':
-                        False}
-            client.put_method_response(**method_response_args)
-            integration_response_args = {
-                'restApiId': self.rest_api_id,
-                'resourceId': node['resource_id'],
-                'httpMethod': http_method,
-                'statusCode': str(error_cls.STATUS_CODE),
-                'selectionPattern': error_cls.__name__ + '.*',
-                'responseTemplates': {'application/json': ERROR_MAPPING},
-            }
-            if route_entry.cors:
-                integration_response_args['responseParameters'] = {
-                    'method.response.header.Access-Control-Allow-Origin':
-                        "'*'"}
-            client.put_integration_response(**integration_response_args)
-
-    def _add_options_preflight_request(self, node, http_methods):
-        # type: (Dict[str, Any], List[str]) -> None
-        # If CORs is configured we also need to set up
-        # an OPTIONS method for them for preflight requests.
-        # TODO: We should probably warn/error if they've also configured
-        # the view function to support an OPTIONs method.
-        c = self.client
-        c.put_method(
-            restApiId=self.rest_api_id,
-            resourceId=node['resource_id'],
-            httpMethod='OPTIONS',
-            authorizationType='NONE',
+        self._apig_methods.create_lambda_method_integration(
+            resource_id, http_method, route_entry.content_types,
+            self._lambda_uri()
         )
-        c.put_integration(
-            restApiId=self.rest_api_id,
-            resourceId=node['resource_id'],
-            httpMethod='OPTIONS',
-            type='MOCK',
-            requestTemplates={
-                'application/json': '{"statusCode": 200}',
-            },
-        )
-        c.put_method_response(
-            restApiId=self.rest_api_id,
-            resourceId=node['resource_id'],
-            httpMethod='OPTIONS',
-            statusCode='200',
-            responseModels={'application/json': 'Empty'},
-            responseParameters={
-                "method.response.header.Access-Control-Allow-Origin": False,
-                "method.response.header.Access-Control-Allow-Methods": False,
-                "method.response.header.Access-Control-Allow-Headers": False,
-            },
-        )
-        if 'OPTIONS' not in http_methods:
-            http_methods.append('OPTIONS')
-        allowed_methods = ','.join(http_methods)
-        c.put_integration_response(
-            restApiId=self.rest_api_id,
-            resourceId=node['resource_id'],
-            httpMethod='OPTIONS',
-            statusCode='200',
-            responseTemplates={'application/json': ''},
-            responseParameters={
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": (
-                    "'%s'" % allowed_methods),
-                "method.response.header.Access-Control-Allow-Headers": (
-                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
-                    ",X-Amz-Security-Token'")
-            },
-        )
+        self._apig_methods.create_method_response(
+            resource_id, http_method, route_entry.cors)
+        self._apig_methods.create_integration_response(
+            resource_id, http_method, route_entry.cors)
+        self._apig_methods.create_error_responses(
+            resource_id, http_method, app.ALL_ERRORS, route_entry.cors)
 
     def _lambda_uri(self):
         # type: () -> str
-        region_name = self.client.meta.region_name
+        region_name = self.region_name
         api_version = '2015-03-31'
         return (
             "arn:aws:apigateway:{region_name}:lambda:path/{api_version}"
@@ -851,7 +722,8 @@ class APIGatewayDeployer(object):
         assert root_resource['path'] == u'/'
         resource_id = root_resource['id']
         route_builder = APIGatewayResourceCreator(
-            self._api_gateway_client, self._lambda_client, rest_api_id,
+            self._aws_client,
+            APIGatewayMethods(self._api_gateway_client, rest_api_id),
             config.lambda_arn)
         # This is a little confusing.  You need to specify the parent
         # resource to create a subresource, but you can't create the root
@@ -899,3 +771,186 @@ class OSUtils(object):
             mode = 'r'
         with open(filename, mode) as f:
             return f.read()
+
+
+class APIGatewayMethods(object):
+    """Create API gateway methods.
+
+    This class is used to configure the various API gateway methods including:
+
+    * Method request
+    * Integration request
+    * Integration response
+    * Method response
+
+    It's a higher level that the APIs provided in the API gateway
+    SDK client, and provide abstractions for easily creating methods
+    that support CORS, etc.
+
+    """
+    def __init__(self, apig_client, rest_api_id):
+        # type: (Any, str) -> None
+        self.rest_api_id = rest_api_id
+        self._apig_client = apig_client
+
+    def create_method_request(self, resource_id, http_method,
+                              authorization_type=None, authorizer_id=None,
+                              api_key_required=False):
+        # type: (str, str, str, str, bool) -> None
+        """Create an API Gateway method request.
+
+        This defines the public API used by consumers of the API Gateway
+        API.
+
+        """
+        put_method_cfg = {
+            'restApiId': self.rest_api_id,
+            'resourceId': resource_id,
+            'httpMethod': http_method,
+            'authorizationType': 'NONE'
+        }  # type: Dict[str, Any]
+        if authorization_type is not None:
+            put_method_cfg['authorizationType'] = authorization_type
+        if authorizer_id is not None:
+            put_method_cfg['authorizerId'] = authorizer_id
+        if api_key_required:
+            put_method_cfg['apiKeyRequired'] = api_key_required
+        self._apig_client.put_method(**put_method_cfg)
+
+    def create_lambda_method_integration(self, resource_id, http_method,
+                                         content_types, lambda_uri):
+        # type: (str, str, List[str], str) -> None
+        """Create an integration method for AWS Lambda."""
+        self._apig_client.put_integration(
+            restApiId=self.rest_api_id,
+            resourceId=resource_id,
+            type='AWS',
+            httpMethod=http_method,
+            integrationHttpMethod='POST',
+            # Request body will never be passed through to
+            # the integration, if the Content-Type header
+            # is not application/json.
+            passthroughBehavior="NEVER",
+            requestTemplates={
+                key: FULL_PASSTHROUGH for key in content_types
+            },
+            uri=lambda_uri,
+        )
+
+    def create_method_response(self, resource_id, http_method, cors=False):
+        # type: (str, str, bool) -> None
+        """Create a method response to return to API gateway consumers."""
+        method_response_args = {
+            'restApiId': self.rest_api_id,
+            'resourceId': resource_id,
+            'httpMethod': http_method,
+            'statusCode': '200',
+            'responseModels': {'application/json': 'Empty'},
+        }
+        if cors:
+            method_response_args['responseParameters'] = {
+                'method.response.header.Access-Control-Allow-Origin': False}
+        self._apig_client.put_method_response(**method_response_args)
+
+    def create_integration_response(self, resource_id, http_method,
+                                    cors=False):
+        # type: (str, str, bool) -> None
+        """Create an integration response for API Gateway."""
+        kwargs = {
+            'restApiId': self.rest_api_id,
+            'resourceId': resource_id,
+            'httpMethod': http_method,
+            'statusCode': '200',
+            'responseTemplates': {'application/json': ''},
+        }
+        if cors:
+            kwargs['responseParameters'] = {
+                'method.response.header.Access-Control-Allow-Origin': "'*'"}
+        self._apig_client.put_integration_response(**kwargs)
+
+    def create_error_responses(self, resource_id, http_method,
+                               error_classes, cors):
+        # type: (str, str, List[app.ChaliceViewError], bool) -> None
+        for error_cls in error_classes:
+            method_response_args = {
+                'restApiId': self.rest_api_id,
+                'resourceId': resource_id,
+                'httpMethod': http_method,
+                'statusCode': str(error_cls.STATUS_CODE),
+                'responseModels': {'application/json': 'Empty'},
+            }
+            if cors:
+                method_response_args['responseParameters'] = {
+                    'method.response.header.Access-Control-Allow-Origin':
+                        False}
+            self._apig_client.put_method_response(**method_response_args)
+            integration_response_args = {
+                'restApiId': self.rest_api_id,
+                'resourceId': resource_id,
+                'httpMethod': http_method,
+                'statusCode': str(error_cls.STATUS_CODE),
+                'selectionPattern': error_cls.__name__ + '.*',
+                'responseTemplates': {'application/json': ERROR_MAPPING},
+            }
+            if cors:
+                integration_response_args['responseParameters'] = {
+                    'method.response.header.Access-Control-Allow-Origin':
+                        "'*'"}
+            self._apig_client.put_integration_response(
+                **integration_response_args)
+
+    def create_preflight_method(self, resource_id, http_methods):
+        # type: (str, List[str]) -> None
+        """Create preflight request for CORS.
+
+        This will add an OPTIONS request to support preflighting
+        needed by CORS.  It uses a mock integration to return
+        a 200 response with the list of supported methods
+        being the provided ``http_methods``.
+
+        """
+        self._apig_client.put_method(
+            restApiId=self.rest_api_id,
+            resourceId=resource_id,
+            httpMethod='OPTIONS',
+            authorizationType='NONE',
+        )
+        self._apig_client.put_integration(
+            restApiId=self.rest_api_id,
+            resourceId=resource_id,
+            httpMethod='OPTIONS',
+            type='MOCK',
+            requestTemplates={
+                'application/json': '{"statusCode": 200}',
+            },
+        )
+        self._apig_client.put_method_response(
+            restApiId=self.rest_api_id,
+            resourceId=resource_id,
+            httpMethod='OPTIONS',
+            statusCode='200',
+            responseModels={'application/json': 'Empty'},
+            responseParameters={
+                "method.response.header.Access-Control-Allow-Origin": False,
+                "method.response.header.Access-Control-Allow-Methods": False,
+                "method.response.header.Access-Control-Allow-Headers": False,
+            },
+        )
+        if 'OPTIONS' not in http_methods:
+            http_methods.append('OPTIONS')
+        allowed_methods = ','.join(http_methods)
+        self._apig_client.put_integration_response(
+            restApiId=self.rest_api_id,
+            resourceId=resource_id,
+            httpMethod='OPTIONS',
+            statusCode='200',
+            responseTemplates={'application/json': ''},
+            responseParameters={
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": (
+                    "'%s'" % allowed_methods),
+                "method.response.header.Access-Control-Allow-Headers": (
+                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
+                    ",X-Amz-Security-Token'")
+            },
+        )
