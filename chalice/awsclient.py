@@ -179,23 +179,112 @@ class TypedAWSClient(object):
         )
         return response
 
+    def add_permission_for_apigateway_if_needed(self, function_name,
+                                                region_name, account_id,
+                                                rest_api_id, random_id):
+        # type: (str, str, str, str, str) -> None
+        """Authorize API gateway to invoke a lambda function is needed.
+
+        This method will first check if API gateway has permission to call
+        the lambda function, and only if necessary will it invoke
+        ``self.add_permission_for_apigateway(...).
+
+        """
+        has_necessary_permissions = False
+        try:
+            policy = self.get_function_policy(function_name)
+        except botocore.exceptions.ClientError as e:
+            error = e.response['Error']
+            if error['Code'] == 'ResourceNotFoundException':
+                pass
+        else:
+            source_arn = self._build_source_arn_str(region_name, account_id,
+                                                    rest_api_id)
+            # Here's what a sample policy looks like after add_permission()
+            # has been previously called:
+            # {
+            #  "Id": "default",
+            #  "Statement": [
+            #   {
+            #    "Action": "lambda:InvokeFunction",
+            #    "Condition": {
+            #     "ArnLike": {
+            #       "AWS:SourceArn": <source_arn>
+            #     }
+            #    },
+            #    "Effect": "Allow",
+            #    "Principal": {
+            #     "Service": "apigateway.amazonaws.com"
+            #    },
+            #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
+            #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
+            #   }
+            #  ],
+            #  "Version": "2012-10-17"
+            # }
+            # So we need to check if there's a policy that looks like this.
+            for statement in policy.get('Statement', []):
+                if self._gives_apigateway_access(statement, function_name,
+                                                 source_arn):
+                    has_necessary_permissions = True
+                    break
+        if not has_necessary_permissions:
+            self.add_permission_for_apigateway(
+                function_name, region_name, account_id, rest_api_id, random_id)
+
+    def _gives_apigateway_access(self, statement, function_name, source_arn):
+        # type: (Dict[str, Any], str, str) -> bool
+        if not statement['Action'] == 'lambda:InvokeFunction':
+            return False
+        if statement.get('Condition', {}).get('ArnLike',
+                                              {}).get('AWS:SourceArn',
+                                                      '') != source_arn:
+            return False
+        if statement.get('Principal', {}).get('Service', '') != \
+                'apigateway.amazonaws.com':
+            return False
+        # We're not checking the "Resource" key because we're assuming
+        # that lambda.get_policy() is returning the policy for the particular
+        # resource in question.
+        return True
+
+    def get_function_policy(self, function_name):
+        # type: (str) -> Dict[str, Any]
+        """Return the function policy for a lambda function.
+
+        This function will extract the policy string as a json document
+        and return the json.loads(...) version of the policy.
+
+        """
+        client = self._client('lambda')
+        policy = client.get_policy(FunctionName=function_name)
+        return json.loads(policy['Policy'])
+
     def add_permission_for_apigateway(self, function_name, region_name,
                                       account_id, rest_api_id, random_id):
         # type: (str, str, str, str, str) -> None
         """Authorize API gateway to invoke a lambda function."""
         client = self._client('lambda')
+        source_arn = self._build_source_arn_str(region_name, account_id,
+                                                rest_api_id)
         client.add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_name,
             StatementId=random_id,
             Principal='apigateway.amazonaws.com',
-            SourceArn=('arn:aws:execute-api:{region_name}:{account_id}'
-                       ':{rest_api_id}/*').format(
+            SourceArn=source_arn,
+        )
+
+    def _build_source_arn_str(self, region_name, account_id, rest_api_id):
+        # type: (str, str, str) -> str
+        source_arn = (
+            'arn:aws:execute-api:'
+            '{region_name}:{account_id}:{rest_api_id}/*').format(
                 region_name=region_name,
                 # Assuming same account id for lambda function and API gateway.
                 account_id=account_id,
                 rest_api_id=rest_api_id)
-        )
+        return source_arn
 
     @property
     def region_name(self):

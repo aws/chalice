@@ -229,6 +229,7 @@ def test_can_build_resource_routes_for_single_view(stubbed_session):
     ).returns({})
     for error_cls in ALL_ERRORS:
         add_expected_calls_to_map_error(error_cls, gateway_stub)
+    lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
     lambda_stub.add_permission(
         Action='lambda:InvokeFunction',
         FunctionName='name',
@@ -369,6 +370,7 @@ def test_cors_adds_required_headers(stubbed_session):
             ),
         }
     ).returns({})
+    lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
     lambda_stub.add_permission(
         Action='lambda:InvokeFunction',
         FunctionName='name',

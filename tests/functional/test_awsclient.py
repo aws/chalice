@@ -339,3 +339,76 @@ class TestCanDeleteRolePolicy(object):
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.delete_role_policy('myrole', 'mypolicy')
         stubbed_session.verify_stubs()
+
+
+class TestAddPermissionsForAPIGateway(object):
+    def test_can_add_permission_for_apigateway(self, stubbed_session):
+        stubbed_session.stub('lambda').add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName='function_name',
+            StatementId='random-id',
+            Principal='apigateway.amazonaws.com',
+            SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        TypedAWSClient(stubbed_session).add_permission_for_apigateway(
+            'function_name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        stubbed_session.verify_stubs()
+
+    def should_call_add_permission(self, lambda_stub):
+        lambda_stub.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName='name',
+            StatementId='random-id',
+            Principal='apigateway.amazonaws.com',
+            SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
+        ).returns({})
+
+    def test_can_add_permission_for_apigateway_needed(self, stubbed_session):
+        # An empty policy means we need to add permissions.
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
+        self.should_call_add_permission(lambda_stub)
+        stubbed_session.activate_stubs()
+        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+            'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_for_apigateway_not_needed(self, stubbed_session):
+        source_arn = 'arn:aws:execute-api:us-west-2:123:rest-api-id/*'
+        policy = {
+            'Id': 'default',
+            'Statement': [{
+                'Action': 'lambda:InvokeFunction',
+                'Condition': {
+                    'ArnLike': {
+                        'AWS:SourceArn': source_arn,
+                    }
+                },
+                'Effect': 'Allow',
+                'Principal': {'Service': 'apigateway.amazonaws.com'},
+                'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'}],
+            'Version': '2012-10-17'
+        }
+        stubbed_session.stub('lambda').get_policy(
+            FunctionName='name').returns({'Policy': json.dumps(policy)})
+
+        # Because the policy above indicates that API gateway already has the
+        # necessary permissions, we should not call add_permission.
+        stubbed_session.activate_stubs()
+        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+            'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_when_policy_does_not_exist(self, stubbed_session):
+        # It's also possible to receive a ResourceNotFoundException
+        # if you call get_policy() on a lambda function with no policy.
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').raises_error(
+            error_code='ResourceNotFoundException', message='Does not exist.')
+        self.should_call_add_permission(lambda_stub)
+        stubbed_session.activate_stubs()
+        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+            'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        stubbed_session.verify_stubs()
