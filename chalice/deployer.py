@@ -300,7 +300,7 @@ class APIGatewayResourceCreator(object):
                 stack.append(current['children'][child])
         # Add a catch all auth that says anything in this rest API can call
         # the lambda function.
-        self.awsclient.add_permission_for_apigateway(
+        self.awsclient.add_permission_for_apigateway_if_needed(
             self.lambda_arn.split(':')[-1],
             self.region_name,
             self.lambda_arn.split(':')[4],
