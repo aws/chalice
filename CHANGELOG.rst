@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#129 <https://github.com/awslabs/chalice/issues/129>`__)
 * Add initial support for CORS
   (`#133 <https://github.com/awslabs/chalice/pull/133>`__)
+* Only add API gateway permissions if needed
+  (`#48 <https://github.com/awslabs/chalice/issues/48>`__)
 
 
 0.2.0
