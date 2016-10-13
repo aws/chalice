@@ -5,6 +5,7 @@ Contains commands for deploying chalice.
 """
 import os
 import json
+import logging
 
 import click
 import botocore.exceptions
@@ -97,6 +98,25 @@ def load_chalice_app(project_dir):
         return g['app']
 
 
+def inject_large_request_body_filter():
+    log = logging.getLogger('botocore.endpoint')
+    log.addFilter(LargeRequestBodyFilter())
+
+
+class LargeRequestBodyFilter(logging.Filter):
+    def filter(self, record):
+        if record.msg.startswith('Making request'):
+            if record.args[0].name in ['UpdateFunctionCode', 'CreateFunction']:
+                # When using the ZipFile argument (which is used in chalice),
+                # the entire deployment package zip is sent as a base64 encoded
+                # string.  We don't want this to clutter the debug logs
+                # so we don't log the request body for lambda operations
+                # that have the ZipFile arg.
+                record.args = (record.args[:-1] +
+                               ('(... omitted from logs due to size ...)',))
+        return True
+
+
 @click.group()
 @click.version_option(version=chalice_version, message='%(prog)s %(version)s')
 @click.pass_context
@@ -117,9 +137,12 @@ def local(ctx):
               default=True,
               help='Automatically generate IAM policy for app code.')
 @click.option('--profile', help='Override profile at deploy time.')
+@click.option('--debug/--no-debug',
+              default=False,
+              help='Print debug logs to stderr.')
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, project_dir, autogen_policy, profile, stage):
+def deploy(ctx, project_dir, autogen_policy, profile, debug, stage):
     user_provided_params = {}
     default_params = {}
     if project_dir is None:
@@ -144,6 +167,9 @@ def deploy(ctx, project_dir, autogen_policy, profile, stage):
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
     session = create_botocore_session(profile=config.profile)
+    if debug:
+        session.set_debug_logger('')
+        inject_large_request_body_filter()
     d = deployer.create_default_deployer(session=session, prompter=click)
     try:
         d.deploy(config)
