@@ -13,6 +13,7 @@ Next Release (TBD)
   (`#48 <https://github.com/awslabs/chalice/issues/48>`__)
 * Fix error when dict comprehension is encountered during policy generation
   (`#131 <https://github.com/awslabs/chalice/issues/131>`__)
+* Add ``--version`` and ``--debug`` options to the chalice CLI
 
 
 0.2.0
