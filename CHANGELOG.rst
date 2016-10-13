@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.3.0
+=====
 
 * Fix bug with case insensitive headers
   (`#129 <https://github.com/awslabs/chalice/issues/129>`__)
