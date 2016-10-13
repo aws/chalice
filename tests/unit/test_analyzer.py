@@ -417,6 +417,22 @@ def test_can_handle_lambda_keyword():
         foo(12)
     """) == {}
 
+
+def test_dict_comp_with_no_client_calls():
+    assert aws_calls("""\
+        import boto3
+        foo = {i: i for i in range(10)}
+    """) == {}
+
+
+#def test_can_handle_dict_comp():
+#    assert aws_calls("""\
+#        import boto3
+#        ddb = boto3.client('dynamodb')
+#        tables = {t: t for t in ddb.list_tables()}
+#    """) == {'dynamodb': set(['list_tables'])}
+#
+#
 #def test_tuple_assignment():
 #    assert aws_calls("""\
 #        import boto3
