@@ -11,6 +11,7 @@ import botocore.exceptions
 import botocore.session
 
 from chalice import deployer
+from chalice import __version__ as chalice_version
 from chalice.logs import LogRetriever
 from chalice import prompts
 from chalice.config import Config
@@ -92,6 +93,7 @@ def load_chalice_app(project_dir):
 
 
 @click.group()
+@click.version_option(version=chalice_version, message='%(prog)s %(version)s')
 @click.pass_context
 def cli(ctx):
     pass
