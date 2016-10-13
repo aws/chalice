@@ -53,9 +53,12 @@ def index():
 """
 
 
-def create_botocore_session(profile=None):
+def create_botocore_session(profile=None, debug=False):
     session = botocore.session.Session(profile=profile)
     session.user_agent_extra = 'chalice/%s' % chalice_version
+    if debug:
+        session.set_debug_logger('')
+        inject_large_request_body_filter()
     return session
 
 
@@ -166,10 +169,7 @@ def deploy(ctx, project_dir, autogen_policy, profile, debug, stage):
     if profile:
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
-    session = create_botocore_session(profile=config.profile)
-    if debug:
-        session.set_debug_logger('')
-        inject_large_request_body_filter()
+    session = create_botocore_session(profile=config.profile, debug=debug)
     d = deployer.create_default_deployer(session=session, prompter=click)
     try:
         d.deploy(config)
