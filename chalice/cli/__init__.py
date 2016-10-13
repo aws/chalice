@@ -52,11 +52,16 @@ def index():
 """
 
 
+def create_botocore_session(profile=None):
+    session = botocore.session.Session(profile=profile)
+    session.user_agent_extra = 'chalice/%s' % chalice_version
+    return session
+
+
 def show_lambda_logs(config, max_entries, include_lambda_messages):
-    import botocore.session
     lambda_arn = config.lambda_arn
     profile = config.profile
-    client = botocore.session.Session(profile=profile).create_client('logs')
+    client = create_botocore_session(profile).create_client('logs')
     retriever = LogRetriever.create_from_arn(client, lambda_arn)
     events = retriever.retrieve_logs(
         include_lambda_messages=include_lambda_messages,
@@ -138,7 +143,7 @@ def deploy(ctx, project_dir, autogen_policy, profile, stage):
     if profile:
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
-    session = botocore.session.Session(profile=config.profile)
+    session = create_botocore_session(profile=config.profile)
     d = deployer.create_default_deployer(session=session, prompter=click)
     try:
         d.deploy(config)
