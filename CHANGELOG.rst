@@ -11,6 +11,8 @@ Next Release (TBD)
   (`#133 <https://github.com/awslabs/chalice/pull/133>`__)
 * Only add API gateway permissions if needed
   (`#48 <https://github.com/awslabs/chalice/issues/48>`__)
+* Fix error when dict comprehension is encountered during policy generation
+  (`#131 <https://github.com/awslabs/chalice/issues/131>`__)
 
 
 0.2.0
