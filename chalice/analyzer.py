@@ -423,6 +423,12 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # traverse into the class body for now.
         return
 
+    def visit_DictComp(self, node):
+        # Not implemented yet.  This creates a new scope,
+        # so we'd need to treat this similar to how we treat
+        # functions.
+        pass
+
     def visit_Return(self, node):
         self.generic_visit(node)
         inferred_type = getattr(node.value, 'inferred_type', None)
