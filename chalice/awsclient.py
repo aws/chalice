@@ -81,11 +81,20 @@ class TypedAWSClient(object):
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
-        response = self._client('iam').list_roles()
-        for role in response.get('Roles', []):
+        for role in self.list_all_roles():
             if role['RoleName'] == name:
                 return role['Arn']
         raise ValueError("No role ARN found for: %s" % name)
+
+    def list_all_roles(self):
+        # type: () -> list
+        roles_response = self._client('iam').list_roles()
+        roles = roles_response.get('Roles', [])
+        while roles_response.get('IsTruncated', False):
+            marker = roles_response.get('Marker', None)
+            roles_response = self._client('iam').list_roles(Marker=marker)
+            roles += roles_response.get('Roles', [])
+        return roles
 
     def delete_role_policy(self, role_name, policy_name):
         # type: (str, str) -> None
