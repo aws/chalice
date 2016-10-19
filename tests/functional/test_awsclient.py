@@ -189,18 +189,16 @@ class TestGetRoleArn(object):
     def test_get_role_arn_for_name_found(self, stubbed_session):
         # Need len(20) to pass param validation.
         good_arn = 'good_arn' * 3
-        bad_arn = 'bad_arn' * 3
         role_id = 'abcd' * 4
         today = datetime.datetime.today()
-        stubbed_session.stub('iam').list_roles().returns({
-            'Roles': [
-                {'RoleName': 'No', 'Arn': bad_arn, 'Path': '/',
-                 'RoleId': role_id, 'CreateDate': today},
-                {'RoleName': 'Yes', 'Arn': good_arn,'Path': '/',
-                 'RoleId': role_id, 'CreateDate': today},
-                {'RoleName': 'No2', 'Arn': bad_arn, 'Path': '/',
-                 'RoleId': role_id, 'CreateDate': today},
-            ]
+        stubbed_session.stub('iam').get_role(RoleName='Yes').returns({
+            'Role': {
+                'Path': '/',
+                'RoleName': 'Yes',
+                'RoleId': role_id,
+                'CreateDate': today,
+                'Arn': good_arn
+            }
         })
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
@@ -208,20 +206,22 @@ class TestGetRoleArn(object):
         stubbed_session.verify_stubs()
 
     def test_got_role_arn_not_found_raises_value_error(self, stubbed_session):
-        bad_arn = 'bad_arn' * 3
-        role_id = 'abcd' * 4
-        today = datetime.datetime.today()
-        stubbed_session.stub('iam').list_roles().returns({
-            'Roles': [
-                {'RoleName': 'No', 'Arn': bad_arn, 'Path': '/',
-                 'RoleId': role_id, 'CreateDate': today},
-                {'RoleName': 'No2', 'Arn': bad_arn, 'Path': '/',
-                 'RoleId': role_id, 'CreateDate': today},
-            ]
-        })
+        stubbed_session.stub('iam').get_role(RoleName='Yes').raises_error(
+            error_code='NoSuchEntity',
+            message='Foo')
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         with pytest.raises(ValueError):
+            awsclient.get_role_arn_for_name(name='Yes')
+        stubbed_session.verify_stubs()
+
+    def test_unexpected_error_is_propagated(self, stubbed_session):
+        stubbed_session.stub('iam').get_role(RoleName='Yes').raises_error(
+            error_code='InternalError',
+            message='Foo')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
             awsclient.get_role_arn_for_name(name='Yes')
         stubbed_session.verify_stubs()
 
