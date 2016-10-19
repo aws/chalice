@@ -6,7 +6,7 @@ Next Release (TBD)
 ==================
 
 * Fix issue where role name to arn lookup was failing due to lack of pagination
-  (`#141 <https://github.com/awslabs/chalice/pull/141>`__)
+  (`#139 <https://github.com/awslabs/chalice/issues/139>`__)
 
 
 0.3.0
