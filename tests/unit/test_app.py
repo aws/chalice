@@ -362,3 +362,10 @@ def test_case_insensitive_mapping():
     assert mapping.get('hEAdEr')
     assert 'hEAdEr' in mapping
     assert repr({'header': 'Value'}) in repr(mapping)
+
+
+def test_unknown_kwargs_raise_error(sample_app):
+    with pytest.raises(TypeError):
+        @sample_app.route('/foo', unknown_kwargs='foo')
+        def badkwargs():
+            pass
