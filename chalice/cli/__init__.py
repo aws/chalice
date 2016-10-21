@@ -51,6 +51,10 @@ def index():
 # See the README documentation for more examples.
 #
 """
+GITIGNORE = """\
+.chalice/deployments/
+.chalice/venv/
+"""
 
 
 def create_botocore_session(profile=None, debug=False):
@@ -255,6 +259,8 @@ def new_project(ctx, project_name, profile):
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
         f.write(TEMPLATE_APP % project_name)
+    with open(os.path.join(project_name, '.gitignore'), 'w') as f:
+        f.write(GITIGNORE)
 
 
 def main():
