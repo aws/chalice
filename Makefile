@@ -68,3 +68,5 @@ htmlcov:
 	py.test --cov chalice --cov-report html $(TESTS)
 	rm -rf /tmp/htmlcov && mv htmlcov /tmp/
 	open /tmp/htmlcov/index.html
+
+prcheck: check typecheck test
