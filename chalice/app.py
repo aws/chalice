@@ -162,17 +162,20 @@ class Chalice(object):
         return _register_view
 
     def _add_route(self, path, view_func, **kwargs):
-        name = kwargs.get('name', view_func.__name__)
-        methods = kwargs.get('methods', ['GET'])
-        authorization_type = kwargs.get('authorization_type', None)
-        authorizer_id = kwargs.get('authorizer_id', None)
-        api_key_required = kwargs.get('api_key_required', None)
-        content_types = kwargs.get('content_types', ['application/json'])
-        cors = kwargs.get('cors', False)
+        name = kwargs.pop('name', view_func.__name__)
+        methods = kwargs.pop('methods', ['GET'])
+        authorization_type = kwargs.pop('authorization_type', None)
+        authorizer_id = kwargs.pop('authorizer_id', None)
+        api_key_required = kwargs.pop('api_key_required', None)
+        content_types = kwargs.pop('content_types', ['application/json'])
+        cors = kwargs.pop('cors', False)
         if not isinstance(content_types, list):
             raise ValueError('In view function "%s", the content_types '
                              'value must be a list, not %s: %s'
                              % (name, type(content_types), content_types))
+        if kwargs:
+            raise TypeError('TypeError: route() got unexpected keyword '
+                            'arguments: %s' % ', '.join(list(kwargs)))
 
         if path in self.routes:
             raise ValueError(
