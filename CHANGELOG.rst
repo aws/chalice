@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Fix issue where role name to arn lookup was failing due to lack of pagination
   (`#139 <https://github.com/awslabs/chalice/issues/139>`__)
+* Raise errors when unknown kwargs are provided to ``app.route(...)``
+  (`#144 <https://github.com/awslabs/chalice/pull/144>`__)
 
 
 0.3.0
