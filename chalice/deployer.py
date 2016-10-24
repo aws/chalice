@@ -469,8 +469,10 @@ class LambdaDeploymentPackager(object):
             chalice_init = chalice_init[:-1]
         zip.write(chalice_init, 'chalice/__init__.py')
 
-        zip.write(os.path.join(project_dir, 'app.py'),
-                  'app.py')
+        # TODO: add sub modules
+        py_files = filter(lambda x: x.endswith('.py'), os.listdir(project_dir))
+        for f in py_files:
+            zip.write(os.path.join(project_dir, f), f)
 
     def _hash_requirements_file(self, filename):
         # type: (str) -> str
