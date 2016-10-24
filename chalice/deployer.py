@@ -133,7 +133,7 @@ def build_url_trie(routes):
     :return: A prefix trie of URL patterns.
 
     """
-    _validate_routes(routes)
+    validate_routes(routes)
     root = node('', '/')
     for route in routes:
         if route == '/':
@@ -170,21 +170,42 @@ def validate_configuration(config):
 
     """
     routes = config.chalice_app.routes
-    _validate_routes(routes)
+    validate_routes(routes)
     _validate_manage_iam_role(config)
 
 
-def _validate_routes(routes):
+def validate_routes(routes):
     # type: (Dict[str, Any]) -> None
     # We're trying to validate any kind of route that will fail
     # when we send the request to API gateway.
     # We check for:
     #
     # * any routes that end with a trailing slash.
-    for route in routes:
-        if route != '/' and route.endswith('/'):
+    for route_name, route_entry in routes.items():
+        if route_name != '/' and route_name.endswith('/'):
             raise ValueError("Route cannot end with a trailing slash: %s"
-                             % route)
+                             % route_name)
+        if route_entry is not None:
+            # This 'is not None' check is not strictly needed.
+            # It's used because some of the tests don't populate
+            # a route_entry when creating test routes.
+            # This should be cleaned up.
+            _validate_route_entry(route_name, route_entry)
+
+
+def _validate_route_entry(route_url, route_entry):
+    # type: (str, app.RouteEntry) -> None
+    if route_entry.cors:
+        # If the user has enabled CORS, they can't also have an OPTIONS method
+        # because we'll create one for them.  API gateway will raise an error
+        # about duplicate methods.
+        if 'OPTIONS' in route_entry.methods:
+            raise ValueError(
+                "Route entry cannot have both cors=True and "
+                "methods=['OPTIONS', ...] configured.  When "
+                "CORS is enabled, an OPTIONS method is automatically "
+                "added for you.  Please remove 'OPTIONS' from the list of "
+                "configured HTTP methods for: %s" % route_url)
 
 
 def _validate_manage_iam_role(config):
