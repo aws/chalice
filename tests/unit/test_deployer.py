@@ -12,6 +12,7 @@ from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import APIGatewayMethods
 from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
 from chalice.deployer import validate_configuration
+from chalice.deployer import validate_routes
 from chalice.deployer import Deployer
 from chalice.app import RouteEntry, ALL_ERRORS
 from chalice.app import Chalice
@@ -427,3 +428,12 @@ def test_lambda_deployer_repeated_deploy():
     # And should result in the lambda function being updated with the API.
     aws_client.update_function_code.assert_called_with(
         'appname', 'package contents')
+
+
+def test_cant_have_options_with_cors(sample_app):
+    @sample_app.route('/badcors', methods=['GET', 'OPTIONS'], cors=True)
+    def badview():
+        pass
+
+    with pytest.raises(ValueError):
+        validate_routes(sample_app.routes)

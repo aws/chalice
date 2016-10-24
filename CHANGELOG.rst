@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#139 <https://github.com/awslabs/chalice/issues/139>`__)
 * Raise errors when unknown kwargs are provided to ``app.route(...)``
   (`#144 <https://github.com/awslabs/chalice/pull/144>`__)
+* Raise validation error when configuring CORS and an OPTIONS method
+  (`#142 <https://github.com/awslabs/chalice/issues/142>`__)
 
 
 0.3.0
