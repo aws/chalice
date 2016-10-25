@@ -5,6 +5,7 @@ Contains commands for deploying chalice.
 """
 import os
 import json
+import sys
 import logging
 
 import click
@@ -91,6 +92,8 @@ def load_project_config(project_dir):
 
 def load_chalice_app(project_dir):
     app_py = os.path.join(project_dir, 'app.py')
+    if project_dir not in sys.path:
+        sys.path.append(project_dir)
     with open(app_py) as f:
         g = {}
         contents = f.read()
