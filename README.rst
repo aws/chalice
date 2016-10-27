@@ -860,6 +860,53 @@ http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorize
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
+Tutorial: Local Mode
+====================
+
+As you develop your application, you may want to experiment locally  before
+deploying your changes.  You can use ``chalice local`` to spin up a local
+HTTP server you can use for testing.
+
+For example, if we have the following ``app.py`` file:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
+
+
+    @app.route('/')
+    def index():
+        return {'hello': 'world'}
+
+
+We can run ``chalice local`` to test this API locally:
+
+
+    $ chalice local
+    Serving on localhost:8000
+
+We can now test our API using ``localhost:8000``::
+
+    $ http localhost:8000/
+    HTTP/1.0 200 OK
+    Content-Length: 18
+    Content-Type: application/json
+    Date: Thu, 27 Oct 2016 20:08:43 GMT
+    Server: BaseHTTP/0.3 Python/2.7.11
+
+    {
+        "hello": "world"
+    }
+
+
+The ``chalice local`` command *does not* assume the
+role associated with your lambda function, so you'll
+need to use an ``AWS_PROFILE`` that has sufficient permissions
+to your AWS resources used in your ``app.py``.
+
+
 Backlog
 =======
 
@@ -867,8 +914,6 @@ These are features that are in the backlog:
 
 * Adding full support for API gateway stages - `issue 20
   <https://github.com/awslabs/chalice/issues/20>`__
-* Adding support for more than ``app.py`` - `issue 21
-  <https://github.com/awslabs/chalice/issues/21>`__
 
 Please share any feedback on the above issues.  We'd also love
 to hear from you.  Please create any Github issues for additional
