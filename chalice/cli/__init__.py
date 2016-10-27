@@ -132,9 +132,15 @@ def cli(ctx):
 
 
 @cli.command()
+@click.option('--project-dir',
+              help='The project directory.  Defaults to CWD')
 @click.pass_context
-def local(ctx):
-    click.echo("Local command")
+def local(ctx, project_dir):
+    if project_dir is None:
+        project_dir = os.getcwd()
+    os.chdir(project_dir)
+    app_obj = load_chalice_app(project_dir)
+    run_local_server(app_obj)
 
 
 @cli.command()
@@ -261,6 +267,12 @@ def new_project(ctx, project_name, profile):
         f.write(TEMPLATE_APP % project_name)
     with open(os.path.join(project_name, '.gitignore'), 'w') as f:
         f.write(GITIGNORE)
+
+
+def run_local_server(app_obj):
+    from chalice import local
+    server = local.LocalDevServer(app_obj)
+    server.serve_forever()
 
 
 def main():
