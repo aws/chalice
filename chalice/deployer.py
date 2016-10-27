@@ -367,6 +367,8 @@ class APIGatewayResourceCreator(object):
 
 
 class LambdaDeploymentPackager(object):
+    _CHALICE_LIB_DIR = 'chalicelib'
+
     def _create_virtualenv(self, venv_dir):
         # type: (str) -> None
         # The original implementation used Popen(['virtualenv', ...])
@@ -457,8 +459,6 @@ class LambdaDeploymentPackager(object):
 
     def _add_app_files(self, zip, project_dir):
         # type: (zipfile.ZipFile, str) -> None
-        # TODO: This will need to change in the future, but
-        # for now we're just supporting an app.py file.
         chalice_router = inspect.getfile(app)
         if chalice_router.endswith('.pyc'):
             chalice_router = chalice_router[:-1]
@@ -471,6 +471,7 @@ class LambdaDeploymentPackager(object):
 
         zip.write(os.path.join(project_dir, 'app.py'),
                   'app.py')
+        self._add_chalice_lib_if_needed(project_dir, zip)
 
     def _hash_requirements_file(self, filename):
         # type: (str) -> str
@@ -502,13 +503,12 @@ class LambdaDeploymentPackager(object):
         # a way to do this efficiently so we need to create a new
         # zip file that has all the same stuff except for the new
         # app file.
-        # TODO: support more than just an app.py file.
         print "Regen deployment package..."
         tmpzip = deployment_package_filename + '.tmp.zip'
         with zipfile.ZipFile(deployment_package_filename, 'r') as inzip:
             with zipfile.ZipFile(tmpzip, 'w') as outzip:
                 for el in inzip.infolist():
-                    if el.filename == 'app.py':
+                    if self._is_chalice_app_file(el.filename):
                         continue
                     else:
                         contents = inzip.read(el.filename)
@@ -517,7 +517,24 @@ class LambdaDeploymentPackager(object):
                 app_py = os.path.join(project_dir, 'app.py')
                 assert os.path.isfile(app_py), app_py
                 outzip.write(app_py, 'app.py')
+                self._add_chalice_lib_if_needed(project_dir, outzip)
         shutil.move(tmpzip, deployment_package_filename)
+
+    def _is_chalice_app_file(self, filename):
+        # type: (str) -> bool
+        return filename == 'app.py' or filename.startswith('chalicelib/')
+
+    def _add_chalice_lib_if_needed(self, project_dir, zip):
+        # type: (str, zipfile.ZipFile) -> None
+        libdir = os.path.join(project_dir, self._CHALICE_LIB_DIR)
+        if os.path.isdir(libdir):
+            for rootdir, dirnames, filenames in os.walk(libdir):
+                for filename in filenames:
+                    fullpath = os.path.join(rootdir, filename)
+                    zip_path = os.path.join(
+                        self._CHALICE_LIB_DIR,
+                        fullpath[len(libdir) + 1:])
+                    zip.write(fullpath, zip_path)
 
 
 class LambdaDeployer(object):

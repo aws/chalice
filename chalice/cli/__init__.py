@@ -5,7 +5,9 @@ Contains commands for deploying chalice.
 """
 import os
 import json
+import sys
 import logging
+import importlib
 
 import click
 import botocore.exceptions
@@ -90,19 +92,17 @@ def load_project_config(project_dir):
 
 
 def load_chalice_app(project_dir):
-    app_py = os.path.join(project_dir, 'app.py')
-    with open(app_py) as f:
-        g = {}
-        contents = f.read()
-        try:
-            exec contents in g
-        except Exception as e:
-            exception = click.ClickException(
-                "Unable to import your app.py file: %s" % e
-            )
-            exception.exit_code = 2
-            raise exception
-        return g['app']
+    if project_dir not in sys.path:
+        sys.path.append(project_dir)
+    try:
+        app = importlib.import_module('app')
+    except Exception as e:
+        exception = click.ClickException(
+            "Unable to import your app.py file: %s" % e
+        )
+        exception.exit_code = 2
+        raise exception
+    return app.app
 
 
 def inject_large_request_body_filter():

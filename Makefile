@@ -13,10 +13,10 @@ check:
 	# Basic error checking in test code
 	pyflakes tests/unit/ tests/functional/
 	##### DOC8 ######
-	# Correct rst formatting for docstrings
+	# Correct rst formatting for documentation
 	#
 	##
-	doc8 docs/source
+	doc8 docs/source --ignore-path docs/source/topics/multifile.rst
 	#
 	#
 	#
