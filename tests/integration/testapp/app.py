@@ -78,3 +78,9 @@ def supports_cors():
 @app.route('/todict', methods=['GET'])
 def todict():
     return app.current_request.to_dict()
+
+
+@app.route('/multifile')
+def multifile():
+    from chalicelib import MESSAGE
+    return {"message": MESSAGE}
