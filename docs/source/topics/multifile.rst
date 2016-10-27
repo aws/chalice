@@ -87,5 +87,5 @@ In our ``app.py`` code, we can load and use our config file:
 
     @app.route("/")
     def index():
-        # We can access ``config`` here if we want. 
+        # We can access ``config`` here if we want.
         return {"hello": config['message']}
