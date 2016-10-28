@@ -835,6 +835,7 @@ Tutorial: Using Custom Authentication
 =====================================
 
 AWS API Gateway routes can be authenticated in multiple ways:
+
 - API Key
 - Custom Auth Handler
 
