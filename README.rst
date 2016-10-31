@@ -2,6 +2,13 @@
 Python Serverless Microframework for AWS
 ========================================
 
+.. image:: https://badges.gitter.im/awslabs/chalice.svg
+   :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
+   :alt: Gitter
+.. image:: https://travis-ci.org/awslabs/chalice.svg?branch=master
+   :target: https://travis-ci.org/awslabs/chalice
+   :alt: Travis CI
+
 The python serverless microframework for AWS allows you to quickly create and
 deploy applications that use Amazon API Gateway and AWS Lambda.
 It provides:
@@ -34,10 +41,12 @@ It provides:
 
 Up and running in less than 30 seconds.
 
-**This project is published as a preview project and is not yet recommended for
+**This project is published as a preview project, and is not yet recommended for
 production APIs.**  Give this project a try and share your feedback with us
-here on github.
+here on Github.
 
+The documentation is available
+`on readthedocs <http://chalice.readthedocs.io/en/latest/>`__.
 
 Quickstart
 ==========
@@ -228,7 +237,7 @@ parts of the URI:
         return {'state': CITIES_TO_STATE[city]}
 
 
-In the example above we've now added a ``state_of_city`` view that allows
+In the example above, we've now added a ``state_of_city`` view that allows
 a user to specify a city name.  The view function takes the city
 name and returns name of the state the city is in.  Notice that the
 ``@app.route`` decorator has a URL pattern of ``/cities/{city}``.  This
@@ -310,8 +319,8 @@ Save this file and redeploy your changes::
     ...
     https://endpoint/dev/
 
-When you now request the same URL that returned an internal
-server error, you'll now get back the original stack trace::
+Now, when you request the same URL that returned an internal
+server error, you'll get back the original stack trace::
 
     $ http https://endpoint/dev/cities/vancouver
     {
@@ -360,18 +369,30 @@ Save and deploy these changes::
     }
 
 We can see now that we can a ``Code`` and ``Message`` key, with the message
-being the value we passed to ``BadRequestError``.  Whenver you raise
+being the value we passed to ``BadRequestError``.  Whenever you raise
 a ``BadRequestError`` from your view function, the framework will return an
 HTTP status code of 400 along with a JSON body with a ``Code`` and ``Message``.
-There's a few additional exceptions you can raise from your python code::
+There are a few additional exceptions you can raise from your python code::
 
-* ChaliceViewError - return a status code of 500
+* BadRequestError - return a status code of 400
+* UnauthorizedError - return a status code of 401
+* ForbiddenError - return a status code of 403
 * NotFoundError - return a status code of 404
+* ConflictError - return a status code of 409
+* TooManyRequestsError - return a status code of 429
+* ChaliceViewError - return a status code of 500
+
+You can import these directly from the ``chalice`` package:
+
+.. code-block:: python
+
+    from chalice import UnauthorizedError
+
 
 Tutorial: Additional Routing
 ============================
 
-So for, our examples have only allowed GET requests.
+So far, our examples have only allowed GET requests.
 It's actually possible to support additional HTTP methods.
 Here's an example of a view function that supports PUT:
 
@@ -535,6 +556,133 @@ sending a query string as well as a custom ``X-TestHeader`` header::
         "uri_params": {}
     }
 
+Tutorial: Request Content Types
+===============================
+
+The default behavior of a view function supports
+a request body of ``application/json``.  When a request is
+made with a ``Content-Type`` of ``application/json``, the
+``app.current_request.json_body`` attribute is automatically
+set for you.  This value is the parsed JSON body.
+
+You can also configure a view function to support other
+content types.  You can do this by specifying the
+``content_types`` paramter value to your ``app.route``
+function.  This parameter is a list of acceptable content
+types.  Here's an example of this feature:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
+
+
+    @app.route('/', methods=['POST'],
+               content_types=['application/x-www-form-urlencoded'])
+    def index():
+        parsed = urlparse.parse_qs(app.current_request.raw_body)
+        return {
+            'states': parsed.get('states', [])
+        }
+
+There's a few things worth noting in this view function.
+First, we've specified that we only accept the
+``application/x-www-form-urlencoded`` content type.  If we
+try to send a request with ``application/json``, we'll now
+get a ``415 Unsupported Media Type`` response::
+
+    $ http POST https://endpoint/dev/ states=WA states=CA --debug
+    ...
+    >>> requests.request(**{'allow_redirects': False,
+     'headers': {'Accept': 'application/json',
+                 'Content-Type': 'application/json',
+    ...
+
+
+    HTTP/1.1 415 Unsupported Media Type
+
+    {
+        "message": "Unsupported Media Type"
+    }
+
+If we use the ``--form`` argument, we can see the
+expected behavior of this view function because ``httpie`` sets the
+``Content-Type`` header to ``application/x-www-form-urlencoded``::
+
+    $ http --form POST https://endpoint/dev/formtest states=WA states=CA --debug
+    ...
+    >>> requests.request(**{'allow_redirects': False,
+     'headers': {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+    ...
+
+    HTTP/1.1 200 OK
+    {
+        "states": [
+            "WA",
+            "CA"
+        ]
+    }
+
+The second thing worth noting is that ``app.current_request.json_body``
+**is only available for the application/json content type.**
+In our example above, we used ``app.current_request.raw_body`` to access
+the raw body bytes:
+
+.. code-block:: python
+
+    parsed = urlparse.parse_qs(app.current_request.raw_body)
+
+``app.current_request.json_body`` is set to ``None`` whenever the
+``Content-Type`` is not ``application/json``.  This means that
+you will need to use ``app.current_request.raw_body`` and parse
+the request body as needed.
+
+Tutorial: CORS Support
+======================
+
+You can specify whether a view supports CORS by adding the
+``cors=True`` parameter to your ``@app.route()`` call.  By
+default this value is false:
+
+.. code-block:: python
+
+    @app.route('/supports-cors', methods=['PUT'], cors=True)
+    def supports_cors():
+        return {}
+
+
+Settings ``cors=True`` has similar behavior to enabling CORS
+using the AWS Console.  This includes:
+
+* Injecting the ``Access-Control-Allow-Origin: *`` header to your
+  responses, including all error responses you can return.
+* Automatically adding an ``OPTIONS`` method so support preflighting
+  requests.
+
+The preflight request will return a response that includes:
+
+* ``Access-Control-Allow-Origin: *``
+* The ``Access-Control-Allow-Methods`` header will return a list of all HTTP
+  methods you've called out in your view function.  In the example above,
+  this will be ``PUT,OPTIONS``.
+* ``Access-Control-Allow-Headers: Content-Type,X-Amz-Date,Authorization,
+  X-Api-Key,X-Amz-Security-Token``.
+
+There's a couple of things to keep in mind when enabling cors for a view:
+
+* An ``OPTIONS`` method for preflighting is always injected.  Ensure that
+  you don't have ``OPTIONS`` in the ``methods=[...]`` list of your
+  view function.
+* Every view function must explicitly enable CORS support.
+* There's no support for customizing the CORS configuration.
+
+The last two points will change in the future.  See
+`this issue
+<https://github.com/awslabs/chalice/issues/70#issuecomment-248787037>`_
+for more information.
+
+
 Tutorial: Policy Generation
 ===========================
 
@@ -608,8 +756,8 @@ your ``app.py`` file.  Next, let's update our view code to use boto3:
 
 Make sure to change ``BUCKET`` with the name of an S3 bucket
 you own.  Redeploy your changes with ``chalice deploy``.
-Now whenver we make a ``PUT`` request to ``/objects/keyname``, the
-data send will be stored in S3.  Subsequent ``GET`` requests will
+Now, whenever we make a ``PUT`` request to ``/objects/keyname``, the
+data send will be stored in S3.  Any subsequent ``GET`` requests will
 retrieve this data from S3.
 
 Manually Providing Policies
@@ -623,6 +771,7 @@ chalice configuration. Setting manage_iam_role to false tells
 Chalice to not attempt to generate policies and create IAM role.
 
 ::
+
     "manage_iam_role":false
     "iam_role_arn":"arn:aws:iam::<account-id>:role/<role-name>"
 
@@ -683,13 +832,15 @@ auto policy generator detects actions that it would like to add or remove::
 .. quick-start-end
 
 Tutorial: Using Custom Authentication
-===========================
+=====================================
 
 AWS API Gateway routes can be authenticated in multiple ways:
+
 - API Key
 - Custom Auth Handler
 
-# API Key
+API Key
+-------
 
 .. code-block:: python
 
@@ -699,7 +850,8 @@ AWS API Gateway routes can be authenticated in multiple ways:
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
-# Custom Auth Handler
+Custom Auth Handler
+-------------------
 
 A custom Authorizer is required for this to work, details can be found here;
 http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html
@@ -712,6 +864,53 @@ http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorize
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
+Tutorial: Local Mode
+====================
+
+As you develop your application, you may want to experiment locally  before
+deploying your changes.  You can use ``chalice local`` to spin up a local
+HTTP server you can use for testing.
+
+For example, if we have the following ``app.py`` file:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
+
+
+    @app.route('/')
+    def index():
+        return {'hello': 'world'}
+
+
+We can run ``chalice local`` to test this API locally:
+
+
+    $ chalice local
+    Serving on localhost:8000
+
+We can now test our API using ``localhost:8000``::
+
+    $ http localhost:8000/
+    HTTP/1.0 200 OK
+    Content-Length: 18
+    Content-Type: application/json
+    Date: Thu, 27 Oct 2016 20:08:43 GMT
+    Server: BaseHTTP/0.3 Python/2.7.11
+
+    {
+        "hello": "world"
+    }
+
+
+The ``chalice local`` command *does not* assume the
+role associated with your lambda function, so you'll
+need to use an ``AWS_PROFILE`` that has sufficient permissions
+to your AWS resources used in your ``app.py``.
+
+
 Backlog
 =======
 
@@ -719,11 +918,9 @@ These are features that are in the backlog:
 
 * Adding full support for API gateway stages - `issue 20
   <https://github.com/awslabs/chalice/issues/20>`__
-* Adding support for more than ``app.py`` - `issue 21
-  <https://github.com/awslabs/chalice/issues/21>`__
 
 Please share any feedback on the above issues.  We'd also love
-to hear from you.  Please create any github issues for additional
+to hear from you.  Please create any Github issues for additional
 features you'd like to see: https://github.com/awslabs/chalice/issues
 
 FAQ

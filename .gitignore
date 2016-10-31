@@ -2,3 +2,4 @@ sample/
 .cache
 venv
 docs/build/
+.idea

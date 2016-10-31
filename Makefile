@@ -1,6 +1,7 @@
 # Eventually I'll add:
 # py.test --cov chalice --cov-report term-missing --cov-fail-under 95 tests/
 # which will fail if tests are under 95%
+TESTS=tests/unit tests/functional
 
 check:
 	###### FLAKE8 #####
@@ -12,10 +13,10 @@ check:
 	# Basic error checking in test code
 	pyflakes tests/unit/ tests/functional/
 	##### DOC8 ######
-	# Correct rst formatting for docstrings
+	# Correct rst formatting for documentation
 	#
 	##
-	doc8 docs/source
+	doc8 docs/source --ignore-path docs/source/topics/multifile.rst
 	#
 	#
 	#
@@ -41,15 +42,31 @@ pylint:
 	pylint --rcfile .pylintrc chalice
 
 test:
-	py.test -v tests/unit/ tests/functional/
+	py.test -v $(TESTS)
 
 typecheck:
-	mypy --py2 --silent-import -p chalice
+	mypy --py2 --silent-import -p chalice --strict-optional
+	# Set of modules that will require type hints for all methods.
+	# The eventual goal is to just --disallow-untyped-defs for
+	# the entire chalice package, but for now as modules have complete
+	# type definitions, the list below should be updated.
+	mypy --py2 --silent-import -p chalice.deployer --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.policy --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.awsclient --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.logs --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice.compat --disallow-untyped-defs --strict-optional
 
 coverage:
-	py.test --cov chalice --cov-report term-missing tests/
+	py.test --cov chalice --cov-report term-missing $(TESTS)
+
+coverage-unit:
+	py.test --cov chalice --cov-report term-missing tests/unit
 
 htmlcov:
-	py.test --cov chalice --cov-report html tests/
+	py.test --cov chalice --cov-report html $(TESTS)
 	rm -rf /tmp/htmlcov && mv htmlcov /tmp/
 	open /tmp/htmlcov/index.html
+
+prcheck: check typecheck test

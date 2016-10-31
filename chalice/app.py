@@ -1,6 +1,7 @@
 """Chalice app and routing code."""
 import re
 import base64
+from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -57,17 +58,41 @@ ALL_ERRORS = [
     TooManyRequestsError]
 
 
+class CaseInsensitiveMapping(Mapping):
+    """Case insensitive and read-only mapping."""
+
+    def __init__(self, mapping):
+        self._dict = {k.lower(): v for k, v in mapping.items()}
+
+    def __getitem__(self, key):
+        return self._dict[key.lower()]
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __repr__(self):
+        return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
+
+
 class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
                  base64_body, context, stage_vars):
         self.query_params = query_params
-        self.headers = headers
+        self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
-        #: The parsed JSON from the body.
-        self.json_body = body
+        #: The parsed JSON from the body.  This value should
+        #: only be set if the Content-Type header is application/json,
+        #: which is the default content type value in chalice.
+        if self.headers.get('content-type') == 'application/json':
+            self.json_body = body
+        else:
+            self.json_body = None
         # This is the raw base64 body.
         # We'll only bother decoding this if the user
         # actually requests this via the `.raw_body` property.
@@ -84,20 +109,19 @@ class Request(object):
         return self._raw_body
 
     def to_dict(self):
-        return self.__dict__.copy()
+        copied = self.__dict__.copy()
+        # We want the output of `to_dict()` to be
+        # JSON serializable, so we need to remove the CaseInsensitive dict.
+        copied['headers'] = dict(copied['headers'])
+        return copied
 
 
 class RouteEntry(object):
 
-    def __init__(
-            self,
-            view_function,
-            view_name,
-            path,
-            methods,
-            authorization_type=None,
-            authorizer_id=None,
-            api_key_required=False):
+    def __init__(self, view_function, view_name, path, methods,
+                 authorization_type=None, authorizer_id=None,
+                 api_key_required=None, content_types=None,
+                 cors=False):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -108,6 +132,8 @@ class RouteEntry(object):
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
+        self.content_types = content_types
+        self.cors = cors
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -118,12 +144,7 @@ class RouteEntry(object):
         return results
 
     def __eq__(self, other):
-        return (
-            self.view_function == other.view_function and
-            self.view_name == other.view_name and
-            self.uri_pattern == other.uri_pattern and
-            self.view_args == other.view_args
-        )
+        return self.__dict__ == other.__dict__
 
 
 class Chalice(object):
@@ -141,24 +162,29 @@ class Chalice(object):
         return _register_view
 
     def _add_route(self, path, view_func, **kwargs):
-        name = kwargs.get('name', view_func.__name__)
-        methods = kwargs.get('methods', ['GET'])
-        authorization_type = kwargs.get('authorization_type', None)
-        authorizer_id = kwargs.get('authorizer_id', None)
-        api_key_required = kwargs.get('api_key_required', None)
+        name = kwargs.pop('name', view_func.__name__)
+        methods = kwargs.pop('methods', ['GET'])
+        authorization_type = kwargs.pop('authorization_type', None)
+        authorizer_id = kwargs.pop('authorizer_id', None)
+        api_key_required = kwargs.pop('api_key_required', None)
+        content_types = kwargs.pop('content_types', ['application/json'])
+        cors = kwargs.pop('cors', False)
+        if not isinstance(content_types, list):
+            raise ValueError('In view function "%s", the content_types '
+                             'value must be a list, not %s: %s'
+                             % (name, type(content_types), content_types))
+        if kwargs:
+            raise TypeError('TypeError: route() got unexpected keyword '
+                            'arguments: %s' % ', '.join(list(kwargs)))
 
         if path in self.routes:
             raise ValueError(
                 "Duplicate route detected: '%s'\n"
                 "URL paths must be unique." % path)
-        self.routes[path] = RouteEntry(
-            view_func,
-            name,
-            path,
-            methods,
-            authorization_type,
-            authorizer_id,
-            api_key_required)
+        entry = RouteEntry(view_func, name, path, methods, authorization_type,
+                           authorizer_id, api_key_required,
+                           content_types, cors)
+        self.routes[path] = entry
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
@@ -190,6 +216,10 @@ class Chalice(object):
                                        event['stage-variables'])
         try:
             response = view_function(*function_args)
+        except ChaliceViewError:
+            # Any chalice view error should propagate.  These
+            # get mapped to various HTTP status codes in API Gateway.
+            raise
         except Exception:
             if self.debug:
                 # If the user has turned on debug mode,
