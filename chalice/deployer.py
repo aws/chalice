@@ -266,10 +266,6 @@ class Deployer(object):
 
         """
         validate_configuration(config)
-        config['vpc_sub_list'] = ['subnet-655de94f',
-                                  'subnet-8381e6f5',
-                                  'subnet-0410af5c']
-        config['vpc_secgrp_list'] = ['sg-1b60a563']
         self._lambda_deploy.deploy(config)
         rest_api_id, region_name, stage = self._apigateway_deploy.deploy(
             config)
@@ -280,6 +276,10 @@ class Deployer(object):
     def _deploy_lambda(self, config):
         # type: (Dict[str, Any]) -> None
         app_config = config['config']
+        app_config['vpc_sub_list'] = ['subnet-655de94f',
+                                      'subnet-8381e6f5',
+                                      'subnet-0410af5c']
+        config['vpc_secgrp_list'] = ['sg-1b60a563']
         app_name = app_config['app_name']
         if self._query.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
