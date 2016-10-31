@@ -228,6 +228,8 @@ class Deployer(object):
             self._client('lambda'),
             self._client('apigateway'),
         )
+        self.vpc_secgrp_list = []
+        self.vpc_sub_list = []
 
     def _client(self, service_name):
         # type: (str) -> Any
@@ -246,9 +248,15 @@ class Deployer(object):
             * project_dir - The directory containing the project
             * config - A dictionary of config values loaded from the
                 project config file.
+            * vpc_sub_list - VPC subnet lists for lambda deployment
+            * vpc_sec_list - VPC security group list for lambda deployment
 
         """
         validate_configuration(config)
+        config['vpc_sub_list'] = ['subnet-655de94f',
+                                  'subnet-8381e6f5',
+                                  'subnet-0410af5c']
+        config['vpc_secgrp_list'] = ['sg-1b60a563']
         self._deploy_lambda(config)
         rest_api_id, region_name, stage = self._deploy_api_gateway(config)
         print (
@@ -328,7 +336,9 @@ class Deployer(object):
                     Code={'ZipFile': zip_contents},
                     Handler='app.app',
                     Role=role_arn,
-                    Timeout=60
+                    Timeout=60,
+                    VpcConfig={'SubnetIds': self.vpc_sub_list,
+                               'SecurityGroupIds': self.vpc_secgrp_list},
                 )
             except botocore.exceptions.ClientError as e:
                 code = e.response['Error'].get('Code')
