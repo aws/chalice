@@ -38,6 +38,16 @@ class Config(object):
         return self._chain_lookup('stage_name')
 
     @property
+    def vpc_subnets(self):
+        ''' return  a list of vpc subnets'''
+        return list(self._chain_lookup('vpc_subnets'))
+
+    @property
+    def security_groups(self):
+        ''' return the security group to assign to lambda function'''
+        return self._chain_lookup('security_groups')
+
+    @property
     def manage_iam_role(self):
         result = self._chain_lookup('manage_iam_role')
         if result is None:

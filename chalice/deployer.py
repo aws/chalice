@@ -248,8 +248,6 @@ class Deployer(object):
         # type: (APIGatewayDeployer, LambdaDeployer) -> None
         self._apigateway_deploy = apigateway_deploy
         self._lambda_deploy = lambda_deploy
-        self.vpc_secgrp_list = []
-        self.vpc_sub_list = []
 
     def deploy(self, config):
         # type: (Config) -> Tuple[str, str, str]
@@ -261,25 +259,20 @@ class Deployer(object):
             * project_dir - The directory containing the project
             * config - A dictionary of config values loaded from the
                 project config file.
-            * vpc_sub_list - VPC subnet lists for lambda deployment
-            * vpc_sec_list - VPC security group list for lambda deployment
 
         """
         validate_configuration(config)
         self._lambda_deploy.deploy(config)
         rest_api_id, region_name, stage = self._apigateway_deploy.deploy(
             config)
-        print (
+        print(
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
             .format(api_id=rest_api_id, region=region_name, stage=stage)
         )
+
     def _deploy_lambda(self, config):
         # type: (Dict[str, Any]) -> None
         app_config = config['config']
-        app_config['vpc_sub_list'] = ['subnet-655de94f',
-                                      'subnet-8381e6f5',
-                                      'subnet-0410af5c']
-        config['vpc_secgrp_list'] = ['sg-1b60a563']
         app_name = app_config['app_name']
         if self._query.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
@@ -324,8 +317,13 @@ class Deployer(object):
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
-        print "Initial creation of lambda function."
+        print("First time creation of lambda function.")
         app_name = config['config']['app_name']
+        self.vpc_subnets = ([st.encode('utf-8')
+                             for st in config['config']['vpc_subnets']])
+        self.security_groups = ([st.encode('utf-8')
+                                 for st in
+                                 config['config']['security_groups']])
         role_arn = self._get_or_create_lambda_role_arn(config)
         zip_filename = self._packager.create_deployment_package(
             config['project_dir'])
@@ -350,8 +348,8 @@ class Deployer(object):
                     Handler='app.app',
                     Role=role_arn,
                     Timeout=60,
-                    VpcConfig={'SubnetIds': self.vpc_sub_list,
-                               'SecurityGroupIds': self.vpc_secgrp_list},
+                    VpcConfig={'SubnetIds': self.vpc_subnets,
+                               'SecurityGroupIds': self.security_groups}
                 )
             except botocore.exceptions.ClientError as e:
                 code = e.response['Error'].get('Code')
@@ -392,13 +390,13 @@ class Deployer(object):
         diff = policy.diff_policies(previous, app_policy)
         if diff:
             if diff.get('added', []):
-                print ("\nThe following actions will be added to "
-                       "the execution policy:\n")
+                print("\nThe following actions will be added to "
+                      "the execution policy:\n")
                 for action in diff['added']:
                     print action
             if diff.get('removed', []):
-                print ("\nThe following action will be removed from "
-                       "the execution policy:\n")
+                print("\nThe following action will be removed from "
+                      "the execution policy:\n")
                 for action in diff['removed']:
                     print action
             self._prompter.confirm("\nWould you like to continue? ",
@@ -556,6 +554,7 @@ class Deployer(object):
 
 
 class APIGatewayResourceCreator(object):
+
     """Create hierarchical resources in API gateway from chalice routes."""
 
     def __init__(self, awsclient, apig_methods, lambda_arn,
@@ -832,6 +831,8 @@ class LambdaDeployer(object):
         self._packager = packager
         self._prompter = prompter
         self._osutils = osutils
+        self.vpc_subnets = []
+        self.security_groups = []
 
     def deploy(self, config):
         # type: (Config) -> None
@@ -871,13 +872,13 @@ class LambdaDeployer(object):
         diff = policy.diff_policies(previous, app_policy)
         if diff:
             if diff.get('added', set([])):
-                print ("\nThe following actions will be added to "
-                       "the execution policy:\n")
+                print("\nThe following actions will be added to "
+                      "the execution policy:\n")
                 for action in diff['added']:
                     print action
             if diff.get('removed', set([])):
-                print ("\nThe following action will be removed from "
-                       "the execution policy:\n")
+                print("\nThe following action will be removed from "
+                      "the execution policy:\n")
                 for action in diff['removed']:
                     print action
             self._prompter.confirm("\nWould you like to continue? ",
@@ -924,15 +925,21 @@ class LambdaDeployer(object):
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
-        print "Initial creation of lambda function."
+        print("Initial creation of lambda function.")
+        self.vpc_subnets = [st.encode('utf-8') for st in config.vpc_subnets]
+        self.security_groups = ([st.encode('utf-8')
+                                 for st in config.security_groups])
         app_name = config.app_name
         role_arn = self._get_or_create_lambda_role_arn(config)
         zip_filename = self._packager.create_deployment_package(
             config.project_dir)
         with open(zip_filename, 'rb') as f:
             zip_contents = f.read()
-        return self._aws_client.create_function(
-            app_name, role_arn, zip_contents)
+        return self._aws_client.create_function(app_name,
+                                                role_arn,
+                                                zip_contents,
+                                                self.vpc_subnets,
+                                                self.security_groups)
 
     def _update_lambda_function(self, config):
         # type: (Config) -> None
@@ -1095,6 +1102,7 @@ class OSUtils(object):
 
 
 class APIGatewayMethods(object):
+
     """Create API gateway methods.
 
     This class is used to configure the various API gateway methods including:
@@ -1109,6 +1117,7 @@ class APIGatewayMethods(object):
     that support CORS, etc.
 
     """
+
     def __init__(self, apig_client, rest_api_id):
         # type: (Any, str) -> None
         self.rest_api_id = rest_api_id
