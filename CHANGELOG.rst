@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.4.0
+=====
 
 * Fix issue where role name to arn lookup was failing due to lack of pagination
   (`#139 <https://github.com/awslabs/chalice/issues/139>`__)
@@ -11,6 +11,10 @@ Next Release (TBD)
   (`#144 <https://github.com/awslabs/chalice/pull/144>`__)
 * Raise validation error when configuring CORS and an OPTIONS method
   (`#142 <https://github.com/awslabs/chalice/issues/142>`__)
+* Add support for multi-file applications
+  (`#21 <https://github.com/awslabs/chalice/issues/21>`__)
+* Add support for ``chalice local``, which runs a local HTTP server for testing
+  (`#22 <https://github.com/awslabs/chalice/issues/22`__)
 
 
 0.3.0

@@ -5,4 +5,4 @@ from chalice.app import (
 )
 
 
-__version__ = '0.3.3.vpc'
+__version__ = '0.4.1vpc'
