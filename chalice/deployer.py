@@ -13,6 +13,7 @@ import zipfile
 import hashlib
 import inspect
 import re
+import time
 
 from typing import Any, Tuple, Callable, IO  # noqa
 import botocore.session  # noqa
@@ -550,11 +551,10 @@ class Deployer(object):
             restApiId=rest_api_id,
             stageName=stage,
         )
-        return rest_api_id, region_name, stage
+        return rest_api_id, stage
 
 
 class APIGatewayResourceCreator(object):
-
     """Create hierarchical resources in API gateway from chalice routes."""
 
     def __init__(self, awsclient, apig_methods, lambda_arn,
@@ -1102,7 +1102,6 @@ class OSUtils(object):
 
 
 class APIGatewayMethods(object):
-
     """Create API gateway methods.
 
     This class is used to configure the various API gateway methods including:

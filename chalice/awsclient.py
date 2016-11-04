@@ -50,7 +50,7 @@ class TypedAWSClient(object):
                         zip_contents,
                         vpc_subnets=[],
                         security_groups=[]):
-        # type: (str, str, str) -> str
+        # type: (str, str, str, list, list) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',

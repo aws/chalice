@@ -113,7 +113,8 @@ def test_delete_methods_from_root_resource(stubbed_session):
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.delete_methods_from_root_resource(
-        'rest_api_id', {'resourceMethods': resource_methods, 'id': 'resource_id'})
+        'rest_api_id', {'resourceMethods': resource_methods,
+                        'id': 'resource_id'})
     stubbed_session.verify_stubs()
 
 
@@ -268,6 +269,26 @@ class TestCreateLambdaFunction(object):
             'name', 'myarn', b'foo') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
+    def test_create_function_succeeds_first_try_vpc(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=60,
+            VpcConfig={"SubnetIds": ["s-000"], "SecurityGroupIds": ["sg-000"]}
+            ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function('name',
+                                         'myarn',
+                                         b'foo',
+                                         {"SubnetIds": ["s-000"],
+                                          "SecurityGroupIds": ["sg-000"]}
+                                         ) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
         kwargs = {
             'FunctionName': 'name',
@@ -374,7 +395,8 @@ class TestAddPermissionsForAPIGateway(object):
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
-    def test_can_add_permission_for_apigateway_not_needed(self, stubbed_session):
+    def test_can_add_permission_for_apigateway_not_needed(self,
+                                                          stubbed_session):
         source_arn = 'arn:aws:execute-api:us-west-2:123:rest-api-id/*'
         policy = {
             'Id': 'default',
@@ -401,7 +423,8 @@ class TestAddPermissionsForAPIGateway(object):
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
-    def test_can_add_permission_when_policy_does_not_exist(self, stubbed_session):
+    def test_can_add_permission_when_policy_does_not_exist(self,
+                                                           stubbed_session):
         # It's also possible to receive a ResourceNotFoundException
         # if you call get_policy() on a lambda function with no policy.
         lambda_stub = stubbed_session.stub('lambda')

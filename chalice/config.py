@@ -39,12 +39,12 @@ class Config(object):
 
     @property
     def vpc_subnets(self):
-        ''' return  a list of vpc subnets'''
+        """Return  a list of vpc subnets."""
         return list(self._chain_lookup('vpc_subnets'))
 
     @property
     def security_groups(self):
-        ''' return the security group to assign to lambda function'''
+        """Return the security group to assign to lambda function."""
         return self._chain_lookup('security_groups')
 
     @property
