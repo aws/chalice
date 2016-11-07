@@ -54,6 +54,10 @@ class TooManyRequestsError(ChaliceViewError):
     STATUS_CODE = 429
 
 
+class SuccessNoContent(ChaliceViewError):
+    STATUS_CODE = 204
+
+
 ALL_ERRORS = [
     ChaliceViewError,
     BadRequestError,
@@ -61,7 +65,8 @@ ALL_ERRORS = [
     UnauthorizedError,
     ForbiddenError,
     ConflictError,
-    TooManyRequestsError]
+    TooManyRequestsError,
+    SuccessNoContent]
 
 
 class CaseInsensitiveMapping(Mapping):
