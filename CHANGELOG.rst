@@ -14,7 +14,7 @@ CHANGELOG
 * Add support for multi-file applications
   (`#21 <https://github.com/awslabs/chalice/issues/21>`__)
 * Add support for ``chalice local``, which runs a local HTTP server for testing
-  (`#22 <https://github.com/awslabs/chalice/issues/22`__)
+  (`#22 <https://github.com/awslabs/chalice/issues/22>`__)
 
 
 0.3.0
