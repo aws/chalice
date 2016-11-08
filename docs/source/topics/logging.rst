@@ -78,8 +78,8 @@ We can make a change to set our log level to debug:
 Now if we make a request to the ``/`` URL and look at the
 output of ``chalice logs``, we'll see the following log message::
 
-    2016-11-07 12:29:15.713000 431786 demolog - DEBUG - This is a debug statement
-    2016-11-07 12:29:15.713000 431786 demolog - ERROR - This is an error statement
+    2016-11-07 12:29:15.714 431786 demolog - DEBUG - This is a debug statement
+    2016-11-07 12:29:15.714 431786 demolog - ERROR - This is an error statement
 
 
 As you can see here, both the debug and error log message are shown.
