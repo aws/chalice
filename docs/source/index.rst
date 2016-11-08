@@ -57,6 +57,7 @@ Topics
    topics/routing
    topics/configfile
    topics/multifile
+   topics/logging
 
 
 API Reference

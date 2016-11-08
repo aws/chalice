@@ -1,4 +1,5 @@
 import base64
+import logging
 import json
 
 import pytest
@@ -369,3 +370,36 @@ def test_unknown_kwargs_raise_error(sample_app):
         @sample_app.route('/foo', unknown_kwargs='foo')
         def badkwargs():
             pass
+
+
+def test_default_logging_handlers_created():
+    handlers_before = logging.getLogger('log_app').handlers[:]
+    # configure_logs = True is the default, but we're
+    # being explicit here.
+    app.Chalice('log_app', configure_logs=True)
+    handlers_after = logging.getLogger('log_app').handlers[:]
+    new_handlers = set(handlers_after) - set(handlers_before)
+    # Should have added a new handler
+    assert len(new_handlers) == 1
+
+
+def test_default_logging_only_added_once():
+    # And creating the same app object means we shouldn't
+    # configure logging again.
+    handlers_before = logging.getLogger('added_once').handlers[:]
+    app.Chalice('added_once', configure_logs=True)
+    # The same app name, we should still only configure logs
+    # once.
+    app.Chalice('added_once', configure_logs=True)
+    handlers_after = logging.getLogger('added_once').handlers[:]
+    new_handlers = set(handlers_after) - set(handlers_before)
+    # Should have added a new handler
+    assert len(new_handlers) == 1
+
+
+def test_logs_can_be_disabled():
+    handlers_before = logging.getLogger('log_app').handlers[:]
+    app.Chalice('log_app', configure_logs=False)
+    handlers_after = logging.getLogger('log_app').handlers[:]
+    new_handlers = set(handlers_after) - set(handlers_before)
+    assert len(new_handlers) == 0

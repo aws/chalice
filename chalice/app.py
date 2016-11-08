@@ -1,6 +1,8 @@
 """Chalice app and routing code."""
 import re
+import sys
 import base64
+import logging
 from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
@@ -149,11 +151,43 @@ class RouteEntry(object):
 
 class Chalice(object):
 
-    def __init__(self, app_name):
+    FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
+
+    def __init__(self, app_name, configure_logs=True):
         self.app_name = app_name
         self.routes = {}
         self.current_request = None
         self.debug = False
+        self.configure_logs = configure_logs
+        self.log = logging.getLogger(self.app_name)
+        if self.configure_logs:
+            self._configure_logging()
+
+    def _configure_logging(self):
+        log = logging.getLogger(self.app_name)
+        if self._already_configured(log):
+            return
+        handler = logging.StreamHandler(sys.stdout)
+        # Timestamp is handled by lambda itself so the
+        # default FORMAT_STRING doesn't need to include it.
+        formatter = logging.Formatter(self.FORMAT_STRING)
+        handler.setFormatter(formatter)
+        log.propagate = False
+        if self.debug:
+            level = logging.DEBUG
+        else:
+            level = logging.ERROR
+        log.setLevel(level)
+        log.addHandler(handler)
+
+    def _already_configured(self, log):
+        if not log.handlers:
+            return False
+        for handler in log.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                if handler.stream == sys.stdout:
+                    return True
+        return False
 
     def route(self, path, **kwargs):
         def _register_view(view_func):

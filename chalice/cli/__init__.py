@@ -198,7 +198,7 @@ def deploy(ctx, project_dir, autogen_policy, profile, debug, stage):
 @click.option('--num-entries', default=None, type=int,
               help='Max number of log entries to show.')
 @click.option('--include-lambda-messages/--no-include-lambda-messages',
-              default=True,
+              default=False,
               help='Controls whether or not lambda log messages are included.')
 @click.pass_context
 def logs(ctx, project_dir, num_entries, include_lambda_messages):
