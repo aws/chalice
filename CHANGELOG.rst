@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add default application logger
+  (`#149 <https://github.com/awslabs/chalice/issues/149>`__)
+
+
 0.4.0
 =====
 
