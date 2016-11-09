@@ -126,8 +126,23 @@ def test_will_pass_captured_params_to_view(sample_app):
 
 def test_error_on_unsupported_method(sample_app):
     event = create_event('/name/{name}', 'POST', {'name': 'james'})
-    with pytest.raises(app.ChaliceError):
+    with pytest.raises(app.MethodNotAllowedError):
         sample_app(event, context=None)
+
+
+def test_error_on_unsupported_method_has_correct_status_code(sample_app):
+    event = create_event('/name/{name}', 'POST', {'name': 'james'})
+    with pytest.raises(app.MethodNotAllowedError) as execinfo:
+        sample_app(event, context=None)
+    assert execinfo.value.STATUS_CODE == 405
+
+
+def test_error_on_unsupported_method_gives_feedback_on_method(sample_app):
+    method = 'POST'
+    event = create_event('/name/{name}', method, {'name': 'james'})
+    with pytest.raises(app.MethodNotAllowedError) as execinfo:
+        sample_app(event, context=None)
+    assert method in str(execinfo.value)
 
 
 def test_no_view_function_found(sample_app):

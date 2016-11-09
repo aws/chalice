@@ -42,6 +42,10 @@ class NotFoundError(ChaliceViewError):
     STATUS_CODE = 404
 
 
+class MethodNotAllowedError(ChaliceViewError):
+    STATUS_CODE = 405
+
+
 class ConflictError(ChaliceViewError):
     STATUS_CODE = 409
 
@@ -235,7 +239,7 @@ class Chalice(object):
             raise ChaliceError("No view function for: %s" % resource_path)
         route_entry = self.routes[resource_path]
         if http_method not in route_entry.methods:
-            raise ChaliceError("Unsupported method: %s" % http_method)
+            raise MethodNotAllowedError("Unsupported method: %s" % http_method)
         view_function = route_entry.view_function
         function_args = [event['params']['path'][name]
                          for name in route_entry.view_args]
