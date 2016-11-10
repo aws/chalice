@@ -7,6 +7,9 @@ Next Release (TBD)
 
 * Add default application logger
   (`#149 <https://github.com/awslabs/chalice/issues/149>`__)
+* Return 405 when method is not supported when running
+  ``chalice local``
+  (`#159 <https://github.com/awslabs/chalice/issues/159>`__)
 
 
 0.4.0
