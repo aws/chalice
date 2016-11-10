@@ -3,3 +3,5 @@ sample/
 venv
 docs/build/
 .idea
+*.py?
+__pycache__/

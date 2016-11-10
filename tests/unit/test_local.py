@@ -147,7 +147,10 @@ def test_unsupported_methods_raise_error(handler):
     handler.do_POST()
 
     body = _get_body_from_response_stream(handler)
-    assert body == {'message': 'Unsupported method: POST'}
+    assert body == {
+        'Code': 'MethodNotAllowedError',
+        'Message': 'MethodNotAllowedError: Unsupported method: POST'
+    }
 
 
 @pytest.mark.parametrize('actual_url,matched_url', [
