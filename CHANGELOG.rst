@@ -10,6 +10,9 @@ Next Release (TBD)
 * Return 405 when method is not supported when running
   ``chalice local``
   (`#159 <https://github.com/awslabs/chalice/issues/159>`__)
+* Add path params as requestParameters so they can be used
+  in generated SDKs as well as cache keys
+  (`#163 <https://github.com/awslabs/chalice/issues/163>`__)
 
 
 0.4.0
