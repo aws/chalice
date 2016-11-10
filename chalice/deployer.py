@@ -14,7 +14,7 @@ import hashlib
 import inspect
 import re
 
-from typing import Any, Tuple, Callable, IO  # noqa
+from typing import Any, Tuple, Callable, IO, List  # noqa
 import botocore.session  # noqa
 import virtualenv
 
@@ -341,6 +341,7 @@ class APIGatewayResourceCreator(object):
         self._apig_methods.create_method_request(
             resource_id, http_method, route_entry.authorization_type,
             route_entry.authorizer_id, route_entry.api_key_required,
+            route_entry.view_args
         )
         self._apig_methods.create_lambda_method_integration(
             resource_id, http_method, route_entry.content_types,
@@ -833,8 +834,9 @@ class APIGatewayMethods(object):
 
     def create_method_request(self, resource_id, http_method,
                               authorization_type=None, authorizer_id=None,
-                              api_key_required=False):
-        # type: (str, str, str, str, bool) -> None
+                              api_key_required=False,
+                              url_params=None):
+        # type: (str, str, str, str, bool, List[str]) -> None
         """Create an API Gateway method request.
 
         This defines the public API used by consumers of the API Gateway
@@ -853,6 +855,12 @@ class APIGatewayMethods(object):
             put_method_cfg['authorizerId'] = authorizer_id
         if api_key_required:
             put_method_cfg['apiKeyRequired'] = api_key_required
+        if url_params:
+            request_params = {
+                'method.request.path.%s' % param: True
+                for param in url_params
+            }
+            put_method_cfg['requestParameters'] = request_params
         self._apig_client.put_method(**put_method_cfg)
 
     def create_lambda_method_integration(self, resource_id, http_method,

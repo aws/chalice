@@ -437,3 +437,20 @@ def test_cant_have_options_with_cors(sample_app):
 
     with pytest.raises(ValueError):
         validate_routes(sample_app.routes)
+
+
+def test_apig_methods(stubbed_session):
+    gateway_stub = stubbed_session.stub('apigateway')
+    gateway_stub.put_method(
+        authorizationType='NONE',
+        httpMethod='GET',
+        resourceId='resource_id',
+        restApiId='rest_api_id',
+        requestParameters={'method.request.path.name': True},
+    ).returns({})
+    apig = APIGatewayMethods(
+        stubbed_session.create_client('apigateway'), 'rest_api_id')
+
+    stubbed_session.activate_stubs()
+    apig.create_method_request('resource_id', 'GET', url_params=['name'])
+    stubbed_session.verify_stubs()
