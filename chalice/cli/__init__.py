@@ -256,6 +256,34 @@ def new_project(ctx, project_name, profile):
         f.write(GITIGNORE)
 
 
+@cli.command('url')
+@click.pass_context
+def url(ctx):
+    user_provided_params = {}
+    project_dir = ctx.obj['project_dir']
+    default_params = {'project_dir': project_dir}
+    try:
+        config_from_disk = load_project_config(project_dir)
+    except (OSError, IOError):
+        click.echo("Unable to load the project config file. "
+                   "Are you sure this is a chalice project?")
+        raise click.Abort()
+    app_obj = load_chalice_app(project_dir)
+    user_provided_params['chalice_app'] = app_obj
+    config = Config(user_provided_params, config_from_disk, default_params)
+    session = create_botocore_session(profile=config.profile,
+                                      debug=ctx.obj['debug'])
+    from chalice.awsclient import TypedAWSClient
+    c = TypedAWSClient(session)
+    rest_api_id = c.get_rest_api_id(app_obj.app_name)
+    stage_name = config_from_disk['stage']
+    region_name = c.region_name
+    click.echo(
+        "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
+        .format(api_id=rest_api_id, region=region_name, stage=stage_name)
+    )
+
+
 def run_local_server(app_obj):
     from chalice import local
     server = local.LocalDevServer(app_obj)
