@@ -73,6 +73,7 @@ class LambdaEventConverter(object):
                 'http-method': method,
                 'resource-path': view_route.route,
             },
+            'claims': {},
             'params': {
                 'header': dict(headers),
                 'path': view_route.captured,

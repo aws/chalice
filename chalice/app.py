@@ -87,11 +87,12 @@ class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
-                 base64_body, context, stage_vars):
+                 base64_body, context, claims, stage_vars):
         self.query_params = query_params
         self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
+        self.claims = claims
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
@@ -251,6 +252,7 @@ class Chalice(object):
                                        event['body-json'],
                                        event['base64-body'],
                                        event['context'],
+                                       event['claims'],
                                        event['stage-variables'])
         try:
             response = view_function(*function_args)
