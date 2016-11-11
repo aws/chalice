@@ -126,26 +126,24 @@ class LargeRequestBodyFilter(logging.Filter):
 
 @click.group()
 @click.version_option(version=chalice_version, message='%(prog)s %(version)s')
-@click.pass_context
-def cli(ctx):
-    pass
-
-
-@cli.command()
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
 @click.pass_context
-def local(ctx, project_dir):
+def cli(ctx, project_dir):
     if project_dir is None:
         project_dir = os.getcwd()
+    ctx.obj['project_dir'] = project_dir
     os.chdir(project_dir)
-    app_obj = load_chalice_app(project_dir)
+
+
+@cli.command()
+@click.pass_context
+def local(ctx):
+    app_obj = load_chalice_app(ctx.obj['project_dir'])
     run_local_server(app_obj)
 
 
 @cli.command()
-@click.option('--project-dir',
-              help='The project directory.  Defaults to CWD')
 @click.option('--autogen-policy/--no-autogen-policy',
               default=True,
               help='Automatically generate IAM policy for app code.')
@@ -155,15 +153,10 @@ def local(ctx, project_dir):
               help='Print debug logs to stderr.')
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, project_dir, autogen_policy, profile, debug, stage):
+def deploy(ctx, autogen_policy, profile, debug, stage):
     user_provided_params = {}
-    default_params = {}
-    if project_dir is None:
-        project_dir = os.getcwd()
-        default_params['project_dir'] = project_dir
-    else:
-        user_provided_params['project_dir'] = project_dir
-    os.chdir(project_dir)
+    project_dir = ctx.obj['project_dir']
+    default_params = {'project_dir': project_dir}
     try:
         config_from_disk = load_project_config(project_dir)
     except (OSError, IOError):
@@ -193,23 +186,16 @@ def deploy(ctx, project_dir, autogen_policy, profile, debug, stage):
 
 
 @cli.command()
-@click.option('--project-dir',
-              help='The project directory.  Defaults to CWD')
 @click.option('--num-entries', default=None, type=int,
               help='Max number of log entries to show.')
 @click.option('--include-lambda-messages/--no-include-lambda-messages',
               default=False,
               help='Controls whether or not lambda log messages are included.')
 @click.pass_context
-def logs(ctx, project_dir, num_entries, include_lambda_messages):
+def logs(ctx, num_entries, include_lambda_messages):
     user_provided_params = {}
-    default_params = {}
-    if project_dir is None:
-        project_dir = os.getcwd()
-        default_params['project_dir'] = project_dir
-    else:
-        user_provided_params['project_dir'] = project_dir
-    os.chdir(project_dir)
+    project_dir = ctx.obj['project_dir']
+    default_params = {'project_dir': project_dir}
     try:
         config_from_disk = load_project_config(project_dir)
     except (OSError, IOError):
@@ -229,8 +215,7 @@ def logs(ctx, project_dir, num_entries, include_lambda_messages):
 def gen_policy(ctx, filename):
     from chalice import policy
     if filename is None:
-        project_dir = os.getcwd()
-        filename = os.path.join(project_dir, 'app.py')
+        filename = os.path.join(ctx.obj['project_dir'], 'app.py')
     if not os.path.isfile(filename):
         click.echo("App file does not exist: %s" % filename)
         raise click.Abort()
