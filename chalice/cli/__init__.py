@@ -128,11 +128,15 @@ class LargeRequestBodyFilter(logging.Filter):
 @click.version_option(version=chalice_version, message='%(prog)s %(version)s')
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
+@click.option('--debug/--no-debug',
+              default=False,
+              help='Print debug logs to stderr.')
 @click.pass_context
-def cli(ctx, project_dir):
+def cli(ctx, project_dir, debug=False):
     if project_dir is None:
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
+    ctx.obj['debug'] = debug
     os.chdir(project_dir)
 
 
@@ -148,12 +152,9 @@ def local(ctx):
               default=True,
               help='Automatically generate IAM policy for app code.')
 @click.option('--profile', help='Override profile at deploy time.')
-@click.option('--debug/--no-debug',
-              default=False,
-              help='Print debug logs to stderr.')
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, autogen_policy, profile, debug, stage):
+def deploy(ctx, autogen_policy, profile, stage):
     user_provided_params = {}
     project_dir = ctx.obj['project_dir']
     default_params = {'project_dir': project_dir}
@@ -172,7 +173,8 @@ def deploy(ctx, autogen_policy, profile, debug, stage):
     if profile:
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
-    session = create_botocore_session(profile=config.profile, debug=debug)
+    session = create_botocore_session(profile=config.profile,
+                                      debug=ctx.obj['debug'])
     d = deployer.create_default_deployer(session=session, prompter=click)
     try:
         d.deploy(config)
