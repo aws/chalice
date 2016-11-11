@@ -13,6 +13,8 @@ Next Release (TBD)
 * Add path params as requestParameters so they can be used
   in generated SDKs as well as cache keys
   (`#163 <https://github.com/awslabs/chalice/issues/163>`__)
+* Map cognito user pool claims as part of request context
+  (`#165 <https://github.com/awslabs/chalice/issues/165>`__)
 
 
 0.4.0

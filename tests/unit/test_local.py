@@ -190,6 +190,7 @@ def test_can_create_lambda_event():
             'http-method': 'GET',
             'resource-path': '/foo/{capture}',
         },
+        'claims': {},
         'params': {
             'header': {'content-type': 'application/json'},
             'path': {'capture': 'other'},
@@ -211,6 +212,7 @@ def test_can_create_lambda_event_for_put_request():
         body='{"foo": "bar"}',
     )
     assert event == {
+        'claims': {},
         'context': {
             'http-method': 'PUT',
             'resource-path': '/foo/{capture}',
@@ -237,6 +239,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         body=form_body,
     )
     assert event == {
+        'claims': {},
         'context': {
             'http-method': 'POST',
             'resource-path': '/foo/{capture}',

@@ -90,6 +90,12 @@ FULL_PASSTHROUGH = """
   "request-id": "$context.requestId",
   "resource-id": "$context.resourceId",
   "resource-path": "$context.resourcePath"
+  },
+  "claims": {
+#foreach($key in $context.authorizer.claims.keySet())
+"$key": "$util.escapeJavaScript($context.authorizer.claims.get($key))"
+  #if($foreach.hasNext),#end
+#end
   }
 }
 """

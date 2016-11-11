@@ -14,6 +14,7 @@ def create_event(uri, method, path, content_type='application/json'):
             'http-method': method,
             'resource-path': uri,
         },
+        'claims': {},
         'params': {
             'header': {
                 'Content-Type': content_type,
