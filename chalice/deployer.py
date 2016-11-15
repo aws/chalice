@@ -783,7 +783,7 @@ class APIGatewayDeployer(object):
         route_builder.build_resources(url_trie)
         # And finally, you need an actual deployment to deploy the changes to
         # API gateway.
-        stage = config.stage_name or 'dev'
+        stage = config.stage or 'dev'
         print "Deploying to:", stage
         self._aws_client.deploy_rest_api(rest_api_id, stage)
         return rest_api_id, self._aws_client.region_name, stage

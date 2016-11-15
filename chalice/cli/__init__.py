@@ -110,6 +110,28 @@ def inject_large_request_body_filter():
     log.addFilter(LargeRequestBodyFilter())
 
 
+def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
+    user_provided_params = {}
+    project_dir = ctx.obj['project_dir']
+    default_params = {'project_dir': project_dir}
+    try:
+        config_from_disk = load_project_config(project_dir)
+    except (OSError, IOError):
+        click.echo("Unable to load the project config file. "
+                   "Are you sure this is a chalice project?")
+        raise click.Abort()
+    app_obj = load_chalice_app(project_dir)
+    user_provided_params['chalice_app'] = app_obj
+    if stage_name is not None:
+        user_provided_params['stage'] = stage_name
+    if autogen_policy is not None:
+        user_provided_params['autogen_policy'] = autogen_policy
+    if profile is not None:
+        user_provided_params['profile'] = profile
+    config = Config(user_provided_params, config_from_disk, default_params)
+    return config
+
+
 class LargeRequestBodyFilter(logging.Filter):
     def filter(self, record):
         if record.msg.startswith('Making request'):
@@ -155,24 +177,9 @@ def local(ctx):
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, stage):
-    user_provided_params = {}
-    project_dir = ctx.obj['project_dir']
-    default_params = {'project_dir': project_dir}
-    try:
-        config_from_disk = load_project_config(project_dir)
-    except (OSError, IOError):
-        click.echo("Unable to load the project config file. "
-                   "Are you sure this is a chalice project?")
-        raise click.Abort()
-    if stage is not None:
-        config_from_disk['stage'] = stage
-        default_params['stage'] = stage
-    app_obj = load_chalice_app(project_dir)
-    user_provided_params['chalice_app'] = app_obj
-    user_provided_params['autogen_policy'] = autogen_policy
-    if profile:
-        user_provided_params['profile'] = profile
-    config = Config(user_provided_params, config_from_disk, default_params)
+    config = create_config_obj(
+        ctx, stage_name=stage, autogen_policy=autogen_policy,
+        profile=profile)
     session = create_botocore_session(profile=config.profile,
                                       debug=ctx.obj['debug'])
     d = deployer.create_default_deployer(session=session, prompter=click)
@@ -195,18 +202,7 @@ def deploy(ctx, autogen_policy, profile, stage):
               help='Controls whether or not lambda log messages are included.')
 @click.pass_context
 def logs(ctx, num_entries, include_lambda_messages):
-    user_provided_params = {}
-    project_dir = ctx.obj['project_dir']
-    default_params = {'project_dir': project_dir}
-    try:
-        config_from_disk = load_project_config(project_dir)
-    except (OSError, IOError):
-        click.echo("Unable to load the project config file. "
-                   "Are you sure this is a chalice project?")
-        raise click.Abort()
-    app_obj = load_chalice_app(project_dir)
-    user_provided_params['chalice_app'] = app_obj
-    config = Config(user_provided_params, config_from_disk, default_params)
+    config = create_config_obj(ctx)
     show_lambda_logs(config, num_entries, include_lambda_messages)
 
 
@@ -230,8 +226,7 @@ def gen_policy(ctx, filename):
 @cli.command('new-project')
 @click.argument('project_name', required=False)
 @click.option('--profile', required=False)
-@click.pass_context
-def new_project(ctx, project_name, profile):
+def new_project(project_name, profile):
     if project_name is None:
         project_name = prompts.getting_started_prompt(click)
     if os.path.isdir(project_name):
@@ -248,7 +243,7 @@ def new_project(ctx, project_name, profile):
         cfg['profile'] = profile
     with open(config, 'w') as f:
         f.write(json.dumps(cfg, indent=2))
-    with open(os.path.join(project_name, 'requirements.txt'), 'w') as f:
+    with open(os.path.join(project_name, 'requirements.txt'), 'w'):
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
         f.write(TEMPLATE_APP % project_name)
@@ -259,24 +254,13 @@ def new_project(ctx, project_name, profile):
 @cli.command('url')
 @click.pass_context
 def url(ctx):
-    user_provided_params = {}
-    project_dir = ctx.obj['project_dir']
-    default_params = {'project_dir': project_dir}
-    try:
-        config_from_disk = load_project_config(project_dir)
-    except (OSError, IOError):
-        click.echo("Unable to load the project config file. "
-                   "Are you sure this is a chalice project?")
-        raise click.Abort()
-    app_obj = load_chalice_app(project_dir)
-    user_provided_params['chalice_app'] = app_obj
-    config = Config(user_provided_params, config_from_disk, default_params)
+    config = create_config_obj(ctx)
     session = create_botocore_session(profile=config.profile,
                                       debug=ctx.obj['debug'])
     from chalice.awsclient import TypedAWSClient
     c = TypedAWSClient(session)
-    rest_api_id = c.get_rest_api_id(app_obj.app_name)
-    stage_name = config_from_disk['stage']
+    rest_api_id = c.get_rest_api_id(config.app_name)
+    stage_name = config.stage
     region_name = c.region_name
     click.echo(
         "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
