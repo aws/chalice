@@ -19,6 +19,8 @@ Next Release (TBD)
   (`#169 <https://github.com/awslabs/chalice/pull/169>`__)
 * Bump up retry limit on initial function creation to 30 seconds
   (`#172 <https://github.com/awslabs/chalice/pull/172>`__)
+* Add support for ``DELETE`` and ``PATCH`` in ``chalice local``
+  (`#167 <https://github.com/awslabs/chalice/issues/167>`__)
 
 
 0.4.0
