@@ -44,6 +44,14 @@ def sample_app():
     def options():
         return {'options': True}
 
+    @demo.route('/delete', methods=['DELETE'])
+    def delete():
+        return {'delete': True}
+
+    @demo.route('/patch', methods=['PATCH'])
+    def patch():
+        return {'patch': True}
+
     @demo.route('/badrequest')
     def badrequest():
         raise BadRequestError('bad-request')
@@ -68,86 +76,91 @@ def _get_body_from_response_stream(handler):
     return json.loads(body)
 
 
-def test_can_convert_request_handler_to_lambda_event(handler):
-    handler.command = 'GET'
-    handler.path = '/index'
-    handler.headers = {'content-type': 'application/json'}
-    handler.do_GET()
+def set_current_request(handler, method, path, headers=None):
+    if headers is None:
+        headers = {'content-type': 'application/json'}
+    handler.command = method
+    handler.path = path
+    handler.headers = headers
 
-    body = _get_body_from_response_stream(handler)
-    assert body == {'hello': 'world'}
+
+def test_can_convert_request_handler_to_lambda_event(handler):
+    set_current_request(handler, method='GET', path='/index')
+    handler.do_GET()
+    assert _get_body_from_response_stream(handler) == {'hello': 'world'}
 
 
 def test_can_route_url_params(handler):
-    handler.command = 'GET'
-    handler.path = '/names/james'
-    handler.headers = {'content-type': 'application/json'}
-
+    set_current_request(handler, method='GET', path='/names/james')
     handler.do_GET()
-    body = _get_body_from_response_stream(handler)
-    assert body == {'provided-name': 'james'}
+    assert _get_body_from_response_stream(handler) == {
+        'provided-name': 'james'}
 
 
 def test_can_route_put_with_body(handler):
-    handler.command = 'PUT'
-    handler.path = '/put'
     body = '{"foo": "bar"}'
-    handler.headers = {'content-type': 'application/json',
-                       'content-length': len(body)}
+    headers = {'content-type': 'application/json',
+               'content-length': len(body)}
+    set_current_request(handler, method='PUT', path='/put',
+                        headers=headers)
     handler.rfile.write(body)
     handler.rfile.seek(0)
 
     handler.do_PUT()
-    response_body = _get_body_from_response_stream(handler)
-    assert response_body == {'body': {'foo': 'bar'}}
+    assert _get_body_from_response_stream(handler) == {
+        'body': {'foo': 'bar'}}
 
 
 def test_will_respond_with_cors_enabled(handler):
-    handler.command = 'GET'
-    handler.path = '/cors'
-    handler.headers = {'content-type': 'application/json', 'origin': 'null'}
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='GET', path='/cors', headers=headers)
     handler.do_GET()
     response_lines = handler.wfile.getvalue().splitlines()
     assert 'Access-Control-Allow-Origin: *' in response_lines
 
 
 def test_can_preflight_request(handler):
-    handler.command = 'OPTIONS'
-    handler.path = '/cors'
-    handler.headers = {'content-type': 'application/json', 'origin': 'null'}
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS', path='/cors',
+                        headers=headers)
     handler.do_OPTIONS()
     response_lines = handler.wfile.getvalue().splitlines()
     assert 'Access-Control-Allow-Origin: *' in response_lines
 
 
 def test_non_preflight_options_request(handler):
-    handler.command = 'OPTIONS'
-    handler.path = '/options'
-    handler.headers = {'content-type': 'application/json', 'origin': 'null'}
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS', path='/options',
+                        headers=headers)
     handler.do_OPTIONS()
-    body = _get_body_from_response_stream(handler)
-    assert body == {'options': True}
+    assert _get_body_from_response_stream(handler) == {'options': True}
 
 
 def test_errors_converted_to_json_response(handler):
-    handler.command = 'GET'
-    handler.path = '/badrequest'
-    handler.headers = {'content-type': 'application/json'}
-
+    set_current_request(handler, method='GET', path='/badrequest')
     handler.do_GET()
-    body = _get_body_from_response_stream(handler)
-    assert body == {'Code': 'BadRequestError',
-                    'Message': 'BadRequestError: bad-request'}
+    assert _get_body_from_response_stream(handler) == {
+        'Code': 'BadRequestError',
+        'Message': 'BadRequestError: bad-request'
+    }
+
+
+def test_can_support_delete_method(handler):
+    set_current_request(handler, method='DELETE', path='/delete')
+    handler.do_DELETE()
+    assert _get_body_from_response_stream(handler) == {'delete': True}
+
+
+def test_can_support_patch_method(handler):
+    set_current_request(handler, method='PATCH', path='/patch')
+    handler.do_PATCH()
+    assert _get_body_from_response_stream(handler) == {'patch': True}
 
 
 def test_unsupported_methods_raise_error(handler):
-    handler.command = 'POST'
-    handler.path = '/index'
-    handler.headers = {'content-type': 'application/json'}
+    set_current_request(handler, method='POST', path='/index')
     handler.do_POST()
-
-    body = _get_body_from_response_stream(handler)
-    assert body == {
+    assert _get_body_from_response_stream(handler) == {
         'Code': 'MethodNotAllowedError',
         'Message': 'MethodNotAllowedError: Unsupported method: POST'
     }

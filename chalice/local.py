@@ -143,7 +143,8 @@ class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         )
         return lambda_event
 
-    do_GET = do_PUT = do_POST = do_HEAD = _generic_handle
+    do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = do_PATCH = \
+        _generic_handle
 
     def do_OPTIONS(self):
         # This can either be because the user's provided an OPTIONS method
