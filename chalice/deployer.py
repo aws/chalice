@@ -307,11 +307,20 @@ class APIGatewayResourceCreator(object):
             # If there's no resource_id we need to create it.
             if current['resource_id'] is None:
                 assert current['parent_resource_id'] is not None, current
-                response = self.awsclient.create_rest_resource(
-                    self.rest_api_id, current['parent_resource_id'],
-                    current['name']
-                )
-                new_resource_id = response['id']
+                try:
+                    response = self.awsclient.create_rest_resource(
+                        self.rest_api_id, current['parent_resource_id'],
+                        current['name']
+                    )
+                except Exception as ce:
+                    if "ConflictException" in str(ce):
+                        response=self.awsclient.get_rest_resource_by_path(
+                            self.rest_api_id, 
+                            current['name']
+                        )
+                    else:
+                        raise(ce)
+                    new_resource_id = response['id']
                 current['resource_id'] = new_resource_id
                 for child in current['children']:
                     current['children'][child]['parent_resource_id'] = \

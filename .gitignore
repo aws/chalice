@@ -5,3 +5,4 @@ docs/build/
 .idea
 *.py?
 __pycache__/
+*.pyc

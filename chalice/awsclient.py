@@ -15,6 +15,7 @@ this class to get improved type checking across chalice.
 """
 import time
 import json
+import re
 
 import botocore.session
 import botocore.exceptions
@@ -184,6 +185,16 @@ class TypedAWSClient(object):
             pathPart=path_part,
         )
         return response
+
+    def get_rest_resource_by_path(self, rest_api_id, path_part):
+        # type: (str, str, str) -> Dict[str, Any]
+        client = self._client('apigateway')
+        resources = [ x for x
+                      in self._client('apigateway').get_resources(restApiId=rest_api_id)['items'] 
+                      if re.search(path_part + '$', x['path']) ]
+        assert len(resources) == 1
+        found_resource = resources[0]
+        return found_resource
 
     def add_permission_for_apigateway_if_needed(self, function_name,
                                                 region_name, account_id,
