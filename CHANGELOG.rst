@@ -15,6 +15,8 @@ Next Release (TBD)
   (`#163 <https://github.com/awslabs/chalice/issues/163>`__)
 * Map cognito user pool claims as part of request context
   (`#165 <https://github.com/awslabs/chalice/issues/165>`__)
+* Add ``chalice url`` command to print the deployed URL
+  (`#169 <https://github.com/awslabs/chalice/pull/169>`__)
 
 
 0.4.0

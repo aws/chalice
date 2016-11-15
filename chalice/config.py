@@ -34,8 +34,8 @@ class Config(object):
         return self._chain_lookup('app_name')
 
     @property
-    def stage_name(self):
-        return self._chain_lookup('stage_name')
+    def stage(self):
+        return self._chain_lookup('stage')
 
     @property
     def manage_iam_role(self):
