@@ -23,7 +23,7 @@ from typing import Any, Optional, Dict, Callable  # noqa
 
 class TypedAWSClient(object):
 
-    LAMBDA_CREATE_ATTEMPTS = 5
+    LAMBDA_CREATE_ATTEMPTS = 10
     DELAY_TIME = 3
 
     def __init__(self, session, sleep=time.sleep):
