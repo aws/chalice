@@ -300,7 +300,7 @@ class TestCreateLambdaFunction(object):
             'Role': 'myarn',
             'Timeout': 60,
         }
-        for _ in range(5):
+        for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
             stubbed_session.stub('lambda').create_function(
                 **kwargs).raises_error(
                 error_code='InvalidParameterValueException', message='')
