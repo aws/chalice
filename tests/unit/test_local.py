@@ -44,6 +44,14 @@ def sample_app():
     def options():
         return {'options': True}
 
+    @demo.route('/delete', methods=['DELETE'])
+    def delete():
+        return {'delete': True}
+
+    @demo.route('/patch', methods=['PATCH'])
+    def patch():
+        return {'patch': True}
+
     @demo.route('/badrequest')
     def badrequest():
         raise BadRequestError('bad-request')
@@ -138,6 +146,24 @@ def test_errors_converted_to_json_response(handler):
     body = _get_body_from_response_stream(handler)
     assert body == {'Code': 'BadRequestError',
                     'Message': 'BadRequestError: bad-request'}
+
+
+def test_can_support_delete_method(handler):
+    handler.command = 'DELETE'
+    handler.path = '/delete'
+    handler.headers = {'content-type': 'application/json'}
+    handler.do_DELETE()
+    body = _get_body_from_response_stream(handler)
+    assert body == {'delete': True}
+
+
+def test_can_support_patch_method(handler):
+    handler.command = 'PATCH'
+    handler.path = '/patch'
+    handler.headers = {'content-type': 'application/json'}
+    handler.do_PATCH()
+    body = _get_body_from_response_stream(handler)
+    assert body == {'patch': True}
 
 
 def test_unsupported_methods_raise_error(handler):
