@@ -6,14 +6,20 @@ This is intended only for local development purposes.
 import json
 import functools
 from collections import namedtuple
-import BaseHTTPServer
+from BaseHTTPServer import HTTPServer
+from BaseHTTPServer import BaseHTTPRequestHandler
+
 
 from chalice import ChaliceViewError
 from chalice.app import ChaliceError
-from typing import List  # noqa
+from chalice.app import Chalice  # noqa
+from typing import List, Any, Dict, Tuple, Callable  # noqa
 
 
 MatchResult = namedtuple('MatchResult', ['route', 'captured'])
+EventType = Dict[str, Any]
+HandlerCls = Callable[..., 'ChaliceRequestHandler']
+ServerCls = Callable[..., 'HTTPServer']
 
 
 class RouteMatcher(object):
@@ -61,10 +67,11 @@ class LambdaEventConverter(object):
         self._route_matcher = route_matcher
 
     def create_lambda_event(self, method, path, headers, body=None):
+        # type: (str, str, Dict[str, str], str) -> EventType
         view_route = self._route_matcher.match_route(path)
         if body is None:
             body = '{}'
-        json_body = {}
+        json_body = {}  # type: Any
         if headers.get('content-type', '') == 'application/json':
             json_body = json.loads(body)
         base64_body = body.encode('base64')
@@ -85,22 +92,25 @@ class LambdaEventConverter(object):
         }
 
 
-class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     protocol = 'HTTP/1.1'
 
     def __init__(self, request, client_address, server, app_object):
+        # type: (bytes, Tuple[str, int], HTTPServer, Chalice) -> None
         self.app_object = app_object
         self.event_converter = LambdaEventConverter(
             RouteMatcher(list(app_object.routes)))
-        BaseHTTPServer.BaseHTTPRequestHandler.__init__(
-            self, request, client_address, server)
+        BaseHTTPRequestHandler.__init__(
+            self, request, client_address, server)  # type: ignore
 
     def _generic_handle(self):
+        # type: () -> None
         lambda_event = self._generate_lambda_event()
         self._do_invoke_view_function(lambda_event)
 
     def _do_invoke_view_function(self, lambda_event):
+        # type: (EventType) -> None
         lambda_context = None
         try:
             response = self.app_object(lambda_event, lambda_context)
@@ -123,6 +133,7 @@ class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                      status_code=500)
 
     def _send_http_response(self, lambda_event, response, status_code=200):
+        # type: (EventType, Any, int) -> None
         json_response = json.dumps(response)
         self.send_response(status_code)
         self.send_header('Content-Length', str(len(json_response)))
@@ -133,12 +144,16 @@ class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(json_response)
 
     def _generate_lambda_event(self):
+        # type: () -> EventType
         content_length = int(self.headers.get('content-length', '0'))
         body = None
         if content_length > 0:
             body = self.rfile.read(content_length)
+        # mypy doesn't like dict(self.headers) so I had to use a
+        # dictcomp instead to make it happy.
+        converted_headers = {key: value for key, value in self.headers.items()}
         lambda_event = self.event_converter.create_lambda_event(
-            method=self.command, path=self.path, headers=dict(self.headers),
+            method=self.command, path=self.path, headers=converted_headers,
             body=body,
         )
         return lambda_event
@@ -147,6 +162,7 @@ class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         _generic_handle
 
     def do_OPTIONS(self):
+        # type: () -> None
         # This can either be because the user's provided an OPTIONS method
         # *or* this is a preflight request, which chalice automatically
         # sets up for you.
@@ -159,16 +175,19 @@ class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self._send_autogen_options_response()
 
     def _cors_enabled_for_route(self, lambda_event):
+        # type: (EventType) -> bool
         route_key = lambda_event['context']['resource-path']
         route_entry = self.app_object.routes[route_key]
         return route_entry.cors
 
     def _has_user_defined_options_method(self, lambda_event):
+        # type: (EventType) -> bool
         route_key = lambda_event['context']['resource-path']
         route_entry = self.app_object.routes[route_key]
         return 'OPTIONS' in route_entry.methods
 
     def _send_autogen_options_response(self):
+        # type:() -> None
         self.send_response(200)
         self.send_header(
             'Access-Control-Allow-Headers',
@@ -183,15 +202,18 @@ class ChaliceRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 class LocalDevServer(object):
     def __init__(self, app_object, handler_cls=ChaliceRequestHandler,
-                 server_cls=BaseHTTPServer.HTTPServer):
+                 server_cls=HTTPServer):
+        # type: (Chalice, HandlerCls, ServerCls) -> None
         self.app_object = app_object
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object)
         self.server = server_cls(('', 8000), self._wrapped_handler)
 
     def handle_single_request(self):
+        # type: () -> None
         self.server.handle_request()
 
     def serve_forever(self):
+        # type: () -> None
         print "Serving on localhost:8000"
         self.server.serve_forever()

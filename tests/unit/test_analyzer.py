@@ -21,18 +21,18 @@ def chalice_aws_calls(source_code):
 
 def known_types_for_module(source_code):
     real_source_code = dedent(source_code)
-    t = analyzer.SymbolTableTypeInfer()
     compiled = analyzer.parse_code(real_source_code)
-    t.bind_types(compiled)
+    t = analyzer.SymbolTableTypeInfer(compiled)
+    t.bind_types()
     known = t.known_types()
     return known
 
 
 def known_types_for_function(source_code, name):
     real_source_code = dedent(source_code)
-    t = analyzer.SymbolTableTypeInfer()
     compiled = analyzer.parse_code(real_source_code)
-    t.bind_types(compiled)
+    t = analyzer.SymbolTableTypeInfer(compiled)
+    t.bind_types()
     known = t.known_types(scope_name=name)
     return known
 

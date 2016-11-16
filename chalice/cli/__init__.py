@@ -12,7 +12,9 @@ import importlib
 import click
 import botocore.exceptions
 import botocore.session
+from typing import Dict, Any  # noqa
 
+from chalice.app import Chalice  # noqa
 from chalice import deployer
 from chalice import __version__ as chalice_version
 from chalice.logs import LogRetriever
@@ -60,6 +62,7 @@ GITIGNORE = """\
 
 
 def create_botocore_session(profile=None, debug=False):
+    # type: (str, bool) -> botocore.session.Session
     session = botocore.session.Session(profile=profile)
     session.user_agent_extra = 'chalice/%s' % chalice_version
     if debug:
@@ -69,6 +72,7 @@ def create_botocore_session(profile=None, debug=False):
 
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
+    # type: (Config, int, bool) -> None
     lambda_arn = config.lambda_arn
     profile = config.profile
     client = create_botocore_session(profile).create_client('logs')
@@ -81,6 +85,7 @@ def show_lambda_logs(config, max_entries, include_lambda_messages):
 
 
 def load_project_config(project_dir):
+    # type: (str) -> Dict[str, Any]
     """Load the chalice config file from the project directory.
 
     :raise: OSError/IOError if unable to load the config file.
@@ -92,26 +97,30 @@ def load_project_config(project_dir):
 
 
 def load_chalice_app(project_dir):
+    # type: (str) -> Chalice
     if project_dir not in sys.path:
         sys.path.append(project_dir)
     try:
         app = importlib.import_module('app')
+        chalice_app = getattr(app, 'app')
     except Exception as e:
         exception = click.ClickException(
             "Unable to import your app.py file: %s" % e
         )
         exception.exit_code = 2
         raise exception
-    return app.app
+    return chalice_app
 
 
 def inject_large_request_body_filter():
+    # type: () -> None
     log = logging.getLogger('botocore.endpoint')
     log.addFilter(LargeRequestBodyFilter())
 
 
 def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
-    user_provided_params = {}
+    # type: (click.Context, str, bool, str) -> Config
+    user_provided_params = {}  # type: Dict[str, Any]
     project_dir = ctx.obj['project_dir']
     default_params = {'project_dir': project_dir}
     try:
@@ -134,6 +143,10 @@ def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
 
 class LargeRequestBodyFilter(logging.Filter):
     def filter(self, record):
+        # type: (Any) -> bool
+        # Note: the proper type should be "logging.LogRecord", but
+        # the typechecker complains about 'Invalid index type "int" for "dict"'
+        # so we're using Any for now.
         if record.msg.startswith('Making request'):
             if record.args[0].name in ['UpdateFunctionCode', 'CreateFunction']:
                 # When using the ZipFile argument (which is used in chalice),
@@ -155,6 +168,7 @@ class LargeRequestBodyFilter(logging.Filter):
               help='Print debug logs to stderr.')
 @click.pass_context
 def cli(ctx, project_dir, debug=False):
+    # type: (click.Context, str, bool) -> None
     if project_dir is None:
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
@@ -165,6 +179,7 @@ def cli(ctx, project_dir, debug=False):
 @cli.command()
 @click.pass_context
 def local(ctx):
+    # type: (click.Context) -> None
     app_obj = load_chalice_app(ctx.obj['project_dir'])
     run_local_server(app_obj)
 
@@ -177,6 +192,7 @@ def local(ctx):
 @click.argument('stage', nargs=1, required=False)
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, stage):
+    # type: (click.Context, bool, str, str) -> None
     config = create_config_obj(
         ctx, stage_name=stage, autogen_policy=autogen_policy,
         profile=profile)
@@ -202,6 +218,7 @@ def deploy(ctx, autogen_policy, profile, stage):
               help='Controls whether or not lambda log messages are included.')
 @click.pass_context
 def logs(ctx, num_entries, include_lambda_messages):
+    # type: (click.Context, int, bool) -> None
     config = create_config_obj(ctx)
     show_lambda_logs(config, num_entries, include_lambda_messages)
 
@@ -211,6 +228,7 @@ def logs(ctx, num_entries, include_lambda_messages):
               help='The filename to analyze.  Otherwise app.py is assumed.')
 @click.pass_context
 def gen_policy(ctx, filename):
+    # type: (click.Context, str) -> None
     from chalice import policy
     if filename is None:
         filename = os.path.join(ctx.obj['project_dir'], 'app.py')
@@ -227,6 +245,7 @@ def gen_policy(ctx, filename):
 @click.argument('project_name', required=False)
 @click.option('--profile', required=False)
 def new_project(project_name, profile):
+    # type: (str, str) -> None
     if project_name is None:
         project_name = prompts.getting_started_prompt(click)
     if os.path.isdir(project_name):
@@ -254,6 +273,7 @@ def new_project(project_name, profile):
 @cli.command('url')
 @click.pass_context
 def url(ctx):
+    # type: (click.Context) -> None
     config = create_config_obj(ctx)
     session = create_botocore_session(profile=config.profile,
                                       debug=ctx.obj['debug'])
@@ -269,12 +289,14 @@ def url(ctx):
 
 
 def run_local_server(app_obj):
+    # type: (Chalice) -> None
     from chalice import local
     server = local.LocalDevServer(app_obj)
     server.serve_forever()
 
 
 def main():
+    # type: () -> int
     # click's dynamic attrs will allow us to pass through
     # 'obj' via the context object, so we're ignoring
     # these error messages from pylint because we know it's ok.
