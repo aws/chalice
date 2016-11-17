@@ -11,6 +11,6 @@ matrix:
 install:
   - pip install -e .
   - travis_retry pip install -r requirements-dev.txt
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.4; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.5; fi
 script:
   - make $TEST_TYPE

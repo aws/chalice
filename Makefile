@@ -6,8 +6,7 @@ TESTS=tests/unit tests/functional
 check:
 	###### FLAKE8 #####
 	# No unused imports, no undefined vars,
-	# I'd eventually like to lower this down to < 10.
-	flake8 --ignore=E731,W503 --exclude chalice/__init__.py --max-complexity 15 chalice/
+	flake8 --ignore=E731,W503 --exclude chalice/__init__.py --max-complexity 10 chalice/
 	#
 	#
 	# Basic error checking in test code
@@ -45,18 +44,7 @@ test:
 	py.test -v $(TESTS)
 
 typecheck:
-	mypy --py2 --silent-import -p chalice --strict-optional
-	# Set of modules that will require type hints for all methods.
-	# The eventual goal is to just --disallow-untyped-defs for
-	# the entire chalice package, but for now as modules have complete
-	# type definitions, the list below should be updated.
-	mypy --py2 --silent-import -p chalice.deployer --disallow-untyped-defs --strict-optional
-	mypy --py2 --silent-import -p chalice.policy --disallow-untyped-defs --strict-optional
-	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
-	mypy --py2 --silent-import -p chalice.awsclient --disallow-untyped-defs --strict-optional
-	mypy --py2 --silent-import -p chalice.prompts --disallow-untyped-defs --strict-optional
-	mypy --py2 --silent-import -p chalice.logs --disallow-untyped-defs --strict-optional
-	mypy --py2 --silent-import -p chalice.compat --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice --disallow-untyped-defs --strict-optional
 
 coverage:
 	py.test --cov chalice --cov-report term-missing $(TESTS)
