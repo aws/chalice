@@ -10,7 +10,7 @@ install_requires = [
     'click==6.2',
     'botocore>=1.4.8,<2.0.0',
     'virtualenv>=15.0.0,<16.0.0',
-    'typing==3.5.1.0',
+    'typing==3.5.2.2',
 ]
 
 
