@@ -7,7 +7,10 @@ import os
 import json
 import sys
 import logging
+import zipfile
+import tempfile
 import importlib
+import shutil
 
 import click
 import botocore.exceptions
@@ -20,6 +23,7 @@ from chalice import __version__ as chalice_version
 from chalice.logs import LogRetriever
 from chalice import prompts
 from chalice.config import Config
+from chalice.awsclient import TypedAWSClient
 
 
 TEMPLATE_APP = """\
@@ -277,7 +281,6 @@ def url(ctx):
     config = create_config_obj(ctx)
     session = create_botocore_session(profile=config.profile,
                                       debug=ctx.obj['debug'])
-    from chalice.awsclient import TypedAWSClient
     c = TypedAWSClient(session)
     rest_api_id = c.get_rest_api_id(config.app_name)
     stage_name = config.stage
@@ -286,6 +289,47 @@ def url(ctx):
         "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
         .format(api_id=rest_api_id, region=region_name, stage=stage_name)
     )
+
+
+@cli.command('generate-sdk')
+@click.option('--sdk-type', default='javascript',
+              type=click.Choice(['javascript']))
+@click.argument('outdir')
+@click.pass_context
+def generate_sdk(ctx, sdk_type, outdir):
+    # type: (click.Context, str, str) -> None
+    config = create_config_obj(ctx)
+    session = create_botocore_session(profile=config.profile,
+                                      debug=ctx.obj['debug'])
+    client = TypedAWSClient(session)
+    rest_api_id = client.get_rest_api_id(config.app_name)
+    stage_name = config.stage
+    if rest_api_id is None:
+        click.echo("Could not find API ID, has this application "
+                   "been deployed?")
+        raise click.Abort()
+    zip_stream = client.get_sdk(rest_api_id, stage=stage_name,
+                                sdk_type=sdk_type)
+    tmpdir = tempfile.mkdtemp()
+    with open(os.path.join(tmpdir, 'sdk.zip'), 'wb') as f:
+        f.write(zip_stream.read())
+    tmp_extract = os.path.join(tmpdir, 'extracted')
+    with zipfile.ZipFile(os.path.join(tmpdir, 'sdk.zip')) as z:
+        z.extractall(tmp_extract)
+    # The extract zip dir will have a single directory:
+    #  ['apiGateway-js-sdk']
+    dirnames = os.listdir(tmp_extract)
+    if len(dirnames) == 1:
+        full_dirname = os.path.join(tmp_extract, dirnames[0])
+        if os.path.isdir(full_dirname):
+            final_dirname = '%s-js-sdk' % config.app_name
+            full_renamed_name = os.path.join(tmp_extract, final_dirname)
+            os.rename(full_dirname, full_renamed_name)
+            shutil.move(full_renamed_name, outdir)
+            return
+    click.echo("The downloaded SDK had an unexpected directory structure: %s"
+               % (', '.join(dirnames)))
+    raise click.Abort()
 
 
 def run_local_server(app_obj):
