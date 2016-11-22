@@ -21,6 +21,8 @@ Next Release (TBD)
   (`#172 <https://github.com/awslabs/chalice/pull/172>`__)
 * Add support for ``DELETE`` and ``PATCH`` in ``chalice local``
   (`#167 <https://github.com/awslabs/chalice/issues/167>`__)
+* Add ``chalice generate-sdk`` command
+  (`#178 <https://github.com/awslabs/chalice/pull/178>`__)
 
 
 0.4.0
