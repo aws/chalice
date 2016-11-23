@@ -412,3 +412,15 @@ class TestAddPermissionsForAPIGateway(object):
         TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
+
+    def test_get_sdk(self, stubbed_session):
+        apig = stubbed_session.stub('apigateway')
+        apig.get_sdk(
+            restApiId='rest-api-id',
+            stageName='dev',
+            sdkType='javascript').returns({'body': 'foo'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        response = awsclient.get_sdk('rest-api-id', 'dev', 'javascript')
+        stubbed_session.verify_stubs()
+        assert response == 'foo'

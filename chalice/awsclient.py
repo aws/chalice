@@ -263,6 +263,18 @@ class TypedAWSClient(object):
         policy = client.get_policy(FunctionName=function_name)
         return json.loads(policy['Policy'])
 
+    def get_sdk(self, rest_api_id, stage='dev', sdk_type='javascript'):
+        # type: (str, str, str) -> file
+        """Generate an SDK for a given SDK.
+
+        Returns a file like object that streams a zip contents for the
+        generated SDK.
+
+        """
+        response = self._client('apigateway').get_sdk(
+            restApiId=rest_api_id, stageName=stage, sdkType=sdk_type)
+        return response['body']
+
     def add_permission_for_apigateway(self, function_name, region_name,
                                       account_id, rest_api_id, random_id):
         # type: (str, str, str, str, str) -> None
