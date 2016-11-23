@@ -44,8 +44,13 @@ class TypedAWSClient(object):
             raise
         return True
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(self,
+                        function_name,
+                        role_arn,
+                        zip_contents,
+                        vpc_subnets=[],
+                        security_groups=[]):
+        # type: (str, str, str, list, list) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -53,6 +58,8 @@ class TypedAWSClient(object):
             'Handler': 'app.app',
             'Role': role_arn,
             'Timeout': 60,
+            'VpcConfig': {'SubnetIds': vpc_subnets,
+                          'SecurityGroupIds': security_groups}
         }
         client = self._client('lambda')
         attempts = 0

@@ -73,7 +73,7 @@ def stubbed_client(service_name):
 
 
 def node(name, uri_path, children=None, resource_id=None,
-      parent_resource_id=None, is_route=False):
+         parent_resource_id=None, is_route=False):
     if children is None:
         children = {}
     return {
