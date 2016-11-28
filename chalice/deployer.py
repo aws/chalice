@@ -375,6 +375,7 @@ class APIGatewayResourceCreator(object):
 
 class LambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
+    _VENDOR_DIR = 'vendor'
 
     def _create_virtualenv(self, venv_dir):
         # type: (str) -> None
@@ -422,7 +423,20 @@ class LambdaDeploymentPackager(object):
                              compression=zipfile.ZIP_DEFLATED) as z:
             self._add_py_deps(z, deps_dir)
             self._add_app_files(z, project_dir)
+            self._add_vendor_files(z, os.path.join(project_dir,
+                                                   self._VENDOR_DIR))
         return deployment_package_filename
+
+    def _add_vendor_files(self, zipped, dirname):
+        # type: (zipfile.ZipFile, str) -> None
+        if not os.path.isdir(dirname):
+            return
+        prefix_len = len(dirname) + 1
+        for root, dirnames, filenames in os.walk(dirname):
+            for filename in filenames:
+                full_path = os.path.join(root, filename)
+                zip_path = full_path[prefix_len:]
+                zipped.write(full_path, zip_path)
 
     def _has_at_least_one_package(self, filename):
         # type: (str) -> bool
@@ -446,7 +460,8 @@ class LambdaDeploymentPackager(object):
         # This is done so that we only "pip install -r requirements.txt"
         # when we know there's new dependencies we need to install.
         requirements_file = os.path.join(project_dir, 'requirements.txt')
-        hash_contents = self._hash_requirements_file(requirements_file)
+        hash_contents = self._hash_project_dir(
+            requirements_file, os.path.join(project_dir, self._VENDOR_DIR))
         deployment_package_filename = os.path.join(
             project_dir, '.chalice', 'deployments', hash_contents + '.zip')
         return deployment_package_filename
@@ -480,14 +495,26 @@ class LambdaDeploymentPackager(object):
                   'app.py')
         self._add_chalice_lib_if_needed(project_dir, zip)
 
-    def _hash_requirements_file(self, filename):
-        # type: (str) -> str
-        if not os.path.isfile(filename):
+    def _hash_project_dir(self, requirements_file, vendor_dir):
+        # type: (str, str) -> str
+        if not os.path.isfile(requirements_file):
             contents = ''
         else:
-            with open(filename) as f:
+            with open(requirements_file) as f:
                 contents = f.read()
-        return hashlib.md5(contents).hexdigest()
+        h = hashlib.md5(contents)
+        if os.path.isdir(vendor_dir):
+            self._hash_vendor_dir(vendor_dir, h)
+        return h.hexdigest()
+
+    def _hash_vendor_dir(self, vendor_dir, md5):
+        # type: (str, Any) -> None
+        for rootdir, dirnames, filenames in os.walk(vendor_dir):
+            for filename in filenames:
+                fullpath = os.path.join(rootdir, filename)
+                with open(fullpath, 'rb') as f:
+                    for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                        md5.update(chunk)
 
     def inject_latest_app(self, deployment_package_filename, project_dir):
         # type: (str, str) -> None
