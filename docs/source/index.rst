@@ -59,6 +59,7 @@ Topics
    topics/multifile
    topics/logging
    topics/sdks
+   topics/packaging
 
 
 API Reference
