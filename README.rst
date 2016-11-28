@@ -41,9 +41,13 @@ It provides:
 
 Up and running in less than 30 seconds.
 
-**This project is published as a preview project, and is not yet recommended for
-production APIs.**  Give this project a try and share your feedback with us
-here on Github.
+**This project is published as a preview project**. Until the 1.0 GA release, we
+may introduce backwards incompatible changes based on customer feedback we
+receive. As a best practice, we do not recommend launching production APIs
+until 1.0 GA because of potential backward incompatible releases. Please see
+the CHANGELOG.rst file to see the changes for each release.
+
+Give this project a try and share your feedback with us here on Github.
 
 The documentation is available
 `on readthedocs <http://chalice.readthedocs.io/en/latest/>`__.
