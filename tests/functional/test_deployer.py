@@ -142,3 +142,37 @@ def test_subsequent_deploy_replaces_chalicelib(tmpdir, chalice_deployer):
         # And chalicelib/__init__.py should no longer be
         # in the zipfile because we deleted it in the appdir.
         assert 'chalicelib/__init__.py' not in f.namelist()
+
+
+def test_vendor_dir_included(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    vendor = appdir.mkdir('vendor')
+    extra_package = vendor.mkdir('mypackage')
+    extra_package.join('__init__.py').write('# Test package')
+    name = chalice_deployer.create_deployment_package(str(appdir))
+    with zipfile.ZipFile(name) as f:
+        _assert_in_zip('mypackage/__init__.py', '# Test package', f)
+
+
+def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    vendor = appdir.mkdir('vendor')
+    extra_package = vendor.mkdir('mypackage')
+    extra_package.join('__init__.py').write('# v1')
+    name = chalice_deployer.create_deployment_package(str(appdir))
+    # Now we update a package in vendor/ with a new version.
+    extra_package.join('__init__.py').write('# v2')
+    name = chalice_deployer.create_deployment_package(str(appdir))
+    with zipfile.ZipFile(name) as f:
+        _assert_in_zip('mypackage/__init__.py', '# v2', f)
+
+
+def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    vendor = appdir.mkdir('vendor')
+    extra_package = vendor.mkdir('mypackage')
+    extra_package.join('__init__.py').write('# v1')
+    first = chalice_deployer.deployment_package_filename(str(appdir))
+    extra_package.join('__init__.py').write('# v2')
+    second = chalice_deployer.deployment_package_filename(str(appdir))
+    assert first != second
