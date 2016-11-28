@@ -167,6 +167,8 @@ class Chalice(object):
         self.log = logging.getLogger(self.app_name)
         if self.configure_logs:
             self._configure_logging()
+        self.before_request_funcs = []
+        self.after_request_funcs = []
 
     def _configure_logging(self):
         log = logging.getLogger(self.app_name)
@@ -225,6 +227,24 @@ class Chalice(object):
                            content_types, cors)
         self.routes[path] = entry
 
+    def before_request(self, f):
+        """Registers a function to run before each request.
+        The function will be called without any arguments.
+        If the function returns a non-None value, it's handled as
+        if it was the return value from the view and further
+        request handling is stopped.
+        """
+        self.before_request_funcs.append(f)
+        return f
+
+    def after_request(self, f):
+        """Register a function to be run after each request.
+        Your function must take one parameter, a response returned by the
+        route's handler, and return a new response object or the same.
+        """
+        self.after_request_funcs.append(f)
+        return f
+
     def __call__(self, event, context):
         # This is what's invoked via lambda.
         # Sometimes the event can be something that's not
@@ -255,7 +275,14 @@ class Chalice(object):
                                        event['claims'],
                                        event['stage-variables'])
         try:
-            response = view_function(*function_args)
+            for preproc_func in self.before_request_funcs:
+                response = preproc_func(*function_args)
+                if response is not None:
+                    break
+            else:
+                response = view_function(*function_args)
+            for postproc_func in self.after_request_funcs:
+                response = postproc_func(response)
         except ChaliceViewError:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
