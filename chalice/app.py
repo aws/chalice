@@ -281,8 +281,8 @@ class Chalice(object):
                     break
             else:
                 response = view_function(*function_args)
-            for postproc_func in self.after_request_funcs:
-                response = postproc_func(response)
+                for postproc_func in self.after_request_funcs:
+                    response = postproc_func(response)
         except ChaliceViewError:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
