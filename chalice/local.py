@@ -15,8 +15,13 @@ from chalice.app import ChaliceError
 from chalice.app import Chalice  # noqa
 from typing import List, Any, Dict, Tuple, Callable  # noqa
 
+try:
+    from urllib.parse import urlparse, parse_qs
+except ImportError:
+    from urlparse import urlparse, parse_qs
 
-MatchResult = namedtuple('MatchResult', ['route', 'captured'])
+
+MatchResult = namedtuple('MatchResult', ['route', 'captured', 'query_params'])
 EventType = Dict[str, Any]
 HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
@@ -44,7 +49,9 @@ class RouteMatcher(object):
 
         """
         # Otherwise we need to check for param substitution
-        parts = url.split('/')
+        parsed_url = urlparse(url)
+        query_params = {k: v[0] for k, v in parse_qs(parsed_url.query).items()}
+        parts = parsed_url.path.split('/')
         captured = {}
         for route_url in self.route_urls:
             url_parts = route_url.split('/')
@@ -56,7 +63,7 @@ class RouteMatcher(object):
                     if i != j:
                         break
                 else:
-                    return MatchResult(route_url, captured)
+                    return MatchResult(route_url, captured, query_params)
         raise ValueError("No matching route found for: %s" % url)
 
 
@@ -84,7 +91,7 @@ class LambdaEventConverter(object):
             'params': {
                 'header': dict(headers),
                 'path': view_route.captured,
-                'querystring': {},
+                'querystring': view_route.query_params,
             },
             'body-json': json_body,
             'base64-body': base64_body,
