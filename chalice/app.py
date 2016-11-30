@@ -96,7 +96,7 @@ class Request(object):
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
-        if self.headers.get('content-type') == 'application/json':
+        if 'application/json' in self.headers.get('content-type'):
             self.json_body = body
         else:
             self.json_body = None
