@@ -72,7 +72,7 @@ class LambdaEventConverter(object):
         if body is None:
             body = '{}'
         json_body = {}  # type: Any
-        if headers.get('content-type', '') == 'application/json':
+        if 'application/json' in headers.get('content-type', ''):
             json_body = json.loads(body)
         base64_body = body.encode('base64')
         return {
