@@ -74,7 +74,8 @@ def test_get_resources_for_api(stubbed_session):
         'resourceMethods': {},
     }
     stubbed_session.stub('apigateway').get_resources(
-        restApiId='rest_api_id').returns({'items': [expected]})
+        restApiId='rest_api_id',
+        limit=100).returns({'items': [expected]})
     stubbed_session.activate_stubs()
 
     awsclient = TypedAWSClient(stubbed_session)

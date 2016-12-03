@@ -146,7 +146,13 @@ class TypedAWSClient(object):
     def get_resources_for_api(self, rest_api_id):
         # type: (str) -> List[Dict[str, Any]]
         client = self._client('apigateway')
-        all_resources = client.get_resources(restApiId=rest_api_id)['items']
+        response = client.get_resources(restApiId=rest_api_id, limit=100)
+        all_resources = response['items']
+        while 'position' in response:
+            response = client.get_resources(restApiId=rest_api_id,
+                                            position=response['position'],
+                                            limit=100)
+            all_resources += response['items']
         return all_resources
 
     def delete_methods_from_root_resource(self, rest_api_id, root_resource):
