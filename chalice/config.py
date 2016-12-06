@@ -88,6 +88,8 @@ class Config(object):
         if result is None:
             return 128
 
+        return result
+
     @property
     def config_from_disk(self):
         # type: () -> StrMap
