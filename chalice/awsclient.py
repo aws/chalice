@@ -44,8 +44,9 @@ class TypedAWSClient(object):
             raise
         return True
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(self, function_name, role_arn, zip_contents,
+                        memory_size):
+        # type: (str, str, str, int) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -53,6 +54,7 @@ class TypedAWSClient(object):
             'Handler': 'app.app',
             'Role': role_arn,
             'Timeout': 60,
+            'MemorySize': memory_size
         }
         client = self._client('lambda')
         attempts = 0
@@ -78,6 +80,11 @@ class TypedAWSClient(object):
         # type: (str, str) -> None
         self._client('lambda').update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
+
+    def update_function_configuration(self, function_name, memory_size):
+        # type: (str, int) -> None
+        self._client('lambda').update_function_configuration(
+            FunctionName=function_name, MemorySize=memory_size)
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
