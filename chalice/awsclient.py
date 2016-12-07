@@ -45,7 +45,7 @@ class TypedAWSClient(object):
         return True
 
     def create_function(self, function_name, role_arn, zip_contents, config):
-        # type: (str, str, str, Config) -> str
+        # type: (str, str, str, chalice.config.Config) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -81,7 +81,7 @@ class TypedAWSClient(object):
             return response['FunctionArn']
 
     def update_function_configuration(self, function_name, role, config):
-        # type: (str, str, Config) -> None
+        # type: (str, str, chalice.config.Config) -> None
         kwargs = {
             'FunctionName': function_name,
             'Role': role,
