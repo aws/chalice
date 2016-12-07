@@ -7,7 +7,29 @@ import mock
 import botocore.exceptions
 
 from chalice.awsclient import TypedAWSClient
+from chalice.config import Config
 
+
+def get_test_config():
+    return Config({
+      "profile": "whoknows",
+      "lambda_arn": "arn:aws:lambda:us-west-2:1234:function:rest-api",
+      "app_name": "rest-api",
+      "lambda": {
+        "MemorySize": 1024,
+        "Description": "Some Chalice api",
+        "Timeout": 10
+      },
+      "stage": "dev"
+    })
+
+def get_empty_config():
+    return Config({
+      "profile": "emptyconfig",
+      "lambda_arn": "arn:aws:lambda:us-west-2:1234:function:rest-api",
+      "app_name": "rest-api",
+      "stage": "dev"
+    })
 
 def test_region_name_is_exposed(stubbed_session):
     assert TypedAWSClient(stubbed_session).region_name == 'us-west-2'
@@ -261,11 +283,12 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Timeout=60,
+            MemorySize=128,
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo') == 'arn:12345:name'
+            'name', 'myarn', b'foo', get_empty_config()) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
@@ -276,6 +299,7 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
+            'MemorySize': 128,
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -288,7 +312,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
-            'name', 'myarn', b'foo') == 'arn:12345:name'
+            'name', 'myarn', b'foo', get_empty_config()) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -308,7 +332,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo')
+            awsclient.create_function('name', 'myarn', b'foo', get_empty_config())
         stubbed_session.verify_stubs()
 
     def test_create_function_propagates_unknown_error(self, stubbed_session):
@@ -319,6 +343,7 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
+            'MemorySize': 128,
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -326,9 +351,23 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo')
+            awsclient.create_function('name', 'myarn', b'foo', get_empty_config())
         stubbed_session.verify_stubs()
 
+
+class TestUpdateFunctionConfiguration(object):
+    def test_update_function_configuration_succeeds(self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_configuration(
+            FunctionName='name',
+            Role='differentarn',
+            Timeout=10,
+            MemorySize=1024,
+            Description='Some Chalice api'
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function_configuration('name', 'differentarn', get_test_config())
+        stubbed_session.verify_stubs()
 
 class TestCanDeleteRolePolicy(object):
     def test_can_delete_role_policy(self, stubbed_session):
