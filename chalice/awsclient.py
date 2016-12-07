@@ -58,8 +58,8 @@ class TypedAWSClient(object):
         if config.lambda_config is not None:
             valid_keys = ['Description', 'Timeout', 'MemorySize', 'VpcConfig',
                           'Environment', 'DeadLetterConfig', 'KMSKeyArn']
-            [kwargs.update({key: value}) for key, value in
-                config.lambda_config.iteritems() if key in valid_keys]
+            for key, value in config.lambda_config.iteritems():
+                kwargs.update({key: value}) if key in valid_keys
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -89,8 +89,8 @@ class TypedAWSClient(object):
         if config.lambda_config is not None:
             valid_keys = ['Description', 'Timeout', 'MemorySize', 'VpcConfig',
                           'Environment', 'DeadLetterConfig', 'KMSKeyArn']
-            [kwargs.update({key: value}) for key, value in
-                config.lambda_config.iteritems() if key in valid_keys]
+            for key, value in config.lambda_config.iteritems():
+                kwargs.update({key: value}) if key in valid_keys
         self._client('lambda').update_function_configuration(**kwargs)
 
     def update_function_code(self, function_name, zip_contents):
