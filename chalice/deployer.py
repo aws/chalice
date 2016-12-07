@@ -675,7 +675,8 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         print "Sending changes to lambda."
-        self._aws_client.update_function_configuration(config.app_name, role_arn, config)
+        self._aws_client.update_function_configuration(config.app_name,
+                                                       role_arn, config)
         self._aws_client.update_function_code(config.app_name,
                                               zip_contents)
 
