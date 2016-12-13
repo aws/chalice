@@ -1,5 +1,6 @@
 from chalice import local, BadRequestError
 import json
+import decimal
 import pytest
 from pytest import fixture
 from StringIO import StringIO
@@ -55,6 +56,10 @@ def sample_app():
     @demo.route('/badrequest')
     def badrequest():
         raise BadRequestError('bad-request')
+
+    @demo.route('/decimals')
+    def decimals():
+        return decimal.Decimal('100')
 
     return demo
 
@@ -155,6 +160,11 @@ def test_can_support_patch_method(handler):
     set_current_request(handler, method='PATCH', path='/patch')
     handler.do_PATCH()
     assert _get_body_from_response_stream(handler) == {'patch': True}
+
+def test_can_support_decimals(handler):
+    set_current_request(handler, method='GET', path='/decimals')
+    handler.do_PATCH()
+    assert _get_body_from_response_stream(handler) == 100
 
 
 def test_unsupported_methods_raise_error(handler):

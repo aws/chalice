@@ -4,6 +4,7 @@ This is intended only for local development purposes.
 
 """
 import json
+import decimal
 import functools
 from collections import namedtuple
 from BaseHTTPServer import HTTPServer
@@ -20,6 +21,15 @@ MatchResult = namedtuple('MatchResult', ['route', 'captured'])
 EventType = Dict[str, Any]
 HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
+
+
+def handle_decimals(obj):
+    # type: (Any) -> Any
+    # Lambda will automatically serialize decimals so we need
+    # to support that as well.
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    return obj
 
 
 class RouteMatcher(object):
@@ -134,7 +144,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     def _send_http_response(self, lambda_event, response, status_code=200):
         # type: (EventType, Any, int) -> None
-        json_response = json.dumps(response)
+        json_response = json.dumps(response, default=handle_decimals)
         self.send_response(status_code)
         self.send_header('Content-Length', str(len(json_response)))
         self.send_header('Content-Type', 'application/json')
