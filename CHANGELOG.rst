@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for serializing decimals in ``chalice local``
+  (`#187 <https://github.com/awslabs/chalice/pull/187>`__)
+
+
 0.5.0
 =====
 
