@@ -849,7 +849,7 @@ API Key
 .. code-block:: python
 
     @app.route('/authenticated', methods=['GET'], api_key_required=True)
-    def authenticated(key):
+    def authenticated():
         return {"secure": True}
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
@@ -863,7 +863,7 @@ http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorize
 .. code-block:: python
 
     @app.route('/authenticated', methods=['GET'], authorization_type='CUSTOM', authorizer_id='ab12cd')
-    def authenticated(key):
+    def authenticated():
         return {"secure": True}
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
