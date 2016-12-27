@@ -8,6 +8,14 @@ from chalice import app
 from chalice import NotFoundError
 
 
+def create_request_with_content_type(content_type):
+    body = {'json': 'body'}
+    return app.Request(
+        {}, {'Content-Type': content_type}, {}, 'GET',
+        body, '', {}, {}, {}
+    )
+
+
 def create_event(uri, method, path, content_type='application/json'):
     return {
         'context': {
@@ -419,3 +427,16 @@ def test_logs_can_be_disabled():
     handlers_after = logging.getLogger('log_app').handlers[:]
     new_handlers = set(handlers_after) - set(handlers_before)
     assert len(new_handlers) == 0
+
+
+@pytest.mark.parametrize('content_type,is_json', [
+    ('application/json', True),
+    ('application/json;charset=UTF-8', True),
+    ('application/notjson', False),
+])
+def test_json_body_available_when_content_type_matches(content_type, is_json):
+    request = create_request_with_content_type(content_type)
+    if is_json:
+        assert request.json_body == {'json': 'body'}
+    else:
+        assert request.json_body is None

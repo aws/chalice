@@ -287,3 +287,23 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         'base64-body': form_body.encode('base64'),
         'stage-variables': {},
     }
+
+
+@pytest.mark.parametrize('content_type,is_json', [
+    ('application/json', True),
+    ('application/json;charset=UTF-8', True),
+    ('application/notjson', False),
+])
+def test_json_body_mapped_when_content_type_matches(content_type, is_json):
+    converter = local.LambdaEventConverter(local.RouteMatcher(['/']))
+    json_body = '{"json": "body"}'
+    event = converter.create_lambda_event(
+        method='POST',
+        path='/',
+        headers={'content-type': content_type},
+        body=json_body
+    )
+    if is_json:
+        assert event['body-json'] == {'json': 'body'}
+    else:
+        assert event['body-json'] == {}
