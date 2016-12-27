@@ -38,7 +38,7 @@ def index():
 
 
 # The view function above will return {"hello": "world"}
-# whenver you make an HTTP GET request to '/'.
+# whenever you make an HTTP GET request to '/'.
 #
 # Here are a few more examples:
 #
