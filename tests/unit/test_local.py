@@ -24,6 +24,7 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
 @fixture
 def sample_app():
     demo = app.Chalice('demo-app')
+    demo.debug = True
 
     @demo.route('/index', methods=['GET'])
     def index():
@@ -60,6 +61,10 @@ def sample_app():
     @demo.route('/decimals')
     def decimals():
         return decimal.Decimal('100')
+
+    @demo.route('/query-string')
+    def query_string():
+        return demo.current_request.query_params
 
     return demo
 
@@ -174,6 +179,12 @@ def test_unsupported_methods_raise_error(handler):
         'Code': 'MethodNotAllowedError',
         'Message': 'MethodNotAllowedError: Unsupported method: POST'
     }
+
+
+def test_querystring_is_mapped(handler):
+    set_current_request(handler, method='GET', path='/query-string?a=b&c=d')
+    handler.do_GET()
+    assert _get_body_from_response_stream(handler) == {'a': 'b', 'c': 'd'}
 
 
 @pytest.mark.parametrize('actual_url,matched_url', [
