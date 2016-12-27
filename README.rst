@@ -580,6 +580,8 @@ types.  Here's an example of this feature:
 
 .. code-block:: python
 
+    import urlparse
+
     from chalice import Chalice
 
     app = Chalice(app_name='helloworld')
