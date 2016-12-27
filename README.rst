@@ -8,6 +8,9 @@ Python Serverless Microframework for AWS
 .. image:: https://travis-ci.org/awslabs/chalice.svg?branch=master
    :target: https://travis-ci.org/awslabs/chalice
    :alt: Travis CI
+.. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
+   :target: http://chalice.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 
 The python serverless microframework for AWS allows you to quickly create and
 deploy applications that use Amazon API Gateway and AWS Lambda.
