@@ -11,6 +11,8 @@ Next Release (TBD)
   (`#186 <https://github.com/awslabs/chalice/pull/186>`__)
 * Map query string parameters when using ``chalice local``
   (`#184 <https://github.com/awslabs/chalice/pull/184>`__)
+* Support Content-Type with a charset
+  (`#180 <https://github.com/awslabs/chalice/issues/180>`__)
 
 
 0.5.0
