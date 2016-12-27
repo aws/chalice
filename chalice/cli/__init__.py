@@ -185,6 +185,12 @@ def cli(ctx, project_dir, debug=False):
 def local(ctx):
     # type: (click.Context) -> None
     app_obj = load_chalice_app(ctx.obj['project_dir'])
+    # When running `chalice local`, a stdout logger is configured
+    # so you'll see the same stdout logging as you would when
+    # running in lambda.  This is configuring the root logger.
+    # The app-specific logger (app.log) will still continue
+    # to work.
+    logging.basicConfig(stream=sys.stdout)
     run_local_server(app_obj)
 
 

@@ -5,8 +5,6 @@ This is intended only for local development purposes.
 """
 import json
 import functools
-import logging
-import sys
 from collections import namedtuple
 from BaseHTTPServer import HTTPServer
 from BaseHTTPServer import BaseHTTPRequestHandler
@@ -17,7 +15,6 @@ from chalice.app import ChaliceError
 from chalice.app import Chalice  # noqa
 from typing import List, Any, Dict, Tuple, Callable  # noqa
 
-logging.basicConfig(stream=sys.stdout)
 
 MatchResult = namedtuple('MatchResult', ['route', 'captured'])
 EventType = Dict[str, Any]
