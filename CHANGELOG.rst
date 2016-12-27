@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#187 <https://github.com/awslabs/chalice/pull/187>`__)
 * Add stdout handler for root logger when using ``chalice local``
   (`#186 <https://github.com/awslabs/chalice/pull/186>`__)
+* Map query string parameters when using ``chalice local``
+  (`#184 <https://github.com/awslabs/chalice/pull/184>`__)
 
 
 0.5.0
