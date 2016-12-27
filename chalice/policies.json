@@ -326,6 +326,18 @@
     "UnassignPrivateIpAddresses": "ec2:UnassignPrivateIpAddresses",
     "UnmonitorInstances": "ec2:UnmonitorInstances"
   },
+  "es": {
+    "CreateElasticsearchDomain": "es:CreateElasticsearchDomain",
+    "DescribeElasticsearchDomain": "es:DescribeElasticsearchDomain",
+    "DescribeElasticsearchDomains": "es:DescribeElasticsearchDomains",
+    "DescribeElasticsearchDomainConfig": "es:DescribeElasticsearchDomainConfig",
+    "DeleteElasticsearchDomain": "es:DeleteElasticsearchDomain",
+    "ListDomainNames": "es:ListDomainNames",
+    "AddTags": "es:AddTags",
+    "ListTags": "es:ListTags",
+    "RemoveTags": "es:RemoveTags",
+    "UpdateElasticsearchDomainConfig": "es:UpdateElasticsearchDomainConfig"
+  },
   "elasticache": {
     "AuthorizeCacheSecurityGroupIngress": "elasticache:AuthorizeCacheSecurityGroupIngress",
     "CreateCacheCluster": "elasticache:CreateCacheCluster",
