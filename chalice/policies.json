@@ -327,11 +327,6 @@
     "UnmonitorInstances": "ec2:UnmonitorInstances"
   },
   "es": {
-    "ESHttpDelete": "es:ESHttpDelete",
-    "ESHttpGet": "es:ESHttpGet",
-    "ESHttpHead": "es:ESHttpHead",
-    "ESHttpPost": "es:ESHttpPost",
-    "ESHttpPut": "es:ESHttpPut",
     "CreateElasticsearchDomain": "es:CreateElasticsearchDomain",
     "DescribeElasticsearchDomain": "es:DescribeElasticsearchDomain",
     "DescribeElasticsearchDomains": "es:DescribeElasticsearchDomains",
