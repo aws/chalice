@@ -27,7 +27,11 @@ def sample_app():
 
     @demo.route('/index', methods=['GET'])
     def index():
-        return {'hello': 'world'}
+        name = demo.current_request.query_params.get('name')
+        if name is None:
+            return {'hello': 'world'}
+        else:
+            return {'hello': name}
 
     @demo.route('/names/{name}', methods=['GET'])
     def name(name):
@@ -101,6 +105,10 @@ def test_can_route_url_params(handler):
     assert _get_body_from_response_stream(handler) == {
         'provided-name': 'james'}
 
+def test_can_route_with_query_string(handler):
+    set_current_request(handler, method='GET', path='/index?name=james')
+    handler.do_GET()
+    assert _get_body_from_response_stream(handler) == {'hello': 'james'}
 
 def test_can_route_put_with_body(handler):
     body = '{"foo": "bar"}'

@@ -6,6 +6,7 @@ This is intended only for local development purposes.
 import json
 import decimal
 import functools
+import urlparse
 from collections import namedtuple
 from BaseHTTPServer import HTTPServer
 from BaseHTTPServer import BaseHTTPRequestHandler
@@ -78,6 +79,12 @@ class LambdaEventConverter(object):
 
     def create_lambda_event(self, method, path, headers, body=None):
         # type: (str, str, Dict[str, str], str) -> EventType
+        if '?' in path:
+            path, querystring = path.split("?")
+            parsed_querystring = dict(urlparse.parse_qsl(querystring))
+        else:
+            parsed_querystring = {}
+
         view_route = self._route_matcher.match_route(path)
         if body is None:
             body = '{}'
@@ -94,7 +101,7 @@ class LambdaEventConverter(object):
             'params': {
                 'header': dict(headers),
                 'path': view_route.captured,
-                'querystring': {},
+                'querystring': parsed_querystring,
             },
             'body-json': json_body,
             'base64-body': base64_body,
