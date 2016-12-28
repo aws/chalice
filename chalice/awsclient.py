@@ -23,8 +23,10 @@ from typing import Any, Optional, Dict, Callable  # noqa
 
 class TypedAWSClient(object):
 
-    LAMBDA_CREATE_ATTEMPTS = 10
-    DELAY_TIME = 3
+    # 30 * 5 == 150 seconds or 2.5 minutes for the initial lambda
+    # creation + role propagation.
+    LAMBDA_CREATE_ATTEMPTS = 30
+    DELAY_TIME = 5
 
     def __init__(self, session, sleep=time.sleep):
         # type: (botocore.session.Session, Callable[[int], None]) -> None
