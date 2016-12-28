@@ -13,7 +13,7 @@ install_requires = [
     'typing==3.5.2.2',
 ]
 
-if sys.version_info < (3, 0):
+if sys.version_info > (3, 0):
     raise RuntimeError("chalice requires only Python 2.7")
 
 setup(
