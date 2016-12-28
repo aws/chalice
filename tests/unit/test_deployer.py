@@ -14,6 +14,7 @@ from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
 from chalice.deployer import validate_configuration
 from chalice.deployer import validate_routes
 from chalice.deployer import Deployer
+from chalice.deployer import ApplicationPolicyHandler
 from chalice.app import RouteEntry, ALL_ERRORS
 from chalice.app import Chalice
 from chalice.config import Config
@@ -418,7 +419,8 @@ def test_lambda_deployer_repeated_deploy():
                   'app_name': 'appname', 'iam_role_arn': True,
                   'project_dir': './myproject'})
 
-    d = LambdaDeployer(aws_client, packager, None, osutils)
+    d = LambdaDeployer(aws_client, packager, None, osutils,
+                       ApplicationPolicyHandler())
     # Doing a lambda deploy:
     d.deploy(cfg)
 
