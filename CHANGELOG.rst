@@ -15,6 +15,8 @@ Next Release (TBD)
   (`#180 <https://github.com/awslabs/chalice/issues/180>`__)
 * Fix not all resources being retrieved due to pagination
   (`188 <https://github.com/awslabs/chalice/pull/188>`__)
+* Handle case where local policy does not exist
+  (`29 <https://github.com/awslabs/chalice/issues/29>`__)
 
 
 0.5.0

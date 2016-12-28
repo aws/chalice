@@ -123,7 +123,8 @@ def create_default_deployer(session, prompter=None):
     packager = LambdaDeploymentPackager()
     osutils = OSUtils()
     lambda_deploy = LambdaDeployer(
-        aws_client, packager, prompter, osutils, ApplicationPolicyHandler())
+        aws_client, packager, prompter, osutils,
+        ApplicationPolicyHandler(osutils))
     return Deployer(api_gateway_deploy, lambda_deploy)
 
 
@@ -547,6 +548,15 @@ class LambdaDeploymentPackager(object):
 class ApplicationPolicyHandler(object):
     """Manages the IAM policy for an application."""
 
+    _EMPTY_POLICY = {
+        'Version': '2012-10-17',
+        'Statement': [],
+    }
+
+    def __init__(self, osutils):
+        # type: (OSUtils) -> None
+        self._osutils = osutils
+
     def generate_policy_from_app_source(self, config):
         # type: (Config) -> Dict[str, Any]
         """Generate a policy from application source code.
@@ -565,11 +575,11 @@ class ApplicationPolicyHandler(object):
     def _do_generate_from_source(self, config):
         # type: (Config) -> Dict[str, Any]
         app_py = os.path.join(config.project_dir, 'app.py')
-        assert os.path.isfile(app_py)
-        with open(app_py) as f:
-            app_policy = policy.policy_from_source_code(f.read())
-            app_policy['Statement'].append(CLOUDWATCH_LOGS)
-            return app_policy
+        assert self._osutils.file_exists(app_py)
+        app_source = self._osutils.get_file_contents(app_py, binary=False)
+        app_policy = policy.policy_from_source_code(app_source)
+        app_policy['Statement'].append(CLOUDWATCH_LOGS)
+        return app_policy
 
     def load_last_policy(self, config):
         # type: (Config) -> Dict[str, Any]
@@ -583,17 +593,20 @@ class ApplicationPolicyHandler(object):
 
         """
         policy_file = self._app_policy_file(config)
-        if not os.path.isfile(policy_file):
-            # TODO: Should return at least {'Statement': []}.
-            return {}
-        with open(policy_file, 'r') as f:
-            return json.loads(f.read())
+        if not self._osutils.file_exists(policy_file):
+            return self._EMPTY_POLICY
+        return json.loads(
+            self._osutils.get_file_contents(policy_file, binary=False)
+        )
 
     def record_policy(self, config, policy):
         # type: (Config, Dict[str, Any]) -> None
         policy_file = self._app_policy_file(config)
-        with open(policy_file, 'w') as f:
-            f.write(json.dumps(policy, indent=2, separators=(',', ': ')))
+        self._osutils.set_file_contents(
+            policy_file,
+            json.dumps(policy, indent=2, separators=(',', ': ')),
+            binary=False
+        )
 
     def _app_policy_file(self, config):
         # type: (Config) -> str
@@ -717,7 +730,7 @@ class LambdaDeployer(object):
     def _create_role_from_source_code(self, config):
         # type: (Config) -> str
         app_name = config.app_name
-        app_policy = self._app_policy.get_policy_from_source_code(config)
+        app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
             print "The following execution policy will be used:"
             print json.dumps(app_policy, indent=2)
@@ -846,6 +859,15 @@ class OSUtils(object):
             mode = 'r'
         with open(filename, mode) as f:
             return f.read()
+
+    def set_file_contents(self, filename, contents, binary=True):
+        # type: (str, str, bool) -> None
+        if binary:
+            mode = 'wb'
+        else:
+            mode = 'w'
+        with open(filename, mode) as f:
+            f.write(contents)
 
 
 class APIGatewayMethods(object):
