@@ -289,6 +289,7 @@ class APIGatewayResourceCreator(object):
         self.region_name = self.awsclient.region_name
         self.rest_api_id = apig_methods.rest_api_id
         self.lambda_arn = lambda_arn
+        assert lambda_arn != None
         self._random_id = random_id_generator
 
     def build_resources(self, chalice_trie):
@@ -304,13 +305,23 @@ class APIGatewayResourceCreator(object):
         stack = [chalice_trie]
         while stack:
             current = stack.pop()
-            # If there's no resource_id we need to create it.
+            # If there's no resource_id we need to create it
+            # or get it from the API Gateway API
             if current['resource_id'] is None:
                 assert current['parent_resource_id'] is not None, current
-                response = self.awsclient.create_rest_resource(
-                    self.rest_api_id, current['parent_resource_id'],
-                    current['name']
-                )
+                try:
+                    response = self.awsclient.create_rest_resource(
+                        self.rest_api_id, current['parent_resource_id'],
+                        current['name']
+                    )
+                except Exception as ce:
+                    if "ConflictException" in str(ce):
+                        response=self.awsclient.get_rest_resource_by_path(
+                            self.rest_api_id, 
+                            current['name']
+                        )
+                    else:
+                        raise(ce)
                 new_resource_id = response['id']
                 current['resource_id'] = new_resource_id
                 for child in current['children']:
@@ -344,21 +355,56 @@ class APIGatewayResourceCreator(object):
         # type: (Dict[str, Any], str) -> None
         route_entry = node['route_entry']
         resource_id = node['resource_id']
-        self._apig_methods.create_method_request(
-            resource_id, http_method, route_entry.authorization_type,
-            route_entry.authorizer_id, route_entry.api_key_required,
-            route_entry.view_args
-        )
-        self._apig_methods.create_lambda_method_integration(
-            resource_id, http_method, route_entry.content_types,
-            self._lambda_uri()
-        )
-        self._apig_methods.create_method_response(
-            resource_id, http_method, route_entry.cors)
-        self._apig_methods.create_integration_response(
-            resource_id, http_method, route_entry.cors)
-        self._apig_methods.create_error_responses(
-            resource_id, http_method, app.ALL_ERRORS, route_entry.cors)
+        try:
+            self._apig_methods.create_method_request(
+                resource_id, http_method, route_entry.authorization_type,
+                route_entry.authorizer_id, route_entry.api_key_required,
+                route_entry.view_args
+            )
+        except Exception as ce:
+            if "ConflictException" in str(ce):
+                pass  # do nothing for now.. assume we match ;-)
+            else:
+                raise(ce)
+
+        try:
+            self._apig_methods.create_lambda_method_integration(
+                resource_id, http_method, route_entry.content_types,
+                self._lambda_uri()
+            )
+        except Exception as ce:
+            if "ConflictException" in str(ce):
+                pass  # do nothing for now.. assume we match ;-)
+            else:
+                raise(ce)
+
+        try:
+            self._apig_methods.create_method_response(
+                resource_id, http_method, route_entry.cors)
+        except Exception as ce:
+            if "ConflictException" in str(ce):
+                pass  # do nothing for now.. assume we match ;-)
+            else:
+                raise(ce)
+
+        try:
+            self._apig_methods.create_integration_response(
+                resource_id, http_method, route_entry.cors)
+        except Exception as ce:
+            if "ConflictException" in str(ce):
+                pass  # do nothing for now.. assume we match ;-)
+            else:
+                raise(ce)
+
+        try:
+            self._apig_methods.create_error_responses(
+                resource_id, http_method, app.ALL_ERRORS, route_entry.cors)
+        except Exception as ce:
+            if "ConflictException" in str(ce):
+                pass  # do nothing for now.. assume we match ;-)
+            else:
+                raise(ce)
+>>>>>>> Fixes to create methods even if some already exist
 
     def _lambda_uri(self):
         # type: () -> str
