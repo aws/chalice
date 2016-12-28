@@ -14,7 +14,9 @@ Next Release (TBD)
 * Support Content-Type with a charset
   (`#180 <https://github.com/awslabs/chalice/issues/180>`__)
 * Fix not all resources being retrieved due to pagination
-  (`188 <https://github.com/awslabs/chalice/pull/188>`__)
+  (`#188 <https://github.com/awslabs/chalice/pull/188>`__)
+* Fix issue where root resource was not being correctly retrieved
+  (`#205 <https://github.com/awslabs/chalice/pull/205>`__)
 
 
 0.5.0
