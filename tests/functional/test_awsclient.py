@@ -84,7 +84,11 @@ def test_get_resources_for_api(stubbed_session):
 
 
 def test_get_root_resource_for_api(stubbed_session):
-    expected = {
+    root_resource = {
+        'id': 'parentId',
+        'path': '/',
+    }
+    foo_resource = {
         'id': 'id',
         'parentId': 'parentId',
         'pathPart': '/foo',
@@ -92,12 +96,13 @@ def test_get_root_resource_for_api(stubbed_session):
         'resourceMethods': {},
     }
     stubbed_session.stub('apigateway').get_resources(
-        restApiId='rest_api_id').returns({'items': [expected]})
+        restApiId='rest_api_id')\
+        .returns({'items': [foo_resource, root_resource]})
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
     result = awsclient.get_root_resource_for_api('rest_api_id')
-    assert result == expected
+    assert result == root_resource
     stubbed_session.verify_stubs()
 
 
