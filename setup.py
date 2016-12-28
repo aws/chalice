@@ -13,7 +13,6 @@ install_requires = [
     'typing==3.5.2.2',
 ]
 
-
 setup(
     name='chalice',
     version='0.5.0',
@@ -22,6 +21,7 @@ setup(
     author="James Saryerwinnie",
     author_email='js@jamesls.com',
     url='https://github.com/jamesls/chalice',
+    python_requires=">=2.7,<3",
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
     license="Apache License 2.0",

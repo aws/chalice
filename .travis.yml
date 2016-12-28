@@ -9,8 +9,8 @@ matrix:
   - python: "2.7"
     env: TEST_TYPE=check
 install:
-  - pip install -e .
-  - travis_retry pip install -r requirements-dev.txt
+  - if [[ $TRAVIS_PYTHON_VERSION != 3.* ]]; then pip install -e . ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION != 3.* ]]; then travis_retry pip install -r requirements-dev.txt; fi
   - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.5; fi
 script:
   - make $TEST_TYPE
