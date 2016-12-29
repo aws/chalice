@@ -44,7 +44,7 @@ test:
 	py.test -v $(TESTS)
 
 typecheck:
-	mypy --py2 --silent-import -p chalice --disallow-untyped-defs --strict-optional
+	mypy --py2 --silent-import -p chalice --disallow-untyped-defs --strict-optional --warn-no-return
 
 coverage:
 	py.test --cov chalice --cov-report term-missing $(TESTS)
