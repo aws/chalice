@@ -68,11 +68,19 @@ GITIGNORE = """\
 def create_botocore_session(profile=None, debug=False):
     # type: (str, bool) -> botocore.session.Session
     session = botocore.session.Session(profile=profile)
-    session.user_agent_extra = 'chalice/%s' % chalice_version
+    _add_chalice_user_agent(session)
     if debug:
         session.set_debug_logger('')
         inject_large_request_body_filter()
     return session
+
+
+def _add_chalice_user_agent(session):
+    # type: (botocore.session.Session) -> None
+    suffix = '%s/%s' % (session.user_agent_name, session.user_agent_version)
+    session.user_agent_name = 'chalice'
+    session.user_agent_version = chalice_version
+    session.user_agent_extra = suffix
 
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
