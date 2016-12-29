@@ -56,10 +56,11 @@ class Config(object):
         if result is None:
             # To simplify downstream code, if manage_iam_role
             # is None (indicating the user hasn't configured/specified this
-            # value anywhere), then we'll return a default value of False.
+            # value anywhere), then we'll return a default value of True.
             # Otherwise client code has to do an awkward
             # "if manage_iam_role is None and not manage_iam_role".
             return True
+        return result
 
     @property
     def iam_role_arn(self):
