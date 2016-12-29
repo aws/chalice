@@ -440,3 +440,19 @@ def test_json_body_available_when_content_type_matches(content_type, is_json):
         assert request.json_body == {'json': 'body'}
     else:
         assert request.json_body is None
+
+
+def test_binary_body():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index', methods=['POST'],
+            content_types=['application/octet-stream'], binary_support=True)
+    def index_view():
+        return {'rawbody': demo.current_request.raw_body}
+
+
+    event = create_event('/index', 'POST', {})
+    event['base64-body'] = base64.b64encode('\xFF\xFF')
+
+    result = demo(event, context=None)
+    assert result == {'rawbody': '\xFF\xFF'}

@@ -49,6 +49,7 @@ class RouteEntry(object):
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]
     cors = ... # type: bool
+    binary_support = ... # type: bool
 
     def __init__(self, view_function: Callable[..., Any],
                  view_name: str, path: str, methods: List[str],
@@ -56,7 +57,8 @@ class RouteEntry(object):
                  authorizer_id: str=None,
                  api_key_required: bool=None,
                  content_types: List[str]=None,
-                 cors: bool=False) -> None: ...
+                 cors: bool=False,
+                 binary_support: bool=None) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
 
