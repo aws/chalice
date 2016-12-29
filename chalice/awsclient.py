@@ -13,7 +13,11 @@ As a side benefit, I can also add type annotations to
 this class to get improved type checking across chalice.
 
 """
+import os
 import time
+import tempfile
+import zipfile
+import shutil
 import json
 
 import botocore.session
@@ -267,7 +271,8 @@ class TypedAWSClient(object):
         policy = client.get_policy(FunctionName=function_name)
         return json.loads(policy['Policy'])
 
-    def get_sdk(self, rest_api_id, stage='dev', sdk_type='javascript'):
+    def get_sdk_download_stream(self, rest_api_id, stage='dev',
+                                sdk_type='javascript'):
         # type: (str, str, str) -> file
         """Generate an SDK for a given SDK.
 
@@ -278,6 +283,40 @@ class TypedAWSClient(object):
         response = self._client('apigateway').get_sdk(
             restApiId=rest_api_id, stageName=stage, sdkType=sdk_type)
         return response['body']
+
+    def download_sdk(self, rest_api_id, output_dir, stage='dev',
+                     sdk_type='javascript'):
+        # type: (str, str, str, str) -> None
+        """Download an SDK to a directory.
+
+        This will generate an SDK and download it to the provided
+        ``output_dir``.  If you're using ``get_sdk_download_stream()``,
+        you have to handle downloading the stream and unzipping the
+        contents yourself.  This method handles that for you.
+
+        """
+        zip_stream = self.get_sdk_download_stream(
+            rest_api_id, stage=stage, sdk_type=sdk_type)
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'sdk.zip'), 'wb') as f:
+            f.write(zip_stream.read())
+        tmp_extract = os.path.join(tmpdir, 'extracted')
+        with zipfile.ZipFile(os.path.join(tmpdir, 'sdk.zip')) as z:
+            z.extractall(tmp_extract)
+        # The extract zip dir will have a single directory:
+        #  ['apiGateway-js-sdk']
+        dirnames = os.listdir(tmp_extract)
+        if len(dirnames) == 1:
+            full_dirname = os.path.join(tmp_extract, dirnames[0])
+            if os.path.isdir(full_dirname):
+                final_dirname = 'chalice-%s-sdk' % sdk_type
+                full_renamed_name = os.path.join(tmp_extract, final_dirname)
+                os.rename(full_dirname, full_renamed_name)
+                shutil.move(full_renamed_name, output_dir)
+                return
+        raise RuntimeError(
+            "The downloaded SDK had an unexpected directory structure: %s" %
+            (', '.join(dirnames)))
 
     def add_permission_for_apigateway(self, function_name, region_name,
                                       account_id, rest_api_id, random_id):
