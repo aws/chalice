@@ -426,6 +426,7 @@ class TestAddPermissionsForAPIGateway(object):
             sdkType='javascript').returns({'body': 'foo'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        response = awsclient.get_sdk('rest-api-id', 'dev', 'javascript')
+        response = awsclient.get_sdk_download_stream(
+            'rest-api-id', 'dev', 'javascript')
         stubbed_session.verify_stubs()
         assert response == 'foo'

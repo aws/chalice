@@ -7,10 +7,7 @@ import os
 import json
 import sys
 import logging
-import zipfile
-import tempfile
 import importlib
-import shutil
 
 import click
 import botocore.exceptions
@@ -322,28 +319,8 @@ def generate_sdk(ctx, sdk_type, outdir):
         click.echo("Could not find API ID, has this application "
                    "been deployed?")
         raise click.Abort()
-    zip_stream = client.get_sdk(rest_api_id, stage=stage_name,
-                                sdk_type=sdk_type)
-    tmpdir = tempfile.mkdtemp()
-    with open(os.path.join(tmpdir, 'sdk.zip'), 'wb') as f:
-        f.write(zip_stream.read())
-    tmp_extract = os.path.join(tmpdir, 'extracted')
-    with zipfile.ZipFile(os.path.join(tmpdir, 'sdk.zip')) as z:
-        z.extractall(tmp_extract)
-    # The extract zip dir will have a single directory:
-    #  ['apiGateway-js-sdk']
-    dirnames = os.listdir(tmp_extract)
-    if len(dirnames) == 1:
-        full_dirname = os.path.join(tmp_extract, dirnames[0])
-        if os.path.isdir(full_dirname):
-            final_dirname = '%s-js-sdk' % config.app_name
-            full_renamed_name = os.path.join(tmp_extract, final_dirname)
-            os.rename(full_dirname, full_renamed_name)
-            shutil.move(full_renamed_name, outdir)
-            return
-    click.echo("The downloaded SDK had an unexpected directory structure: %s"
-               % (', '.join(dirnames)))
-    raise click.Abort()
+    client.download_sdk(rest_api_id, outdir, stage=stage_name,
+                        sdk_type=sdk_type)
 
 
 def run_local_server(app_obj):
