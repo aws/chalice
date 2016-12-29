@@ -562,6 +562,7 @@ class AppViewTransformer(ast.NodeTransformer):
                 if decorator.func.attr == 'route' and \
                         len(decorator.args) > 0:
                     return True
+        return False
 
     def _auto_invoke_view(self, node):
         # type: (ast.FunctionDef) -> List[ast.AST]
