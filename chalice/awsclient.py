@@ -137,6 +137,7 @@ class TypedAWSClient(object):
         for api in rest_apis:
             if api['name'] == name:
                 return api['id']
+        return None
 
     def create_rest_api(self, name):
         # type: (str) -> str
