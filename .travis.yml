@@ -14,3 +14,5 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.5; fi
 script:
   - make $TEST_TYPE
+after_success:
+  - codecov
