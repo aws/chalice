@@ -73,6 +73,7 @@ runner = CliRunner()
 result = runner.invoke(cli.local, obj=obj)
 """
 
+
 def create_botocore_session(profile=None, debug=False):
     # type: (str, bool) -> botocore.session.Session
     session = botocore.session.Session(profile=profile)
