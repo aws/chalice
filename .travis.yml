@@ -5,7 +5,7 @@ matrix:
   - python: "3.5"
     env: TEST_TYPE=typecheck
   - python: "2.7"
-    env: TEST_TYPE=test
+    env: TEST_TYPE=coverage
   - python: "2.7"
     env: TEST_TYPE=check
 install:
