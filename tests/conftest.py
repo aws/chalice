@@ -90,3 +90,24 @@ class StubBuilder(object):
 def stubbed_session():
     s = StubbedSession()
     return s
+
+
+@fixture
+def no_local_config(monkeypatch):
+    """Ensure no local AWS configuration is used.
+
+    This is useful for unit/functional tests so we
+    can ensure that local configuration does not affect
+    the results of the test.
+
+    """
+    monkeypatch.setenv('AWS_DEFAULT_REGION', 'us-west-2')
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
+    monkeypatch.delenv('AWS_PROFILE', raising=False)
+    monkeypatch.delenv('AWS_DEFAULT_PROFILE', raising=False)
+    # Ensure that the existing ~/.aws/{config,credentials} file
+    # don't influence test results.
+    monkeypatch.setenv('AWS_CONFIG_FILE', '/tmp/asdfasdfaf/does/not/exist')
+    monkeypatch.setenv('AWS_SHARED_CREDENTIALS_FILE',
+                       '/tmp/asdfasdfaf/does/not/exist2')
