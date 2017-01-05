@@ -12,8 +12,7 @@ install:
   - pip install -e .
   - travis_retry pip install -r requirements-dev.txt
   - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.5; fi
-  - pip install codecov==2.0.5
 script:
   - make $TEST_TYPE
 after_success:
-  - codecov
+  - if [[ $TEST_TYPE == 'coverage' ]]; then pip install codecov==2.0.5 && codecov; fi
