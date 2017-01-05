@@ -5,7 +5,7 @@ matrix:
   - python: "3.5"
     env: TEST_TYPE=typecheck
   - python: "2.7"
-    env: TEST_TYPE=test
+    env: TEST_TYPE=coverage
   - python: "2.7"
     env: TEST_TYPE=check
 install:
@@ -14,3 +14,5 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install mypy-lang==0.4.6; fi
 script:
   - make $TEST_TYPE
+after_success:
+  - if [[ $TEST_TYPE == 'coverage' ]]; then pip install codecov==2.0.5 && codecov; fi
