@@ -900,6 +900,10 @@ We can run ``chalice local`` to test this API locally:
     $ chalice local
     Serving on localhost:8000
 
+We can override the port using:
+
+    $ chalice --port=8080 local
+
 We can now test our API using ``localhost:8000``::
 
     $ http localhost:8000/

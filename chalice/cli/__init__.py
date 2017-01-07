@@ -186,9 +186,10 @@ def cli(ctx, project_dir, debug=False):
 
 
 @cli.command()
+@click.option('--port', default=8000, type=click.INT)
 @click.pass_context
-def local(ctx):
-    # type: (click.Context) -> None
+def local(ctx, port=8000):
+    # type: (click.Context, int) -> None
     app_obj = load_chalice_app(ctx.obj['project_dir'])
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
@@ -196,7 +197,7 @@ def local(ctx):
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(stream=sys.stdout)
-    run_local_server(app_obj)
+    run_local_server(app_obj, port)
 
 
 @cli.command()
@@ -323,10 +324,10 @@ def generate_sdk(ctx, sdk_type, outdir):
                         sdk_type=sdk_type)
 
 
-def run_local_server(app_obj):
-    # type: (Chalice) -> None
+def run_local_server(app_obj, port):
+    # type: (Chalice, int) -> None
     from chalice.local import LocalDevServer
-    server = LocalDevServer(app_obj)
+    server = LocalDevServer(app_obj, port)
     server.serve_forever()
 
 

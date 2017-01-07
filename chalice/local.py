@@ -218,13 +218,14 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
 
 class LocalDevServer(object):
-    def __init__(self, app_object, handler_cls=ChaliceRequestHandler,
+    def __init__(self, app_object, port, handler_cls=ChaliceRequestHandler,
                  server_cls=HTTPServer):
-        # type: (Chalice, HandlerCls, ServerCls) -> None
+        # type: (Chalice, int, HandlerCls, ServerCls) -> None
         self.app_object = app_object
+        self.port = port
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object)
-        self.server = server_cls(('', 8000), self._wrapped_handler)
+        self.server = server_cls(('', port), self._wrapped_handler)
 
     def handle_single_request(self):
         # type: () -> None
@@ -232,5 +233,5 @@ class LocalDevServer(object):
 
     def serve_forever(self):
         # type: () -> None
-        print "Serving on localhost:8000"
+        print "Serving on localhost:%s" % self.port
         self.server.serve_forever()
