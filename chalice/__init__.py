@@ -4,5 +4,4 @@ from chalice.app import (
     NotFoundError, ConflictError, TooManyRequestsError
 )
 
-
 __version__ = '0.5.1'

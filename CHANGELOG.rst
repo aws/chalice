@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add port parameter to local command
+  (`#220 <https://github.com/awslabs/chalice/pull/220>`__)
+
+
 0.5.1
 =====
 
