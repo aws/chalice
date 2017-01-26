@@ -28,6 +28,11 @@ HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
 
 
+def create_local_server(app_obj, port):
+    # type: (Chalice, int) -> LocalDevServer
+    return LocalDevServer(app_obj, port)
+
+
 def handle_decimals(obj):
     # type: (Any) -> Any
     # Lambda will automatically serialize decimals so we need

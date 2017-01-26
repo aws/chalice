@@ -326,8 +326,8 @@ def generate_sdk(ctx, sdk_type, outdir):
 
 def run_local_server(app_obj, port):
     # type: (Chalice, int) -> None
-    from chalice.local import LocalDevServer
-    server = LocalDevServer(app_obj, port)
+    from chalice.local import create_local_server
+    server = create_local_server(app_obj, port)
     server.serve_forever()
 
 

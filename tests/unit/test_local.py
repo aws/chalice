@@ -307,3 +307,8 @@ def test_json_body_mapped_when_content_type_matches(content_type, is_json):
         assert event['body-json'] == {'json': 'body'}
     else:
         assert event['body-json'] == {}
+
+
+def test_can_provide_port_to_local_server(sample_app):
+    dev_server = local.create_local_server(sample_app, port=23456)
+    assert dev_server.server.server_port == 23456
