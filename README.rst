@@ -378,7 +378,7 @@ Save and deploy these changes::
         "Message": "BadRequestError: Unknown city 'vancouver', valid choices are: portland, seattle"
     }
 
-We can see now that we can a ``Code`` and ``Message`` key, with the message
+We can see now that we have received a ``Code`` and ``Message`` key, with the message
 being the value we passed to ``BadRequestError``.  Whenever you raise
 a ``BadRequestError`` from your view function, the framework will return an
 HTTP status code of 400 along with a JSON body with a ``Code`` and ``Message``.
