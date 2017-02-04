@@ -31,8 +31,7 @@ LAMBDA_TRUST_POLICY = {
         "Sid": "",
         "Effect": "Allow",
         "Principal": {
-            "Service": "lambda.amazonaws.com",
-            "Service": "apigateway.amazonaws.com",
+            "Service": "lambda.amazonaws.com"
         },
         "Action": "sts:AssumeRole"}
     ]
