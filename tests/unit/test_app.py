@@ -5,7 +5,7 @@ import json
 import pytest
 from pytest import fixture
 from chalice import app
-from chalice import NotFoundError
+from chalice import NotFoundError, SuccessNoContent
 
 
 def create_request_with_content_type(content_type):
@@ -58,6 +58,10 @@ def sample_app():
     @demo.route('/name/{name}', methods=['GET'])
     def name(name):
         return {'provided-name': name}
+
+    @demo.route('/successnocontent', methods=['GET'])
+    def successnocontent():
+        raise SuccessNoContent
 
     return demo
 
@@ -152,6 +156,19 @@ def test_error_on_unsupported_method_gives_feedback_on_method(sample_app):
     with pytest.raises(app.MethodNotAllowedError) as execinfo:
         sample_app(event, context=None)
     assert method in str(execinfo.value)
+
+
+def test_error_on_success_nocontent(sample_app):
+    event = create_event('/successnocontent', 'GET', {})
+    with pytest.raises(app.SuccessNoContent):
+        sample_app(event, context=None)
+
+
+def test_error_on_success_nocontent_has_correct_status_code(sample_app):
+    event = create_event('/successnocontent', 'GET', {})
+    with pytest.raises(app.SuccessNoContent) as execinfo:
+        sample_app(event, context=None)
+    assert execinfo.value.STATUS_CODE == 204
 
 
 def test_no_view_function_found(sample_app):
