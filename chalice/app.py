@@ -241,7 +241,7 @@ class Chalice(object):
         content_types = ['application/json']
         cors = False
         if kwargs:
-            raise TypeError('TypeError: route() got unexpected keyword '
+            raise TypeError('TypeError: schedule() got unexpected keyword '
                             'arguments: %s' % ', '.join(list(kwargs)))
 
         if path in self.scheduled:
