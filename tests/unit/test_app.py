@@ -98,6 +98,24 @@ def test_can_handle_multiple_routes():
     assert demo.routes['/other'].view_function == other_view
 
 
+def test_can_handle_multiple_scheduled():
+    demo = app.Chalice('app-name')
+
+    @demo.schedule('cloud-event-1')
+    def view1():
+        return {}
+
+    @demo.schedule('cloud-event-2')
+    def view2():
+        return {}
+
+    assert len(demo.scheduled) == 2, demo.scheduled
+    assert 'cloud-event-1' in demo.scheduled, demo.scheduled
+    assert 'cloud-event-2' in demo.scheduled, demo.scheduled
+    assert demo.scheduled['cloud-event-1'].view_function == view1
+    assert demo.scheduled['cloud-event-2'].view_function == view2
+
+
 def test_error_on_unknown_event(sample_app):
     bad_event = {'random': 'event'}
     with pytest.raises(app.ChaliceError):
@@ -207,13 +225,25 @@ def test_error_on_duplicate_routes():
             return {'foo': 'bar'}
 
 
+def test_error_on_duplicate_scheduled():
+    demo = app.Chalice('app-name')
+
+    @demo.schedule('cloud-event')
+    def action_1():
+        return {'foo': 'bar'}
+
+    with pytest.raises(ValueError):
+        @demo.schedule('cloud-event')
+        def index_post():
+            return {'foo': 'bar'}
+
+
 def test_json_body_available_with_right_content_type():
     demo = app.Chalice('demo-app')
 
     @demo.route('/', methods=['POST'])
     def index():
         return demo.current_request.json_body
-
 
     event = create_event('/', 'POST', {})
     event['body-json'] = {'foo': 'bar'}
