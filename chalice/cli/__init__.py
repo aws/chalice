@@ -11,7 +11,6 @@ import importlib
 
 import click
 import botocore.exceptions
-import botocore.session
 from typing import Dict, Any  # noqa
 
 from chalice.app import Chalice  # noqa
@@ -21,6 +20,7 @@ from chalice.logs import LogRetriever
 from chalice import prompts
 from chalice.config import Config
 from chalice.awsclient import TypedAWSClient
+from chalice.cli.utils import create_botocore_session
 
 
 TEMPLATE_APP = """\
@@ -60,24 +60,6 @@ GITIGNORE = """\
 .chalice/deployments/
 .chalice/venv/
 """
-
-
-def create_botocore_session(profile=None, debug=False):
-    # type: (str, bool) -> botocore.session.Session
-    session = botocore.session.Session(profile=profile)
-    _add_chalice_user_agent(session)
-    if debug:
-        session.set_debug_logger('')
-        inject_large_request_body_filter()
-    return session
-
-
-def _add_chalice_user_agent(session):
-    # type: (botocore.session.Session) -> None
-    suffix = '%s/%s' % (session.user_agent_name, session.user_agent_version)
-    session.user_agent_name = 'chalice'
-    session.user_agent_version = chalice_version
-    session.user_agent_extra = suffix
 
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
@@ -121,12 +103,6 @@ def load_chalice_app(project_dir):
     return chalice_app
 
 
-def inject_large_request_body_filter():
-    # type: () -> None
-    log = logging.getLogger('botocore.endpoint')
-    log.addFilter(LargeRequestBodyFilter())
-
-
 def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
     # type: (click.Context, str, bool, str) -> Config
     user_provided_params = {}  # type: Dict[str, Any]
@@ -148,24 +124,6 @@ def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
     return config
-
-
-class LargeRequestBodyFilter(logging.Filter):
-    def filter(self, record):
-        # type: (Any) -> bool
-        # Note: the proper type should be "logging.LogRecord", but
-        # the typechecker complains about 'Invalid index type "int" for "dict"'
-        # so we're using Any for now.
-        if record.msg.startswith('Making request'):
-            if record.args[0].name in ['UpdateFunctionCode', 'CreateFunction']:
-                # When using the ZipFile argument (which is used in chalice),
-                # the entire deployment package zip is sent as a base64 encoded
-                # string.  We don't want this to clutter the debug logs
-                # so we don't log the request body for lambda operations
-                # that have the ZipFile arg.
-                record.args = (record.args[:-1] +
-                               ('(... omitted from logs due to size ...)',))
-        return True
 
 
 @click.group()
