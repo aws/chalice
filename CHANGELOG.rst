@@ -7,6 +7,10 @@ Next Release (TBD)
 
 * Add port parameter to local command
   (`#220 <https://github.com/awslabs/chalice/pull/220>`__)
+* Add support for binary vendored packages
+  (`#182 <https://github.com/awslabs/chalice/pull/182>`__,
+   `#106 <https://github.com/awslabs/chalice/issues/106>`__,
+   `#42 <https://github.com/awslabs/chalice/issues/42>`__)
 
 
 0.5.1
