@@ -47,11 +47,11 @@ CLOUDWATCH_LOGS = {
     "Resource": "arn:aws:logs:*:*:*"
 }
 
-FULL_PASSTHROUGH = """
+BASE_PASSTHROUGH = """
 #set($allParams = $input.params())
 {
 "body-json" : $input.json('$'),
-"base64-body": "$util.base64Encode($input.body)",
+"base64-body": "%(base64Body)s",
 "params" : {
 #foreach($type in $allParams.keySet())
   #set($params = $allParams.get($type))
@@ -99,6 +99,11 @@ FULL_PASSTHROUGH = """
   }
 }
 """
+
+FULL_PASSTHROUGH = BASE_PASSTHROUGH % {
+    "base64Body": "$util.base64Encode($input.body)"
+}
+BINARY_PASSTHROUGH = BASE_PASSTHROUGH % {"base64Body": "$input.body"}
 
 ERROR_MAPPING = (
     "#set($inputRoot = $input.path('$'))"
@@ -303,6 +308,7 @@ class APIGatewayResourceCreator(object):
         # We need to create the parent resource before we can create
         # child resources, so we'll do a pre-order depth first traversal.
         stack = [chalice_trie]
+        binary_media_types = []  # type: List[str]
         while stack:
             current = stack.pop()
             # If there's no resource_id we need to create it.
@@ -324,8 +330,16 @@ class APIGatewayResourceCreator(object):
                 if current['route_entry'].cors:
                     self._apig_methods.create_preflight_method(
                         current['resource_id'], current['route_entry'].methods)
+                if current['route_entry'].binary_support:
+                    content_types = current['route_entry'].content_types
+                    binary_media_types = [
+                        content_type for content_type in content_types
+                        if content_type != 'application/json'
+                    ]
+                    binary_media_types = list(set(binary_media_types))
             for child in current['children']:
                 stack.append(current['children'][child])
+        self._apig_methods.update_binary_media_types(binary_media_types)
         # Add a catch all auth that says anything in this rest API can call
         # the lambda function.
         self.awsclient.add_permission_for_apigateway_if_needed(
@@ -352,7 +366,7 @@ class APIGatewayResourceCreator(object):
         )
         self._apig_methods.create_lambda_method_integration(
             resource_id, http_method, route_entry.content_types,
-            self._lambda_uri()
+            self._lambda_uri(), route_entry.binary_support
         )
         self._apig_methods.create_method_response(
             resource_id, http_method, route_entry.cors)
@@ -949,24 +963,40 @@ class APIGatewayMethods(object):
         self._apig_client.put_method(**put_method_cfg)
 
     def create_lambda_method_integration(self, resource_id, http_method,
-                                         content_types, lambda_uri):
-        # type: (str, str, List[str], str) -> None
+                                         content_types, lambda_uri,
+                                         binary_support=None):
+        # type: (str, str, List[str], str, bool) -> None
         """Create an integration method for AWS Lambda."""
-        self._apig_client.put_integration(
-            restApiId=self.rest_api_id,
-            resourceId=resource_id,
-            type='AWS',
-            httpMethod=http_method,
-            integrationHttpMethod='POST',
-            # Request body will never be passed through to
-            # the integration, if the Content-Type header
-            # is not application/json.
-            passthroughBehavior="NEVER",
-            requestTemplates={
-                key: FULL_PASSTHROUGH for key in content_types
-            },
-            uri=lambda_uri,
-        )
+        if binary_support is None:
+            self._apig_client.put_integration(
+                restApiId=self.rest_api_id,
+                resourceId=resource_id,
+                type='AWS',
+                httpMethod=http_method,
+                integrationHttpMethod='POST',
+                # Request body will never be passed through to
+                # the integration, if the Content-Type header
+                # is not application/json.
+                passthroughBehavior='NEVER',
+                requestTemplates={
+                    key: FULL_PASSTHROUGH for key in content_types
+                },
+                uri=lambda_uri,
+            )
+        else:
+            self._apig_client.put_integration(
+                restApiId=self.rest_api_id,
+                resourceId=resource_id,
+                type='AWS',
+                httpMethod=http_method,
+                integrationHttpMethod='POST',
+                passthroughBehavior='WHEN_NO_TEMPLATES',
+                requestTemplates={
+                    key: BINARY_PASSTHROUGH for key in content_types
+                },
+                contentHandling="CONVERT_TO_TEXT",
+                uri=lambda_uri,
+            )
 
     def create_method_response(self, resource_id, http_method, cors=False):
         # type: (str, str, bool) -> None
@@ -1084,4 +1114,32 @@ class APIGatewayMethods(object):
                     "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
                     ",X-Amz-Security-Token'")
             },
+        )
+
+    def update_binary_media_types(self, binary_media_types):
+        # type: (List[str]) -> None
+        patch_operations = []
+        response = self._apig_client.get_rest_api(restApiId=self.rest_api_id)
+        for content_type in response.get('binary_media_types', []):
+            patch_operations.append({
+                'op': 'remove',
+                'path': "%s" % content_type
+            })
+        if patch_operations:
+            self._patch_operations(patch_operations)
+        patch_operations = []
+        for content_type in binary_media_types:
+            patch_operations.append({
+                'op': 'add',
+                'path': '/binaryMediaTypes/{}'.format(
+                    content_type.replace('/', '~1'))
+            })
+        if patch_operations:
+            self._patch_operations(patch_operations)
+
+    def _patch_operations(self, patch_operations):
+        # type: (List[dict]) -> None
+        self._apig_client.update_rest_api(
+            restApiId=self.rest_api_id,
+            patchOperations=patch_operations
         )

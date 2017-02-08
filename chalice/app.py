@@ -128,7 +128,7 @@ class RouteEntry(object):
     def __init__(self, view_function, view_name, path, methods,
                  authorization_type=None, authorizer_id=None,
                  api_key_required=None, content_types=None,
-                 cors=False):
+                 cors=False, binary_support=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -141,6 +141,7 @@ class RouteEntry(object):
         self.view_args = self._parse_view_args()
         self.content_types = content_types
         self.cors = cors
+        self.binary_support = binary_support
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -208,6 +209,7 @@ class Chalice(object):
         api_key_required = kwargs.pop('api_key_required', None)
         content_types = kwargs.pop('content_types', ['application/json'])
         cors = kwargs.pop('cors', False)
+        binary_support = kwargs.pop('binary_support', None)
         if not isinstance(content_types, list):
             raise ValueError('In view function "%s", the content_types '
                              'value must be a list, not %s: %s'
@@ -222,7 +224,7 @@ class Chalice(object):
                 "URL paths must be unique." % path)
         entry = RouteEntry(view_func, name, path, methods, authorization_type,
                            authorizer_id, api_key_required,
-                           content_types, cors)
+                           content_types, cors, binary_support)
         self.routes[path] = entry
 
     def __call__(self, event, context):

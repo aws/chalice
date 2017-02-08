@@ -12,7 +12,7 @@ from chalice.deployer import LambdaDeploymentPackager
 from chalice.deployer import APIGatewayDeployer
 from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import APIGatewayMethods
-from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
+from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING, BINARY_PASSTHROUGH
 from chalice.deployer import validate_configuration
 from chalice.deployer import validate_routes
 from chalice.deployer import Deployer
@@ -248,6 +248,7 @@ def test_can_build_resource_routes_for_single_view(stubbed_session):
     ).returns({})
     for error_cls in ALL_ERRORS:
         add_expected_calls_to_map_error(error_cls, gateway_stub)
+    gateway_stub.get_rest_api(restApiId='rest-api-id').returns({})
     lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
     lambda_stub.add_permission(
         Action='lambda:InvokeFunction',
@@ -389,6 +390,7 @@ def test_cors_adds_required_headers(stubbed_session):
             ),
         }
     ).returns({})
+    gateway_stub.get_rest_api(restApiId=ANY).returns({})
     lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
     lambda_stub.add_permission(
         Action='lambda:InvokeFunction',
@@ -519,3 +521,88 @@ def test_can_record_policy_to_disk(app_policy):
     latest_policy ={"Statement": ["policy"]}
     app_policy.record_policy(cfg, latest_policy)
     assert app_policy.load_last_policy(cfg) == latest_policy
+
+
+def test_binary_support(stubbed_session):
+    route_trie = {
+        'name': '',
+        'uri_path': '/',
+        'children': {},
+        'resource_id': 'parent-id',
+        'parent_resource_id': None,
+        'is_route': True,
+        'route_entry': RouteEntry(None, 'index_view', '/', ['POST'],
+                                  content_types=['application/octet-stream'],
+                                  binary_support=True),
+    }
+    gateway_client = stubbed_session.create_client('apigateway')
+    gateway_stub = stubbed_session.stub('apigateway')
+    lambda_stub = stubbed_session.stub('lambda')
+    awsclient = TypedAWSClient(stubbed_session)
+    g = APIGatewayResourceCreator(
+        awsclient, APIGatewayMethods(gateway_client, 'rest-api-id'),
+        'arn:aws:lambda:us-west-2:123:function:name',
+        random_id_generator=lambda: "random-id")
+
+    gateway_stub.put_method(
+        resourceId='parent-id',
+        authorizationType='NONE',
+        restApiId='rest-api-id',
+        httpMethod='POST',
+    ).returns({})
+    gateway_stub.put_integration(
+        httpMethod='POST',
+        integrationHttpMethod='POST',
+        passthroughBehavior='WHEN_NO_TEMPLATES',
+        requestTemplates={
+            'application/octet-stream': BINARY_PASSTHROUGH,
+        },
+        contentHandling="CONVERT_TO_TEXT",
+        resourceId='parent-id',
+        restApiId='rest-api-id',
+        type='AWS',
+        uri=('arn:aws:apigateway:us-west-2:lambda:path'
+             '/2015-03-31/functions/arn:aws:lambda:us-west'
+             '-2:123:function:name/invocations')
+    ).returns({})
+    gateway_stub.put_method_response(
+        httpMethod='POST',
+        resourceId='parent-id',
+        responseModels={
+            'application/json': 'Empty',
+        },
+        restApiId='rest-api-id',
+        statusCode='200',
+    ).returns({})
+    gateway_stub.put_integration_response(
+        httpMethod='POST',
+        resourceId='parent-id',
+        responseTemplates={
+            'application/json': '',
+        },
+        restApiId='rest-api-id',
+        statusCode='200',
+    ).returns({})
+    for error_cls in ALL_ERRORS:
+        add_expected_calls_to_map_error(error_cls, gateway_stub)
+    gateway_stub.get_rest_api(restApiId='rest-api-id').returns({})
+    gateway_stub.update_rest_api(
+            restApiId='rest-api-id',
+            patchOperations=[
+                {
+                    'op': 'add',
+                    'path': '/binaryMediaTypes/application~1octet-stream'
+                }
+            ]
+    ).returns({})
+    lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
+    lambda_stub.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='name',
+        Principal='apigateway.amazonaws.com',
+        SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
+        StatementId='random-id',
+    ).returns({})
+    stubbed_session.activate_stubs()
+    g.build_resources(route_trie)
+    stubbed_session.verify_stubs()
