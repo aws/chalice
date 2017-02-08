@@ -161,6 +161,7 @@ class Chalice(object):
     def __init__(self, app_name, configure_logs=True):
         self.app_name = app_name
         self.routes = {}
+        self.scheduled = {}
         self.current_request = None
         self.debug = False
         self.configure_logs = configure_logs
@@ -225,35 +226,85 @@ class Chalice(object):
                            content_types, cors)
         self.routes[path] = entry
 
+    def schedule(self, path, **kwargs):
+        def _register_view(view_func):
+            self._add_scheduled(path, view_func, **kwargs)
+            return view_func
+        return _register_view
+
+    def _add_scheduled(self, path, view_func, **kwargs):
+        name = kwargs.pop('name', view_func.__name__)
+        methods = 'GET'
+        authorization_type = kwargs.pop('authorization_type', None)
+        authorizer_id = kwargs.pop('authorizer_id', None)
+        api_key_required = kwargs.pop('api_key_required', None)
+        content_types = ['application/json']
+        cors = False
+        if kwargs:
+            raise TypeError('TypeError: schedule() got unexpected keyword '
+                            'arguments: %s' % ', '.join(list(kwargs)))
+
+        if path in self.scheduled:
+            raise ValueError(
+                "Duplicate scheduled method detected: '%s'\n"
+                "Schedule names must be unique." % path)
+        entry = RouteEntry(view_func, name, path, methods, authorization_type,
+                           authorizer_id, api_key_required,
+                           content_types, cors)
+        self.scheduled[path] = entry
+
     def __call__(self, event, context):
         # This is what's invoked via lambda.
         # Sometimes the event can be something that's not
         # what we specified in our request_template mapping.
         # When that happens, we want to give a better error message here.
         resource_path = event.get('context', {}).get('resource-path')
-        if resource_path is None:
+        is_scheduled = event.get('source') == u'aws.events'
+        if resource_path is None and not is_scheduled:
             raise ChaliceError(
                 "Unknown request. (Did you forget to set the Content-Type "
                 "header?)")
-        http_method = event['context']['http-method']
-        if resource_path not in self.routes:
-            raise ChaliceError("No view function for: %s" % resource_path)
-        route_entry = self.routes[resource_path]
-        if http_method not in route_entry.methods:
-            raise MethodNotAllowedError("Unsupported method: %s" % http_method)
-        view_function = route_entry.view_function
-        function_args = [event['params']['path'][name]
-                         for name in route_entry.view_args]
-        params = event['params']
-        self.current_request = Request(params['querystring'],
-                                       params['header'],
-                                       params['path'],
-                                       event['context']['http-method'],
-                                       event['body-json'],
-                                       event['base64-body'],
-                                       event['context'],
-                                       event['claims'],
-                                       event['stage-variables'])
+        if is_scheduled:
+            if not self.scheduled:
+                raise ChaliceError(
+                    "No handlers are configured for scheduled triggers")
+            scheduler_name = event.get('resources')[0].split('/')[1] \
+                if event.get('resources', None) else None
+            scheduled_entry = self.scheduled.get(scheduler_name)
+            if not scheduled_entry:
+                raise ChaliceError("No scheduled function for: %s" % scheduler_name)
+            view_function = scheduled_entry.view_function
+            function_args = []
+            self.current_request = Request(query_params='',
+                                           headers={},
+                                           uri_params='',
+                                           method='GET',
+                                           body='{}',
+                                           base64_body=None,
+                                           context=event.get('context'),
+                                           claims=event.get('claims'),
+                                           stage_vars=event.get('stage-variables', {}))
+
+        else:
+            http_method = event['context']['http-method']
+            if resource_path not in self.routes:
+                raise ChaliceError("No view function for: %s" % resource_path)
+            route_entry = self.routes[resource_path]
+            if http_method not in route_entry.methods:
+                raise MethodNotAllowedError("Unsupported method: %s" % http_method)
+            view_function = route_entry.view_function
+            function_args = [event['params']['path'][name]
+                             for name in route_entry.view_args]
+            params = event.get('params')
+            self.current_request = Request(params['querystring'],
+                                           params['header'],
+                                           params['path'],
+                                           event['context']['http-method'],
+                                           event['body-json'],
+                                           event['base64-body'],
+                                           event['context'],
+                                           event['claims'],
+                                           event['stage-variables'])
         try:
             response = view_function(*function_args)
         except ChaliceViewError:
