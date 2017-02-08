@@ -51,6 +51,10 @@ specific examples).  The ``vendor/`` directory is helpful in these scenarios:
 * You need to use C extensions, and you're not developing on Linux.
 
 
+As a general rule of thumb, code that you write goes in either ``app.py`` or
+``chalicelib/``, and dependencies are either specified in ``requirements.txt``
+or placed in the ``vendor/`` directory.
+
 Examples
 --------
 
@@ -86,3 +90,56 @@ Then the final deployment package directory structure would look like this::
 
 This directory structure is then zipped up and sent to AWS Lambda during the
 deployment process.
+
+
+Psycopg2 Example
+----------------
+
+Below shows an example of how you can use the
+[psycopg2](https://pypi.python.org/pypi/psycopg2) package in a chalice app.
+
+We're going to leverage the ``vendor/`` directory in order to use this
+package in our app.  We can't use ``requirements.txt`` file because
+``psycopg2`` has additional requirements:
+
+* It contains C extensions and if you're not developing on Amazon Linux,
+  the binaries built on a dev machine will not match what's needed on AWS
+  Lambda.
+* AWS Lambda does not have the ``libpq.so`` library available, so we need
+  to build a custom version of ``psycopg2`` that has ``libpq.so`` statically
+  linked.
+
+You can do this yourself by building [psycopg2](https://pypi.python.org/pypi/psycopg2)
+on Amazon Linux with the ``static_libpq=1`` value set in the ``setup.cfg``
+file.  You can then copy/unzip the ``.whl`` file into the ``vendor/``
+directory.
+
+There are also existing packages that have prebuilt this, including the
+3rd party [awslambda-psycopg2](https://github.com/jkehler/awslambda-psycopg2)
+package.  If you wanted to use this 3rd party package you can follow these
+steps::
+
+$ mkdir vendor
+$ git clone git@github.com:jkehler/awslambda-psycopg2.git
+$ cp -r awslambda-psycopg2/psycopg2 vendor/
+$ rm -rf awslambda-psycopg2/
+
+
+You should now have a directory that looks like this::
+
+    $ tree
+    .
+    ├── app.py
+    ├── app.pyc
+    ├── requirements.txt
+    └── vendor
+        └── psycopg2
+            ├── __init__.py
+            ├── _json.py
+            ├── _psycopg.so
+            ....
+
+
+In your ``app.py`` file you can now import ``psycopg2``, and this
+dependency will automatically be included when the ``chalice deploy``
+command is run.
