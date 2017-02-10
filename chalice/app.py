@@ -1,8 +1,10 @@
 """Chalice app and routing code."""
 import re
 import sys
-import base64
 import logging
+import json
+import traceback
+import decimal
 from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
@@ -12,6 +14,20 @@ from collections import Mapping
 
 
 _PARAMS = re.compile('{\w+}')
+
+
+def handle_decimals(obj):
+    # Lambda will automatically serialize decimals so we need
+    # to support that as well.
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    return obj
+
+
+def error_response(message, error_code, http_status_code):
+    body = {'Code': error_code, 'Message': message}
+    response = Response(body=body, status_code=http_status_code)
+    return response.to_dict()
 
 
 class ChaliceError(Exception):
@@ -87,33 +103,25 @@ class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
-                 base64_body, context, claims, stage_vars):
+                 context, stage_vars):
         self.query_params = query_params
         self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
-        self.claims = claims
+        self.raw_body = body
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
-        if self.headers.get('content-type', '').startswith('application/json'):
-            self.json_body = body
-        else:
-            self.json_body = None
-        # This is the raw base64 body.
-        # We'll only bother decoding this if the user
-        # actually requests this via the `.raw_body` property.
-        self._base64_body = base64_body
-        self._raw_body = None
+        self._json_body = None
         self.context = context
         self.stage_vars = stage_vars
 
     @property
-    def raw_body(self):
-        # Return the raw request body as bytes.
-        if self._raw_body is None:
-            self._raw_body = base64.b64decode(self._base64_body)
-        return self._raw_body
+    def json_body(self):
+        if self.headers.get('content-type', '').startswith('application/json'):
+            if self._json_body is None:
+                self._json_body = json.loads(self.raw_body)
+            return self._json_body
 
     def to_dict(self):
         copied = self.__dict__.copy()
@@ -121,6 +129,25 @@ class Request(object):
         # JSON serializable, so we need to remove the CaseInsensitive dict.
         copied['headers'] = dict(copied['headers'])
         return copied
+
+
+class Response(object):
+    def __init__(self, body, headers=None, status_code=200):
+        self.body = body
+        if headers is None:
+            headers = {}
+        self.headers = headers
+        self.status_code = status_code
+
+    def to_dict(self):
+        body = self.body
+        if not isinstance(body, str):
+            body = json.dumps(body, default=handle_decimals)
+        return {
+            'headers': self.headers,
+            'statusCode': self.status_code,
+            'body': body,
+        }
 
 
 class RouteEntry(object):
@@ -230,41 +257,59 @@ class Chalice(object):
         # Sometimes the event can be something that's not
         # what we specified in our request_template mapping.
         # When that happens, we want to give a better error message here.
-        resource_path = event.get('context', {}).get('resource-path')
+        resource_path = event.get('requestContext', {}).get('resourcePath')
         if resource_path is None:
-            raise ChaliceError(
-                "Unknown request. (Did you forget to set the Content-Type "
-                "header?)")
-        http_method = event['context']['http-method']
+            # TODO: convert to error response
+            return error_response(error_code='InternalServerError',
+                                  message='Unknown request.',
+                                  http_status_code=500)
+        http_method = event['requestContext']['httpMethod']
         if resource_path not in self.routes:
             raise ChaliceError("No view function for: %s" % resource_path)
         route_entry = self.routes[resource_path]
         if http_method not in route_entry.methods:
-            raise MethodNotAllowedError("Unsupported method: %s" % http_method)
+            return error_response(
+                error_code='MethodNotAllowedError',
+                message='Unsupported method: %s' % http_method,
+                http_status_code=405)
         view_function = route_entry.view_function
-        function_args = [event['params']['path'][name]
+        function_args = [event['pathParameters'][name]
                          for name in route_entry.view_args]
-        params = event['params']
-        self.current_request = Request(params['querystring'],
-                                       params['header'],
-                                       params['path'],
-                                       event['context']['http-method'],
-                                       event['body-json'],
-                                       event['base64-body'],
-                                       event['context'],
-                                       event['claims'],
-                                       event['stage-variables'])
+        self.current_request = Request(event['queryStringParameters'],
+                                       event['headers'],
+                                       event['pathParameters'],
+                                       event['requestContext']['httpMethod'],
+                                       event['body'],
+                                       event['requestContext'],
+                                       event['stageVariables'])
         try:
             response = view_function(*function_args)
-        except ChaliceViewError:
+        except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
-            raise
-        except Exception:
+            response = Response(body={'Code': e.__class__.__name__,
+                                      'Message': str(e)},
+                                status_code=e.STATUS_CODE)
+        except Exception as e:
             if self.debug:
                 # If the user has turned on debug mode,
                 # we'll let the original exception propogate so
                 # they get more information about what went wrong.
-                raise
-            raise ChaliceViewError("An internal server error occurred.")
-        return response
+                self.log.debug("Caught exception", exc_info=True)
+                stack_trace = ''.join(traceback.format_exc())
+                body = stack_trace
+            else:
+                body = {'Code': 'InternalServerError',
+                        'Message': 'An internal server error occurred.'}
+            response = Response(body=body, status_code=500)
+        if not isinstance(response, Response):
+            response = Response(body=response)
+        if self._cors_enabled_for_route(route_entry):
+            self._add_cors_headers(response)
+        return response.to_dict()
+
+    def _cors_enabled_for_route(self, route_entry):
+        return route_entry.cors
+
+    def _add_cors_headers(self, response):
+        response.headers['Access-Control-Allow-Origin'] = '*'

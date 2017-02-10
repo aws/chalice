@@ -177,7 +177,7 @@ def test_unsupported_methods_raise_error(handler):
     handler.do_POST()
     assert _get_body_from_response_stream(handler) == {
         'Code': 'MethodNotAllowedError',
-        'Message': 'MethodNotAllowedError: Unsupported method: POST'
+        'Message': 'Unsupported method: POST'
     }
 
 
@@ -220,19 +220,15 @@ def test_can_create_lambda_event():
         headers={'content-type': 'application/json'}
     )
     assert event == {
-        'context': {
-            'http-method': 'GET',
-            'resource-path': '/foo/{capture}',
+        'requestContext': {
+            'httpMethod': 'GET',
+            'resourcePath': '/foo/{capture}',
         },
-        'claims': {},
-        'params': {
-            'header': {'content-type': 'application/json'},
-            'path': {'capture': 'other'},
-            'querystring': {},
-        },
-        'body-json': {},
-        'base64-body': json.dumps({}).encode("base64"),
-        'stage-variables': {},
+        'headers': {'content-type': 'application/json'},
+        'pathParameters': {'capture': 'other'},
+        'queryStringParameters': {},
+        'body': '{}',
+        'stageVariables': {},
     }
 
 
@@ -246,19 +242,15 @@ def test_can_create_lambda_event_for_put_request():
         body='{"foo": "bar"}',
     )
     assert event == {
-        'claims': {},
-        'context': {
-            'http-method': 'PUT',
-            'resource-path': '/foo/{capture}',
+        'requestContext': {
+            'httpMethod': 'PUT',
+            'resourcePath': '/foo/{capture}',
         },
-        'params': {
-            'header': {'content-type': 'application/json'},
-            'path': {'capture': 'other'},
-            'querystring': {},
-        },
-        'body-json': {'foo': 'bar'},
-        'base64-body': json.dumps({'foo': 'bar'}).encode("base64"),
-        'stage-variables': {},
+        'headers': {'content-type': 'application/json'},
+        'pathParameters': {'capture': 'other'},
+        'queryStringParameters': {},
+        'body': '{"foo": "bar"}',
+        'stageVariables': {},
     }
 
 
@@ -273,40 +265,16 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         body=form_body,
     )
     assert event == {
-        'claims': {},
-        'context': {
-            'http-method': 'POST',
-            'resource-path': '/foo/{capture}',
+        'requestContext': {
+            'httpMethod': 'POST',
+            'resourcePath': '/foo/{capture}',
         },
-        'params': {
-            'header': {'content-type': 'application/x-www-form-urlencoded'},
-            'path': {'capture': 'other'},
-            'querystring': {},
-        },
-        'body-json': {},
-        'base64-body': form_body.encode('base64'),
-        'stage-variables': {},
+        'headers': {'content-type': 'application/x-www-form-urlencoded'},
+        'pathParameters': {'capture': 'other'},
+        'queryStringParameters': {},
+        'body': form_body,
+        'stageVariables': {},
     }
-
-
-@pytest.mark.parametrize('content_type,is_json', [
-    ('application/json', True),
-    ('application/json;charset=UTF-8', True),
-    ('application/notjson', False),
-])
-def test_json_body_mapped_when_content_type_matches(content_type, is_json):
-    converter = local.LambdaEventConverter(local.RouteMatcher(['/']))
-    json_body = '{"json": "body"}'
-    event = converter.create_lambda_event(
-        method='POST',
-        path='/',
-        headers={'content-type': content_type},
-        body=json_body
-    )
-    if is_json:
-        assert event['body-json'] == {'json': 'body'}
-    else:
-        assert event['body-json'] == {}
 
 
 def test_can_provide_port_to_local_server(sample_app):

@@ -3,16 +3,12 @@
 This is intended only for local development purposes.
 
 """
-import json
-import decimal
 import functools
 from collections import namedtuple
 from BaseHTTPServer import HTTPServer
 from BaseHTTPServer import BaseHTTPRequestHandler
 
 
-from chalice import ChaliceViewError
-from chalice.app import ChaliceError
 from chalice.app import Chalice  # noqa
 from typing import List, Any, Dict, Tuple, Callable  # noqa
 
@@ -31,15 +27,6 @@ ServerCls = Callable[..., 'HTTPServer']
 def create_local_server(app_obj, port):
     # type: (Chalice, int) -> LocalDevServer
     return LocalDevServer(app_obj, port)
-
-
-def handle_decimals(obj):
-    # type: (Any) -> Any
-    # Lambda will automatically serialize decimals so we need
-    # to support that as well.
-    if isinstance(obj, decimal.Decimal):
-        return float(obj)
-    return obj
 
 
 class RouteMatcher(object):
@@ -93,24 +80,16 @@ class LambdaEventConverter(object):
         view_route = self._route_matcher.match_route(path)
         if body is None:
             body = '{}'
-        json_body = {}  # type: Any
-        if headers.get('content-type', '').startswith('application/json'):
-            json_body = json.loads(body)
-        base64_body = body.encode('base64')
         return {
-            'context': {
-                'http-method': method,
-                'resource-path': view_route.route,
+            'requestContext': {
+                'httpMethod': method,
+                'resourcePath': view_route.route,
             },
-            'claims': {},
-            'params': {
-                'header': dict(headers),
-                'path': view_route.captured,
-                'querystring': view_route.query_params,
-            },
-            'body-json': json_body,
-            'base64-body': base64_body,
-            'stage-variables': {},
+            'headers': dict(headers),
+            'queryStringParameters': view_route.query_params,
+            'body': body,
+            'pathParameters': view_route.captured,
+            'stageVariables': {},
         }
 
 
@@ -134,36 +113,21 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
     def _do_invoke_view_function(self, lambda_event):
         # type: (EventType) -> None
         lambda_context = None
-        try:
-            response = self.app_object(lambda_event, lambda_context)
-            self._send_http_response(lambda_event, response)
-        except ChaliceViewError as e:
-            response = {
-                'Code': e.__class__.__name__,
-                'Message': str(e)
-            }
-            self._send_http_response(lambda_event, response,
-                                     status_code=e.STATUS_CODE)
-        except ChaliceError as e:
-            # This is a bit unfortunate, but in many cases
-            # API gateway will return a 403 instead of a 500
-            # or a 404.  In this case there's a slight difference
-            # in behavior in local mode where any ChaliceError
-            # just gets a plain old 500 response.
-            response = {'message': str(e)}
-            self._send_http_response(lambda_event, response,
-                                     status_code=500)
+        response = self.app_object(lambda_event, lambda_context)
+        self._send_http_response(lambda_event, response)
 
-    def _send_http_response(self, lambda_event, response, status_code=200):
-        # type: (EventType, Any, int) -> None
-        json_response = json.dumps(response, default=handle_decimals)
-        self.send_response(status_code)
-        self.send_header('Content-Length', str(len(json_response)))
-        self.send_header('Content-Type', 'application/json')
-        if self._cors_enabled_for_route(lambda_event):
-            self.send_header('Access-Control-Allow-Origin', '*')
+    def _send_http_response(self, lambda_event, response):
+        # type: (EventType, Dict[str, Any]) -> None
+        self.send_response(response['statusCode'])
+        self.send_header('Content-Length', str(len(response['body'])))
+        self.send_header(
+            'Content-Type',
+            response['headers'].get('Content-Type', 'application/json'))
+        headers = response['headers']
+        for header in headers:
+            self.send_header(header, headers[header])
         self.end_headers()
-        self.wfile.write(json_response)
+        self.wfile.write(response['body'])
 
     def _generate_lambda_event(self):
         # type: () -> EventType
@@ -198,13 +162,13 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     def _cors_enabled_for_route(self, lambda_event):
         # type: (EventType) -> bool
-        route_key = lambda_event['context']['resource-path']
+        route_key = lambda_event['requestContext']['resourcePath']
         route_entry = self.app_object.routes[route_key]
         return route_entry.cors
 
     def _has_user_defined_options_method(self, lambda_event):
         # type: (EventType) -> bool
-        route_key = lambda_event['context']['resource-path']
+        route_key = lambda_event['requestContext']['resourcePath']
         route_entry = self.app_object.routes[route_key]
         return 'OPTIONS' in route_entry.methods
 

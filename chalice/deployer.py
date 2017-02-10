@@ -358,8 +358,6 @@ class APIGatewayResourceCreator(object):
             resource_id, http_method, route_entry.cors)
         self._apig_methods.create_integration_response(
             resource_id, http_method, route_entry.cors)
-        self._apig_methods.create_error_responses(
-            resource_id, http_method, app.ALL_ERRORS, route_entry.cors)
 
     def _lambda_uri(self):
         # type: () -> str
@@ -955,16 +953,12 @@ class APIGatewayMethods(object):
         self._apig_client.put_integration(
             restApiId=self.rest_api_id,
             resourceId=resource_id,
-            type='AWS',
+            type='AWS_PROXY',
             httpMethod=http_method,
             integrationHttpMethod='POST',
-            # Request body will never be passed through to
-            # the integration, if the Content-Type header
-            # is not application/json.
-            passthroughBehavior="NEVER",
-            requestTemplates={
-                key: FULL_PASSTHROUGH for key in content_types
-            },
+            contentHandling='CONVERT_TO_TEXT',
+            # Matches what the console uses for proxy integration.
+            passthroughBehavior="WHEN_NO_MATCH",
             uri=lambda_uri,
         )
 
@@ -998,37 +992,6 @@ class APIGatewayMethods(object):
             kwargs['responseParameters'] = {
                 'method.response.header.Access-Control-Allow-Origin': "'*'"}
         self._apig_client.put_integration_response(**kwargs)
-
-    def create_error_responses(self, resource_id, http_method,
-                               error_classes, cors):
-        # type: (str, str, List[app.ChaliceViewError], bool) -> None
-        for error_cls in error_classes:
-            method_response_args = {
-                'restApiId': self.rest_api_id,
-                'resourceId': resource_id,
-                'httpMethod': http_method,
-                'statusCode': str(error_cls.STATUS_CODE),
-                'responseModels': {'application/json': 'Empty'},
-            }
-            if cors:
-                method_response_args['responseParameters'] = {
-                    'method.response.header.Access-Control-Allow-Origin':
-                        False}
-            self._apig_client.put_method_response(**method_response_args)
-            integration_response_args = {
-                'restApiId': self.rest_api_id,
-                'resourceId': resource_id,
-                'httpMethod': http_method,
-                'statusCode': str(error_cls.STATUS_CODE),
-                'selectionPattern': error_cls.__name__ + '.*',
-                'responseTemplates': {'application/json': ERROR_MAPPING},
-            }
-            if cors:
-                integration_response_args['responseParameters'] = {
-                    'method.response.header.Access-Control-Allow-Origin':
-                        "'*'"}
-            self._apig_client.put_integration_response(
-                **integration_response_args)
 
     def create_preflight_method(self, resource_id, http_methods):
         # type: (str, List[str]) -> None
