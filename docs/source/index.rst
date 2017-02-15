@@ -55,6 +55,7 @@ Topics
    :maxdepth: 2
 
    topics/routing
+   topics/views
    topics/configfile
    topics/multifile
    topics/logging

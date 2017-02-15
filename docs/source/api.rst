@@ -115,3 +115,28 @@ Request
   .. attribute:: stage_vars
 
      A dict of configuration for the API Gateway stage.
+
+
+Response
+========
+
+.. class:: Response(body, headers=None, status_code=200)
+
+  A class that represents the response for the view function.  You
+  can optionally return an instance of this class from a view function if you
+  want complete control over the returned HTTP response.
+
+  .. versionadded:: 0.6.0
+
+  .. attribute:: body
+
+     The HTTP response body to send back.  This value must be a string.
+
+  .. attribute:: headers
+
+     An optional dictionary of HTTP headers to send back.  This is a dictionary
+     of header name to header value, e.g ``{'Content-Type': 'text/plain'}``
+
+  .. attribute:: status_code
+
+     The integer HTTP status code to send back in the HTTP response.
