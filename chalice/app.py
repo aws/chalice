@@ -259,7 +259,6 @@ class Chalice(object):
         # When that happens, we want to give a better error message here.
         resource_path = event.get('requestContext', {}).get('resourcePath')
         if resource_path is None:
-            # TODO: convert to error response
             return error_response(error_code='InternalServerError',
                                   message='Unknown request.',
                                   http_status_code=500)
@@ -282,6 +281,24 @@ class Chalice(object):
                                        event['body'],
                                        event['requestContext'],
                                        event['stageVariables'])
+        # We're doing the header validation after creating the request
+        # so can leverage the case insensitive dict that the Request class
+        # uses for headers.
+        if route_entry.content_types:
+            content_type = self.current_request.headers.get('content-type', '')
+            if content_type not in route_entry.content_types:
+                return error_response(
+                    error_code='UnsupportedMediaType',
+                    message='Unsupported media type: %s' % content_type,
+                    http_status_code=415,
+                )
+        response = self._get_view_function_response(view_function,
+                                                    function_args)
+        if self._cors_enabled_for_route(route_entry):
+            self._add_cors_headers(response)
+        return response.to_dict()
+
+    def _get_view_function_response(self, view_function, function_args):
         try:
             response = view_function(*function_args)
         except ChaliceViewError as e:
@@ -291,6 +308,7 @@ class Chalice(object):
                                       'Message': str(e)},
                                 status_code=e.STATUS_CODE)
         except Exception as e:
+            headers = {}
             if self.debug:
                 # If the user has turned on debug mode,
                 # we'll let the original exception propogate so
@@ -298,15 +316,14 @@ class Chalice(object):
                 self.log.debug("Caught exception", exc_info=True)
                 stack_trace = ''.join(traceback.format_exc())
                 body = stack_trace
+                headers['Content-Type'] = 'text/plain'
             else:
                 body = {'Code': 'InternalServerError',
                         'Message': 'An internal server error occurred.'}
-            response = Response(body=body, status_code=500)
+            response = Response(body=body, headers=headers, status_code=500)
         if not isinstance(response, Response):
             response = Response(body=response)
-        if self._cors_enabled_for_route(route_entry):
-            self._add_cors_headers(response)
-        return response.to_dict()
+        return response
 
     def _cors_enabled_for_route(self, route_entry):
         return route_entry.cors

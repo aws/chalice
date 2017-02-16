@@ -288,6 +288,22 @@ def test_content_types_must_be_lists():
             return {'foo': 'bar'}
 
 
+def test_content_type_validation_raises_error_on_unknown_types():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'], content_types=['application/xml'])
+    def index():
+        return "success"
+
+    bad_content_type = 'application/bad-xml'
+    event = create_event('/', 'POST', {}, content_type=bad_content_type)
+    event['body'] = 'Request body'
+
+    json_response = json_response_body(demo(event, context=None))
+    assert json_response['Code'] == 'UnsupportedMediaType'
+    assert 'application/bad-xml' in json_response['Message']
+
+
 def test_route_equality():
     view_function = lambda: {"hello": "world"}
     a = app.RouteEntry(
