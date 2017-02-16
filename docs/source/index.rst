@@ -72,6 +72,13 @@ API Reference
    api
 
 
+Upgrade Notes
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   upgrading
 
 
 Indices and tables
