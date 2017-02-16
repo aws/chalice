@@ -575,8 +575,8 @@ sending a query string as well as a custom ``X-TestHeader`` header::
     }
 
 
-Tutorial: Non-JSON Request Bodies
-=================================
+Tutorial: Request Content Types
+===============================
 
 The default behavior of a view function supports
 a request body of ``application/json``.  When a request is
@@ -584,34 +584,48 @@ made with a ``Content-Type`` of ``application/json``, the
 ``app.current_request.json_body`` attribute is automatically
 set for you.  This value is the parsed JSON body.
 
-When the incoming content type of the request is not
-``application/json`` you can use the ``app.current_request.raw_body``
-to access the request body as a string.  You can then combine
-this with the ``app.current_request.headers`` dict to check
-the ``Content-Type`` of the request.
-Here's an example of this feature:
+You can also configure a view function to support other
+content types.  You can do this by specifying the
+``content_types`` paramter value to your ``app.route``
+function.  This parameter is a list of acceptable content
+types.  Here's an example of this feature:
 
 .. code-block:: python
 
     import urlparse
 
-    from chalice import Chalice, BadRequestError
+    from chalice import Chalice
 
     app = Chalice(app_name='helloworld')
 
 
-    @app.route('/', methods=['POST'])
+    @app.route('/', methods=['POST'],
+               content_types=['application/x-www-form-urlencoded'])
     def index():
-        headers = app.current_request.headers
-        content_type = headers.get('Content-Type', '')
-        if content_type.startswith('application/x-www-form-urlencoded;'):
-            parsed = urlparse.parse_qs(app.current_request.raw_body)
-            return {
-                'states': parsed.get('states', [])
-            }
-        else:
-            raise BadRequestError("Invalid content type")
+        parsed = urlparse.parse_qs(app.current_request.raw_body)
+        return {
+            'states': parsed.get('states', [])
+        }
 
+There's a few things worth noting in this view function.
+First, we've specified that we only accept the
+``application/x-www-form-urlencoded`` content type.  If we
+try to send a request with ``application/json``, we'll now
+get a ``415 Unsupported Media Type`` response::
+
+    $ http POST https://endpoint/dev/ states=WA states=CA --debug
+    ...
+    >>> requests.request(**{'allow_redirects': False,
+     'headers': {'Accept': 'application/json',
+                 'Content-Type': 'application/json',
+    ...
+
+
+    HTTP/1.1 415 Unsupported Media Type
+
+    {
+        "message": "Unsupported Media Type"
+    }
 
 If we use the ``--form`` argument, we can see the
 expected behavior of this view function because ``httpie`` sets the
@@ -644,12 +658,6 @@ the raw body bytes:
 ``Content-Type`` is not ``application/json``.  This means that
 you will need to use ``app.current_request.raw_body`` and parse
 the request body as needed.
-
-**NOTE**  Previous versions of chalice (versions 0.5.1 and lower) required
-a ``content_types`` option to be provided to the ``@app.route()`` call in
-order to receive non-JSON request bodies.  This is no longer required and
-the ``content_types`` option is a no-op.  It will be removed in future
-versions of chalice.
 
 
 Tutorial: Customizing the HTTP Response
