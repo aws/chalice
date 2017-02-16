@@ -333,18 +333,12 @@ Now, when you request the same URL that returned an internal
 server error, you'll get back the original stack trace::
 
     $ http https://endpoint/dev/cities/vancouver
-    {
-        "errorMessage": "u'vancouver'",
-        "errorType": "KeyError",
-        "stackTrace": [
-            [
-                "/var/task/chalice/__init__.py",
-                134,
-                "__call__",
-                "raise e"
-            ]
-        ]
-    }
+    Traceback (most recent call last):
+      File "/var/task/chalice/app.py", line 304, in _get_view_function_response
+        response = view_function(*function_args)
+      File "/var/task/app.py", line 18, in state_of_city
+        return {'state': CITIES_TO_STATE[city]}
+    KeyError: u'vancouver'
 
 
 We can see that the error is caused from an uncaught ``KeyError`` resulting
@@ -375,7 +369,7 @@ Save and deploy these changes::
 
     {
         "Code": "BadRequestError",
-        "Message": "BadRequestError: Unknown city 'vancouver', valid choices are: portland, seattle"
+        "Message": "Unknown city 'vancouver', valid choices are: portland, seattle"
     }
 
 We can see now that we have received a ``Code`` and ``Message`` key, with the message
@@ -488,7 +482,7 @@ body, and retrieve the value of that body by making a subsequent
 
     {
         "Code": "NotFoundError",
-        "Message": "NotFoundError: mykey"
+        "Message": "mykey"
     }
 
     # Next, we'll create that key by sending a PUT request.
@@ -545,26 +539,41 @@ sending a query string as well as a custom ``X-TestHeader`` header::
 
     {
         "context": {
-            ...
-            "resource-path": "/introspect",
-            "stage": "dev",
-            "user-agent": "HTTPie/0.9.3",
-            "user-arn": ""
+            "apiId": "apiId",
+            "httpMethod": "GET",
+            "identity": {
+                "accessKey": null,
+                "accountId": null,
+                "apiKey": null,
+                "caller": null,
+                "cognitoAuthenticationProvider": null,
+                "cognitoAuthenticationType": null,
+                "cognitoIdentityId": null,
+                "cognitoIdentityPoolId": null,
+                "sourceIp": "1.1.1.1",
+                "userAgent": "HTTPie/0.9.3",
+                "userArn": null
+            },
+            "requestId": "request-id",
+            "resourceId": "resourceId",
+            "resourcePath": "/introspect",
+            "stage": "dev"
         },
         "headers": {
-            "Accept": "*/*",
-             ...
-            "X-TestHeader": "Foo"
+            "accept": "*/*",
+            ...
+            "x-testheader": "Foo"
         },
-        "json_body": {},
         "method": "GET",
         "query_params": {
             "query1": "value1",
             "query2": "value2"
         },
-        "stage_vars": {},
-        "uri_params": {}
+        "raw_body": null,
+        "stage_vars": null,
+        "uri_params": null
     }
+
 
 Tutorial: Non-JSON Request Bodies
 =================================

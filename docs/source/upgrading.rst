@@ -57,3 +57,6 @@ user-visible changes.
         "Code": "UnsupportedMediaType",
         "Message": "Unsupported media type: text/plain"
     }
+* The keys in the ``app.current_request.to_dict()`` now match the casing used
+  by the ``AWS_PPROXY`` lambda integration, which are ``lowerCamelCased``.
+  This method is primarily intended for introspection purposes.
