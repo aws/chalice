@@ -304,6 +304,24 @@ def test_content_type_validation_raises_error_on_unknown_types():
     assert 'application/bad-xml' in json_response['Message']
 
 
+def test_no_content_type_is_still_allowed():
+    # When the content type validation happens in API gateway, it appears
+    # to assume a default of application/json, so the chalice handler needs
+    # to emulate that behavior.
+
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'], content_types=['application/json'])
+    def index():
+        return {'success': True}
+
+    event = create_event('/', 'POST', {})
+    del event['headers']['Content-Type']
+
+    json_response = json_response_body(demo(event, context=None))
+    assert json_response == {'success': True}
+
+
 def test_route_equality():
     view_function = lambda: {"hello": "world"}
     a = app.RouteEntry(

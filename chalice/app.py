@@ -285,7 +285,8 @@ class Chalice(object):
         # so can leverage the case insensitive dict that the Request class
         # uses for headers.
         if route_entry.content_types:
-            content_type = self.current_request.headers.get('content-type', '')
+            content_type = self.current_request.headers.get(
+                'content-type', 'application/json')
             if content_type not in route_entry.content_types:
                 return error_response(
                     error_code='UnsupportedMediaType',
