@@ -12,7 +12,6 @@ import subprocess
 import zipfile
 import hashlib
 import inspect
-import re
 
 from typing import Any, Tuple, Callable, IO, List, Dict  # noqa
 import botocore.session  # noqa
@@ -33,9 +32,10 @@ LAMBDA_TRUST_POLICY = {
         "Principal": {
             "Service": "lambda.amazonaws.com"
         },
-        "Action": "sts:AssumeRole"}
-    ]
+        "Action": "sts:AssumeRole"
+    }]
 }
+
 
 CLOUDWATCH_LOGS = {
     "Effect": "Allow",
@@ -47,66 +47,6 @@ CLOUDWATCH_LOGS = {
     "Resource": "arn:aws:logs:*:*:*"
 }
 
-FULL_PASSTHROUGH = """
-#set($allParams = $input.params())
-{
-"body-json" : $input.json('$'),
-"base64-body": "$util.base64Encode($input.body)",
-"params" : {
-#foreach($type in $allParams.keySet())
-  #set($params = $allParams.get($type))
-"$type" : {
-  #foreach($paramName in $params.keySet())
-  "$paramName" : "$util.escapeJavaScript($params.get($paramName))"
-      #if($foreach.hasNext),#end
-  #end
-}
-  #if($foreach.hasNext),#end
-#end
-},
-"stage-variables" : {
-#foreach($key in $stageVariables.keySet())
-"$key" : "$util.escapeJavaScript($stageVariables.get($key))"
-  #if($foreach.hasNext),#end
-#end
-},
-"context" : {
-  "account-id": "$context.identity.accountId",
-  "api-id": "$context.apiId",
-  "api-key": "$context.identity.apiKey",
-  "authorizer-principal-id": "$context.authorizer.principalId",
-  "caller": "$context.identity.caller",
-  "cognito-authentication-provider": \
-    "$context.identity.cognitoAuthenticationProvider",
-  "cognito-authentication-type": "$context.identity.cognitoAuthenticationType",
-  "cognito-identity-id": "$context.identity.cognitoIdentityId",
-  "cognito-identity-pool-id": "$context.identity.cognitoIdentityPoolId",
-  "http-method": "$context.httpMethod",
-  "stage": "$context.stage",
-  "source-ip": "$context.identity.sourceIp",
-  "user": "$context.identity.user",
-  "user-agent": "$context.identity.userAgent",
-  "user-arn": "$context.identity.userArn",
-  "request-id": "$context.requestId",
-  "resource-id": "$context.resourceId",
-  "resource-path": "$context.resourcePath"
-  },
-  "claims": {
-#foreach($key in $context.authorizer.claims.keySet())
-"$key": "$util.escapeJavaScript($context.authorizer.claims.get($key))"
-  #if($foreach.hasNext),#end
-#end
-  }
-}
-"""
-
-ERROR_MAPPING = (
-    "#set($inputRoot = $input.path('$'))"
-    "{"
-    '"Code": "$inputRoot.errorType",'
-    '"Message": "$inputRoot.errorMessage"'
-    "}"
-)
 
 NULLARY = Callable[[], str]
 
@@ -336,11 +276,6 @@ class APIGatewayResourceCreator(object):
             self._random_id(),
         )
 
-    def _camel_convert(self, name):
-        # type: (str) -> str
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
     def _configure_resource_route(self, node, http_method):
         # type: (Dict[str, Any], str) -> None
         route_entry = node['route_entry']
@@ -355,9 +290,9 @@ class APIGatewayResourceCreator(object):
             self._lambda_uri()
         )
         self._apig_methods.create_method_response(
-            resource_id, http_method, route_entry.cors)
+            resource_id, http_method)
         self._apig_methods.create_integration_response(
-            resource_id, http_method, route_entry.cors)
+            resource_id, http_method)
 
     def _lambda_uri(self):
         # type: () -> str
@@ -431,7 +366,7 @@ class LambdaDeploymentPackager(object):
         if not os.path.isdir(dirname):
             return
         prefix_len = len(dirname) + 1
-        for root, dirnames, filenames in os.walk(dirname):
+        for root, _, filenames in os.walk(dirname):
             for filename in filenames:
                 full_path = os.path.join(root, filename)
                 zip_path = full_path[prefix_len:]
@@ -962,8 +897,8 @@ class APIGatewayMethods(object):
             uri=lambda_uri,
         )
 
-    def create_method_response(self, resource_id, http_method, cors=False):
-        # type: (str, str, bool) -> None
+    def create_method_response(self, resource_id, http_method):
+        # type: (str, str) -> None
         """Create a method response to return to API gateway consumers."""
         method_response_args = {
             'restApiId': self.rest_api_id,
@@ -972,14 +907,10 @@ class APIGatewayMethods(object):
             'statusCode': '200',
             'responseModels': {'application/json': 'Empty'},
         }
-        if cors:
-            method_response_args['responseParameters'] = {
-                'method.response.header.Access-Control-Allow-Origin': False}
         self._apig_client.put_method_response(**method_response_args)
 
-    def create_integration_response(self, resource_id, http_method,
-                                    cors=False):
-        # type: (str, str, bool) -> None
+    def create_integration_response(self, resource_id, http_method):
+        # type: (str, str) -> None
         """Create an integration response for API Gateway."""
         kwargs = {
             'restApiId': self.rest_api_id,
@@ -988,9 +919,6 @@ class APIGatewayMethods(object):
             'statusCode': '200',
             'responseTemplates': {'application/json': ''},
         }
-        if cors:
-            kwargs['responseParameters'] = {
-                'method.response.header.Access-Control-Allow-Origin': "'*'"}
         self._apig_client.put_integration_response(**kwargs)
 
     def create_preflight_method(self, resource_id, http_methods):
