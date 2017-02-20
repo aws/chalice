@@ -55,6 +55,7 @@ Topics
    :maxdepth: 2
 
    topics/routing
+   topics/views
    topics/configfile
    topics/multifile
    topics/logging
@@ -71,6 +72,13 @@ API Reference
    api
 
 
+Upgrade Notes
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   upgrading
 
 
 Indices and tables

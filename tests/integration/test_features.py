@@ -136,7 +136,7 @@ def test_can_raise_not_found(smoke_test_app):
 def test_unexpected_error_raises_500_in_prod_mode(smoke_test_app):
     response = requests.get(smoke_test_app.url + '/arbitrary-error')
     assert response.status_code == 500
-    assert response.json()['Code'] == 'ChaliceViewError'
+    assert response.json()['Code'] == 'InternalServerError'
     assert 'internal server error' in response.json()['Message']
 
 

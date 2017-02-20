@@ -12,12 +12,11 @@ from chalice.deployer import LambdaDeploymentPackager
 from chalice.deployer import APIGatewayDeployer
 from chalice.deployer import APIGatewayResourceCreator
 from chalice.deployer import APIGatewayMethods
-from chalice.deployer import FULL_PASSTHROUGH, ERROR_MAPPING
 from chalice.deployer import validate_configuration
 from chalice.deployer import validate_routes
 from chalice.deployer import Deployer
 from chalice.deployer import ApplicationPolicyHandler
-from chalice.app import RouteEntry, ALL_ERRORS
+from chalice.app import RouteEntry
 from chalice.app import Chalice
 from chalice.config import Config
 
@@ -91,7 +90,7 @@ def stubbed_client(service_name):
 
 
 def node(name, uri_path, children=None, resource_id=None,
-      parent_resource_id=None, is_route=False):
+         parent_resource_id=None, is_route=False):
     if children is None:
         children = {}
     return {
@@ -167,27 +166,6 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
         validate_configuration(config)
 
 
-def add_expected_calls_to_map_error(error_cls, gateway_stub,
-                                    http_method='POST'):
-    gateway_stub.put_method_response(
-        httpMethod=http_method,
-        resourceId='parent-id',
-        responseModels={
-            'application/json': 'Empty',
-        },
-        restApiId='rest-api-id',
-        statusCode=str(error_cls.STATUS_CODE),
-    ).returns({})
-    gateway_stub.put_integration_response(
-        httpMethod=http_method,
-        resourceId='parent-id',
-        responseTemplates={'application/json': ERROR_MAPPING},
-        restApiId='rest-api-id',
-        selectionPattern='%s.*' % error_cls.__name__,
-        statusCode=str(error_cls.STATUS_CODE),
-    ).returns({})
-
-
 def test_can_build_resource_routes_for_single_view(stubbed_session):
     route_trie = {
         'name': '',
@@ -217,13 +195,11 @@ def test_can_build_resource_routes_for_single_view(stubbed_session):
     gateway_stub.put_integration(
         httpMethod='POST',
         integrationHttpMethod='POST',
-        passthroughBehavior='NEVER',
-        requestTemplates={
-            'application/json': FULL_PASSTHROUGH,
-        },
+        passthroughBehavior='WHEN_NO_MATCH',
         resourceId='parent-id',
         restApiId='rest-api-id',
-        type='AWS',
+        type='AWS_PROXY',
+        contentHandling='CONVERT_TO_TEXT',
         uri=('arn:aws:apigateway:us-west-2:lambda:path'
              '/2015-03-31/functions/arn:aws:lambda:us-west'
              '-2:123:function:name/invocations')
@@ -246,8 +222,6 @@ def test_can_build_resource_routes_for_single_view(stubbed_session):
         restApiId='rest-api-id',
         statusCode='200',
     ).returns({})
-    for error_cls in ALL_ERRORS:
-        add_expected_calls_to_map_error(error_cls, gateway_stub)
     lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
     lambda_stub.add_permission(
         Action='lambda:InvokeFunction',
@@ -291,13 +265,11 @@ def test_cors_adds_required_headers(stubbed_session):
     gateway_stub.put_integration(
         httpMethod='PUT',
         integrationHttpMethod='POST',
-        passthroughBehavior='NEVER',
-        requestTemplates={
-            'application/json': FULL_PASSTHROUGH,
-        },
+        passthroughBehavior='WHEN_NO_MATCH',
         resourceId='parent-id',
         restApiId='rest-api-id',
-        type='AWS',
+        contentHandling='CONVERT_TO_TEXT',
+        type='AWS_PROXY',
         uri=('arn:aws:apigateway:us-west-2:lambda:path'
              '/2015-03-31/functions/arn:aws:lambda:us-west'
              '-2:123:function:name/invocations')
@@ -310,8 +282,6 @@ def test_cors_adds_required_headers(stubbed_session):
         },
         restApiId='rest-api-id',
         statusCode='200',
-        responseParameters={
-            'method.response.header.Access-Control-Allow-Origin': False},
     ).returns({})
     gateway_stub.put_integration_response(
         httpMethod='PUT',
@@ -321,32 +291,7 @@ def test_cors_adds_required_headers(stubbed_session):
         },
         restApiId='rest-api-id',
         statusCode='200',
-        responseParameters={
-            'method.response.header.Access-Control-Allow-Origin': "'*'"},
     ).returns({})
-    for error_cls in ALL_ERRORS:
-        gateway_stub.put_method_response(
-            httpMethod='PUT',
-            resourceId='parent-id',
-            responseModels={
-                'application/json': 'Empty',
-            },
-            restApiId='rest-api-id',
-            responseParameters={
-                'method.response.header.Access-Control-Allow-Origin': False},
-            statusCode=str(error_cls.STATUS_CODE),
-        ).returns({})
-        gateway_stub.put_integration_response(
-            httpMethod='PUT',
-            resourceId='parent-id',
-            responseTemplates={'application/json': ERROR_MAPPING},
-            restApiId='rest-api-id',
-            selectionPattern='%s.*' % error_cls.__name__,
-            responseParameters={
-                'method.response.header.Access-Control-Allow-Origin': "'*'"},
-            statusCode=str(error_cls.STATUS_CODE),
-        ).returns({})
-
     gateway_stub.put_method(
         restApiId=ANY,
         resourceId=ANY,
@@ -417,8 +362,10 @@ def test_can_deploy_apig_and_lambda(sample_app):
 
 
 def test_noprompt_always_returns_default():
-    assert not NoPrompt().confirm("You sure you want to do this?", default=False)
-    assert NoPrompt().confirm("You sure you want to do this?", default=True)
+    assert not NoPrompt().confirm("You sure you want to do this?",
+                                  default=False)
+    assert NoPrompt().confirm("You sure you want to do this?",
+                              default=True)
     assert NoPrompt().confirm("You sure?", default='yes') == 'yes'
 
 
@@ -441,7 +388,8 @@ def test_lambda_deployer_repeated_deploy(app_policy):
     d.deploy(cfg)
 
     # Should result in injecting the latest app code.
-    packager.inject_latest_app.assert_called_with('packages.zip', './myproject')
+    packager.inject_latest_app.assert_called_with('packages.zip',
+                                                  './myproject')
 
     # And should result in the lambda function being updated with the API.
     aws_client.update_function_code.assert_called_with(
@@ -516,6 +464,6 @@ def test_load_policy_from_disk_when_file_exists(app_policy,
 
 def test_can_record_policy_to_disk(app_policy):
     cfg = Config.create(project_dir='.')
-    latest_policy ={"Statement": ["policy"]}
+    latest_policy = {"Statement": ["policy"]}
     app_policy.record_policy(cfg, latest_policy)
     assert app_policy.load_last_policy(cfg) == latest_policy

@@ -37,6 +37,19 @@ class Request:
     def to_dict(self) -> Dict[Any, Any]: ...
 
 
+class Response:
+    headers = ... # type: Dict[str, str]
+    body = ...  # type: Any
+    status_code = ... # type: int
+
+    def __init__(self,
+                 body: Any,
+                 headers: Dict[str, str],
+                 status_code: int) -> None: ...
+
+    def to_dict(self) -> Dict[str, Any]: ...
+
+
 class RouteEntry(object):
     # TODO: How so I specify *args, where args is a tuple of strings.
     view_function = ... # type: Callable[..., Any]
@@ -73,3 +86,6 @@ class Chalice(object):
     def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
     def _add_route(self, path: str, view_func: Callable[..., Any], **kwargs: Any) -> None: ...
     def __call__(self, event: Any, context: Any) -> Any: ...
+    def _get_view_function_response(self,
+                                    view_function: Callable[..., Any],
+                                    function_args: List[Any]) -> Response: ...

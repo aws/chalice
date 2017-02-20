@@ -9,42 +9,44 @@ from chalice import NotFoundError
 
 
 def create_request_with_content_type(content_type):
-    body = {'json': 'body'}
+    body = '{"json": "body"}'
     return app.Request(
         {}, {'Content-Type': content_type}, {}, 'GET',
-        body, '', {}, {}, {}
+        body, {}, {}
     )
 
 
 def create_event(uri, method, path, content_type='application/json'):
     return {
-        'context': {
-            'http-method': method,
-            'resource-path': uri,
+        'requestContext': {
+            'httpMethod': method,
+            'resourcePath': uri,
         },
-        'claims': {},
-        'params': {
-            'header': {
-                'Content-Type': content_type,
-            },
-            'path': path,
-            'querystring': {},
+        'headers': {
+            'Content-Type': content_type,
         },
-        'body-json': {},
-        'base64-body': "",
-        'stage-variables': {},
+        'pathParameters': path,
+        'queryStringParameters': {},
+        'body': "",
+        'stageVariables': {},
     }
 
 
 def create_event_with_body(body, uri='/', method='POST',
                            content_type='application/json'):
     event = create_event(uri, method, {}, content_type)
-    event['body-json'] = body
     if content_type == 'application/json':
-        event['base64-body'] = base64.b64encode(json.dumps(body))
-    else:
-        event['base64-body'] = base64.b64encode(body)
+        body = json.dumps(body)
+    event['body'] = body
     return event
+
+
+def assert_response_body_is(response, body):
+    assert json.loads(response['body']) == body
+
+
+def json_response_body(response):
+    return json.loads(response['body'])
 
 
 @fixture
@@ -100,14 +102,15 @@ def test_can_handle_multiple_routes():
 
 def test_error_on_unknown_event(sample_app):
     bad_event = {'random': 'event'}
-    with pytest.raises(app.ChaliceError):
-        sample_app(bad_event, context=None)
+    raw_response = sample_app(bad_event, context=None)
+    assert raw_response['statusCode'] == 500
+    assert json_response_body(raw_response)['Code'] == 'InternalServerError'
 
 
 def test_can_route_api_call_to_view_function(sample_app):
     event = create_event('/index', 'GET', {})
     response = sample_app(event, context=None)
-    assert response == {'hello': 'world'}
+    assert_response_body_is(response, {'hello': 'world'})
 
 
 def test_can_call_to_dict_on_current_request(sample_app):
@@ -115,12 +118,11 @@ def test_can_call_to_dict_on_current_request(sample_app):
     def todict():
         return sample_app.current_request.to_dict()
     event = create_event('/todict', 'GET', {})
-    response = sample_app(event, context=None)
+    response = json_response_body(sample_app(event, context=None))
     assert isinstance(response, dict)
     # The dict can change over time so we'll just pick
     # out a few keys as a basic sanity test.
     assert response['method'] == 'GET'
-    assert response['json_body'] == {}
     # We also want to verify that to_dict() is always
     # JSON serializable so we check we can roundtrip
     # the data to/from JSON.
@@ -130,28 +132,22 @@ def test_can_call_to_dict_on_current_request(sample_app):
 def test_will_pass_captured_params_to_view(sample_app):
     event = create_event('/name/{name}', 'GET', {'name': 'james'})
     response = sample_app(event, context=None)
+    response = json_response_body(response)
     assert response == {'provided-name': 'james'}
 
 
 def test_error_on_unsupported_method(sample_app):
     event = create_event('/name/{name}', 'POST', {'name': 'james'})
-    with pytest.raises(app.MethodNotAllowedError):
-        sample_app(event, context=None)
-
-
-def test_error_on_unsupported_method_has_correct_status_code(sample_app):
-    event = create_event('/name/{name}', 'POST', {'name': 'james'})
-    with pytest.raises(app.MethodNotAllowedError) as execinfo:
-        sample_app(event, context=None)
-    assert execinfo.value.STATUS_CODE == 405
+    raw_response = sample_app(event, context=None)
+    assert raw_response['statusCode'] == 405
+    assert json_response_body(raw_response)['Code'] == 'MethodNotAllowedError'
 
 
 def test_error_on_unsupported_method_gives_feedback_on_method(sample_app):
     method = 'POST'
     event = create_event('/name/{name}', method, {'name': 'james'})
-    with pytest.raises(app.MethodNotAllowedError) as execinfo:
-        sample_app(event, context=None)
-    assert method in str(execinfo.value)
+    raw_response = sample_app(event, context=None)
+    assert 'POST' in json_response_body(raw_response)['Message']
 
 
 def test_no_view_function_found(sample_app):
@@ -169,9 +165,10 @@ def test_can_access_raw_body():
 
 
     event = create_event('/index', 'GET', {})
-    event['base64-body'] = base64.b64encode('{"hello": "world"}')
+    event['body'] = '{"hello": "world"}'
 
     result = demo(event, context=None)
+    result = json_response_body(result)
     assert result == {'rawbody': '{"hello": "world"}'}
 
 
@@ -191,6 +188,7 @@ def test_raw_body_cache_returns_same_result():
     event['base64-body'] = base64.b64encode('{"hello": "world"}')
 
     result = demo(event, context=None)
+    result = json_response_body(result)
     assert result['rawbody'] == result['rawbody2']
 
 
@@ -216,10 +214,11 @@ def test_json_body_available_with_right_content_type():
 
 
     event = create_event('/', 'POST', {})
-    event['body-json'] = {'foo': 'bar'}
+    event['body'] = json.dumps({'foo': 'bar'})
 
     result = demo(event, context=None)
-    assert result == event['body-json']
+    result = json_response_body(result)
+    assert result == {'foo': 'bar'}
 
 
 def test_cant_access_json_body_with_wrong_content_type():
@@ -230,10 +229,10 @@ def test_cant_access_json_body_with_wrong_content_type():
         return (demo.current_request.json_body, demo.current_request.raw_body)
 
     event = create_event('/', 'POST', {}, content_type='application/xml')
-    event['body-json'] = '<Message>hello</Message>'
-    event['base64-body'] = base64.b64encode('<Message>hello</Message>')
+    event['body'] = '<Message>hello</Message>'
 
-    json_body, raw_body = demo(event, context=None)
+    response = json_response_body(demo(event, context=None))
+    json_body, raw_body = response
     assert json_body is None
     assert raw_body == '<Message>hello</Message>'
 
@@ -249,7 +248,8 @@ def test_json_body_available_on_multiple_content_types():
     event = create_event_with_body('<Message>hello</Message>',
                                    content_type='application/xml')
 
-    json_body, raw_body = demo(event, context=None)
+    response = json_response_body(demo(event, context=None))
+    json_body, raw_body = response
     assert json_body is None
     assert raw_body == '<Message>hello</Message>'
 
@@ -257,7 +257,8 @@ def test_json_body_available_on_multiple_content_types():
     # to access .json_body as well.
     event = create_event_with_body({'foo': 'bar'},
                                    content_type='application/json')
-    json_body, raw_body = demo(event, context=None)
+    response = json_response_body(demo(event, context=None))
+    json_body, raw_body = response
     assert json_body == {'foo': 'bar'}
     assert raw_body == '{"foo": "bar"}'
 
@@ -270,10 +271,10 @@ def test_json_body_available_with_lowercase_content_type_key():
         return (demo.current_request.json_body, demo.current_request.raw_body)
 
     event = create_event_with_body({'foo': 'bar'})
-    del event['params']['header']['Content-Type']
-    event['params']['header']['content-type'] = 'application/json'
+    del event['headers']['Content-Type']
+    event['headers']['content-type'] = 'application/json'
 
-    json_body, raw_body = demo(event, context=None)
+    json_body, raw_body = json_response_body(demo(event, context=None))
     assert json_body == {'foo': 'bar'}
     assert raw_body == '{"foo": "bar"}'
 
@@ -285,6 +286,40 @@ def test_content_types_must_be_lists():
         @demo.route('/index', content_types='application/not-a-list')
         def index_post():
             return {'foo': 'bar'}
+
+
+def test_content_type_validation_raises_error_on_unknown_types():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'], content_types=['application/xml'])
+    def index():
+        return "success"
+
+    bad_content_type = 'application/bad-xml'
+    event = create_event('/', 'POST', {}, content_type=bad_content_type)
+    event['body'] = 'Request body'
+
+    json_response = json_response_body(demo(event, context=None))
+    assert json_response['Code'] == 'UnsupportedMediaType'
+    assert 'application/bad-xml' in json_response['Message']
+
+
+def test_no_content_type_is_still_allowed():
+    # When the content type validation happens in API gateway, it appears
+    # to assume a default of application/json, so the chalice handler needs
+    # to emulate that behavior.
+
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'], content_types=['application/json'])
+    def index():
+        return {'success': True}
+
+    event = create_event('/', 'POST', {})
+    del event['headers']['Content-Type']
+
+    json_response = json_response_body(demo(event, context=None))
+    assert json_response == {'success': True}
 
 
 def test_route_equality():
@@ -340,8 +375,10 @@ def test_exceptions_raised_as_chalice_errors(sample_app):
     # This is intentional behavior.  If we're not in debug mode
     # we don't want to surface internal errors that get raised.
     # We should reply with a general internal server error.
-    with pytest.raises(app.ChaliceViewError):
-        sample_app(event, context=None)
+    raw_response = sample_app(event, context=None)
+    response = json_response_body(raw_response)
+    assert response['Code'] == 'InternalServerError'
+    assert raw_response['statusCode'] == 500
 
 
 def test_original_exception_raised_in_debug_mode(sample_app):
@@ -352,11 +389,12 @@ def test_original_exception_raised_in_debug_mode(sample_app):
         raise ValueError("You will see this error")
 
     event = create_event('/error', 'GET', {})
-    with pytest.raises(ValueError) as e:
-        sample_app(event, context=None)
+    response = sample_app(event, context=None)
     # In debug mode, we let the original exception propagate.
     # This includes the original type as well as the message.
-    assert str(e.value) == 'You will see this error'
+    assert response['statusCode'] == 500
+    assert 'ValueError' in response['body']
+    assert 'You will see this error' in response['body']
 
 
 def test_chalice_view_errors_propagate_in_non_debug_mode(sample_app):
@@ -365,19 +403,21 @@ def test_chalice_view_errors_propagate_in_non_debug_mode(sample_app):
         raise NotFoundError("resource not found")
 
     event = create_event('/notfound', 'GET', {})
-    with pytest.raises(NotFoundError):
-        sample_app(event, context=None)
+    raw_response = sample_app(event, context=None)
+    assert raw_response['statusCode'] == 404
+    assert json_response_body(raw_response)['Code'] == 'NotFoundError'
 
 
 def test_chalice_view_errors_propagate_in_debug_mode(sample_app):
     @sample_app.route('/notfound')
     def notfound():
         raise NotFoundError("resource not found")
-
     sample_app.debug = True
+
     event = create_event('/notfound', 'GET', {})
-    with pytest.raises(NotFoundError):
-        sample_app(event, context=None)
+    raw_response = sample_app(event, context=None)
+    assert raw_response['statusCode'] == 404
+    assert json_response_body(raw_response)['Code'] == 'NotFoundError'
 
 
 def test_case_insensitive_mapping():
