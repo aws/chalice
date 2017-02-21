@@ -52,7 +52,7 @@ NULLARY = Callable[[], str]
 
 
 def create_default_deployer(session, prompter=None):
-    # type: (botocore.session.Session, NoPrompt) -> Deployer
+    # type: (botocore.session.Session, click) -> Deployer
     if prompter is None:
         prompter = NoPrompt()
     aws_client = TypedAWSClient(session)
@@ -119,6 +119,7 @@ def validate_configuration(config):
     routes = config.chalice_app.routes
     validate_routes(routes)
     _validate_manage_iam_role(config)
+    # TODO: Add environment variable validation
 
 
 def validate_routes(routes):
@@ -594,7 +595,6 @@ class LambdaDeployer(object):
         # type: (Config) -> None
         app_name = config.app_name
         if self._aws_client.lambda_function_exists(app_name):
-            self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
         else:
             function_arn = self._first_time_lambda_create(config)
@@ -652,33 +652,45 @@ class LambdaDeployer(object):
         # function arn.
         # First we need to create a deployment package.
         print "Initial creation of lambda function."
-        app_name = config.app_name
         role_arn = self._get_or_create_lambda_role_arn(config)
-        zip_filename = self._packager.create_deployment_package(
-            config.project_dir)
-        with open(zip_filename, 'rb') as f:
-            zip_contents = f.read()
+        packager = self._packager
+        deployment_package_filename = packager.create_deployment_package(
+            config.project_dir
+        )
+        zip_contents = self._osutils.get_file_contents(
+            deployment_package_filename, binary=True
+        )
         return self._aws_client.create_function(
-            app_name, role_arn, zip_contents)
+            config.app_name, role_arn, zip_contents,
+            config.environment_variables
+        )
 
     def _update_lambda_function(self, config):
-        # type: (Config) -> None
+        # type: (Config, str) -> None
         print "Updating lambda function..."
-        project_dir = config.project_dir
+        role_arn = self._get_or_create_lambda_role_arn(config)
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
-            project_dir)
+            config.project_dir
+        )
         if self._osutils.file_exists(deployment_package_filename):
-            packager.inject_latest_app(deployment_package_filename,
-                                       project_dir)
+            packager.inject_latest_app(
+                deployment_package_filename, config.project_dir
+            )
         else:
             deployment_package_filename = packager.create_deployment_package(
-                project_dir)
+                config.project_dir
+            )
         zip_contents = self._osutils.get_file_contents(
-            deployment_package_filename, binary=True)
+            deployment_package_filename, binary=True
+        )
         print "Sending changes to lambda."
-        self._aws_client.update_function_code(config.app_name,
-                                              zip_contents)
+        self._aws_client.update_function_code(
+            config.app_name, zip_contents
+        )
+        self._aws_client.update_function_configuration(
+            config.app_name, role_arn, config.environment_variables
+        )
 
     def _write_config_to_disk(self, config):
         # type: (Config) -> None

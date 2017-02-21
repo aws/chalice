@@ -50,8 +50,10 @@ class TypedAWSClient(object):
             raise
         return True
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(
+            self, function_name, role_arn, zip_contents,
+            environment_variables):
+        # type: (str, str, str, dict) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -60,6 +62,8 @@ class TypedAWSClient(object):
             'Role': role_arn,
             'Timeout': 60,
         }
+        if environment_variables:
+            kwargs['Environment'] = {'Variables': environment_variables}
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -84,6 +88,17 @@ class TypedAWSClient(object):
         # type: (str, str) -> None
         self._client('lambda').update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
+
+    def update_function_configuration(
+            self, function_name, role_arn, environment_variables):
+        # type: (str, str, dict) -> None
+        kwargs = {
+            'FunctionName': function_name,
+            'Role': role_arn
+        }
+        if environment_variables:
+            kwargs['Environment'] = {'Variables': environment_variables}
+        self._client('lambda').update_function_configuration(**kwargs)
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str

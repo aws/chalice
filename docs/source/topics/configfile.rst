@@ -35,3 +35,8 @@ Below are the values you can specify in this file:
   must specify this value that indicates which IAM role arn to
   use when configuration your application.  This value is only
   used if ``manage_iam_role`` is ``false``.
+
+* ``environment_variables`` - ``{'KEY': 'value'}``.
+  You can add any key value pairs to this dictionary that you
+  would like. All key value pairs will be set directly as
+  environment variables on your lambda function.

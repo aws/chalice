@@ -87,6 +87,11 @@ class Config(object):
         # type: () -> StrMap
         return self._config_from_disk
 
+    @property
+    def environment_variables(self):
+        # type: () -> dict
+        return self._chain_lookup('environment_variables')
+
     def _chain_lookup(self, name):
         # type: (str) -> Any
         all_dicts = [

@@ -1,4 +1,4 @@
-from chalice import local, BadRequestError
+from chalice import local, BadRequestError, config
 import json
 import decimal
 import pytest
@@ -278,5 +278,13 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
 
 
 def test_can_provide_port_to_local_server(sample_app):
-    dev_server = local.create_local_server(sample_app, port=23456)
+    local_config = config.Config(
+        user_provided_params={
+            'environment_variables': {
+                'TESTVAR': 'testvar'
+            }
+        }
+    )
+    dev_server = local.create_local_server(sample_app, port=23456,
+                                           config=local_config)
     assert dev_server.server.server_port == 23456

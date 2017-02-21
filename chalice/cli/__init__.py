@@ -155,7 +155,9 @@ def local(ctx, port=8000):
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(stream=sys.stdout)
-    run_local_server(app_obj, port)
+    # We need to load the config to set any environment variables
+    config = create_config_obj(ctx)
+    run_local_server(app_obj, port, config)
 
 
 @cli.command()
@@ -282,10 +284,10 @@ def generate_sdk(ctx, sdk_type, outdir):
                         sdk_type=sdk_type)
 
 
-def run_local_server(app_obj, port):
-    # type: (Chalice, int) -> None
+def run_local_server(app_obj, port, config):
+    # type: (Chalice, int, Config) -> None
     from chalice.local import create_local_server
-    server = create_local_server(app_obj, port)
+    server = create_local_server(app_obj, port, config)
     server.serve_forever()
 
 

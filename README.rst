@@ -925,6 +925,34 @@ http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorize
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
+Tutorial: Environment Variables
+===============================
+
+By default, chalice will not set any environment variables on your
+lambda function. However, you can add your own by adding the
+following key to your chalice configuration. This key can contain
+any key, value pairs that you would like to be set in your lambda
+function as environment variables. Both the key and the value must
+be a string.
+
+::
+
+   "environment_variables": {"KEY": "value"}
+
+A good use of environment variables may be setting log levels in
+your application. For example, setting ``environment_variables``
+in your chalice config to ``{"LOG_LEVEL": "debug"}``:
+
+.. code-block:: python
+
+   from os import environ
+
+   @app.route('/')
+   def index():
+      if environ.get('LOG_LEVEL', 'info') == 'debug':
+         print 'debug message'
+      return {'hello': 'world'}
+
 Tutorial: Local Mode
 ====================
 
