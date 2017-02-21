@@ -952,6 +952,9 @@ in your chalice config to ``{"LOG_LEVEL": "debug"}``:
          print 'debug message'
       return {'hello': 'world'}
 
+Your app will only print `debug message` if your `LOG_LEVEL` environment
+variable is set to `debug`.
+
 Tutorial: Local Mode
 ====================
 
