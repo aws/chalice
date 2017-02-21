@@ -185,7 +185,9 @@ def _validate_environment_variables(environment_variables):
             error_message = "All environment variable values must be a " \
                             "string. However"
             for key, value in invalid_value_types.iteritems():
-                error_message += ", value for {} was type {}".format(key, value)
+                error_message += ", value for {} was type {}".format(
+                    key, value
+                )
             raise TypeError(error_message)
 
 
