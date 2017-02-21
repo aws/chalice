@@ -119,7 +119,7 @@ def validate_configuration(config):
     routes = config.chalice_app.routes
     validate_routes(routes)
     _validate_manage_iam_role(config)
-    # TODO: Add environment variable validation
+    _validate_environment_variables(config.environment_variables)
 
 
 def validate_routes(routes):
@@ -170,6 +170,23 @@ def _validate_manage_iam_role(config):
                 "When 'manage_iam_role' is set to false, you "
                 "must provide an 'iam_role_arn' in config.json."
             )
+
+
+def _validate_environment_variables(environment_variables):
+    # type: (dict) -> None
+    if environment_variables:
+        # We need to verify that all environment variable values are strings
+        # Since keys must be strings in JSON we don't need to verify those
+        invalid_value_types = {}
+        for key, value in environment_variables.iteritems():
+            if not isinstance(value, basestring):
+                invalid_value_types[key] = type(value)
+        if invalid_value_types:
+            error_message = "All environment variable values must be a " \
+                            "string. However"
+            for key, value in invalid_value_types.iteritems():
+                error_message += ", value for {} was type {}".format(key, value)
+            raise TypeError(error_message)
 
 
 def node(name, uri_path, is_route=False):

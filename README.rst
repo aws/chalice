@@ -931,9 +931,8 @@ Tutorial: Environment Variables
 By default, chalice will not set any environment variables on your
 lambda function. However, you can add your own by adding the
 following key to your chalice configuration. This key can contain
-any key, value pairs that you would like to be set in your lambda
-function as environment variables. Both the key and the value must
-be a string.
+any key-value pairs that you would like to be set in your lambda
+function as environment variables. Variable values must be strings.
 
 ::
 
@@ -958,7 +957,8 @@ Tutorial: Local Mode
 
 As you develop your application, you may want to experiment locally  before
 deploying your changes.  You can use ``chalice local`` to spin up a local
-HTTP server you can use for testing.
+HTTP server you can use for testing. Any ``environment_variables`` that you
+set in your chalice config will be automatically set up for your app to access.
 
 For example, if we have the following ``app.py`` file:
 

@@ -37,6 +37,7 @@ Below are the values you can specify in this file:
   used if ``manage_iam_role`` is ``false``.
 
 * ``environment_variables`` - ``{'KEY': 'value'}``.
-  You can add any key value pairs to this dictionary that you
-  would like. All key value pairs will be set directly as
-  environment variables on your lambda function.
+  You can add any key-value pairs to this dictionary that you
+  would like. All key-value pairs will be set directly as
+  environment variables on your lambda function. Note that
+  all environment variable values must be strings.
