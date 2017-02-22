@@ -52,7 +52,7 @@ NULLARY = Callable[[], str]
 
 
 def create_default_deployer(session, prompter=None):
-    # type: (botocore.session.Session, click) -> Deployer
+    # type: (botocore.session.Session, NoPrompt) -> Deployer
     if prompter is None:
         prompter = NoPrompt()
     aws_client = TypedAWSClient(session)
@@ -173,11 +173,12 @@ def _validate_manage_iam_role(config):
 
 
 def _validate_environment_variables(environment_variables):
-    # type: (dict) -> None
+    # type: (Dict[str, str]) -> None
     if environment_variables:
         # We need to verify that all environment variable values are strings
         # Since keys must be strings in JSON we don't need to verify those
         invalid_value_types = {}
+        # type: Dict[str, Any]
         for key, value in environment_variables.iteritems():
             if not isinstance(value, basestring):
                 invalid_value_types[key] = type(value)
@@ -685,7 +686,7 @@ class LambdaDeployer(object):
         )
 
     def _update_lambda_function(self, config):
-        # type: (Config, str) -> None
+        # type: (Config) -> None
         print "Updating lambda function..."
         role_arn = self._get_or_create_lambda_role_arn(config)
         packager = self._packager

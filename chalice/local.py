@@ -11,6 +11,7 @@ from os import environ
 
 
 from chalice.app import Chalice  # noqa
+from chalice.config import Config  # noqa
 from typing import List, Any, Dict, Tuple, Callable  # noqa
 
 try:

@@ -62,6 +62,7 @@ class TypedAWSClient(object):
             'Role': role_arn,
             'Timeout': 60,
         }
+        # type: Dict[str, Any]
         if environment_variables:
             kwargs['Environment'] = {'Variables': environment_variables}
         client = self._client('lambda')
@@ -91,11 +92,12 @@ class TypedAWSClient(object):
 
     def update_function_configuration(
             self, function_name, role_arn, environment_variables):
-        # type: (str, str, dict) -> None
+        # type: (str, str, Dict[str, str]) -> None
         kwargs = {
             'FunctionName': function_name,
             'Role': role_arn
         }
+        # type: Dict[str, Any]
         if environment_variables:
             kwargs['Environment'] = {'Variables': environment_variables}
         self._client('lambda').update_function_configuration(**kwargs)
