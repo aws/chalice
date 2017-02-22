@@ -60,8 +60,8 @@ def test_app_injection_still_compresses_file(tmpdir, chalice_deployer):
     new_size = os.path.getsize(name)
     # The new_size won't be exactly the same as the original,
     # we just want to make sure it wasn't converted to
-    # ZIP_STORED.
-    assert abs(original_size - new_size) < 10
+    # ZIP_STORED, so there's a 5% tolerance.
+    assert new_size < (original_size * 1.05)
 
 
 def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
@@ -176,3 +176,34 @@ def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
     extra_package.join('__init__.py').write('# v2')
     second = chalice_deployer.deployment_package_filename(str(appdir))
     assert first != second
+
+
+def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    name = chalice_deployer.create_deployment_package(str(appdir))
+    # We're verifying that we always inject the chalice runtime
+    # but we can't actually modify the runtime in this repo, so
+    # instead we'll modify the deployment package and change the
+    # runtime.
+    # We'll then verify when we inject the latest app the runtime
+    # has been re-added.  This should give us enough confidence
+    # that the runtime is always being inserted.
+    _remove_runtime_from_deployment_package(name)
+    with zipfile.ZipFile(name) as z:
+        assert 'chalice/app.py' not in z.namelist()
+    chalice_deployer.inject_latest_app(name, str(appdir))
+    with zipfile.ZipFile(name) as z:
+        assert 'chalice/app.py' in z.namelist()
+
+
+def _remove_runtime_from_deployment_package(filename):
+    new_filename = os.path.join(os.path.dirname(filename), 'new.zip')
+    with zipfile.ZipFile(filename, 'r') as original:
+        with zipfile.ZipFile (new_filename, 'w',
+                              compression=zipfile.ZIP_DEFLATED) as z:
+            for item in original.infolist():
+                if item.filename.startswith('chalice/'):
+                    continue
+                contents = original.read(item.filename)
+                z.writestr(item, contents)
+    os.rename(new_filename, filename)
