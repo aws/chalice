@@ -6,6 +6,7 @@ Handles Lambda and API Gateway deployments.
 import os
 import sys
 import uuid
+import copy
 import shutil
 import json
 import subprocess
@@ -23,6 +24,7 @@ from chalice import policy
 from chalice.config import Config  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice import compat
+
 
 LAMBDA_TRUST_POLICY = {
     "Version": "2012-10-17",
@@ -725,69 +727,98 @@ class APIGatewayDeployer(object):
             return self._first_time_deploy(config)
         else:
             print "API Gateway rest API already found."
-            self._remove_all_resources(rest_api_id)
             return self._create_resources_for_api(config, rest_api_id)
 
-    def _remove_all_resources(self, rest_api_id):
-        # type: (str) -> None
-        all_resources = self._aws_client.get_resources_for_api(rest_api_id)
-        first_tier_ids = [r['id'] for r in all_resources
-                          if r['path'].count('/') == 1 and r['path'] != '/']
-        print "Deleting root resource id"
-        for resource_id in first_tier_ids:
-            self._aws_client.delete_resource_for_api(rest_api_id, resource_id)
-        root_resource = [r for r in all_resources if r['path'] == '/'][0]
-        # We can't delete the root resource, but we need to remove all the
-        # existing methods otherwise we'll get 4xx from API gateway when we
-        # try to add methods to the root resource on a redeploy.
-        self._aws_client.delete_methods_from_root_resource(
-            rest_api_id, root_resource)
-        print "Done deleting existing resources."
-
-    def _lambda_uri(self, lambda_function_arn):
-        # type: (str) -> str
-        region_name = self._aws_client.region_name
-        api_version = '2015-03-31'
-        return (
-            "arn:aws:apigateway:{region_name}:lambda:path/{api_version}"
-            "/functions/{lambda_arn}/invocations".format(
-                region_name=region_name,
-                api_version=api_version,
-                lambda_arn=lambda_function_arn)
+    def _first_time_deploy(self, config):
+        # type: (Config) -> Tuple[str, str, str]
+        generator = SwaggerGenerator(self._aws_client.region_name,
+                                     config.lambda_arn)
+        swagger_doc = generator.generate_swagger(config.chalice_app)
+        response = self._api_gateway_client.import_rest_api(
+            body=json.dumps(swagger_doc, indent=2))
+        rest_api_id = response['id']
+        stage = config.stage or 'dev'
+        print "Deploying to:", stage
+        self._aws_client.deploy_rest_api(rest_api_id, stage)
+        self._aws_client.add_permission_for_apigateway_if_needed(
+            config.lambda_arn.split(':')[-1],
+            self._aws_client.region_name,
+            config.lambda_arn.split(':')[4],
+            rest_api_id,
+            str(uuid.uuid4()),
         )
+        return rest_api_id, self._aws_client.region_name, stage
+
+    def _create_resources_for_api(self, config, rest_api_id):
+        generator = SwaggerGenerator(self._aws_client.region_name,
+                                     config.lambda_arn)
+        swagger_doc = generator.generate_swagger(config.chalice_app)
+        response = self._api_gateway_client.put_rest_api(
+            restApiId=rest_api_id,
+            body=json.dumps(swagger_doc, indent=2))
+        stage = config.stage or 'dev'
+        print "Deploying to:", stage
+        self._aws_client.deploy_rest_api(rest_api_id, stage)
+        self._aws_client.add_permission_for_apigateway_if_needed(
+            config.lambda_arn.split(':')[-1],
+            self._aws_client.region_name,
+            config.lambda_arn.split(':')[4],
+            rest_api_id,
+            str(uuid.uuid4()),
+        )
+        return rest_api_id, self._aws_client.region_name, stage
+
+
+class SwaggerAPIDeployer(APIGatewayDeployer):
+    def __init__(self,
+                 aws_client,          # type: TypedAWSClient
+                 api_gateway_client,  # type: Any
+                 lambda_client        # type: Any
+                 ):
+        # type: (...) -> None
+        self._aws_client = aws_client
+        self._api_gateway_client = api_gateway_client
+        self._lambda_client = lambda_client
 
     def _first_time_deploy(self, config):
         # type: (Config) -> Tuple[str, str, str]
         app_name = config.app_name
-        rest_api_id = self._aws_client.create_rest_api(name=app_name)
-        return self._create_resources_for_api(config, rest_api_id)
-
-    def _create_resources_for_api(self, config, rest_api_id):
-        # type: (Config, str) -> Tuple[str, str, str]
-        url_trie = build_url_trie(config.chalice_app.routes)
-        root_resource = self._aws_client.get_root_resource_for_api(rest_api_id)
-        assert root_resource['path'] == u'/'
-        resource_id = root_resource['id']
-        route_builder = APIGatewayResourceCreator(
-            self._aws_client,
-            APIGatewayMethods(self._api_gateway_client, rest_api_id),
-            config.lambda_arn)
-        # This is a little confusing.  You need to specify the parent
-        # resource to create a subresource, but you can't create the root
-        # resource because you have to specify a parent id.  So API Gateway
-        # automatically creates the root "/" resource for you. So we have
-        # to query that via get_resources() and inject that into the
-        # url_trie to indicate the builder shouldn't try to create the
-        # resource.
-        url_trie['resource_id'] = resource_id
-        for child in url_trie['children']:
-            url_trie['children'][child]['parent_resource_id'] = resource_id
-        route_builder.build_resources(url_trie)
-        # And finally, you need an actual deployment to deploy the changes to
-        # API gateway.
+        generator = SwaggerGenerator(self._aws_client.region_name,
+                                     config.lambda_arn)
+        swagger_doc = generator.generate_swagger(config.chalice_app)
+        response = self._api_gateway_client.import_rest_api(
+            body=json.dumps(swagger_doc, indent=2))
+        rest_api_id = response['id']
         stage = config.stage or 'dev'
         print "Deploying to:", stage
         self._aws_client.deploy_rest_api(rest_api_id, stage)
+        self._aws_client.add_permission_for_apigateway_if_needed(
+            config.lambda_arn.split(':')[-1],
+            self._aws_client.region_name,
+            config.lambda_arn.split(':')[4],
+            rest_api_id,
+            str(uuid.uuid4()),
+        )
+        return rest_api_id, self._aws_client.region_name, stage
+
+    def _create_resources_for_api(self, config, rest_api_id):
+        app_name = config.app_name
+        generator = SwaggerGenerator(self._aws_client.region_name,
+                                     config.lambda_arn)
+        swagger_doc = generator.generate_swagger(config.chalice_app)
+        response = self._api_gateway_client.put_rest_api(
+            restApiId=rest_api_id,
+            body=json.dumps(swagger_doc, indent=2))
+        stage = config.stage or 'dev'
+        print "Deploying to:", stage
+        self._aws_client.deploy_rest_api(rest_api_id, stage)
+        self._aws_client.add_permission_for_apigateway_if_needed(
+            config.lambda_arn.split(':')[-1],
+            self._aws_client.region_name,
+            config.lambda_arn.split(':')[4],
+            rest_api_id,
+            str(uuid.uuid4()),
+        )
         return rest_api_id, self._aws_client.region_name, stage
 
 
@@ -975,3 +1006,138 @@ class APIGatewayMethods(object):
                     ",X-Amz-Security-Token'")
             },
         )
+
+
+class SwaggerGenerator(object):
+
+    _BASE_TEMPLATE = {
+        'swagger': '2.0',
+        'info': {
+            'version': '1.0',
+            'title': ''
+        },
+        'schemes': ['https'],
+        'paths': {},
+        'definitions': {
+            'Empty': {
+                'type': 'object',
+                'title': 'Empty Schema',
+            }
+        }
+    }  # type: Dict[str, Any]
+
+    def __init__(self, region, lambda_arn):
+        self._region = region
+        self._lambda_arn = lambda_arn
+
+    def generate_swagger(self, app):
+        # type: (Chalice) -> Dict[str, Any]
+        api = copy.deepcopy(self._BASE_TEMPLATE)
+        api['info']['title'] = app.app_name
+        self._add_route_paths(api, app)
+        return api
+
+    def _add_route_paths(self, api, app):
+        # type: (Dict[str, Any], Chalice) -> None
+        for path, view in app.routes.items():
+            swagger_for_path = {}
+            api['paths'][path] = swagger_for_path
+            for http_method in view.methods:
+                current = self._generate_route_method(view)
+                swagger_for_path[http_method.lower()] = current
+            if view.cors:
+                self._add_preflight_request(view, swagger_for_path)
+
+    def _generate_route_method(self, view):
+        # type: (RouteEntry) -> Dict[str, Any]
+        current = {
+            'consumes': view.content_types,
+            'produces': ['application/json'],
+            'responses': self._generate_precanned_responses(),
+            'x-amazon-apigateway-integration': self._generate_apig_integ(
+                view),
+        }
+        return current
+
+    def _generate_precanned_responses(self):
+        # type: () -> Dict[str, Any]
+        responses = {
+            '200': {
+                'description': '200 response',
+                'schema': {
+                    '$ref': '#/definitions/Empty',
+                }
+            }
+        }
+        return responses
+
+    def _generate_apig_integ(self, view):
+        # type: (RouteEntry) -> Dict[str, Any]
+        apig_integ = {
+            'responses': {
+                'default': {
+                    'statusCode': "200",
+                }
+            },
+            'uri': (
+                'arn:aws:apigateway:{region}:lambda:path/2015-03-31'
+                '/functions/{lambda_arn}/invocations').format(
+                    region=self._region, lambda_arn=self._lambda_arn),
+            'passthroughBehavior': 'when_no_match',
+            'httpMethod': 'POST',
+            'contentHandling': 'CONVERT_TO_TEXT',
+            'type': 'aws_proxy',
+        }
+        if view.view_args:
+            self._add_view_args(apig_integ, view.view_args)
+        return apig_integ
+
+    def _add_view_args(self, apig_integ, view_args):
+        # type: (Dict[str, Any], List[st]) -> None
+        apig_integ['parameters'] = [
+            {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
+            for name in view_args
+        ]
+
+    def _add_preflight_request(self, view, swagger_for_path):
+        # type: (RouteEntry, Dict[str, Any]) -> None
+        methods = view.methods + ['OPTIONS']
+        allowed_methods = ','.join(methods)
+        response_params = {
+            "method.response.header.Access-Control-Allow-Methods": (
+                "'%s'" % allowed_methods),
+            "method.response.header.Access-Control-Allow-Headers": (
+                "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,"
+                "X-Amz-Security-Token'"),
+            "method.response.header.Access-Control-Allow-Origin": "'*'"
+        }
+
+        options_request = {
+            "consumes": ["application/json"],
+            "produces": ["application/json"],
+            "responses": {
+                "200": {
+                    "description": "200 response",
+                    "schema": {"$ref": "#/definitions/Empty"},
+                    "headers": {
+                        "Access-Control-Allow-Origin": {"type": "string"},
+                        "Access-Control-Allow-Methods": {"type": "string"},
+                        "Access-Control-Allow-Headers": {"type": "string"},
+                    }
+                }
+            },
+            "x-amazon-apigateway-integration": {
+                "responses": {
+                    "default": {
+                        "statusCode": "200",
+                        "responseParameters": response_params,
+                    }
+                },
+                "requestTemplates": {
+                    "application/json": "{\"statusCode\": 200}"
+                },
+                "passthroughBehavior": "when_no_match",
+                "type": "mock"
+            }
+        }
+        swagger_for_path['options'] = options_request
