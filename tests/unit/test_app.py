@@ -304,6 +304,36 @@ def test_content_type_validation_raises_error_on_unknown_types():
     assert 'application/bad-xml' in json_response['Message']
 
 
+def test_can_return_response_object():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(status_code=200, body={'foo': 'bar'},
+                            headers={'Content-Type': 'application/json'})
+
+    event = create_event('/index', 'GET', {})
+    response = demo(event, context=None)
+    assert response == {'statusCode': 200, 'body': '{"foo": "bar"}',
+                        'headers': {'Content-Type': 'application/json'}}
+
+
+def test_headers_have_basic_validation():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(
+            status_code=200, body='{}',
+            headers={'Invalid-Header': 'foo\nbar'})
+
+    event = create_event('/index', 'GET', {})
+    response = demo(event, context=None)
+    assert response['statusCode'] == 500
+    assert 'Invalid-Header' not in response['headers']
+    assert json.loads(response['body'])['Code'] == 'InternalServerError'
+
+
 def test_no_content_type_is_still_allowed():
     # When the content type validation happens in API gateway, it appears
     # to assume a default of application/json, so the chalice handler needs
