@@ -1,4 +1,4 @@
-from chalice import Chalice, BadRequestError, NotFoundError
+from chalice import Chalice, BadRequestError, NotFoundError, Response
 
 import  urlparse
 # This is a test app that is used by integration tests.
@@ -84,3 +84,9 @@ def todict():
 def multifile():
     from chalicelib import MESSAGE
     return {"message": MESSAGE}
+
+
+@app.route('/custom-response', methods=['GET'])
+def custom_response():
+    return Response(status_code=204, body='',
+                    headers={'Content-Type': 'text/plain'})

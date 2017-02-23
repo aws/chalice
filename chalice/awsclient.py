@@ -52,8 +52,8 @@ class TypedAWSClient(object):
 
     def create_function(
             self, function_name, role_arn, zip_contents,
-            environment_variables):
-        # type: (str, str, str, dict) -> str
+            environment_variables, vpc_config):
+        # type: (str, str, str, Dict[str, str], Dict[str, List[str]]) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -62,9 +62,13 @@ class TypedAWSClient(object):
             'Role': role_arn,
             'Timeout': 60,
         }
-        # type: Dict[str, Any]
         if environment_variables:
             kwargs['Environment'] = {'Variables': environment_variables}
+        if vpc_config:
+            kwargs['VpcConfig'] = {
+                'SubnetIds': vpc_config.get('subnet_ids', []),
+                'SecurityGroupIds': vpc_config.get('security_group_ids', [])
+            }
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -91,15 +95,21 @@ class TypedAWSClient(object):
             FunctionName=function_name, ZipFile=zip_contents)
 
     def update_function_configuration(
-            self, function_name, role_arn, environment_variables):
-        # type: (str, str, Dict[str, str]) -> None
+            self, function_name, role_arn, environment_variables, vpc_config):
+        # type: (str, str, Dict[str, str], Dict[str, List[str]]) -> None
+        if not environment_variables:
+            environment_variables = {}
+        if not vpc_config:
+            vpc_config = {}
         kwargs = {
             'FunctionName': function_name,
-            'Role': role_arn
+            'Role': role_arn,
+            'Environment': {'Variables': environment_variables},
+            'VpcConfig': {
+                'SubnetIds': vpc_config.get('subnet_ids', []),
+                'SecurityGroupIds': vpc_config.get('security_group_ids', [])
+            }
         }
-        # type: Dict[str, Any]
-        if environment_variables:
-            kwargs['Environment'] = {'Variables': environment_variables}
         self._client('lambda').update_function_configuration(**kwargs)
 
     def get_role_arn_for_name(self, name):
@@ -115,8 +125,15 @@ class TypedAWSClient(object):
 
     def delete_role_policy(self, role_name, policy_name):
         # type: (str, str) -> None
-        self._client('iam').delete_role_policy(RoleName=role_name,
-                                               PolicyName=policy_name)
+        try:
+            self._client('iam').delete_role_policy(
+                RoleName=role_name,
+                PolicyName=policy_name
+            )
+        except botocore.exceptions.ClientError as e:
+            error = e.response['Error']
+            if error['Code'] != 'NoSuchEntity':
+                raise
 
     def put_role_policy(self, role_name, policy_name, policy_document):
         # type: (str, str, Dict[str, Any]) -> None
@@ -207,6 +224,56 @@ class TypedAWSClient(object):
             pathPart=path_part,
         )
         return response
+
+    def get_vpc_id_for_subnet_id(self, subnet_id):
+        # type: (str) -> str
+        response = self._client('ec2').describe_subnets(
+            SubnetIds=[subnet_id]
+        )
+        subnets = response.get('Subnets', [])
+        if not subnets:
+            raise ValueError("No subnet found for ID %s" % subnet_id)
+        # Searching on ID we know we will only ever get a single subnet
+        # in the response
+        return subnets[0]['VpcId']
+
+    def get_security_group_id_for_name(self, name):
+        # type: (str) -> str
+        sgs = self._client('ec2').describe_security_groups(
+            Filters=[{'Name': 'group-name', 'Values': [name]}]
+        )
+        security_groups = sgs.get('SecurityGroups', [])
+        for security_group in security_groups:
+            if security_group['GroupName'] == name:
+                return security_group['GroupId']
+        return ''
+
+    def create_security_group(self, name, vpc_id):
+        # type: (str, str) -> str
+        sg = self._client('ec2').create_security_group(
+            GroupName=name,
+            Description="Default SG for %s" % name,
+            VpcId=vpc_id
+        )
+        sg_id = sg['GroupId']
+        self._client('ec2').authorize_security_group_ingress(
+            GroupId=sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 80,
+                    'ToPort': 80,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                },
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 443,
+                    'ToPort': 443,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }
+            ]
+        )
+        return sg_id
 
     def add_permission_for_apigateway_if_needed(self, function_name,
                                                 region_name, account_id,

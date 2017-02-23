@@ -51,20 +51,6 @@ def test_update_function_code(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_update_function_configuration(stubbed_session):
-    stubbed_session.stub('lambda').update_function_configuration(
-        FunctionName='name',
-        Role='myarn',
-        Environment={'Variables': {'KEY': 'value'}}
-    ).returns({})
-    stubbed_session.activate_stubs()
-    awsclient = TypedAWSClient(stubbed_session)
-    awsclient.update_function_configuration(
-        'name', 'myarn', {'KEY': 'value'}
-    )
-    stubbed_session.verify_stubs()
-
-
 def test_put_role_policy(stubbed_session):
     stubbed_session.stub('iam').put_role_policy(
         RoleName='role_name',
@@ -133,6 +119,45 @@ def test_delete_methods_from_root_resource(stubbed_session):
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.delete_methods_from_root_resource(
         'rest_api_id', {'resourceMethods': resource_methods, 'id': 'resource_id'})
+    stubbed_session.verify_stubs()
+
+
+def test_get_vpc_id_for_subnet_id(stubbed_session):
+    stubbed_session.stub('ec2').describe_subnets(
+        SubnetIds=['12345']
+    ).returns({'Subnets': [{'VpcId': '67890'}]})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.get_vpc_id_for_subnet_id('12345') == '67890'
+    stubbed_session.verify_stubs()
+
+
+def test_create_security_group(stubbed_session):
+    stubbed_session.stub('ec2').create_security_group(
+        GroupName='name',
+        Description='Default SG for name',
+        VpcId='67890'
+    ).returns({'GroupId': 'abc'})
+    stubbed_session.stub('ec2').authorize_security_group_ingress(
+        GroupId='abc',
+        IpPermissions=[
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 80,
+                'ToPort': 80,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            },
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 443,
+                'ToPort': 443,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            }
+        ]
+    ).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.create_security_group('name', '67890') == 'abc'
     stubbed_session.verify_stubs()
 
 
@@ -280,12 +305,15 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Timeout=60,
-            Environment={'Variables': {'KEY': 'value'}}
+            Environment={'Variables': {'KEY': 'value'}},
+            VpcConfig={'SubnetIds': ['12345'], 'SecurityGroupIds': ['67890']}
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', {'KEY': 'value'}) == 'arn:12345:name'
+            'name', 'myarn', b'foo', {'KEY': 'value'},
+            {'subnet_ids': ['12345'], 'security_group_ids': ['67890']}
+        ) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
@@ -296,7 +324,8 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
-            'Environment': {'Variables': {'KEY': 'value'}}
+            'Environment': {'Variables': {'KEY': 'value'}},
+            'VpcConfig': {'SubnetIds': ['12345'], 'SecurityGroupIds': ['67890']}
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -309,7 +338,9 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', {'KEY': 'value'}) == 'arn:12345:name'
+            'name', 'myarn', b'foo', {'KEY': 'value'},
+            {'subnet_ids': ['12345'], 'security_group_ids': ['67890']}
+        ) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -320,7 +351,8 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
-            'Environment': {'Variables': {'KEY': 'value'}}
+            'Environment': {'Variables': {'KEY': 'value'}},
+            'VpcConfig': {'SubnetIds': ['12345'], 'SecurityGroupIds': ['67890']}
         }
         for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
             stubbed_session.stub('lambda').create_function(
@@ -330,7 +362,10 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo', {'KEY': 'value'})
+            awsclient.create_function(
+                'name', 'myarn', b'foo', {'KEY': 'value'},
+                {'subnet_ids': ['12345'], 'security_group_ids': ['67890']}
+            )
         stubbed_session.verify_stubs()
 
     def test_create_function_propagates_unknown_error(self, stubbed_session):
@@ -341,7 +376,8 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
-            'Environment': {'Variables': {'KEY': 'value'}}
+            'Environment': {'Variables': {'KEY': 'value'}},
+            'VpcConfig': {'SubnetIds': ['12345'], 'SecurityGroupIds': ['67890']}
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -349,7 +385,39 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo', {'KEY': 'value'})
+            awsclient.create_function(
+                'name', 'myarn', b'foo', {'KEY': 'value'},
+                {'subnet_ids': ['12345'], 'security_group_ids': ['67890']}
+            )
+        stubbed_session.verify_stubs()
+
+
+class TestUpdateFunctionConfiguration(object):
+    def test_update_function_configuration_provided_args(self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_configuration(
+            FunctionName='name',
+            Role='myarn',
+            Environment={'Variables': {'KEY': 'value'}},
+            VpcConfig={'SubnetIds': ['12345'], 'SecurityGroupIds': ['67890']}
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function_configuration(
+            'name', 'myarn', {'KEY': 'value'},
+            {'subnet_ids': ['12345'], 'security_group_ids': ['67890']}
+        )
+        stubbed_session.verify_stubs()
+
+    def test_update_function_configuration_generates_args(self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_configuration(
+            FunctionName='name',
+            Role='myarn',
+            Environment={'Variables': {}},
+            VpcConfig={'SubnetIds': [], 'SecurityGroupIds': []}
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function_configuration('name', 'myarn', {}, {})
         stubbed_session.verify_stubs()
 
 
@@ -448,3 +516,23 @@ class TestAddPermissionsForAPIGateway(object):
             'rest-api-id', 'dev', 'javascript')
         stubbed_session.verify_stubs()
         assert response == 'foo'
+
+
+class TestGetSecurityGroupIdForName(object):
+    def test_get_security_group_id_for_name_finds_group(self, stubbed_session):
+        stubbed_session.stub('ec2').describe_security_groups(
+            Filters=[{'Name': 'group-name', 'Values': ['name']}]
+        ).returns({'SecurityGroups': [{'GroupName': 'name', 'GroupId': '55555'}]})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_security_group_id_for_name('name') == '55555'
+        stubbed_session.verify_stubs()
+
+    def test_get_security_group_id_for_name_not_find_group(self, stubbed_session):
+        stubbed_session.stub('ec2').describe_security_groups(
+            Filters=[{'Name': 'group-name', 'Values': ['name']}]
+        ).returns({'SecurityGroups': [{'GroupName': 'not_name', 'GroupId': '4444'}]})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_security_group_id_for_name('name') == ''
+        stubbed_session.verify_stubs()

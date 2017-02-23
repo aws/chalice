@@ -48,6 +48,17 @@ CLOUDWATCH_LOGS = {
 }
 
 
+ENIS = {
+    "Effect": "Allow",
+    "Action": [
+        "ec2:CreateNetworkInterface",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DeleteNetworkInterface"
+    ],
+    "Resource": "*"
+}
+
+
 NULLARY = Callable[[], str]
 
 
@@ -120,6 +131,7 @@ def validate_configuration(config):
     validate_routes(routes)
     _validate_manage_iam_role(config)
     _validate_environment_variables(config.environment_variables)
+    _validate_vpc_config(config.vpc_config)
 
 
 def validate_routes(routes):
@@ -190,6 +202,25 @@ def _validate_environment_variables(environment_variables):
                     key, value
                 )
             raise TypeError(error_message)
+
+
+def _validate_vpc_config(vpc_config):
+    # type: (Dict[str, List[str]]) -> None
+    if vpc_config:
+        # Ensure that at least one subnet ID was provided if VPC config
+        # has been enabled
+        subnet_ids = vpc_config.get('subnet_ids', [])
+        if not subnet_ids:
+            raise ValueError(
+                "At least one subnet ID must be provided when enabling "
+                "VPC support."
+            )
+        for subnet_id in subnet_ids:
+            if not isinstance(subnet_id, basestring):
+                raise TypeError('All subnet IDs must be strings')
+        for security_group_id in vpc_config.get('security_group_ids', []):
+            if not isinstance(security_group_id, basestring):
+                raise TypeError('All security group IDs must be strings')
 
 
 def node(name, uri_path, is_route=False):
@@ -497,21 +528,20 @@ class LambdaDeploymentPackager(object):
         with zipfile.ZipFile(deployment_package_filename, 'r') as inzip:
             with zipfile.ZipFile(tmpzip, 'w') as outzip:
                 for el in inzip.infolist():
-                    if self._is_chalice_app_file(el.filename):
+                    if self._needs_latest_version(el.filename):
                         continue
                     else:
                         contents = inzip.read(el.filename)
                         outzip.writestr(el, contents)
-                # Then at the end, add back the app.py.
-                app_py = os.path.join(project_dir, 'app.py')
-                assert os.path.isfile(app_py), app_py
-                outzip.write(app_py, 'app.py')
-                self._add_chalice_lib_if_needed(project_dir, outzip)
+                # Then at the end, add back the app.py, chalicelib,
+                # and runtime files.
+                self._add_app_files(outzip, project_dir)
         shutil.move(tmpzip, deployment_package_filename)
 
-    def _is_chalice_app_file(self, filename):
+    def _needs_latest_version(self, filename):
         # type: (str) -> bool
-        return filename == 'app.py' or filename.startswith('chalicelib/')
+        return filename == 'app.py' or filename.startswith(
+            ('chalicelib/', 'chalice/'))
 
     def _add_chalice_lib_if_needed(self, project_dir, zip):
         # type: (str, zipfile.ZipFile) -> None
@@ -560,6 +590,8 @@ class ApplicationPolicyHandler(object):
         app_source = self._osutils.get_file_contents(app_py, binary=False)
         app_policy = policy.policy_from_source_code(app_source)
         app_policy['Statement'].append(CLOUDWATCH_LOGS)
+        if config.vpc_config:
+            app_policy['Statement'].append(ENIS)
         return app_policy
 
     def load_last_policy(self, config):
@@ -597,13 +629,14 @@ class ApplicationPolicyHandler(object):
 
 
 class LambdaDeployer(object):
-    def __init__(self,
-                 aws_client,   # type: TypedAWSClient
-                 packager,     # type: LambdaDeploymentPackager
-                 prompter,     # type: NoPrompt
-                 osutils,      # type: OSUtils
-                 app_policy,   # type: ApplicationPolicyHandler
-                 ):
+    def __init__(
+            self,
+            aws_client,   # type: TypedAWSClient
+            packager,     # type: LambdaDeploymentPackager
+            prompter,     # type: NoPrompt
+            osutils,      # type: OSUtils
+            app_policy,   # type: ApplicationPolicyHandler
+    ):
         # type: (...) -> None
         self._aws_client = aws_client
         self._packager = packager
@@ -666,6 +699,37 @@ class LambdaDeployer(object):
                                          policy_document=app_policy)
         self._app_policy.record_policy(config, app_policy)
 
+    def _get_or_create_vpc_config(self, config):
+        # type: (Config) -> Dict[str, List[str]]
+        vpc_config = config.vpc_config
+        if vpc_config and vpc_config.get('subnet_ids'):
+            # We need to ensure that all subnets share a common VPC
+            vpc_id = None
+            for subnet_id in vpc_config.get('subnet_ids', []):
+                subnet_vpc = self._aws_client.get_vpc_id_for_subnet_id(
+                    subnet_id
+                )
+                if not vpc_id:
+                    vpc_id = subnet_vpc
+                else:
+                    if subnet_vpc != vpc_id:
+                        raise ValueError("Subnet VPCs are mismatched")
+            # If subnet_ids is populated but security_group_ids is
+            # not, we will need to generate a new security group
+            # for the lambda function to use.
+            if not vpc_config.get('security_group_ids'):
+                security_group = self._aws_client.\
+                    get_security_group_id_for_name(config.app_name)
+                if not security_group:
+                    print "Creating security group."
+                    security_group = self._aws_client.create_security_group(
+                        config.app_name, vpc_id
+                    )
+                config.config_from_disk['vpc_config'][
+                    'security_group_ids'] = [security_group]
+                self._write_config_to_disk(config)
+        return config.vpc_config
+
     def _first_time_lambda_create(self, config):
         # type: (Config) -> str
         # Creates a lambda function and returns the
@@ -673,6 +737,7 @@ class LambdaDeployer(object):
         # First we need to create a deployment package.
         print "Initial creation of lambda function."
         role_arn = self._get_or_create_lambda_role_arn(config)
+        vpc_config = self._get_or_create_vpc_config(config)
         packager = self._packager
         deployment_package_filename = packager.create_deployment_package(
             config.project_dir
@@ -682,13 +747,14 @@ class LambdaDeployer(object):
         )
         return self._aws_client.create_function(
             config.app_name, role_arn, zip_contents,
-            config.environment_variables
+            config.environment_variables, vpc_config
         )
 
     def _update_lambda_function(self, config):
         # type: (Config) -> None
         print "Updating lambda function..."
         role_arn = self._get_or_create_lambda_role_arn(config)
+        vpc_config = self._get_or_create_vpc_config(config)
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
             config.project_dir
@@ -709,7 +775,8 @@ class LambdaDeployer(object):
             config.app_name, zip_contents
         )
         self._aws_client.update_function_configuration(
-            config.app_name, role_arn, config.environment_variables
+            config.app_name, role_arn, config.environment_variables,
+            vpc_config
         )
 
     def _write_config_to_disk(self, config):
@@ -738,11 +805,12 @@ class LambdaDeployer(object):
 
 
 class APIGatewayDeployer(object):
-    def __init__(self,
-                 aws_client,          # type: TypedAWSClient
-                 api_gateway_client,  # type: Any
-                 lambda_client        # type: Any
-                 ):
+    def __init__(
+            self,
+            aws_client,          # type: TypedAWSClient
+            api_gateway_client,  # type: Any
+            lambda_client        # type: Any
+    ):
         # type: (...) -> None
         self._aws_client = aws_client
         self._api_gateway_client = api_gateway_client
