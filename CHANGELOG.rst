@@ -2,8 +2,12 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.6.0
+=====
+
+Check out the `upgrade notes for 0.6.0
+<http://chalice.readthedocs.io/en/latest/upgrading.html#id1>`__
+for more detailed information about changes in this release.
 
 * Add port parameter to local command
   (`#220 <https://github.com/awslabs/chalice/pull/220>`__)
@@ -11,6 +15,10 @@ Next Release (TBD)
   (`#182 <https://github.com/awslabs/chalice/pull/182>`__,
   `#106 <https://github.com/awslabs/chalice/issues/106>`__,
   `#42 <https://github.com/awslabs/chalice/issues/42>`__)
+* Add support for customizing the returned HTTP response
+  (`#240 <https://github.com/awslabs/chalice/pull/240>`__)
+* Always inject latest runtime to allow for chalice upgrades
+  (`#245 <https://github.com/awslabs/chalice/pull/245>`__)
 
 
 0.5.1
