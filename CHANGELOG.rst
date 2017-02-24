@@ -16,7 +16,11 @@ for more detailed information about changes in this release.
   `#106 <https://github.com/awslabs/chalice/issues/106>`__,
   `#42 <https://github.com/awslabs/chalice/issues/42>`__)
 * Add support for customizing the returned HTTP response
-  (`#240 <https://github.com/awslabs/chalice/pull/240>`__)
+  (`#240 <https://github.com/awslabs/chalice/pull/240>`__,
+  `#218 <https://github.com/awslabs/chalice/issues/218>`__,
+  `#110 <https://github.com/awslabs/chalice/issues/110>`__,
+  `#30 <https://github.com/awslabs/chalice/issues/30>`__,
+  `#226 <https://github.com/awslabs/chalice/issues/226>`__)
 * Always inject latest runtime to allow for chalice upgrades
   (`#245 <https://github.com/awslabs/chalice/pull/245>`__)
 
