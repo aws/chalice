@@ -1,29 +1,28 @@
-import pytest
-from pytest import fixture
-import mock
 import json
 import os
 
-from chalice.awsclient import TypedAWSClient
-from chalice.deployer import build_url_trie
-from chalice.deployer import NoPrompt
-from chalice.deployer import LambdaDeployer
-from chalice.deployer import LambdaDeploymentPackager
-from chalice.deployer import APIGatewayDeployer
-from chalice.deployer import APIGatewayResourceCreator
-from chalice.deployer import APIGatewayMethods
-from chalice.deployer import validate_configuration
-from chalice.deployer import validate_routes
-from chalice.deployer import Deployer
-from chalice.deployer import ApplicationPolicyHandler
-from chalice.deployer import SwaggerGenerator
-from chalice.app import RouteEntry
-from chalice.app import Chalice
-from chalice.config import Config
-
-from botocore.stub import Stubber, ANY
 import botocore.session
+import mock
+import pytest
+from botocore.stub import Stubber, ANY
+from pytest import fixture
 
+from chalice.app import Chalice
+from chalice.app import RouteEntry
+from chalice.awsclient import TypedAWSClient
+from chalice.config import Config
+from chalice.deploy.deployer import APIGatewayDeployer
+from chalice.deploy.deployer import APIGatewayMethods
+from chalice.deploy.deployer import APIGatewayResourceCreator
+from chalice.deploy.deployer import ApplicationPolicyHandler
+from chalice.deploy.deployer import Deployer
+from chalice.deploy.deployer import LambdaDeployer
+from chalice.deploy.deployer import NoPrompt
+from chalice.deploy.deployer import build_url_trie
+from chalice.deploy.deployer import validate_configuration
+from chalice.deploy.deployer import validate_routes
+from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.swagger import SwaggerGenerator
 
 _SESSION = None
 
