@@ -139,6 +139,22 @@ class TypedAWSClient(object):
                 return api['id']
         return None
 
+    def import_rest_api(self, swagger_document):
+        # type: (Dict[str, Any]) -> str
+        client = self._client('apigateway')
+        response = client.import_rest_api(
+            body=json.dumps(swagger_document, indent=2)
+        )
+        rest_api_id = response['id']
+        return rest_api_id
+
+    def update_api_from_swagger(self, rest_api_id, swagger_document):
+        # type: (str, Dict[str, Any]) -> None
+        client = self._client('apigateway')
+        client.put_rest_api(
+            restApiId=rest_api_id,
+            body=json.dumps(swagger_document, indent=2))
+
     def deploy_rest_api(self, rest_api_id, stage_name):
         # type: (str, str) -> None
         client = self._client('apigateway')

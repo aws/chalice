@@ -66,6 +66,16 @@ def sample_app():
 
 
 @fixture
+def config_obj(sample_app):
+    config = Config.create(
+        chalice_app=sample_app,
+        lambda_arn='arn:aws:lambda:us-west-2:account-id:function:func-name',
+        stage='dev',
+    )
+    return config
+
+
+@fixture
 def in_memory_osutils():
     return InMemoryOSUtils()
 
@@ -330,3 +340,51 @@ def test_can_add_preflight_cors(sample_app, swagger_gen):
             'type': 'mock',
         },
     }
+
+
+def test_api_gateway_deployer_initial_deploy(config_obj):
+    aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
+
+    # The rest_api_id does not exist which will trigger
+    # the initial import
+    aws_client.get_rest_api_id.return_value = None
+    aws_client.import_rest_api.return_value = 'rest-api-id'
+
+    d = APIGatewayDeployer(aws_client)
+    d.deploy(config_obj)
+
+    # mock.ANY because we don't want to test the contents of the swagger
+    # doc.  That's tested exhaustively elsewhere.
+    # We will do a basic sanity check to make sure it looks like a swagger
+    # doc.
+    aws_client.import_rest_api.assert_called_with(mock.ANY)
+    first_arg = aws_client.import_rest_api.call_args[0][0]
+    assert isinstance(first_arg, dict)
+    assert 'swagger' in first_arg
+
+    aws_client.deploy_rest_api.assert_called_with('rest-api-id', 'dev')
+    aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
+        'func-name', 'us-west-2', 'account-id', 'rest-api-id', mock.ANY
+    )
+
+
+def test_api_gateway_deployer_redeploy_api(config_obj):
+    aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
+
+    # The rest_api_id does not exist which will trigger
+    # the initial import
+    aws_client.get_rest_api_id.return_value = 'existing-id'
+
+    d = APIGatewayDeployer(aws_client)
+    d.deploy(config_obj)
+
+    aws_client.update_api_from_swagger.assert_called_with('existing-id',
+                                                          mock.ANY)
+    second_arg = aws_client.update_api_from_swagger.call_args[0][1]
+    assert isinstance(second_arg, dict)
+    assert 'swagger' in second_arg
+
+    aws_client.deploy_rest_api.assert_called_with('existing-id', 'dev')
+    aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
+        'func-name', 'us-west-2', 'account-id', 'existing-id', mock.ANY
+    )

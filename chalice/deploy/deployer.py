@@ -50,9 +50,7 @@ def create_default_deployer(session, prompter=None):
     if prompter is None:
         prompter = NoPrompt()
     aws_client = TypedAWSClient(session)
-    api_gateway_deploy = APIGatewayDeployer(
-        aws_client, session.create_client('apigateway'),
-        session.create_client('lambda'))
+    api_gateway_deploy = APIGatewayDeployer(aws_client)
 
     packager = LambdaDeploymentPackager()
     osutils = OSUtils()
@@ -363,19 +361,12 @@ class LambdaDeployer(object):
 
 
 class APIGatewayDeployer(object):
-    def __init__(self,
-                 aws_client,          # type: TypedAWSClient
-                 api_gateway_client,  # type: Any
-                 lambda_client        # type: Any
-                 ):
-        # type: (...) -> None
+    def __init__(self, aws_client):
+        # type: (TypedAWSClient) -> None
         self._aws_client = aws_client
-        self._api_gateway_client = api_gateway_client
-        self._lambda_client = lambda_client
 
     def deploy(self, config):
         # type: (Config) -> Tuple[str, str, str]
-        # Perhaps move this into APIGatewayResourceCreator.
         app_name = config.app_name
         rest_api_id = self._aws_client.get_rest_api_id(app_name)
         if rest_api_id is None:
@@ -390,19 +381,9 @@ class APIGatewayDeployer(object):
         generator = SwaggerGenerator(self._aws_client.region_name,
                                      config.lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
-        response = self._api_gateway_client.import_rest_api(
-            body=json.dumps(swagger_doc, indent=2))
-        rest_api_id = response['id']
+        rest_api_id = self._aws_client.import_rest_api(swagger_doc)
         stage = config.stage or 'dev'
-        print "Deploying to:", stage
-        self._aws_client.deploy_rest_api(rest_api_id, stage)
-        self._aws_client.add_permission_for_apigateway_if_needed(
-            config.lambda_arn.split(':')[-1],
-            self._aws_client.region_name,
-            config.lambda_arn.split(':')[4],
-            rest_api_id,
-            str(uuid.uuid4()),
-        )
+        self._deploy_api_to_stage(rest_api_id, stage, config)
         return rest_api_id, self._aws_client.region_name, stage
 
     def _create_resources_for_api(self, config, rest_api_id):
@@ -410,10 +391,13 @@ class APIGatewayDeployer(object):
         generator = SwaggerGenerator(self._aws_client.region_name,
                                      config.lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
-        self._api_gateway_client.put_rest_api(
-            restApiId=rest_api_id,
-            body=json.dumps(swagger_doc, indent=2))
+        self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
         stage = config.stage or 'dev'
+        self._deploy_api_to_stage(rest_api_id, stage, config)
+        return rest_api_id, self._aws_client.region_name, stage
+
+    def _deploy_api_to_stage(self, rest_api_id, stage, config):
+        # type: (str, str, Config) -> None
         print "Deploying to:", stage
         self._aws_client.deploy_rest_api(rest_api_id, stage)
         self._aws_client.add_permission_for_apigateway_if_needed(
@@ -423,4 +407,3 @@ class APIGatewayDeployer(object):
             rest_api_id,
             str(uuid.uuid4()),
         )
-        return rest_api_id, self._aws_client.region_name, stage
