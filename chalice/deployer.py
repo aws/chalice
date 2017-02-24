@@ -718,9 +718,14 @@ class LambdaDeployer(object):
             # not, we will need to generate a new security group
             # for the lambda function to use.
             if not vpc_config.get('security_group_ids'):
-                security_group = self._aws_client.\
+                security_group, sg_vpc = self._aws_client.\
                     get_security_group_id_for_name(config.app_name)
-                if not security_group:
+                if security_group:
+                    if sg_vpc != vpc_id:
+                        raise ValueError(
+                            'Security group and subnet VPCs are mismatched'
+                        )
+                else:
                     print "Creating security group."
                     security_group = self._aws_client.create_security_group(
                         config.app_name, vpc_id

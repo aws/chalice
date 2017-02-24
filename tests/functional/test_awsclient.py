@@ -522,10 +522,16 @@ class TestGetSecurityGroupIdForName(object):
     def test_get_security_group_id_for_name_finds_group(self, stubbed_session):
         stubbed_session.stub('ec2').describe_security_groups(
             Filters=[{'Name': 'group-name', 'Values': ['name']}]
-        ).returns({'SecurityGroups': [{'GroupName': 'name', 'GroupId': '55555'}]})
+        ).returns(
+            {
+                'SecurityGroups': [
+                    {'GroupName': 'name', 'GroupId': '55555', 'VpcId': '67890'}
+                ]
+            }
+        )
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.get_security_group_id_for_name('name') == '55555'
+        assert awsclient.get_security_group_id_for_name('name') == ('55555', '67890')
         stubbed_session.verify_stubs()
 
     def test_get_security_group_id_for_name_not_find_group(self, stubbed_session):
@@ -534,5 +540,5 @@ class TestGetSecurityGroupIdForName(object):
         ).returns({'SecurityGroups': [{'GroupName': 'not_name', 'GroupId': '4444'}]})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.get_security_group_id_for_name('name') == ''
+        assert awsclient.get_security_group_id_for_name('name') == ('', '')
         stubbed_session.verify_stubs()

@@ -22,7 +22,7 @@ import json
 
 import botocore.session
 import botocore.exceptions
-from typing import Any, Optional, Dict, Callable  # noqa
+from typing import Any, Optional, Dict, Callable, Tuple  # noqa
 
 
 class TypedAWSClient(object):
@@ -238,15 +238,17 @@ class TypedAWSClient(object):
         return subnets[0]['VpcId']
 
     def get_security_group_id_for_name(self, name):
-        # type: (str) -> str
+        # type: (str) -> Tuple[str, str]
         sgs = self._client('ec2').describe_security_groups(
             Filters=[{'Name': 'group-name', 'Values': [name]}]
         )
         security_groups = sgs.get('SecurityGroups', [])
         for security_group in security_groups:
             if security_group['GroupName'] == name:
-                return security_group['GroupId']
-        return ''
+                # We also return the VPC ID to verify it matches the
+                # subnet(s) VPC
+                return security_group['GroupId'], security_group['VpcId']
+        return '', ''
 
     def create_security_group(self, name, vpc_id):
         # type: (str, str) -> str

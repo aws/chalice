@@ -955,6 +955,29 @@ in your chalice config to ``{"LOG_LEVEL": "debug"}``:
 Your app will only print `debug message` if your `LOG_LEVEL` environment
 variable is set to `debug`.
 
+If for any reason you wish to remove environment variables from your lambda
+function, simply remove ``environment_variables`` from your config file.
+
+Tutorial: VPC Configuration
+===========================
+
+If you wish to give your lambda function access to a VPC, you can do so by
+adding the following key to your chalice configuration. All subnets and security
+groups provided must belong to the same VPC.
+
+::
+
+   "vpc_config": {"subnet_ids": ["subnet-foo"], "security_group_ids": ["sg-bar"]
+
+Adding your function to a VPC will allow it to access private resources within that
+VPC which are not accessible publicly. If you do not provide any ``security_group_ids``,
+a security group will be generated for you automatically with TCP ports 80 and 443 open
+to the world on ingress and all traffic open to egress. You must always provide at least
+one subnet in ``subnet_ids``, but it is highly recommended that you provide at least two
+in order to gain multi-AZ redundancy. If for any reason you wish to remove VPC
+configuration from your lambda function, simply remove ``vpc_config`` from your config file.
+
+
 Tutorial: Local Mode
 ====================
 
