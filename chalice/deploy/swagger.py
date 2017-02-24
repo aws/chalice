@@ -1,5 +1,9 @@
 import copy
 
+from typing import Any, List, Dict  # noqa
+
+from chalice.app import Chalice, RouteEntry  # noqa
+
 
 class SwaggerGenerator(object):
 
@@ -20,6 +24,7 @@ class SwaggerGenerator(object):
     }  # type: Dict[str, Any]
 
     def __init__(self, region, lambda_arn):
+        # type: (str, str) -> None
         self._region = region
         self._lambda_arn = lambda_arn
 
@@ -33,7 +38,7 @@ class SwaggerGenerator(object):
     def _add_route_paths(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None
         for path, view in app.routes.items():
-            swagger_for_path = {}
+            swagger_for_path = {}  # type: Dict[str, Any]
             api['paths'][path] = swagger_for_path
             for http_method in view.methods:
                 current = self._generate_route_method(view)
@@ -86,7 +91,7 @@ class SwaggerGenerator(object):
         return apig_integ
 
     def _add_view_args(self, apig_integ, view_args):
-        # type: (Dict[str, Any], List[st]) -> None
+        # type: (Dict[str, Any], List[str]) -> None
         apig_integ['parameters'] = [
             {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
             for name in view_args

@@ -1,5 +1,7 @@
 import os
 
+from typing import IO  # noqa
+
 
 class OSUtils(object):
     def open(self, filename, mode):

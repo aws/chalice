@@ -7,6 +7,7 @@ import sys
 import zipfile
 
 import virtualenv
+from typing import Any  # noqa
 
 import chalice
 from chalice import compat, app
