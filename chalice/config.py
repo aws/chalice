@@ -1,4 +1,4 @@
-from typing import Dict, Any  # noqa
+from typing import Dict, Any, List  # noqa
 from chalice.app import Chalice  # noqa
 
 StrMap = Dict[str, Any]
@@ -89,8 +89,13 @@ class Config(object):
 
     @property
     def environment_variables(self):
-        # type: () -> dict
+        # type: () -> Dict[str, str]
         return self._chain_lookup('environment_variables')
+
+    @property
+    def vpc_config(self):
+        # type: () -> Dict[str, List[str]]
+        return self._chain_lookup('vpc_config')
 
     def _chain_lookup(self, name):
         # type: (str) -> Any
