@@ -4,21 +4,17 @@ import os
 import botocore.session
 import mock
 import pytest
-from botocore.stub import Stubber, ANY
+from botocore.stub import Stubber
 from pytest import fixture
 
 from chalice.app import Chalice
-from chalice.app import RouteEntry
 from chalice.awsclient import TypedAWSClient
 from chalice.config import Config
 from chalice.deploy.deployer import APIGatewayDeployer
-from chalice.deploy.deployer import APIGatewayMethods
-from chalice.deploy.deployer import APIGatewayResourceCreator
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
 from chalice.deploy.deployer import LambdaDeployer
 from chalice.deploy.deployer import NoPrompt
-from chalice.deploy.deployer import build_url_trie
 from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
 from chalice.deploy.packager import LambdaDeploymentPackager
@@ -95,60 +91,6 @@ def stubbed_client(service_name):
     return client, stubber
 
 
-def node(name, uri_path, children=None, resource_id=None,
-         parent_resource_id=None, is_route=False):
-    if children is None:
-        children = {}
-    return {
-        'name': name,
-        'uri_path': uri_path,
-        'children': children,
-        'resource_id': resource_id,
-        'parent_resource_id': parent_resource_id,
-        'is_route': is_route,
-        'route_entry': None,
-    }
-
-
-n = node
-
-
-def test_url_trie():
-    assert build_url_trie({'/': None}) == n(name='', uri_path='/',
-                                            is_route=True)
-
-
-def test_single_nested_route():
-    assert build_url_trie({'/foo/bar': None}) == n(
-        name='', uri_path='/',
-        children={
-            'foo': n('foo', '/foo',
-                     children={'bar':  n('bar', '/foo/bar', is_route=True)})
-        }
-    )
-
-
-def test_multiple_routes():
-    assert build_url_trie({'/foo/bar': None, '/bar': None, '/': None}) == n(
-        name='', uri_path='/', is_route=True,
-        children={
-            'bar': n('bar', '/bar', is_route=True),
-            'foo': n('foo', '/foo',
-                     children={'bar':  n('bar', '/foo/bar', is_route=True)})
-        }
-    )
-
-
-def test_multiple_routes_on_single_spine():
-    assert build_url_trie({'/foo/bar': None, '/foo': None, '/': None}) == n(
-        name='', uri_path='/', is_route=True,
-        children={
-            'foo': n('foo', '/foo', is_route=True,
-                     children={'bar':  n('bar', '/foo/bar', is_route=True)})
-        }
-    )
-
-
 def test_trailing_slash_routes_result_in_error():
     app = Chalice('appname')
     app.routes = {'/trailing-slash/': None}
@@ -170,187 +112,6 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
     config = Config.create(chalice_app=sample_app, manage_iam_role=False)
     with pytest.raises(ValueError):
         validate_configuration(config)
-
-
-def test_can_build_resource_routes_for_single_view(stubbed_session):
-    route_trie = {
-        'name': '',
-        'uri_path': '/',
-        'children': {},
-        'resource_id': 'parent-id',
-        'parent_resource_id': None,
-        'is_route': True,
-        'route_entry': RouteEntry(None, 'index_view', '/', ['POST'],
-                                  content_types=['application/json']),
-    }
-    gateway_client = stubbed_session.create_client('apigateway')
-    gateway_stub = stubbed_session.stub('apigateway')
-    lambda_stub = stubbed_session.stub('lambda')
-    awsclient = TypedAWSClient(stubbed_session)
-    g = APIGatewayResourceCreator(
-        awsclient, APIGatewayMethods(gateway_client, 'rest-api-id'),
-        'arn:aws:lambda:us-west-2:123:function:name',
-        random_id_generator=lambda: "random-id")
-
-    gateway_stub.put_method(
-        resourceId='parent-id',
-        authorizationType='NONE',
-        restApiId='rest-api-id',
-        httpMethod='POST',
-    ).returns({})
-    gateway_stub.put_integration(
-        httpMethod='POST',
-        integrationHttpMethod='POST',
-        passthroughBehavior='WHEN_NO_MATCH',
-        resourceId='parent-id',
-        restApiId='rest-api-id',
-        type='AWS_PROXY',
-        contentHandling='CONVERT_TO_TEXT',
-        uri=('arn:aws:apigateway:us-west-2:lambda:path'
-             '/2015-03-31/functions/arn:aws:lambda:us-west'
-             '-2:123:function:name/invocations')
-    ).returns({})
-    gateway_stub.put_method_response(
-        httpMethod='POST',
-        resourceId='parent-id',
-        responseModels={
-            'application/json': 'Empty',
-        },
-        restApiId='rest-api-id',
-        statusCode='200',
-    ).returns({})
-    gateway_stub.put_integration_response(
-        httpMethod='POST',
-        resourceId='parent-id',
-        responseTemplates={
-            'application/json': '',
-        },
-        restApiId='rest-api-id',
-        statusCode='200',
-    ).returns({})
-    lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
-    lambda_stub.add_permission(
-        Action='lambda:InvokeFunction',
-        FunctionName='name',
-        Principal='apigateway.amazonaws.com',
-        SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-        StatementId='random-id',
-    ).returns({})
-    stubbed_session.activate_stubs()
-    g.build_resources(route_trie)
-    stubbed_session.verify_stubs()
-
-
-def test_cors_adds_required_headers(stubbed_session):
-    cors_route_entry = RouteEntry(None, 'index_view', '/', ['PUT'],
-                                  cors=True,
-                                  content_types=['application/json'])
-    route_trie = {
-        'name': '',
-        'uri_path': '/',
-        'children': {},
-        'resource_id': 'parent-id',
-        'parent_resource_id': None,
-        'is_route': True,
-        'route_entry': cors_route_entry,
-    }
-    gateway_client = stubbed_session.create_client('apigateway')
-    gateway_stub = stubbed_session.stub('apigateway')
-    lambda_stub = stubbed_session.stub('lambda')
-    awsclient = TypedAWSClient(stubbed_session)
-    g = APIGatewayResourceCreator(
-        awsclient, APIGatewayMethods(gateway_client, 'rest-api-id'),
-        'arn:aws:lambda:us-west-2:123:function:name',
-        random_id_generator=lambda: "random-id")
-    gateway_stub.put_method(
-        resourceId='parent-id',
-        authorizationType='NONE',
-        restApiId='rest-api-id',
-        httpMethod='PUT',
-    ).returns({})
-    gateway_stub.put_integration(
-        httpMethod='PUT',
-        integrationHttpMethod='POST',
-        passthroughBehavior='WHEN_NO_MATCH',
-        resourceId='parent-id',
-        restApiId='rest-api-id',
-        contentHandling='CONVERT_TO_TEXT',
-        type='AWS_PROXY',
-        uri=('arn:aws:apigateway:us-west-2:lambda:path'
-             '/2015-03-31/functions/arn:aws:lambda:us-west'
-             '-2:123:function:name/invocations')
-    ).returns({})
-    gateway_stub.put_method_response(
-        httpMethod='PUT',
-        resourceId='parent-id',
-        responseModels={
-            'application/json': 'Empty',
-        },
-        restApiId='rest-api-id',
-        statusCode='200',
-    ).returns({})
-    gateway_stub.put_integration_response(
-        httpMethod='PUT',
-        resourceId='parent-id',
-        responseTemplates={
-            'application/json': '',
-        },
-        restApiId='rest-api-id',
-        statusCode='200',
-    ).returns({})
-    gateway_stub.put_method(
-        restApiId=ANY,
-        resourceId=ANY,
-        httpMethod='OPTIONS',
-        authorizationType='NONE',
-    ).returns({})
-    gateway_stub.put_integration(
-        restApiId=ANY,
-        resourceId=ANY,
-        httpMethod='OPTIONS',
-        type='MOCK',
-        requestTemplates={'application/json': '{"statusCode": 200}'}
-    ).returns({})
-    gateway_stub.put_method_response(
-        restApiId=ANY,
-        resourceId=ANY,
-        httpMethod='OPTIONS',
-        statusCode='200',
-        responseModels=ANY,
-        responseParameters={
-            'method.response.header.Access-Control-Allow-Origin': False,
-            'method.response.header.Access-Control-Allow-Methods': False,
-            'method.response.header.Access-Control-Allow-Headers': False,
-        }
-    ).returns({})
-    gateway_stub.put_integration_response(
-        restApiId=ANY,
-        resourceId=ANY,
-        httpMethod='OPTIONS',
-        statusCode='200',
-        responseTemplates=ANY,
-        responseParameters={
-            'method.response.header.Access-Control-Allow-Origin': "'*'",
-            'method.response.header.Access-Control-Allow-Methods': (
-                "'PUT,OPTIONS'"
-            ),
-            'method.response.header.Access-Control-Allow-Headers': (
-                "'Content-Type,X-Amz-Date,Authorization,X-Api-Key"
-                ",X-Amz-Security-Token'"
-            ),
-        }
-    ).returns({})
-    lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
-    lambda_stub.add_permission(
-        Action='lambda:InvokeFunction',
-        FunctionName='name',
-        Principal='apigateway.amazonaws.com',
-        SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-        StatementId='random-id',
-    ).returns({})
-    stubbed_session.activate_stubs()
-    g.build_resources(route_trie)
-    stubbed_session.verify_stubs()
 
 
 def test_can_deploy_apig_and_lambda(sample_app):
@@ -409,23 +170,6 @@ def test_cant_have_options_with_cors(sample_app):
 
     with pytest.raises(ValueError):
         validate_routes(sample_app.routes)
-
-
-def test_apig_methods(stubbed_session):
-    gateway_stub = stubbed_session.stub('apigateway')
-    gateway_stub.put_method(
-        authorizationType='NONE',
-        httpMethod='GET',
-        resourceId='resource_id',
-        restApiId='rest_api_id',
-        requestParameters={'method.request.path.name': True},
-    ).returns({})
-    apig = APIGatewayMethods(
-        stubbed_session.create_client('apigateway'), 'rest_api_id')
-
-    stubbed_session.activate_stubs()
-    apig.create_method_request('resource_id', 'GET', url_params=['name'])
-    stubbed_session.verify_stubs()
 
 
 def test_policy_autogenerated_when_enabled(app_policy,
