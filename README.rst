@@ -956,7 +956,8 @@ Your app will only print `debug message` if your `LOG_LEVEL` environment
 variable is set to `debug`.
 
 If for any reason you wish to remove environment variables from your lambda
-function, simply remove ``environment_variables`` from your config file.
+function, simply remove ``environment_variables`` from your config file and
+run ``chalice deploy``.
 
 Tutorial: VPC Configuration
 ===========================
@@ -975,7 +976,8 @@ a security group will be generated for you automatically with TCP ports 80 and 4
 to the world on ingress and all traffic open to egress. You must always provide at least
 one subnet in ``subnet_ids``, but it is highly recommended that you provide at least two
 in order to gain multi-AZ redundancy. If for any reason you wish to remove VPC
-configuration from your lambda function, simply remove ``vpc_config`` from your config file.
+configuration from your lambda function, simply remove ``vpc_config`` from your config
+file and run ``chalice deploy``.
 
 
 Tutorial: Local Mode

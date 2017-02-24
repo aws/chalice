@@ -43,7 +43,7 @@ Below are the values you can specify in this file:
   all environment variable values must be strings. If for any
   reason you wish to remove environment variables from your lambda
   function, simply remove ``environment_variables`` from your
-  ``config.json`` file.
+  ``config.json`` file and run ``chalice deploy``.
 
 * ``vpc_config`` - ``{'subnet_ids': [], 'security_group_ids': []}``.
   If ``subnet_ids`` contains at least one subnet, this indicates that
@@ -56,4 +56,5 @@ Below are the values you can specify in this file:
   world on ingress and all traffic open to egress. Please note that all
   ``subnet_ids`` and ``security_group_ids`` must exist in the same VPC.
   If for any reason you wish to remove VPC configuration from your lambda
-  function, simply remove ``vpc_config`` from your ``config.json`` file.
+  function, simply remove ``vpc_config`` from your ``config.json`` file
+  and run ``chalice deploy``.
