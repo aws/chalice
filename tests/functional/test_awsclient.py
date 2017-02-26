@@ -1,10 +1,13 @@
 import json
 import datetime
+import os
+import tempfile
 import time
 
 import pytest
 import mock
 import botocore.exceptions
+from botocore.response import StreamingBody
 
 from chalice.awsclient import TypedAWSClient
 
@@ -122,16 +125,6 @@ def test_delete_methods_from_root_resource(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_get_vpc_id_for_subnet_id(stubbed_session):
-    stubbed_session.stub('ec2').describe_subnets(
-        SubnetIds=['12345']
-    ).returns({'Subnets': [{'VpcId': '67890'}]})
-    stubbed_session.activate_stubs()
-    awsclient = TypedAWSClient(stubbed_session)
-    assert awsclient.get_vpc_id_for_subnet_id('12345') == '67890'
-    stubbed_session.verify_stubs()
-
-
 def test_create_security_group(stubbed_session):
     stubbed_session.stub('ec2').create_security_group(
         GroupName='name',
@@ -161,8 +154,20 @@ def test_create_security_group(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-class TestLambdaFunctionExists(object):
+def test_create_rest_resource(stubbed_session):
+    stubbed_session.stub('apigateway').create_resource(
+        restApiId='rest_api_id',
+        parentId='parent_id',
+        pathPart='path_part'
+    ).returns({'id': '123', 'parentId': 'parent_id'})
+    stubbed_session.activate_stubs()
+    TypedAWSClient(stubbed_session).create_rest_resource(
+        'rest_api_id', 'parent_id', 'path_part'
+    )
+    stubbed_session.verify_stubs()
 
+
+class TestLambdaFunctionExists(object):
     def test_can_query_lambda_function_exists(self, stubbed_session):
         stubbed_session.stub('lambda').get_function(FunctionName='myappname')\
                 .returns({'Code': {}, 'Configuration': {}})
@@ -316,6 +321,21 @@ class TestCreateLambdaFunction(object):
         ) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
+    def test_create_function_succeeds_no_extras(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=60
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', {}, {}) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
         kwargs = {
             'FunctionName': 'name',
@@ -422,13 +442,32 @@ class TestUpdateFunctionConfiguration(object):
 
 
 class TestCanDeleteRolePolicy(object):
-    def test_can_delete_role_policy(self, stubbed_session):
+    def test_can_delete_role_policy_succeeds(self, stubbed_session):
         stubbed_session.stub('iam').delete_role_policy(
             RoleName='myrole', PolicyName='mypolicy'
         ).returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.delete_role_policy('myrole', 'mypolicy')
+        stubbed_session.verify_stubs()
+
+    def test_can_delete_role_policy_succeeds_missing(self, stubbed_session):
+        stubbed_session.stub('iam').delete_role_policy(
+            RoleName='myrole', PolicyName='mypolicy'
+        ).raises_error(error_code='NoSuchEntity', message='Missing')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_role_policy('myrole', 'mypolicy')
+        stubbed_session.verify_stubs()
+
+    def test_can_delete_role_policy_fails_not_missing(self, stubbed_session):
+        stubbed_session.stub('iam').delete_role_policy(
+            RoleName='myrole', PolicyName='mypolicy'
+        ).raises_error(error_code='TestException', message='Test Error')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.delete_role_policy('myrole', 'mypolicy')
         stubbed_session.verify_stubs()
 
 
@@ -460,6 +499,63 @@ class TestAddPermissionsForAPIGateway(object):
         lambda_stub = stubbed_session.stub('lambda')
         lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
         self.should_call_add_permission(lambda_stub)
+        stubbed_session.activate_stubs()
+        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+            'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_for_apigateway_needed_with_policy(self, stubbed_session):
+        source_arn = 'arn:aws:execute-api:us-west-2:123:rest-api-id/*'
+        bad_source_arn = 'arn:aws:execute-api:us-east-1:456:not-rest-api-id/*'
+        policy = {
+            'Id': 'default',
+            'Statement': [
+                {  # Fails check on "Action"
+                    'Action': 'ec2:RunInstances',
+                    'Condition': {
+                        'ArnLike': {
+                            'AWS:SourceArn': source_arn,
+                        }
+                    },
+                    'Effect': 'Allow',
+                    'Principal': {'Service': 'apigateway.amazonaws.com'},
+                    'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                    'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'
+                },
+                {  # Fails check on "Condition"
+                    'Action': 'lambda:InvokeFunction',
+                    'Condition': {
+                        'ArnLike': {
+                            'AWS:SourceArn': bad_source_arn,
+                        }
+                    },
+                    'Effect': 'Allow',
+                    'Principal': {'Service': 'apigateway.amazonaws.com'},
+                    'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                    'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'
+                },
+                {  # Fails check on "Principal"
+                    'Action': 'lambda:InvokeFunction',
+                    'Condition': {
+                        'ArnLike': {
+                            'AWS:SourceArn': source_arn,
+                        }
+                    },
+                    'Effect': 'Allow',
+                    'Principal': {'Service': 'ec2.amazonaws.com'},
+                    'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                    'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'
+                }
+            ],
+            'Version': '2012-10-17'
+        }
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(
+            FunctionName='name').returns({'Policy': json.dumps(policy)})
+        self.should_call_add_permission(lambda_stub)
+
+        # Because the policy above indicates that a policy exists but API
+        # gateway does NOT have the necessary permissions, we call add_permission.
         stubbed_session.activate_stubs()
         TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
@@ -504,18 +600,17 @@ class TestAddPermissionsForAPIGateway(object):
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
-    def test_get_sdk(self, stubbed_session):
-        apig = stubbed_session.stub('apigateway')
-        apig.get_sdk(
-            restApiId='rest-api-id',
-            stageName='dev',
-            sdkType='javascript').returns({'body': 'foo'})
+    def test_can_add_permission_fails_get(self, stubbed_session):
+        # It's also possible to receive a ResourceNotFoundException
+        # if you call get_policy() on a lambda function with no policy.
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').raises_error(
+            error_code='FakeError', message='Does not exist.')
+        self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
-        response = awsclient.get_sdk_download_stream(
-            'rest-api-id', 'dev', 'javascript')
-        stubbed_session.verify_stubs()
-        assert response == 'foo'
+        with pytest.raises(botocore.exceptions.ClientError):
+            TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+                'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
 
 
 class TestGetSecurityGroupIdForName(object):
@@ -541,4 +636,77 @@ class TestGetSecurityGroupIdForName(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.get_security_group_id_for_name('name') == ('', '')
+        stubbed_session.verify_stubs()
+
+
+class TestGetVpcIdForSubnetId(object):
+    def test_get_vpc_id_for_subnet_id_finds_subnet(self, stubbed_session):
+        stubbed_session.stub('ec2').describe_subnets(
+            SubnetIds=['12345']
+        ).returns({'Subnets': [{'VpcId': '67890'}]})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_vpc_id_for_subnet_id('12345') == '67890'
+        stubbed_session.verify_stubs()
+
+    def test_get_vpc_id_for_subnet_id_not_finds_subnet(self, stubbed_session):
+        stubbed_session.stub('ec2').describe_subnets(
+            SubnetIds=['12345']
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ValueError):
+            awsclient.get_vpc_id_for_subnet_id('12345')
+        stubbed_session.verify_stubs()
+
+
+class TestDownloadSdk(object):
+    """These tests call on the fake API zip files in the
+    test/support_files directory"""
+    class FakeRawObject(object):
+        def __init__(self, stream):
+            self.stored_object = stream
+
+        def read(self, amt):
+            return self.stored_object
+
+    def test_download_sdk_succeeds(self, stubbed_session):
+        support_files = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'support_files'
+        )
+        with open(os.path.join(support_files, 'good_api.zip'), 'rb') as good_zip:
+            good_object = self.FakeRawObject(good_zip.read())
+        good_body = StreamingBody(good_object, None)
+        stubbed_session.stub('apigateway').get_sdk(
+            restApiId='rest-api-id',
+            stageName='dev',
+            sdkType='javascript'
+        ).returns({'body': good_body})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.download_sdk(
+            'rest-api-id', tempfile.mkdtemp(), 'dev', 'javascript'
+        )
+        stubbed_session.verify_stubs()
+
+    def test_download_sdk_unexpected_structure(self, stubbed_session):
+        support_files = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'support_files'
+        )
+        with open(os.path.join(support_files, 'bad_api.zip'), 'rb') as bad_zip:
+            bad_object = self.FakeRawObject(bad_zip.read())
+        bad_body = StreamingBody(bad_object, None)
+        stubbed_session.stub('apigateway').get_sdk(
+            restApiId='rest-api-id',
+            stageName='dev',
+            sdkType='javascript'
+        ).returns({'body': bad_body})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(RuntimeError):
+            awsclient.download_sdk(
+                'rest-api-id', tempfile.mkdtemp(), 'dev', 'javascript'
+            )
         stubbed_session.verify_stubs()

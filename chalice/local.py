@@ -184,7 +184,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         )
         self.send_header('Access-Control-Allow-Methods',
                          'GET,HEAD,PUT,POST,OPTIONS')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        if self._cors_enabled_for_route(self._generate_lambda_event()):
+            self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
 
@@ -197,7 +198,8 @@ class LocalDevServer(object):
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object)
         self.server = server_cls(('', port), self._wrapped_handler)
-        environ.update(config.environment_variables)
+        if config.environment_variables:
+            environ.update(config.environment_variables)
 
     def handle_single_request(self):
         # type: () -> None

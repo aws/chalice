@@ -85,7 +85,7 @@ class TypedAWSClient(object):
                     attempts += 1
                     if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
                         raise
-                    continue
+                    continue  # Not picked up by pytest-cov?
                 raise
             return response['FunctionArn']
 
@@ -293,8 +293,8 @@ class TypedAWSClient(object):
             policy = self.get_function_policy(function_name)
         except botocore.exceptions.ClientError as e:
             error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                pass
+            if error['Code'] != 'ResourceNotFoundException':
+                raise
         else:
             source_arn = self._build_source_arn_str(region_name, account_id,
                                                     rest_api_id)
@@ -395,7 +395,7 @@ class TypedAWSClient(object):
         dirnames = os.listdir(tmp_extract)
         if len(dirnames) == 1:
             full_dirname = os.path.join(tmp_extract, dirnames[0])
-            if os.path.isdir(full_dirname):
+            if os.path.isdir(full_dirname):  # Test this failing?
                 final_dirname = 'chalice-%s-sdk' % sdk_type
                 full_renamed_name = os.path.join(tmp_extract, final_dirname)
                 os.rename(full_dirname, full_renamed_name)

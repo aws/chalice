@@ -138,6 +138,15 @@ def test_can_preflight_request(handler):
     assert 'Access-Control-Allow-Origin: *' in response_lines
 
 
+def test_no_access_control_cors_disabled(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS', path='/index',
+                        headers=headers)
+    handler.do_OPTIONS()
+    response_lines = handler.wfile.getvalue().splitlines()
+    assert 'Access-Control-Allow-Origin: *' not in response_lines
+
+
 def test_non_preflight_options_request(handler):
     headers = {'content-type': 'application/json', 'origin': 'null'}
     set_current_request(handler, method='OPTIONS', path='/options',

@@ -1,6 +1,8 @@
 import json
 import os
 
+import click
+from click.exceptions import ClickException
 from click.testing import CliRunner
 
 from chalice import cli
@@ -76,3 +78,93 @@ def test_gen_policy_command_creates_policy():
         # it looks like a policy document.
         assert 'Version' in parsed_policy
         assert 'Statement' in parsed_policy
+
+
+def test_create_config_object_no_options():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        runner.invoke(cli.new_project, ['testproject'])
+        os.chdir('testproject')
+        test_context = click.Context(
+            command=click.Command('test_command'),
+            obj={'project_dir': os.getcwd()}
+        )
+        config = cli.create_config_obj(test_context)
+        assert 'testproject' in config.project_dir
+        assert config.chalice_app.app_name == 'testproject'
+        assert config.stage == 'dev'
+        assert config.autogen_policy is None
+        assert config.profile is None
+
+
+def test_create_config_object_set_stage():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        runner.invoke(cli.new_project, ['testproject'])
+        os.chdir('testproject')
+        test_context = click.Context(
+            command=click.Command('test_command'),
+            obj={'project_dir': os.getcwd()}
+        )
+        config = cli.create_config_obj(
+            test_context, stage_name='teststage'
+        )
+        assert 'testproject' in config.project_dir
+        assert config.chalice_app.app_name == 'testproject'
+        assert config.stage == 'teststage'
+        assert config.autogen_policy is None
+        assert config.profile is None
+
+
+def test_create_config_object_set_autogen_policy():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        runner.invoke(cli.new_project, ['testproject'])
+        os.chdir('testproject')
+        test_context = click.Context(
+            command=click.Command('test_command'),
+            obj={'project_dir': os.getcwd()}
+        )
+        config = cli.create_config_obj(
+            test_context, autogen_policy=True
+        )
+        assert 'testproject' in config.project_dir
+        assert config.chalice_app.app_name == 'testproject'
+        assert config.stage == 'dev'
+        assert config.autogen_policy is True
+        assert config.profile is None
+
+
+def test_create_config_object_set_profile():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        runner.invoke(cli.new_project, ['testproject'])
+        os.chdir('testproject')
+        test_context = click.Context(
+            command=click.Command('test_command'),
+            obj={'project_dir': os.getcwd()}
+        )
+        config = cli.create_config_obj(
+            test_context, profile='testprofile'
+        )
+        assert 'testproject' in config.project_dir
+        assert config.chalice_app.app_name == 'testproject'
+        assert config.stage == 'dev'
+        assert config.autogen_policy is None
+        assert config.profile == 'testprofile'
+
+
+def test_load_chalice_app_no_app_py():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        runner.invoke(cli.new_project, ['testproject'])
+        os.chdir('testproject')
+        os.remove('app.py')
+        # For some reason this is failing when using
+        # with pytest.raises(ClickException):
+        try:
+            cli.load_chalice_app(os.getcwd())
+        except ClickException as click_ex:
+            assert 'Unable to import your app.py file' \
+                   in click_ex.message
+            assert click_ex.exit_code == 2

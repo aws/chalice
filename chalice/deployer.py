@@ -130,7 +130,6 @@ def validate_configuration(config):
     routes = config.chalice_app.routes
     validate_routes(routes)
     _validate_manage_iam_role(config)
-    _validate_environment_variables(config.environment_variables)
     _validate_vpc_config(config.vpc_config)
 
 
@@ -184,26 +183,6 @@ def _validate_manage_iam_role(config):
             )
 
 
-def _validate_environment_variables(environment_variables):
-    # type: (Dict[str, str]) -> None
-    if environment_variables:
-        # We need to verify that all environment variable values are strings
-        # Since keys must be strings in JSON we don't need to verify those
-        invalid_value_types = {}
-        # type: Dict[str, Any]
-        for key, value in environment_variables.iteritems():
-            if not isinstance(value, basestring):
-                invalid_value_types[key] = type(value)
-        if invalid_value_types:
-            error_message = "All environment variable values must be a " \
-                            "string. However"
-            for key, value in invalid_value_types.iteritems():
-                error_message += ", value for {} was type {}".format(
-                    key, value
-                )
-            raise TypeError(error_message)
-
-
 def _validate_vpc_config(vpc_config):
     # type: (Dict[str, List[str]]) -> None
     if vpc_config:
@@ -215,12 +194,6 @@ def _validate_vpc_config(vpc_config):
                 "At least one subnet ID must be provided when enabling "
                 "VPC support."
             )
-        for subnet_id in subnet_ids:
-            if not isinstance(subnet_id, basestring):
-                raise TypeError('All subnet IDs must be strings')
-        for security_group_id in vpc_config.get('security_group_ids', []):
-            if not isinstance(security_group_id, basestring):
-                raise TypeError('All security group IDs must be strings')
 
 
 def node(name, uri_path, is_route=False):
