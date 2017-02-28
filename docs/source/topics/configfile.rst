@@ -35,3 +35,7 @@ Below are the values you can specify in this file:
   must specify this value that indicates which IAM role arn to
   use when configuration your application.  This value is only
   used if ``manage_iam_role`` is ``false``.
+
+* ``memory_size`` - If ``memory_size`` is set, the lambda function
+  will use this value for its memory size setting. If not set, it
+  will default to 128.

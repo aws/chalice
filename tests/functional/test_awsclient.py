@@ -51,6 +51,15 @@ def test_update_function_code(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_update_function_configuration(stubbed_session):
+    stubbed_session.stub('lambda').update_function_configuration(
+        FunctionName='name', MemorySize=256).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.update_function_configuration('name', 256)
+    stubbed_session.verify_stubs()
+
+
 def test_put_role_policy(stubbed_session):
     stubbed_session.stub('iam').put_role_policy(
         RoleName='role_name',
@@ -266,11 +275,12 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Timeout=60,
+            MemorySize=128,
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo') == 'arn:12345:name'
+            'name', 'myarn', b'foo', 128) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
@@ -281,6 +291,7 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
+            'MemorySize': 128,
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -293,7 +304,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
-            'name', 'myarn', b'foo') == 'arn:12345:name'
+            'name', 'myarn', b'foo', 128) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -304,6 +315,7 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
+            'MemorySize': 128,
         }
         for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
             stubbed_session.stub('lambda').create_function(
@@ -313,7 +325,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo')
+            awsclient.create_function('name', 'myarn', b'foo', 128)
         stubbed_session.verify_stubs()
 
     def test_create_function_propagates_unknown_error(self, stubbed_session):
@@ -324,6 +336,7 @@ class TestCreateLambdaFunction(object):
             'Handler': 'app.app',
             'Role': 'myarn',
             'Timeout': 60,
+            'MemorySize': 128,
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -331,7 +344,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo')
+            awsclient.create_function('name', 'myarn', b'foo', 128)
         stubbed_session.verify_stubs()
 
 

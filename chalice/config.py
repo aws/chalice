@@ -83,6 +83,15 @@ class Config(object):
         return self._chain_lookup('autogen_policy')
 
     @property
+    def memory_size(self):
+        # type: () -> int
+        result = self._chain_lookup('memory_size')
+        if result is None:
+            return 128
+
+        return result
+
+    @property
     def config_from_disk(self):
         # type: () -> StrMap
         return self._config_from_disk
