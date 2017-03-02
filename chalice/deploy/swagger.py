@@ -110,6 +110,12 @@ class SwaggerGenerator(object):
         }
         return responses
 
+    def _uri(self):
+        # type: () -> Any
+        return ('arn:aws:apigateway:{region}:lambda:path/2015-03-31'
+                '/functions/{lambda_arn}/invocations').format(
+                    region=self._region, lambda_arn=self._lambda_arn)
+
     def _generate_apig_integ(self, view):
         # type: (RouteEntry) -> Dict[str, Any]
         apig_integ = {
@@ -118,10 +124,7 @@ class SwaggerGenerator(object):
                     'statusCode': "200",
                 }
             },
-            'uri': (
-                'arn:aws:apigateway:{region}:lambda:path/2015-03-31'
-                '/functions/{lambda_arn}/invocations').format(
-                    region=self._region, lambda_arn=self._lambda_arn),
+            'uri': self._uri(),
             'passthroughBehavior': 'when_no_match',
             'httpMethod': 'POST',
             'contentHandling': 'CONVERT_TO_TEXT',
@@ -180,3 +183,15 @@ class SwaggerGenerator(object):
             }
         }
         swagger_for_path['options'] = options_request
+
+
+class CFNSwaggerGenerator(SwaggerGenerator):
+    def _uri(self):
+        # type: () -> Any
+        # TODO: Does this have to be return type Any?
+        return {
+            'Fn::Sub': (
+                'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31'
+                '/functions/${APIHandler.Arn}/invocations'
+            )
+        }

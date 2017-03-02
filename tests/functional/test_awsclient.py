@@ -355,3 +355,30 @@ class TestAddPermissionsForAPIGateway(object):
             'rest-api-id', 'dev', 'javascript')
         stubbed_session.verify_stubs()
         assert response == 'foo'
+
+    def test_import_rest_api(self, stubbed_session):
+        apig = stubbed_session.stub('apigateway')
+        swagger_doc = {'swagger': 'doc'}
+        apig.import_rest_api(
+            body=json.dumps(swagger_doc, indent=2)).returns(
+                {'id': 'rest_api_id'})
+
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        rest_api_id = awsclient.import_rest_api(swagger_doc)
+        stubbed_session.verify_stubs()
+        assert rest_api_id == 'rest_api_id'
+
+    def test_update_api_from_swagger(self, stubbed_session):
+        apig = stubbed_session.stub('apigateway')
+        swagger_doc = {'swagger': 'doc'}
+        apig.put_rest_api(
+            restApiId='rest_api_id',
+            body=json.dumps(swagger_doc, indent=2)).returns({})
+
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+
+        awsclient.update_api_from_swagger('rest_api_id',
+                                          swagger_doc)
+        stubbed_session.verify_stubs()

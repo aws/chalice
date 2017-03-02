@@ -21,6 +21,7 @@ from chalice.cli.utils import create_botocore_session
 from chalice.config import Config
 from chalice.deploy import deployer
 from chalice.logs import LogRetriever
+from chalice.package import create_app_packager
 
 TEMPLATE_APP = """\
 from chalice import Chalice
@@ -279,6 +280,16 @@ def generate_sdk(ctx, sdk_type, outdir):
         raise click.Abort()
     client.download_sdk(rest_api_id, outdir, stage=stage_name,
                         sdk_type=sdk_type)
+
+
+@cli.command('package')
+@click.argument('outdir')
+@click.pass_context
+def package(ctx, outdir):
+    # type: (click.Context, str) -> None
+    config = create_config_obj(ctx)
+    packager = create_app_packager(config)
+    packager.package_app(outdir)
 
 
 def run_local_server(app_obj, port):

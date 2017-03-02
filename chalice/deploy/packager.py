@@ -3,11 +3,10 @@ import inspect
 import os
 import shutil
 import subprocess
-import sys
 import zipfile
 
 import virtualenv
-from typing import Any  # noqa
+from typing import Any, Optional  # noqa
 
 import chalice
 from chalice import compat, app
@@ -19,23 +18,10 @@ class LambdaDeploymentPackager(object):
 
     def _create_virtualenv(self, venv_dir):
         # type: (str) -> None
-        # The original implementation used Popen(['virtualenv', ...])
-        # However, it's hard to make assumptions about how a users
-        # PATH is set up.  This could result in using old versions
-        # of virtualenv that give confusing error messages.
-        # To fix this issue, we're calling directly into the
-        # virtualenv package.  The main() method doesn't accept
-        # args, so we need to patch out sys.argv with the venv
-        # dir.  The original sys.argv is replaced on exit.
-        original = sys.argv
-        sys.argv = ['', venv_dir, '--quiet']
-        try:
-            virtualenv.main()
-        finally:
-            sys.argv = original
+        virtualenv.create_environment(venv_dir)
 
-    def create_deployment_package(self, project_dir):
-        # type: (str) -> str
+    def create_deployment_package(self, project_dir, package_filename=None):
+        # type: (str, Optional[str]) -> str
         print "Creating deployment package."
         # pip install -t doesn't work out of the box with homebrew and
         # python, so we're using virtualenvs instead which works in
@@ -48,8 +34,10 @@ class LambdaDeploymentPackager(object):
         requirements_file = os.path.join(project_dir, 'requirements.txt')
         deployment_package_filename = self.deployment_package_filename(
             project_dir)
+        if package_filename is None:
+            package_filename = deployment_package_filename
         if self._has_at_least_one_package(requirements_file) and not \
-                os.path.isfile(deployment_package_filename):
+                os.path.isfile(package_filename):
             p = subprocess.Popen([pip_exe, 'install', '-r', requirements_file],
                                  stdout=subprocess.PIPE)
             p.communicate()
@@ -57,15 +45,16 @@ class LambdaDeploymentPackager(object):
         assert os.path.isdir(deps_dir)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
-        if not os.path.isdir(os.path.dirname(deployment_package_filename)):
-            os.makedirs(os.path.dirname(deployment_package_filename))
-        with zipfile.ZipFile(deployment_package_filename, 'w',
+        dirname = os.path.dirname(os.path.abspath(package_filename))
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        with zipfile.ZipFile(package_filename, 'w',
                              compression=zipfile.ZIP_DEFLATED) as z:
             self._add_py_deps(z, deps_dir)
             self._add_app_files(z, project_dir)
             self._add_vendor_files(z, os.path.join(project_dir,
                                                    self._VENDOR_DIR))
-        return deployment_package_filename
+        return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
         # type: (zipfile.ZipFile, str) -> None

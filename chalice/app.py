@@ -153,14 +153,13 @@ class Response(object):
 class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, methods,
-                 authorization_type=None, authorizer_name=None,
+                 authorizer_name=None,
                  api_key_required=None, content_types=None,
                  cors=False):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
         self.methods = methods
-        self.authorization_type = authorization_type
         self.authorizer_name = authorizer_name
         self.api_key_required = api_key_required
         #: A list of names to extract from path:
@@ -244,7 +243,6 @@ class Chalice(object):
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
         methods = kwargs.pop('methods', ['GET'])
-        authorization_type = kwargs.pop('authorization_type', None)
         authorizer_name = kwargs.pop('authorizer_name', None)
         api_key_required = kwargs.pop('api_key_required', None)
         content_types = kwargs.pop('content_types', ['application/json'])
@@ -261,7 +259,7 @@ class Chalice(object):
             raise ValueError(
                 "Duplicate route detected: '%s'\n"
                 "URL paths must be unique." % path)
-        entry = RouteEntry(view_func, name, path, methods, authorization_type,
+        entry = RouteEntry(view_func, name, path, methods,
                            authorizer_name, api_key_required,
                            content_types, cors)
         self.routes[path] = entry

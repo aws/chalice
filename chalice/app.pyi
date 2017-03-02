@@ -56,7 +56,6 @@ class RouteEntry(object):
     view_name = ... # type: str
     methods = ... # type: List[str]
     uri_pattern = ... # type: str
-    authorization_type = ... # type: str
     authorizer_name = ... # type: str
     api_key_required = ... # type: bool
     content_types = ... # type: List[str]
@@ -65,7 +64,6 @@ class RouteEntry(object):
 
     def __init__(self, view_function: Callable[..., Any],
                  view_name: str, path: str, methods: List[str],
-                 authorization_type: str=None,
                  authorizer_name: str=None,
                  api_key_required: bool=None,
                  content_types: List[str]=None,
