@@ -1,15 +1,17 @@
 import os
 import zipfile
-from pytest import fixture
 
 import botocore.session
+from pytest import fixture
 
-from chalice import deployer
+import chalice.deploy.packager
+import chalice.utils
+from chalice.deploy import deployer
 
 
 @fixture
 def chalice_deployer():
-    d = deployer.LambdaDeploymentPackager()
+    d = chalice.deploy.packager.LambdaDeploymentPackager()
     return d
 
 
@@ -85,7 +87,7 @@ def test_osutils_proxies_os_functions(tmpdir):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write(b'hello')
 
-    osutils = deployer.OSUtils()
+    osutils = chalice.utils.OSUtils()
 
     app_file = str(appdir.join('app.py'))
     assert osutils.file_exists(app_file)

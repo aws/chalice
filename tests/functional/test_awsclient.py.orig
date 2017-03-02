@@ -50,6 +50,64 @@ def test_put_role_policy(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+<<<<<<< HEAD
+def test_get_resources_for_api(stubbed_session):
+    expected = {
+        'id': 'id',
+        'parentId': 'parentId',
+        'pathPart': '/foo',
+        'path': '/foo',
+        'resourceMethods': {},
+    }
+    stubbed_session.stub('apigateway').get_resources(
+        restApiId='rest_api_id').returns({'items': [expected]})
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    result = awsclient.get_resources_for_api('rest_api_id')
+    assert result == [expected]
+    stubbed_session.verify_stubs()
+
+
+def test_get_root_resource_for_api(stubbed_session):
+    root_resource = {
+        'id': 'parentId',
+        'path': '/',
+    }
+    foo_resource = {
+        'id': 'id',
+        'parentId': 'parentId',
+        'pathPart': '/foo',
+        'path': '/foo',
+        'resourceMethods': {},
+    }
+    stubbed_session.stub('apigateway').get_resources(
+        restApiId='rest_api_id')\
+        .returns({'items': [foo_resource, root_resource]})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    result = awsclient.get_root_resource_for_api('rest_api_id')
+    assert result == root_resource
+    stubbed_session.verify_stubs()
+
+
+def test_delete_methods_from_root_resource(stubbed_session):
+    resource_methods = {
+        'GET': 'foo',
+    }
+    stubbed_session.stub('apigateway').delete_method(
+        restApiId='rest_api_id',
+        resourceId='resource_id',
+        httpMethod='GET').returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.delete_methods_from_root_resource(
+        'rest_api_id', {'resourceMethods': resource_methods, 'id': 'resource_id'})
+    stubbed_session.verify_stubs()
+
+
 def test_create_security_group(stubbed_session):
     stubbed_session.stub('ec2').create_security_group(
         GroupName='name',
@@ -76,6 +134,22 @@ def test_create_security_group(stubbed_session):
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
     assert awsclient.create_security_group('name', '67890') == 'abc'
+    stubbed_session.verify_stubs()
+
+=======
+class TestLambdaFunctionExists(object):
+>>>>>>> master
+
+def test_create_rest_resource(stubbed_session):
+    stubbed_session.stub('apigateway').create_resource(
+        restApiId='rest_api_id',
+        parentId='parent_id',
+        pathPart='path_part'
+    ).returns({'id': '123', 'parentId': 'parent_id'})
+    stubbed_session.activate_stubs()
+    TypedAWSClient(stubbed_session).create_rest_resource(
+        'rest_api_id', 'parent_id', 'path_part'
+    )
     stubbed_session.verify_stubs()
 
 

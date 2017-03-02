@@ -173,39 +173,21 @@ class TypedAWSClient(object):
                 return api['id']
         return None
 
-    def create_rest_api(self, name):
-        # type: (str) -> str
-        response = self._client('apigateway').create_rest_api(name=name)
-        return response['id']
-
-    def get_root_resource_for_api(self, rest_api_id):
-        # type: (str) -> Dict[str, Any]
-        resources = [r for r in self.get_resources_for_api(rest_api_id)
-                     if r['path'] == '/']
-        root_resource = resources[0]
-        return root_resource
-
-    def get_resources_for_api(self, rest_api_id):
-        # type: (str) -> List[Dict[str, Any]]
+    def import_rest_api(self, swagger_document):
+        # type: (Dict[str, Any]) -> str
         client = self._client('apigateway')
-        paginator = client.get_paginator('get_resources')
-        pages = paginator.paginate(restApiId=rest_api_id)
-        return pages.build_full_result()['items']
+        response = client.import_rest_api(
+            body=json.dumps(swagger_document, indent=2)
+        )
+        rest_api_id = response['id']
+        return rest_api_id
 
-    def delete_methods_from_root_resource(self, rest_api_id, root_resource):
+    def update_api_from_swagger(self, rest_api_id, swagger_document):
         # type: (str, Dict[str, Any]) -> None
         client = self._client('apigateway')
-        methods = list(root_resource.get('resourceMethods', []))
-        for method in methods:
-            client.delete_method(restApiId=rest_api_id,
-                                 resourceId=root_resource['id'],
-                                 httpMethod=method)
-
-    def delete_resource_for_api(self, rest_api_id, resource_id):
-        # type: (str, str) -> None
-        client = self._client('apigateway')
-        client.delete_resource(restApiId=rest_api_id,
-                               resourceId=resource_id)
+        client.put_rest_api(
+            restApiId=rest_api_id,
+            body=json.dumps(swagger_document, indent=2))
 
     def deploy_rest_api(self, rest_api_id, stage_name):
         # type: (str, str) -> None
@@ -214,16 +196,6 @@ class TypedAWSClient(object):
             restApiId=rest_api_id,
             stageName=stage_name,
         )
-
-    def create_rest_resource(self, rest_api_id, parent_id, path_part):
-        # type: (str, str, str) -> Dict[str, Any]
-        client = self._client('apigateway')
-        response = client.create_resource(
-            restApiId=rest_api_id,
-            parentId=parent_id,
-            pathPart=path_part,
-        )
-        return response
 
     def get_vpc_id_for_subnet_id(self, subnet_id):
         # type: (str) -> str
