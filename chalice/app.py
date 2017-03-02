@@ -301,7 +301,7 @@ class Chalice(object):
 
     def _get_view_function_response(self, view_function, function_args):
         try:
-            response = view_function(*function_args)
+            response = self._invoke_view_function(view_function, function_args)
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
@@ -314,7 +314,8 @@ class Chalice(object):
                 # If the user has turned on debug mode,
                 # we'll let the original exception propogate so
                 # they get more information about what went wrong.
-                self.log.debug("Caught exception", exc_info=True)
+                self.log.debug("Caught exception for %s", view_function,
+                               exc_info=True)
                 stack_trace = ''.join(traceback.format_exc())
                 body = stack_trace
                 headers['Content-Type'] = 'text/plain'
@@ -324,7 +325,20 @@ class Chalice(object):
             response = Response(body=body, headers=headers, status_code=500)
         if not isinstance(response, Response):
             response = Response(body=response)
+        self._validate_response(response)
         return response
+
+    def _invoke_view_function(self, view_function, function_args):
+        response = view_function(*function_args)
+        self._validate_response(response)
+        return response
+
+    def _validate_response(self, response):
+        if isinstance(response, Response):
+            for header, value in response.headers.items():
+                if '\n' in value:
+                    raise ChaliceError("Bad value for header '%s': %r" %
+                                       (header, value))
 
     def _cors_enabled_for_route(self, route_entry):
         return route_entry.cors

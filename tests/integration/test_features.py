@@ -1,13 +1,14 @@
-import pytest
-import os
-import requests
 import json
-import botocore.session
+import os
 import shutil
 
-from chalice import deployer
+import botocore.session
+import pytest
+import requests
+
 from chalice.cli import load_chalice_app
 from chalice.config import Config
+from chalice.deploy import deployer
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
@@ -179,3 +180,13 @@ def test_to_dict_is_also_json_serializable(smoke_test_app):
 def test_multfile_support(smoke_test_app):
     response = smoke_test_app.get_json('/multifile')
     assert response == {'message': 'success'}
+
+
+def test_custom_response(smoke_test_app):
+    url = smoke_test_app.url + '/custom-response'
+    response = requests.get(url)
+    response.raise_for_status()
+    # Custom header
+    assert response.headers['Content-Type'] == 'text/plain'
+    # Custom status code
+    assert response.status_code == 204
