@@ -294,6 +294,19 @@ def package(ctx, single_file, stage, out):
         packager.package_app(config, out)
 
 
+@cli.command('generate-pipeline')
+@click.argument('filename')
+@click.pass_context
+def generate_pipeline(ctx, filename):
+    # type: (click.Context, str) -> None
+    from chalice.pipeline import create_pipeline_template
+    factory = ctx.obj['factory']  # type: CLIFactory
+    config = factory.create_config_obj()
+    output = create_pipeline_template(config)
+    with open(filename, 'w') as f:
+        f.write(json.dumps(output, indent=2, separators=(',', ': ')))
+
+
 def run_local_server(app_obj, port):
     # type: (Chalice, int) -> None
     from chalice.local import create_local_server

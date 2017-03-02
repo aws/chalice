@@ -252,3 +252,19 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
                                   cli_factory=mock_cli_factory)
         assert result.exit_code == 2
         assert 'not find' in result.output
+
+
+def test_can_generate_pipeline_for_all(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.generate_pipeline, ['pipeline.json'])
+        assert result.exit_code == 0, result.output
+        assert os.path.isfile('pipeline.json')
+        with open('pipeline.json', 'r') as f:
+            template = json.load(f)
+            # The actual contents are tested in the unit
+            # tests.  Just a sanity check that it looks right.
+            assert "AWSTemplateFormatVersion" in template
+            assert "Outputs" in template
