@@ -22,7 +22,7 @@ import json
 
 import botocore.session
 import botocore.exceptions
-from typing import Any, Optional, Dict, Callable  # noqa
+from typing import Any, Optional, Dict, Callable, Tuple  # noqa
 
 
 class TypedAWSClient(object):
@@ -50,8 +50,10 @@ class TypedAWSClient(object):
             raise
         return True
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(
+            self, function_name, role_arn, zip_contents,
+            environment_variables, vpc_config):
+        # type: (str, str, str, Dict[str, str], Dict[str, List[str]]) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -60,6 +62,13 @@ class TypedAWSClient(object):
             'Role': role_arn,
             'Timeout': 60,
         }
+        if environment_variables:
+            kwargs['Environment'] = {'Variables': environment_variables}
+        if vpc_config:
+            kwargs['VpcConfig'] = {
+                'SubnetIds': vpc_config.get('subnet_ids', []),
+                'SecurityGroupIds': vpc_config.get('security_group_ids', [])
+            }
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -76,7 +85,7 @@ class TypedAWSClient(object):
                     attempts += 1
                     if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
                         raise
-                    continue
+                    continue  # Not picked up by pytest-cov?
                 raise
             return response['FunctionArn']
 
@@ -84,6 +93,24 @@ class TypedAWSClient(object):
         # type: (str, str) -> None
         self._client('lambda').update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
+
+    def update_function_configuration(
+            self, function_name, role_arn, environment_variables, vpc_config):
+        # type: (str, str, Dict[str, str], Dict[str, List[str]]) -> None
+        if not environment_variables:
+            environment_variables = {}
+        if not vpc_config:
+            vpc_config = {}
+        kwargs = {
+            'FunctionName': function_name,
+            'Role': role_arn,
+            'Environment': {'Variables': environment_variables},
+            'VpcConfig': {
+                'SubnetIds': vpc_config.get('subnet_ids', []),
+                'SecurityGroupIds': vpc_config.get('security_group_ids', [])
+            }
+        }
+        self._client('lambda').update_function_configuration(**kwargs)
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
@@ -98,8 +125,15 @@ class TypedAWSClient(object):
 
     def delete_role_policy(self, role_name, policy_name):
         # type: (str, str) -> None
-        self._client('iam').delete_role_policy(RoleName=role_name,
-                                               PolicyName=policy_name)
+        try:
+            self._client('iam').delete_role_policy(
+                RoleName=role_name,
+                PolicyName=policy_name
+            )
+        except botocore.exceptions.ClientError as e:
+            error = e.response['Error']
+            if error['Code'] != 'NoSuchEntity':
+                raise
 
     def put_role_policy(self, role_name, policy_name, policy_document):
         # type: (str, str, Dict[str, Any]) -> None
@@ -163,6 +197,58 @@ class TypedAWSClient(object):
             stageName=stage_name,
         )
 
+    def get_vpc_id_for_subnet_id(self, subnet_id):
+        # type: (str) -> str
+        response = self._client('ec2').describe_subnets(
+            SubnetIds=[subnet_id]
+        )
+        subnets = response.get('Subnets', [])
+        if not subnets:
+            raise ValueError("No subnet found for ID %s" % subnet_id)
+        # Searching on ID we know we will only ever get a single subnet
+        # in the response
+        return subnets[0]['VpcId']
+
+    def get_security_group_id_for_name(self, name):
+        # type: (str) -> Tuple[str, str]
+        sgs = self._client('ec2').describe_security_groups(
+            Filters=[{'Name': 'group-name', 'Values': [name]}]
+        )
+        security_groups = sgs.get('SecurityGroups', [])
+        for security_group in security_groups:
+            if security_group['GroupName'] == name:
+                # We also return the VPC ID to verify it matches the
+                # subnet(s) VPC
+                return security_group['GroupId'], security_group['VpcId']
+        return '', ''
+
+    def create_security_group(self, name, vpc_id):
+        # type: (str, str) -> str
+        sg = self._client('ec2').create_security_group(
+            GroupName=name,
+            Description="Default SG for %s" % name,
+            VpcId=vpc_id
+        )
+        sg_id = sg['GroupId']
+        self._client('ec2').authorize_security_group_ingress(
+            GroupId=sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 80,
+                    'ToPort': 80,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                },
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 443,
+                    'ToPort': 443,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }
+            ]
+        )
+        return sg_id
+
     def add_permission_for_apigateway_if_needed(self, function_name,
                                                 region_name, account_id,
                                                 rest_api_id, random_id):
@@ -179,8 +265,8 @@ class TypedAWSClient(object):
             policy = self.get_function_policy(function_name)
         except botocore.exceptions.ClientError as e:
             error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                pass
+            if error['Code'] != 'ResourceNotFoundException':
+                raise
         else:
             source_arn = self._build_source_arn_str(region_name, account_id,
                                                     rest_api_id)
@@ -281,7 +367,7 @@ class TypedAWSClient(object):
         dirnames = os.listdir(tmp_extract)
         if len(dirnames) == 1:
             full_dirname = os.path.join(tmp_extract, dirnames[0])
-            if os.path.isdir(full_dirname):
+            if os.path.isdir(full_dirname):  # Test this failing?
                 final_dirname = 'chalice-%s-sdk' % sdk_type
                 full_renamed_name = os.path.join(tmp_extract, final_dirname)
                 os.rename(full_dirname, full_renamed_name)

@@ -7,9 +7,11 @@ import functools
 from collections import namedtuple
 from BaseHTTPServer import HTTPServer
 from BaseHTTPServer import BaseHTTPRequestHandler
+from os import environ
 
 
 from chalice.app import Chalice  # noqa
+from chalice.config import Config  # noqa
 from typing import List, Any, Dict, Tuple, Callable  # noqa
 
 try:
@@ -24,9 +26,9 @@ HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
 
 
-def create_local_server(app_obj, port):
-    # type: (Chalice, int) -> LocalDevServer
-    return LocalDevServer(app_obj, port)
+def create_local_server(app_obj, port, config):
+    # type: (Chalice, int, Config) -> LocalDevServer
+    return LocalDevServer(app_obj, port, config)
 
 
 class RouteMatcher(object):
@@ -182,19 +184,22 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         )
         self.send_header('Access-Control-Allow-Methods',
                          'GET,HEAD,PUT,POST,OPTIONS')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        if self._cors_enabled_for_route(self._generate_lambda_event()):
+            self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
 
 class LocalDevServer(object):
-    def __init__(self, app_object, port, handler_cls=ChaliceRequestHandler,
-                 server_cls=HTTPServer):
-        # type: (Chalice, int, HandlerCls, ServerCls) -> None
+    def __init__(self, app_object, port, config,
+                 handler_cls=ChaliceRequestHandler, server_cls=HTTPServer):
+        # type: (Chalice, int, Config, HandlerCls, ServerCls) -> None
         self.app_object = app_object
         self.port = port
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object)
         self.server = server_cls(('', port), self._wrapped_handler)
+        if config.environment_variables:
+            environ.update(config.environment_variables)
 
     def handle_single_request(self):
         # type: () -> None

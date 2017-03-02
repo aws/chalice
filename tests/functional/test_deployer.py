@@ -93,6 +93,10 @@ def test_osutils_proxies_os_functions(tmpdir):
     assert osutils.file_exists(app_file)
     assert osutils.get_file_contents(app_file) == b'hello'
     assert osutils.open(app_file, 'rb').read() == b'hello'
+    osutils.set_file_contents(app_file, b'world')
+    assert osutils.get_file_contents(app_file) == b'world'
+    osutils.set_file_contents(app_file, 'foo', binary=False)
+    assert osutils.get_file_contents(app_file, binary=False) == 'foo'
     osutils.remove_file(app_file)
     # Removing again doesn't raise an error.
     osutils.remove_file(app_file)
@@ -201,8 +205,8 @@ def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
 def _remove_runtime_from_deployment_package(filename):
     new_filename = os.path.join(os.path.dirname(filename), 'new.zip')
     with zipfile.ZipFile(filename, 'r') as original:
-        with zipfile.ZipFile (new_filename, 'w',
-                              compression=zipfile.ZIP_DEFLATED) as z:
+        with zipfile.ZipFile(new_filename, 'w',
+                             compression=zipfile.ZIP_DEFLATED) as z:
             for item in original.infolist():
                 if item.filename.startswith('chalice/'):
                     continue

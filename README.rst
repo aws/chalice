@@ -925,12 +925,68 @@ http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorize
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
+Tutorial: Environment Variables
+===============================
+
+By default, chalice will not set any environment variables on your
+lambda function. However, you can add your own by adding the
+following key to your chalice configuration. This key can contain
+any key-value pairs that you would like to be set in your lambda
+function as environment variables. Variable values must be strings.
+
+::
+
+   "environment_variables": {"KEY": "value"}
+
+A good use of environment variables may be setting log levels in
+your application. For example, setting ``environment_variables``
+in your chalice config to ``{"LOG_LEVEL": "debug"}``:
+
+.. code-block:: python
+
+   from os import environ
+
+   @app.route('/')
+   def index():
+      if environ.get('LOG_LEVEL', 'info') == 'debug':
+         print 'debug message'
+      return {'hello': 'world'}
+
+Your app will only print `debug message` if your `LOG_LEVEL` environment
+variable is set to `debug`.
+
+If for any reason you wish to remove environment variables from your lambda
+function, simply remove ``environment_variables`` from your config file and
+run ``chalice deploy``.
+
+Tutorial: VPC Configuration
+===========================
+
+If you wish to give your lambda function access to a VPC, you can do so by
+adding the following key to your chalice configuration. All subnets and security
+groups provided must belong to the same VPC.
+
+::
+
+   "vpc_config": {"subnet_ids": ["subnet-foo"], "security_group_ids": ["sg-bar"]
+
+Adding your function to a VPC will allow it to access private resources within that
+VPC which are not accessible publicly. If you do not provide any ``security_group_ids``,
+a security group will be generated for you automatically with TCP ports 80 and 443 open
+to the world on ingress and all traffic open to egress. You must always provide at least
+one subnet in ``subnet_ids``, but it is highly recommended that you provide at least two
+in order to gain multi-AZ redundancy. If for any reason you wish to remove VPC
+configuration from your lambda function, simply remove ``vpc_config`` from your config
+file and run ``chalice deploy``.
+
+
 Tutorial: Local Mode
 ====================
 
 As you develop your application, you may want to experiment locally  before
 deploying your changes.  You can use ``chalice local`` to spin up a local
-HTTP server you can use for testing.
+HTTP server you can use for testing. Any ``environment_variables`` that you
+set in your chalice config will be automatically set up for your app to access.
 
 For example, if we have the following ``app.py`` file:
 
