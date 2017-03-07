@@ -119,3 +119,55 @@ def test_can_add_preflight_cors(sample_app, swagger_gen):
             'type': 'mock',
         },
     }
+
+
+def test_can_add_api_key(sample_app, swagger_gen):
+    @sample_app.route('/api-key-required', api_key_required=True)
+    def foo(name):
+        return {}
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/api-key-required']['get']
+    assert 'security' in single_method
+    assert single_method['security'] == {
+        'api_key': []
+    }
+    # Also need to add in the api_key definition in the top level
+    # security definitions.
+    assert 'securityDefinitions' in doc
+    assert 'api_key' in doc['securityDefinitions']
+    assert doc['securityDefinitions']['api_key'] == {
+        'type': 'apiKey',
+        'name': 'x-api-key',
+        'in': 'header'
+    }
+
+
+def test_can_add_authorizers(sample_app, swagger_gen):
+    @sample_app.route('/api-key-required',
+                      authorizer_name='MyUserPool')
+    def foo(name):
+        return {}
+
+    # Doesn't matter if you define the authorizer before
+    # it's referenced.
+    sample_app.define_authorizer(
+        name='MyUserPool',
+        header='Authorization',
+        auth_type='cognito_user_pools',
+        provider_arns=['arn:aws:cog:r:1:userpool/name']
+    )
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/api-key-required']['get']
+    assert single_method.get('security') == [{'MyUserPool': []}]
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions'].get('MyUserPool') == {
+        'in': 'header',
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'x-amazon-apigateway-authtype': 'cognito_user_pools',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'cognito_user_pools',
+            'providerARNs': ['arn:aws:cog:r:1:userpool/name']
+        }
+    }

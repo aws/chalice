@@ -42,9 +42,42 @@ class SwaggerGenerator(object):
             api['paths'][path] = swagger_for_path
             for http_method in view.methods:
                 current = self._generate_route_method(view)
+                if 'security' in current:
+                    self._add_to_security_definition(
+                        current['security'], api, app.authorizers)
                 swagger_for_path[http_method.lower()] = current
             if view.cors:
                 self._add_preflight_request(view, swagger_for_path)
+
+    def _add_to_security_definition(self, security, api_config, authorizers):
+        # type: (Any, Dict[str, Any], Dict[str, Any]) -> None
+        if 'api_key' in security:
+            # This is just the api_key_required=True config
+            swagger_snippet = {
+                'type': 'apiKey',
+                'name': 'x-api-key',
+                'in': 'header',
+            }  # type: Dict[str, Any]
+            api_config.setdefault(
+                'securityDefinitions', {})['api_key'] = swagger_snippet
+        elif isinstance(security, list):
+            for auth in security:
+                # TODO: Add validation checks for unknown auth references.
+                name = auth.keys()[0]
+                authorizer_config = authorizers[name]
+                auth_type = authorizer_config['auth_type']
+                swagger_snippet = {
+                    'in': 'header',
+                    'type': 'apiKey',
+                    'name': authorizer_config['header'],
+                    'x-amazon-apigateway-authtype': auth_type,
+                    'x-amazon-apigateway-authorizer': {
+                        'type': auth_type,
+                        'providerARNs': authorizer_config['provider_arns'],
+                    }
+                }
+            api_config.setdefault(
+                'securityDefinitions', {})[name] = swagger_snippet
 
     def _generate_route_method(self, view):
         # type: (RouteEntry) -> Dict[str, Any]
@@ -54,7 +87,15 @@ class SwaggerGenerator(object):
             'responses': self._generate_precanned_responses(),
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
-        }
+        }  # type: Dict[str, Any]
+        if view.api_key_required:
+            # When this happens we also have to add the relevant portions
+            # to the security definitions.  We have to someone indicate
+            # this because this neeeds to be added to the global config
+            # file.
+            current['security'] = {'api_key': []}
+        if view.authorizer_name:
+            current['security'] = [{view.authorizer_name: []}]
         return current
 
     def _generate_precanned_responses(self):
