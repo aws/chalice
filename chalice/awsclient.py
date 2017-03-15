@@ -22,7 +22,7 @@ import json
 
 import botocore.session
 import botocore.exceptions
-from typing import Any, Optional, Dict, Callable  # noqa
+from typing import Any, Optional, Dict, Callable, List  # noqa
 
 
 class TypedAWSClient(object):
@@ -36,8 +36,7 @@ class TypedAWSClient(object):
         # type: (botocore.session.Session, Callable[[int], None]) -> None
         self._session = session
         self._sleep = sleep
-        self._client_cache = {}
-        # type: Dict[str, Any]
+        self._client_cache = {}  # type: Dict[str, Any]
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool
