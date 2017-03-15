@@ -36,7 +36,7 @@ particular ``FunctionDef`` node.
 import ast
 import symtable
 
-from typing import Dict, Set, Any, Optional  # noqa
+from typing import Dict, Set, Any, Optional, List  # noqa
 
 
 APICallT = Dict[str, Set[str]]
