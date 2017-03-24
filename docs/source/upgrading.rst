@@ -8,6 +8,45 @@ interested in the high level changes, see the
 file.
 
 
+0.7.0
+-----
+
+**The ``authorizer_id`` and ``authorization_type`` args are
+no longer supported in ``@app.route(...)`` calls.**
+They have been replaced with an ``authorizer_name`` parameter and an
+``app.define_authorizer`` method.
+
+This version changed the internals of how an API gateway REST API is created.
+Prior to 0.7.0, the AWS SDK for Python was used to make the appropriate service
+API calls to API gateway include ``create_rest_api`` and ``put_method /
+put_method_response`` for each route.  In version 0.7.0, this internal
+mechanism was changed to instead generate a swagger document.  The rest api is
+then created or updated by calling ``import_rest_api`` or ``put_rest_api`` and
+providing the swagger document.  This simplifies the internals and also unifies
+the code base for the newly added ``chalice package`` command (which uses a
+swagger document internally).  One consequence of this change is that the
+entire REST API must be defined in the swagger document.  With the previous
+``authorizer_id`` parameter, you would create/deploy a rest api, create your
+authorizer, and then provide that ``authorizer_id`` in your ``@app.route``
+calls.  Now they must be defined all at once in the ``app.py`` file:
+
+
+.. code-block:: python
+
+    app = chalice.Chalice(app_name='demo')
+
+    @app.route('/auth-required', authorizer_name='MyUserPool')
+    def foo():
+        return {}
+
+    app.define_authorizer(
+        name='MyUserPool',
+        header='Authorization',
+        auth_type='cognito_user_pools',
+        provider_arns=['arn:aws:cognito:...:userpool/name']
+    )
+
+
 0.6.0
 -----
 

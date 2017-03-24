@@ -24,24 +24,6 @@ def test_deploy_rest_api(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_delete_resource_for_api(stubbed_session):
-    stubbed_session.stub('apigateway').delete_resource(
-        restApiId='api_id', resourceId='resource_id').returns({})
-    stubbed_session.activate_stubs()
-    awsclient = TypedAWSClient(stubbed_session)
-    awsclient.delete_resource_for_api('api_id', 'resource_id')
-    stubbed_session.verify_stubs()
-
-
-def test_create_rest_api(stubbed_session):
-    stubbed_session.stub('apigateway').create_rest_api(
-        name='name').returns({'id': 'rest_api_id'})
-    stubbed_session.activate_stubs()
-    awsclient = TypedAWSClient(stubbed_session)
-    assert awsclient.create_rest_api('name') == 'rest_api_id'
-    stubbed_session.verify_stubs()
-
-
 def test_update_function_code(stubbed_session):
     stubbed_session.stub('lambda').update_function_code(
         FunctionName='name', ZipFile=b'foo').returns({})
@@ -62,63 +44,6 @@ def test_put_role_policy(stubbed_session):
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.put_role_policy('role_name', 'policy_name', {'foo': 'bar'})
 
-    stubbed_session.verify_stubs()
-
-
-def test_get_resources_for_api(stubbed_session):
-    expected = {
-        'id': 'id',
-        'parentId': 'parentId',
-        'pathPart': '/foo',
-        'path': '/foo',
-        'resourceMethods': {},
-    }
-    stubbed_session.stub('apigateway').get_resources(
-        restApiId='rest_api_id').returns({'items': [expected]})
-    stubbed_session.activate_stubs()
-
-    awsclient = TypedAWSClient(stubbed_session)
-    result = awsclient.get_resources_for_api('rest_api_id')
-    assert result == [expected]
-    stubbed_session.verify_stubs()
-
-
-def test_get_root_resource_for_api(stubbed_session):
-    root_resource = {
-        'id': 'parentId',
-        'path': '/',
-    }
-    foo_resource = {
-        'id': 'id',
-        'parentId': 'parentId',
-        'pathPart': '/foo',
-        'path': '/foo',
-        'resourceMethods': {},
-    }
-    stubbed_session.stub('apigateway').get_resources(
-        restApiId='rest_api_id')\
-        .returns({'items': [foo_resource, root_resource]})
-
-    stubbed_session.activate_stubs()
-    awsclient = TypedAWSClient(stubbed_session)
-    result = awsclient.get_root_resource_for_api('rest_api_id')
-    assert result == root_resource
-    stubbed_session.verify_stubs()
-
-
-def test_delete_methods_from_root_resource(stubbed_session):
-    resource_methods = {
-        'GET': 'foo',
-    }
-    stubbed_session.stub('apigateway').delete_method(
-        restApiId='rest_api_id',
-        resourceId='resource_id',
-        httpMethod='GET').returns({})
-
-    stubbed_session.activate_stubs()
-    awsclient = TypedAWSClient(stubbed_session)
-    awsclient.delete_methods_from_root_resource(
-        'rest_api_id', {'resourceMethods': resource_methods, 'id': 'resource_id'})
     stubbed_session.verify_stubs()
 
 
@@ -430,3 +355,30 @@ class TestAddPermissionsForAPIGateway(object):
             'rest-api-id', 'dev', 'javascript')
         stubbed_session.verify_stubs()
         assert response == 'foo'
+
+    def test_import_rest_api(self, stubbed_session):
+        apig = stubbed_session.stub('apigateway')
+        swagger_doc = {'swagger': 'doc'}
+        apig.import_rest_api(
+            body=json.dumps(swagger_doc, indent=2)).returns(
+                {'id': 'rest_api_id'})
+
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        rest_api_id = awsclient.import_rest_api(swagger_doc)
+        stubbed_session.verify_stubs()
+        assert rest_api_id == 'rest_api_id'
+
+    def test_update_api_from_swagger(self, stubbed_session):
+        apig = stubbed_session.stub('apigateway')
+        swagger_doc = {'swagger': 'doc'}
+        apig.put_rest_api(
+            restApiId='rest_api_id',
+            body=json.dumps(swagger_doc, indent=2)).returns({})
+
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+
+        awsclient.update_api_from_swagger('rest_api_id',
+                                          swagger_doc)
+        stubbed_session.verify_stubs()
