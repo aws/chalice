@@ -3,7 +3,7 @@ import json
 import decimal
 import pytest
 from pytest import fixture
-from StringIO import StringIO
+from six import BytesIO
 
 from chalice import app
 
@@ -13,8 +13,8 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
     request_version = 'HTTP/1.1'
 
     def setup(self):
-        self.rfile = StringIO()
-        self.wfile = StringIO()
+        self.rfile = BytesIO()
+        self.wfile = BytesIO()
         self.requestline = ''
 
     def finish(self):
@@ -108,7 +108,7 @@ def test_can_route_url_params(handler):
 
 
 def test_can_route_put_with_body(handler):
-    body = '{"foo": "bar"}'
+    body = b'{"foo": "bar"}'
     headers = {'content-type': 'application/json',
                'content-length': len(body)}
     set_current_request(handler, method='PUT', path='/put',
@@ -126,7 +126,7 @@ def test_will_respond_with_cors_enabled(handler):
     set_current_request(handler, method='GET', path='/cors', headers=headers)
     handler.do_GET()
     response_lines = handler.wfile.getvalue().splitlines()
-    assert 'Access-Control-Allow-Origin: *' in response_lines
+    assert b'Access-Control-Allow-Origin: *' in response_lines
 
 
 def test_can_preflight_request(handler):
@@ -135,7 +135,7 @@ def test_can_preflight_request(handler):
                         headers=headers)
     handler.do_OPTIONS()
     response_lines = handler.wfile.getvalue().splitlines()
-    assert 'Access-Control-Allow-Origin: *' in response_lines
+    assert b'Access-Control-Allow-Origin: *' in response_lines
 
 
 def test_non_preflight_options_request(handler):

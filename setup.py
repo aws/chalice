@@ -11,6 +11,7 @@ install_requires = [
     'botocore>=1.5.0,<2.0.0',
     'virtualenv>=15.0.0,<16.0.0',
     'typing==3.5.3.0',
+    'six>=1.10.0,<2.0.0',
 ]
 
 setup(
@@ -21,7 +22,6 @@ setup(
     author="James Saryerwinnie",
     author_email='js@jamesls.com',
     url='https://github.com/jamesls/chalice',
-    python_requires=">=2.7,<3",
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
     license="Apache License 2.0",

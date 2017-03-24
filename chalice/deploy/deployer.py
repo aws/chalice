@@ -141,7 +141,7 @@ class Deployer(object):
         rest_api_id, region_name, apig_stage = self._apigateway_deploy.deploy(
             config, existing_resources,
             deployed_values['api_handler_arn'])
-        print (
+        print(
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
             .format(api_id=rest_api_id, region=region_name, stage=apig_stage)
         )
@@ -204,27 +204,27 @@ class LambdaDeployer(object):
             role_arn = self._aws_client.get_role_arn_for_name(role_name)
             self._update_role_with_latest_policy(role_name, config)
         except ValueError:
-            print "Creating role"
+            print("Creating role")
             role_arn = self._create_role_from_source_code(config, role_name)
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
         # type: (str, Config) -> None
-        print "Updating IAM policy."
+        print("Updating IAM policy.")
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         previous = self._app_policy.load_last_policy(config)
         diff = policy.diff_policies(previous, app_policy)
         if diff:
             if diff.get('added', set([])):
-                print ("\nThe following actions will be added to "
-                       "the execution policy:\n")
+                print("\nThe following actions will be added to "
+                      "the execution policy:\n")
                 for action in diff['added']:
-                    print action
+                    print(action)
             if diff.get('removed', set([])):
-                print ("\nThe following action will be removed from "
-                       "the execution policy:\n")
+                print("\nThe following action will be removed from "
+                      "the execution policy:\n")
                 for action in diff['removed']:
-                    print action
+                    print(action)
             self._prompter.confirm("\nWould you like to continue? ",
                                    default=True, abort=True)
         self._aws_client.delete_role_policy(
@@ -239,7 +239,7 @@ class LambdaDeployer(object):
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
-        print "Initial creation of lambda function."
+        print("Initial creation of lambda function.")
         role_arn = self._get_or_create_lambda_role_arn(config, function_name)
         zip_filename = self._packager.create_deployment_package(
             config.project_dir)
@@ -251,7 +251,7 @@ class LambdaDeployer(object):
 
     def _update_lambda_function(self, config, lambda_name):
         # type: (Config, str) -> None
-        print "Updating lambda function..."
+        print("Updating lambda function...")
         project_dir = config.project_dir
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
@@ -264,7 +264,7 @@ class LambdaDeployer(object):
                 project_dir)
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
-        print "Sending changes to lambda."
+        print("Sending changes to lambda.")
         self._aws_client.update_function(lambda_name, zip_contents,
                                          config.environment_variables)
 
@@ -279,8 +279,8 @@ class LambdaDeployer(object):
         # type: (Config, str) -> str
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
-            print "The following execution policy will be used:"
-            print json.dumps(app_policy, indent=2)
+            print("The following execution policy will be used:")
+            print(json.dumps(app_policy, indent=2))
             self._prompter.confirm("Would you like to continue? ",
                                    default=True, abort=True)
         role_arn = self._aws_client.create_role(
@@ -302,12 +302,12 @@ class APIGatewayDeployer(object):
         if existing_resources is not None and \
                 self._aws_client.rest_api_exists(
                     existing_resources.rest_api_id):
-            print "API Gateway rest API already found."
+            print("API Gateway rest API already found.")
             rest_api_id = existing_resources.rest_api_id
             return self._create_resources_for_api(config, rest_api_id,
                                                   lambda_arn)
         else:
-            print "Initiating first time deployment..."
+            print("Initiating first time deployment...")
             return self._first_time_deploy(config, lambda_arn)
 
     def _first_time_deploy(self, config, lambda_arn):
@@ -336,7 +336,7 @@ class APIGatewayDeployer(object):
 
     def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage, lambda_arn):
         # type: (str, str, str) -> None
-        print "Deploying to:", api_gateway_stage
+        print("Deploying to:", api_gateway_stage)
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         self._aws_client.add_permission_for_apigateway_if_needed(
             lambda_arn.split(':')[-1],

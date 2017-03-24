@@ -120,7 +120,8 @@ class SAMTemplateGenerator(object):
             for http_method in view.methods:
                 key_name = ''.join([
                     view.view_name, http_method.lower(),
-                    hashlib.md5(view.view_name).hexdigest()[:4],
+                    hashlib.md5(
+                        view.view_name.encode('utf-8')).hexdigest()[:4],
                 ])
                 events[key_name] = {
                     'Type': 'Api',

@@ -62,7 +62,9 @@ def show_lambda_logs(session, lambda_arn, max_entries,
         include_lambda_messages=include_lambda_messages,
         max_entries=max_entries)
     for event in events:
-        print event['timestamp'], event['logShortId'], event['message'].strip()
+        print('%s %s %s' % (event['timestamp'],
+                            event['logShortId'],
+                            event['message'].strip()))
 
 
 @click.group()

@@ -365,7 +365,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
 
     # And should result in the lambda function being updated with the API.
     aws_client.update_function.assert_called_with(
-        lambda_function_name, 'package contents', {"FOO": "BAR"})
+        lambda_function_name, b'package contents', {"FOO": "BAR"})
 
 
 def test_lambda_deployer_initial_deploy(app_policy, sample_app):
