@@ -3,24 +3,25 @@
 Contains commands for deploying chalice.
 
 """
-import importlib
-import json
-import logging
 import os
+import json
 import sys
+import logging
+import importlib
 
-import botocore.exceptions
 import click
+import botocore.exceptions
 from typing import Dict, Any  # noqa
 
-from chalice import __version__ as chalice_version
-from chalice import prompts
 from chalice.app import Chalice  # noqa
+from chalice import deployer
+from chalice import __version__ as chalice_version
+from chalice.logs import LogRetriever
+from chalice import prompts
+from chalice.config import Config
 from chalice.awsclient import TypedAWSClient
 from chalice.cli.utils import create_botocore_session
-from chalice.config import Config
-from chalice.deploy import deployer
-from chalice.logs import LogRetriever
+
 
 TEMPLATE_APP = """\
 from chalice import Chalice

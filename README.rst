@@ -954,7 +954,7 @@ We can run ``chalice local`` to test this API locally:
 
 We can override the port using:
 
-    $ chalice --port=8080 local
+    $ chalice local --port=8080
 
 We can now test our API using ``localhost:8000``::
 

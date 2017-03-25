@@ -1,14 +1,13 @@
-import json
+import pytest
 import os
+import requests
+import json
+import botocore.session
 import shutil
 
-import botocore.session
-import pytest
-import requests
-
+from chalice import deployer
 from chalice.cli import load_chalice_app
 from chalice.config import Config
-from chalice.deploy import deployer
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
