@@ -1,7 +1,24 @@
 import os
 import zipfile
+import json
 
-from typing import IO  # noqa
+from typing import IO, Dict, Any  # noqa
+
+
+def record_deployed_values(deployed_values, filename):
+    # type: (Dict[str, str], str) -> None
+    """Record deployed values to a JSON file.
+
+    This allows subsequent deploys to lookup previously deployed values.
+
+    """
+    final_values = {}  # type: Dict[str, Any]
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            final_values = json.load(f)
+    final_values.update(deployed_values)
+    with open(filename, 'wb') as f:
+        f.write(json.dumps(final_values, indent=2, separators=(',', ': ')))
 
 
 def create_zip_file(source_dir, outfile):

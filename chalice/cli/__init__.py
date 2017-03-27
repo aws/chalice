@@ -24,7 +24,7 @@ from chalice.config import Config
 from chalice.deploy import deployer
 from chalice.logs import LogRetriever
 from chalice.package import create_app_packager
-from chalice.utils import create_zip_file
+from chalice.utils import create_zip_file, record_deployed_values
 
 
 TEMPLATE_APP = """\
@@ -172,13 +172,20 @@ def local(ctx, port=8000):
 def deploy(ctx, autogen_policy, profile, stage):
     # type: (click.Context, bool, str, str) -> None
     config = create_config_obj(
-        ctx, stage_name=stage, autogen_policy=autogen_policy,
+        # Note: stage_name is not the same thing as the chalice stage.
+        # This is a legacy artifact that just means "API gateway stage",
+        # or for our purposes, the URL prefix.
+        ctx, stage_name='dev', autogen_policy=autogen_policy,
         profile=profile)
+    if stage is None:
+        stage = 'dev'
     session = create_botocore_session(profile=config.profile,
                                       debug=ctx.obj['debug'])
     d = deployer.create_default_deployer(session=session, prompter=click)
     try:
-        d.deploy(config)
+        deployed_values = d.deploy(config, stage_name=stage)
+        record_deployed_values(deployed_values, os.path.join(
+            config.project_dir, '.chalice', 'deployed.json'))
     except botocore.exceptions.NoRegionError:
         e = click.ClickException("No region configured. "
                                  "Either export the AWS_DEFAULT_REGION "

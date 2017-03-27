@@ -80,8 +80,8 @@ class TypedAWSClient(object):
             return response['FunctionArn']
 
     def update_function_code(self, function_name, zip_contents):
-        # type: (str, str) -> None
-        self._client('lambda').update_function_code(
+        # type: (str, str) -> Dict[str, Any]
+        return self._client('lambda').update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
 
     def get_role_arn_for_name(self, name):
@@ -137,6 +137,17 @@ class TypedAWSClient(object):
             if api['name'] == name:
                 return api['id']
         return None
+
+    def rest_api_exists(self, rest_api_id):
+        # type: (str) -> bool
+        """Check if an an API Gateway REST API exists."""
+        try:
+            self._client('apigateway').get_rest_api(restApiId=rest_api_id)
+            return True
+        except botocore.exceptions.ClientError as e:
+            if e['Code'] == 'NotFoundException':
+                return False
+            raise
 
     def import_rest_api(self, swagger_document):
         # type: (Dict[str, Any]) -> str

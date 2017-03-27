@@ -7,9 +7,10 @@ import mock
 from botocore.stub import Stubber
 from pytest import fixture
 
+from chalice import __version__ as chalice_version
 from chalice.app import Chalice
 from chalice.awsclient import TypedAWSClient
-from chalice.config import Config
+from chalice.config import Config, DeployedResources
 from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
@@ -92,7 +93,7 @@ def test_api_gateway_deployer_initial_deploy(config_obj):
     aws_client.import_rest_api.return_value = 'rest-api-id'
 
     d = APIGatewayDeployer(aws_client)
-    d.deploy(config_obj)
+    d.deploy(config_obj, None)
 
     # mock.ANY because we don't want to test the contents of the swagger
     # doc.  That's tested exhaustively elsewhere.
@@ -114,10 +115,12 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
 
     # The rest_api_id does not exist which will trigger
     # the initial import
-    aws_client.get_rest_api_id.return_value = 'existing-id'
+    deployed = DeployedResources(
+        None, None, None, 'existing-id', 'dev', None, None)
+    aws_client.rest_api_exists.return_value = True
 
     d = APIGatewayDeployer(aws_client)
-    d.deploy(config_obj)
+    d.deploy(config_obj, deployed)
 
     aws_client.update_api_from_swagger.assert_called_with('existing-id',
                                                           mock.ANY)
@@ -202,14 +205,43 @@ def test_can_deploy_apig_and_lambda(sample_app):
     lambda_deploy = mock.Mock(spec=LambdaDeployer)
     apig_deploy = mock.Mock(spec=APIGatewayDeployer)
 
+    lambda_deploy.deploy.return_value = {
+        'api_handler_name': 'lambda_function',
+        'api_handler_arn': 'my_lambda_arn',
+    }
     apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
 
     d = Deployer(apig_deploy, lambda_deploy)
-    cfg = Config({'chalice_app': sample_app})
-    result = d.deploy(cfg)
-    assert result == ('api_id', 'region', 'stage')
-    lambda_deploy.deploy.assert_called_with(cfg)
-    apig_deploy.deploy.assert_called_with(cfg)
+    cfg = Config({'chalice_app': sample_app, 'project_dir': '.'})
+    d.deploy(cfg)
+    lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
+    apig_deploy.deploy.assert_called_with(cfg, None)
+
+
+def test_deployer_returns_deployed_resources(sample_app):
+    cfg = Config({'chalice_app': sample_app, 'project_dir': '.'})
+    lambda_deploy = mock.Mock(spec=LambdaDeployer)
+    apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+
+    apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
+    lambda_deploy.deploy.return_value = {
+        'api_handler_name': 'lambda_function',
+        'api_handler_arn': 'my_lambda_arn',
+    }
+
+    d = Deployer(apig_deploy, lambda_deploy)
+    deployed_values = d.deploy(cfg)
+    assert deployed_values == {
+        'dev': {
+            'backend': 'api',
+            'api_handler_arn': 'my_lambda_arn',
+            'api_handler_name': 'lambda_function',
+            'rest_api_id': 'api_id',
+            'api_gateway_stage': 'stage',
+            'region': 'region',
+            'chalice_version': chalice_version,
+        }
+    }
 
 
 def test_noprompt_always_returns_default():
@@ -228,6 +260,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     packager.deployment_package_filename.return_value = 'packages.zip'
     # Given the lambda function already exists:
     aws_client.lambda_function_exists.return_value = True
+    aws_client.update_function_code.return_value = {"FunctionArn": "myarn"}
     # And given we don't want chalice to manage our iam role for the lambda
     # function:
     cfg = Config({'chalice_app': sample_app, 'manage_iam_role': False,
@@ -236,7 +269,11 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
 
     d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
     # Doing a lambda deploy:
-    d.deploy(cfg)
+    lambda_function_name = 'lambda_function_name'
+    deployed = DeployedResources(
+        'api', 'api_handler_arn', lambda_function_name,
+        None, 'dev', None, None)
+    d.deploy(cfg, deployed, 'dev')
 
     # Should result in injecting the latest app code.
     packager.inject_latest_app.assert_called_with('packages.zip',
@@ -244,7 +281,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
 
     # And should result in the lambda function being updated with the API.
     aws_client.update_function_code.assert_called_with(
-        'appname', 'package contents')
+        lambda_function_name, 'package contents')
 
 
 def test_cant_have_options_with_cors(sample_app):
