@@ -1,6 +1,27 @@
 import os
+import zipfile
 
 from typing import IO  # noqa
+
+
+def create_zip_file(source_dir, outfile):
+    # type: (str, str) -> None
+    """Create a zip file from a source input directory.
+
+    This function is intended to be an equivalent to
+    `zip -r`.  You give it a source directory, `source_dir`,
+    and it will recursively zip up the files into a zipfile
+    specified by the `outfile` argument.
+
+    """
+    with zipfile.ZipFile(outfile, 'w',
+                         compression=zipfile.ZIP_DEFLATED) as z:
+        prefix_len = len(source_dir) + 1
+        for root, _, filenames in os.walk(source_dir):
+            for filename in filenames:
+                full_name = os.path.join(root, filename)
+                archive_name = full_name[prefix_len:]
+                z.write(full_name, archive_name)
 
 
 class OSUtils(object):
