@@ -43,9 +43,9 @@ class Config(object):
         return self._chain_lookup('app_name')
 
     @property
-    def stage(self):
+    def api_gateway_stage(self):
         # type: () -> str
-        return self._chain_lookup('stage')
+        return self._chain_lookup('api_gateway_stage')
 
     @property
     def manage_iam_role(self):
@@ -101,7 +101,7 @@ class Config(object):
         # type: () -> str
         return self._chain_lookup('lambda_arn')
 
-    def deployed_resources(self, stage_name):
+    def deployed_resources(self, chalice_stage_name):
         # type: (str) -> Optional[DeployedResources]
         """Return resources associated with a given stage.
 
@@ -117,9 +117,9 @@ class Config(object):
             return None
         with open(deployed_file, 'r') as f:
             data = json.load(f)
-        if stage_name not in data:
+        if chalice_stage_name not in data:
             return None
-        return DeployedResources.from_dict(data[stage_name])
+        return DeployedResources.from_dict(data[chalice_stage_name])
 
 
 class DeployedResources(object):

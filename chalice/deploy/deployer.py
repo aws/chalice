@@ -141,22 +141,22 @@ class Deployer(object):
         self._apigateway_deploy = apigateway_deploy
         self._lambda_deploy = lambda_deploy
 
-    def deploy(self, config, stage_name='dev'):
+    def deploy(self, config, chalice_stage_name='dev'):
         # type: (Config, str) -> Dict[str, Any]
         """Deploy chalice application to AWS.
 
-        :type config: Config
-        :param config: A dictionary of config values including:
-
-            * project_dir - The directory containing the project
-            * config - A dictionary of config values loaded from the
-                project config file.
+        :param config: A chalice config object for the app
+        :param chalice_stage_name: The name of the chalice stage to deploy to.
+            If this chalice stage does not exist, a new stage will be created.
+            If the stage exists, a redeploy will occur.  A chalice stage
+            is an entire collection of AWS resources including an API Gateway
+            rest api, lambda function, role, etc.
 
         """
         validate_configuration(config)
-        existing_resources = config.deployed_resources(stage_name)
+        existing_resources = config.deployed_resources(chalice_stage_name)
         deployed_values = self._lambda_deploy.deploy(
-            config, existing_resources, stage_name)
+            config, existing_resources, chalice_stage_name)
         rest_api_id, region_name, apig_stage = self._apigateway_deploy.deploy(
             config, existing_resources)
         print (
@@ -171,7 +171,7 @@ class Deployer(object):
             'chalice_version': chalice_version,
         })
         return {
-            stage_name: deployed_values
+            chalice_stage_name: deployed_values
         }
 
 
@@ -341,9 +341,9 @@ class APIGatewayDeployer(object):
         # for each rest API, but that would require injecting chalice stage
         # information into the swagger generator.
         rest_api_id = self._aws_client.import_rest_api(swagger_doc)
-        stage = config.stage or 'dev'
-        self._deploy_api_to_stage(rest_api_id, stage, config)
-        return rest_api_id, self._aws_client.region_name, stage
+        api_gateway_stage = config.api_gateway_stage or 'dev'
+        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, config)
+        return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
     def _create_resources_for_api(self, config, rest_api_id):
         # type: (Config, str) -> Tuple[str, str, str]
@@ -351,14 +351,14 @@ class APIGatewayDeployer(object):
                                      config.lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
-        stage = config.stage or 'dev'
-        self._deploy_api_to_stage(rest_api_id, stage, config)
-        return rest_api_id, self._aws_client.region_name, stage
+        api_gateway_stage = config.api_gateway_stage or 'dev'
+        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, config)
+        return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
-    def _deploy_api_to_stage(self, rest_api_id, stage, config):
+    def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage, config):
         # type: (str, str, Config) -> None
-        print "Deploying to:", stage
-        self._aws_client.deploy_rest_api(rest_api_id, stage)
+        print "Deploying to:", api_gateway_stage
+        self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         self._aws_client.add_permission_for_apigateway_if_needed(
             config.lambda_arn.split(':')[-1],
             self._aws_client.region_name,

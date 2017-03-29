@@ -107,7 +107,7 @@ def cli(ctx, project_dir, debug=False):
 @click.pass_context
 def local(ctx, port=8000):
     # type: (click.Context, int) -> None
-    factory = ctx.obj['factory']
+    factory = ctx.obj['factory']  # type: CLIFactory
     app_obj = factory.load_chalice_app()
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
@@ -127,19 +127,19 @@ def local(ctx, port=8000):
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, stage):
     # type: (click.Context, bool, str, str) -> None
-    factory = ctx.obj['factory']
+    factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(
         # Note: stage_name is not the same thing as the chalice stage.
         # This is a legacy artifact that just means "API gateway stage",
         # or for our purposes, the URL prefix.
-        stage_name='dev', autogen_policy=autogen_policy)
+        chalice_stage_name='dev', autogen_policy=autogen_policy)
     if stage is None:
         stage = 'dev'
     session = factory.create_botocore_session()
     d = factory.create_default_deployer(session=session, prompter=click)
     try:
-        deployed_values = d.deploy(config, stage_name=stage)
+        deployed_values = d.deploy(config, chalice_stage_name=stage)
         record_deployed_values(deployed_values, os.path.join(
             config.project_dir, '.chalice', 'deployed.json'))
     except botocore.exceptions.NoRegionError:
@@ -162,7 +162,6 @@ def logs(ctx, num_entries, include_lambda_messages):
     # type: (click.Context, int, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj('dev', False)
-    factory = ctx.obj['factory']
     session = factory.create_botocore_session()
     show_lambda_logs(session, config, num_entries, include_lambda_messages)
 
@@ -201,7 +200,11 @@ def new_project(project_name, profile):
     cfg = {
         'version': CONFIG_VERSION,
         'app_name': project_name,
-        'stage': 'dev'
+        'stages': {
+            'dev': {
+                'api_gateway_stage': 'dev'
+            }
+        }
     }
     if profile:
         cfg['profile'] = profile
@@ -219,18 +222,18 @@ def new_project(project_name, profile):
 @click.pass_context
 def url(ctx):
     # type: (click.Context) -> None
-    factory = ctx.obj['factory']
+    factory = ctx.obj['factory']  # type: CLIFactory
     # TODO: Command should be stage aware!
     config = factory.create_config_obj()
-    session = factory.create_botocore_session(
-        profile=config.profile, debug=ctx.obj['debug'])
+    session = factory.create_botocore_session()
     c = TypedAWSClient(session)
     rest_api_id = c.get_rest_api_id(config.app_name)
-    stage_name = config.stage
+    api_gateway_stage = config.api_gateway_stage
     region_name = c.region_name
     click.echo(
         "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
-        .format(api_id=rest_api_id, region=region_name, stage=stage_name)
+        .format(api_id=rest_api_id, region=region_name,
+                stage=api_gateway_stage)
     )
 
 
@@ -241,19 +244,18 @@ def url(ctx):
 @click.pass_context
 def generate_sdk(ctx, sdk_type, outdir):
     # type: (click.Context, str, str) -> None
-    factory = ctx.obj['factory']
+    factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
-    factory = ctx.obj['factory']
-    session = factory.create_botocore_session(
-        profile=config.profile, debug=ctx.obj['debug'])
+    session = factory.create_botocore_session()
     client = TypedAWSClient(session)
     rest_api_id = client.get_rest_api_id(config.app_name)
-    stage_name = config.stage
+    api_gateway_stage = config.api_gateway_stage
     if rest_api_id is None:
         click.echo("Could not find API ID, has this application "
                    "been deployed?")
         raise click.Abort()
-    client.download_sdk(rest_api_id, outdir, stage=stage_name,
+    client.download_sdk(rest_api_id, outdir,
+                        api_gateway_stage=api_gateway_stage,
                         sdk_type=sdk_type)
 
 
@@ -270,7 +272,7 @@ def generate_sdk(ctx, sdk_type, outdir):
 @click.pass_context
 def package(ctx, single_file, out):
     # type: (click.Context, bool, str) -> None
-    factory = ctx.obj['factory']
+    factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
     packager = factory.create_app_packager(config)
     if single_file:

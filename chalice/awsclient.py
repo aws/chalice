@@ -156,12 +156,12 @@ class TypedAWSClient(object):
             restApiId=rest_api_id,
             body=json.dumps(swagger_document, indent=2))
 
-    def deploy_rest_api(self, rest_api_id, stage_name):
+    def deploy_rest_api(self, rest_api_id, api_gateway_stage):
         # type: (str, str) -> None
         client = self._client('apigateway')
         client.create_deployment(
             restApiId=rest_api_id,
-            stageName=stage_name,
+            stageName=api_gateway_stage,
         )
 
     def add_permission_for_apigateway_if_needed(self, function_name,
@@ -244,20 +244,7 @@ class TypedAWSClient(object):
         policy = client.get_policy(FunctionName=function_name)
         return json.loads(policy['Policy'])
 
-    def get_sdk_download_stream(self, rest_api_id, stage='dev',
-                                sdk_type='javascript'):
-        # type: (str, str, str) -> file
-        """Generate an SDK for a given SDK.
-
-        Returns a file like object that streams a zip contents for the
-        generated SDK.
-
-        """
-        response = self._client('apigateway').get_sdk(
-            restApiId=rest_api_id, stageName=stage, sdkType=sdk_type)
-        return response['body']
-
-    def download_sdk(self, rest_api_id, output_dir, stage='dev',
+    def download_sdk(self, rest_api_id, output_dir, api_gateway_stage='dev',
                      sdk_type='javascript'):
         # type: (str, str, str, str) -> None
         """Download an SDK to a directory.
@@ -269,7 +256,8 @@ class TypedAWSClient(object):
 
         """
         zip_stream = self.get_sdk_download_stream(
-            rest_api_id, stage=stage, sdk_type=sdk_type)
+            rest_api_id, api_gateway_stage=api_gateway_stage,
+            sdk_type=sdk_type)
         tmpdir = tempfile.mkdtemp()
         with open(os.path.join(tmpdir, 'sdk.zip'), 'wb') as f:
             f.write(zip_stream.read())
@@ -290,6 +278,19 @@ class TypedAWSClient(object):
         raise RuntimeError(
             "The downloaded SDK had an unexpected directory structure: %s" %
             (', '.join(dirnames)))
+
+    def get_sdk_download_stream(self, rest_api_id, api_gateway_stage='dev',
+                                sdk_type='javascript'):
+        # type: (str, str, str) -> file
+        """Generate an SDK for a given SDK.
+
+        Returns a file like object that streams a zip contents for the
+        generated SDK.
+
+        """
+        response = self._client('apigateway').get_sdk(
+            restApiId=rest_api_id, stageName=api_gateway_stage, sdkType=sdk_type)
+        return response['body']
 
     def add_permission_for_apigateway(self, function_name, region_name,
                                       account_id, rest_api_id, random_id):

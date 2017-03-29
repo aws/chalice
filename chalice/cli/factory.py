@@ -74,7 +74,7 @@ class CLIFactory(object):
         return deployer.create_default_deployer(
             session=session, prompter=prompter)
 
-    def create_config_obj(self, stage_name='dev', autogen_policy=True):
+    def create_config_obj(self, chalice_stage_name='dev', autogen_policy=True):
         # type: (str, bool) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir}
@@ -85,8 +85,6 @@ class CLIFactory(object):
                                "Are you sure this is a chalice project?")
         app_obj = self.load_chalice_app()
         user_provided_params['chalice_app'] = app_obj
-        if stage_name is not None:
-            user_provided_params['stage'] = stage_name
         if autogen_policy is not None:
             user_provided_params['autogen_policy'] = autogen_policy
         if self.profile is not None:

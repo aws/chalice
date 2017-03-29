@@ -82,12 +82,12 @@ class SAMTemplateGenerator(object):
         self._policy_generator = policy_generator
 
     def generate_sam_template(self, app, code_uri='<placeholder>',
-                              stage_name='dev'):
+                              api_gateway_stage='dev'):
         # type: (Chalice, str, str) -> Dict[str, Any]
         template = copy.deepcopy(self._BASE_TEMPLATE)
         resources = {
             'APIHandler': self._generate_serverless_function(app, code_uri),
-            'RestAPI': self._generate_rest_api(app, stage_name),
+            'RestAPI': self._generate_rest_api(app, api_gateway_stage),
         }
         template['Resources'] = resources
         return template
@@ -125,11 +125,11 @@ class SAMTemplateGenerator(object):
                 }
         return events
 
-    def _generate_rest_api(self, app, stage_name):
+    def _generate_rest_api(self, app, api_gateway_stage):
         # type: (Chalice, str) -> Dict[str, Any]
         swagger_definition = self._swagger_generator.generate_swagger(app)
         properties = {
-            'StageName': stage_name,
+            'StageName': api_gateway_stage,
             'DefinitionBody': swagger_definition,
         }
         return {

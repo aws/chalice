@@ -63,8 +63,13 @@ def test_can_load_project_config_after_project_creation():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
         config = factory.CLIFactory('testproject').load_project_config()
-        assert config == {'app_name': 'testproject', 'stage': 'dev',
-                          'version': '2.0'}
+        assert config == {
+            'version': '2.0',
+            'app_name': 'testproject',
+            'stages': {
+                'dev': {'api_gateway_stage': u'dev'}
+            }
+        }
 
 
 def test_default_new_project_adds_index_route():
