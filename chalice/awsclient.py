@@ -20,8 +20,7 @@ import zipfile
 import shutil
 import json
 
-import botocore.session
-import botocore.exceptions
+import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List  # noqa
 
 
@@ -40,14 +39,12 @@ class TypedAWSClient(object):
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool
+        client = self._client('lambda')
         try:
-            self._client('lambda').get_function(FunctionName=name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                return False
-            raise
-        return True
+            client.get_function(FunctionName=name)
+            return True
+        except client.exceptions.ResourceNotFoundException:
+            return False
 
     def create_function(self, function_name, role_arn, zip_contents):
         # type: (str, str, str) -> str
@@ -64,35 +61,30 @@ class TypedAWSClient(object):
         while True:
             try:
                 response = client.create_function(**kwargs)
-            except botocore.exceptions.ClientError as e:
-                code = e.response['Error'].get('Code')
-                if code == 'InvalidParameterValueException':
-                    # We're assuming that if we receive an
-                    # InvalidParameterValueException, it's because
-                    # the role we just created can't be used by
-                    # Lambda.
-                    self._sleep(self.DELAY_TIME)
-                    attempts += 1
-                    if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
-                        raise
-                    continue
-                raise
+            except client.exceptions.InvalidParameterValueException:
+                # We're assuming that if we receive an
+                # InvalidParameterValueException, it's because
+                # the role we just created can't be used by
+                # Lambda.
+                self._sleep(self.DELAY_TIME)
+                attempts += 1
+                if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
+                    raise
+                continue
             return response['FunctionArn']
 
     def update_function_code(self, function_name, zip_contents):
-        # type: (str, str) -> None
-        self._client('lambda').update_function_code(
+        # type: (str, str) -> Dict[str, Any]
+        return self._client('lambda').update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
+        client = self._client('iam')
         try:
-            role = self._client('iam').get_role(RoleName=name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'NoSuchEntity':
-                raise ValueError("No role ARN found for: %s" % name)
-            raise
+            role = client.get_role(RoleName=name)
+        except client.exceptions.NoSuchEntityException:
+            raise ValueError("No role ARN found for: %s" % name)
         return role['Role']['Arn']
 
     def delete_role_policy(self, role_name, policy_name):
@@ -138,6 +130,16 @@ class TypedAWSClient(object):
                 return api['id']
         return None
 
+    def rest_api_exists(self, rest_api_id):
+        # type: (str) -> bool
+        """Check if an an API Gateway REST API exists."""
+        client = self._client('apigateway')
+        try:
+            client.get_rest_api(restApiId=rest_api_id)
+            return True
+        except client.exceptions.NotFoundException:
+            return False
+
     def import_rest_api(self, swagger_document):
         # type: (Dict[str, Any]) -> str
         client = self._client('apigateway')
@@ -174,12 +176,11 @@ class TypedAWSClient(object):
 
         """
         has_necessary_permissions = False
+        client = self._client('lambda')
         try:
             policy = self.get_function_policy(function_name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                pass
+        except client.exceptions.ResourceNotFoundException:
+            pass
         else:
             source_arn = self._build_source_arn_str(region_name, account_id,
                                                     rest_api_id)

@@ -1,4 +1,7 @@
-from typing import Dict, Any  # noqa
+import os
+import json
+
+from typing import Dict, Any, Optional  # noqa
 from chalice.app import Chalice  # noqa
 
 StrMap = Dict[str, Any]
@@ -28,11 +31,6 @@ class Config(object):
     def create(cls, **kwargs):
         # type: (**Any) -> Config
         return cls(user_provided_params=kwargs.copy())
-
-    @property
-    def lambda_arn(self):
-        # type: () -> str
-        return self._chain_lookup('lambda_arn')
 
     @property
     def profile(self):
@@ -97,3 +95,55 @@ class Config(object):
         for cfg_dict in all_dicts:
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
                 return cfg_dict[name]
+
+    @property
+    def lambda_arn(self):
+        # type: () -> str
+        return self._chain_lookup('lambda_arn')
+
+    def deployed_resources(self, stage_name):
+        # type: (str) -> Optional[DeployedResources]
+        """Return resources associated with a given stage.
+
+        If a deployment to a given stage has never happened,
+        this method will return a value of None.
+
+        """
+        # This is arguably the wrong level of abstraction.
+        # We might be able to move this elsewhere.
+        deployed_file = os.path.join(self.project_dir, '.chalice',
+                                     'deployed.json')
+        if not os.path.isfile(deployed_file):
+            return None
+        with open(deployed_file, 'r') as f:
+            data = json.load(f)
+        if stage_name not in data:
+            return None
+        return DeployedResources.from_dict(data[stage_name])
+
+
+class DeployedResources(object):
+    def __init__(self, backend, api_handler_arn,
+                 api_handler_name, rest_api_id, api_gateway_stage,
+                 region, chalice_version):
+        # type: (str, str, str, str, str, str, str) -> None
+        self.backend = backend
+        self.api_handler_arn = api_handler_arn
+        self.api_handler_name = api_handler_name
+        self.rest_api_id = rest_api_id
+        self.api_gateway_stage = api_gateway_stage
+        self.region = region
+        self.chalice_version = chalice_version
+
+    @classmethod
+    def from_dict(cls, data):
+        # type: (Dict[str, str]) -> DeployedResources
+        return cls(
+            data['backend'],
+            data['api_handler_arn'],
+            data['api_handler_name'],
+            data['rest_api_id'],
+            data['api_gateway_stage'],
+            data['region'],
+            data['chalice_version'],
+        )

@@ -1,4 +1,5 @@
 import zipfile
+import json
 
 from chalice import utils
 
@@ -35,3 +36,23 @@ def test_can_zip_recursive_contents(tmpdir):
             'subdir/subsubdir/leaf.txt',
         ]
         assert f.read('subdir/subsubdir/leaf.txt') == 'leaf.txt'
+
+
+def test_can_write_recorded_values(tmpdir):
+    filename = str(tmpdir.join('deployed.json'))
+    utils.record_deployed_values({'dev': {'deployed': 'foo'}}, filename)
+    with open(filename, 'r') as f:
+        assert json.load(f) == {'dev': {'deployed': 'foo'}}
+
+
+def test_can_merge_recorded_values(tmpdir):
+    filename = str(tmpdir.join('deployed.json'))
+    first = {'dev': {'deployed': 'values'}}
+    second = {'prod': {'deployed': 'values'}}
+    utils.record_deployed_values(first, filename)
+    utils.record_deployed_values(second, filename)
+    combined = first.copy()
+    combined.update(second)
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    assert data == combined
