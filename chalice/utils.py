@@ -16,11 +16,10 @@ def create_zip_file(source_dir, outfile):
     """
     with zipfile.ZipFile(outfile, 'w',
                          compression=zipfile.ZIP_DEFLATED) as z:
-        prefix_len = len(source_dir) + 1
         for root, _, filenames in os.walk(source_dir):
             for filename in filenames:
                 full_name = os.path.join(root, filename)
-                archive_name = full_name[prefix_len:]
+                archive_name = os.path.relpath(full_name, source_dir)
                 z.write(full_name, archive_name)
 
 
