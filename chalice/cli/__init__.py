@@ -60,6 +60,18 @@ GITIGNORE = """\
 .chalice/deployments/
 .chalice/venv/
 """
+DEBUGGING = """\
+from click.testing import CliRunner
+from chalice import cli
+import os
+
+project_dir = os.getcwd()
+obj = dict()
+obj['project_dir'] = project_dir
+
+runner = CliRunner()
+result = runner.invoke(cli.local, obj=obj)
+"""
 
 
 def show_lambda_logs(config, max_entries, include_lambda_messages):
@@ -242,6 +254,8 @@ def new_project(project_name, profile):
         f.write(TEMPLATE_APP % project_name)
     with open(os.path.join(project_name, '.gitignore'), 'w') as f:
         f.write(GITIGNORE)
+    with open(os.path.join(project_name, 'debug.py'), 'w') as f:
+        f.write(DEBUGGING)
 
 
 @cli.command('url')
