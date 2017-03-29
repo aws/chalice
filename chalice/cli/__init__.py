@@ -3,7 +3,6 @@
 Contains commands for deploying chalice.
 
 """
-import importlib
 import json
 import logging
 import os
@@ -13,17 +12,16 @@ import shutil
 
 import botocore.exceptions
 import click
+from botocore.session import Session  # noqa
 from typing import Dict, Any  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice import prompts
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
-from chalice.cli.utils import create_botocore_session
-from chalice.config import Config
-from chalice.deploy import deployer
+from chalice.cli.factory import CLIFactory
+from chalice.config import Config  # noqa
 from chalice.logs import LogRetriever
-from chalice.package import create_app_packager
 from chalice.utils import create_zip_file, record_deployed_values
 
 
@@ -74,68 +72,16 @@ GITIGNORE = """\
 """
 
 
-def show_lambda_logs(config, max_entries, include_lambda_messages):
-    # type: (Config, int, bool) -> None
+def show_lambda_logs(session, config, max_entries, include_lambda_messages):
+    # type: (Session, Config, int, bool) -> None
     lambda_arn = config.lambda_arn
-    profile = config.profile
-    client = create_botocore_session(profile).create_client('logs')
+    client = session.create_client('logs')
     retriever = LogRetriever.create_from_arn(client, lambda_arn)
     events = retriever.retrieve_logs(
         include_lambda_messages=include_lambda_messages,
         max_entries=max_entries)
     for event in events:
         print event['timestamp'], event['logShortId'], event['message'].strip()
-
-
-def load_project_config(project_dir):
-    # type: (str) -> Dict[str, Any]
-    """Load the chalice config file from the project directory.
-
-    :raise: OSError/IOError if unable to load the config file.
-
-    """
-    config_file = os.path.join(project_dir, '.chalice', 'config.json')
-    with open(config_file) as f:
-        return json.loads(f.read())
-
-
-def load_chalice_app(project_dir):
-    # type: (str) -> Chalice
-    if project_dir not in sys.path:
-        sys.path.append(project_dir)
-    try:
-        app = importlib.import_module('app')
-        chalice_app = getattr(app, 'app')
-    except Exception as e:
-        exception = click.ClickException(
-            "Unable to import your app.py file: %s" % e
-        )
-        exception.exit_code = 2
-        raise exception
-    return chalice_app
-
-
-def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
-    # type: (click.Context, str, bool, str) -> Config
-    user_provided_params = {}  # type: Dict[str, Any]
-    project_dir = ctx.obj['project_dir']
-    default_params = {'project_dir': project_dir}
-    try:
-        config_from_disk = load_project_config(project_dir)
-    except (OSError, IOError):
-        click.echo("Unable to load the project config file. "
-                   "Are you sure this is a chalice project?")
-        raise click.Abort()
-    app_obj = load_chalice_app(project_dir)
-    user_provided_params['chalice_app'] = app_obj
-    if stage_name is not None:
-        user_provided_params['stage'] = stage_name
-    if autogen_policy is not None:
-        user_provided_params['autogen_policy'] = autogen_policy
-    if profile is not None:
-        user_provided_params['profile'] = profile
-    config = Config(user_provided_params, config_from_disk, default_params)
-    return config
 
 
 @click.group()
@@ -152,6 +98,7 @@ def cli(ctx, project_dir, debug=False):
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
     ctx.obj['debug'] = debug
+    ctx.obj['factory'] = CLIFactory(project_dir, debug)
     os.chdir(project_dir)
 
 
@@ -160,7 +107,8 @@ def cli(ctx, project_dir, debug=False):
 @click.pass_context
 def local(ctx, port=8000):
     # type: (click.Context, int) -> None
-    app_obj = load_chalice_app(ctx.obj['project_dir'])
+    factory = ctx.obj['factory']
+    app_obj = factory.load_chalice_app()
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
     # running in lambda.  This is configuring the root logger.
@@ -179,17 +127,17 @@ def local(ctx, port=8000):
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, stage):
     # type: (click.Context, bool, str, str) -> None
-    config = create_config_obj(
+    factory = ctx.obj['factory']
+    factory.profile = profile
+    config = factory.create_config_obj(
         # Note: stage_name is not the same thing as the chalice stage.
         # This is a legacy artifact that just means "API gateway stage",
         # or for our purposes, the URL prefix.
-        ctx, stage_name='dev', autogen_policy=autogen_policy,
-        profile=profile)
+        stage_name='dev', autogen_policy=autogen_policy)
     if stage is None:
         stage = 'dev'
-    session = create_botocore_session(profile=config.profile,
-                                      debug=ctx.obj['debug'])
-    d = deployer.create_default_deployer(session=session, prompter=click)
+    session = factory.create_botocore_session()
+    d = factory.create_default_deployer(session=session, prompter=click)
     try:
         deployed_values = d.deploy(config, stage_name=stage)
         record_deployed_values(deployed_values, os.path.join(
@@ -212,8 +160,11 @@ def deploy(ctx, autogen_policy, profile, stage):
 @click.pass_context
 def logs(ctx, num_entries, include_lambda_messages):
     # type: (click.Context, int, bool) -> None
-    config = create_config_obj(ctx)
-    show_lambda_logs(config, num_entries, include_lambda_messages)
+    factory = ctx.obj['factory']  # type: CLIFactory
+    config = factory.create_config_obj('dev', False)
+    factory = ctx.obj['factory']
+    session = factory.create_botocore_session()
+    show_lambda_logs(session, config, num_entries, include_lambda_messages)
 
 
 @cli.command('gen-policy')
@@ -268,9 +219,11 @@ def new_project(project_name, profile):
 @click.pass_context
 def url(ctx):
     # type: (click.Context) -> None
-    config = create_config_obj(ctx)
-    session = create_botocore_session(profile=config.profile,
-                                      debug=ctx.obj['debug'])
+    factory = ctx.obj['factory']
+    # TODO: Command should be stage aware!
+    config = factory.create_config_obj()
+    session = factory.create_botocore_session(
+        profile=config.profile, debug=ctx.obj['debug'])
     c = TypedAWSClient(session)
     rest_api_id = c.get_rest_api_id(config.app_name)
     stage_name = config.stage
@@ -288,9 +241,11 @@ def url(ctx):
 @click.pass_context
 def generate_sdk(ctx, sdk_type, outdir):
     # type: (click.Context, str, str) -> None
-    config = create_config_obj(ctx)
-    session = create_botocore_session(profile=config.profile,
-                                      debug=ctx.obj['debug'])
+    factory = ctx.obj['factory']
+    config = factory.create_config_obj()
+    factory = ctx.obj['factory']
+    session = factory.create_botocore_session(
+        profile=config.profile, debug=ctx.obj['debug'])
     client = TypedAWSClient(session)
     rest_api_id = client.get_rest_api_id(config.app_name)
     stage_name = config.stage
@@ -315,8 +270,9 @@ def generate_sdk(ctx, sdk_type, outdir):
 @click.pass_context
 def package(ctx, single_file, out):
     # type: (click.Context, bool, str) -> None
-    config = create_config_obj(ctx)
-    packager = create_app_packager(config)
+    factory = ctx.obj['factory']
+    config = factory.create_config_obj()
+    packager = factory.create_app_packager(config)
     if single_file:
         dirname = tempfile.mkdtemp()
         try:
@@ -341,4 +297,8 @@ def main():
     # 'obj' via the context object, so we're ignoring
     # these error messages from pylint because we know it's ok.
     # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-    return cli(obj={})
+    try:
+        return cli(obj={})
+    except Exception as e:
+        click.echo(str(e))
+        return 2

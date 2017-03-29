@@ -5,6 +5,7 @@ import os
 from click.testing import CliRunner
 
 from chalice import cli
+from chalice.cli import factory
 
 
 def assert_chalice_app_structure_created(dirname):
@@ -20,8 +21,9 @@ def _run_cli_command(runner, function, args):
     # that use @pass_context to work properly.
     # click doesn't support this natively so we have to duplicate
     # what 'def cli(...)' is doing.
-    result = runner.invoke(function, args,
-                           obj={'project_dir': '.', 'debug': False})
+    result = runner.invoke(
+        function, args, obj={'project_dir': '.', 'debug': False,
+                             'factory': factory.CLIFactory('.')})
     return result
 
 
@@ -60,7 +62,7 @@ def test_can_load_project_config_after_project_creation():
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
-        config = cli.load_project_config('testproject')
+        config = factory.CLIFactory('testproject').load_project_config()
         assert config == {'app_name': 'testproject', 'stage': 'dev',
                           'version': '2.0'}
 
@@ -70,7 +72,7 @@ def test_default_new_project_adds_index_route():
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
-        app = cli.load_chalice_app('testproject')
+        app = factory.CLIFactory('testproject').load_chalice_app()
         assert '/' in app.routes
 
 
@@ -96,7 +98,7 @@ def test_can_package_command():
         assert runner.invoke(cli.new_project, ['testproject']).exit_code == 0
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.package, ['outdir'])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         assert os.path.isdir('outdir')
         dir_contents = os.listdir('outdir')
         assert 'sam.json' in dir_contents
@@ -114,3 +116,9 @@ def test_can_package_with_single_file():
         assert os.path.isfile('package.zip')
         with zipfile.ZipFile('package.zip', 'r') as f:
             assert f.namelist() == ['deployment.zip', 'sam.json']
+
+
+def test_can_deploy():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        pass
