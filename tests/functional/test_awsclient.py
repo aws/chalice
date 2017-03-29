@@ -47,6 +47,30 @@ def test_put_role_policy(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_rest_api_exists(stubbed_session):
+    stubbed_session.stub('apigateway').get_rest_api(
+        restApiId='api').returns({})
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.rest_api_exists('api')
+
+    stubbed_session.verify_stubs()
+
+
+def test_rest_api_not_exists(stubbed_session):
+    stubbed_session.stub('apigateway').get_rest_api(
+        restApiId='api').raises_error(
+            error_code='NotFoundException',
+            message='ResourceNotFound')
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert not awsclient.rest_api_exists('api')
+
+    stubbed_session.verify_stubs()
+
+
 class TestLambdaFunctionExists(object):
 
     def test_can_query_lambda_function_exists(self, stubbed_session):
