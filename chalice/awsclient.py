@@ -49,8 +49,8 @@ class TypedAWSClient(object):
             raise
         return True
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(self, function_name, role_arn, zip_contents, config):
+        # type: (str, str, str, Any) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -58,7 +58,14 @@ class TypedAWSClient(object):
             'Handler': 'app.app',
             'Role': role_arn,
             'Timeout': 60,
+            'MemorySize': 128,
         }
+        if config.lambda_config is not None:
+            valid_keys = ['Description', 'Timeout', 'MemorySize', 'VpcConfig',
+                          'Environment', 'DeadLetterConfig', 'KMSKeyArn']
+            for key, value in config.lambda_config.iteritems():
+                if key in valid_keys:
+                    kwargs.update({key: value})
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -78,6 +85,20 @@ class TypedAWSClient(object):
                     continue
                 raise
             return response['FunctionArn']
+
+    def update_function_configuration(self, function_name, role, config):
+        # type: (str, str, Any) -> None
+        kwargs = {
+            'FunctionName': function_name,
+            'Role': role,
+        }
+        if config.lambda_config is not None:
+            valid_keys = ['Description', 'Timeout', 'MemorySize', 'VpcConfig',
+                          'Environment', 'DeadLetterConfig', 'KMSKeyArn']
+            for key, value in config.lambda_config.iteritems():
+                if key in valid_keys:
+                    kwargs.update({key: value})
+        self._client('lambda').update_function_configuration(**kwargs)
 
     def update_function_code(self, function_name, zip_contents):
         # type: (str, str) -> None

@@ -658,11 +658,12 @@ class LambdaDeployer(object):
         with open(zip_filename, 'rb') as f:
             zip_contents = f.read()
         return self._aws_client.create_function(
-            app_name, role_arn, zip_contents)
+            app_name, role_arn, zip_contents, config)
 
     def _update_lambda_function(self, config):
         # type: (Config) -> None
         print "Updating lambda function..."
+        role_arn = self._get_or_create_lambda_role_arn(config)
         project_dir = config.project_dir
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
@@ -676,6 +677,8 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         print "Sending changes to lambda."
+        self._aws_client.update_function_configuration(config.app_name,
+                                                       role_arn, config)
         self._aws_client.update_function_code(config.app_name,
                                               zip_contents)
 
