@@ -8,6 +8,8 @@ import json
 import logging
 import os
 import sys
+import tempfile
+import shutil
 
 import botocore.exceptions
 import click
@@ -22,6 +24,8 @@ from chalice.config import Config
 from chalice.deploy import deployer
 from chalice.logs import LogRetriever
 from chalice.package import create_app_packager
+from chalice.utils import create_zip_file
+
 
 TEMPLATE_APP = """\
 from chalice import Chalice
@@ -283,13 +287,29 @@ def generate_sdk(ctx, sdk_type, outdir):
 
 
 @cli.command('package')
-@click.argument('outdir')
+@click.option('--single-file', is_flag=True,
+              default=False,
+              help=("Create a single packaged file. "
+                    "By default, the 'out' argument "
+                    "specifies a directory in which the "
+                    "package assets will be placed.  If "
+                    "this argument is specified, a single "
+                    "zip file will be created instead."))
+@click.argument('out')
 @click.pass_context
-def package(ctx, outdir):
-    # type: (click.Context, str) -> None
+def package(ctx, single_file, out):
+    # type: (click.Context, bool, str) -> None
     config = create_config_obj(ctx)
     packager = create_app_packager(config)
-    packager.package_app(outdir)
+    if single_file:
+        dirname = tempfile.mkdtemp()
+        try:
+            packager.package_app(dirname)
+            create_zip_file(source_dir=dirname, outfile=out)
+        finally:
+            shutil.rmtree(dirname)
+    else:
+        packager.package_app(out)
 
 
 def run_local_server(app_obj, port):

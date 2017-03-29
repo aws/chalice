@@ -1,4 +1,5 @@
 import json
+import zipfile
 import os
 
 from click.testing import CliRunner
@@ -12,6 +13,16 @@ def assert_chalice_app_structure_created(dirname):
     assert 'requirements.txt' in app_contents
     assert '.chalice' in app_contents
     assert '.gitignore' in app_contents
+
+
+def _run_cli_command(runner, function, args):
+    # Handles passing in 'obj' so we can get commands
+    # that use @pass_context to work properly.
+    # click doesn't support this natively so we have to duplicate
+    # what 'def cli(...)' is doing.
+    result = runner.invoke(function, args,
+                           obj={'project_dir': '.', 'debug': False})
+    return result
 
 
 def test_create_new_project_creates_app():
@@ -76,3 +87,29 @@ def test_gen_policy_command_creates_policy():
         # it looks like a policy document.
         assert 'Version' in parsed_policy
         assert 'Statement' in parsed_policy
+
+
+def test_can_package_command():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        assert runner.invoke(cli.new_project, ['testproject']).exit_code == 0
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.package, ['outdir'])
+        assert result.exit_code == 0
+        assert os.path.isdir('outdir')
+        dir_contents = os.listdir('outdir')
+        assert 'sam.json' in dir_contents
+        assert 'deployment.zip' in dir_contents
+
+
+def test_can_package_with_single_file():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        assert runner.invoke(cli.new_project, ['testproject']).exit_code == 0
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.package, ['--single-file', 'package.zip'])
+        assert result.exit_code == 0, result.output
+        assert os.path.isfile('package.zip')
+        with zipfile.ZipFile('package.zip', 'r') as f:
+            assert f.namelist() == ['deployment.zip', 'sam.json']
