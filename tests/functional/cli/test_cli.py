@@ -61,7 +61,8 @@ def test_can_load_project_config_after_project_creation():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
         config = cli.load_project_config('testproject')
-        assert config == {'app_name': 'testproject', 'stage': 'dev'}
+        assert config == {'app_name': 'testproject', 'stage': 'dev',
+                          'version': '2.0'}
 
 
 def test_default_new_project_adds_index_route():

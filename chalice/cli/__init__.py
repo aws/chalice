@@ -27,6 +27,12 @@ from chalice.package import create_app_packager
 from chalice.utils import create_zip_file, record_deployed_values
 
 
+# This is the version that's written to the config file
+# on a `chalice new-project`.  It's also how chalice is able
+# to know when to warn you when changing behavior is introduced.
+CONFIG_VERSION = '2.0'
+
+
 TEMPLATE_APP = """\
 from chalice import Chalice
 
@@ -60,6 +66,8 @@ def index():
 # See the README documentation for more examples.
 #
 """
+
+
 GITIGNORE = """\
 .chalice/deployments/
 .chalice/venv/
@@ -240,6 +248,7 @@ def new_project(project_name, profile):
     os.makedirs(chalice_dir)
     config = os.path.join(project_name, '.chalice', 'config.json')
     cfg = {
+        'version': CONFIG_VERSION,
         'app_name': project_name,
         'stage': 'dev'
     }
