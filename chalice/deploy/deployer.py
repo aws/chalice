@@ -18,29 +18,8 @@ from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice.utils import OSUtils
-
-LAMBDA_TRUST_POLICY = {
-    "Version": "2012-10-17",
-    "Statement": [{
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": {
-            "Service": "lambda.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
-    }]
-}
-
-
-CLOUDWATCH_LOGS = {
-    "Effect": "Allow",
-    "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-    ],
-    "Resource": "arn:aws:logs:*:*:*"
-}
+from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
+from chalice.constants import CLOUDWATCH_LOGS
 
 
 NULLARY = Callable[[], str]
@@ -141,7 +120,7 @@ class Deployer(object):
         self._apigateway_deploy = apigateway_deploy
         self._lambda_deploy = lambda_deploy
 
-    def deploy(self, config, chalice_stage_name='dev'):
+    def deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
         # type: (Config, str) -> Dict[str, Any]
         """Deploy chalice application to AWS.
 
@@ -341,7 +320,7 @@ class APIGatewayDeployer(object):
         # for each rest API, but that would require injecting chalice stage
         # information into the swagger generator.
         rest_api_id = self._aws_client.import_rest_api(swagger_doc)
-        api_gateway_stage = config.api_gateway_stage or 'dev'
+        api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
         self._deploy_api_to_stage(rest_api_id, api_gateway_stage, config)
         return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
@@ -351,7 +330,7 @@ class APIGatewayDeployer(object):
                                      config.lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
-        api_gateway_stage = config.api_gateway_stage or 'dev'
+        api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
         self._deploy_api_to_stage(rest_api_id, api_gateway_stage, config)
         return rest_api_id, self._aws_client.region_name, api_gateway_stage
 

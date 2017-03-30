@@ -3,6 +3,8 @@ import json
 
 from typing import Dict, Any, Optional  # noqa
 from chalice.app import Chalice  # noqa
+from chalice.constants import DEFAULT_STAGE_NAME
+
 
 StrMap = Dict[str, Any]
 
@@ -62,9 +64,13 @@ class Config(object):
 
         {"TABLE": "foo", "S3BUCKET": "devbucket"}
 
+    The "prod" stage would be::
+
+        {"TABLE": "prodtable", "S3BUCKET": "prodbucket"}
+
     """
     def __init__(self,
-                 chalice_stage='dev',
+                 chalice_stage=DEFAULT_STAGE_NAME,
                  user_provided_params=None,
                  config_from_disk=None,
                  default_params=None):
@@ -84,7 +90,7 @@ class Config(object):
         self._default_params = default_params
 
     @classmethod
-    def create(cls, chalice_stage='dev', **kwargs):
+    def create(cls, chalice_stage=DEFAULT_STAGE_NAME, **kwargs):
         # type: (str, **Any) -> Config
         return cls(chalice_stage=chalice_stage,
                    user_provided_params=kwargs.copy())
@@ -116,13 +122,13 @@ class Config(object):
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any
-        all_dicts = [self._user_provided_params]
+        search_dicts = [self._user_provided_params]
         if varies_per_chalice_stage:
-            all_dicts.append(
+            search_dicts.append(
                 self._config_from_disk.get('stages', {}).get(
                     self.chalice_stage, {}))
-        all_dicts.extend([self._config_from_disk, self._default_params])
-        for cfg_dict in all_dicts:
+        search_dicts.extend([self._config_from_disk, self._default_params])
+        for cfg_dict in search_dicts:
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
                 return cfg_dict[name]
 

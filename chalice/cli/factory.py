@@ -13,6 +13,7 @@ from chalice.config import Config
 from chalice.deploy import deployer
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
+from chalice.constants import DEFAULT_STAGE_NAME
 
 
 def create_botocore_session(profile=None, debug=False):
@@ -37,6 +38,13 @@ def _inject_large_request_body_filter():
     # type: () -> None
     log = logging.getLogger('botocore.endpoint')
     log.addFilter(LargeRequestBodyFilter())
+
+
+class UnknownConfigFileVersion(Exception):
+    def __init__(self, version):
+        # type: (str) -> None
+        super(UnknownConfigFileVersion, self).__init__(
+            "Unknown version '%s' in config.json" % version)
 
 
 class LargeRequestBodyFilter(logging.Filter):
@@ -74,8 +82,9 @@ class CLIFactory(object):
         return deployer.create_default_deployer(
             session=session, prompter=prompter)
 
-    def create_config_obj(self, chalice_stage_name='dev', autogen_policy=True):
-        # type: (str, bool) -> Config
+    def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
+                          autogen_policy=True, api_gateway_stage=None):
+        # type: (str, bool, Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir}
         try:
@@ -83,15 +92,28 @@ class CLIFactory(object):
         except (OSError, IOError):
             raise RuntimeError("Unable to load the project config file. "
                                "Are you sure this is a chalice project?")
+        self._validate_config_from_disk(config_from_disk)
         app_obj = self.load_chalice_app()
         user_provided_params['chalice_app'] = app_obj
         if autogen_policy is not None:
             user_provided_params['autogen_policy'] = autogen_policy
         if self.profile is not None:
             user_provided_params['profile'] = self.profile
+        if api_gateway_stage is not None:
+            user_provided_params['api_gateway_stage'] = api_gateway_stage
         config = Config(chalice_stage_name, user_provided_params,
                         config_from_disk, default_params)
         return config
+
+    def _validate_config_from_disk(self, config):
+        # type: (Dict[str, Any]) -> None
+        string_version = config.get('version', '1.0')
+        try:
+            version = float(string_version)
+            if version > 2.0:
+                raise UnknownConfigFileVersion(string_version)
+        except ValueError:
+            raise UnknownConfigFileVersion(string_version)
 
     def create_app_packager(self, config):
         # type: (Config) -> AppPackager
@@ -100,17 +122,18 @@ class CLIFactory(object):
     def load_chalice_app(self):
         # type: () -> Chalice
         if self.project_dir not in sys.path:
-            sys.path.append(self.project_dir)
+            sys.path.insert(0, self.project_dir)
         try:
             app = importlib.import_module('app')
             chalice_app = getattr(app, 'app')
-        except Exception as e:
-            # TODO: better error.
-            exception = Exception(
-                "Unable to import your app.py file: %s" % e
-            )
-            # exception.exit_code = 2
-            raise exception
+        except SyntaxError as e:
+            message = (
+                'Unable to import your app.py file:\n\n'
+                'File "%s", line %s\n'
+                '  %s\n'
+                'SyntaxError: %s'
+            ) % (getattr(e, 'filename'), e.lineno, e.text, e.msg)
+            raise RuntimeError(message)
         return chalice_app
 
     def load_project_config(self):

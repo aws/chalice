@@ -1,3 +1,6 @@
+import os
+import sys
+import json
 import logging
 
 import pytest
@@ -48,7 +51,7 @@ def test_can_create_botocore_session_debug():
     assert logging.getLogger('').level == logging.DEBUG
 
 
-def test_can_create_botocoreo_session_cli_factory(clifactory):
+def test_can_create_botocore_session_cli_factory(clifactory):
     clifactory.profile = 'myprofile'
     session = clifactory.create_botocore_session()
     assert session.profile == 'myprofile'
@@ -69,3 +72,28 @@ def test_cant_load_config_obj_with_bad_project(clifactory):
     clifactory.project_dir = 'nowhere-asdfasdfasdfas'
     with pytest.raises(RuntimeError):
         clifactory.create_config_obj()
+
+
+def test_error_raised_on_unknown_config_version(clifactory):
+    filename = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(filename, 'w') as f:
+        f.write(json.dumps({"version": "100.0"}))
+
+    with pytest.raises(factory.UnknownConfigFileVersion):
+        clifactory.create_config_obj()
+
+
+def test_filename_and_lineno_included_in_syntax_error(clifactory):
+    filename = os.path.join(clifactory.project_dir, 'app.py')
+    with open(filename, 'w') as f:
+        f.write("this is a syntax error\n")
+    # If this app has been previously imported in another app
+    # we need to remove it from the cached modules to ensure
+    # we get the syntax error on import.
+    sys.modules.pop('app', None)
+    with pytest.raises(RuntimeError) as excinfo:
+        clifactory.load_chalice_app()
+    message = str(excinfo.value)
+    assert 'app.py' in message
+    assert 'line 1' in message
