@@ -1,6 +1,12 @@
 import botocore.session
 from botocore.stub import Stubber
+import pytest
 from pytest import fixture
+
+
+def pytest_addoption(parser):
+    parser.addoption('--skip-slow', action='store_true',
+                     help='Skip slow tests')
 
 
 class StubbedSession(botocore.session.Session):
