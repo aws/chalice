@@ -289,7 +289,8 @@ class TypedAWSClient(object):
 
         """
         response = self._client('apigateway').get_sdk(
-            restApiId=rest_api_id, stageName=api_gateway_stage, sdkType=sdk_type)
+            restApiId=rest_api_id, stageName=api_gateway_stage,
+            sdkType=sdk_type)
         return response['body']
 
     def add_permission_for_apigateway(self, function_name, region_name,

@@ -89,7 +89,8 @@ class CLIFactory(object):
             user_provided_params['autogen_policy'] = autogen_policy
         if self.profile is not None:
             user_provided_params['profile'] = self.profile
-        config = Config(user_provided_params, config_from_disk, default_params)
+        config = Config(chalice_stage_name, user_provided_params,
+                        config_from_disk, default_params)
         return config
 
     def create_app_packager(self, config):

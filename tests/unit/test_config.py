@@ -10,6 +10,16 @@ def test_config_create_method():
     assert c.api_gateway_stage is None
 
 
+def test_default_chalice_stage():
+    c = Config()
+    assert c.chalice_stage == 'dev'
+
+
+def test_version_defaults_to_1_when_missing():
+    c = Config()
+    assert c.config_file_version == '1.0'
+
+
 def test_default_value_of_manage_iam_role():
     c = Config.create()
     assert c.manage_iam_role
@@ -40,7 +50,7 @@ def test_can_chain_lookup():
         'project_dir': 'default_params',
     }
 
-    c = Config(user_provided_params, config_from_disk, default_params)
+    c = Config('dev', user_provided_params, config_from_disk, default_params)
     assert c.api_gateway_stage == 'user_provided_params'
     assert c.lambda_arn == 'user_provided_params'
     assert c.app_name == 'config_from_disk'
@@ -53,6 +63,31 @@ def test_user_params_is_optional():
     c = Config(config_from_disk={'api_gateway_stage': 'config_from_disk'},
                default_params={'api_gateway_stage': 'default_params'})
     assert c.api_gateway_stage == 'config_from_disk'
+
+
+def test_can_chain_chalice_stage_values():
+    disk_config = {
+        'api_gateway_stage': 'dev',
+        'stages': {
+            'dev': {
+            },
+            'prod': {
+                'api_gateway_stage': 'prod',
+                'iam_role_arn': 'foobar',
+                'manage_iam_role': False,
+            }
+        }
+    }
+    c = Config(chalice_stage='dev',
+               config_from_disk=disk_config)
+    assert c.api_gateway_stage == 'dev'
+    assert c.manage_iam_role
+
+    prod = Config(chalice_stage='prod',
+                  config_from_disk=disk_config)
+    assert prod.api_gateway_stage == 'prod'
+    assert prod.iam_role_arn == 'foobar'
+    assert not prod.manage_iam_role
 
 
 def test_can_create_deployed_resource_from_dict():
