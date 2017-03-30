@@ -116,13 +116,13 @@ class Config(object):
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any
-        all_dicts = [self._user_provided_params]
+        search_dicts = [self._user_provided_params]
         if varies_per_chalice_stage:
-            all_dicts.append(
+            search_dicts.append(
                 self._config_from_disk.get('stages', {}).get(
                     self.chalice_stage, {}))
-        all_dicts.extend([self._config_from_disk, self._default_params])
-        for cfg_dict in all_dicts:
+        search_dicts.extend([self._config_from_disk, self._default_params])
+        for cfg_dict in search_dicts:
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
                 return cfg_dict[name]
 
