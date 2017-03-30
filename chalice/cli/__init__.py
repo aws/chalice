@@ -13,7 +13,7 @@ import shutil
 import botocore.exceptions
 import click
 from botocore.session import Session  # noqa
-from typing import Dict, Any  # noqa
+from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice import prompts
@@ -72,9 +72,35 @@ GITIGNORE = """\
 """
 
 
-def show_lambda_logs(session, config, max_entries, include_lambda_messages):
-    # type: (Session, Config, int, bool) -> None
-    lambda_arn = config.lambda_arn
+def create_new_project_skeleton(project_name, profile=None):
+    # type: (str, Optional[str]) -> None
+    chalice_dir = os.path.join(project_name, '.chalice')
+    os.makedirs(chalice_dir)
+    config = os.path.join(project_name, '.chalice', 'config.json')
+    cfg = {
+        'version': CONFIG_VERSION,
+        'app_name': project_name,
+        'stages': {
+            'dev': {
+                'api_gateway_stage': 'dev'
+            }
+        }
+    }
+    if profile is not None:
+        cfg['profile'] = profile
+    with open(config, 'w') as f:
+        f.write(json.dumps(cfg, indent=2))
+    with open(os.path.join(project_name, 'requirements.txt'), 'w'):
+        pass
+    with open(os.path.join(project_name, 'app.py'), 'w') as f:
+        f.write(TEMPLATE_APP % project_name)
+    with open(os.path.join(project_name, '.gitignore'), 'w') as f:
+        f.write(GITIGNORE)
+
+
+def show_lambda_logs(session, lambda_arn, max_entries,
+                     include_lambda_messages):
+    # type: (Session, str, int, bool) -> None
     client = session.create_client('logs')
     retriever = LogRetriever.create_from_arn(client, lambda_arn)
     events = retriever.retrieve_logs(
@@ -123,32 +149,67 @@ def local(ctx, port=8000):
               default=True,
               help='Automatically generate IAM policy for app code.')
 @click.option('--profile', help='Override profile at deploy time.')
-@click.argument('stage', nargs=1, required=False)
+@click.option('--api-gateway-stage',
+              help='Name of the API gateway stage to deploy to.')
+@click.option('--stage', default='dev',
+              help=('Name of the Chalice stage to deploy to. '
+                    'Specifying a new chalice stage will create '
+                    'an entirely new set of AWS resources.'))
+@click.argument('deprecated-api-gateway-stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, autogen_policy, profile, stage):
-    # type: (click.Context, bool, str, str) -> None
+def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
+           deprecated_api_gateway_stage):
+    # type: (click.Context, bool, str, str, str, str) -> None
+    if api_gateway_stage is not None and \
+            deprecated_api_gateway_stage is not None:
+        raise _create_deprecated_stage_error(api_gateway_stage,
+                                             deprecated_api_gateway_stage)
+    if api_gateway_stage is None and deprecated_api_gateway_stage is not None:
+        # The "chalice deploy <stage>" is deprecated and will be removed
+        # in future versions.  We'll support it for now, but let the
+        # user know to stop using this.
+        _warn_pending_removal(deprecated_api_gateway_stage)
+        api_gateway_stage = deprecated_api_gateway_stage
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(
-        # Note: stage_name is not the same thing as the chalice stage.
-        # This is a legacy artifact that just means "API gateway stage",
-        # or for our purposes, the URL prefix.
-        chalice_stage_name='dev', autogen_policy=autogen_policy)
-    if stage is None:
-        stage = 'dev'
+        chalice_stage_name=stage, autogen_policy=autogen_policy)
     session = factory.create_botocore_session()
     d = factory.create_default_deployer(session=session, prompter=click)
-    try:
-        deployed_values = d.deploy(config, chalice_stage_name=stage)
-        record_deployed_values(deployed_values, os.path.join(
-            config.project_dir, '.chalice', 'deployed.json'))
-    except botocore.exceptions.NoRegionError:
-        e = click.ClickException("No region configured. "
-                                 "Either export the AWS_DEFAULT_REGION "
-                                 "environment variable or set the "
-                                 "region value in our ~/.aws/config file.")
-        e.exit_code = 2
-        raise e
+    deployed_values = d.deploy(config, chalice_stage_name=stage)
+    record_deployed_values(deployed_values, os.path.join(
+        config.project_dir, '.chalice', 'deployed.json'))
+
+
+def _create_deprecated_stage_error(option, positional_arg):
+    # type: (str, str) -> click.ClickException
+    message = (
+        "You've specified both an '--api-gateway-stage' value of "
+        "'%s' as well as the positional API Gateway stage argument "
+        "'chalice deploy \"%s\"'.\n\n"
+        "The positional argument for API gateway stage ('chalice deploy "
+        "<api-gateway-stage>') is deprecated and support will be "
+        "removed in a future version of chalice.\nIf you want to "
+        "specify an API Gateway stage, just specify the "
+        "--api-gateway-stage option and remove the positional "
+        "stage argument.\n"
+        "If you want a completely separate set of AWS resources, "
+        "consider using the '--stage' argument."
+    ) % (option, positional_arg)
+    exception = click.ClickException(message)
+    exception.exit_code = 2
+    return exception
+
+
+def _warn_pending_removal(deprecated_stage):
+    # type: (str) -> None
+    click.echo("You've specified a deploy command of the form "
+               "'chalice deploy <stage>'\n"
+               "This form is deprecated and will be removed in a "
+               "future version of chalice.\n"
+               "You can use the --api-gateway-stage to achieve the "
+               "same functionality, or the newer '--stage' argument "
+               "if you want an entirely set of separate resources.")
 
 
 @cli.command()
@@ -157,13 +218,17 @@ def deploy(ctx, autogen_policy, profile, stage):
 @click.option('--include-lambda-messages/--no-include-lambda-messages',
               default=False,
               help='Controls whether or not lambda log messages are included.')
+@click.option('--stage', default='dev')
 @click.pass_context
-def logs(ctx, num_entries, include_lambda_messages):
-    # type: (click.Context, int, bool) -> None
+def logs(ctx, num_entries, include_lambda_messages, stage):
+    # type: (click.Context, int, bool, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    config = factory.create_config_obj('dev', False)
-    session = factory.create_botocore_session()
-    show_lambda_logs(session, config, num_entries, include_lambda_messages)
+    config = factory.create_config_obj(stage, False)
+    deployed = config.deployed_resources(stage)
+    if deployed is not None:
+        session = factory.create_botocore_session()
+        show_lambda_logs(session, deployed.api_handler_arn, num_entries,
+                         include_lambda_messages)
 
 
 @cli.command('gen-policy')
@@ -194,69 +259,55 @@ def new_project(project_name, profile):
     if os.path.isdir(project_name):
         click.echo("Directory already exists: %s" % project_name)
         raise click.Abort()
-    chalice_dir = os.path.join(project_name, '.chalice')
-    os.makedirs(chalice_dir)
-    config = os.path.join(project_name, '.chalice', 'config.json')
-    cfg = {
-        'version': CONFIG_VERSION,
-        'app_name': project_name,
-        'stages': {
-            'dev': {
-                'api_gateway_stage': 'dev'
-            }
-        }
-    }
-    if profile:
-        cfg['profile'] = profile
-    with open(config, 'w') as f:
-        f.write(json.dumps(cfg, indent=2))
-    with open(os.path.join(project_name, 'requirements.txt'), 'w'):
-        pass
-    with open(os.path.join(project_name, 'app.py'), 'w') as f:
-        f.write(TEMPLATE_APP % project_name)
-    with open(os.path.join(project_name, '.gitignore'), 'w') as f:
-        f.write(GITIGNORE)
+    create_new_project_skeleton(project_name, profile)
 
 
 @cli.command('url')
+@click.option('--stage', default='dev')
 @click.pass_context
-def url(ctx):
-    # type: (click.Context) -> None
+def url(ctx, stage):
+    # type: (click.Context, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    # TODO: Command should be stage aware!
-    config = factory.create_config_obj()
-    session = factory.create_botocore_session()
-    c = TypedAWSClient(session)
-    rest_api_id = c.get_rest_api_id(config.app_name)
-    api_gateway_stage = config.api_gateway_stage
-    region_name = c.region_name
-    click.echo(
-        "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
-        .format(api_id=rest_api_id, region=region_name,
-                stage=api_gateway_stage)
-    )
+    config = factory.create_config_obj(stage)
+    deployed = config.deployed_resources(stage)
+    if deployed is not None:
+        click.echo(
+            "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
+            .format(api_id=deployed.rest_api_id,
+                    region=deployed.region,
+                    stage=deployed.api_gateway_stage)
+        )
+    else:
+        e = click.ClickException(
+            "Could not find a record of deployed values to chalice stage: '%s'"
+            % stage)
+        e.exit_code = 2
+        raise e
 
 
 @cli.command('generate-sdk')
 @click.option('--sdk-type', default='javascript',
               type=click.Choice(['javascript']))
+@click.option('--stage', default='dev')
 @click.argument('outdir')
 @click.pass_context
-def generate_sdk(ctx, sdk_type, outdir):
-    # type: (click.Context, str, str) -> None
+def generate_sdk(ctx, sdk_type, stage, outdir):
+    # type: (click.Context, str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    config = factory.create_config_obj()
+    config = factory.create_config_obj(stage)
     session = factory.create_botocore_session()
     client = TypedAWSClient(session)
-    rest_api_id = client.get_rest_api_id(config.app_name)
-    api_gateway_stage = config.api_gateway_stage
-    if rest_api_id is None:
+    deployed = config.deployed_resources(stage)
+    if deployed is None:
         click.echo("Could not find API ID, has this application "
                    "been deployed?")
         raise click.Abort()
-    client.download_sdk(rest_api_id, outdir,
-                        api_gateway_stage=api_gateway_stage,
-                        sdk_type=sdk_type)
+    else:
+        rest_api_id = deployed.rest_api_id
+        api_gateway_stage = deployed.api_gateway_stage
+        client.download_sdk(rest_api_id, outdir,
+                            api_gateway_stage=api_gateway_stage,
+                            sdk_type=sdk_type)
 
 
 @cli.command('package')
@@ -268,12 +319,13 @@ def generate_sdk(ctx, sdk_type, outdir):
                     "package assets will be placed.  If "
                     "this argument is specified, a single "
                     "zip file will be created instead."))
+@click.option('--stage', default='dev')
 @click.argument('out')
 @click.pass_context
-def package(ctx, single_file, out):
-    # type: (click.Context, bool, str) -> None
+def package(ctx, single_file, stage, out):
+    # type: (click.Context, bool, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    config = factory.create_config_obj()
+    config = factory.create_config_obj(stage)
     packager = factory.create_app_packager(config)
     if single_file:
         dirname = tempfile.mkdtemp()
@@ -301,6 +353,12 @@ def main():
     # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
     try:
         return cli(obj={})
+    except botocore.exceptions.NoRegionError:
+        click.echo("No region configured. "
+                   "Either export the AWS_DEFAULT_REGION "
+                   "environment variable or set the "
+                   "region value in our ~/.aws/config file.")
+        return 2
     except Exception as e:
         click.echo(str(e))
         return 2

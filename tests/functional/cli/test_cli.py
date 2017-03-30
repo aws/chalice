@@ -2,10 +2,36 @@ import json
 import zipfile
 import os
 
+import pytest
 from click.testing import CliRunner
+import mock
 
 from chalice import cli
 from chalice.cli import factory
+from chalice.deploy.deployer import Deployer
+from chalice.config import Config
+from chalice.utils import record_deployed_values
+
+
+@pytest.fixture
+def runner():
+    return CliRunner()
+
+
+@pytest.fixture
+def mock_deployer():
+    d = mock.Mock(spec=Deployer)
+    d.deploy.return_value = {}
+    return d
+
+
+@pytest.fixture
+def mock_cli_factory(mock_deployer):
+    cli_factory = mock.Mock(spec=factory.CLIFactory)
+    cli_factory.create_config_obj.return_value = Config.create(project_dir='.')
+    cli_factory.create_botocore_session.return_value = mock.sentinel.Session
+    cli_factory.create_default_deployer.return_value = mock_deployer
+    return cli_factory
 
 
 def assert_chalice_app_structure_created(dirname):
@@ -16,19 +42,20 @@ def assert_chalice_app_structure_created(dirname):
     assert '.gitignore' in app_contents
 
 
-def _run_cli_command(runner, function, args):
+def _run_cli_command(runner, function, args, cli_factory=None):
     # Handles passing in 'obj' so we can get commands
     # that use @pass_context to work properly.
     # click doesn't support this natively so we have to duplicate
     # what 'def cli(...)' is doing.
+    if cli_factory is None:
+        cli_factory = factory.CLIFactory('.')
     result = runner.invoke(
         function, args, obj={'project_dir': '.', 'debug': False,
-                             'factory': factory.CLIFactory('.')})
+                             'factory': cli_factory})
     return result
 
 
-def test_create_new_project_creates_app():
-    runner = CliRunner()
+def test_create_new_project_creates_app(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
@@ -39,8 +66,7 @@ def test_create_new_project_creates_app():
         assert_chalice_app_structure_created(dirname='testproject')
 
 
-def test_create_project_with_prompted_app_name():
-    runner = CliRunner()
+def test_create_project_with_prompted_app_name(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, input='testproject')
         assert result.exit_code == 0
@@ -48,8 +74,7 @@ def test_create_project_with_prompted_app_name():
         assert_chalice_app_structure_created(dirname='testproject')
 
 
-def test_error_raised_if_dir_already_exists():
-    runner = CliRunner()
+def test_error_raised_if_dir_already_exists(runner):
     with runner.isolated_filesystem():
         os.mkdir('testproject')
         result = runner.invoke(cli.new_project, ['testproject'])
@@ -57,8 +82,7 @@ def test_error_raised_if_dir_already_exists():
         assert 'Directory already exists: testproject' in result.output
 
 
-def test_can_load_project_config_after_project_creation():
-    runner = CliRunner()
+def test_can_load_project_config_after_project_creation(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
@@ -72,8 +96,7 @@ def test_can_load_project_config_after_project_creation():
         }
 
 
-def test_default_new_project_adds_index_route():
-    runner = CliRunner()
+def test_default_new_project_adds_index_route(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
@@ -81,10 +104,9 @@ def test_default_new_project_adds_index_route():
         assert '/' in app.routes
 
 
-def test_gen_policy_command_creates_policy():
-    runner = CliRunner()
+def test_gen_policy_command_creates_policy(runner):
     with runner.isolated_filesystem():
-        runner.invoke(cli.new_project, ['testproject'])
+        cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = runner.invoke(cli.cli, ['gen-policy'], obj={})
         assert result.exit_code == 0
@@ -97,10 +119,9 @@ def test_gen_policy_command_creates_policy():
         assert 'Statement' in parsed_policy
 
 
-def test_can_package_command():
-    runner = CliRunner()
+def test_can_package_command(runner):
     with runner.isolated_filesystem():
-        assert runner.invoke(cli.new_project, ['testproject']).exit_code == 0
+        cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.package, ['outdir'])
         assert result.exit_code == 0, result.output
@@ -110,10 +131,9 @@ def test_can_package_command():
         assert 'deployment.zip' in dir_contents
 
 
-def test_can_package_with_single_file():
-    runner = CliRunner()
+def test_can_package_with_single_file(runner):
     with runner.isolated_filesystem():
-        assert runner.invoke(cli.new_project, ['testproject']).exit_code == 0
+        cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.package, ['--single-file', 'package.zip'])
@@ -123,7 +143,112 @@ def test_can_package_with_single_file():
             assert f.namelist() == ['deployment.zip', 'sam.json']
 
 
-def test_can_deploy():
-    runner = CliRunner()
+def test_can_deploy(runner, mock_cli_factory, mock_deployer):
+    deployed_values = {
+        'dev': {
+            # We don't need to fill in everything here.
+            'api_handler_arn': 'foo',
+            'rest_api_id': 'bar',
+        }
+    }
+    mock_deployer.deploy.return_value = deployed_values
     with runner.isolated_filesystem():
-        pass
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy, [],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        # We should have also created the deployed JSON file.
+        deployed_file = os.path.join('.chalice', 'deployed.json')
+        assert os.path.isfile(deployed_file)
+        with open(deployed_file) as f:
+            data = json.load(f)
+            assert data == deployed_values
+
+
+def test_warning_when_using_deprecated_arg(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy, ['prod'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        assert 'is deprecated and will be removed' in result.output
+
+
+def test_can_specify_chalice_stage_arg(runner, mock_cli_factory,
+                                       mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy, ['--stage', 'prod'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+
+    config = mock_cli_factory.create_config_obj.return_value
+    mock_deployer.deploy.assert_called_with(config, chalice_stage_name='prod')
+
+
+def test_api_gateway_mutex_with_positional_arg(runner, mock_cli_factory,
+                                               mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy,
+                                  ['--api-gateway-stage', 'prod', 'prod'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 2
+        assert 'is deprecated' in result.output
+
+    assert not mock_deployer.deploy.called
+
+
+def test_can_retrieve_url(runner, mock_cli_factory):
+    deployed_values = {
+        "dev": {
+            "rest_api_id": "rest_api_id",
+            "chalice_version": "0.7.0",
+            "region": "us-west-2",
+            "backend": "api",
+            "api_handler_name": "helloworld-dev",
+            "api_handler_arn": "arn:...",
+            "api_gateway_stage": "dev-apig"
+        },
+        "prod": {
+            "rest_api_id": "rest_api_id_prod",
+            "chalice_version": "0.7.0",
+            "region": "us-west-2",
+            "backend": "api",
+            "api_handler_name": "helloworld-dev",
+            "api_handler_arn": "arn:...",
+            "api_gateway_stage": "prod-apig"
+        },
+    }
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        record_deployed_values(deployed_values,
+                               os.path.join('.chalice', 'deployed.json'))
+        result = _run_cli_command(runner, cli.url, [],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        assert result.output == (
+            'https://rest_api_id.execute-api.us-west-2.amazonaws.com'
+            '/dev-apig/\n')
+
+        prod_result = _run_cli_command(runner, cli.url, ['--stage', 'prod'],
+                                       cli_factory=mock_cli_factory)
+        assert prod_result.exit_code == 0
+        assert prod_result.output == (
+            'https://rest_api_id_prod.execute-api.us-west-2.amazonaws.com'
+            '/prod-apig/\n')
+
+
+def test_error_when_no_deployed_record(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.url, [],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 2
+        assert 'not find' in result.output

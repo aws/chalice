@@ -74,8 +74,9 @@ class CLIFactory(object):
         return deployer.create_default_deployer(
             session=session, prompter=prompter)
 
-    def create_config_obj(self, chalice_stage_name='dev', autogen_policy=True):
-        # type: (str, bool) -> Config
+    def create_config_obj(self, chalice_stage_name='dev', autogen_policy=True,
+                          api_gateway_stage=None):
+        # type: (str, bool, Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir}
         try:
@@ -89,6 +90,8 @@ class CLIFactory(object):
             user_provided_params['autogen_policy'] = autogen_policy
         if self.profile is not None:
             user_provided_params['profile'] = self.profile
+        if api_gateway_stage is not None:
+            user_provided_params['api_gateway_stage'] = api_gateway_stage
         config = Config(chalice_stage_name, user_provided_params,
                         config_from_disk, default_params)
         return config
