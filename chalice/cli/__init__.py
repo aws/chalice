@@ -164,7 +164,7 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
             deprecated_api_gateway_stage is not None:
         raise _create_deprecated_stage_error(api_gateway_stage,
                                              deprecated_api_gateway_stage)
-    if api_gateway_stage is None and deprecated_api_gateway_stage is not None:
+    if deprecated_api_gateway_stage is not None:
         # The "chalice deploy <stage>" is deprecated and will be removed
         # in future versions.  We'll support it for now, but let the
         # user know to stop using this.
