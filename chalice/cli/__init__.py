@@ -209,7 +209,8 @@ def _warn_pending_removal(deprecated_stage):
                "future version of chalice.\n"
                "You can use the --api-gateway-stage to achieve the "
                "same functionality, or the newer '--stage' argument "
-               "if you want an entirely set of separate resources.")
+               "if you want an entirely set of separate resources.",
+               err=True)
 
 
 @cli.command()
@@ -241,7 +242,7 @@ def gen_policy(ctx, filename):
     if filename is None:
         filename = os.path.join(ctx.obj['project_dir'], 'app.py')
     if not os.path.isfile(filename):
-        click.echo("App file does not exist: %s" % filename)
+        click.echo("App file does not exist: %s" % filename, err=True)
         raise click.Abort()
     with open(filename) as f:
         contents = f.read()
@@ -257,7 +258,7 @@ def new_project(project_name, profile):
     if project_name is None:
         project_name = prompts.getting_started_prompt(click)
     if os.path.isdir(project_name):
-        click.echo("Directory already exists: %s" % project_name)
+        click.echo("Directory already exists: %s" % project_name, err=True)
         raise click.Abort()
     create_new_project_skeleton(project_name, profile)
 
@@ -300,7 +301,7 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
     deployed = config.deployed_resources(stage)
     if deployed is None:
         click.echo("Could not find API ID, has this application "
-                   "been deployed?")
+                   "been deployed?", err=True)
         raise click.Abort()
     else:
         rest_api_id = deployed.rest_api_id
@@ -357,8 +358,8 @@ def main():
         click.echo("No region configured. "
                    "Either export the AWS_DEFAULT_REGION "
                    "environment variable or set the "
-                   "region value in our ~/.aws/config file.")
+                   "region value in our ~/.aws/config file.", err=True)
         return 2
     except Exception as e:
-        click.echo(str(e))
+        click.echo(str(e), err=True)
         return 2
