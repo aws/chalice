@@ -3,6 +3,8 @@ import json
 
 from typing import Dict, Any, Optional  # noqa
 from chalice.app import Chalice  # noqa
+from chalice.constants import DEFAULT_STAGE_NAME
+
 
 StrMap = Dict[str, Any]
 
@@ -68,7 +70,7 @@ class Config(object):
 
     """
     def __init__(self,
-                 chalice_stage='dev',
+                 chalice_stage=DEFAULT_STAGE_NAME,
                  user_provided_params=None,
                  config_from_disk=None,
                  default_params=None):
@@ -88,7 +90,7 @@ class Config(object):
         self._default_params = default_params
 
     @classmethod
-    def create(cls, chalice_stage='dev', **kwargs):
+    def create(cls, chalice_stage=DEFAULT_STAGE_NAME, **kwargs):
         # type: (str, **Any) -> Config
         return cls(chalice_stage=chalice_stage,
                    user_provided_params=kwargs.copy())

@@ -23,6 +23,8 @@ import json
 import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List  # noqa
 
+from chalice.constants import DEFAULT_STAGE_NAME
+
 
 class TypedAWSClient(object):
 
@@ -244,7 +246,8 @@ class TypedAWSClient(object):
         policy = client.get_policy(FunctionName=function_name)
         return json.loads(policy['Policy'])
 
-    def download_sdk(self, rest_api_id, output_dir, api_gateway_stage='dev',
+    def download_sdk(self, rest_api_id, output_dir,
+                     api_gateway_stage=DEFAULT_STAGE_NAME,
                      sdk_type='javascript'):
         # type: (str, str, str, str) -> None
         """Download an SDK to a directory.
@@ -279,7 +282,8 @@ class TypedAWSClient(object):
             "The downloaded SDK had an unexpected directory structure: %s" %
             (', '.join(dirnames)))
 
-    def get_sdk_download_stream(self, rest_api_id, api_gateway_stage='dev',
+    def get_sdk_download_stream(self, rest_api_id,
+                                api_gateway_stage=DEFAULT_STAGE_NAME,
                                 sdk_type='javascript'):
         # type: (str, str, str) -> file
         """Generate an SDK for a given SDK.

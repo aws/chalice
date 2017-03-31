@@ -23,53 +23,8 @@ from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import LogRetriever
 from chalice.utils import create_zip_file, record_deployed_values
-
-
-# This is the version that's written to the config file
-# on a `chalice new-project`.  It's also how chalice is able
-# to know when to warn you when changing behavior is introduced.
-CONFIG_VERSION = '2.0'
-
-
-TEMPLATE_APP = """\
-from chalice import Chalice
-
-app = Chalice(app_name='%s')
-
-
-@app.route('/')
-def index():
-    return {'hello': 'world'}
-
-
-# The view function above will return {"hello": "world"}
-# whenever you make an HTTP GET request to '/'.
-#
-# Here are a few more examples:
-#
-# @app.route('/hello/{name}')
-# def hello_name(name):
-#    # '/hello/james' -> {"hello": "james"}
-#    return {'hello': name}
-#
-# @app.route('/users', methods=['POST'])
-# def create_user():
-#     # This is the JSON body the user sent in their POST request.
-#     user_as_json = app.json_body
-#     # Suppose we had some 'db' object that we used to
-#     # read/write from our database.
-#     # user_id = db.create_user(user_as_json)
-#     return {'user_id': user_id}
-#
-# See the README documentation for more examples.
-#
-"""
-
-
-GITIGNORE = """\
-.chalice/deployments/
-.chalice/venv/
-"""
+from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
+from chalice.constants import DEFAULT_STAGE_NAME
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -81,8 +36,8 @@ def create_new_project_skeleton(project_name, profile=None):
         'version': CONFIG_VERSION,
         'app_name': project_name,
         'stages': {
-            'dev': {
-                'api_gateway_stage': 'dev'
+            DEFAULT_STAGE_NAME: {
+                'api_gateway_stage': DEFAULT_STAGE_NAME,
             }
         }
     }
@@ -151,7 +106,7 @@ def local(ctx, port=8000):
 @click.option('--profile', help='Override profile at deploy time.')
 @click.option('--api-gateway-stage',
               help='Name of the API gateway stage to deploy to.')
-@click.option('--stage', default='dev',
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
               help=('Name of the Chalice stage to deploy to. '
                     'Specifying a new chalice stage will create '
                     'an entirely new set of AWS resources.'))
@@ -219,7 +174,7 @@ def _warn_pending_removal(deprecated_stage):
 @click.option('--include-lambda-messages/--no-include-lambda-messages',
               default=False,
               help='Controls whether or not lambda log messages are included.')
-@click.option('--stage', default='dev')
+@click.option('--stage', default=DEFAULT_STAGE_NAME)
 @click.pass_context
 def logs(ctx, num_entries, include_lambda_messages, stage):
     # type: (click.Context, int, bool, str) -> None
@@ -264,7 +219,7 @@ def new_project(project_name, profile):
 
 
 @cli.command('url')
-@click.option('--stage', default='dev')
+@click.option('--stage', default=DEFAULT_STAGE_NAME)
 @click.pass_context
 def url(ctx, stage):
     # type: (click.Context, str) -> None
@@ -289,7 +244,7 @@ def url(ctx, stage):
 @cli.command('generate-sdk')
 @click.option('--sdk-type', default='javascript',
               type=click.Choice(['javascript']))
-@click.option('--stage', default='dev')
+@click.option('--stage', default=DEFAULT_STAGE_NAME)
 @click.argument('outdir')
 @click.pass_context
 def generate_sdk(ctx, sdk_type, stage, outdir):
@@ -320,7 +275,7 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
                     "package assets will be placed.  If "
                     "this argument is specified, a single "
                     "zip file will be created instead."))
-@click.option('--stage', default='dev')
+@click.option('--stage', default=DEFAULT_STAGE_NAME)
 @click.argument('out')
 @click.pass_context
 def package(ctx, single_file, stage, out):

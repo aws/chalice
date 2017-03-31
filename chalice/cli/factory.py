@@ -13,6 +13,7 @@ from chalice.config import Config
 from chalice.deploy import deployer
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
+from chalice.constants import DEFAULT_STAGE_NAME
 
 
 def create_botocore_session(profile=None, debug=False):
@@ -41,6 +42,7 @@ def _inject_large_request_body_filter():
 
 class UnknownConfigFileVersion(Exception):
     def __init__(self, version):
+        # type: (str) -> None
         super(UnknownConfigFileVersion, self).__init__(
             "Unknown version '%s' in config.json" % version)
 
@@ -80,8 +82,8 @@ class CLIFactory(object):
         return deployer.create_default_deployer(
             session=session, prompter=prompter)
 
-    def create_config_obj(self, chalice_stage_name='dev', autogen_policy=True,
-                          api_gateway_stage=None):
+    def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
+                          autogen_policy=True, api_gateway_stage=None):
         # type: (str, bool, Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir}
@@ -104,6 +106,7 @@ class CLIFactory(object):
         return config
 
     def _validate_config_from_disk(self, config):
+        # type: (Dict[str, Any]) -> None
         string_version = config.get('version', '1.0')
         try:
             version = float(string_version)
