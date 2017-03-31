@@ -1,3 +1,5 @@
+import os
+import json
 import logging
 
 import pytest
@@ -68,4 +70,14 @@ def test_can_create_config_obj(clifactory):
 def test_cant_load_config_obj_with_bad_project(clifactory):
     clifactory.project_dir = 'nowhere-asdfasdfasdfas'
     with pytest.raises(RuntimeError):
+        clifactory.create_config_obj()
+
+
+def test_error_raised_on_unknown_config_version(clifactory):
+    filename = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(filename, 'w') as f:
+        f.write(json.dumps({"version": "100.0"}))
+
+    with pytest.raises(factory.UnknownConfigFileVersion):
         clifactory.create_config_obj()

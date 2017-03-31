@@ -39,6 +39,12 @@ def _inject_large_request_body_filter():
     log.addFilter(LargeRequestBodyFilter())
 
 
+class UnknownConfigFileVersion(Exception):
+    def __init__(self, version):
+        super(UnknownConfigFileVersion, self).__init__(
+            "Unknown version '%s' in config.json" % version)
+
+
 class LargeRequestBodyFilter(logging.Filter):
     def filter(self, record):
         # type: (Any) -> bool
@@ -84,6 +90,7 @@ class CLIFactory(object):
         except (OSError, IOError):
             raise RuntimeError("Unable to load the project config file. "
                                "Are you sure this is a chalice project?")
+        self._validate_config_from_disk(config_from_disk)
         app_obj = self.load_chalice_app()
         user_provided_params['chalice_app'] = app_obj
         if autogen_policy is not None:
@@ -95,6 +102,15 @@ class CLIFactory(object):
         config = Config(chalice_stage_name, user_provided_params,
                         config_from_disk, default_params)
         return config
+
+    def _validate_config_from_disk(self, config):
+        string_version = config.get('version', '1.0')
+        try:
+            version = float(string_version)
+            if version > 2.0:
+                raise UnknownConfigFileVersion(string_version)
+        except ValueError:
+            raise UnknownConfigFileVersion(string_version)
 
     def create_app_packager(self, config):
         # type: (Config) -> AppPackager
