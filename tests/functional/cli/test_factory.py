@@ -50,7 +50,7 @@ def test_can_create_botocore_session_debug():
     assert logging.getLogger('').level == logging.DEBUG
 
 
-def test_can_create_botocoreo_session_cli_factory(clifactory):
+def test_can_create_botocore_session_cli_factory(clifactory):
     clifactory.profile = 'myprofile'
     session = clifactory.create_botocore_session()
     assert session.profile == 'myprofile'
