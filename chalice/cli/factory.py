@@ -122,17 +122,18 @@ class CLIFactory(object):
     def load_chalice_app(self):
         # type: () -> Chalice
         if self.project_dir not in sys.path:
-            sys.path.append(self.project_dir)
+            sys.path.insert(0, self.project_dir)
         try:
             app = importlib.import_module('app')
             chalice_app = getattr(app, 'app')
-        except Exception as e:
-            # TODO: better error.
-            exception = Exception(
-                "Unable to import your app.py file: %s" % e
-            )
-            # exception.exit_code = 2
-            raise exception
+        except SyntaxError as e:
+            message = (
+                'Unable to import your app.py file:\n\n'
+                'File "%s", line %s\n'
+                '  %s\n'
+                'SyntaxError: %s'
+            ) % (getattr(e, 'filename'), e.lineno, e.text, e.msg)
+            raise RuntimeError(message)
         return chalice_app
 
     def load_project_config(self):

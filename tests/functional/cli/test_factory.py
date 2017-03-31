@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 
@@ -81,3 +82,18 @@ def test_error_raised_on_unknown_config_version(clifactory):
 
     with pytest.raises(factory.UnknownConfigFileVersion):
         clifactory.create_config_obj()
+
+
+def test_filename_and_lineno_included_in_syntax_error(clifactory):
+    filename = os.path.join(clifactory.project_dir, 'app.py')
+    with open(filename, 'w') as f:
+        f.write("this is a syntax error\n")
+    # If this app has been previously imported in another app
+    # we need to remove it from the cached modules to ensure
+    # we get the syntax error on import.
+    sys.modules.pop('app', None)
+    with pytest.raises(RuntimeError) as excinfo:
+        clifactory.load_chalice_app()
+    message = str(excinfo.value)
+    assert 'app.py' in message
+    assert 'line 1' in message
