@@ -5,7 +5,6 @@ def test_config_create_method():
     c = Config.create(app_name='foo')
     assert c.app_name == 'foo'
     # Otherwise attributes default to None meaning 'not set'.
-    assert c.lambda_arn is None
     assert c.profile is None
     assert c.api_gateway_stage is None
 
@@ -35,12 +34,10 @@ def test_manage_iam_role_explicitly_set():
 def test_can_chain_lookup():
     user_provided_params = {
         'api_gateway_stage': 'user_provided_params',
-        'lambda_arn': 'user_provided_params',
     }
 
     config_from_disk = {
         'api_gateway_stage': 'config_from_disk',
-        'lambda_arn': 'config_from_disk',
         'app_name': 'config_from_disk',
     }
 
@@ -52,7 +49,6 @@ def test_can_chain_lookup():
 
     c = Config('dev', user_provided_params, config_from_disk, default_params)
     assert c.api_gateway_stage == 'user_provided_params'
-    assert c.lambda_arn == 'user_provided_params'
     assert c.app_name == 'config_from_disk'
     assert c.project_dir == 'default_params'
 

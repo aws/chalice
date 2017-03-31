@@ -23,6 +23,7 @@ from chalice.constants import CLOUDWATCH_LOGS
 
 
 NULLARY = Callable[[], str]
+OPT_RESOURCES = Optional[DeployedResources]
 
 
 def create_default_deployer(session, prompter=None):
@@ -137,7 +138,8 @@ class Deployer(object):
         deployed_values = self._lambda_deploy.deploy(
             config, existing_resources, chalice_stage_name)
         rest_api_id, region_name, apig_stage = self._apigateway_deploy.deploy(
-            config, existing_resources)
+            config, existing_resources,
+            deployed_values['api_handler_arn'])
         print (
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
             .format(api_id=rest_api_id, region=region_name, stage=apig_stage)
@@ -170,23 +172,22 @@ class LambdaDeployer(object):
         self._app_policy = app_policy
 
     def deploy(self, config, existing_resources, stage_name):
-        # type: (Config, Optional[DeployedResources], str) -> Dict[str, str]
-        function_name = '%s-%s' % (config.app_name, stage_name)
-        deployed_values = {'api_handler_name': function_name}
+        # type: (Config, OPT_RESOURCES, str) -> Dict[str, str]
+        deployed_values = {}
         if existing_resources is not None and \
                 self._aws_client.lambda_function_exists(
                     existing_resources.api_handler_name):
+            handler_name = existing_resources.api_handler_name
             self._get_or_create_lambda_role_arn(
-                config, existing_resources.api_handler_name)
-            self._update_lambda_function(
-                config, existing_resources.api_handler_name)
+                config, handler_name)
+            self._update_lambda_function(config, handler_name)
             function_arn = existing_resources.api_handler_arn
+            deployed_values['api_handler_name'] = handler_name
         else:
+            function_name = '%s-%s' % (config.app_name, stage_name)
             function_arn = self._first_time_lambda_create(
                 config, function_name)
-            # Record the lambda_arn for later use.
-            config.config_from_disk['lambda_arn'] = function_arn
-            self._write_config_to_disk(config)
+            deployed_values['api_handler_name'] = function_name
         deployed_values['api_handler_arn'] = function_arn
         return deployed_values
 
@@ -296,22 +297,22 @@ class APIGatewayDeployer(object):
         # type: (TypedAWSClient) -> None
         self._aws_client = aws_client
 
-    def deploy(self, config, existing_resources):
-        # type: (Config, Optional[DeployedResources]) -> Tuple[str, str, str]
+    def deploy(self, config, existing_resources, lambda_arn):
+        # type: (Config, OPT_RESOURCES, str) -> Tuple[str, str, str]
         if existing_resources is not None and \
                 self._aws_client.rest_api_exists(
                     existing_resources.rest_api_id):
             print "API Gateway rest API already found."
             rest_api_id = existing_resources.rest_api_id
-            return self._create_resources_for_api(config, rest_api_id)
+            return self._create_resources_for_api(config, rest_api_id,
+                                                  lambda_arn)
         else:
             print "Initiating first time deployment..."
-            return self._first_time_deploy(config)
+            return self._first_time_deploy(config, lambda_arn)
 
-    def _first_time_deploy(self, config):
-        # type: (Config) -> Tuple[str, str, str]
-        generator = SwaggerGenerator(self._aws_client.region_name,
-                                     config.lambda_arn)
+    def _first_time_deploy(self, config, lambda_arn):
+        # type: (Config, str) -> Tuple[str, str, str]
+        generator = SwaggerGenerator(self._aws_client.region_name, lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         # The swagger_doc that's generated will contain the "name" which is
         # used to set the name for the restAPI.  API Gateway allows you
@@ -321,27 +322,26 @@ class APIGatewayDeployer(object):
         # information into the swagger generator.
         rest_api_id = self._aws_client.import_rest_api(swagger_doc)
         api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
-        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, config)
+        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, lambda_arn)
         return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
-    def _create_resources_for_api(self, config, rest_api_id):
-        # type: (Config, str) -> Tuple[str, str, str]
-        generator = SwaggerGenerator(self._aws_client.region_name,
-                                     config.lambda_arn)
+    def _create_resources_for_api(self, config, rest_api_id, lambda_arn):
+        # type: (Config, str, str) -> Tuple[str, str, str]
+        generator = SwaggerGenerator(self._aws_client.region_name, lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
         api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
-        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, config)
+        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, lambda_arn)
         return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
-    def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage, config):
-        # type: (str, str, Config) -> None
+    def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage, lambda_arn):
+        # type: (str, str, str) -> None
         print "Deploying to:", api_gateway_stage
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         self._aws_client.add_permission_for_apigateway_if_needed(
-            config.lambda_arn.split(':')[-1],
+            lambda_arn.split(':')[-1],
             self._aws_client.region_name,
-            config.lambda_arn.split(':')[4],
+            lambda_arn.split(':')[4],
             rest_api_id,
             str(uuid.uuid4()),
         )
