@@ -62,6 +62,10 @@ class Config(object):
 
         {"TABLE": "foo", "S3BUCKET": "devbucket"}
 
+    The "prod" stage would be::
+
+        {"TABLE": "prodtable", "S3BUCKET": "prodbucket"}
+
     """
     def __init__(self,
                  chalice_stage='dev',
