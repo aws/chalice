@@ -212,14 +212,21 @@ def test_can_deploy_apig_and_lambda(sample_app):
     apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
 
     d = Deployer(apig_deploy, lambda_deploy)
-    cfg = Config({'chalice_app': sample_app, 'project_dir': '.'})
+    cfg = Config.create(
+        chalice_stage='dev',
+        chalice_app=sample_app,
+        project_dir='.')
     d.deploy(cfg)
     lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
     apig_deploy.deploy.assert_called_with(cfg, None)
 
 
 def test_deployer_returns_deployed_resources(sample_app):
-    cfg = Config({'chalice_app': sample_app, 'project_dir': '.'})
+    cfg = Config.create(
+        chalice_stage='dev',
+        chalice_app=sample_app,
+        project_dir='.',
+    )
     lambda_deploy = mock.Mock(spec=LambdaDeployer)
     apig_deploy = mock.Mock(spec=APIGatewayDeployer)
 
@@ -263,9 +270,14 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     aws_client.update_function_code.return_value = {"FunctionArn": "myarn"}
     # And given we don't want chalice to manage our iam role for the lambda
     # function:
-    cfg = Config({'chalice_app': sample_app, 'manage_iam_role': False,
-                  'app_name': 'appname', 'iam_role_arn': True,
-                  'project_dir': './myproject'})
+    cfg = Config.create(
+        chalice_stage='dev',
+        chalice_app=sample_app,
+        manage_iam_role=False,
+        app_name='appname',
+        iam_role_arn=True,
+        project_dir='./myproject'
+    )
 
     d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
     # Doing a lambda deploy:

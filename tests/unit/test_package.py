@@ -48,7 +48,8 @@ def test_sam_generates_sam_template_basic(sample_app,
                                           mock_policy_generator):
     p = package.SAMTemplateGenerator(mock_swagger_generator,
                                      mock_policy_generator)
-    template = p.generate_sam_template(sample_app, 'code-uri', stage_name='dev')
+    template = p.generate_sam_template(sample_app, 'code-uri',
+                                       api_gateway_stage='dev')
     # Verify the basic structure is in place.  The specific parts
     # are validated in other tests.
     assert template['AWSTemplateFormatVersion'] == '2010-09-09'
