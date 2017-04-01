@@ -5,6 +5,7 @@ import logging
 import json
 import traceback
 import decimal
+import base64
 from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
@@ -132,21 +133,25 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200):
+    def __init__(self, body, headers=None, status_code=200, is_binary=False):
         self.body = body
         if headers is None:
             headers = {}
         self.headers = headers
         self.status_code = status_code
+        self.is_binary = is_binary
 
     def to_dict(self):
         body = self.body
+        if self.is_binary:
+            body = base64.b64encode(body)
         if not isinstance(body, str):
             body = json.dumps(body, default=handle_decimals)
         return {
             'headers': self.headers,
             'statusCode': self.status_code,
             'body': body,
+            'isBase64Encoded': self.is_binary
         }
 
 
@@ -191,6 +196,7 @@ class Chalice(object):
         self.current_request = None
         self.debug = False
         self.configure_logs = configure_logs
+        self.binary_media_types = []
         self.log = logging.getLogger(self.app_name)
         if self.configure_logs:
             self._configure_logging()
@@ -220,6 +226,12 @@ class Chalice(object):
                 if handler.stream == sys.stdout:
                     return True
         return False
+
+    def add_binary_media_types(self, binary_media_types):
+        if not isinstance(binary_media_types, list):
+            raise ValueError('The binary_media_types value must be a list')
+        self.binary_media_types = list(
+            set(self.binary_media_types + binary_media_types))
 
     def route(self, path, **kwargs):
         def _register_view(view_func):
@@ -274,11 +286,15 @@ class Chalice(object):
         view_function = route_entry.view_function
         function_args = [event['pathParameters'][name]
                          for name in route_entry.view_args]
+        if event.get('isBase64Encoded'):
+            body = base64.b64decode(event['body'])
+        else:
+            body = event['body']
         self.current_request = Request(event['queryStringParameters'],
                                        event['headers'],
                                        event['pathParameters'],
                                        event['requestContext']['httpMethod'],
-                                       event['body'],
+                                       body,
                                        event['requestContext'],
                                        event['stageVariables'])
         # We're doing the header validation after creating the request

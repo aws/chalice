@@ -315,7 +315,8 @@ def test_can_return_response_object():
     event = create_event('/index', 'GET', {})
     response = demo(event, context=None)
     assert response == {'statusCode': 200, 'body': '{"foo": "bar"}',
-                        'headers': {'Content-Type': 'application/json'}}
+                        'headers': {'Content-Type': 'application/json'},
+                        'isBase64Encoded': False}
 
 
 def test_headers_have_basic_validation():
@@ -510,3 +511,21 @@ def test_json_body_available_when_content_type_matches(content_type, is_json):
         assert request.json_body == {'json': 'body'}
     else:
         assert request.json_body is None
+
+def test_binary_media_types():
+    demo = app.Chalice('app-name')
+    demo.add_binary_media_types(['image/png', 'application/octet-stream'])
+
+    @demo.route('/', methods=['POST'],
+                content_types=['application/octet-stream'])
+    def index_view():
+        return demo.current_request.raw_body
+
+    event = create_event('/', 'POST', {},
+                         content_type='application/octet-stream')
+    event['body'] = base64.b64encode('\xFF\xFF')
+    event['isBase64Encoded'] = True
+
+    result = demo(event, context=None)
+    assert result['body'] == '\xFF\xFF'
+    assert result['statusCode'] == 200

@@ -355,3 +355,35 @@ class TypedAWSClient(object):
             self._client_cache[service_name] = self._session.create_client(
                 service_name)
         return self._client_cache[service_name]
+
+    def delete_binary_media_types(self, rest_api_id):
+        # type: (str) -> None
+        patch_operations = []
+        client = self._client('apigateway')
+        response = client.get_rest_api(restApiId=rest_api_id)
+        for binary_media_type in response.get('binaryMediaTypes', []):
+            patch_operations.append({
+                "op": "remove",
+                "path": "/binaryMediaTypes/{}".format(
+                    binary_media_type.replace('/', '~1'))
+            })
+        client.update_rest_api(
+            restApiId=rest_api_id,
+            patchOperations=patch_operations
+        )
+
+    def add_binary_media_types(self, rest_api_id, binary_media_types):
+        # type: (str, List[str]) -> None
+        patch_operations = []
+        client = self._client('apigateway')
+        for binary_media_type in binary_media_types:
+            patch_operations.append({
+                'op': 'add',
+                'path': '/binaryMediaTypes/{}'.format(
+                    binary_media_type.replace('/', '~1'))
+            })
+        if patch_operations:
+            client.update_rest_api(
+                restApiId=rest_api_id,
+                patchOperations=patch_operations
+            )

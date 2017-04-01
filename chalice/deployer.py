@@ -742,6 +742,7 @@ class APIGatewayDeployer(object):
         # try to add methods to the root resource on a redeploy.
         self._aws_client.delete_methods_from_root_resource(
             rest_api_id, root_resource)
+        self._aws_client.delete_binary_media_types(rest_api_id)
         print "Done deleting existing resources."
 
     def _lambda_uri(self, lambda_function_arn):
@@ -783,6 +784,10 @@ class APIGatewayDeployer(object):
         for child in url_trie['children']:
             url_trie['children'][child]['parent_resource_id'] = resource_id
         route_builder.build_resources(url_trie)
+        self._aws_client.add_binary_media_types(
+            rest_api_id,
+            config.chalice_app.binary_media_types
+        )
         # And finally, you need an actual deployment to deploy the changes to
         # API gateway.
         stage = config.stage or 'dev'

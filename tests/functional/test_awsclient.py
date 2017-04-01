@@ -121,6 +121,31 @@ def test_delete_methods_from_root_resource(stubbed_session):
         'rest_api_id', {'resourceMethods': resource_methods, 'id': 'resource_id'})
     stubbed_session.verify_stubs()
 
+def test_binary_media_types(stubbed_session):
+    stubbed_session.stub('apigateway').get_rest_api(
+        restApiId='api_id').returns({'binaryMediaTypes': ['image/png']})
+    patch_operations = [{
+        "op": "remove",
+        "path": "/binaryMediaTypes/image~1png"
+    }]
+    stubbed_session.stub('apigateway').update_rest_api(
+        restApiId='api_id', patchOperations=patch_operations).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.delete_binary_media_types('api_id')
+    stubbed_session.verify_stubs()
+
+def test_add_binary_media_types(stubbed_session):
+    patch_operations = [{
+        "op": "add",
+        "path": "/binaryMediaTypes/image~1png"
+    }]
+    stubbed_session.stub('apigateway').update_rest_api(
+        restApiId='api_id', patchOperations=patch_operations).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_binary_media_types('api_id', ['image/png'])
+    stubbed_session.verify_stubs()
 
 class TestLambdaFunctionExists(object):
 
