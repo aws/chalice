@@ -19,17 +19,13 @@ def create_app_packager(config):
     osutils = OSUtils()
     # The config object does not handle a default value
     # for autogen'ing a policy so we need to handle this here.
-    should_autogen = True
-    if config.autogen_policy is not None:
-        should_autogen = config.autogen_policy
     return AppPackager(
         # We're add place holder values that will be filled in once the
         # lambda function is deployed.
         SAMTemplateGenerator(
             CFNSwaggerGenerator('{region}', '{lambda_arn}'),
             PreconfiguredPolicyGenerator(
-                config.project_dir,
-                should_autogen,
+                config,
                 ApplicationPolicyHandler(osutils))),
         LambdaDeploymentPackager(),
         ApplicationPolicyHandler(osutils),
@@ -39,16 +35,14 @@ def create_app_packager(config):
 
 
 class PreconfiguredPolicyGenerator(object):
-    def __init__(self, project_dir, autogen_policy, policy_gen):
-        # type: (str, bool, ApplicationPolicyHandler) -> None
-        self._project_dir = project_dir
-        self._autogen_policy = autogen_policy
+    def __init__(self, config, policy_gen):
+        # type: (Config, ApplicationPolicyHandler) -> None
+        self._config = config
         self._policy_gen = policy_gen
 
     def generate_policy_from_app_source(self):
         # type: () -> Dict[str, Any]
-        return self._policy_gen.generate_policy_from_app_source(
-            self._project_dir, self._autogen_policy)
+        return self._policy_gen.generate_policy_from_app_source(self._config)
 
 
 class SAMTemplateGenerator(object):

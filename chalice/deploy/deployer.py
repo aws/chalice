@@ -211,8 +211,7 @@ class LambdaDeployer(object):
     def _update_role_with_latest_policy(self, app_name, config):
         # type: (str, Config) -> None
         print "Updating IAM policy."
-        app_policy = self._app_policy.generate_policy_from_app_source(
-            config.project_dir, config.autogen_policy)
+        app_policy = self._app_policy.generate_policy_from_app_source(config)
         previous = self._app_policy.load_last_policy(config.project_dir)
         diff = policy.diff_policies(previous, app_policy)
         if diff:
@@ -276,8 +275,7 @@ class LambdaDeployer(object):
 
     def _create_role_from_source_code(self, config, role_name):
         # type: (Config, str) -> str
-        app_policy = self._app_policy.generate_policy_from_app_source(
-            config.project_dir, config.autogen_policy)
+        app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
             print "The following execution policy will be used:"
             print json.dumps(app_policy, indent=2)
@@ -359,8 +357,8 @@ class ApplicationPolicyHandler(object):
         # type: (OSUtils) -> None
         self._osutils = osutils
 
-    def generate_policy_from_app_source(self, project_dir, autogen_policy):
-        # type: (str, bool) -> Dict[str, Any]
+    def generate_policy_from_app_source(self, config):
+        # type: (Config) -> Dict[str, Any]
         """Generate a policy from application source code.
 
         If the ``autogen_policy`` value is set to false, then
@@ -368,10 +366,10 @@ class ApplicationPolicyHandler(object):
         the policy from the source code.
 
         """
-        if autogen_policy:
-            app_policy = self._do_generate_from_source(project_dir)
+        if config.autogen_policy:
+            app_policy = self._do_generate_from_source(config.project_dir)
         else:
-            app_policy = self.load_last_policy(project_dir)
+            app_policy = self.load_last_policy(config.project_dir)
         return app_policy
 
     def _do_generate_from_source(self, project_dir):
