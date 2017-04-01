@@ -12,6 +12,7 @@ from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.utils import OSUtils
 from chalice.config import Config  # noqa
 from chalice.app import Chalice  # noqa
+from chalice.policy import AppPolicyGenerator
 
 
 def create_app_packager(config):
@@ -26,9 +27,11 @@ def create_app_packager(config):
             CFNSwaggerGenerator('{region}', '{lambda_arn}'),
             PreconfiguredPolicyGenerator(
                 config,
-                ApplicationPolicyHandler(osutils))),
+                ApplicationPolicyHandler(
+                    osutils, AppPolicyGenerator(osutils)))),
         LambdaDeploymentPackager(),
-        ApplicationPolicyHandler(osutils),
+        # TODO: remove duplication here.
+        ApplicationPolicyHandler(osutils, AppPolicyGenerator(osutils)),
         config.chalice_app,
         config.project_dir,
         config.autogen_policy)

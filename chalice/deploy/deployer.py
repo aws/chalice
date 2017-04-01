@@ -20,6 +20,7 @@ from chalice.deploy.swagger import SwaggerGenerator
 from chalice.utils import OSUtils
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
 from chalice.constants import CLOUDWATCH_LOGS
+from chalice.policy import AppPolicyGenerator
 
 
 NULLARY = Callable[[], str]
@@ -37,7 +38,8 @@ def create_default_deployer(session, prompter=None):
     osutils = OSUtils()
     lambda_deploy = LambdaDeployer(
         aws_client, packager, prompter, osutils,
-        ApplicationPolicyHandler(osutils))
+        ApplicationPolicyHandler(
+            osutils, AppPolicyGenerator(osutils)))
     return Deployer(api_gateway_deploy, lambda_deploy)
 
 
@@ -346,16 +348,40 @@ class APIGatewayDeployer(object):
 
 
 class ApplicationPolicyHandler(object):
-    """Manages the IAM policy for an application."""
+    """Manages the IAM policy for an application.
+
+    This class handles returning the policy that used by
+    used for the API handler lambda function for a given
+    stage.
+
+    It has several possible outcomes:
+
+        * By default, it will autogenerate a policy based on
+          analyzing the application source code.
+        * It will return a policy from a file on disk that's been
+          configured as the policy for the given stage.
+
+    This class has a precondition that we should be loading
+    some IAM policy for the the API handler function.
+
+    If a user has indicated that there's a pre-existing
+    role that they'd like to use for the API handler function,
+    this class should never be invoked.  In other words,
+    the logic of whether or not we even need to bother with
+    loading an IAM policy is handled a layer above where
+    this class should be used.
+
+    """
 
     _EMPTY_POLICY = {
         'Version': '2012-10-17',
         'Statement': [],
     }
 
-    def __init__(self, osutils):
-        # type: (OSUtils) -> None
+    def __init__(self, osutils, policy_generator):
+        # type: (OSUtils, AppPolicyGenerator) -> None
         self._osutils = osutils
+        self._policy_gen = policy_generator
 
     def generate_policy_from_app_source(self, config):
         # type: (Config) -> Dict[str, Any]
@@ -367,19 +393,14 @@ class ApplicationPolicyHandler(object):
 
         """
         if config.autogen_policy:
-            app_policy = self._do_generate_from_source(config.project_dir)
+            app_policy = self._do_generate_from_source(config)
         else:
             app_policy = self.load_last_policy(config.project_dir)
         return app_policy
 
-    def _do_generate_from_source(self, project_dir):
-        # type: (str) -> Dict[str, Any]
-        app_py = os.path.join(project_dir, 'app.py')
-        assert self._osutils.file_exists(app_py)
-        app_source = self._osutils.get_file_contents(app_py, binary=False)
-        app_policy = policy.policy_from_source_code(app_source)
-        app_policy['Statement'].append(CLOUDWATCH_LOGS)
-        return app_policy
+    def _do_generate_from_source(self, config):
+        # type: (Config) -> Dict[str, Any]
+        return self._policy_gen.generate_policy(config)
 
     def load_last_policy(self, project_dir):
         # type: (str) -> Dict[str, Any]

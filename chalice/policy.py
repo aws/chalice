@@ -10,8 +10,11 @@ import json
 import uuid
 
 from typing import Any, List, Dict, Set  # noqa
-
 import botocore.session
+
+from chalice.constants import CLOUDWATCH_LOGS
+from chalice.utils import OSUtils  # noqa
+from chalice.config import Config  # noqa
 
 
 def policy_from_source_code(source_code):
@@ -55,6 +58,27 @@ def _create_simple_format(policy):
     for statement in policy['Statement']:
         actions.update(statement['Action'])
     return actions
+
+
+class AppPolicyGenerator(object):
+    def __init__(self, osutils):
+        # type: (OSUtils) -> None
+        self._osutils = osutils
+
+    def generate_policy(self, config):
+        # type: (Config) -> Dict[str, Any]
+        """Auto generate policy for an application."""
+        # Admittedly, this is pretty bare bones logic for the time
+        # being.  All it really does it work out, given a Config instance,
+        # which files need to analyzed and then delegates to the
+        # appropriately analyzer functions to do the real work.
+        # This may change in the future.
+        app_py = os.path.join(config.project_dir, 'app.py')
+        assert self._osutils.file_exists(app_py)
+        app_source = self._osutils.get_file_contents(app_py, binary=False)
+        app_policy = policy_from_source_code(app_source)
+        app_policy['Statement'].append(CLOUDWATCH_LOGS)
+        return app_policy
 
 
 class PolicyBuilder(object):

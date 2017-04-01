@@ -11,6 +11,7 @@ from chalice import __version__ as chalice_version
 from chalice.app import Chalice
 from chalice.awsclient import TypedAWSClient
 from chalice.config import Config, DeployedResources
+from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
@@ -62,7 +63,9 @@ def in_memory_osutils():
 
 @fixture
 def app_policy(in_memory_osutils):
-    return ApplicationPolicyHandler(in_memory_osutils)
+    return ApplicationPolicyHandler(
+        in_memory_osutils,
+        AppPolicyGenerator(in_memory_osutils))
 
 
 def stubbed_client(service_name):
