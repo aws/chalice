@@ -103,3 +103,46 @@ def test_can_create_deployed_resource_from_dict():
     assert d.api_gateway_stage == 'stage'
     assert d.region == 'region'
     assert d.chalice_version == '1.0.0'
+
+
+def test_environment_from_top_level():
+    config_from_disk = {'environment_variables': {"foo": "bar"}}
+    c = Config('dev', config_from_disk=config_from_disk)
+    assert c.environment_variables == config_from_disk['environment_variables']
+
+
+def test_environment_from_stage_leve():
+    config_from_disk = {
+        'stages': {
+            'prod': {
+                'environment_variables': {"foo": "bar"}
+            }
+        }
+    }
+    c = Config('prod', config_from_disk=config_from_disk)
+    assert c.environment_variables == \
+            config_from_disk['stages']['prod']['environment_variables']
+
+
+def test_env_vars_chain_merge():
+    config_from_disk = {
+        'environment_variables': {
+            'top_level': 'foo',
+            'shared_key': 'from-top',
+        },
+        'stages': {
+            'prod': {
+                'environment_variables': {
+                    'stage_var': 'bar',
+                    'shared_key': 'from-stage',
+                }
+            }
+        }
+    }
+    c = Config('prod', config_from_disk=config_from_disk)
+    resolved = c.environment_variables
+    assert resolved == {
+        'top_level': 'foo',
+        'stage_var': 'bar',
+        'shared_key': 'from-stage',
+    }

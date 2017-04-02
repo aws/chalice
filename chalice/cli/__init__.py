@@ -286,12 +286,12 @@ def package(ctx, single_file, stage, out):
     if single_file:
         dirname = tempfile.mkdtemp()
         try:
-            packager.package_app(dirname)
+            packager.package_app(config, dirname)
             create_zip_file(source_dir=dirname, outfile=out)
         finally:
             shutil.rmtree(dirname)
     else:
-        packager.package_app(out)
+        packager.package_app(config, out)
 
 
 def run_local_server(app_obj, port):
