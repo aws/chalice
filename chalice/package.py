@@ -45,7 +45,8 @@ class PreconfiguredPolicyGenerator(object):
 
     def generate_policy_from_app_source(self):
         # type: () -> Dict[str, Any]
-        return self._policy_gen.generate_policy_from_app_source(self._config)
+        return self._policy_gen.generate_policy_from_app_source(
+            self._config)
 
 
 class SAMTemplateGenerator(object):

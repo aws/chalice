@@ -19,7 +19,6 @@ from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice.utils import OSUtils
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
-from chalice.constants import CLOUDWATCH_LOGS
 from chalice.policy import AppPolicyGenerator
 
 
@@ -180,8 +179,7 @@ class LambdaDeployer(object):
                 self._aws_client.lambda_function_exists(
                     existing_resources.api_handler_name):
             handler_name = existing_resources.api_handler_name
-            self._get_or_create_lambda_role_arn(
-                config, handler_name)
+            self._get_or_create_lambda_role_arn(config, handler_name)
             self._update_lambda_function(config, handler_name)
             function_arn = existing_resources.api_handler_arn
             deployed_values['api_handler_name'] = handler_name
@@ -214,7 +212,7 @@ class LambdaDeployer(object):
         # type: (str, Config) -> None
         print "Updating IAM policy."
         app_policy = self._app_policy.generate_policy_from_app_source(config)
-        previous = self._app_policy.load_last_policy(config.project_dir)
+        previous = self._app_policy.load_last_policy(config)
         diff = policy.diff_policies(previous, app_policy)
         if diff:
             if diff.get('added', set([])):
@@ -234,7 +232,7 @@ class LambdaDeployer(object):
         self._aws_client.put_role_policy(role_name=app_name,
                                          policy_name=app_name,
                                          policy_document=app_policy)
-        self._app_policy.record_policy(config.project_dir, app_policy)
+        self._app_policy.record_policy(config, app_policy)
 
     def _first_time_lambda_create(self, config, function_name):
         # type: (Config, str) -> str
@@ -288,7 +286,7 @@ class LambdaDeployer(object):
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=app_policy
         )
-        self._app_policy.record_policy(config.project_dir, app_policy)
+        self._app_policy.record_policy(config, app_policy)
         return role_arn
 
 
@@ -395,41 +393,47 @@ class ApplicationPolicyHandler(object):
         if config.autogen_policy:
             app_policy = self._do_generate_from_source(config)
         else:
-            app_policy = self.load_last_policy(config.project_dir)
+            app_policy = self.load_last_policy(config)
         return app_policy
 
     def _do_generate_from_source(self, config):
         # type: (Config) -> Dict[str, Any]
         return self._policy_gen.generate_policy(config)
 
-    def load_last_policy(self, project_dir):
-        # type: (str) -> Dict[str, Any]
-        """Load the last recorded policy file for the app.
-
-        Whenever a policy is generated, the file is written to
-        .chalice/policy.json.  This method will load that file
-        and return the IAM policy.
-
-        If the file does not exist, an empty policy is returned.
-
-        """
-        policy_file = self._app_policy_file(project_dir)
-        if not self._osutils.file_exists(policy_file):
+    def load_last_policy(self, config):
+        # type: (Config) -> Dict[str, Any]
+        """Load the last recorded policy file for the app."""
+        filename = self._app_policy_file(config)
+        if not self._osutils.file_exists(filename):
             return self._EMPTY_POLICY
         return json.loads(
-            self._osutils.get_file_contents(policy_file, binary=False)
+            self._osutils.get_file_contents(filename, binary=False)
         )
 
-    def record_policy(self, project_dir, policy):
-        # type: (str, Dict[str, Any]) -> None
-        policy_file = self._app_policy_file(project_dir)
+    def record_policy(self, config, policy):
+        # type: (Config, Dict[str, Any]) -> None
+        policy_file = self._app_policy_file(config)
         self._osutils.set_file_contents(
             policy_file,
             json.dumps(policy, indent=2, separators=(',', ': ')),
             binary=False
         )
 
-    def _app_policy_file(self, project_dir):
-        # type: (str) -> str
-        policy_file = os.path.join(project_dir, '.chalice', 'policy.json')
-        return policy_file
+    def _app_policy_file(self, config):
+        # type: (Config) -> str
+        if config.iam_policy_file:
+            filename = os.path.join(config.project_dir, '.chalice',
+                                    config.iam_policy_file)
+        else:
+            # Otherwise if the user doesn't specify a file it defaults
+            # to a fixed name based on the stage.
+            basename = 'policy-%s.json' % config.chalice_stage
+            filename = os.path.join(config.project_dir, '.chalice', basename)
+            if not self._osutils.file_exists(filename) and \
+                    config.chalice_stage == DEFAULT_STAGE_NAME:
+                # There's a special back-compat case where we'll
+                # try to load .chalice/policy.json if you're using
+                # the default dev stage.
+                filename = os.path.join(config.project_dir,
+                                        '.chalice', 'policy.json')
+        return filename
