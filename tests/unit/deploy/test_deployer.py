@@ -202,6 +202,18 @@ def test_can_provide_stage_specific_policy_for_other_stage(app_policy,
     assert generated == json.loads(previous_policy)
 
 
+def test_autogen_policy_for_non_dev_stage(app_policy, in_memory_osutils):
+    in_memory_osutils.filemap['./app.py'] = ''
+    config = Config.create(
+        project_dir='.',
+        chalice_stage='prod',
+        autogen_policy=True,
+    )
+    generated = app_policy.generate_policy_from_app_source(config)
+    assert 'Statement' in generated
+    assert 'Version' in generated
+
+
 def test_no_policy_generated_when_disabled_in_config(app_policy,
                                                      in_memory_osutils):
     previous_policy = '{"Statement": ["foo"]}'
