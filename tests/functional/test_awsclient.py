@@ -24,10 +24,12 @@ def test_deploy_rest_api(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_update_function_code_only(stubbed_session):
+def test_always_update_function_code(stubbed_session):
     lambda_client = stubbed_session.stub('lambda')
     lambda_client.update_function_code(
         FunctionName='name', ZipFile=b'foo').returns({})
+    # Even if there's only a code change, we'll always call
+    # update_function_configuration.
     lambda_client.update_function_configuration(
         FunctionName='name', Environment={'Variables': {}}).returns({})
     stubbed_session.activate_stubs()
