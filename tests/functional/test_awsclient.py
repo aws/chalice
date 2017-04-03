@@ -25,8 +25,11 @@ def test_deploy_rest_api(stubbed_session):
 
 
 def test_update_function_code_only(stubbed_session):
-    stubbed_session.stub('lambda').update_function_code(
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.update_function_code(
         FunctionName='name', ZipFile=b'foo').returns({})
+    lambda_client.update_function_configuration(
+        FunctionName='name', Environment={'Variables': {}}).returns({})
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.update_function('name', b'foo')

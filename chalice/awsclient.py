@@ -84,10 +84,16 @@ class TypedAWSClient(object):
         lambda_client = self._client('lambda')
         return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
-        if environment_variables is not None:
-            lambda_client.update_function_configuration(
-                FunctionName=function_name,
-                Environment={"Variables": environment_variables})
+        if environment_variables is None:
+            environment_variables = {}
+        # We need to handle the case where the user removes
+        # all env vars from their config.json file.  We'll
+        # just call update_function_configuration every time.
+        # We're going to need this moving forward anyways,
+        # more config options besides env vars will be added.
+        lambda_client.update_function_configuration(
+            FunctionName=function_name,
+            Environment={"Variables": environment_variables})
         return return_value
 
     def get_role_arn_for_name(self, name):
