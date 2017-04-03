@@ -153,15 +153,14 @@ class Response(object):
 class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, methods,
-                 authorization_type=None, authorizer_id=None,
+                 authorizer_name=None,
                  api_key_required=None, content_types=None,
                  cors=False):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
         self.methods = methods
-        self.authorization_type = authorization_type
-        self.authorizer_id = authorizer_id
+        self.authorizer_name = authorizer_name
         self.api_key_required = api_key_required
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
@@ -192,6 +191,7 @@ class Chalice(object):
         self.debug = False
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
+        self._authorizers = {}
         if self.configure_logs:
             self._configure_logging()
 
@@ -221,6 +221,19 @@ class Chalice(object):
                     return True
         return False
 
+    @property
+    def authorizers(self):
+        return self._authorizers.copy()
+
+    def define_authorizer(self, name, header, auth_type, provider_arns=None):
+        # TODO: double check remaining authorizers.  This only handles
+        # cognito_user_pools.
+        self._authorizers[name] = {
+            'header': header,
+            'auth_type': auth_type,
+            'provider_arns': provider_arns
+        }
+
     def route(self, path, **kwargs):
         def _register_view(view_func):
             self._add_route(path, view_func, **kwargs)
@@ -230,8 +243,7 @@ class Chalice(object):
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
         methods = kwargs.pop('methods', ['GET'])
-        authorization_type = kwargs.pop('authorization_type', None)
-        authorizer_id = kwargs.pop('authorizer_id', None)
+        authorizer_name = kwargs.pop('authorizer_name', None)
         api_key_required = kwargs.pop('api_key_required', None)
         content_types = kwargs.pop('content_types', ['application/json'])
         cors = kwargs.pop('cors', False)
@@ -247,8 +259,8 @@ class Chalice(object):
             raise ValueError(
                 "Duplicate route detected: '%s'\n"
                 "URL paths must be unique." % path)
-        entry = RouteEntry(view_func, name, path, methods, authorization_type,
-                           authorizer_id, api_key_required,
+        entry = RouteEntry(view_func, name, path, methods,
+                           authorizer_name, api_key_required,
                            content_types, cors)
         self.routes[path] = entry
 

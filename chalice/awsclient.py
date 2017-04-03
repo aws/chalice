@@ -20,9 +20,10 @@ import zipfile
 import shutil
 import json
 
-import botocore.session
-import botocore.exceptions
+import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List  # noqa
+
+from chalice.constants import DEFAULT_STAGE_NAME
 
 
 class TypedAWSClient(object):
@@ -40,17 +41,16 @@ class TypedAWSClient(object):
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool
+        client = self._client('lambda')
         try:
-            self._client('lambda').get_function(FunctionName=name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                return False
-            raise
-        return True
+            client.get_function(FunctionName=name)
+            return True
+        except client.exceptions.ResourceNotFoundException:
+            return False
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(self, function_name, role_arn, zip_contents,
+                        environment_variables=None):
+        # type: (str, str, str, Optional[Dict[str, str]]) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -59,40 +59,50 @@ class TypedAWSClient(object):
             'Role': role_arn,
             'Timeout': 60,
         }
+        if environment_variables is not None:
+            kwargs['Environment'] = {"Variables": environment_variables}
         client = self._client('lambda')
         attempts = 0
         while True:
             try:
                 response = client.create_function(**kwargs)
-            except botocore.exceptions.ClientError as e:
-                code = e.response['Error'].get('Code')
-                if code == 'InvalidParameterValueException':
-                    # We're assuming that if we receive an
-                    # InvalidParameterValueException, it's because
-                    # the role we just created can't be used by
-                    # Lambda.
-                    self._sleep(self.DELAY_TIME)
-                    attempts += 1
-                    if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
-                        raise
-                    continue
-                raise
+            except client.exceptions.InvalidParameterValueException:
+                # We're assuming that if we receive an
+                # InvalidParameterValueException, it's because
+                # the role we just created can't be used by
+                # Lambda.
+                self._sleep(self.DELAY_TIME)
+                attempts += 1
+                if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
+                    raise
+                continue
             return response['FunctionArn']
 
-    def update_function_code(self, function_name, zip_contents):
-        # type: (str, str) -> None
-        self._client('lambda').update_function_code(
+    def update_function(self, function_name, zip_contents,
+                        environment_variables=None):
+        # type: (str, str, Optional[Dict[str, str]]) -> Dict[str, Any]
+        lambda_client = self._client('lambda')
+        return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
+        if environment_variables is None:
+            environment_variables = {}
+        # We need to handle the case where the user removes
+        # all env vars from their config.json file.  We'll
+        # just call update_function_configuration every time.
+        # We're going to need this moving forward anyways,
+        # more config options besides env vars will be added.
+        lambda_client.update_function_configuration(
+            FunctionName=function_name,
+            Environment={"Variables": environment_variables})
+        return return_value
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
+        client = self._client('iam')
         try:
-            role = self._client('iam').get_role(RoleName=name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'NoSuchEntity':
-                raise ValueError("No role ARN found for: %s" % name)
-            raise
+            role = client.get_role(RoleName=name)
+        except client.exceptions.NoSuchEntityException:
+            raise ValueError("No role ARN found for: %s" % name)
         return role['Role']['Arn']
 
     def delete_role_policy(self, role_name, policy_name):
@@ -138,57 +148,39 @@ class TypedAWSClient(object):
                 return api['id']
         return None
 
-    def create_rest_api(self, name):
-        # type: (str) -> str
-        response = self._client('apigateway').create_rest_api(name=name)
-        return response['id']
-
-    def get_root_resource_for_api(self, rest_api_id):
-        # type: (str) -> Dict[str, Any]
-        resources = [r for r in self.get_resources_for_api(rest_api_id)
-                     if r['path'] == '/']
-        root_resource = resources[0]
-        return root_resource
-
-    def get_resources_for_api(self, rest_api_id):
-        # type: (str) -> List[Dict[str, Any]]
+    def rest_api_exists(self, rest_api_id):
+        # type: (str) -> bool
+        """Check if an an API Gateway REST API exists."""
         client = self._client('apigateway')
-        paginator = client.get_paginator('get_resources')
-        pages = paginator.paginate(restApiId=rest_api_id)
-        return pages.build_full_result()['items']
+        try:
+            client.get_rest_api(restApiId=rest_api_id)
+            return True
+        except client.exceptions.NotFoundException:
+            return False
 
-    def delete_methods_from_root_resource(self, rest_api_id, root_resource):
+    def import_rest_api(self, swagger_document):
+        # type: (Dict[str, Any]) -> str
+        client = self._client('apigateway')
+        response = client.import_rest_api(
+            body=json.dumps(swagger_document, indent=2)
+        )
+        rest_api_id = response['id']
+        return rest_api_id
+
+    def update_api_from_swagger(self, rest_api_id, swagger_document):
         # type: (str, Dict[str, Any]) -> None
         client = self._client('apigateway')
-        methods = list(root_resource.get('resourceMethods', []))
-        for method in methods:
-            client.delete_method(restApiId=rest_api_id,
-                                 resourceId=root_resource['id'],
-                                 httpMethod=method)
+        client.put_rest_api(
+            restApiId=rest_api_id,
+            body=json.dumps(swagger_document, indent=2))
 
-    def delete_resource_for_api(self, rest_api_id, resource_id):
-        # type: (str, str) -> None
-        client = self._client('apigateway')
-        client.delete_resource(restApiId=rest_api_id,
-                               resourceId=resource_id)
-
-    def deploy_rest_api(self, rest_api_id, stage_name):
+    def deploy_rest_api(self, rest_api_id, api_gateway_stage):
         # type: (str, str) -> None
         client = self._client('apigateway')
         client.create_deployment(
             restApiId=rest_api_id,
-            stageName=stage_name,
+            stageName=api_gateway_stage,
         )
-
-    def create_rest_resource(self, rest_api_id, parent_id, path_part):
-        # type: (str, str, str) -> Dict[str, Any]
-        client = self._client('apigateway')
-        response = client.create_resource(
-            restApiId=rest_api_id,
-            parentId=parent_id,
-            pathPart=path_part,
-        )
-        return response
 
     def add_permission_for_apigateway_if_needed(self, function_name,
                                                 region_name, account_id,
@@ -202,12 +194,11 @@ class TypedAWSClient(object):
 
         """
         has_necessary_permissions = False
+        client = self._client('lambda')
         try:
             policy = self.get_function_policy(function_name)
-        except botocore.exceptions.ClientError as e:
-            error = e.response['Error']
-            if error['Code'] == 'ResourceNotFoundException':
-                pass
+        except client.exceptions.ResourceNotFoundException:
+            pass
         else:
             source_arn = self._build_source_arn_str(region_name, account_id,
                                                     rest_api_id)
@@ -271,20 +262,8 @@ class TypedAWSClient(object):
         policy = client.get_policy(FunctionName=function_name)
         return json.loads(policy['Policy'])
 
-    def get_sdk_download_stream(self, rest_api_id, stage='dev',
-                                sdk_type='javascript'):
-        # type: (str, str, str) -> file
-        """Generate an SDK for a given SDK.
-
-        Returns a file like object that streams a zip contents for the
-        generated SDK.
-
-        """
-        response = self._client('apigateway').get_sdk(
-            restApiId=rest_api_id, stageName=stage, sdkType=sdk_type)
-        return response['body']
-
-    def download_sdk(self, rest_api_id, output_dir, stage='dev',
+    def download_sdk(self, rest_api_id, output_dir,
+                     api_gateway_stage=DEFAULT_STAGE_NAME,
                      sdk_type='javascript'):
         # type: (str, str, str, str) -> None
         """Download an SDK to a directory.
@@ -296,7 +275,8 @@ class TypedAWSClient(object):
 
         """
         zip_stream = self.get_sdk_download_stream(
-            rest_api_id, stage=stage, sdk_type=sdk_type)
+            rest_api_id, api_gateway_stage=api_gateway_stage,
+            sdk_type=sdk_type)
         tmpdir = tempfile.mkdtemp()
         with open(os.path.join(tmpdir, 'sdk.zip'), 'wb') as f:
             f.write(zip_stream.read())
@@ -317,6 +297,21 @@ class TypedAWSClient(object):
         raise RuntimeError(
             "The downloaded SDK had an unexpected directory structure: %s" %
             (', '.join(dirnames)))
+
+    def get_sdk_download_stream(self, rest_api_id,
+                                api_gateway_stage=DEFAULT_STAGE_NAME,
+                                sdk_type='javascript'):
+        # type: (str, str, str) -> file
+        """Generate an SDK for a given SDK.
+
+        Returns a file like object that streams a zip contents for the
+        generated SDK.
+
+        """
+        response = self._client('apigateway').get_sdk(
+            restApiId=rest_api_id, stageName=api_gateway_stage,
+            sdkType=sdk_type)
+        return response['body']
 
     def add_permission_for_apigateway(self, function_name, region_name,
                                       account_id, rest_api_id, random_id):

@@ -60,6 +60,7 @@ Topics
    topics/multifile
    topics/logging
    topics/sdks
+   topics/stages
    topics/packaging
 
 

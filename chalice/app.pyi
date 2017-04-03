@@ -56,8 +56,7 @@ class RouteEntry(object):
     view_name = ... # type: str
     methods = ... # type: List[str]
     uri_pattern = ... # type: str
-    authorization_type = ... # type: str
-    authorizer_id = ... # type: str
+    authorizer_name = ... # type: str
     api_key_required = ... # type: bool
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]
@@ -65,8 +64,7 @@ class RouteEntry(object):
 
     def __init__(self, view_function: Callable[..., Any],
                  view_name: str, path: str, methods: List[str],
-                 authorization_type: str=None,
-                 authorizer_id: str=None,
+                 authorizer_name: str=None,
                  api_key_required: bool=None,
                  content_types: List[str]=None,
                  cors: bool=False) -> None: ...
@@ -81,6 +79,8 @@ class Chalice(object):
     routes = ... # type: Dict[str, RouteEntry]
     current_request = ... # type: Request
     debug = ... # type: bool
+    authorizers = ... # type: Dict[str, Dict[str, Any]]
+
     def __init__(self, app_name: str) -> None: ...
 
     def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
