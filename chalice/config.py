@@ -133,11 +133,6 @@ class Config(object):
                 return cfg_dict[name]
 
     @property
-    def lambda_arn(self):
-        # type: () -> str
-        return self._chain_lookup('lambda_arn')
-
-    @property
     def config_file_version(self):
         # type: () -> str
         return self._config_from_disk.get('version', '1.0')

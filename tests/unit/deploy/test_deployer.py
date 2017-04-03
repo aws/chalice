@@ -78,7 +78,6 @@ def stubbed_client(service_name):
 def config_obj(sample_app):
     config = Config.create(
         chalice_app=sample_app,
-        lambda_arn='arn:aws:lambda:us-west-2:account-id:function:func-name',
         stage='dev',
     )
     return config
@@ -91,9 +90,10 @@ def test_api_gateway_deployer_initial_deploy(config_obj):
     # the initial import
     aws_client.get_rest_api_id.return_value = None
     aws_client.import_rest_api.return_value = 'rest-api-id'
+    lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
     d = APIGatewayDeployer(aws_client)
-    d.deploy(config_obj, None)
+    d.deploy(config_obj, None, lambda_arn)
 
     # mock.ANY because we don't want to test the contents of the swagger
     # doc.  That's tested exhaustively elsewhere.
@@ -118,9 +118,10 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
     deployed = DeployedResources(
         None, None, None, 'existing-id', 'dev', None, None)
     aws_client.rest_api_exists.return_value = True
+    lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
     d = APIGatewayDeployer(aws_client)
-    d.deploy(config_obj, deployed)
+    d.deploy(config_obj, deployed, lambda_arn)
 
     aws_client.update_api_from_swagger.assert_called_with('existing-id',
                                                           mock.ANY)
@@ -218,7 +219,7 @@ def test_can_deploy_apig_and_lambda(sample_app):
         project_dir='.')
     d.deploy(cfg)
     lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
-    apig_deploy.deploy.assert_called_with(cfg, None)
+    apig_deploy.deploy.assert_called_with(cfg, None, 'my_lambda_arn')
 
 
 def test_deployer_returns_deployed_resources(sample_app):
