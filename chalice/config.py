@@ -138,6 +138,25 @@ class Config(object):
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
                 return cfg_dict[name]
 
+    def _chain_merge(self, name):
+        # type: (str) -> Dict[str, Any]
+        # Merge values for all search dicts instead of returning on first
+        # found.
+        search_dicts = [
+            # This is reverse order to _chain_lookup().
+            self._default_params,
+            self._config_from_disk,
+            self._config_from_disk.get('stages', {}).get(
+                self.chalice_stage, {}),
+            self._user_provided_params,
+        ]
+        final = {}
+        for cfg_dict in search_dicts:
+            value = cfg_dict.get(name, {})
+            if isinstance(value, dict):
+                final.update(value)
+        return final
+
     @property
     def config_file_version(self):
         # type: () -> str
@@ -177,6 +196,11 @@ class Config(object):
         # type: () -> bool
         return self._chain_lookup('autogen_policy',
                                   varies_per_chalice_stage=True)
+
+    @property
+    def environment_variables(self):
+        # type: () -> Dict[str, str]
+        return self._chain_merge('environment_variables')
 
     def deployed_resources(self, chalice_stage_name):
         # type: (str) -> Optional[DeployedResources]

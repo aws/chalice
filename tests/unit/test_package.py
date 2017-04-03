@@ -49,8 +49,9 @@ def test_sam_generates_sam_template_basic(sample_app,
                                           mock_policy_generator):
     p = package.SAMTemplateGenerator(mock_swagger_generator,
                                      mock_policy_generator)
-    template = p.generate_sam_template(sample_app, 'code-uri',
-                                       api_gateway_stage='dev')
+    config = Config.create(chalice_app=sample_app,
+                           api_gateway_stage='dev')
+    template = p.generate_sam_template(config, 'code-uri')
     # Verify the basic structure is in place.  The specific parts
     # are validated in other tests.
     assert template['AWSTemplateFormatVersion'] == '2010-09-09'
@@ -68,7 +69,9 @@ def test_sam_injects_policy(sample_app,
     mock_policy_generator.generate_policy_from_app_source.return_value = {
         'iam': 'policy',
     }
-    template = p.generate_sam_template(sample_app)
+    config = Config.create(chalice_app=sample_app,
+                           api_gateway_stage='dev')
+    template = p.generate_sam_template(config)
     assert template['Resources']['APIHandler']['Properties']['Policies'] == [{
         'iam': 'policy',
     }]
@@ -82,6 +85,47 @@ def test_sam_injects_swagger_doc(sample_app,
     mock_swagger_generator.generate_swagger.return_value = {
         'swagger': 'document'
     }
-    template = p.generate_sam_template(sample_app)
+    config = Config.create(chalice_app=sample_app,
+                           api_gateway_stage='dev')
+    template = p.generate_sam_template(config)
     properties = template['Resources']['RestAPI']['Properties']
     assert properties['DefinitionBody'] == {'swagger': 'document'}
+
+
+def test_can_inject_environment_vars(sample_app,
+                                     mock_swagger_generator,
+                                     mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='dev',
+        environment_variables={
+            'FOO': 'BAR'
+        }
+    )
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert 'Environment' in properties
+    assert properties['Environment']['Variables'] == {'FOO': 'BAR'}
+
+
+def test_endpoint_url_reflects_apig_stage(sample_app,
+                                          mock_swagger_generator,
+                                          mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='prod',
+    )
+    template = p.generate_sam_template(config)
+    endpoint_url = template['Outputs']['EndpointURL']['Value']['Fn::Sub']
+    assert endpoint_url == (
+        'https://${RestAPI}.execute-api.${AWS::Region}.amazonaws.com/prod/')

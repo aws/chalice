@@ -24,12 +24,31 @@ def test_deploy_rest_api(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_update_function_code(stubbed_session):
-    stubbed_session.stub('lambda').update_function_code(
+def test_always_update_function_code(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.update_function_code(
         FunctionName='name', ZipFile=b'foo').returns({})
+    # Even if there's only a code change, we'll always call
+    # update_function_configuration.
+    lambda_client.update_function_configuration(
+        FunctionName='name', Environment={'Variables': {}}).returns({})
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    awsclient.update_function_code('name', b'foo')
+    awsclient.update_function('name', b'foo')
+    stubbed_session.verify_stubs()
+
+
+def test_update_function_code_and_deploy(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.update_function_code(
+        FunctionName='name', ZipFile=b'foo').returns({})
+    lambda_client.update_function_configuration(
+        FunctionName='name',
+        Environment={'Variables': {"FOO": "BAR"}}).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.update_function(
+        'name', b'foo', {"FOO": "BAR"})
     stubbed_session.verify_stubs()
 
 
@@ -215,11 +234,12 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Timeout=60,
+            Environment={'Variables': {'FOO': 'BAR'}},
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo') == 'arn:12345:name'
+            'name', 'myarn', b'foo', {'FOO': 'BAR'}) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):

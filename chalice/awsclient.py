@@ -48,8 +48,9 @@ class TypedAWSClient(object):
         except client.exceptions.ResourceNotFoundException:
             return False
 
-    def create_function(self, function_name, role_arn, zip_contents):
-        # type: (str, str, str) -> str
+    def create_function(self, function_name, role_arn, zip_contents,
+                        environment_variables=None):
+        # type: (str, str, str, Optional[Dict[str, str]]) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': 'python2.7',
@@ -58,6 +59,8 @@ class TypedAWSClient(object):
             'Role': role_arn,
             'Timeout': 60,
         }
+        if environment_variables is not None:
+            kwargs['Environment'] = {"Variables": environment_variables}
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -75,10 +78,23 @@ class TypedAWSClient(object):
                 continue
             return response['FunctionArn']
 
-    def update_function_code(self, function_name, zip_contents):
-        # type: (str, str) -> Dict[str, Any]
-        return self._client('lambda').update_function_code(
+    def update_function(self, function_name, zip_contents,
+                        environment_variables=None):
+        # type: (str, str, Optional[Dict[str, str]]) -> Dict[str, Any]
+        lambda_client = self._client('lambda')
+        return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
+        if environment_variables is None:
+            environment_variables = {}
+        # We need to handle the case where the user removes
+        # all env vars from their config.json file.  We'll
+        # just call update_function_configuration every time.
+        # We're going to need this moving forward anyways,
+        # more config options besides env vars will be added.
+        lambda_client.update_function_configuration(
+            FunctionName=function_name,
+            Environment={"Variables": environment_variables})
+        return return_value
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str

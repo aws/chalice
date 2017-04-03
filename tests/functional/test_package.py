@@ -30,7 +30,7 @@ def test_can_create_app_packager_with_no_autogen(tmpdir):
     config = Config.create(project_dir=str(appdir),
                            chalice_app=sample_app())
     p = package.create_app_packager(config)
-    p.package_app(str(outdir))
+    p.package_app(config, str(outdir))
     # We're not concerned with the contents of the files
     # (those are tested in the unit tests), we just want to make
     # sure they're written to disk and look (mostly) right.
@@ -45,7 +45,7 @@ def test_will_create_outdir_if_needed(tmpdir):
     config = Config.create(project_dir=str(appdir),
                            chalice_app=sample_app())
     p = package.create_app_packager(config)
-    p.package_app(outdir)
+    p.package_app(config, str(outdir))
     contents = os.listdir(str(outdir))
     assert 'deployment.zip' in contents
     assert 'sam.json' in contents

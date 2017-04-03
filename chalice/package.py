@@ -29,12 +29,8 @@ def create_app_packager(config):
                 config,
                 ApplicationPolicyHandler(
                     osutils, AppPolicyGenerator(osutils)))),
-        LambdaDeploymentPackager(),
-        # TODO: remove duplication here.
-        ApplicationPolicyHandler(osutils, AppPolicyGenerator(osutils)),
-        config.chalice_app,
-        config.project_dir,
-        config.autogen_policy)
+        LambdaDeploymentPackager()
+    )
 
 
 class PreconfiguredPolicyGenerator(object):
@@ -67,7 +63,9 @@ class SAMTemplateGenerator(object):
                 'Value': {
                     'Fn::Sub': (
                         'https://${RestAPI}.execute-api.${AWS::Region}'
-                        '.amazonaws.com/dev/'
+                        # The api_gateway_stage is filled in when
+                        # the template is built.
+                        '.amazonaws.com/%s/'
                     )
                 }
             }
@@ -79,26 +77,37 @@ class SAMTemplateGenerator(object):
         self._swagger_generator = swagger_generator
         self._policy_generator = policy_generator
 
-    def generate_sam_template(self, app, code_uri='<placeholder>',
-                              api_gateway_stage='dev'):
-        # type: (Chalice, str, str) -> Dict[str, Any]
+    def generate_sam_template(self, config, code_uri='<placeholder>'):
+        # type: (Config, str) -> Dict[str, Any]
         template = copy.deepcopy(self._BASE_TEMPLATE)
         resources = {
-            'APIHandler': self._generate_serverless_function(app, code_uri),
-            'RestAPI': self._generate_rest_api(app, api_gateway_stage),
+            'APIHandler': self._generate_serverless_function(config, code_uri),
+            'RestAPI': self._generate_rest_api(
+                config.chalice_app, config.api_gateway_stage),
         }
         template['Resources'] = resources
+        self._update_endpoint_url_output(template, config)
         return template
 
-    def _generate_serverless_function(self, app, code_uri):
-        # type: (Chalice, str) -> Dict[str, Any]
+    def _update_endpoint_url_output(self, template, config):
+        # type: (Dict[str, Any], Config) -> None
+        url = template['Outputs']['EndpointURL']['Value']['Fn::Sub']
+        template['Outputs']['EndpointURL']['Value']['Fn::Sub'] = (
+            url % config.api_gateway_stage)
+
+    def _generate_serverless_function(self, config, code_uri):
+        # type: (Config, str) -> Dict[str, Any]
         properties = {
             'Runtime': 'python2.7',
             'Handler': 'app.app',
             'CodeUri': code_uri,
-            'Events': self._generate_function_events(app),
+            'Events': self._generate_function_events(config.chalice_app),
             'Policies': [self._generate_iam_policy()],
         }
+        if config.environment_variables:
+            properties['Environment'] = {
+                'Variables': config.environment_variables
+            }
         return {
             'Type': 'AWS::Serverless::Function',
             'Properties': properties,
@@ -144,33 +153,25 @@ class AppPackager(object):
     def __init__(self,
                  sam_templater,       # type: SAMTemplateGenerator
                  lambda_packager,     # type: LambdaDeploymentPackager
-                 policy_gen,          # type: ApplicationPolicyHandler
-                 app,                 # type: Chalice
-                 project_dir,         # type: str
-                 autogen_policy=True  # type: bool
                  ):
         # type: (...) -> None
         self._sam_templater = sam_templater
         self._lambda_packaager = lambda_packager
-        self._app = app
-        self._policy_gen = policy_gen
-        self._project_dir = project_dir
-        self._autogen_policy = autogen_policy
 
     def _to_json(self, doc):
         # type: (Any) -> str
         return json.dumps(doc, indent=2, separators=(',', ': '))
 
-    def package_app(self, outdir):
-        # type: (str) -> None
+    def package_app(self, config, outdir):
+        # type: (Config, str) -> None
         # Deployment package
         zip_file = os.path.join(outdir, 'deployment.zip')
         self._lambda_packaager.create_deployment_package(
-            self._project_dir, zip_file)
+            config.project_dir, zip_file)
 
         # SAM template
         sam_template = self._sam_templater.generate_sam_template(
-            self._app, './deployment.zip')
+            config, './deployment.zip')
         if not os.path.isdir(outdir):
             os.makedirs(outdir)
         with open(os.path.join(outdir, 'sam.json'), 'w') as f:

@@ -338,7 +338,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     packager.deployment_package_filename.return_value = 'packages.zip'
     # Given the lambda function already exists:
     aws_client.lambda_function_exists.return_value = True
-    aws_client.update_function_code.return_value = {"FunctionArn": "myarn"}
+    aws_client.update_function.return_value = {"FunctionArn": "myarn"}
     # And given we don't want chalice to manage our iam role for the lambda
     # function:
     cfg = Config.create(
@@ -347,7 +347,8 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
         manage_iam_role=False,
         app_name='appname',
         iam_role_arn=True,
-        project_dir='./myproject'
+        project_dir='./myproject',
+        environment_variables={"FOO": "BAR"},
     )
 
     d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
@@ -363,8 +364,35 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
                                                   './myproject')
 
     # And should result in the lambda function being updated with the API.
-    aws_client.update_function_code.assert_called_with(
-        lambda_function_name, 'package contents')
+    aws_client.update_function.assert_called_with(
+        lambda_function_name, 'package contents', {"FOO": "BAR"})
+
+
+def test_lambda_deployer_initial_deploy(app_policy, sample_app):
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    aws_client.create_function.return_value = 'lambda-arn'
+    packager = mock.Mock(LambdaDeploymentPackager)
+    packager.create_deployment_package.return_value = 'packages.zip'
+    cfg = Config.create(
+        chalice_stage='dev',
+        app_name='myapp',
+        chalice_app=sample_app,
+        manage_iam_role=False,
+        iam_role_arn='role-arn',
+        project_dir='.',
+        environment_variables={"FOO": "BAR"},
+    )
+
+    d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
+    deployed = d.deploy(cfg, None, 'dev')
+    assert deployed == {
+        'api_handler_arn': 'lambda-arn',
+        'api_handler_name': 'myapp-dev',
+    }
+    aws_client.create_function.assert_called_with(
+        'myapp-dev', 'role-arn', b'package contents',
+        {"FOO": "BAR"})
 
 
 def test_cant_have_options_with_cors(sample_app):
