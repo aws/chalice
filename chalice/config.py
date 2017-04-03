@@ -120,6 +120,12 @@ class Config(object):
         # type: () -> StrMap
         return self._config_from_disk
 
+    @property
+    def iam_policy_file(self):
+        # type: () -> str
+        return self._chain_lookup('iam_policy_file',
+                                  varies_per_chalice_stage=True)
+
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any
         search_dicts = [self._user_provided_params]
