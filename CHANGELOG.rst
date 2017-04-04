@@ -24,6 +24,8 @@ for more detailed information about upgrading to this release.
   (`#272 <https://github.com/awslabs/chalice/pull/272>`__)
 * Add support for setting environment variables in your app
   (`#273 <https://github.com/awslabs/chalice/pull/273>`__)
+* Add a ``generate-pipeline`` command
+  (`#278 <https://github.com/awslabs/chalice/pull/278>`__)
 
 
 0.6.0
