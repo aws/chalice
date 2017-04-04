@@ -299,6 +299,21 @@ def package(ctx, single_file, stage, out):
 @click.pass_context
 def generate_pipeline(ctx, filename):
     # type: (click.Context, str) -> None
+    """Generate a cloudformation template for a starter CD pipeline.
+
+    This command will write a starter cloudformation template to
+    the filename you provide.  It contains a CodeCommit repo,
+    a CodeBuild stage for packaging your chalice app, and a
+    CodePipeline stage to deploy your application using cloudformation.
+
+    You can use any AWS SDK or the AWS CLI to deploy this stack.
+    Here's an example using the AWS CLI:
+
+        \b
+        $ chalice generate-pipeline pipeline.json
+        $ aws cloudformation deploy --stack-name mystack \b
+            --template-file pipeline.json --capabilities CAPABILITY_IAM
+    """
     from chalice.pipeline import create_pipeline_template
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
