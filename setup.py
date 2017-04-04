@@ -8,7 +8,7 @@ with open('README.rst') as readme_file:
 
 install_requires = [
     'click==6.6',
-    'botocore>=1.4.8,<2.0.0',
+    'botocore>=1.5.0,<2.0.0',
     'virtualenv>=15.0.0,<16.0.0',
     'typing==3.5.3.0',
 ]

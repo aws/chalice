@@ -911,19 +911,25 @@ API Key
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
-Custom Auth Handler
--------------------
+Using Amazon Cognito User Pools
+-------------------------------
 
-A custom Authorizer is required for this to work, details can be found here;
-http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html
+To integrate with cognito user pools, you can use the ``define_authorizer`` method
+on the ``app`` object.
 
 .. code-block:: python
 
-    @app.route('/authenticated', methods=['GET'], authorization_type='CUSTOM', authorizer_id='ab12cd')
+    @app.route('/user-pools', methods=['GET'], authorizer_name='MyPool')
     def authenticated():
         return {"secure": True}
 
-Only requests sent with a valid `X-Api-Key` header will be accepted.
+    app.define_authorizer(
+        name='MyPool',
+        header='Authorization',
+        auth_type='cognito_user_pools',
+        provider_arns=['arn:aws:cognito:...:userpool/name']
+    )
+
 
 Tutorial: Local Mode
 ====================

@@ -1,15 +1,23 @@
 import os
 import zipfile
-from pytest import fixture
 
 import botocore.session
+from pytest import fixture
+import pytest
 
-from chalice import deployer
+import chalice.deploy.packager
+import chalice.utils
+from chalice.deploy import deployer
+
+
+slow = pytest.mark.skipif(
+    pytest.config.getoption('--skip-slow'),
+    reason='Skipped due to --skip-slow')
 
 
 @fixture
 def chalice_deployer():
-    d = deployer.LambdaDeploymentPackager()
+    d = chalice.deploy.packager.LambdaDeploymentPackager()
     return d
 
 
@@ -20,6 +28,7 @@ def _create_app_structure(tmpdir):
     return appdir
 
 
+@slow
 def test_can_create_deployment_package(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app')
@@ -31,6 +40,7 @@ def test_can_create_deployment_package(tmpdir, chalice_deployer):
     assert str(contents[0]).endswith('.zip')
 
 
+@slow
 def test_can_inject_latest_app(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app v1')
@@ -50,6 +60,7 @@ def test_can_inject_latest_app(tmpdir, chalice_deployer):
         assert contents == '# Test app NEW VERSION'
 
 
+@slow
 def test_app_injection_still_compresses_file(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app v1')
@@ -64,6 +75,7 @@ def test_app_injection_still_compresses_file(tmpdir, chalice_deployer):
     assert new_size < (original_size * 1.05)
 
 
+@slow
 def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
                                                      chalice_deployer,
                                                      capfd):
@@ -85,7 +97,7 @@ def test_osutils_proxies_os_functions(tmpdir):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write(b'hello')
 
-    osutils = deployer.OSUtils()
+    osutils = chalice.utils.OSUtils()
 
     app_file = str(appdir.join('app.py'))
     assert osutils.file_exists(app_file)
@@ -97,6 +109,7 @@ def test_osutils_proxies_os_functions(tmpdir):
     assert not osutils.file_exists(app_file)
 
 
+@slow
 def test_includes_app_and_chalicelib_dir(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     # We're now also going to create additional files
@@ -125,6 +138,7 @@ def _assert_in_zip(path, contents, zip):
     assert zip.read(path) == contents
 
 
+@slow
 def test_subsequent_deploy_replaces_chalicelib(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     chalicelib = appdir.mkdir('chalicelib')
@@ -144,6 +158,7 @@ def test_subsequent_deploy_replaces_chalicelib(tmpdir, chalice_deployer):
         assert 'chalicelib/__init__.py' not in f.namelist()
 
 
+@slow
 def test_vendor_dir_included(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     vendor = appdir.mkdir('vendor')
@@ -154,6 +169,7 @@ def test_vendor_dir_included(tmpdir, chalice_deployer):
         _assert_in_zip('mypackage/__init__.py', '# Test package', f)
 
 
+@slow
 def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     vendor = appdir.mkdir('vendor')
@@ -178,6 +194,7 @@ def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
     assert first != second
 
 
+@slow
 def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     name = chalice_deployer.create_deployment_package(str(appdir))

@@ -2,11 +2,37 @@
 CHANGELOG
 =========
 
+0.7.0
+=====
+
+Please read the `upgrade notes for 0.7.0
+<http://chalice.readthedocs.io/en/latest/upgrading.html#v0-7-0>`__
+for more detailed information about upgrading to this release.
+
+* Add ``chalice package`` command.  This will
+  create a SAM template and Lambda deployment package that
+  can be subsequently deployed by AWS CloudFormation.
+  (`#258 <https://github.com/awslabs/chalice/pull/258>`__)
+* Add a ``--stage-name`` argument for creating chalice stages.
+  A chalice stage is a completely separate set of AWS resources.
+  As a result, most configuration values can also be specified
+  per chalice stage.
+  (`#264 <https://github.com/awslabs/chalice/pull/264>__,
+   `#270 <https://github.com/awslabs/chalice/pull/270>`__)
+* Add support for ``iam_role_file``, which allows you to
+  specify the file location of an IAM policy to use for your app
+  (`#272 <https://github.com/awslabs/chalice/pull/272>`__)
+* Add support for setting environment variables in your app
+  (`#273 <https://github.com/awslabs/chalice/pull/273>`__)
+* Add a ``generate-pipeline`` command
+  (`#278 <https://github.com/awslabs/chalice/pull/278>`__)
+
+
 0.6.0
 =====
 
 Check out the `upgrade notes for 0.6.0
-<http://chalice.readthedocs.io/en/latest/upgrading.html#id1>`__
+<http://chalice.readthedocs.io/en/latest/upgrading.html#v0-6-0>`__
 for more detailed information about changes in this release.
 
 * Add port parameter to local command

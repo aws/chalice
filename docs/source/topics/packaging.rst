@@ -96,7 +96,7 @@ Psycopg2 Example
 ----------------
 
 Below shows an example of how you can use the
-[psycopg2](https://pypi.python.org/pypi/psycopg2) package in a chalice app.
+`psycopg2 <https://pypi.python.org/pypi/psycopg2>`__ package in a chalice app.
 
 We're going to leverage the ``vendor/`` directory in order to use this
 package in our app.  We can't use ``requirements.txt`` file because
@@ -109,13 +109,13 @@ package in our app.  We can't use ``requirements.txt`` file because
   to build a custom version of ``psycopg2`` that has ``libpq.so`` statically
   linked.
 
-You can do this yourself by building [psycopg2](https://pypi.python.org/pypi/psycopg2)
+You can do this yourself by building `psycopg2 <https://pypi.python.org/pypi/psycopg2>`__
 on Amazon Linux with the ``static_libpq=1`` value set in the ``setup.cfg``
 file.  You can then copy/unzip the ``.whl`` file into the ``vendor/``
 directory.
 
 There are also existing packages that have prebuilt this, including the
-3rd party [awslambda-psycopg2](https://github.com/jkehler/awslambda-psycopg2)
+3rd party `awslambda-psycopg2 <https://github.com/jkehler/awslambda-psycopg2>`__
 package.  If you wanted to use this 3rd party package you can follow these
 steps::
 
