@@ -101,7 +101,6 @@ def local(ctx, port=8000):
 
 @cli.command()
 @click.option('--autogen-policy/--no-autogen-policy',
-              default=True,
               help='Automatically generate IAM policy for app code.')
 @click.option('--profile', help='Override profile at deploy time.')
 @click.option('--api-gateway-stage',
