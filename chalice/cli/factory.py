@@ -84,7 +84,7 @@ class CLIFactory(object):
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None, api_gateway_stage=None):
-        # type: (str, bool, Optional[str]) -> Config
+        # type: (str, Optional[bool], Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'autogen_policy': True}
