@@ -59,8 +59,7 @@ def test_can_create_botocore_session_connection_timeout():
 
 
 def test_can_create_botocore_session_cli_factory(clifactory):
-    clifactory.profile = 'myprofile'
-    session = clifactory.create_botocore_session()
+    session = clifactory.create_botocore_session(profile='myprofile')
     assert session.profile == 'myprofile'
 
 
