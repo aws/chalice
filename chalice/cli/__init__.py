@@ -16,7 +16,6 @@ from botocore.session import Session  # noqa
 from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
-from chalice import prompts
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.cli.factory import CLIFactory
@@ -24,6 +23,7 @@ from chalice.config import Config  # noqa
 from chalice.logs import LogRetriever
 from chalice.utils import create_zip_file, record_deployed_values
 from chalice.deploy.deployer import validate_python_version
+from chalice.utils import getting_started_prompt
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 
@@ -214,7 +214,7 @@ def gen_policy(ctx, filename):
 def new_project(project_name, profile):
     # type: (str, str) -> None
     if project_name is None:
-        project_name = prompts.getting_started_prompt(click)
+        project_name = getting_started_prompt(click)
     if os.path.isdir(project_name):
         click.echo("Directory already exists: %s" % project_name, err=True)
         raise click.Abort()
