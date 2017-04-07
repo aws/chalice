@@ -121,6 +121,35 @@ def test_can_get_function_configuration(stubbed_session):
             'python3.6')
 
 
+def test_can_iterate_logs(stubbed_session):
+    stubbed_session.stub('logs').filter_log_events(
+        logGroupName='loggroup', interleaved=True).returns({
+            "events": [{
+                "logStreamName": "logStreamName",
+                "timestamp": 0,
+                "message": "message",
+                "ingestionTime": 0,
+                "eventId": "eventId"
+            }],
+        })
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    logs = list(awsclient.iter_log_events('loggroup'))
+    timestamp = datetime.datetime.fromtimestamp(0)
+    assert logs == [
+        {'logStreamName': 'logStreamName',
+         # We should have converted the ints to timestamps.
+         'timestamp': timestamp,
+         'message': 'message',
+         'ingestionTime': timestamp,
+         'eventId': 'eventId',}
+    ]
+
+    stubbed_session.verify_stubs()
+
+
 class TestLambdaFunctionExists(object):
 
     def test_can_query_lambda_function_exists(self, stubbed_session):

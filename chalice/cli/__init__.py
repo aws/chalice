@@ -19,7 +19,7 @@ from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
-from chalice.logs import show_lambda_logs
+from chalice.logs import display_logs
 from chalice.utils import create_zip_file, record_deployed_values
 from chalice.deploy.deployer import validate_python_version
 from chalice.utils import getting_started_prompt
@@ -171,8 +171,10 @@ def logs(ctx, num_entries, include_lambda_messages, stage):
     deployed = config.deployed_resources(stage)
     if deployed is not None:
         session = factory.create_botocore_session()
-        show_lambda_logs(session, deployed.api_handler_arn, num_entries,
-                         include_lambda_messages)
+        retriever = factory.create_log_retriever(
+            session, deployed.api_handler_arn)
+        display_logs(retriever, num_entries, include_lambda_messages,
+                     sys.stdout)
 
 
 @cli.command('gen-policy')
