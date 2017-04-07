@@ -12,7 +12,6 @@ import shutil
 
 import botocore.exceptions
 import click
-from botocore.session import Session  # noqa
 from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
@@ -20,7 +19,7 @@ from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
-from chalice.logs import LogRetriever
+from chalice.logs import show_lambda_logs
 from chalice.utils import create_zip_file, record_deployed_values
 from chalice.deploy.deployer import validate_python_version
 from chalice.utils import getting_started_prompt
@@ -52,20 +51,6 @@ def create_new_project_skeleton(project_name, profile=None):
         f.write(TEMPLATE_APP % project_name)
     with open(os.path.join(project_name, '.gitignore'), 'w') as f:
         f.write(GITIGNORE)
-
-
-def show_lambda_logs(session, lambda_arn, max_entries,
-                     include_lambda_messages):
-    # type: (Session, str, int, bool) -> None
-    client = session.create_client('logs')
-    retriever = LogRetriever.create_from_arn(client, lambda_arn)
-    events = retriever.retrieve_logs(
-        include_lambda_messages=include_lambda_messages,
-        max_entries=max_entries)
-    for event in events:
-        print('%s %s %s' % (event['timestamp'],
-                            event['logShortId'],
-                            event['message'].strip()))
 
 
 @click.group()
