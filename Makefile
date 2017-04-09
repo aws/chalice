@@ -22,7 +22,7 @@ check:
 	# Proper docstring conventions according to pep257
 	#
 	#
-	pydocstyle --add-ignore=D100,D101,D102,D103,D104,D105,D204 chalice/
+	pydocstyle --add-ignore=D100,D101,D102,D103,D104,D105,D204,D301 chalice/
 	#
 	#
 	#

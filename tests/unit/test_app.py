@@ -359,7 +359,6 @@ def test_route_equality():
         view_function,
         view_name='myview', path='/',
         methods=['GET'],
-        authorization_type='foo',
         api_key_required=True,
         content_types=['application/json'],
     )
@@ -367,7 +366,6 @@ def test_route_equality():
         view_function,
         view_name='myview', path='/',
         methods=['GET'],
-        authorization_type='foo',
         api_key_required=True,
         content_types=['application/json'],
     )
@@ -380,7 +378,6 @@ def test_route_inequality():
         view_function,
         view_name='myview', path='/',
         methods=['GET'],
-        authorization_type='foo',
         api_key_required=True,
         content_types=['application/json'],
     )
@@ -388,7 +385,6 @@ def test_route_inequality():
         view_function,
         view_name='myview', path='/',
         methods=['GET'],
-        authorization_type='foo',
         api_key_required=True,
         # Different content types
         content_types=['application/xml'],
