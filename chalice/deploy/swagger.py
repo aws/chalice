@@ -52,7 +52,9 @@ class SwaggerGenerator(object):
 
     def _add_binary_media_types(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None
-        api['x-amazon-apigateway-binary-media-types'] = app.binary_media_types
+        if app.binary_media_types:
+            api['x-amazon-apigateway-binary-media-types'] = \
+                app.binary_media_types
 
     def _add_to_security_definition(self, security, api_config, authorizers):
         # type: (Any, Dict[str, Any], Dict[str, Any]) -> None

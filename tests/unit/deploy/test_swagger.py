@@ -171,3 +171,11 @@ def test_can_add_authorizers(sample_app, swagger_gen):
             'providerARNs': ['arn:aws:cog:r:1:userpool/name']
         }
     }
+
+
+def test_can_add_binary_media_types(sample_app, swagger_gen):
+    sample_app.add_binary_media_types(['image/png'])
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    binary_media_types = doc['x-amazon-apigateway-binary-media-types']
+    assert binary_media_types == ['image/png']
