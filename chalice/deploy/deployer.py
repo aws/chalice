@@ -327,6 +327,7 @@ class APIGatewayDeployer(object):
 
     def _create_resources_for_api(self, config, rest_api_id, lambda_arn):
         # type: (Config, str, str) -> Tuple[str, str, str]
+        self._aws_client.delete_binary_media_types(rest_api_id)
         generator = SwaggerGenerator(self._aws_client.region_name, lambda_arn)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
