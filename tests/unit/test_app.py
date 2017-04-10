@@ -508,6 +508,7 @@ def test_json_body_available_when_content_type_matches(content_type, is_json):
     else:
         assert request.json_body is None
 
+
 def test_binary_media_types():
     demo = app.Chalice('app-name')
     demo.add_binary_media_types(['image/png', 'application/octet-stream'])
@@ -525,3 +526,9 @@ def test_binary_media_types():
     result = demo(event, context=None)
     assert result['body'] == '\xFF\xFF'
     assert result['statusCode'] == 200
+
+
+def test_binary_media_types_raise_error():
+    with pytest.raises(ValueError):
+        demo = app.Chalice('app-name')
+        demo.add_binary_media_types('image/jpeg')
