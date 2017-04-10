@@ -532,3 +532,20 @@ def test_binary_media_types_raise_error():
     with pytest.raises(ValueError):
         demo = app.Chalice('app-name')
         demo.add_binary_media_types('image/jpeg')
+
+
+def test_can_return_binary_response():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(status_code=200, body='\xFF\xFF',
+                            headers={'Content-Type': 'image/bmp'},
+                            is_binary=True)
+
+    event = create_event('/index', 'GET', {})
+    response = demo(event, context=None)
+    assert response == {'statusCode': 200,
+                        'body': base64.b64encode('\xFF\xFF'),
+                        'headers': {'Content-Type': 'image/bmp'},
+                        'isBase64Encoded': True}
