@@ -51,32 +51,31 @@ class SwaggerGenerator(object):
 
     def _add_to_security_definition(self, security, api_config, authorizers):
         # type: (Any, Dict[str, Any], Dict[str, Any]) -> None
-        if isinstance(security, list):
-            for auth in security:
-                # TODO: Add validation checks for unknown auth references.
-                name = auth.keys()[0]
-                if name == 'api_key':
-                    # This is just the api_key_required=True config
-                    swagger_snippet = {
-                        'type': 'apiKey',
-                        'name': 'x-api-key',
-                        'in': 'header',
-                    }  # type: Dict[str, Any]
-                else:
-                    authorizer_config = authorizers[name]
-                    auth_type = authorizer_config['auth_type']
-                    swagger_snippet = {
-                        'in': 'header',
-                        'type': 'apiKey',
-                        'name': authorizer_config['header'],
-                        'x-amazon-apigateway-authtype': auth_type,
-                        'x-amazon-apigateway-authorizer': {
-                            'type': auth_type,
-                            'providerARNs': authorizer_config['provider_arns'],
-                        }
+        for auth in security:
+            # TODO: Add validation checks for unknown auth references.
+            name = auth.keys()[0]
+            if name == 'api_key':
+                # This is just the api_key_required=True config
+                swagger_snippet = {
+                    'type': 'apiKey',
+                    'name': 'x-api-key',
+                    'in': 'header',
+                }  # type: Dict[str, Any]
+            else:
+                authorizer_config = authorizers[name]
+                auth_type = authorizer_config['auth_type']
+                swagger_snippet = {
+                    'in': 'header',
+                    'type': 'apiKey',
+                    'name': authorizer_config['header'],
+                    'x-amazon-apigateway-authtype': auth_type,
+                    'x-amazon-apigateway-authorizer': {
+                        'type': auth_type,
+                        'providerARNs': authorizer_config['provider_arns'],
                     }
-                api_config.setdefault(
-                    'securityDefinitions', {})[name] = swagger_snippet
+                }
+            api_config.setdefault(
+                'securityDefinitions', {})[name] = swagger_snippet
 
     def _generate_route_method(self, view):
         # type: (RouteEntry) -> Dict[str, Any]
