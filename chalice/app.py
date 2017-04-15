@@ -119,9 +119,9 @@ class Request(object):
     @property
     def json_body(self):
         if self.headers.get('content-type', '').startswith('application/json'):
-            if self._json_body is None:
-                self._json_body = json.loads(self.raw_body)
-            return self._json_body
+            if self._json_body is None and self.raw_body:
+                    self._json_body = json.loads(self.raw_body)
+            return self._json_body or {}
 
     def to_dict(self):
         copied = self.__dict__.copy()
