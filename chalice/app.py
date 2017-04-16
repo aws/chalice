@@ -148,7 +148,7 @@ class Response(object):
             'headers': self.headers,
             'statusCode': self.status_code,
             'body': body,
-            'is_base_64_encoded': self.is_base_64_encoded,
+            'isBase64Encoded': self.is_base_64_encoded,
         }
 
 
