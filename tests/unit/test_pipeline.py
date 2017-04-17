@@ -67,3 +67,11 @@ def test_codepipeline_resource(pipeline_gen):
     resources['ArtifactBucketStore']['Type'] == 'AWS::S3::Bucket'
     resources['CodePipelineRole']['Type'] == 'AWS::IAM::Role'
     resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
+
+
+def test_install_requirements_in_buildspec(pipeline_gen):
+    template = {}
+    pipeline.CodeBuild().add_to_template(template)
+    build = template['Resources']['AppPackageBuild']
+    build_spec = build['Properties']['Source']['BuildSpec']
+    assert 'pip install -r requirements.txt' in build_spec
