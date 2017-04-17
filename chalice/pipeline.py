@@ -118,6 +118,7 @@ class CodeBuild(BaseResource):
                         "      - sudo pip install --upgrade awscli\n"
                         "      - aws --version\n"
                         "      - sudo pip install chalice\n"
+                        "      - sudo pip install -r requirements.txt\n"
                         "      - chalice package /tmp/packaged\n"
                         "      - aws cloudformation package"
                         " --template-file /tmp/packaged/sam.json"
