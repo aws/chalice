@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Fix swagger generation when using ``api_key_required=True``
   (`#279 <https://github.com/awslabs/chalice/issues/279>`__)
+* Fix ``generate-pipeline`` to install requirements file before packaging
+  (`#295 <https://github.com/awslabs/chalice/pull/295>`__)
 
 
 0.7.0
