@@ -44,6 +44,21 @@ def test_update_function_code_and_deploy(stubbed_session):
         FunctionName='name', ZipFile=b'foo').returns({})
     lambda_client.update_function_configuration(
         FunctionName='name',
+        Runtime='python3.6',
+        Environment={'Variables': {"FOO": "BAR"}}).returns({})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.update_function(
+        'name', b'foo', {"FOO": "BAR"}, 'python3.6')
+    stubbed_session.verify_stubs()
+
+
+def test_no_runtime_arg_is_not_added_to_kwargs(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.update_function_code(
+        FunctionName='name', ZipFile=b'foo').returns({})
+    lambda_client.update_function_configuration(
+        FunctionName='name',
         Environment={'Variables': {"FOO": "BAR"}}).returns({})
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
@@ -283,6 +298,21 @@ class TestCreateLambdaFunction(object):
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
             awsclient.create_function('name', 'myarn', b'foo')
+        stubbed_session.verify_stubs()
+
+    def test_can_pass_python_runtime(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python3.6',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=60,
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', runtime='python3.6') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_propagates_unknown_error(self, stubbed_session):

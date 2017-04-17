@@ -129,3 +129,21 @@ def test_endpoint_url_reflects_apig_stage(sample_app,
     endpoint_url = template['Outputs']['EndpointURL']['Value']['Fn::Sub']
     assert endpoint_url == (
         'https://${RestAPI}.execute-api.${AWS::Region}.amazonaws.com/prod/')
+
+
+def test_maps_python_version(sample_app,
+                             mock_swagger_generator,
+                             mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='dev',
+    )
+    template = p.generate_sam_template(config)
+    expected = config.lambda_python_version
+    actual = template['Resources']['APIHandler']['Properties']['Runtime']
+    assert actual == expected

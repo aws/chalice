@@ -26,6 +26,10 @@ from typing import Any, Optional, Dict, Callable, List  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 
 
+_ENV_VAR = Optional[Dict[str, str]]
+_OPT_STR = Optional[str]
+
+
 class TypedAWSClient(object):
 
     # 30 * 5 == 150 seconds or 2.5 minutes for the initial lambda
@@ -49,11 +53,11 @@ class TypedAWSClient(object):
             return False
 
     def create_function(self, function_name, role_arn, zip_contents,
-                        environment_variables=None):
-        # type: (str, str, str, Optional[Dict[str, str]]) -> str
+                        environment_variables=None, runtime='python2.7'):
+        # type: (str, str, str, _ENV_VAR, str) -> str
         kwargs = {
             'FunctionName': function_name,
-            'Runtime': 'python2.7',
+            'Runtime': runtime,
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
@@ -79,21 +83,26 @@ class TypedAWSClient(object):
             return response['FunctionArn']
 
     def update_function(self, function_name, zip_contents,
-                        environment_variables=None):
-        # type: (str, str, Optional[Dict[str, str]]) -> Dict[str, Any]
+                        environment_variables=None,
+                        runtime=None):
+        # type: (str, str, _ENV_VAR, _OPT_STR) -> Dict[str, Any]
         lambda_client = self._client('lambda')
         return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
         if environment_variables is None:
             environment_variables = {}
-        # We need to handle the case where the user removes
-        # all env vars from their config.json file.  We'll
-        # just call update_function_configuration every time.
-        # We're going to need this moving forward anyways,
-        # more config options besides env vars will be added.
-        lambda_client.update_function_configuration(
-            FunctionName=function_name,
-            Environment={"Variables": environment_variables})
+        kwargs = {
+            'FunctionName': function_name,
+            # We need to handle the case where the user removes
+            # all env vars from their config.json file.  We'll
+            # just call update_function_configuration every time.
+            # We're going to need this moving forward anyways,
+            # more config options besides env vars will be added.
+            'Environment': {'Variables': environment_variables},
+        }
+        if runtime is not None:
+            kwargs['Runtime'] = runtime
+        lambda_client.update_function_configuration(**kwargs)
         return return_value
 
     def get_role_arn_for_name(self, name):

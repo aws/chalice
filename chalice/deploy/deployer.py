@@ -247,7 +247,8 @@ class LambdaDeployer(object):
             zip_filename, binary=True)
         return self._aws_client.create_function(
             function_name, role_arn, zip_contents,
-            config.environment_variables)
+            config.environment_variables,
+            config.lambda_python_version)
 
     def _update_lambda_function(self, config, lambda_name):
         # type: (Config, str) -> None
@@ -266,7 +267,8 @@ class LambdaDeployer(object):
             deployment_package_filename, binary=True)
         print("Sending changes to lambda.")
         self._aws_client.update_function(lambda_name, zip_contents,
-                                         config.environment_variables)
+                                         config.environment_variables,
+                                         config.lambda_python_version)
 
     def _write_config_to_disk(self, config):
         # type: (Config) -> None

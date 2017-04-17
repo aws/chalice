@@ -98,7 +98,7 @@ class SAMTemplateGenerator(object):
     def _generate_serverless_function(self, config, code_uri):
         # type: (Config, str) -> Dict[str, Any]
         properties = {
-            'Runtime': 'python2.7',
+            'Runtime': config.lambda_python_version,
             'Handler': 'app.app',
             'CodeUri': code_uri,
             'Events': self._generate_function_events(config.chalice_app),
