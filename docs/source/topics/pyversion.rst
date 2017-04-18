@@ -51,6 +51,7 @@ python2.7.13               python2.7
 python3.3.6                python3.6
 python3.4.6                python3.6
 python3.5.3                python3.6
+python3.6.0                python3.6
 python3.6.1                python3.6
 ====================      =====================
 
