@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.8.0
+=====
 
 * Add support for python3!
   (`#296 <https://github.com/awslabs/chalice/pull/296>`__)
