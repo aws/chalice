@@ -105,6 +105,22 @@ def test_rest_api_not_exists(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_can_get_function_configuration(stubbed_session):
+    stubbed_session.stub('lambda').get_function_configuration(
+        FunctionName='myfunction',
+    ).returns({
+        "FunctionName": "myfunction",
+        "MemorySize": 128,
+        "Handler": "app.app",
+        "Runtime": "python3.6",
+    })
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    assert (awsclient.get_function_configuration('myfunction')['Runtime'] ==
+            'python3.6')
+
+
 class TestLambdaFunctionExists(object):
 
     def test_can_query_lambda_function_exists(self, stubbed_session):

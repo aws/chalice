@@ -350,8 +350,13 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
         project_dir='./myproject',
         environment_variables={"FOO": "BAR"},
     )
+    aws_client.get_function_configuration.return_value = {
+        'Runtime': cfg.lambda_python_version,
+    }
+    prompter = mock.Mock(spec=NoPrompt)
+    prompter.confirm.return_value = True
 
-    d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
     # Doing a lambda deploy:
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
@@ -367,6 +372,44 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     aws_client.update_function.assert_called_with(
         lambda_function_name, b'package contents', {"FOO": "BAR"},
         cfg.lambda_python_version)
+
+
+def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    packager = mock.Mock(spec=LambdaDeploymentPackager)
+    packager.deployment_package_filename.return_value = 'packages.zip'
+    aws_client.lambda_function_exists.return_value = True
+    aws_client.get_function_configuration.return_value = {
+        'Runtime': 'python1.0',
+    }
+    aws_client.update_function.return_value = {"FunctionArn": "myarn"}
+    cfg = Config.create(
+        chalice_stage='dev',
+        chalice_app=sample_app,
+        manage_iam_role=False,
+        app_name='appname',
+        iam_role_arn=True,
+        project_dir='./myproject',
+        environment_variables={"FOO": "BAR"},
+    )
+    prompter = mock.Mock(spec=NoPrompt)
+    prompter.confirm.side_effect = RuntimeError("Aborted")
+
+    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    # Doing a lambda deploy with a different runtime:
+    lambda_function_name = 'lambda_function_name'
+    deployed = DeployedResources(
+        'api', 'api_handler_arn', lambda_function_name,
+        None, 'dev', None, None)
+    with pytest.raises(RuntimeError):
+        d.deploy(cfg, deployed, 'dev')
+
+    assert not packager.inject_latest_app.called
+    assert not aws_client.update_function.called
+    assert prompter.confirm.called
+    message = prompter.confirm.call_args[0][0]
+    assert 'runtime will change' in message
 
 
 def test_lambda_deployer_initial_deploy(app_policy, sample_app):

@@ -52,6 +52,12 @@ class TypedAWSClient(object):
         except client.exceptions.ResourceNotFoundException:
             return False
 
+    def get_function_configuration(self, name):
+        # type: (str) -> Dict[str, Any]
+        response = self._client('lambda').get_function_configuration(
+            FunctionName=name)
+        return response
+
     def create_function(self, function_name, role_arn, zip_contents,
                         environment_variables=None, runtime='python2.7'):
         # type: (str, str, str, _ENV_VAR, str) -> str

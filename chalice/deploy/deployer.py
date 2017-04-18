@@ -179,6 +179,7 @@ class LambdaDeployer(object):
                 self._aws_client.lambda_function_exists(
                     existing_resources.api_handler_name):
             handler_name = existing_resources.api_handler_name
+            self._confirm_any_runtime_changes(config, handler_name)
             self._get_or_create_lambda_role_arn(config, handler_name)
             self._update_lambda_function(config, handler_name)
             function_arn = existing_resources.api_handler_arn
@@ -190,6 +191,18 @@ class LambdaDeployer(object):
             deployed_values['api_handler_name'] = function_name
         deployed_values['api_handler_arn'] = function_arn
         return deployed_values
+
+    def _confirm_any_runtime_changes(self, config, handler_name):
+        # type: (Config, str) -> None
+        # precondition: lambda function exists.
+        lambda_config = self._aws_client.get_function_configuration(
+            handler_name)
+        if lambda_config['Runtime'] != config.lambda_python_version:
+            self._prompter.confirm(
+                "The python runtime will change from %s to %s, would "
+                "you like to continue? " % (lambda_config['Runtime'],
+                                            config.lambda_python_version),
+                default=True, abort=True)
 
     def _get_or_create_lambda_role_arn(self, config, role_name):
         # type: (Config, str) -> str
@@ -338,7 +351,7 @@ class APIGatewayDeployer(object):
 
     def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage, lambda_arn):
         # type: (str, str, str) -> None
-        print("Deploying to:", api_gateway_stage)
+        print("Deploying to: %s" % api_gateway_stage)
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         self._aws_client.add_permission_for_apigateway_if_needed(
             lambda_arn.split(':')[-1],
