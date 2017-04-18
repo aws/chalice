@@ -98,7 +98,7 @@ class SAMTemplateGenerator(object):
     def _generate_serverless_function(self, config, code_uri):
         # type: (Config, str) -> Dict[str, Any]
         properties = {
-            'Runtime': 'python2.7',
+            'Runtime': config.lambda_python_version,
             'Handler': 'app.app',
             'CodeUri': code_uri,
             'Events': self._generate_function_events(config.chalice_app),
@@ -120,7 +120,8 @@ class SAMTemplateGenerator(object):
             for http_method in view.methods:
                 key_name = ''.join([
                     view.view_name, http_method.lower(),
-                    hashlib.md5(view.view_name).hexdigest()[:4],
+                    hashlib.md5(
+                        view.view_name.encode('utf-8')).hexdigest()[:4],
                 ])
                 events[key_name] = {
                     'Type': 'Api',

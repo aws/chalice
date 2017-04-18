@@ -57,7 +57,7 @@ def test_can_inject_latest_app(tmpdir, chalice_deployer):
     assert str(contents[0]) == name
     with zipfile.ZipFile(name) as f:
         contents = f.read('app.py')
-        assert contents == '# Test app NEW VERSION'
+        assert contents == b'# Test app NEW VERSION'
 
 
 @slow
@@ -123,13 +123,13 @@ def test_includes_app_and_chalicelib_dir(tmpdir, chalice_deployer):
     subdir.join('subconfig.json').write('{"test": "subconfig"}')
     name = chalice_deployer.create_deployment_package(str(appdir))
     with zipfile.ZipFile(name) as f:
-        _assert_in_zip('chalicelib/__init__.py', '# Test package', f)
-        _assert_in_zip('chalicelib/mymodule.py', '# Test module', f)
-        _assert_in_zip('chalicelib/config.json', '{"test": "config"}', f)
+        _assert_in_zip('chalicelib/__init__.py', b'# Test package', f)
+        _assert_in_zip('chalicelib/mymodule.py', b'# Test module', f)
+        _assert_in_zip('chalicelib/config.json', b'{"test": "config"}', f)
         _assert_in_zip('chalicelib/subdir/submodule.py',
-                       '# Test submodule', f)
+                       b'# Test submodule', f)
         _assert_in_zip('chalicelib/subdir/subconfig.json',
-                       '{"test": "subconfig"}', f)
+                       b'{"test": "subconfig"}', f)
 
 
 def _assert_in_zip(path, contents, zip):
@@ -152,7 +152,7 @@ def test_subsequent_deploy_replaces_chalicelib(tmpdir, chalice_deployer):
     chalice_deployer.inject_latest_app(name, str(appdir))
     with zipfile.ZipFile(name) as f:
         _assert_in_zip('chalicelib/subdir/submodule.py',
-                       '# Test submodule v2', f)
+                       b'# Test submodule v2', f)
         # And chalicelib/__init__.py should no longer be
         # in the zipfile because we deleted it in the appdir.
         assert 'chalicelib/__init__.py' not in f.namelist()
@@ -166,7 +166,7 @@ def test_vendor_dir_included(tmpdir, chalice_deployer):
     extra_package.join('__init__.py').write('# Test package')
     name = chalice_deployer.create_deployment_package(str(appdir))
     with zipfile.ZipFile(name) as f:
-        _assert_in_zip('mypackage/__init__.py', '# Test package', f)
+        _assert_in_zip('mypackage/__init__.py', b'# Test package', f)
 
 
 @slow
@@ -180,7 +180,7 @@ def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
     extra_package.join('__init__.py').write('# v2')
     name = chalice_deployer.create_deployment_package(str(appdir))
     with zipfile.ZipFile(name) as f:
-        _assert_in_zip('mypackage/__init__.py', '# v2', f)
+        _assert_in_zip('mypackage/__init__.py', b'# v2', f)
 
 
 def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):

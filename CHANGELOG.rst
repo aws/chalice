@@ -5,6 +5,8 @@ CHANGELOG
 Next Release (TBD)
 ==================
 
+* Add support for python3!
+  (`#296 <https://github.com/awslabs/chalice/pull/296>`__)
 * Fix swagger generation when using ``api_key_required=True``
   (`#279 <https://github.com/awslabs/chalice/issues/279>`__)
 * Fix ``generate-pipeline`` to install requirements file before packaging

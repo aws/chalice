@@ -53,7 +53,7 @@ class SwaggerGenerator(object):
         # type: (Any, Dict[str, Any], Dict[str, Any]) -> None
         for auth in security:
             # TODO: Add validation checks for unknown auth references.
-            name = auth.keys()[0]
+            name = list(auth.keys())[0]
             if name == 'api_key':
                 # This is just the api_key_required=True config
                 swagger_snippet = {

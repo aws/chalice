@@ -1,3 +1,5 @@
+import sys
+
 from chalice.config import Config, DeployedResources
 
 
@@ -146,3 +148,12 @@ def test_env_vars_chain_merge():
         'stage_var': 'bar',
         'shared_key': 'from-stage',
     }
+
+
+def test_can_load_python_version():
+    c = Config('dev')
+    expected_runtime = {
+        2: 'python2.7',
+        3: 'python3.6',
+    }[sys.version_info[0]]
+    assert c.lambda_python_version == expected_runtime

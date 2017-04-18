@@ -108,7 +108,7 @@ class PolicyBuilder(object):
         # client_calls = service_name -> set([method_calls])
         for service in sorted(client_calls):
             if service not in self._policy_actions:
-                print "Unsupported service:", service
+                print("Unsupported service: %s" % service)
                 continue
             service_actions = self._policy_actions[service]
             method_calls = client_calls[service]

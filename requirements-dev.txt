@@ -3,7 +3,7 @@ flake8==2.5.0
 tox==2.2.1
 wheel==0.26.0
 doc8==0.7.0
-pylint==1.5.5
+-e git://github.com/PyCQA/pylint.git@7cb3ffddfd96f5e099ca697f6b1e30e727544627#egg=pylint
 pytest-cov==2.3.1
 pydocstyle==1.0.0
 -r requirements-test.txt
