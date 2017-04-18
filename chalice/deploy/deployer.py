@@ -5,7 +5,9 @@ Handles Lambda and API Gateway deployments.
 """
 import json
 import os
+import sys
 import uuid
+import warnings
 
 import botocore.session  # noqa
 from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
@@ -55,6 +57,7 @@ def validate_configuration(config):
     routes = config.chalice_app.routes
     validate_routes(routes)
     _validate_manage_iam_role(config)
+    validate_python_version(config)
 
 
 def validate_routes(routes):
@@ -74,6 +77,32 @@ def validate_routes(routes):
             # a route_entry when creating test routes.
             # This should be cleaned up.
             _validate_route_entry(route_name, route_entry)
+
+
+def validate_python_version(config, actual_py_version=None):
+    # type: (Config, Optional[str]) -> None
+    """Validate configuration matches a specific python version.
+
+    If the ``actual_py_version`` is not provided, it will default
+    to the major/minor version of the currently running python
+    interpreter.
+
+    :param actual_py_version: The major/minor python version in
+        the form "pythonX.Y", e.g "python2.7", "python3.6".
+
+    """
+    lambda_version = config.lambda_python_version
+    if actual_py_version is None:
+        actual_py_version = 'python%s.%s' % sys.version_info[:2]
+    if actual_py_version != lambda_version:
+        # We're not making this a hard error for now, but we may
+        # turn this into a hard fail.
+        warnings.warn("You are currently running %s, but the closest "
+                      "supported version on AWS Lambda is %s\n"
+                      "Please use %s, otherwise you may run into "
+                      "deployment issues. " %
+                      (actual_py_version, lambda_version, lambda_version),
+                      stacklevel=2)
 
 
 def _validate_route_entry(route_url, route_entry):
@@ -197,11 +226,12 @@ class LambdaDeployer(object):
         # precondition: lambda function exists.
         lambda_config = self._aws_client.get_function_configuration(
             handler_name)
-        if lambda_config['Runtime'] != config.lambda_python_version:
+        lambda_python_version = config.lambda_python_version
+        if lambda_config['Runtime'] != lambda_python_version:
             self._prompter.confirm(
                 "The python runtime will change from %s to %s, would "
                 "you like to continue? " % (lambda_config['Runtime'],
-                                            config.lambda_python_version),
+                                            lambda_python_version),
                 default=True, abort=True)
 
     def _get_or_create_lambda_role_arn(self, config, role_name):

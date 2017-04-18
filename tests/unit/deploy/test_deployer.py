@@ -19,6 +19,7 @@ from chalice.deploy.deployer import LambdaDeployer
 from chalice.deploy.deployer import NoPrompt
 from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
+from chalice.deploy.deployer import validate_python_version
 from chalice.deploy.packager import LambdaDeploymentPackager
 
 
@@ -255,6 +256,26 @@ def test_trailing_slash_routes_result_in_error():
     config = Config.create(chalice_app=app)
     with pytest.raises(ValueError):
         validate_configuration(config)
+
+
+def test_validate_python_version_invalid():
+    config = mock.Mock(spec=Config)
+    config.lambda_python_version = 'python1.0'
+    with pytest.warns(UserWarning):
+        validate_python_version(config)
+
+
+def test_python_version_invalid_from_real_config():
+    config = Config.create()
+    with pytest.warns(UserWarning):
+        validate_python_version(config, 'python1.0')
+
+
+def test_python_version_is_valid():
+    config = Config.create()
+    with pytest.warns(None) as record:
+        validate_python_version(config, config.lambda_python_version)
+    assert len(record) == 0
 
 
 def test_manage_iam_role_false_requires_role_arn(sample_app):
