@@ -31,6 +31,19 @@ def create_event(uri, method, path, content_type='application/json'):
         'stageVariables': {},
     }
 
+def create_empty_header_event(uri, method, path, content_type='application/json'):
+    return {
+        'requestContext': {
+            'httpMethod': method,
+            'resourcePath': uri,
+        },
+        'headers': None,
+        'pathParameters': path,
+        'queryStringParameters': {},
+        'body': "",
+        'stageVariables': {},
+    }
+
 
 def create_event_with_body(body, uri='/', method='POST',
                            content_type='application/json'):
@@ -334,6 +347,17 @@ def test_headers_have_basic_validation():
     assert 'Invalid-Header' not in response['headers']
     assert json.loads(response['body'])['Code'] == 'InternalServerError'
 
+def test_empty_headers_have_basic_validation():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(
+            status_code=200, body='{}', headers={})
+
+    event = create_empty_header_event('/index', 'GET', {})
+    response = demo(event, context=None)
+    assert response['statusCode'] == 200
 
 def test_no_content_type_is_still_allowed():
     # When the content type validation happens in API gateway, it appears
