@@ -84,6 +84,7 @@ class CaseInsensitiveMapping(Mapping):
     """Case insensitive and read-only mapping."""
 
     def __init__(self, mapping):
+        mapping = mapping or {}
         self._dict = {k.lower(): v for k, v in mapping.items()}
 
     def __getitem__(self, key):
