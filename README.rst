@@ -717,7 +717,7 @@ Settings ``cors=True`` has similar behavior to enabling CORS
 using the AWS Console.  This includes:
 
 * Injecting the ``Access-Control-Allow-Origin: *`` header to your
-  responses, including all error responses you can return.
+  responses, including all error responses you can return. A wildcard ``'*'`` indicates that any origin will be allowed to access the resource. Setting this value to your specific domain is highly recommended, for example ``Access-Control-Allow-Origin: api.my-domain.com``. Until this cors issue_ is resolved, you will have to manually modify this value within API Gateway.
 * Automatically adding an ``OPTIONS`` method so support preflighting
   requests.
 
@@ -739,9 +739,10 @@ There's a couple of things to keep in mind when enabling cors for a view:
 * There's no support for customizing the CORS configuration.
 
 The last two points will change in the future.  See
-`this issue
-<https://github.com/awslabs/chalice/issues/70#issuecomment-248787037>`_
+this cors issue_
 for more information.
+
+.. _issue: https://github.com/awslabs/chalice/issues/70#issuecomment-248787037
 
 
 Tutorial: Policy Generation
