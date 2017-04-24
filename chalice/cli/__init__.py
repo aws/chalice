@@ -23,6 +23,7 @@ from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import LogRetriever
 from chalice.utils import create_zip_file, record_deployed_values
+from chalice.deploy.deployer import validate_python_version
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 
@@ -62,7 +63,9 @@ def show_lambda_logs(session, lambda_arn, max_entries,
         include_lambda_messages=include_lambda_messages,
         max_entries=max_entries)
     for event in events:
-        print event['timestamp'], event['logShortId'], event['message'].strip()
+        print('%s %s %s' % (event['timestamp'],
+                            event['logShortId'],
+                            event['message'].strip()))
 
 
 @click.group()
@@ -216,6 +219,7 @@ def new_project(project_name, profile):
         click.echo("Directory already exists: %s" % project_name, err=True)
         raise click.Abort()
     create_new_project_skeleton(project_name, profile)
+    validate_python_version(Config.create())
 
 
 @cli.command('url')

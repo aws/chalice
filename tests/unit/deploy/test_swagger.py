@@ -128,9 +128,9 @@ def test_can_add_api_key(sample_app, swagger_gen):
     doc = swagger_gen.generate_swagger(sample_app)
     single_method = doc['paths']['/api-key-required']['get']
     assert 'security' in single_method
-    assert single_method['security'] == {
+    assert single_method['security'] == [{
         'api_key': []
-    }
+    }]
     # Also need to add in the api_key definition in the top level
     # security definitions.
     assert 'securityDefinitions' in doc

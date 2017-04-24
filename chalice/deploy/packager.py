@@ -22,7 +22,7 @@ class LambdaDeploymentPackager(object):
 
     def create_deployment_package(self, project_dir, package_filename=None):
         # type: (str, Optional[str]) -> str
-        print "Creating deployment package."
+        print("Creating deployment package.")
         # pip install -t doesn't work out of the box with homebrew and
         # python, so we're using virtualenvs instead which works in
         # more cases.
@@ -127,9 +127,9 @@ class LambdaDeploymentPackager(object):
     def _hash_project_dir(self, requirements_file, vendor_dir):
         # type: (str, str) -> str
         if not os.path.isfile(requirements_file):
-            contents = ''
+            contents = b''
         else:
-            with open(requirements_file) as f:
+            with open(requirements_file, 'rb') as f:
                 contents = f.read()
         h = hashlib.md5(contents)
         if os.path.isdir(vendor_dir):
@@ -166,7 +166,7 @@ class LambdaDeploymentPackager(object):
         # a way to do this efficiently so we need to create a new
         # zip file that has all the same stuff except for the new
         # app file.
-        print "Regen deployment package..."
+        print("Regen deployment package...")
         tmpzip = deployment_package_filename + '.tmp.zip'
         with zipfile.ZipFile(deployment_package_filename, 'r') as inzip:
             with zipfile.ZipFile(tmpzip, 'w') as outzip:

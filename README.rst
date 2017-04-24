@@ -72,16 +72,16 @@ is recommended::
     $ virtualenv ~/.virtualenvs/chalice-demo
     $ source ~/.virtualenvs/chalice-demo/bin/activate
 
-Note: **make sure you are using python2.7**.  The ``chalice`` CLI
-as well as the ``chalice`` python package will support the versions
-of python supported by AWS Lambda.  Currently, AWS Lambda only supports
-python2.7, so this is what this project supports.  You can ensure
-you're creating a virtualenv with python2.7 by running::
+Note: **make sure you are using python2.7 or python3.6**.  The ``chalice`` CLI
+as well as the ``chalice`` python package will support the versions of python
+supported by AWS Lambda.  Currently, AWS Lambda supports python2.7 and
+python3.6, so that's what this project supports.  You can ensure you're
+creating a virtualenv with python3.6 by running::
 
-    # Double check you have python2.7
-    $ which python2.7
-    /usr/local/bin/python2.7
-    $ virtualenv --python $(which python2.7) ~/.virtualenvs/chalice-demo
+    # Double check you have python3.6
+    $ which python3.6
+    /usr/local/bin/python3.6
+    $ virtualenv --python $(which python3.6) ~/.virtualenvs/chalice-demo
     $ source ~/.virtualenvs/chalice-demo/bin/activate
 
 Next, in your virtualenv, install ``chalice``::

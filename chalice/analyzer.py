@@ -498,7 +498,15 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         for arg, defined in zip(node.args, defined_args.args):
             inferred_type = self._get_inferred_type_for_node(arg)
             if inferred_type is not None:
-                sub_table.set_inferred_type(defined.id, inferred_type)
+                name = self._get_name(defined)
+                sub_table.set_inferred_type(name, inferred_type)
+
+    def _get_name(self, node):
+        # type: (Any) -> str
+        try:
+            return getattr(node, 'id')
+        except AttributeError:
+            return getattr(node, 'arg')
 
     def visit_FunctionDef(self, node):
         # type: (ast.FunctionDef) -> None

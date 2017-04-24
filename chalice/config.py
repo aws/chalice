@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 
 from typing import Dict, Any, Optional  # noqa
@@ -69,6 +70,12 @@ class Config(object):
         {"TABLE": "prodtable", "S3BUCKET": "prodbucket"}
 
     """
+
+    _PYTHON_VERSIONS = {
+        2: 'python2.7',
+        3: 'python3.6',
+    }
+
     def __init__(self,
                  chalice_stage=DEFAULT_STAGE_NAME,
                  user_provided_params=None,
@@ -125,6 +132,14 @@ class Config(object):
         # type: () -> str
         return self._chain_lookup('iam_policy_file',
                                   varies_per_chalice_stage=True)
+
+    @property
+    def lambda_python_version(self):
+        # type: () -> str
+        # We may open this up to configuration later, but for now,
+        # we attempt to match your python version to the closest version
+        # supported by lambda.
+        return self._PYTHON_VERSIONS[sys.version_info[0]]
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any

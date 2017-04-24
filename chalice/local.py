@@ -5,8 +5,8 @@ This is intended only for local development purposes.
 """
 import functools
 from collections import namedtuple
-from BaseHTTPServer import HTTPServer
-from BaseHTTPServer import BaseHTTPRequestHandler
+from six.moves.BaseHTTPServer import HTTPServer
+from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 
 
 from chalice.app import Chalice  # noqa
@@ -127,7 +127,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         for header in headers:
             self.send_header(header, headers[header])
         self.end_headers()
-        self.wfile.write(response['body'])
+        self.wfile.write(response['body'].encode('utf-8'))
 
     def _generate_lambda_event(self):
         # type: () -> EventType
@@ -202,5 +202,5 @@ class LocalDevServer(object):
 
     def serve_forever(self):
         # type: () -> None
-        print "Serving on localhost:%s" % self.port
+        print("Serving on localhost:%s" % self.port)
         self.server.serve_forever()

@@ -185,7 +185,8 @@ def test_raw_body_cache_returns_same_result():
 
 
     event = create_event('/index', 'GET', {})
-    event['base64-body'] = base64.b64encode('{"hello": "world"}')
+    event['base64-body'] = base64.b64encode(
+        b'{"hello": "world"}').decode('ascii')
 
     result = demo(event, context=None)
     result = json_response_body(result)
