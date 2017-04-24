@@ -84,6 +84,7 @@ class SAMTemplateGenerator(object):
             'APIHandler': self._generate_serverless_function(config, code_uri),
             'RestAPI': self._generate_rest_api(
                 config.chalice_app, config.api_gateway_stage),
+            'APIPermission': self._generate_gateway_permission()
         }
         template['Resources'] = resources
         self._update_endpoint_url_output(template, config)
@@ -117,9 +118,13 @@ class SAMTemplateGenerator(object):
         # type: (Chalice) -> Dict[str, Any]
         events = {}
         for path, view in app.routes.items():
+            # CloudFormation does not allow underscores in logical names
+            # so we strip them out here to ensure that a valid template
+            # is generated
+            view_name = view.view_name.replace('_', '')
             for http_method in view.methods:
                 key_name = ''.join([
-                    view.view_name, http_method.lower(),
+                    view_name, http_method.lower(),
                     hashlib.md5(
                         view.view_name.encode('utf-8')).hexdigest()[:4],
                 ])
@@ -148,6 +153,31 @@ class SAMTemplateGenerator(object):
     def _generate_iam_policy(self):
         # type: () -> Dict[str, Any]
         return self._policy_generator.generate_policy_from_app_source()
+
+    def _generate_gateway_permission(self):
+        # type: () -> Dict[str, Any]
+        return {
+            'Type': 'AWS::Lambda::Permission',
+            'Properties': {
+                'Action': 'lambda:InvokeFunction',
+                'FunctionName': {'Fn::GetAtt': ['APIHandler', 'Arn']},
+                'Principal': 'apigateway.amazonaws.com',
+                'SourceArn': {
+                    'Fn::Join': [
+                        '',
+                        [
+                            'arn:aws:execute-api:',
+                            {'Ref': 'AWS::Region'},
+                            ':',
+                            {'Ref': 'AWS::AccountId'},
+                            ':',
+                            {'Ref': 'RestAPI'},
+                            '/*/*/*'
+                        ]
+                    ]
+                }
+            }
+        }
 
 
 class AppPackager(object):
