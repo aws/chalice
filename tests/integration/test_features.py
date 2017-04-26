@@ -6,9 +6,8 @@ import botocore.session
 import pytest
 import requests
 
-from chalice.cli import load_chalice_app
-from chalice.config import Config
-from chalice.deploy import deployer
+from chalice.cli.factory import CLIFactory
+
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
@@ -16,13 +15,25 @@ CHALICE_DIR = os.path.join(PROJECT_DIR, '.chalice')
 
 
 class SmokeTestApplication(object):
-    def __init__(self, url, rest_api_id, region_name, name):
+    def __init__(self, url, deployed_values, stage_name, app_name):
         if url.endswith('/'):
             url = url[:-1]
         self.url = url
-        self.rest_api_id = rest_api_id
-        self.region_name = region_name
-        self.name = name
+        self._deployed_values = deployed_values
+        self.stage_name = stage_name
+        self.app_name = app_name
+
+    @property
+    def rest_api_id(self):
+        return self._deployed_values['rest_api_id']
+
+    @property
+    def region_name(self):
+        return self._deployed_values['region_name']
+
+    @property
+    def api_handler_arn(self):
+        return self._deployed_values['api_handler_arn']
 
     def get_json(self, url):
         if not url.startswith('/'):
@@ -42,33 +53,41 @@ def smoke_test_app():
 def _deploy_app():
     if not os.path.isdir(CHALICE_DIR):
         os.makedirs(CHALICE_DIR)
-    session = botocore.session.get_session()
-    config = Config.create(
-        project_dir=PROJECT_DIR,
-        app_name='smoketestapp',
-        stage_name='dev',
-        autogen_policy=True,
-        chalice_app=load_chalice_app(PROJECT_DIR),
+    with open(os.path.join(CHALICE_DIR, 'config.json'), 'w') as f:
+        f.write('{"app_name": "smoketestapp"}\n')
+    factory = CLIFactory(PROJECT_DIR)
+    config = factory.create_config_obj(
+        chalice_stage_name='dev',
+        autogen_policy=True
     )
-    d = deployer.create_default_deployer(session=session)
-    rest_api_id, region_name, stage = d.deploy(config)
+    d = factory.create_default_deployer(
+        factory.create_botocore_session(), None)
+    deployed = d.deploy(config)['dev']
     url = (
-        "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/".format(
-            api_id=rest_api_id, region=region_name, stage=stage))
-    application = SmokeTestApplication(url, rest_api_id, region_name, 'smoketestapp')
+        "https://{rest_api_id}.execute-api.{region}.amazonaws.com/"
+        "{api_gateway_stage}/".format(**deployed))
+    application = SmokeTestApplication(
+        url=url,
+        deployed_values=deployed,
+        stage_name='dev',
+        app_name='smoketestapp',
+    )
     return application
 
 
 def _delete_app(application):
     s = botocore.session.get_session()
     lambda_client = s.create_client('lambda')
-    lambda_client.delete_function(FunctionName=application.name)
+    # You can use either the function name of the function ARN
+    # for this argument, despite the name being FunctionName.
+    lambda_client.delete_function(FunctionName=application.api_handler_arn)
 
     iam = s.create_client('iam')
-    policies = iam.list_role_policies(RoleName=application.name)
+    role_name = application.app_name + '-' + application.stage_name
+    policies = iam.list_role_policies(RoleName=role_name)
     for name in policies['PolicyNames']:
-        iam.delete_role_policy(RoleName=application.name, PolicyName=name)
-    iam.delete_role(RoleName=application.name)
+        iam.delete_role_policy(RoleName=role_name, PolicyName=name)
+    iam.delete_role(RoleName=role_name)
 
     apig = s.create_client('apigateway')
     apig.delete_rest_api(restApiId=application.rest_api_id)
@@ -190,3 +209,11 @@ def test_custom_response(smoke_test_app):
     assert response.headers['Content-Type'] == 'text/plain'
     # Custom status code
     assert response.status_code == 204
+
+
+def test_api_key_required_fails_with_no_key(smoke_test_app):
+    url = smoke_test_app.url + '/api-key-required'
+    response = requests.get(url)
+    # Request should fail because we're not providing
+    # an API key.
+    assert response.status_code == 403
