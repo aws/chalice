@@ -187,6 +187,7 @@ class TypedAWSClient(object):
         client = self._client('apigateway')
         client.put_rest_api(
             restApiId=rest_api_id,
+            mode='overwrite',
             body=json.dumps(swagger_document, indent=2))
 
     def deploy_rest_api(self, rest_api_id, api_gateway_stage):

@@ -464,6 +464,7 @@ class TestAddPermissionsForAPIGateway(object):
         swagger_doc = {'swagger': 'doc'}
         apig.put_rest_api(
             restApiId='rest_api_id',
+            mode='overwrite',
             body=json.dumps(swagger_doc, indent=2)).returns({})
 
         stubbed_session.activate_stubs()
