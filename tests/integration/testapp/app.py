@@ -90,3 +90,8 @@ def multifile():
 def custom_response():
     return Response(status_code=204, body='',
                     headers={'Content-Type': 'text/plain'})
+
+
+@app.route('/api-key-required', methods=['GET'], api_key_required=True)
+def api_key_required():
+    return {"success": True}

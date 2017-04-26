@@ -209,3 +209,11 @@ def test_custom_response(smoke_test_app):
     assert response.headers['Content-Type'] == 'text/plain'
     # Custom status code
     assert response.status_code == 204
+
+
+def test_api_key_required_fails_with_no_key(smoke_test_app):
+    url = smoke_test_app.url + '/api-key-required'
+    response = requests.get(url)
+    # Request should fail because we're not providing
+    # an API key.
+    assert response.status_code == 403
