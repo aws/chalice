@@ -1,4 +1,5 @@
 from chalice.deploy.swagger import SwaggerGenerator
+from chalice import CORSConfig
 
 from pytest import fixture
 
@@ -71,6 +72,60 @@ def test_can_add_multiple_http_methods(sample_app, swagger_gen):
 
 
 def test_can_add_preflight_cors(sample_app, swagger_gen):
+    @sample_app.route('/cors', methods=['GET', 'POST'], cors=CORSConfig(
+        allow_origin='http://foo.com',
+        allow_headers=['X-Special-Header']))
+    def cors_request():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    view_config = doc['paths']['/cors']
+    # We should add an OPTIONS preflight request automatically.
+    assert 'options' in view_config, (
+        'Preflight OPTIONS method not added to CORS view')
+    options = view_config['options']
+    expected_response_params = {
+        'method.response.header.Access-Control-Allow-Methods': (
+            "'GET,POST,OPTIONS'"),
+        'method.response.header.Access-Control-Allow-Headers': (
+            "'X-Special-Header,Content-Type,X-Amz-Date,Authorization,"
+            "X-Api-Key,X-Amz-Security-Token'"),
+        'method.response.header.Access-Control-Allow-Origin': (
+            "'http://foo.com'"),
+    }
+    assert options == {
+        'consumes': ['application/json'],
+        'produces': ['application/json'],
+        'responses': {
+            '200': {
+                'description': '200 response',
+                'schema': {
+                    '$ref': '#/definitions/Empty'
+                },
+                'headers': {
+                    'Access-Control-Allow-Origin': {'type': 'string'},
+                    'Access-Control-Allow-Methods': {'type': 'string'},
+                    'Access-Control-Allow-Headers': {'type': 'string'},
+                }
+            }
+        },
+        'x-amazon-apigateway-integration': {
+            'responses': {
+                'default': {
+                    'statusCode': '200',
+                    'responseParameters': expected_response_params,
+                }
+            },
+            'requestTemplates': {
+                'application/json': '{"statusCode": 200}'
+            },
+            'passthroughBehavior': 'when_no_match',
+            'type': 'mock',
+        },
+    }
+
+
+def test_can_add_preflight_custom_cors(sample_app, swagger_gen):
     @sample_app.route('/cors', methods=['GET', 'POST'], cors=True)
     def cors_request():
         pass

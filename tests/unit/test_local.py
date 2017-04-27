@@ -166,6 +166,7 @@ def test_can_support_patch_method(handler):
     handler.do_PATCH()
     assert _get_body_from_response_stream(handler) == {'patch': True}
 
+
 def test_can_support_decimals(handler):
     set_current_request(handler, method='GET', path='/decimals')
     handler.do_PATCH()

@@ -1,4 +1,5 @@
-from chalice import Chalice, BadRequestError, NotFoundError, Response
+from chalice import Chalice, BadRequestError, NotFoundError, Response,\
+    CORSConfig
 from chalice.compat import parse_qs
 
 # This is a test app that is used by integration tests.
@@ -72,6 +73,16 @@ def form_encoded():
 def supports_cors():
     # It doesn't really matter what we return here because
     # we'll be checking the response headers to verify CORS support.
+    return {'cors': True}
+
+
+@app.route('/custom_cors', methods=['GET', 'POST', 'PUT'], cors=CORSConfig(
+    allow_origin='https://foo.example.com',
+    allow_headers=['X-Special-Header'],
+    max_age=600,
+    expose_headers=['X-Special-Header'],
+    allow_credentials=False))
+def supports_custom_cors():
     return {'cors': True}
 
 

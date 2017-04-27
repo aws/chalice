@@ -46,7 +46,7 @@ class SwaggerGenerator(object):
                     self._add_to_security_definition(
                         current['security'], api, app.authorizers)
                 swagger_for_path[http_method.lower()] = current
-            if view.cors:
+            if view.cors is not None:
                 self._add_preflight_request(view, swagger_for_path)
 
     def _add_to_security_definition(self, security, api_config, authorizers):
@@ -141,15 +141,16 @@ class SwaggerGenerator(object):
 
     def _add_preflight_request(self, view, swagger_for_path):
         # type: (RouteEntry, Dict[str, Any]) -> None
+        cors = view.cors
         methods = view.methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
         response_params = {
             "method.response.header.Access-Control-Allow-Methods": (
                 "'%s'" % allowed_methods),
+            "method.response.header.Access-Control-Allow-Origin": (
+                "'%s'" % cors.allow_origin),
             "method.response.header.Access-Control-Allow-Headers": (
-                "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,"
-                "X-Amz-Security-Token'"),
-            "method.response.header.Access-Control-Allow-Origin": "'*'"
+                "'%s'" % cors.allow_headers)
         }
 
         options_request = {
