@@ -305,6 +305,18 @@ def test_content_type_validation_raises_error_on_unknown_types():
     assert 'application/bad-xml' in json_response['Message']
 
 
+def test_content_type_with_charset():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', content_types=['application/json'])
+    def index():
+        return {'foo': 'bar'}
+
+    event = create_event('/', 'GET', {}, 'application/json; charset=utf-8')
+    response = json_response_body(demo(event, context=None))
+    assert response == {'foo': 'bar'}
+
+
 def test_can_return_response_object():
     demo = app.Chalice('app-name')
 
