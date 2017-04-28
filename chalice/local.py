@@ -8,14 +8,9 @@ from collections import namedtuple
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 
-
 from chalice.app import Chalice  # noqa
+from chalice.compat import urlparse, parse_qs
 from typing import List, Any, Dict, Tuple, Callable  # noqa
-
-try:
-    from urllib.parse import urlparse, parse_qs
-except ImportError:
-    from urlparse import urlparse, parse_qs
 
 
 MatchResult = namedtuple('MatchResult', ['route', 'captured', 'query_params'])

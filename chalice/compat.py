@@ -1,5 +1,12 @@
 import os
 import platform
+import six
+
+
+if six.PY3:
+    from urllib.parse import urlparse, parse_qs
+else:
+    from urlparse import urlparse, parse_qs
 
 
 if platform.system() == 'Windows':

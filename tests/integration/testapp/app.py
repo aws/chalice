@@ -1,6 +1,6 @@
 from chalice import Chalice, BadRequestError, NotFoundError, Response
+from chalice.compat import parse_qs
 
-import  urlparse
 # This is a test app that is used by integration tests.
 # This app exercises all the major features of chalice
 # and helps prevent regressions.
@@ -62,7 +62,7 @@ def raise_arbitrary_error():
 @app.route('/formencoded', methods=['POST'],
            content_types=['application/x-www-form-urlencoded'])
 def form_encoded():
-    parsed = urlparse.parse_qs(app.current_request.raw_body)
+    parsed = parse_qs(app.current_request.raw_body)
     return {
         'parsed': parsed
     }
