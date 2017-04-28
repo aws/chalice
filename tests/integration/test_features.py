@@ -188,7 +188,8 @@ def test_can_support_cors(smoke_test_app):
     headers = response.headers
     assert headers['Access-Control-Allow-Origin'] == '*'
     assert headers['Access-Control-Allow-Headers'] == (
-        'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token')
+        'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,'
+        'X-Api-Key')
     assert headers['Access-Control-Allow-Methods'] == 'GET,POST,PUT,OPTIONS'
 
 
@@ -203,11 +204,15 @@ def test_can_support_custom_cors(smoke_test_app):
     response = requests.options(smoke_test_app.url + '/custom_cors')
     response.raise_for_status()
     headers = response.headers
+    print(headers)
     assert headers['Access-Control-Allow-Origin'] == expected_allow_origin
     assert headers['Access-Control-Allow-Headers'] == (
-        'X-Special-Header,Content-Type,X-Amz-Date,Authorization,X-Api-Key,'
-        'X-Amz-Security-Token')
+        'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,'
+        'X-Api-Key,X-Special-Header')
     assert headers['Access-Control-Allow-Methods'] == 'GET,POST,PUT,OPTIONS'
+    assert headers['Access-Control-Max-Age'] == '600'
+    assert headers['Access-Control-Expose-Headers'] == 'X-Special-Header'
+    assert headers['Access-Control-Allow-Credentials'] == 'true'
 
 
 def test_to_dict_is_also_json_serializable(smoke_test_app):
