@@ -2,6 +2,8 @@ import os
 import zipfile
 import json
 
+from chalice.constants import WELCOME_PROMPT
+
 from typing import IO, Dict, Any  # noqa
 
 
@@ -77,3 +79,8 @@ class OSUtils(object):
             mode = 'w'
         with open(filename, mode) as f:
             f.write(contents)
+
+
+def getting_started_prompt(prompter):
+    # type: (Any) -> bool
+    return prompter.prompt(WELCOME_PROMPT)

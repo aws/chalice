@@ -8,12 +8,14 @@ from botocore import session
 from typing import Any, Optional, Dict  # noqa
 
 from chalice import __version__ as chalice_version
+from chalice.awsclient import TypedAWSClient
 from chalice.app import Chalice  # noqa
 from chalice.config import Config
 from chalice.deploy import deployer
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.logs import LogRetriever
 
 
 def create_botocore_session(profile=None, debug=False):
@@ -118,6 +120,12 @@ class CLIFactory(object):
     def create_app_packager(self, config):
         # type: (Config) -> AppPackager
         return create_app_packager(config)
+
+    def create_log_retriever(self, session, lambda_arn):
+        # type: (session.Session, str) -> LogRetriever
+        client = TypedAWSClient(session)
+        retriever = LogRetriever.create_from_arn(client, lambda_arn)
+        return retriever
 
     def load_chalice_app(self):
         # type: () -> Chalice
