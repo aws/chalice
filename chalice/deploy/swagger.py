@@ -144,14 +144,15 @@ class SwaggerGenerator(object):
         cors = view.cors
         methods = view.methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
+
         response_params = {
-            "method.response.header.Access-Control-Allow-Methods": (
-                "'%s'" % allowed_methods),
-            "method.response.header.Access-Control-Allow-Origin": (
-                "'%s'" % cors.allow_origin),
-            "method.response.header.Access-Control-Allow-Headers": (
-                "'%s'" % cors.allow_headers)
+            'Access-Control-Allow-Methods': '%s' % allowed_methods
         }
+        response_params.update(cors.get_access_control_headers())
+
+        headers = {k: {'type': 'string'} for k, _ in response_params.items()}
+        response_params = {'method.response.header.%s' % k: "'%s'" % v for k, v
+                           in response_params.items()}
 
         options_request = {
             "consumes": ["application/json"],
@@ -160,11 +161,7 @@ class SwaggerGenerator(object):
                 "200": {
                     "description": "200 response",
                     "schema": {"$ref": "#/definitions/Empty"},
-                    "headers": {
-                        "Access-Control-Allow-Origin": {"type": "string"},
-                        "Access-Control-Allow-Methods": {"type": "string"},
-                        "Access-Control-Allow-Headers": {"type": "string"},
-                    }
+                    "headers": headers
                 }
             },
             "x-amazon-apigateway-integration": {

@@ -1,4 +1,4 @@
-from chalice import local, BadRequestError
+from chalice import local, BadRequestError, CORSConfig
 import json
 import decimal
 import pytest
@@ -40,6 +40,16 @@ def sample_app():
 
     @demo.route('/cors', methods=['GET', 'PUT'], cors=True)
     def cors():
+        return {'cors': True}
+
+    @demo.route('/custom_cors', methods=['GET', 'PUT'], cors=CORSConfig(
+        allow_origin='https://foo.bar',
+        allow_headers=['Header-A', 'Header-B'],
+        expose_headers=['Header-A', 'Header-B'],
+        max_age=600,
+        allow_credentials=True
+    ))
+    def custom_cors():
         return {'cors': True}
 
     @demo.route('/options', methods=['OPTIONS'])
@@ -127,6 +137,22 @@ def test_will_respond_with_cors_enabled(handler):
     handler.do_GET()
     response_lines = handler.wfile.getvalue().splitlines()
     assert b'Access-Control-Allow-Origin: *' in response_lines
+
+
+def test_will_respond_with_custom_cors_enabled(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='GET', path='/custom_cors',
+                        headers=headers)
+    handler.do_GET()
+    response = handler.wfile.getvalue().splitlines()
+    print(response)
+    assert b'Access-Control-Allow-Origin: https://foo.bar' in response
+    assert (b'Access-Control-Allow-Headers: Authorization,Content-Type,'
+            b'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
+            b'X-Api-Key') in response
+    assert b'Access-Control-Expose-Headers: Header-A,Header-B' in response
+    assert b'Access-Control-Max-Age: 600' in response
+    assert b'Access-Control-Allow-Credentials: true' in response
 
 
 def test_can_preflight_request(handler):

@@ -74,7 +74,10 @@ def test_can_add_multiple_http_methods(sample_app, swagger_gen):
 def test_can_add_preflight_cors(sample_app, swagger_gen):
     @sample_app.route('/cors', methods=['GET', 'POST'], cors=CORSConfig(
         allow_origin='http://foo.com',
-        allow_headers=['X-Special-Header']))
+        allow_headers=['X-ZZ-Top', 'X-Special-Header'],
+        expose_headers=['X-Exposed', 'X-Special'],
+        max_age=600,
+        allow_credentials=True))
     def cors_request():
         pass
 
@@ -88,10 +91,17 @@ def test_can_add_preflight_cors(sample_app, swagger_gen):
         'method.response.header.Access-Control-Allow-Methods': (
             "'GET,POST,OPTIONS'"),
         'method.response.header.Access-Control-Allow-Headers': (
-            "'X-Special-Header,Content-Type,X-Amz-Date,Authorization,"
-            "X-Api-Key,X-Amz-Security-Token'"),
+            "'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,"
+            "X-Api-Key,X-Special-Header,X-ZZ-Top'"),
         'method.response.header.Access-Control-Allow-Origin': (
             "'http://foo.com'"),
+        'method.response.header.Access-Control-Expose-Headers': (
+            "'X-Exposed,X-Special'"),
+        'method.response.header.Access-Control-Max-Age': (
+            "'600'"),
+        'method.response.header.Access-Control-Allow-Credentials': (
+            "'true'"),
+
     }
     assert options == {
         'consumes': ['application/json'],
@@ -106,6 +116,9 @@ def test_can_add_preflight_cors(sample_app, swagger_gen):
                     'Access-Control-Allow-Origin': {'type': 'string'},
                     'Access-Control-Allow-Methods': {'type': 'string'},
                     'Access-Control-Allow-Headers': {'type': 'string'},
+                    'Access-Control-Expose-Headers': {'type': 'string'},
+                    'Access-Control-Max-Age': {'type': 'string'},
+                    'Access-Control-Allow-Credentials': {'type': 'string'},
                 }
             }
         },
@@ -140,8 +153,8 @@ def test_can_add_preflight_custom_cors(sample_app, swagger_gen):
         'method.response.header.Access-Control-Allow-Methods': (
             "'GET,POST,OPTIONS'"),
         'method.response.header.Access-Control-Allow-Headers': (
-            "'Content-Type,X-Amz-Date,Authorization,"
-            "X-Api-Key,X-Amz-Security-Token'"),
+            "'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,"
+            "X-Api-Key'"),
         'method.response.header.Access-Control-Allow-Origin': "'*'",
     }
     assert options == {

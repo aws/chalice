@@ -17,6 +17,8 @@ ALL_ERRORS = ... # type: List[ChaliceViewError]
 class CORSConfig:
     allow_origin = ... # type: str
     allow_headers = ... # type: str
+    get_access_control_headers = ... # type: Callable[..., Dict[str, str]]
+
 
 class Request:
     query_params = ... # type: Dict[str, str]

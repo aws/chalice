@@ -111,9 +111,9 @@ class CORSConfig(object):
         self.allow_origin = allow_origin
 
         if allow_headers is None:
-            allow_headers = list(self._REQUIRED_HEADERS)
+            allow_headers = set(self._REQUIRED_HEADERS)
         else:
-            allow_headers.extend(self._REQUIRED_HEADERS)
+            allow_headers = set(allow_headers + self._REQUIRED_HEADERS)
         self._allow_headers = allow_headers
 
         if expose_headers is None:
@@ -125,12 +125,12 @@ class CORSConfig(object):
 
     @property
     def allow_headers(self):
-        return ','.join(self._allow_headers)
+        return ','.join(sorted(self._allow_headers))
 
     def get_access_control_headers(self):
         headers = {
             'Access-Control-Allow-Origin': self.allow_origin,
-            'Access-Control-Allow-Headers': ','.join(self._allow_headers),
+            'Access-Control-Allow-Headers': self.allow_headers
         }
         if self._expose_headers:
             headers.update({
@@ -140,9 +140,9 @@ class CORSConfig(object):
             headers.update({
                 'Access-Control-Max-Age': str(self._max_age)
             })
-        if self._allow_credentials is not None:
+        if self._allow_credentials is True:
             headers.update({
-                'Access-Control-Allow-Credentials': self._allow_credentials
+                'Access-Control-Allow-Credentials': 'true'
             })
 
         return headers
@@ -215,6 +215,11 @@ class RouteEntry(object):
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
         self.content_types = content_types
+        # cors is passed as either a boolean or a CORSConfig object. If it is a
+        # boolean it needs to be replaced with a real CORSConfig object to
+        # pass the typechecker. None in this context will not inject any cors
+        # headers, otherwise the CORSConfig object will determine which
+        # headers are injected.
         if cors is True:
             cors = CORSConfig()
         elif cors is False:
@@ -409,4 +414,6 @@ class Chalice(object):
         return route_entry.cors is not None
 
     def _add_cors_headers(self, response, cors):
-        response.headers.update(cors.get_access_control_headers())
+        for name, value in cors.get_access_control_headers().items():
+            if name not in response.headers:
+                response.headers[name] = value
