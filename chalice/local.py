@@ -120,9 +120,9 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         # type: (EventType, Dict[str, Any]) -> None
         self.send_response(response['statusCode'])
         self.send_header('Content-Length', str(len(response['body'])))
-        self.send_header(
-            'Content-Type',
-            response['headers'].get('Content-Type', 'application/json'))
+        content_type = response['headers'].pop(
+            'Content-Type', 'application/json')
+        self.send_header('Content-Type', content_type)
         headers = response['headers']
         for header in headers:
             self.send_header(header, headers[header])
