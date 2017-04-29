@@ -227,7 +227,7 @@ def test_content_type_included_once(handler):
     value = handler.wfile.getvalue()
     response_lines = value.splitlines()
     content_header_lines = [line for line in response_lines
-                            if line.startswith('Content-Type')]
+                            if line.startswith(b'Content-Type')]
     assert len(content_header_lines) == 1
 
 
