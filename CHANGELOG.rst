@@ -9,6 +9,9 @@ Next Release (TBD)
   (`#305 <https://github.com/awslabs/chalice/issues/305>`__)
 * Added more granular support for CORS
   (`#311 <https://github.com/awslabs/chalice/pull/311>`__)
+* Fix duplicate content type header in local model
+  (`#311 <https://github.com/awslabs/chalice/issues/310>`__)
+
 
 0.8.0
 =====
