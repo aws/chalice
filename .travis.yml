@@ -2,16 +2,17 @@ language: python
 sudo: false
 matrix:
   include:
-  - python: "3.5"
+  - python: "3.6"
     env: TEST_TYPE=typecheck
+  - python: "3.6"
+    env: TEST_TYPE=coverage
   - python: "2.7"
     env: TEST_TYPE=coverage
   - python: "2.7"
     env: TEST_TYPE=check
 install:
-  - if [[ $TRAVIS_PYTHON_VERSION != 3.* ]]; then pip install -e . ; fi
-  - if [[ $TRAVIS_PYTHON_VERSION != 3.* ]]; then travis_retry pip install -r requirements-dev.txt; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then pip install  mypy==0.501; fi
+  - pip install -r requirements-dev.txt
+  - pip install -e .
 script:
   - make $TEST_TYPE
 after_success:
