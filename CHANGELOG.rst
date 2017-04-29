@@ -7,7 +7,8 @@ Next Release (TBD)
 
 * Alway overwrite existing API Gateway Rest API on updates
   (`#305 <https://github.com/awslabs/chalice/issues/305>`__)
-
+* Added more granular support for CORS
+  (`#311 <https://github.com/awslabs/chalice/pull/311>`__)
 
 0.8.0
 =====

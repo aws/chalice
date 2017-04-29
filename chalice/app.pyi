@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Callable
+from typing import Dict, List, Any, Callable, Union
 
 class ChaliceError(Exception): ...
 class ChaliceViewError(ChaliceError):
@@ -13,6 +13,12 @@ class TooManyRequestsError(ChaliceViewError): ...
 
 
 ALL_ERRORS = ... # type: List[ChaliceViewError]
+
+class CORSConfig:
+    allow_origin = ... # type: str
+    allow_headers = ... # type: str
+    get_access_control_headers = ... # type: Callable[..., Dict[str, str]]
+
 
 class Request:
     query_params = ... # type: Dict[str, str]
@@ -60,14 +66,14 @@ class RouteEntry(object):
     api_key_required = ... # type: bool
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]
-    cors = ... # type: bool
+    cors = ... # type: CORSConfig
 
     def __init__(self, view_function: Callable[..., Any],
                  view_name: str, path: str, methods: List[str],
                  authorizer_name: str=None,
                  api_key_required: bool=None,
                  content_types: List[str]=None,
-                 cors: bool=False) -> None: ...
+                 cors: Union[bool, CORSConfig]=False) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
 

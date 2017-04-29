@@ -100,6 +100,54 @@ class CaseInsensitiveMapping(Mapping):
         return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
 
 
+class CORSConfig(object):
+    """A cors configuration to attach to a route."""
+
+    _REQUIRED_HEADERS = ['Content-Type', 'X-Amz-Date', 'Authorization',
+                         'X-Api-Key', 'X-Amz-Security-Token']
+
+    def __init__(self, allow_origin='*', allow_headers=None,
+                 expose_headers=None, max_age=None, allow_credentials=None):
+        self.allow_origin = allow_origin
+
+        if allow_headers is None:
+            allow_headers = set(self._REQUIRED_HEADERS)
+        else:
+            allow_headers = set(allow_headers + self._REQUIRED_HEADERS)
+        self._allow_headers = allow_headers
+
+        if expose_headers is None:
+            expose_headers = []
+        self._expose_headers = expose_headers
+
+        self._max_age = max_age
+        self._allow_credentials = allow_credentials
+
+    @property
+    def allow_headers(self):
+        return ','.join(sorted(self._allow_headers))
+
+    def get_access_control_headers(self):
+        headers = {
+            'Access-Control-Allow-Origin': self.allow_origin,
+            'Access-Control-Allow-Headers': self.allow_headers
+        }
+        if self._expose_headers:
+            headers.update({
+                'Access-Control-Expose-Headers': ','.join(self._expose_headers)
+            })
+        if self._max_age is not None:
+            headers.update({
+                'Access-Control-Max-Age': str(self._max_age)
+            })
+        if self._allow_credentials is True:
+            headers.update({
+                'Access-Control-Allow-Credentials': 'true'
+            })
+
+        return headers
+
+
 class Request(object):
     """The current request from API gateway."""
 
@@ -167,6 +215,15 @@ class RouteEntry(object):
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
         self.content_types = content_types
+        # cors is passed as either a boolean or a CORSConfig object. If it is a
+        # boolean it needs to be replaced with a real CORSConfig object to
+        # pass the typechecker. None in this context will not inject any cors
+        # headers, otherwise the CORSConfig object will determine which
+        # headers are injected.
+        if cors is True:
+            cors = CORSConfig()
+        elif cors is False:
+            cors = None
         self.cors = cors
 
     def _parse_view_args(self):
@@ -309,7 +366,7 @@ class Chalice(object):
         response = self._get_view_function_response(view_function,
                                                     function_args)
         if self._cors_enabled_for_route(route_entry):
-            self._add_cors_headers(response)
+            self._add_cors_headers(response, route_entry.cors)
         return response.to_dict()
 
     def _get_view_function_response(self, view_function, function_args):
@@ -354,7 +411,9 @@ class Chalice(object):
                                        (header, value))
 
     def _cors_enabled_for_route(self, route_entry):
-        return route_entry.cors
+        return route_entry.cors is not None
 
-    def _add_cors_headers(self, response):
-        response.headers['Access-Control-Allow-Origin'] = '*'
+    def _add_cors_headers(self, response, cors):
+        for name, value in cors.get_access_control_headers().items():
+            if name not in response.headers:
+                response.headers[name] = value

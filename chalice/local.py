@@ -8,9 +8,9 @@ from collections import namedtuple
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 
-from chalice.app import Chalice  # noqa
-from chalice.compat import urlparse, parse_qs
+from chalice.app import Chalice, CORSConfig  # noqa
 from typing import List, Any, Dict, Tuple, Callable  # noqa
+from chalice.compat import urlparse, parse_qs
 
 
 MatchResult = namedtuple('MatchResult', ['route', 'captured', 'query_params'])
@@ -156,7 +156,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             self._send_autogen_options_response()
 
     def _cors_enabled_for_route(self, lambda_event):
-        # type: (EventType) -> bool
+        # type: (EventType) -> CORSConfig
         route_key = lambda_event['requestContext']['resourcePath']
         route_entry = self.app_object.routes[route_key]
         return route_entry.cors

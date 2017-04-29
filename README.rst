@@ -730,15 +730,54 @@ The preflight request will return a response that includes:
 * ``Access-Control-Allow-Headers: Content-Type,X-Amz-Date,Authorization,
   X-Api-Key,X-Amz-Security-Token``.
 
+If more fine grained control of the CORS headers is desired, set the ``cors``
+parameter to an instance of ``CORSConfig`` instead of ``True``. The
+``CORSConfig`` object can be imported from from the ``chalice`` package it's
+constructor takes the following keyword arguments that map to CORS headers:
+
+================= ==== ================================
+Argument          Type Header
+================= ==== ================================
+allow_origin      str  Access-Control-Allow-Origin
+allow_headers     list Access-Control-Allow-Headers
+expose_headers    list Access-Control-Expose-Headers
+max_age           int  Access-Control-Max-Age
+allow_credentials bool Access-Control-Allow-Credentials
+================= ==== ================================
+
+Code sample defining more CORS headers:
+
+.. code-block:: python
+
+    from chalice import CORSConfig
+    cors_config = CORSConfig(
+        allow_origin='https://foo.example.com',
+        allow_headers=['X-Special-Header'],
+        max_age=600,
+        expose_headers=['X-Special-Header'],
+	allow_credentials=True
+    )
+    @app.route('/custom_cors', methods=['GET'], cors=cors_config)
+    def supports_custom_cors():
+        return {'cors': True}
+
+
 There's a couple of things to keep in mind when enabling cors for a view:
 
 * An ``OPTIONS`` method for preflighting is always injected.  Ensure that
   you don't have ``OPTIONS`` in the ``methods=[...]`` list of your
   view function.
+* Even though the ``Access-Control-Allow-Origin`` header can be set to a
+  string that is a space separated list of origins, this behavior does not
+  work on all clients that implement CORS. You should only supply a single
+  origin to the ``CORSConfig`` object. If you need to supply multiple origins
+  you will need to define a custom handler for it that accepts ``OPTIONS``
+  requests and matches the ``Origin`` header against a whitelist of origins.
+  If the match is succssful then return just their ``Origin`` back to them
+  in the ``Access-Control-Allow-Origin`` header.
 * Every view function must explicitly enable CORS support.
-* There's no support for customizing the CORS configuration.
 
-The last two points will change in the future.  See
+The last point will change in the future.  See
 `this issue
 <https://github.com/awslabs/chalice/issues/70#issuecomment-248787037>`_
 for more information.
