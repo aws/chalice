@@ -1,5 +1,4 @@
 from chalice import local, BadRequestError
-from chalice import Response
 import json
 import decimal
 import pytest
@@ -66,12 +65,6 @@ def sample_app():
     @demo.route('/query-string')
     def query_string():
         return demo.current_request.query_params
-
-    @demo.route('/custom-response')
-    def custom_response():
-        return Response(body='text',
-                        status_code=200,
-                        headers={'Content-Type': 'text/plain'})
 
     return demo
 
@@ -192,16 +185,6 @@ def test_querystring_is_mapped(handler):
     set_current_request(handler, method='GET', path='/query-string?a=b&c=d')
     handler.do_GET()
     assert _get_body_from_response_stream(handler) == {'a': 'b', 'c': 'd'}
-
-
-def test_content_type_included_once(handler):
-    set_current_request(handler, method='GET', path='/custom-response')
-    handler.do_GET()
-    value = handler.wfile.getvalue()
-    response_lines = value.splitlines()
-    content_header_lines = [line for line in response_lines
-                            if line.startswith('Content-Type')]
-    assert len(content_header_lines) == 1
 
 
 @pytest.mark.parametrize('actual_url,matched_url', [
