@@ -204,7 +204,6 @@ def test_can_support_custom_cors(smoke_test_app):
     response = requests.options(smoke_test_app.url + '/custom_cors')
     response.raise_for_status()
     headers = response.headers
-    print(headers)
     assert headers['Access-Control-Allow-Origin'] == expected_allow_origin
     assert headers['Access-Control-Allow-Headers'] == (
         'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,'
