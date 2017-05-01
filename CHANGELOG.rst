@@ -11,6 +11,8 @@ Next Release (TBD)
   (`#311 <https://github.com/awslabs/chalice/pull/311>`__)
 * Fix duplicate content type header in local model
   (`#311 <https://github.com/awslabs/chalice/issues/310>`__)
+* Fix content type validation when charset is provided
+  (`#306 <https://github.com/awslabs/chalice/issues/306>`__)
 
 
 0.8.0

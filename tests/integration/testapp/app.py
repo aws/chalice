@@ -73,6 +73,11 @@ def form_encoded():
     }
 
 
+@app.route('/json-only', content_types=['application/json'])
+def json_only():
+    return {'success': True}
+
+
 @app.route('/cors', methods=['GET', 'POST', 'PUT'], cors=True)
 def supports_cors():
     # It doesn't really matter what we return here because

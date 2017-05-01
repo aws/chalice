@@ -240,3 +240,11 @@ def test_api_key_required_fails_with_no_key(smoke_test_app):
     # Request should fail because we're not providing
     # an API key.
     assert response.status_code == 403
+
+
+def test_can_handle_charset(smoke_test_app):
+    url = smoke_test_app.url + '/json-only'
+    # Should pass content type validation even with charset specified.
+    response = requests.get(
+        url, headers={'Content-Type': 'application/json; charset=utf-8'})
+    assert response.status_code == 200

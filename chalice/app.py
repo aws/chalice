@@ -357,7 +357,8 @@ class Chalice(object):
         if route_entry.content_types:
             content_type = self.current_request.headers.get(
                 'content-type', 'application/json')
-            if content_type not in route_entry.content_types:
+            if not self._matches_content_type(content_type,
+                                              route_entry.content_types):
                 return error_response(
                     error_code='UnsupportedMediaType',
                     message='Unsupported media type: %s' % content_type,
@@ -368,6 +369,11 @@ class Chalice(object):
         if self._cors_enabled_for_route(route_entry):
             self._add_cors_headers(response, route_entry.cors)
         return response.to_dict()
+
+    def _matches_content_type(self, content_type, valid_content_types):
+        if ';' in content_type:
+            content_type = content_type.split(';', 1)[0].strip()
+        return content_type in valid_content_types
 
     def _get_view_function_response(self, view_function, function_args):
         try:
