@@ -592,8 +592,15 @@ types.  Here's an example of this feature:
 
 .. code-block:: python
 
+    import sys
+
     from chalice import Chalice
-    from chalice.compat import parse_qs  # works with Python 2 and 3
+    if sys.version_info[0] == 3:
+        # Python 3 imports.
+        from urllib.parse import urlparse, parse_qs
+    else:
+        # Python 2 imports.
+        from urlparse import urlparse, parse_qs
 
 
     app = Chalice(app_name='helloworld')
