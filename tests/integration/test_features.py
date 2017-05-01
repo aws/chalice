@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+import time
 import shutil
 
 import botocore.session
@@ -7,14 +9,21 @@ import pytest
 import requests
 
 from chalice.cli.factory import CLIFactory
+from chalice.utils import record_deployed_values
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
 CHALICE_DIR = os.path.join(PROJECT_DIR, '.chalice')
+APP_FILE = os.path.join(PROJECT_DIR, 'app.py')
 
 
 class SmokeTestApplication(object):
+
+    # Number of seconds to wait after redeploy before running
+    # tests.
+    _REDEPLOY_SLEEP = 20
+
     def __init__(self, url, deployed_values, stage_name, app_name):
         if url.endswith('/'):
             url = url[:-1]
@@ -22,6 +31,7 @@ class SmokeTestApplication(object):
         self._deployed_values = deployed_values
         self.stage_name = stage_name
         self.app_name = app_name
+        self._has_redeployed = False
 
     @property
     def rest_api_id(self):
@@ -41,6 +51,26 @@ class SmokeTestApplication(object):
         response = requests.get(self.url + url)
         response.raise_for_status()
         return response.json()
+
+    def redeploy_once(self):
+        # Redeploy the application once.  If a redeploy
+        # has already happened, this function is a noop.
+        if self._has_redeployed:
+            return
+        new_file = os.path.join(PROJECT_DIR, 'app-redeploy.py')
+        shutil.move(APP_FILE, APP_FILE + '.bak')
+        shutil.copy(new_file, APP_FILE)
+        self._clear_app_import()
+        _deploy_app()
+        self._has_redeployed = True
+        # Give it settling time before running more tests.
+        time.sleep(self._REDEPLOY_SLEEP)
+
+    def _clear_app_import(self):
+        # Now that we're using `import` instead of `exec` we need
+        # to clear out sys.modules in order to pick up the new
+        # version of the app we just copied over.
+        del sys.modules['app']
 
 
 @pytest.fixture(scope='module')
@@ -62,7 +92,8 @@ def _deploy_app():
     )
     d = factory.create_default_deployer(
         factory.create_botocore_session(), None)
-    deployed = d.deploy(config)['dev']
+    deployed_stages = d.deploy(config)
+    deployed = deployed_stages['dev']
     url = (
         "https://{rest_api_id}.execute-api.{region}.amazonaws.com/"
         "{api_gateway_stage}/".format(**deployed))
@@ -72,6 +103,8 @@ def _deploy_app():
         stage_name='dev',
         app_name='smoketestapp',
     )
+    record_deployed_values(deployed_stages, os.path.join(
+        PROJECT_DIR, '.chalice', 'deployed.json'))
     return application
 
 
@@ -94,6 +127,10 @@ def _delete_app(application):
     chalice_dir = os.path.join(PROJECT_DIR, '.chalice')
     shutil.rmtree(chalice_dir)
     os.makedirs(chalice_dir)
+
+    original = APP_FILE + '.bak'
+    if os.path.isfile(original):
+        shutil.move(original, APP_FILE)
 
 
 def test_returns_simple_response(smoke_test_app):
@@ -247,3 +284,42 @@ def test_can_handle_charset(smoke_test_app):
     response = requests.get(
         url, headers={'Content-Type': 'application/json; charset=utf-8'})
     assert response.status_code == 200
+
+
+@pytest.mark.on_redeploy
+def test_redeploy_no_change_view(smoke_test_app):
+    smoke_test_app.redeploy_once()
+    assert smoke_test_app.get_json('/') == {'hello': 'world'}
+
+
+@pytest.mark.on_redeploy
+def test_redeploy_changed_function(smoke_test_app):
+    smoke_test_app.redeploy_once()
+    assert smoke_test_app.get_json('/a/b/c/d/e/f/g') == {
+        'redeployed': True}
+
+
+@pytest.mark.on_redeploy
+def test_redeploy_new_function(smoke_test_app):
+    smoke_test_app.redeploy_once()
+    assert smoke_test_app.get_json('/redeploy') == {'success': True}
+
+
+@pytest.mark.on_redeploy
+def test_redeploy_change_route_info(smoke_test_app):
+    smoke_test_app.redeploy_once()
+    url = smoke_test_app.url + '/multimethod'
+    # POST is no longer allowed:
+    assert requests.post(url).status_code == 403
+    # But PUT is now allowed in the redeployed app.py
+    assert requests.put(url).status_code == 200
+
+
+@pytest.mark.on_redeploy
+def test_redeploy_view_deleted(smoke_test_app):
+    smoke_test_app.redeploy_once()
+    url = smoke_test_app.url + '/path/foo'
+    response = requests.get(url)
+    # Request should fail because it's not in the redeployed
+    # app.py
+    assert response.status_code == 403
