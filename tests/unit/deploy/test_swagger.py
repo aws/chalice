@@ -1,7 +1,9 @@
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice import CORSConfig
 
+import pytest
 from pytest import fixture
+
 
 @fixture
 def swagger_gen():
@@ -210,10 +212,10 @@ def test_can_add_api_key(sample_app, swagger_gen):
     }
 
 
-def test_can_add_authorizers(sample_app, swagger_gen):
+def test_can_add_cognito_authorizers(sample_app, swagger_gen):
     @sample_app.route('/api-key-required',
                       authorizer_name='MyUserPool')
-    def foo(name):
+    def foo():
         return {}
 
     # Doesn't matter if you define the authorizer before
@@ -239,3 +241,53 @@ def test_can_add_authorizers(sample_app, swagger_gen):
             'providerARNs': ['arn:aws:cog:r:1:userpool/name']
         }
     }
+
+
+def test_can_add_custom_authorizer(sample_app, swagger_gen):
+    @sample_app.route('/custom-auth', authorizer_name='MyAuth')
+    def foo():
+        return {}
+
+    sample_app.define_authorizer('MyAuth',
+                                 header='Authorization',
+                                 auth_type='custom',
+                                 authorizer_uri='arn:aws:...')
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/custom-auth']['get']
+    assert single_method.get('security') == [{'MyAuth': []}]
+    security_definitions = doc['securityDefinitions']
+    assert 'MyAuth' in security_definitions
+    assert security_definitions['MyAuth'] == {
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'in': 'header',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'authorizerUri': 'arn:aws:...',
+            'type': 'token',
+            'authorizerResultTtlInSeconds': 300
+        }
+    }
+
+
+def test_unknown_auth_raises_error(sample_app, swagger_gen):
+    @sample_app.route('/unknown', authorizer_name='Unknown')
+    def foo():
+        return {}
+
+    sample_app.define_authorizer(
+        'Unknown', header='Authorization',
+        auth_type='unknown-type', authorizer_uri='arn:aws:...')
+
+    with pytest.raises(ValueError):
+        swagger_gen.generate_swagger(sample_app)
+
+
+def test_reference_auth_without_defining(sample_app, swagger_gen):
+    @sample_app.route('/unknown', authorizer_name='NeverDefined')
+    def foo():
+        return {}
+
+    with pytest.raises(ValueError):
+        swagger_gen.generate_swagger(sample_app)

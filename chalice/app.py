@@ -283,14 +283,17 @@ class Chalice(object):
     def authorizers(self):
         return self._authorizers.copy()
 
-    def define_authorizer(self, name, header, auth_type, provider_arns=None):
-        # TODO: double check remaining authorizers.  This only handles
-        # cognito_user_pools.
-        self._authorizers[name] = {
+    def define_authorizer(self, name, header, auth_type,
+                          provider_arns=None, authorizer_uri=None):
+        auth = {
             'header': header,
             'auth_type': auth_type,
-            'provider_arns': provider_arns
         }
+        if provider_arns is not None:
+            auth['provider_arns'] = provider_arns
+        elif authorizer_uri is not None:
+            auth['authorizer_uri'] = authorizer_uri
+        self._authorizers[name] = auth
 
     def route(self, path, **kwargs):
         def _register_view(view_func):

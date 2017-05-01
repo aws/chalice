@@ -944,6 +944,7 @@ Tutorial: Using Custom Authentication
 AWS API Gateway routes can be authenticated in multiple ways:
 
 - API Key
+- Cognito User Pools
 - Custom Auth Handler
 
 API Key
@@ -974,6 +975,28 @@ on the ``app`` object.
         header='Authorization',
         auth_type='cognito_user_pools',
         provider_arns=['arn:aws:cognito:...:userpool/name']
+    )
+
+Using Custom Authorizers
+------------------------
+
+To integrate with custom authorizers, you can use the ``define_authorizer`` method
+on the ``app`` object.  You'll need to set the ``auth_type`` to ``custom`` and
+the ``authorizer_uri`` to the URI of your lambda function.
+
+.. code-block:: python
+
+    @app.route('/user-pools', methods=['GET'], authorizer_name='MyCustomAuth')
+    def authenticated():
+        return {"secure": True}
+
+    app.define_authorizer(
+        name='MyCustomAuth',
+        header='Authorization',
+        auth_type='custom',
+        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-01'
+                        '/functions/arn:aws:lambda:region:account-id:'
+                        'function:FunctionName/invocations')
     )
 
 

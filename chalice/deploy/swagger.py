@@ -23,6 +23,8 @@ class SwaggerGenerator(object):
         }
     }  # type: Dict[str, Any]
 
+    _KNOWN_AUTH_TYPES = ['cognito_user_pools', 'custom']
+
     def __init__(self, region, lambda_arn):
         # type: (str, str) -> None
         self._region = region
@@ -52,7 +54,6 @@ class SwaggerGenerator(object):
     def _add_to_security_definition(self, security, api_config, authorizers):
         # type: (Any, Dict[str, Any], Dict[str, Any]) -> None
         for auth in security:
-            # TODO: Add validation checks for unknown auth references.
             name = list(auth.keys())[0]
             if name == 'api_key':
                 # This is just the api_key_required=True config
@@ -62,18 +63,44 @@ class SwaggerGenerator(object):
                     'in': 'header',
                 }  # type: Dict[str, Any]
             else:
+                if name not in authorizers:
+                    error_msg = (
+                        "The authorizer '%s' is not defined.  "
+                        "Use app.define_authorizer(...) to define an "
+                        "authorizer." % (name)
+                    )
+                    if authorizers:
+                        error_msg += (
+                            '  Defined authorizers in this app: %s' %
+                            ', '.join(authorizers))
+                    raise ValueError(error_msg)
                 authorizer_config = authorizers[name]
                 auth_type = authorizer_config['auth_type']
+                if auth_type not in self._KNOWN_AUTH_TYPES:
+                    raise ValueError(
+                        "Unknown auth type: '%s',  must be one of: %s" %
+                        (auth_type, ', '.join(self._KNOWN_AUTH_TYPES)))
                 swagger_snippet = {
                     'in': 'header',
                     'type': 'apiKey',
                     'name': authorizer_config['header'],
                     'x-amazon-apigateway-authtype': auth_type,
                     'x-amazon-apigateway-authorizer': {
+                    }
+                }
+                if auth_type == 'custom':
+                    auth_config = {
+                        'type': auth_type,
+                        'authorizerUri': authorizer_config['authorizer_uri'],
+                        'authorizerResultTtlInSeconds': 300,
+                        'type': 'token',
+                    }
+                elif auth_type == 'cognito_user_pools':
+                    auth_config = {
                         'type': auth_type,
                         'providerARNs': authorizer_config['provider_arns'],
                     }
-                }
+                swagger_snippet['x-amazon-apigateway-authorizer'] = auth_config
             api_config.setdefault(
                 'securityDefinitions', {})[name] = swagger_snippet
 

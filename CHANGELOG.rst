@@ -13,6 +13,8 @@ Next Release (TBD)
   (`#311 <https://github.com/awslabs/chalice/issues/310>`__)
 * Fix content type validation when charset is provided
   (`#306 <https://github.com/awslabs/chalice/issues/306>`__)
+* Add back custom authorizer support
+  (`#322 <https://github.com/awslabs/chalice/pull/322>`__)
 
 
 0.8.0
