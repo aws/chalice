@@ -33,6 +33,7 @@ class SwaggerGenerator(object):
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
         self._add_route_paths(api, app)
+        self._add_binary_media_types(api, app)
         return api
 
     def _add_route_paths(self, api, app):
@@ -48,6 +49,12 @@ class SwaggerGenerator(object):
                 swagger_for_path[http_method.lower()] = current
             if view.cors is not None:
                 self._add_preflight_request(view, swagger_for_path)
+
+    def _add_binary_media_types(self, api, app):
+        # type: (Dict[str, Any], Chalice) -> None
+        if app.binary_media_types:
+            api['x-amazon-apigateway-binary-media-types'] = \
+                app.binary_media_types
 
     def _add_to_security_definition(self, security, api_config, authorizers):
         # type: (Any, Dict[str, Any], Dict[str, Any]) -> None
