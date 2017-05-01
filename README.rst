@@ -592,9 +592,16 @@ types.  Here's an example of this feature:
 
 .. code-block:: python
 
-    import urlparse
+    import sys
 
     from chalice import Chalice
+    if sys.version_info[0] == 3:
+        # Python 3 imports.
+        from urllib.parse import urlparse, parse_qs
+    else:
+        # Python 2 imports.
+        from urlparse import urlparse, parse_qs
+
 
     app = Chalice(app_name='helloworld')
 
@@ -602,7 +609,7 @@ types.  Here's an example of this feature:
     @app.route('/', methods=['POST'],
                content_types=['application/x-www-form-urlencoded'])
     def index():
-        parsed = urlparse.parse_qs(app.current_request.raw_body)
+        parsed = parse_qs(app.current_request.raw_body)
         return {
             'states': parsed.get('states', [])
         }
@@ -652,7 +659,7 @@ the raw body bytes:
 
 .. code-block:: python
 
-    parsed = urlparse.parse_qs(app.current_request.raw_body)
+    parsed = parse_qs(app.current_request.raw_body)
 
 ``app.current_request.json_body`` is set to ``None`` whenever the
 ``Content-Type`` is not ``application/json``.  This means that
