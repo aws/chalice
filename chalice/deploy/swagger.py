@@ -2,7 +2,7 @@ import copy
 
 from typing import Any, List, Dict  # noqa
 
-from chalice.app import Chalice, RouteEntry  # noqa
+from chalice.app import Chalice, RouteEntry, Authorizer  # noqa
 
 
 class SwaggerGenerator(object):
@@ -44,15 +44,24 @@ class SwaggerGenerator(object):
                 current = self._generate_route_method(view)
                 if 'security' in current:
                     self._add_to_security_definition(
-                        current['security'], api, app.authorizers)
+                        current['security'], api, app.authorizers, view)
                 swagger_for_path[http_method.lower()] = current
             if view.cors is not None:
                 self._add_preflight_request(view, swagger_for_path)
 
-    def _add_to_security_definition(self, security, api_config, authorizers):
-        # type: (Any, Dict[str, Any], Dict[str, Any]) -> None
+    def _generate_security_from_auth_obj(self, api_config, authorizer):
+        # type: (Dict[str, Any], Authorizer) -> None
+        config = authorizer.to_swagger()
+        api_config.setdefault(
+            'securityDefinitions', {})[authorizer.name] = config
+
+    def _add_to_security_definition(self, security,
+                                    api_config, authorizers, view):
+        # type: (Any, Dict[str, Any], Dict[str, Any], RouteEntry) -> None
+        if view.authorizer is not None:
+            self._generate_security_from_auth_obj(api_config, view.authorizer)
+            return
         for auth in security:
-            # TODO: Add validation checks for unknown auth references.
             name = list(auth.keys())[0]
             if name == 'api_key':
                 # This is just the api_key_required=True config
@@ -62,8 +71,29 @@ class SwaggerGenerator(object):
                     'in': 'header',
                 }  # type: Dict[str, Any]
             else:
+                # This whole section is deprecated and will
+                # eventually be removed.  This handles the
+                # authorizers that come in via app.define_authorizer(...)
+                # The only supported type in this method is
+                # 'cognito_user_pools'.  Everything else goes through the
+                # preferred ``view.authorizer``.
+                if name not in authorizers:
+                    error_msg = (
+                        "The authorizer '%s' is not defined.  "
+                        "Use app.define_authorizer(...) to define an "
+                        "authorizer." % (name)
+                    )
+                    if authorizers:
+                        error_msg += (
+                            '  Defined authorizers in this app: %s' %
+                            ', '.join(authorizers))
+                    raise ValueError(error_msg)
                 authorizer_config = authorizers[name]
                 auth_type = authorizer_config['auth_type']
+                if auth_type != 'cognito_user_pools':
+                    raise ValueError(
+                        "Unknown auth type: '%s',  must be "
+                        "'cognito_user_pools'" % (auth_type,))
                 swagger_snippet = {
                     'in': 'header',
                     'type': 'apiKey',
@@ -94,6 +124,8 @@ class SwaggerGenerator(object):
             current['security'] = [{'api_key': []}]
         if view.authorizer_name:
             current['security'] = [{view.authorizer_name: []}]
+        if view.authorizer:
+            current['security'] = [{view.authorizer.name: []}]
         return current
 
     def _generate_precanned_responses(self):

@@ -5,6 +5,7 @@ import logging
 import json
 import traceback
 import decimal
+import warnings
 from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
@@ -98,6 +99,67 @@ class CaseInsensitiveMapping(Mapping):
 
     def __repr__(self):
         return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
+
+
+class Authorizer(object):
+    name = ''
+
+    def to_swagger(self):
+        raise NotImplementedError("to_swagger")
+
+
+class CognitoUserPoolAuthorizer(Authorizer):
+
+    _AUTH_TYPE = 'cognito_user_pools'
+
+    def __init__(self, name, provider_arns, header='Authorization'):
+        self.name = name
+        self._header = header
+        if not isinstance(provider_arns, list):
+            # This class is used directly by users so we're
+            # adding some validation to help them troubleshoot
+            # potential issues.
+            raise TypeError(
+                "provider_arns should be a list of ARNs, received: %s"
+                % provider_arns)
+        self._provider_arns = provider_arns
+
+    def to_swagger(self):
+        return {
+            'in': 'header',
+            'type': 'apiKey',
+            'name': self._header,
+            'x-amazon-apigateway-authtype': self._AUTH_TYPE,
+            'x-amazon-apigateway-authorizer': {
+                'type': self._AUTH_TYPE,
+                'providerARNs': self._provider_arns,
+            }
+        }
+
+
+class CustomAuthorizer(Authorizer):
+
+    _AUTH_TYPE = 'custom'
+
+    def __init__(self, name, authorizer_uri, ttl_seconds=300,
+                 header='Authorization'):
+        self.name = name
+        self._header = header
+        self._authorizer_uri = authorizer_uri
+        self._ttl_seconds = ttl_seconds
+
+    def to_swagger(self):
+        return {
+            'in': 'header',
+            'type': 'apiKey',
+            'name': self._header,
+            'x-amazon-apigateway-authtype': self._AUTH_TYPE,
+            'x-amazon-apigateway-authorizer': {
+                'type': 'token',
+                'authorizerUri': self._authorizer_uri,
+                'authorizerResultTtlInSeconds': self._ttl_seconds,
+            }
+        }
 
 
 class CORSConfig(object):
@@ -204,7 +266,7 @@ class RouteEntry(object):
     def __init__(self, view_function, view_name, path, methods,
                  authorizer_name=None,
                  api_key_required=None, content_types=None,
-                 cors=False):
+                 cors=False, authorizer=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -225,6 +287,7 @@ class RouteEntry(object):
         elif cors is False:
             cors = None
         self.cors = cors
+        self.authorizer = authorizer
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -284,12 +347,14 @@ class Chalice(object):
         return self._authorizers.copy()
 
     def define_authorizer(self, name, header, auth_type, provider_arns=None):
-        # TODO: double check remaining authorizers.  This only handles
-        # cognito_user_pools.
+        warnings.warn(
+            "define_authorizer() is deprecated and will be removed in future "
+            "versions of chalice.  Please use CognitoUserPoolAuthorizer(...) "
+            "instead", PendingDeprecationWarning)
         self._authorizers[name] = {
             'header': header,
             'auth_type': auth_type,
-            'provider_arns': provider_arns
+            'provider_arns': provider_arns,
         }
 
     def route(self, path, **kwargs):
@@ -302,6 +367,7 @@ class Chalice(object):
         name = kwargs.pop('name', view_func.__name__)
         methods = kwargs.pop('methods', ['GET'])
         authorizer_name = kwargs.pop('authorizer_name', None)
+        authorizer = kwargs.pop('authorizer', None)
         api_key_required = kwargs.pop('api_key_required', None)
         content_types = kwargs.pop('content_types', ['application/json'])
         cors = kwargs.pop('cors', False)
@@ -319,7 +385,7 @@ class Chalice(object):
                 "URL paths must be unique." % path)
         entry = RouteEntry(view_func, name, path, methods,
                            authorizer_name, api_key_required,
-                           content_types, cors)
+                           content_types, cors, authorizer)
         self.routes[path] = entry
 
     def __call__(self, event, context):

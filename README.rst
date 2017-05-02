@@ -944,6 +944,7 @@ Tutorial: Using Custom Authentication
 AWS API Gateway routes can be authenticated in multiple ways:
 
 - API Key
+- Cognito User Pools
 - Custom Auth Handler
 
 API Key
@@ -960,21 +961,45 @@ Only requests sent with a valid `X-Api-Key` header will be accepted.
 Using Amazon Cognito User Pools
 -------------------------------
 
-To integrate with cognito user pools, you can use the ``define_authorizer`` method
-on the ``app`` object.
+To integrate with cognito user pools, you can use the
+``CognitoUserPoolAuthorizer`` object:
 
 .. code-block:: python
 
-    @app.route('/user-pools', methods=['GET'], authorizer_name='MyPool')
+    authorizer = CognitoUserPoolAuthorizer(
+        'MyPool', header='Authorization',
+        provider_arns=['arn:aws:cognito:...:userpool/name'])
+
+    @app.route('/user-pools', methods=['GET'], authorizer=authorizer)
     def authenticated():
         return {"secure": True}
 
-    app.define_authorizer(
-        name='MyPool',
-        header='Authorization',
-        auth_type='cognito_user_pools',
-        provider_arns=['arn:aws:cognito:...:userpool/name']
-    )
+
+Note, earlier versions of chalice also have an ``app.define_authorizer``
+method as well as an ``authorizer_name`` argument on the ``@app.route(...)``
+method.  This approach is deprecated in favor of ``CognitoUserPoolAuthorizer``
+and the ``authorizer`` argument in the ``@app.route(...)`` method.
+``app.define_authorizer`` will be removed in future versions of chalice.
+
+
+Using Custom Authorizers
+------------------------
+
+To integrate with custom authorizers, you can use the ``CustomAuthorizer`` method
+on the ``app`` object.  You'll need to set the ``authorizer_uri``
+to the URI of your lambda function.
+
+.. code-block:: python
+
+    authorizer = CustomAuthorizer(
+        'MyCustomAuth', header='Authorization',
+        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-01'
+                        '/functions/arn:aws:lambda:region:account-id:'
+                        'function:FunctionName/invocations'))
+
+    @app.route('/custom-auth', methods=['GET'], authorizer=authorizer)
+    def authenticated():
+        return {"secure": True}
 
 
 Tutorial: Local Mode

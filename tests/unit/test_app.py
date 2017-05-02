@@ -543,3 +543,41 @@ def test_json_body_available_when_content_type_matches(content_type, is_json):
         assert request.json_body == {'json': 'body'}
     else:
         assert request.json_body is None
+
+
+def test_can_serialize_cognito_auth():
+    auth = app.CognitoUserPoolAuthorizer(
+        'Name', provider_arns=['Foo'], header='Authorization')
+    assert auth.to_swagger() == {
+        'in': 'header',
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'x-amazon-apigateway-authtype': 'cognito_user_pools',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'cognito_user_pools',
+            'providerARNs': ['Foo'],
+        }
+    }
+
+
+def test_typecheck_list_type():
+    with pytest.raises(TypeError):
+        app.CognitoUserPoolAuthorizer('Name', 'Authorization',
+                                      provider_arns='foo')
+
+
+def test_can_serialize_custom_authorizer():
+    auth = app.CustomAuthorizer(
+        'Name', 'myuri', ttl_seconds=10, header='NotAuth'
+    )
+    assert auth.to_swagger() == {
+        'in': 'header',
+        'type': 'apiKey',
+        'name': 'NotAuth',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'token',
+            'authorizerUri': 'myuri',
+            'authorizerResultTtlInSeconds': 10,
+        }
+    }

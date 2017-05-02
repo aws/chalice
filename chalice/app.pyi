@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Callable, Union
+from typing import Dict, List, Any, Callable, Union, Optional
 
 class ChaliceError(Exception): ...
 class ChaliceViewError(ChaliceError):
@@ -13,6 +13,18 @@ class TooManyRequestsError(ChaliceViewError): ...
 
 
 ALL_ERRORS = ... # type: List[ChaliceViewError]
+
+
+class Authorizer:
+    name = ... # type: str
+    def to_swagger(self) -> Dict[str, Any]: ...
+
+
+class CognitoUserPoolAuthorizer(Authorizer): ...
+
+
+class CustomAuthorizer(Authorizer): ...
+
 
 class CORSConfig:
     allow_origin = ... # type: str
@@ -63,6 +75,7 @@ class RouteEntry(object):
     methods = ... # type: List[str]
     uri_pattern = ... # type: str
     authorizer_name = ... # type: str
+    authorizer = ... # type: Optional[Authorizer]
     api_key_required = ... # type: bool
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]

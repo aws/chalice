@@ -1,2 +1,5 @@
 [run]
 branch = True
+[report]
+exclude_lines =
+    raise NotImplementedError.*
