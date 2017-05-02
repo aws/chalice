@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.8.1
+=====
 
 * Alway overwrite existing API Gateway Rest API on updates
   (`#305 <https://github.com/awslabs/chalice/issues/305>`__)
