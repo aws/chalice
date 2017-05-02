@@ -5,6 +5,7 @@ import logging
 import json
 import traceback
 import decimal
+import warnings
 from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
@@ -338,6 +339,10 @@ class Chalice(object):
         return self._authorizers.copy()
 
     def define_authorizer(self, name, header, auth_type, provider_arns=None):
+        warnings.warn(
+            "define_authorizer() is deprecated and will be removed in future "
+            "versions of chalice.  Please use CognitoUserPoolAuthorizer(...) "
+            "instead", PendingDeprecationWarning)
         self._authorizers[name] = {
             'header': header,
             'auth_type': auth_type,
