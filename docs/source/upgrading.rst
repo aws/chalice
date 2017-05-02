@@ -7,6 +7,65 @@ interested in the high level changes, see the
 `CHANGELOG.rst <https://github.com/awslabs/chalice/blob/master/CHANGELOG.rst>`__)
 file.
 
+.. _v0-8-1:
+
+0.8.1
+-----
+
+The 0.8.1 changed the preferred way of specifying authorizers for view
+functions.  You now specify either an instance of
+``chalice.CognitoUserPoolAuthorizer`` or ``chalice.CustomAuthorizer``
+to an ``@app.route()`` function using the ``authorizer`` argument.
+
+Deprecated:
+
+.. code-block:: python
+
+    @app.route('/user-pools', methods=['GET'], authorizer_name='MyPool')
+    def authenticated():
+        return {"secure": True}
+
+    app.define_authorizer(
+        name='MyPool',
+        header='Authorization',
+        auth_type='cognito_user_pools',
+        provider_arns=['arn:aws:cognito:...:userpool/name']
+    )
+
+Equivalent, and preferred way
+
+.. code-block:: python
+
+    from chalice import CognitoUserPoolAuthorizer
+
+    authorizer = CognitoUserPoolAuthorizer(
+        'MyPool', header='Authorization',
+        provider_arns=['arn:aws:cognito:...:userpool/name'])
+
+    @app.route('/user-pools', methods=['GET'], authorizer=authorizer)
+    def authenticated():
+        return {"secure": True}
+
+
+The ``define_authorizer`` is still available, but is now deprecated and will
+be removed in future versions of chalice.  You can also use the new
+``authorizer`` argument to provider a ``CustomAuthorizer``:
+
+
+.. code-block:: python
+
+    from chalice import CustomAuthorizer
+
+    authorizer = CustomAuthorizer(
+        'MyCustomAuth', header='Authorization',
+        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-01'
+                        '/functions/arn:aws:lambda:region:account-id:'
+                        'function:FunctionName/invocations'))
+
+    @app.route('/custom-auth', methods=['GET'], authorizer=authorizer)
+    def authenticated():
+        return {"secure": True}
+
 
 .. _v0-7-0:
 
