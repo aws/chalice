@@ -286,7 +286,8 @@ def test_reference_auth_with_other_auth_defined(sample_app, swagger_gen):
 
 
 def test_can_use_authorizer_object(sample_app, swagger_gen):
-    authorizer = CustomAuthorizer('MyAuth', 'Authorization', 'auth-uri')
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization')
     @sample_app.route('/auth', authorizer=authorizer)
     def auth():
         return {'foo': 'bar'}

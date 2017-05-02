@@ -108,13 +108,20 @@ class Authorizer(object):
         raise NotImplementedError("to_swagger")
 
 
-class CognitoUserPoolAuthorizer(object):
+class CognitoUserPoolAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'cognito_user_pools'
 
-    def __init__(self, name, header, provider_arns):
+    def __init__(self, name, provider_arns, header='Authorization'):
         self.name = name
         self._header = header
+        if not isinstance(provider_arns, list):
+            # This class is used directly by users so we're
+            # adding some validation to help them troubleshoot
+            # potential issues.
+            raise TypeError(
+                "provider_arns should be a list of ARNs, received: %s"
+                % provider_arns)
         self._provider_arns = provider_arns
 
     def to_swagger(self):
@@ -130,11 +137,12 @@ class CognitoUserPoolAuthorizer(object):
         }
 
 
-class CustomAuthorizer(object):
+class CustomAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'custom'
 
-    def __init__(self, name, header, authorizer_uri, ttl_seconds=300):
+    def __init__(self, name, authorizer_uri, ttl_seconds=300,
+                 header='Authorization'):
         self.name = name
         self._header = header
         self._authorizer_uri = authorizer_uri

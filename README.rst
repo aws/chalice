@@ -997,7 +997,7 @@ to the URI of your lambda function.
                         '/functions/arn:aws:lambda:region:account-id:'
                         'function:FunctionName/invocations'))
 
-    @app.route('/user-pools', methods=['GET'], authorizer=authorizer)
+    @app.route('/custom-auth', methods=['GET'], authorizer=authorizer)
     def authenticated():
         return {"secure": True}
 
