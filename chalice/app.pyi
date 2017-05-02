@@ -20,6 +20,12 @@ class Authorizer:
     def to_swagger(self) -> Dict[str, Any]: ...
 
 
+class CognitoUserPoolAuthorizer(Authorizer): ...
+
+
+class CustomAuthorizer(Authorizer): ...
+
+
 class CORSConfig:
     allow_origin = ... # type: str
     allow_headers = ... # type: str
