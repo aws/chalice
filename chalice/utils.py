@@ -7,6 +7,27 @@ from chalice.constants import WELCOME_PROMPT
 from typing import IO, Dict, Any  # noqa
 
 
+def remove_stage_from_deployed_values(key, filename):
+    # type: (str, str) -> None
+    """Delete a top level key from the deployed JSON file."""
+    final_values = {}  # type: Dict[str, Any]
+    try:
+        with open(filename, 'r') as f:
+            final_values = json.load(f)
+    except IOError:
+        # If there is no file to delete from, then this funciton is a noop.
+        return
+
+    try:
+        del final_values[key]
+        with open(filename, 'wb') as f:
+            data = json.dumps(final_values, indent=2, separators=(',', ': '))
+            f.write(data.encode('utf-8'))
+    except KeyError:
+        # If they key didn't exist then there is nothing to remove.
+        pass
+
+
 def record_deployed_values(deployed_values, filename):
     # type: (Dict[str, str], str) -> None
     """Record deployed values to a JSON file.
