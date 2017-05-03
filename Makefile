@@ -31,7 +31,7 @@ check:
 	#
 	#
 	#
-	pylint --rcfile .pylintrc -E chalice
+	pylint --rcfile .pylintrc chalice
 
 pylint:
 	###### PYLINT ######

@@ -14,7 +14,7 @@ from collections import Mapping
 # startup overhead.
 
 
-_PARAMS = re.compile('{\w+}')
+_PARAMS = re.compile(r'{\w+}')
 
 
 def handle_decimals(obj):

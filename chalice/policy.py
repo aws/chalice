@@ -5,6 +5,7 @@ and make a best effort attempt to generate an IAM policy
 for you.
 
 """
+from __future__ import print_function
 import os
 import json
 import uuid

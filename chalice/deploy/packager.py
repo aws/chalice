@@ -1,3 +1,4 @@
+from __future__ import print_function
 import hashlib
 import inspect
 import os
@@ -95,7 +96,7 @@ class LambdaDeploymentPackager(object):
             project_dir, '.chalice', 'deployments', hash_contents + '.zip')
         return deployment_package_filename
 
-    def _add_py_deps(self, zip, deps_dir):
+    def _add_py_deps(self, zip_fileobj, deps_dir):
         # type: (zipfile.ZipFile, str) -> None
         prefix_len = len(deps_dir) + 1
         for root, dirnames, filenames in os.walk(deps_dir):
@@ -106,23 +107,23 @@ class LambdaDeploymentPackager(object):
             for filename in filenames:
                 full_path = os.path.join(root, filename)
                 zip_path = full_path[prefix_len:]
-                zip.write(full_path, zip_path)
+                zip_fileobj.write(full_path, zip_path)
 
-    def _add_app_files(self, zip, project_dir):
+    def _add_app_files(self, zip_fileobj, project_dir):
         # type: (zipfile.ZipFile, str) -> None
         chalice_router = inspect.getfile(app)
         if chalice_router.endswith('.pyc'):
             chalice_router = chalice_router[:-1]
-        zip.write(chalice_router, 'chalice/app.py')
+        zip_fileobj.write(chalice_router, 'chalice/app.py')
 
         chalice_init = inspect.getfile(chalice)
         if chalice_init.endswith('.pyc'):
             chalice_init = chalice_init[:-1]
-        zip.write(chalice_init, 'chalice/__init__.py')
+        zip_fileobj.write(chalice_init, 'chalice/__init__.py')
 
-        zip.write(os.path.join(project_dir, 'app.py'),
-                  'app.py')
-        self._add_chalice_lib_if_needed(project_dir, zip)
+        zip_fileobj.write(os.path.join(project_dir, 'app.py'),
+                          'app.py')
+        self._add_chalice_lib_if_needed(project_dir, zip_fileobj)
 
     def _hash_project_dir(self, requirements_file, vendor_dir):
         # type: (str, str) -> str
@@ -138,10 +139,20 @@ class LambdaDeploymentPackager(object):
 
     def _hash_vendor_dir(self, vendor_dir, md5):
         # type: (str, Any) -> None
-        for rootdir, dirnames, filenames in os.walk(vendor_dir):
+        for rootdir, _, filenames in os.walk(vendor_dir):
             for filename in filenames:
                 fullpath = os.path.join(rootdir, filename)
                 with open(fullpath, 'rb') as f:
+                    # Not actually an issue, but pylint will complain
+                    # about the f var being used in the lambda function
+                    # is being used in a loop.  This is ok because
+                    # we're immediately using the lambda function.
+                    # Also binding it as a default argument fixes
+                    # pylint, but mypy will complain that it can't
+                    # infer the types.  So the compromise here is to
+                    # just write it the idiomatic way and have pylint
+                    # ignore this warning.
+                    # pylint: disable=cell-var-from-loop
                     for chunk in iter(lambda: f.read(1024 * 1024), b''):
                         md5.update(chunk)
 
@@ -186,14 +197,14 @@ class LambdaDeploymentPackager(object):
         return filename == 'app.py' or filename.startswith(
             ('chalicelib/', 'chalice/'))
 
-    def _add_chalice_lib_if_needed(self, project_dir, zip):
+    def _add_chalice_lib_if_needed(self, project_dir, zip_fileobj):
         # type: (str, zipfile.ZipFile) -> None
         libdir = os.path.join(project_dir, self._CHALICE_LIB_DIR)
         if os.path.isdir(libdir):
-            for rootdir, dirnames, filenames in os.walk(libdir):
+            for rootdir, _, filenames in os.walk(libdir):
                 for filename in filenames:
                     fullpath = os.path.join(rootdir, filename)
                     zip_path = os.path.join(
                         self._CHALICE_LIB_DIR,
                         fullpath[len(libdir) + 1:])
-                    zip.write(fullpath, zip_path)
+                    zip_fileobj.write(fullpath, zip_path)

@@ -4,7 +4,7 @@ import json
 import importlib
 import logging
 
-from botocore import session
+from botocore.session import Session
 from typing import Any, Optional, Dict  # noqa
 
 from chalice import __version__ as chalice_version
@@ -19,8 +19,8 @@ from chalice.logs import LogRetriever
 
 
 def create_botocore_session(profile=None, debug=False):
-    # type: (str, bool) -> session.Session
-    s = session.Session(profile=profile)
+    # type: (str, bool) -> Session
+    s = Session(profile=profile)
     _add_chalice_user_agent(s)
     if debug:
         s.set_debug_logger('')
@@ -29,7 +29,7 @@ def create_botocore_session(profile=None, debug=False):
 
 
 def _add_chalice_user_agent(session):
-    # type: (session.Session) -> None
+    # type: (Session) -> None
     suffix = '%s/%s' % (session.user_agent_name, session.user_agent_version)
     session.user_agent_name = 'aws-chalice'
     session.user_agent_version = chalice_version
@@ -75,12 +75,12 @@ class CLIFactory(object):
         self.profile = profile
 
     def create_botocore_session(self):
-        # type: () -> session.Session
+        # type: () -> Session
         return create_botocore_session(profile=self.profile,
                                        debug=self.debug)
 
     def create_default_deployer(self, session, prompter):
-        # type: (session.Session, deployer.NoPrompt) -> deployer.Deployer
+        # type: (Session, deployer.NoPrompt) -> deployer.Deployer
         return deployer.create_default_deployer(
             session=session, prompter=prompter)
 
@@ -122,7 +122,7 @@ class CLIFactory(object):
         return create_app_packager(config)
 
     def create_log_retriever(self, session, lambda_arn):
-        # type: (session.Session, str) -> LogRetriever
+        # type: (Session, str) -> LogRetriever
         client = TypedAWSClient(session)
         retriever = LogRetriever.create_from_arn(client, lambda_arn)
         return retriever

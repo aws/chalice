@@ -36,7 +36,7 @@ extension-pkg-whitelist=
 # operator. Joining a lot of strings can lead to a maximum recursion error in
 # Pylint and this flag can prevent that. It has one side effect, the resulting
 # AST will be different than the one from reality.
-optimize-ast=no
+optimize-ast=yes
 
 
 [MESSAGES CONTROL]
@@ -59,7 +59,7 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=E1608,R0201,W1627,E1601,E1603,E1602,E1605,E1604,E1607,E1606,W1621,W1620,W1623,W1622,W1625,W1624,W1609,W1608,W1607,W1606,W1605,W1604,W1603,W1602,W1601,W1639,W0613,W1640,I0021,W1638,I0020,C0111,W1618,W1619,W1630,W1626,W1637,W1634,W1635,W1610,W1611,W1612,W1613,W1614,W1615,W1616,W1617,W1632,R0903,W1633,W0231,W0704,W0232,W1628,W1629,W1636
+disable=R0201,W0613,I0021,I0020,C0111,W1618,W1619,R0902,R0903,W0231,W0611,R0913,W0703,C0330,R0204,I0011
 
 
 [REPORTS]
@@ -162,7 +162,9 @@ module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 
 # Regular expression matching correct method names
-method-rgx=[a-z_][a-z0-9_]{2,50}$
+# Allow for the ast visitor method names of visit_CamelCase.
+# Allow for do_HTTPMETHOD used in chalice local.
+method-rgx=([a-z_][a-z0-9_]{2,50}|visit_[a-zA-Z]+|do_[A-Z]+)$
 
 # Naming hint for method names
 method-name-hint=[a-z_][a-z0-9_]{2,30}$
@@ -221,7 +223,7 @@ notes=FIXME,XXX
 [SIMILARITIES]
 
 # Minimum lines number of a similarity.
-min-similarity-lines=3
+min-similarity-lines=5
 
 # Ignore comments when computing similarities.
 ignore-comments=no
