@@ -255,6 +255,17 @@ def test_can_match_exact_route(actual_url, matched_url):
             matcher.match_route(actual_url)
 
 
+def test_lambda_event_contains_source_ip():
+    converter = local.LambdaEventConverter(
+        local.RouteMatcher(['/foo/bar']))
+    event = converter.create_lambda_event(
+        method='GET',
+        path='/foo/bar',
+        headers={'content-type': 'application/json'}
+    )
+    assert event.get('requestContext').get('identity').get('sourceIp') == '127.0.0.1'
+
+
 def test_can_create_lambda_event():
     converter = local.LambdaEventConverter(
         local.RouteMatcher(['/foo/bar', '/foo/{capture}']))
@@ -267,6 +278,9 @@ def test_can_create_lambda_event():
         'requestContext': {
             'httpMethod': 'GET',
             'resourcePath': '/foo/{capture}',
+            'identity': {
+                'sourceIp': '127.0.0.1'
+            },
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
@@ -289,6 +303,9 @@ def test_can_create_lambda_event_for_put_request():
         'requestContext': {
             'httpMethod': 'PUT',
             'resourcePath': '/foo/{capture}',
+            'identity': {
+                'sourceIp': '127.0.0.1'
+            },
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
@@ -312,6 +329,9 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         'requestContext': {
             'httpMethod': 'POST',
             'resourcePath': '/foo/{capture}',
+            'identity': {
+                'sourceIp': '127.0.0.1'
+            },
         },
         'headers': {'content-type': 'application/x-www-form-urlencoded'},
         'pathParameters': {'capture': 'other'},
