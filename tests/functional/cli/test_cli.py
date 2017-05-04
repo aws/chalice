@@ -203,6 +203,21 @@ def test_api_gateway_mutex_with_positional_arg(runner, mock_cli_factory,
     assert not mock_deployer.deploy.called
 
 
+def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
+                                       mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy,
+                                  ['--api-gateway-stage', 'notdev'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        mock_cli_factory.create_config_obj.assert_called_with(
+            autogen_policy=True, chalice_stage_name='dev',
+            api_gateway_stage='notdev'
+        )
+
+
 def test_can_retrieve_url(runner, mock_cli_factory):
     deployed_values = {
         "dev": {
