@@ -43,7 +43,7 @@ for more detailed information about upgrading to this release.
   A chalice stage is a completely separate set of AWS resources.
   As a result, most configuration values can also be specified
   per chalice stage.
-  (`#264 <https://github.com/awslabs/chalice/pull/264>__,
+  (`#264 <https://github.com/awslabs/chalice/pull/264>`__,
   `#270 <https://github.com/awslabs/chalice/pull/270>`__)
 * Add support for ``iam_role_file``, which allows you to
   specify the file location of an IAM policy to use for your app
