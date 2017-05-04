@@ -65,11 +65,13 @@ class RouteMatcher(object):
 
 
 class LambdaEventConverter(object):
+
+    local_source_ip = '127.0.0.1'
+
     """Convert an HTTP request to an event dict used by lambda."""
     def __init__(self, route_matcher):
         # type: (RouteMatcher) -> None
         self._route_matcher = route_matcher
-        self._local_source_ip = '127.0.0.1'
 
     def create_lambda_event(self, method, path, headers, body=None):
         # type: (str, str, Dict[str, str], str) -> EventType
@@ -81,7 +83,7 @@ class LambdaEventConverter(object):
                 'httpMethod': method,
                 'resourcePath': view_route.route,
                 'identity': {
-                    'sourceIp': self._local_source_ip
+                    'sourceIp': LambdaEventConverter.local_source_ip
                 },
             },
             'headers': dict(headers),
