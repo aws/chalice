@@ -116,7 +116,9 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(
-        chalice_stage_name=stage, autogen_policy=autogen_policy)
+        chalice_stage_name=stage, autogen_policy=autogen_policy,
+        api_gateway_stage=api_gateway_stage,
+    )
     session = factory.create_botocore_session()
     d = factory.create_default_deployer(session=session, prompter=click)
     deployed_values = d.deploy(config, chalice_stage_name=stage)
