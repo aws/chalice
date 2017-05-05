@@ -14,7 +14,7 @@ from collections import Mapping
 # startup overhead.
 
 
-_PARAMS = re.compile('{\w+}')
+_PARAMS = re.compile('{(\w+)\+?}')
 
 
 def handle_decimals(obj):
@@ -292,9 +292,7 @@ class RouteEntry(object):
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
             return []
-        # The [1:-1] slice is to remove the braces
-        # e.g {foobar} -> foobar
-        results = [r[1:-1] for r in _PARAMS.findall(self.uri_pattern)]
+        results = _PARAMS.findall(self.uri_pattern)
         return results
 
     def __eq__(self, other):
