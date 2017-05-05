@@ -2,9 +2,9 @@ import os
 import zipfile
 import json
 
-from chalice.constants import WELCOME_PROMPT
-
 from typing import IO, Dict, Any  # noqa
+
+from chalice.constants import WELCOME_PROMPT
 
 
 def remove_stage_from_deployed_values(key, filename):

@@ -3,6 +3,7 @@
 Handles Lambda and API Gateway deployments.
 
 """
+from __future__ import print_function
 import json
 import os
 import sys
@@ -395,9 +396,8 @@ class APIGatewayDeployer(object):
             rest_api_id = existing_resources.rest_api_id
             return self._create_resources_for_api(config, rest_api_id,
                                                   lambda_arn)
-        else:
-            print("Initiating first time deployment...")
-            return self._first_time_deploy(config, lambda_arn)
+        print("Initiating first time deployment...")
+        return self._first_time_deploy(config, lambda_arn)
 
     def _first_time_deploy(self, config, lambda_arn):
         # type: (Config, str) -> Tuple[str, str, str]
@@ -501,12 +501,12 @@ class ApplicationPolicyHandler(object):
             self._osutils.get_file_contents(filename, binary=False)
         )
 
-    def record_policy(self, config, policy):
+    def record_policy(self, config, policy_document):
         # type: (Config, Dict[str, Any]) -> None
         policy_file = self._app_policy_file(config)
         self._osutils.set_file_contents(
             policy_file,
-            json.dumps(policy, indent=2, separators=(',', ': ')),
+            json.dumps(policy_document, indent=2, separators=(',', ': ')),
             binary=False
         )
 
