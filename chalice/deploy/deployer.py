@@ -159,8 +159,8 @@ class Deployer(object):
             print('No existing resources found for stage %s.' %
                   chalice_stage_name)
             return
-        self._lambda_deploy.delete(existing_resources)
         self._apigateway_deploy.delete(existing_resources)
+        self._lambda_deploy.delete(existing_resources)
 
     def deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
         # type: (Config, str) -> Dict[str, Any]
@@ -216,6 +216,11 @@ class LambdaDeployer(object):
         # type: (DeployedResources) -> None
         handler_name = existing_resources.api_handler_name
         role_arn = self._get_lambda_role_arn(handler_name)
+        print('Deleting lambda function %s' % handler_name)
+        try:
+            self._aws_client.delete_function(handler_name)
+        except ResourceDoesNotExistError as e:
+            print('No lambda function named %s found.' % e)
         if role_arn is not None:
             role_name = role_arn.split('/')[1]
             if self._prompter.confirm(
@@ -223,11 +228,7 @@ class LambdaDeployer(object):
                     default=False, abort=False):
                 print('Deleting role name %s' % role_name)
                 self._aws_client.delete_role(role_name)
-        print('Deleting lambda function %s' % handler_name)
-        try:
-            self._aws_client.delete_function(handler_name)
-        except ResourceDoesNotExistError as e:
-            print('No lambda function named %s found.' % e)
+
 
     def deploy(self, config, existing_resources, stage_name):
         # type: (Config, OPT_RESOURCES, str) -> Dict[str, str]
