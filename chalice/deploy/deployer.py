@@ -229,7 +229,6 @@ class LambdaDeployer(object):
                 print('Deleting role name %s' % role_name)
                 self._aws_client.delete_role(role_name)
 
-
     def deploy(self, config, existing_resources, stage_name):
         # type: (Config, OPT_RESOURCES, str) -> Dict[str, str]
         deployed_values = {}
