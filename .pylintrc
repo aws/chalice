@@ -36,7 +36,7 @@ extension-pkg-whitelist=
 # operator. Joining a lot of strings can lead to a maximum recursion error in
 # Pylint and this flag can prevent that. It has one side effect, the resulting
 # AST will be different than the one from reality.
-optimize-ast=yes
+optimize-ast=no
 
 
 [MESSAGES CONTROL]
