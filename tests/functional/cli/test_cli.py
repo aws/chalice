@@ -166,6 +166,29 @@ def test_can_deploy(runner, mock_cli_factory, mock_deployer):
             assert data == deployed_values
 
 
+def test_can_delete(runner, mock_cli_factory, mock_deployer):
+    deployed_values = {
+        'dev': {
+            'api_handler_arn': 'foo',
+            'rest_api_id': 'bar',
+        }
+    }
+    mock_deployer.delete.return_value = None
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        deployed_file = os.path.join('.chalice', 'deployed.json')
+        with open(deployed_file, 'wb') as f:
+            f.write(json.dumps(deployed_values).encode('utf-8'))
+        result = _run_cli_command(runner, cli.delete, [],
+                                  cli_factory=mock_cli_factory)
+
+        assert result.exit_code == 0
+        with open(deployed_file) as f:
+            data = json.load(f)
+            assert data == {}
+
+
 def test_warning_when_using_deprecated_arg(runner, mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
