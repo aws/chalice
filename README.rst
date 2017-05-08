@@ -725,7 +725,7 @@ using the AWS Console.  This includes:
 
 * Injecting the ``Access-Control-Allow-Origin: *`` header to your
   responses, including all error responses you can return.
-* Automatically adding an ``OPTIONS`` method so support preflighting
+* Automatically adding an ``OPTIONS`` method to support preflighting
   requests.
 
 The preflight request will return a response that includes:
@@ -762,7 +762,7 @@ Code sample defining more CORS headers:
         allow_headers=['X-Special-Header'],
         max_age=600,
         expose_headers=['X-Special-Header'],
-	allow_credentials=True
+        allow_credentials=True
     )
     @app.route('/custom_cors', methods=['GET'], cors=cors_config)
     def supports_custom_cors():
