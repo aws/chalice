@@ -6,7 +6,7 @@ Chalice
    This class represents a chalice application.  It provides:
 
    * The ability to register routes using the :meth:`route` method.
-   * Within a few function, the ability to introspect the current
+   * Within a view function, the ability to introspect the current
      request using the ``current_request`` attribute which is an instance
      of the :class:`Request` class.
 
@@ -30,7 +30,7 @@ Chalice
          app = Chalice(app_name="appname")
          app.debug = True
 
-   .. method:: route(path, \* , [methods [, name], authorization_type, authorizer_id, api_key_required])
+   .. method:: route(path, \*\*options)
 
       Register a view function for a particular URI path.  This method
       is intended to be used as a decorator for a view function.  For example:
@@ -64,15 +64,27 @@ Chalice
         function.  You generally do not need to set this value.  The name
         of the view function is used as the default value for the view name.
 
-      :param str authorization_type: Optional parameter to specify the type
-        of authorization used for the view.
+      :param Authorizer authorizer: Specify an authorizer to use for this
+        view.  Can be an instance of :class:`CognitoUserPoolAuthorizer` or
+        :class:`CustomAuthorizer`.
 
-      :param str authorizer_id: Optional parameter to specify the identifier
-        of an Authorizer to use on this view, if the authorization_type is
-        CUSTOM.
+      :param str content_types: A list of content types to accept for
+        this view.  By default ``application/json`` is accepted.  If
+        this value is specified, then chalice will reject any incoming request
+        that does not match the provided list of content types with a
+        415 Unsupported Media Type response.
 
       :param boolean api_key_required: Optional parameter to specify whether
-        the method required a valid ApiKey
+        the method required a valid API key.
+
+      :param cors: Specify if CORS is supported for this view.  This can either
+        by a boolean value or an instance of :class:`CORSConfig`.  Setting this
+        value is set to ``True`` gives similar behavior to enabling CORS in the
+        AWS Console.  This includes injecting the
+        ``Access-Control-Allow-Origin`` header to have a value of ``*`` as well
+        as adding an ``OPTIONS`` method to support preflighting requests.  If
+        you would like more control over how CORS is configured, you can
+        provide an instance of :class:`CORSConfig`.
 
 
 Request
@@ -82,6 +94,19 @@ Request
 
   A class that represents the current request.  This is mapped to
   the ``app.current_request`` object.
+
+  .. code-block:: python
+
+      @app.route('/objects/{key}', methods=['GET', 'PUT'])
+      def myobject(key):
+          request = app.current_request
+          if request.method == 'PUT':
+              # handle PUT request
+              pass
+          elif request.method == 'GET':
+              # handle GET request
+              pass
+
 
   .. attribute:: query_params
 
@@ -101,7 +126,9 @@ Request
 
   .. attribute:: json_body
 
-     The parsed JSON body (``json.loads(raw_body)``).
+     The parsed JSON body (``json.loads(raw_body)``).  This value will only
+     be non-None if the Content-Type header is ``application/json``, which
+     is the default content type value in chalice.
 
   .. attribute:: raw_body
 
@@ -116,6 +143,12 @@ Request
 
      A dict of configuration for the API Gateway stage.
 
+  .. method:: to_dict()
+
+     Convert the :class:`Request` object to a dictionary.  This is useful
+     for debugging purposes.  This dictionary is guaranteed to be JSON
+     serializable so you can return this value from a chalice view.
+
 
 Response
 ========
@@ -125,6 +158,20 @@ Response
   A class that represents the response for the view function.  You
   can optionally return an instance of this class from a view function if you
   want complete control over the returned HTTP response.
+
+  .. code-block:: python
+
+      from chalice import Chalice, Response
+
+      app = Chalice(app_name='custom-response')
+
+
+      @app.route('/')
+      def index():
+          return Response(body='hello world!',
+                          status_code=200,
+                          headers={'Content-Type': 'text/plain'})
+
 
   .. versionadded:: 0.6.0
 
@@ -140,3 +187,117 @@ Response
   .. attribute:: status_code
 
      The integer HTTP status code to send back in the HTTP response.
+
+
+Authorization
+=============
+
+Each of these classes below can be provided using the ``authorizer`` argument
+for an ``@app.route(authorizer=...)`` call:
+
+
+.. code-block:: python
+
+    authorizer = CognitoUserPoolAuthorizer(
+        'MyPool', header='Authorization',
+        provider_arns=['arn:aws:cognito:...:userpool/name'])
+
+    @app.route('/user-pools', methods=['GET'], authorizer=authorizer)
+    def authenticated():
+        return {"secure": True}
+
+
+.. class:: CognitoUserPoolAuthorizer(name, provider_arns, header='Authorization')
+
+  .. versionadded:: 0.8.1
+
+  .. attribute:: name
+
+     The name of the authorizer.
+
+  .. attribute:: provider_arns
+
+     The Cognito User Pool arns to use.
+
+  .. attribute:: header
+
+     The header where the auth token will be specified.
+
+
+.. class:: CustomAuthorizer(name, authorizer_uri, ttl_seconds, header='Authorization')
+
+  .. versionadded:: 0.8.1
+
+  .. attribute:: name
+
+     The name of the authorizer.
+
+  .. attribute:: authorizer_uri
+
+     The URI of the lambda function to use for the custom authorizer.  This
+     usually has the form
+     ``arn:aws:apigateway:{region}:lambda:path/2015-03-01/functions/{lambda_arn}/invocations``.
+
+  .. attribute:: ttl_seconds
+
+     The number of seconds to cache the returned policy from a custom
+     authorizer.
+
+  .. attribute:: header
+
+     The header where the auth token will be specified.
+
+CORS
+====
+
+.. class:: CORSConfig(allow_origin='*', allow_headers=None, expose_headers=None, max_age=None, allow_credentials=None)
+
+  CORS configuration to attach to a route.
+
+  .. code-block:: python
+
+      from chalice import CORSConfig
+      cors_config = CORSConfig(
+          allow_origin='https://foo.example.com',
+          allow_headers=['X-Special-Header'],
+          max_age=600,
+          expose_headers=['X-Special-Header'],
+          allow_credentials=True
+      )
+
+      @app.route('/custom_cors', methods=['GET'], cors=cors_config)
+      def supports_custom_cors():
+          return {'cors': True}
+
+  .. versionadded:: 0.8.1
+
+  .. attribute:: allow_origin
+
+     The value of the ``Access-Control-Allow-Origin`` to send in the response.
+     Keep in mind that even though the ``Access-Control-Allow-Origin`` header
+     can be set to a string that is a space separated list of origins, this
+     behavior does not work on all clients that implement CORS. You should only
+     supply a single origin to the ``CORSConfig`` object. If you need to supply
+     multiple origins you will need to define a custom handler for it that
+     accepts ``OPTIONS`` requests and matches the ``Origin`` header against a
+     whitelist of origins.  If the match is succssful then return just their
+     ``Origin`` back to them in the ``Access-Control-Allow-Origin`` header.
+
+  .. attribute:: allow_headers
+
+     The list of additional allowed headers.  This list is added to list of
+     built in allowed headers: ``Content-Type``, ``X-Amz-Date``,
+     ``Authorization``, ``X-Api-Key``, ``X-Amz-Security-Token``.
+
+  .. attribute:: expose_headers
+
+     A list of values to return for the ``Access-Control-Expose-Headers``:
+
+  .. attribute:: max_age
+
+     The value for the ``Access-Control-Max-Age``
+
+  .. attribute:: allow_credentials
+
+     A boolean value that sets the value of
+     ``Access-Control-Allow-Credentials``.
