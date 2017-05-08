@@ -22,7 +22,7 @@ Stage Specific Configuration
 
 As of version 0.7.0 of chalice, you can specify configuration
 that is specific to a chalice stage as well as configuration that should
-be shared across all stages.  See the :doc:`topics/stages` doc for more
+be shared across all stages.  See the :doc:`stages` doc for more
 information about chalice stages.
 
 * ``stages`` - This value of this key is a mapping of chalice stage

@@ -55,6 +55,8 @@ As a general rule of thumb, code that you write goes in either ``app.py`` or
 ``chalicelib/``, and dependencies are either specified in ``requirements.txt``
 or placed in the ``vendor/`` directory.
 
+.. _package-examples:
+
 Examples
 --------
 
