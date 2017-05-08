@@ -140,7 +140,7 @@ def test_can_package_with_single_file(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('package.zip')
         with zipfile.ZipFile('package.zip', 'r') as f:
-            assert f.namelist() == ['deployment.zip', 'sam.json']
+            assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
 
 
 def test_can_deploy(runner, mock_cli_factory, mock_deployer):
