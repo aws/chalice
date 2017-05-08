@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Fix issue where ``--api-gateway-stage`` was being
   ignored (`#325 <https://github.com/awslabs/chalice/pull/325>`__)
+* Add ``chalice delete`` command
+  (`#40 <https://github.com/awslabs/chalice/issues/40>`__)
 
 
 0.8.1
