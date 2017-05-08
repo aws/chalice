@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.8.2
+=====
 
 * Fix issue where ``--api-gateway-stage`` was being
   ignored (`#325 <https://github.com/awslabs/chalice/pull/325>`__)
