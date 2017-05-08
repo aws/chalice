@@ -1053,17 +1053,28 @@ need to use an ``AWS_PROFILE`` that has sufficient permissions
 to your AWS resources used in your ``app.py``.
 
 
-Backlog
-=======
+Deleting Your App
+=================
 
-These are features that are in the backlog:
+You can use the ``chalice delete`` command to delete your app.
+Similar to the ``chalice deploy`` command, you can specify which
+chalice stage to delete.  By default it will delete the ``dev`` stage::
 
-* Adding full support for API gateway stages - `issue 20
-  <https://github.com/awslabs/chalice/issues/20>`__
+    $ chalice delete --stage dev
+    Deleting rest API duvw4kwyl3
+    Deleting lambda function helloworld-dev
+    Delete the role helloworld-dev? [y/N]: y
+    Deleting role name helloworld-dev
 
-Please share any feedback on the above issues.  We'd also love
-to hear from you.  Please create any Github issues for additional
-features you'd like to see: https://github.com/awslabs/chalice/issues
+
+Feedback
+========
+
+We'also love to hear from you.  Please create any Github issues for
+additional features you'd like to see over at
+https://github.com/awslabs/chalice/issues.  You can also chat with us
+on gitter: https://gitter.im/awslabs/chalice
+
 
 FAQ
 ===
