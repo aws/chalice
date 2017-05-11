@@ -944,6 +944,7 @@ Tutorial: Using Custom Authentication
 AWS API Gateway routes can be authenticated in multiple ways:
 
 - API Key
+- AWS IAM
 - Cognito User Pools
 - Custom Auth Handler
 
@@ -957,6 +958,17 @@ API Key
         return {"secure": True}
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
+
+Using Amazon IAM
+----------------
+
+.. code-block:: python
+    authorizer = IamAuthorizer()
+
+    @app.route('/iam-role', methods=['GET'], authorizer=authorizer)
+    def authenticated():
+        return {"secure": True}
+
 
 Using Amazon Cognito User Pools
 -------------------------------

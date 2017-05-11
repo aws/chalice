@@ -108,6 +108,22 @@ class Authorizer(object):
         raise NotImplementedError("to_swagger")
 
 
+class IamAuthorizer(Authorizer):
+
+    _AUTH_TYPE = 'aws_iam'
+
+    def __init__(self):
+        self.name = 'sigv4'
+
+    def to_swagger(self):
+        return {
+            'in': 'header',
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'x-amazon-apigateway-authtype': 'awsSigv4',
+        }
+
+
 class CognitoUserPoolAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'cognito_user_pools'
