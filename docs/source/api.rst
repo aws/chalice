@@ -196,7 +196,6 @@ Each of these classes below can be provided using the ``authorizer`` argument
 for an ``@app.route(authorizer=...)`` call:
 
 
-
 .. code-block:: python
 
     authorizer = CognitoUserPoolAuthorizer(
