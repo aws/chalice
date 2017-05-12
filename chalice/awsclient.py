@@ -27,7 +27,7 @@ from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 
 
-_ENV_VAR = Optional[Dict[str, str]]
+_STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 
 
@@ -64,8 +64,9 @@ class TypedAWSClient(object):
         return response
 
     def create_function(self, function_name, role_arn, zip_contents,
-                        environment_variables=None, runtime='python2.7'):
-        # type: (str, str, str, _ENV_VAR, str) -> str
+                        environment_variables=None, runtime='python2.7',
+                        tags=None):
+        # type: (str, str, str, _STR_MAP, str, Optional[Dict[str, str]]) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': runtime,
@@ -76,6 +77,8 @@ class TypedAWSClient(object):
         }
         if environment_variables is not None:
             kwargs['Environment'] = {"Variables": environment_variables}
+        if tags is not None:
+            kwargs['Tags'] = tags
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -103,8 +106,8 @@ class TypedAWSClient(object):
 
     def update_function(self, function_name, zip_contents,
                         environment_variables=None,
-                        runtime=None):
-        # type: (str, str, _ENV_VAR, _OPT_STR) -> Dict[str, Any]
+                        runtime=None, tags=None):
+        # type: (str, str, _STR_MAP, _OPT_STR, _STR_MAP) -> Dict[str, Any]
         lambda_client = self._client('lambda')
         return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
@@ -122,6 +125,9 @@ class TypedAWSClient(object):
         if runtime is not None:
             kwargs['Runtime'] = runtime
         lambda_client.update_function_configuration(**kwargs)
+        if tags is not None:
+            lambda_client.tag_resource(Resource=return_value['FunctionArn'],
+                                       Tags=tags)
         return return_value
 
     def get_role_arn_for_name(self, name):

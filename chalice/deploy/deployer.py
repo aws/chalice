@@ -238,13 +238,13 @@ class LambdaDeployer(object):
             handler_name = existing_resources.api_handler_name
             self._confirm_any_runtime_changes(config, handler_name)
             self._get_or_create_lambda_role_arn(config, handler_name)
-            self._update_lambda_function(config, handler_name)
+            self._update_lambda_function(config, handler_name, stage_name)
             function_arn = existing_resources.api_handler_arn
             deployed_values['api_handler_name'] = handler_name
         else:
             function_name = '%s-%s' % (config.app_name, stage_name)
             function_arn = self._first_time_lambda_create(
-                config, function_name)
+                config, function_name, stage_name)
             deployed_values['api_handler_name'] = function_name
         deployed_values['api_handler_arn'] = function_arn
         return deployed_values
@@ -313,8 +313,8 @@ class LambdaDeployer(object):
                                          policy_document=app_policy)
         self._app_policy.record_policy(config, app_policy)
 
-    def _first_time_lambda_create(self, config, function_name):
-        # type: (Config, str) -> str
+    def _first_time_lambda_create(self, config, function_name, stage_name):
+        # type: (Config, str, str) -> str
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
@@ -327,10 +327,18 @@ class LambdaDeployer(object):
         return self._aws_client.create_function(
             function_name, role_arn, zip_contents,
             config.environment_variables,
-            config.lambda_python_version)
+            config.lambda_python_version,
+            self._function_tags(config, stage_name),
+        )
 
-    def _update_lambda_function(self, config, lambda_name):
-        # type: (Config, str) -> None
+    def _function_tags(self, config, stage_name):
+        # type: (Config, str) -> Dict[str, str]
+        tag = 'version=%s:stage=%s:app=%s' % (chalice_version,
+                                              stage_name, config.app_name)
+        return {'aws-chalice': tag}
+
+    def _update_lambda_function(self, config, lambda_name, stage_name):
+        # type: (Config, str, str) -> None
         print("Updating lambda function...")
         project_dir = config.project_dir
         packager = self._packager
@@ -345,9 +353,12 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         print("Sending changes to lambda.")
-        self._aws_client.update_function(lambda_name, zip_contents,
-                                         config.environment_variables,
-                                         config.lambda_python_version)
+        self._aws_client.update_function(
+            lambda_name, zip_contents,
+            config.environment_variables,
+            config.lambda_python_version,
+            self._function_tags(config, stage_name),
+        )
 
     def _write_config_to_disk(self, config):
         # type: (Config) -> None

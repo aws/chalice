@@ -3,6 +3,7 @@ import mock
 import pytest
 from chalice.config import Config
 from chalice import package
+from chalice import __version__ as chalice_version
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.swagger import SwaggerGenerator
 
@@ -111,6 +112,22 @@ def test_can_inject_environment_vars(sample_app,
     properties = template['Resources']['APIHandler']['Properties']
     assert 'Environment' in properties
     assert properties['Environment']['Variables'] == {'FOO': 'BAR'}
+
+
+def test_chalice_tag_added_to_function(sample_app,
+                                       mock_swagger_generator,
+                                       mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
+                           app_name='myapp')
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['Tags'] == {
+        'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version}
 
 
 def test_endpoint_url_reflects_apig_stage(sample_app,
