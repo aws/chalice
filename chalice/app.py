@@ -375,11 +375,11 @@ class Chalice(object):
         )
         try:
             result = results['Parameters'][0]['Value']
-            if cache:
-                self._param_cache[key] = result
-            return result
         except (KeyError, IndexError):
-            return None
+            result = None
+        if cache:
+            self._param_cache[key] = result
+        return result
 
     @property
     def authorizers(self):

@@ -344,11 +344,24 @@ def test_can_delete_ssm_parameter(runner, mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({
+                'ssm_parameters': ['foo', 'bar']
+            }).encode('utf-8'))
+        cli_factory = factory.CLIFactory('.')
+        config = cli_factory.create_config_obj()
+        mock_cli_factory.create_config_obj.return_value = config
+
         result = _run_cli_command(
             runner, cli.param_delete, ['--key', 'foo'],
-            cli_factory=mock_cli_factory)
+            cli_factory=mock_cli_factory
+        )
         assert result.exit_code == 0
         assert result.output == ''
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+        assert data.get('ssm_parameters', []) == ['bar']
 
 
 def test_can_list_ssm_parameters(runner):
@@ -363,3 +376,15 @@ def test_can_list_ssm_parameters(runner):
         result = _run_cli_command(runner, cli.param_list, [])
         assert result.exit_code == 0
         assert result.output == 'var_1, var_2\n'
+
+
+def test_can_list_no_ssm_parameters_set(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({}).encode('utf-8'))
+        result = _run_cli_command(runner, cli.param_list, [])
+        assert result.exit_code == 0
+        assert result.output == 'No parameters set.\n'

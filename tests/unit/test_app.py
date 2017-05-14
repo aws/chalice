@@ -629,3 +629,31 @@ def test_can_fetch_ssm_parameters(stubbed_session):
         result = view()
         assert result == {"key": "bar"}
         assert mock_ssm.get_parameters.call_count == 1
+
+
+def test_can_fetch_nonexistant_ssm_parameter(stubbed_session):
+    mock_ssm = mock.Mock()
+    mock_ssm.get_parameters.return_value = {
+        'InvalidParameters': ['foo']
+    }
+    mock_session = mock.Mock()
+    mock_session.create_client.return_value = mock_ssm
+
+    with mock.patch('chalice.app.botocore.session') as mock_botocore:
+        mock_botocore.get_session.return_value = mock_session
+
+        demo = app.Chalice('app-name')
+
+        @demo.route('/')
+        def view():
+            value = demo.get_param('test', cache=True)
+            return {"key": value}
+
+        # Test once
+        result = view()
+        assert result == {"key": None}
+
+        # Test twice to check caching works correctly
+        result = view()
+        assert result == {"key": None}
+        assert mock_ssm.get_parameters.call_count == 1

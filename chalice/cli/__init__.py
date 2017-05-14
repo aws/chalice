@@ -152,8 +152,8 @@ def param_delete(ctx, key):
     param_names = set(config.ssm_parameters)
     if key in param_names:
         param_names.remove(key)
-    record_ssm_parameters(list(param_names), os.path.join(
-        config.project_dir, '.chalice', 'config.json'))
+        record_ssm_parameters(list(param_names), os.path.join(
+            config.project_dir, '.chalice', 'config.json'))
 
 
 @param.command('list')
