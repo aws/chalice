@@ -26,7 +26,6 @@ from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 
-
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 
@@ -47,6 +46,32 @@ class TypedAWSClient(object):
         self._session = session
         self._sleep = sleep
         self._client_cache = {}  # type: Dict[str, Any]
+
+    def ssm_put_param(self, key, value, overwrite, param_type):
+        # type: (str, str, bool, str) -> None
+        client = self._client('ssm')
+        client.put_parameter(
+            Name=key,
+            Value=value,
+            Type=param_type,
+            Overwrite=overwrite
+        )
+
+    def ssm_get_param(self, key, decrypt=False):
+        # type: (str, bool) -> str
+        client = self._client('ssm')
+        result = client.get_parameters(
+            Names=[key],
+            WithDecryption=decrypt
+        )['Parameters'][0]['Value']
+        return result
+
+    def ssm_delete_param(self, key):
+        # type: (str) -> None
+        client = self._client('ssm')
+        client.delete_parameter(
+            Name=key
+        )
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool

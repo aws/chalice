@@ -134,6 +134,14 @@ class Config(object):
                                   varies_per_chalice_stage=True)
 
     @property
+    def ssm_parameters(self):
+        # type: () -> List[str]
+        params = self._chain_lookup('ssm_parameters')
+        if params is None:
+            params = []
+        return params
+
+    @property
     def lambda_python_version(self):
         # type: () -> str
         # We may open this up to configuration later, but for now,

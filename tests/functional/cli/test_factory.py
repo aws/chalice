@@ -8,6 +8,7 @@ from pytest import fixture
 
 from chalice.cli import factory
 from chalice.deploy.deployer import Deployer
+from chalice.deploy.paramstore import ParameterStore
 from chalice.config import Config
 
 
@@ -61,6 +62,12 @@ def test_can_create_default_deployer(clifactory):
     session = clifactory.create_botocore_session()
     deployer = clifactory.create_default_deployer(session, None)
     assert isinstance(deployer, Deployer)
+
+
+def test_can_create_default_parameter_store(clifactory):
+    session = clifactory.create_botocore_session
+    store = clifactory.create_default_parameter_store(session, 'name')
+    assert isinstance(store, ParameterStore)
 
 
 def test_can_create_config_obj(clifactory):

@@ -331,6 +331,8 @@ class Chalice(object):
         self._authorizers = {}
         if self.configure_logs:
             self._configure_logging()
+        self._param_cache = {}
+        self._ssm_client = None
 
     def _configure_logging(self):
         log = logging.getLogger(self.app_name)
@@ -357,6 +359,25 @@ class Chalice(object):
                 if handler.stream == sys.stdout:
                     return True
         return False
+
+    def get_param(self, key, cache=False):
+        if cache and key in self._param_cache:
+            return self._param_cache[key]
+        import boto3  # pylint: disable=import-error
+        if self._ssm_client is None:
+            self._ssm_client = boto3.client('ssm')
+        key_name = 'chalice.%s.%s' % (self.app_name, key)
+        results = self._ssm_client.get_parameters(
+            Names=[key_name],
+            WithDecryption=True
+        )
+        try:
+            result = results['Parameters'][0]['Value']
+            if cache:
+                self._param_cache[key] = result
+            return result
+        except (KeyError, IndexError):
+            return None
 
     @property
     def authorizers(self):

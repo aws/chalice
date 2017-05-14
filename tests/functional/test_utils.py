@@ -5,6 +5,30 @@ import os
 from chalice import utils
 
 
+def test_add_record_ssm_parameters(tmpdir):
+    filename = str(tmpdir.join('config.json'))
+    config = {}
+    with open(filename, 'wb') as f:
+        f.write(json.dumps(config).encode('utf-8'))
+    utils.record_ssm_parameters(['foo', 'bar'], filename)
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    assert set(data['ssm_parameters']) == set(['foo', 'bar'])
+
+
+def test_update_record_ssm_parameters(tmpdir):
+    filename = str(tmpdir.join('config.json'))
+    config = {
+        "ssm_parameters": ['foo', 'bar']
+    }
+    with open(filename, 'wb') as f:
+        f.write(json.dumps(config).encode('utf-8'))
+    utils.record_ssm_parameters(['bar', 'baz'], filename)
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    assert set(data['ssm_parameters']) == set(['bar', 'baz'])
+
+
 def test_can_zip_single_file(tmpdir):
     source = tmpdir.mkdir('sourcedir')
     source.join('hello.txt').write(b'hello world')

@@ -7,6 +7,17 @@ from typing import IO, Dict, Any  # noqa
 from chalice.constants import WELCOME_PROMPT
 
 
+def record_ssm_parameters(param_names, filename):
+    # type: (List[str], str) -> None
+    final_values = {}  # type: Dict[str, Any]
+    with open(filename, 'r') as f:
+        final_values = json.load(f)
+    final_values['ssm_parameters'] = param_names
+    with open(filename, 'wb') as f:
+        data = json.dumps(final_values, indent=2, separators=(',', ': '))
+        f.write(data.encode('utf-8'))
+
+
 def remove_stage_from_deployed_values(key, filename):
     # type: (str, str) -> None
     """Delete a top level key from the deployed JSON file."""

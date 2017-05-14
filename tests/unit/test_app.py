@@ -1,11 +1,25 @@
 import base64
 import logging
 import json
+import sys
+import mock
 
 import pytest
 from pytest import fixture
 from chalice import app
 from chalice import NotFoundError
+
+
+@fixture
+def mock_boto3():
+    mock_client = mock.Mock()
+
+    class MockBoto3(object):
+        def client(*args, **kwargs):
+            return mock_client
+    sys.modules['boto3'] = MockBoto3
+
+    return mock_client
 
 
 def create_request_with_content_type(content_type):
@@ -31,7 +45,9 @@ def create_event(uri, method, path, content_type='application/json'):
         'stageVariables': {},
     }
 
-def create_empty_header_event(uri, method, path, content_type='application/json'):
+
+def create_empty_header_event(uri, method, path,
+                              content_type='application/json'):
     return {
         'requestContext': {
             'httpMethod': method,
@@ -90,9 +106,10 @@ def test_can_route_single_view():
     def index_view():
         return {}
 
-    assert demo.routes['/index'] == app.RouteEntry(index_view, 'index_view',
-                                                   '/index', ['GET'],
-                                                   content_types=['application/json'])
+    assert demo.routes['/index'] == app.RouteEntry(
+        index_view, 'index_view', '/index', ['GET'],
+        content_types=['application/json']
+    )
 
 
 def test_can_handle_multiple_routes():
@@ -176,7 +193,6 @@ def test_can_access_raw_body():
     def index_view():
         return {'rawbody': demo.current_request.raw_body}
 
-
     event = create_event('/index', 'GET', {})
     event['body'] = '{"hello": "world"}'
 
@@ -195,7 +211,6 @@ def test_raw_body_cache_returns_same_result():
         # Both should be the same value
         return {'rawbody': demo.current_request.raw_body,
                 'rawbody2': demo.current_request.raw_body}
-
 
     event = create_event('/index', 'GET', {})
     event['base64-body'] = base64.b64encode(
@@ -225,7 +240,6 @@ def test_json_body_available_with_right_content_type():
     @demo.route('/', methods=['POST'])
     def index():
         return demo.current_request.json_body
-
 
     event = create_event('/', 'POST', {})
     event['body'] = json.dumps({'foo': 'bar'})
@@ -359,6 +373,7 @@ def test_headers_have_basic_validation():
     assert 'Invalid-Header' not in response['headers']
     assert json.loads(response['body'])['Code'] == 'InternalServerError'
 
+
 def test_empty_headers_have_basic_validation():
     demo = app.Chalice('app-name')
 
@@ -370,6 +385,7 @@ def test_empty_headers_have_basic_validation():
     event = create_empty_header_event('/index', 'GET', {})
     response = demo(event, context=None)
     assert response['statusCode'] == 200
+
 
 def test_no_content_type_is_still_allowed():
     # When the content type validation happens in API gateway, it appears
@@ -390,7 +406,9 @@ def test_no_content_type_is_still_allowed():
 
 
 def test_route_equality():
-    view_function = lambda: {"hello": "world"}
+    def view_function():
+        return {"hello": "world"}
+
     a = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
@@ -409,7 +427,9 @@ def test_route_equality():
 
 
 def test_route_inequality():
-    view_function = lambda: {"hello": "world"}
+    def view_function():
+        return {"hello": "world"}
+
     a = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
@@ -589,3 +609,28 @@ def test_can_serialize_custom_authorizer():
             'authorizerResultTtlInSeconds': 10,
         }
     }
+
+
+def test_can_fetch_ssm_parameters(mock_boto3):
+    mock_boto3.get_parameters.return_value = {
+        'Parameters': [
+            {
+                'Name': 'foo',
+                'Value': 'bar'
+            }
+        ]
+    }
+    demo = app.Chalice('app-name')
+
+    @demo.route('/other')
+    def view():
+        value = demo.get_param('test', cache=True)
+        return {"key": value}
+
+    # Test once
+    result = view()
+    assert result == {"key": "bar"}
+    # Test twice to check caching works correctly
+    result = view()
+    assert result == {"key": "bar"}
+    assert mock_boto3.get_parameters.call_count == 1
