@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+0.8.2
+=====
+
+* Fix issue where ``--api-gateway-stage`` was being
+  ignored (`#325 <https://github.com/awslabs/chalice/pull/325>`__)
+* Add ``chalice delete`` command
+  (`#40 <https://github.com/awslabs/chalice/issues/40>`__)
+
+
 0.8.1
 =====
 
@@ -43,7 +52,7 @@ for more detailed information about upgrading to this release.
   A chalice stage is a completely separate set of AWS resources.
   As a result, most configuration values can also be specified
   per chalice stage.
-  (`#264 <https://github.com/awslabs/chalice/pull/264>__,
+  (`#264 <https://github.com/awslabs/chalice/pull/264>`__,
   `#270 <https://github.com/awslabs/chalice/pull/270>`__)
 * Add support for ``iam_role_file``, which allows you to
   specify the file location of an IAM policy to use for your app
@@ -51,7 +60,7 @@ for more detailed information about upgrading to this release.
 * Add support for setting environment variables in your app
   (`#273 <https://github.com/awslabs/chalice/pull/273>`__)
 * Add a ``generate-pipeline`` command
-  (`#278 <https://github.com/awslabs/chalice/pull/278>`__)
+  (`#277 <https://github.com/awslabs/chalice/pull/277>`__)
 
 
 0.6.0

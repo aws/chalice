@@ -116,7 +116,7 @@ class SAMTemplateGenerator(object):
     def _generate_function_events(self, app):
         # type: (Chalice) -> Dict[str, Any]
         events = {}
-        for path, view in app.routes.items():
+        for _, view in app.routes.items():
             for http_method in view.methods:
                 key_name = ''.join([
                     view.view_name, http_method.lower(),

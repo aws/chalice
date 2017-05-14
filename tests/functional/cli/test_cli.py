@@ -140,7 +140,7 @@ def test_can_package_with_single_file(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('package.zip')
         with zipfile.ZipFile('package.zip', 'r') as f:
-            assert f.namelist() == ['deployment.zip', 'sam.json']
+            assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
 
 
 def test_can_deploy(runner, mock_cli_factory, mock_deployer):
@@ -164,6 +164,29 @@ def test_can_deploy(runner, mock_cli_factory, mock_deployer):
         with open(deployed_file) as f:
             data = json.load(f)
             assert data == deployed_values
+
+
+def test_can_delete(runner, mock_cli_factory, mock_deployer):
+    deployed_values = {
+        'dev': {
+            'api_handler_arn': 'foo',
+            'rest_api_id': 'bar',
+        }
+    }
+    mock_deployer.delete.return_value = None
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        deployed_file = os.path.join('.chalice', 'deployed.json')
+        with open(deployed_file, 'wb') as f:
+            f.write(json.dumps(deployed_values).encode('utf-8'))
+        result = _run_cli_command(runner, cli.delete, [],
+                                  cli_factory=mock_cli_factory)
+
+        assert result.exit_code == 0
+        with open(deployed_file) as f:
+            data = json.load(f)
+            assert data == {}
 
 
 def test_warning_when_using_deprecated_arg(runner, mock_cli_factory):
@@ -201,6 +224,21 @@ def test_api_gateway_mutex_with_positional_arg(runner, mock_cli_factory,
         assert 'is deprecated' in result.output
 
     assert not mock_deployer.deploy.called
+
+
+def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
+                                       mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy,
+                                  ['--api-gateway-stage', 'notdev'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        mock_cli_factory.create_config_obj.assert_called_with(
+            autogen_policy=True, chalice_stage_name='dev',
+            api_gateway_stage='notdev'
+        )
 
 
 def test_can_retrieve_url(runner, mock_cli_factory):

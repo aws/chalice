@@ -1,5 +1,6 @@
 import zipfile
 import json
+import os
 
 from chalice import utils
 
@@ -56,3 +57,44 @@ def test_can_merge_recorded_values(tmpdir):
     with open(filename, 'r') as f:
         data = json.load(f)
     assert data == combined
+
+
+def test_can_remove_stage_from_deployed_values(tmpdir):
+    filename = str(tmpdir.join('deployed.json'))
+    deployed = {
+        'dev': {'deployed': 'values'},
+    }
+    left_after_removal = {
+        'prod': {'deployed': 'values'}
+    }
+    deployed.update(left_after_removal)
+    with open(filename, 'wb') as f:
+        f.write(json.dumps(deployed).encode('utf-8'))
+    utils.remove_stage_from_deployed_values('dev', filename)
+
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    assert data == left_after_removal
+
+
+def test_remove_stage_from_deployed_values_already_removed(tmpdir):
+    filename = str(tmpdir.join('deployed.json'))
+    deployed = {
+        'dev': {'deployed': 'values'},
+        'prod': {'deployed': 'values'}
+    }
+    with open(filename, 'wb') as f:
+        f.write(json.dumps(deployed).encode('utf-8'))
+    utils.remove_stage_from_deployed_values('fake_key', filename)
+
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    assert data == deployed
+
+
+def test_remove_stage_from_deployed_values_no_file(tmpdir):
+    filename = str(tmpdir.join('deployed.json'))
+    utils.remove_stage_from_deployed_values('fake_key', filename)
+
+    # Make sure it doesn't create the file if it didn't already exist
+    assert os.path.isfile(filename) == False

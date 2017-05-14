@@ -31,6 +31,10 @@ _ENV_VAR = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 
 
+class ResourceDoesNotExistError(Exception):
+    pass
+
+
 class TypedAWSClient(object):
 
     # 30 * 5 == 150 seconds or 2.5 minutes for the initial lambda
@@ -89,6 +93,14 @@ class TypedAWSClient(object):
                 continue
             return response['FunctionArn']
 
+    def delete_function(self, function_name):
+        # type: (str) -> None
+        lambda_client = self._client('lambda')
+        try:
+            lambda_client.delete_function(FunctionName=function_name)
+        except lambda_client.exceptions.ResourceNotFoundException:
+            raise ResourceDoesNotExistError(function_name)
+
     def update_function(self, function_name, zip_contents,
                         environment_variables=None,
                         runtime=None):
@@ -146,6 +158,17 @@ class TypedAWSClient(object):
                              policy_document=policy)
         return role_arn
 
+    def delete_role(self, name):
+        # type: (str) -> None
+        """Delete a role by first deleting all inline policies."""
+        client = self._client('iam')
+        inline_policies = client.list_role_policies(
+            RoleName=name
+        )['PolicyNames']
+        for policy_name in inline_policies:
+            self.delete_role_policy(name, policy_name)
+        client.delete_role(RoleName=name)
+
     def get_rest_api_id(self, name):
         # type: (str) -> Optional[str]
         """Get rest api id associated with an API name.
@@ -190,6 +213,14 @@ class TypedAWSClient(object):
             restApiId=rest_api_id,
             mode='overwrite',
             body=json.dumps(swagger_document, indent=2))
+
+    def delete_rest_api(self, rest_api_id):
+        # type: (str) -> None
+        client = self._client('apigateway')
+        try:
+            client.delete_rest_api(restApiId=rest_api_id)
+        except client.exceptions.NotFoundException:
+            raise ResourceDoesNotExistError(rest_api_id)
 
     def deploy_rest_api(self, rest_api_id, api_gateway_stage):
         # type: (str, str) -> None

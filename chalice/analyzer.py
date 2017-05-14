@@ -91,7 +91,7 @@ class BaseType(object):
 
     def __eq__(self, other):
         # type: (Any) -> bool
-        return type(self) == type(other)
+        return isinstance(other, self.__class__)
 
 
 # The next 5 classes are used to track the
@@ -124,7 +124,7 @@ class Boto3ClientType(BaseType):
 
     def __eq__(self, other):
         # type: (Any) -> bool
-        if type(other) != Boto3ClientType:
+        if not isinstance(other, self.__class__):
             return False
         return self.service_name == other.service_name
 
@@ -319,12 +319,14 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
     _SDK_PACKAGE = 'boto3'
     _CREATE_CLIENT = 'client'
 
-    def __init__(self, parsed_code):
-        # type: (ParsedCode) -> None
+    def __init__(self, parsed_code, binder=None):
+        # type: (ParsedCode, Optional[TypeBinder]) -> None
         self._symbol_table = parsed_code.symbol_table
         self._current_ast_namespace = parsed_code.parsed_ast
         self._node_inference = {}  # type: Dict[ast.AST, Any]
-        self._binder = TypeBinder()
+        if binder is None:
+            binder = TypeBinder()
+        self._binder = binder
 
     def bind_types(self):
         # type: () -> TypeBinder
@@ -360,8 +362,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def _new_inference_scope(self, parsed_code, binder):
         # type: (ParsedCode, TypeBinder) -> SymbolTableTypeInfer
-        instance = self.__class__(parsed_code)
-        instance._binder = binder
+        instance = self.__class__(parsed_code, binder)
         return instance
 
     def visit_Import(self, node):
@@ -568,7 +569,7 @@ class AppViewTransformer(ast.NodeTransformer):
             if isinstance(decorator, ast.Call) and \
                     isinstance(decorator.func, ast.Attribute):
                 if decorator.func.attr == 'route' and \
-                        len(decorator.args) > 0:
+                        decorator.args:
                     return True
         return False
 
@@ -581,9 +582,3 @@ class AppViewTransformer(ast.NodeTransformer):
             )
         )
         return [node, auto_invoke]
-
-
-if __name__ == '__main__':
-    from pprint import pprint
-    import sys
-    pprint(get_client_calls(open(sys.argv[1]).read()))

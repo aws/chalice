@@ -225,11 +225,6 @@ Amazon API Gateway and AWS Lambda.
 
 Right now it's under developer preview and we're looking
 for customer feedback.
-Be aware that there are several features missing:
-
-* No support for authentication or authorization
-* No support for stages
-* No support for CORS
 
 If you'd like to proceded, then answer the questions
 below.

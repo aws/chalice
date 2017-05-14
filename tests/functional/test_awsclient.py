@@ -7,6 +7,7 @@ import mock
 import botocore.exceptions
 
 from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ResourceDoesNotExistError
 
 
 def test_region_name_is_exposed(stubbed_session):
@@ -187,6 +188,48 @@ class TestLambdaFunctionExists(object):
             awsclient.lambda_function_exists(name='myappname')
 
         stubbed_session.verify_stubs()
+
+
+class TestDeleteLambdaFunction(object):
+    def test_lambda_delete_function(self, stubbed_session):
+        stubbed_session.stub('lambda')\
+                       .delete_function(FunctionName='name').returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.delete_function('name') == None
+        stubbed_session.verify_stubs()
+
+    def test_lambda_delete_function_already_deleted(self, stubbed_session):
+        stubbed_session.stub('lambda')\
+                       .delete_function(FunctionName='name')\
+                       .raises_error(error_code='ResourceNotFoundException',
+                                     message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            assert awsclient.delete_function('name')
+
+
+class TestDeleteRestAPI(object):
+    def test_rest_api_delete(self, stubbed_session):
+        stubbed_session.stub('apigateway')\
+                       .delete_rest_api(restApiId='name').returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.delete_rest_api('name') == None
+        stubbed_session.verify_stubs()
+
+    def test_rest_api_delete_already_deleted(self, stubbed_session):
+        stubbed_session.stub('apigateway')\
+                       .delete_rest_api(restApiId='name')\
+                       .raises_error(error_code='NotFoundException',
+                                     message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            assert awsclient.delete_rest_api('name')
 
 
 class TestGetRestAPI(object):
@@ -387,6 +430,25 @@ class TestCanDeleteRolePolicy(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.delete_role_policy('myrole', 'mypolicy')
+        stubbed_session.verify_stubs()
+
+
+class TestCanDeleteRole(object):
+    def test_can_delete_role(self, stubbed_session):
+        stubbed_session.stub('iam').list_role_policies(
+            RoleName='myrole').returns({
+                'PolicyNames': ['mypolicy']
+            })
+        stubbed_session.stub('iam').delete_role_policy(
+            RoleName='myrole',
+            PolicyName='mypolicy').returns({})
+        stubbed_session.stub('iam').delete_role(
+            RoleName='myrole'
+        ).returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_role('myrole')
         stubbed_session.verify_stubs()
 
 
