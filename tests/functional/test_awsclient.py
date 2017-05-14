@@ -56,6 +56,17 @@ def test_ssm_delete_param(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_ssm_delete_param_error(stubbed_session):
+    stub_client = stubbed_session.stub('ssm')
+    stub_client.delete_parameter(
+        Name='foo',
+    ).raises_error('ParameterNotFound', 'Param not found.')
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    with pytest.raises(ResourceDoesNotExistError):
+        awsclient.ssm_delete_param('foo')
+
+
 def test_deploy_rest_api(stubbed_session):
     stub_client = stubbed_session.stub('apigateway')
     stub_client.create_deployment(

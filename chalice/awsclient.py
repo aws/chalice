@@ -69,9 +69,10 @@ class TypedAWSClient(object):
     def ssm_delete_param(self, key):
         # type: (str) -> None
         client = self._client('ssm')
-        client.delete_parameter(
-            Name=key
-        )
+        try:
+            client.delete_parameter(Name=key)
+        except client.exceptions.ClientError as e:
+            raise ResourceDoesNotExistError(e)
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool

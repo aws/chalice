@@ -12,6 +12,8 @@ from chalice.deploy.deployer import Deployer
 from chalice.deploy.paramstore import ParameterStore
 from chalice.config import Config
 from chalice.utils import record_deployed_values
+from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ResourceDoesNotExistError
 
 
 @pytest.fixture
@@ -362,6 +364,34 @@ def test_can_delete_ssm_parameter(runner, mock_cli_factory):
         with open(filename, 'r') as f:
             data = json.loads(f.read())
         assert data.get('ssm_parameters', []) == ['bar']
+
+
+def test_delete_nonexistant_param_does_raise_error(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({
+                'ssm_parameters': ['foo', 'bar']
+            }).encode('utf-8'))
+        cli_factory = factory.CLIFactory('.')
+        config = cli_factory.create_config_obj()
+        aws_client = mock.Mock(spec=TypedAWSClient)
+        aws_client.ssm_delete_param.side_effect = ResourceDoesNotExistError
+        store = ParameterStore(aws_client, 'testproject')
+        mock_cli_factory.create_config_obj.return_value = config
+        mock_cli_factory.create_default_parameter_store.return_value = store
+
+        result = _run_cli_command(
+            runner, cli.param_delete, ['--key', 'baz'],
+            cli_factory=mock_cli_factory
+        )
+        assert result.exit_code == 0
+        assert result.output == 'Parameter baz does not exist.\n'
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+        assert data.get('ssm_parameters', []) == ['foo', 'bar']
 
 
 def test_can_list_ssm_parameters(runner):

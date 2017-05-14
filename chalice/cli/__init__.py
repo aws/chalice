@@ -26,6 +26,7 @@ from chalice.utils import record_deployed_values
 from chalice.utils import remove_stage_from_deployed_values
 from chalice.utils import record_ssm_parameters
 from chalice.deploy.deployer import validate_python_version
+from chalice.deploy.paramstore import ParameterStoreError
 from chalice.utils import getting_started_prompt
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -147,8 +148,11 @@ def param_delete(ctx, key):
     config = factory.create_config_obj()
     param_store = factory.create_default_parameter_store(
         session, config.app_name)
-    param_store.delete_param(key)
 
+    try:
+        param_store.delete_param(key)
+    except ParameterStoreError:
+        click.echo('Parameter %s does not exist.' % key)
     param_names = set(config.ssm_parameters)
     if key in param_names:
         param_names.remove(key)
@@ -235,6 +239,20 @@ def delete(ctx, profile, stage):
     factory.profile = profile
     config = factory.create_config_obj(chalice_stage_name=stage)
     session = factory.create_botocore_session()
+
+    # Delete parameters
+    param_store = factory.create_default_parameter_store(
+        session, config.app_name)
+    for param_name in config.ssm_parameters:
+        try:
+            param_store.delete_param(param_name)
+            click.echo('Deleted parameter: %s' % param_name)
+        except ParameterStoreError:
+            click.echo('Parameter %s was already deleted.' % param_name)
+    record_ssm_parameters([], os.path.join(
+        config.project_dir, '.chalice', 'config.json'))
+
+    # Delete deployed resources
     d = factory.create_default_deployer(session=session, prompter=click)
     d.delete(config, chalice_stage_name=stage)
     remove_stage_from_deployed_values(stage, os.path.join(

@@ -3,6 +3,7 @@ from __future__ import print_function
 import botocore.session  # noqa
 
 from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ResourceDoesNotExistError
 
 
 class ParameterStoreError(Exception):
@@ -43,4 +44,7 @@ class ParameterStore(object):
     def delete_param(self, key):
         # type: (str) -> None
         key = self._full_key_name(key)
-        self._aws_client.ssm_delete_param(key)
+        try:
+            self._aws_client.ssm_delete_param(key)
+        except ResourceDoesNotExistError as e:
+            raise ParameterStoreError(e)
