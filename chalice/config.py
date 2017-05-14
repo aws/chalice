@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, List  # noqa
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 

@@ -10,8 +10,9 @@ import sys
 import uuid
 import warnings
 
-import botocore.session  # noqa
 from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
+
+import botocore.session  # noqa
 
 from chalice import app  # noqa
 from chalice import __version__ as chalice_version

@@ -2,7 +2,7 @@ import os
 import zipfile
 import json
 
-from typing import IO, Dict, Any  # noqa
+from typing import IO, Dict, Any, List  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 

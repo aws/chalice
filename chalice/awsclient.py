@@ -21,8 +21,8 @@ import zipfile
 import shutil
 import json
 
-import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
+import botocore.session  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 
