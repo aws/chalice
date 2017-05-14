@@ -30,12 +30,12 @@ def test_can_zip_recursive_contents(tmpdir):
     utils.create_zip_file(source_dir=str(source),
                           outfile=outfile)
     with zipfile.ZipFile(outfile) as f:
-        assert f.namelist() == [
+        assert sorted(f.namelist()) == sorted([
             'hello.txt',
             'subdir/sub.txt',
             'subdir/sub2.txt',
             'subdir/subsubdir/leaf.txt',
-        ]
+        ])
         assert f.read('subdir/subsubdir/leaf.txt') == b'leaf.txt'
 
 
