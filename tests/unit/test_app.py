@@ -1,25 +1,12 @@
 import base64
 import logging
 import json
-import sys
 import mock
 
 import pytest
 from pytest import fixture
 from chalice import app
 from chalice import NotFoundError
-
-
-@fixture
-def mock_boto3():
-    mock_client = mock.Mock()
-
-    class MockBoto3(object):
-        def client(*args, **kwargs):
-            return mock_client
-    sys.modules['boto3'] = MockBoto3
-
-    return mock_client
 
 
 def create_request_with_content_type(content_type):
@@ -611,8 +598,9 @@ def test_can_serialize_custom_authorizer():
     }
 
 
-def test_can_fetch_ssm_parameters(mock_boto3):
-    mock_boto3.get_parameters.return_value = {
+def test_can_fetch_ssm_parameters(stubbed_session):
+    mock_ssm = mock.Mock()
+    mock_ssm.get_parameters.return_value = {
         'Parameters': [
             {
                 'Name': 'foo',
@@ -620,17 +608,24 @@ def test_can_fetch_ssm_parameters(mock_boto3):
             }
         ]
     }
-    demo = app.Chalice('app-name')
+    mock_session = mock.Mock()
+    mock_session.create_client.return_value = mock_ssm
 
-    @demo.route('/other')
-    def view():
-        value = demo.get_param('test', cache=True)
-        return {"key": value}
+    with mock.patch('chalice.app.botocore.session') as mock_botocore:
+        mock_botocore.get_session.return_value = mock_session
 
-    # Test once
-    result = view()
-    assert result == {"key": "bar"}
-    # Test twice to check caching works correctly
-    result = view()
-    assert result == {"key": "bar"}
-    assert mock_boto3.get_parameters.call_count == 1
+        demo = app.Chalice('app-name')
+
+        @demo.route('/')
+        def view():
+            value = demo.get_param('test', cache=True)
+            return {"key": value}
+
+        # Test once
+        result = view()
+        assert result == {"key": "bar"}
+
+        # Test twice to check caching works correctly
+        result = view()
+        assert result == {"key": "bar"}
+        assert mock_ssm.get_parameters.call_count == 1

@@ -4,7 +4,6 @@ import os
 import pytest
 import mock
 from pytest import fixture
-from tests.unit.deploy import stubbed_client
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice
@@ -53,16 +52,6 @@ class CustomConfirmPrompt():
 
     def Abort(self):
         return Exception('Aborted!')
-
-
-@fixture
-def stubbed_api_gateway():
-    return stubbed_client('apigateway')
-
-
-@fixture
-def stubbed_lambda():
-    return stubbed_client('lambda')
 
 
 @fixture

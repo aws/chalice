@@ -8,6 +8,8 @@ import decimal
 import warnings
 from collections import Mapping
 
+import botocore.session
+
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
@@ -363,9 +365,9 @@ class Chalice(object):
     def get_param(self, key, cache=False):
         if cache and key in self._param_cache:
             return self._param_cache[key]
-        import boto3  # pylint: disable=import-error
         if self._ssm_client is None:
-            self._ssm_client = boto3.client('ssm')
+            session = botocore.session.get_session()
+            self._ssm_client = session.create_client('ssm')
         key_name = 'chalice.%s.%s' % (self.app_name, key)
         results = self._ssm_client.get_parameters(
             Names=[key_name],
