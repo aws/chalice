@@ -959,11 +959,12 @@ API Key
 
 Only requests sent with a valid `X-Api-Key` header will be accepted.
 
-Using Amazon IAM
-----------------
+Using AWS IAM
+-------------
 
 .. code-block:: python
-    authorizer = IamAuthorizer()
+
+    authorizer = IAMAuthorizer()
 
     @app.route('/iam-role', methods=['GET'], authorizer=authorizer)
     def authenticated():

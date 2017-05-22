@@ -1,6 +1,6 @@
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice import CORSConfig
-from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IamAuthorizer
+from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer
 
 import pytest
 from pytest import fixture
@@ -310,7 +310,7 @@ def test_can_use_authorizer_object(sample_app, swagger_gen):
     }
 
 def test_can_use_iam_authorizer_object(sample_app, swagger_gen):
-    authorizer = IamAuthorizer()
+    authorizer = IAMAuthorizer()
     @sample_app.route('/auth', authorizer=authorizer)
     def auth():
         return {'foo': 'bar'}

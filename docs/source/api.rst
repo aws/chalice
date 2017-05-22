@@ -66,7 +66,7 @@ Chalice
 
       :param Authorizer authorizer: Specify an authorizer to use for this
         view.  Can be an instance of :class:`CognitoUserPoolAuthorizer`,
-        :class:`CustomAuthorizer` or :class:`IamAuthorizer`.
+        :class:`CustomAuthorizer` or :class:`IAMAuthorizer`.
 
       :param str content_types: A list of content types to accept for
         this view.  By default ``application/json`` is accepted.  If
@@ -223,7 +223,7 @@ for an ``@app.route(authorizer=...)`` call:
 
      The header where the auth token will be specified.
 
-.. class:: IamAuthorizer()
+.. class:: IAMAuthorizer()
 
   .. versionadded:: 0.8.3
 

@@ -108,7 +108,7 @@ class Authorizer(object):
         raise NotImplementedError("to_swagger")
 
 
-class IamAuthorizer(Authorizer):
+class IAMAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'aws_iam'
 

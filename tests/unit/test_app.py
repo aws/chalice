@@ -560,7 +560,7 @@ def test_can_serialize_cognito_auth():
     }
 
 def test_can_serialize_iam_auth():
-    auth = app.IamAuthorizer()
+    auth = app.IAMAuthorizer()
     assert auth.to_swagger() == {
             'in': 'header',
             'type': 'apiKey',
