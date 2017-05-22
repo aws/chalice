@@ -329,7 +329,7 @@ max-branches=12
 max-statements=30
 
 # Maximum number of parents for a class (see R0901).
-max-parents=5
+max-parents=6
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=7
@@ -358,6 +358,12 @@ ext-import-graph=
 # not be disabled)
 int-import-graph=
 
+# Typing is a third party package in python 2, but built-in to the standard
+# library for Python 3. This causes linting issues when typing get grouped
+# with the third party package imports. Since chalice was originally written
+# just for Python 2, the code standard is to treat as a third party library
+# and thus mark it as so when linting.
+known-third-party=typing
 
 [EXCEPTIONS]
 
