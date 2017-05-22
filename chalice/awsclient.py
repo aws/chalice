@@ -66,7 +66,7 @@ class TypedAWSClient(object):
     def create_function(self, function_name, role_arn, zip_contents,
                         environment_variables=None, runtime='python2.7',
                         tags=None):
-        # type: (str, str, str, _STR_MAP, str, Optional[Dict[str, str]]) -> str
+        # type: (str, str, str, _STR_MAP, str, _STR_MAP) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': runtime,
