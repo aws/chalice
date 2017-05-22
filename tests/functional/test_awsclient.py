@@ -421,6 +421,25 @@ class TestCreateLambdaFunction(object):
             awsclient.create_function('name', 'myarn', b'foo')
         stubbed_session.verify_stubs()
 
+    def test_can_provide_tags(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=60,
+            Tags={'key': 'value'},
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            function_name='name',
+            role_arn='myarn',
+            zip_contents=b'foo',
+            tags={'key': 'value'}) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
 
 class TestCanDeleteRolePolicy(object):
     def test_can_delete_role_policy(self, stubbed_session):
