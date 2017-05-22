@@ -4,7 +4,24 @@ import json
 
 from typing import IO, Dict, Any  # noqa
 
+from chalice import __version__ as chalice_version
 from chalice.constants import WELCOME_PROMPT
+from chalice.config import Config  # noqa
+
+
+def get_application_tags(config):
+    # type: (Config) -> Dict[str, str]
+    """Return a chalice application's configured tags.
+
+    This will pull tags from the provided config object and inject
+    the default aws-chalice tag as well.
+    """
+    tags = {}
+    if config.tags:
+        tags.update(config.tags)
+    tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
+        chalice_version, config.chalice_stage, config.app_name)
+    return tags
 
 
 def remove_stage_from_deployed_values(key, filename):

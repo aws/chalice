@@ -130,6 +130,54 @@ def test_chalice_tag_added_to_function(sample_app,
         'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version}
 
 
+def test_custom_tags_added_to_function(sample_app,
+                                       mock_swagger_generator,
+                                       mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
+                           app_name='myapp', tags={'mykey': 'myvalue'})
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['Tags'] == {
+        'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
+        'mykey': 'myvalue'
+    }
+
+
+def test_timeout_added_to_function(sample_app,
+                                   mock_swagger_generator,
+                                   mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
+                           app_name='myapp', lambda_timeout=240)
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['Timeout'] == 240
+
+
+def test_memory_size_added_to_function(sample_app,
+                                       mock_swagger_generator,
+                                       mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
+                           app_name='myapp', lambda_memory_size=256)
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['MemorySize'] == 256
+
+
 def test_endpoint_url_reflects_apig_stage(sample_app,
                                           mock_swagger_generator,
                                           mock_policy_generator):

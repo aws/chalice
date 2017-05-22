@@ -141,6 +141,23 @@ class Config(object):
         # supported by lambda.
         return self._PYTHON_VERSIONS[sys.version_info[0]]
 
+    @property
+    def lambda_memory_size(self):
+        # type: () -> int
+        return self._chain_lookup(
+            'lambda_memory_size', varies_per_chalice_stage=True)
+
+    @property
+    def lambda_timeout(self):
+        # type: () -> int
+        return self._chain_lookup(
+            'lambda_timeout', varies_per_chalice_stage=True)
+
+    @property
+    def tags(self):
+        # type: () -> Dict[str, str]
+        return self._chain_merge('tags')
+
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any
         search_dicts = [self._user_provided_params]

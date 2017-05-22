@@ -84,6 +84,27 @@ be checked.
   variables will be merged into the top level keys.  See the
   examples section below for a concrete example.
 
+* ``lambda_timeout`` - An integer representing the function execution time,
+  in seconds, at which AWS Lambda should terminate the function. The
+  default ``lambda_timeout`` is ``60`` seconds.
+
+* ``lambda_memory_size`` - An integer representing the amount of memory, in
+   MB, your Lambda function is given. AWS Lambda uses this memory size
+   to infer the amount of CPU allocated to your function. The default
+   ``lambda_memory_size`` value is ``128``. The value must be a multiple of
+   64 MB.
+
+* ``tags`` - A mapping of key value pairs. These key value pairs will
+  be set as the tags on the resources running your deployed
+  application. All tag keys and values must be strings. Similar to
+  ``environment_variables``, if a key is specified in both a stage
+  specific config option as well as a top level key, the stage specific
+  tags will be merged into the top level keys. By default, all chalice
+  deployed resources are tagged with the key ``'aws-chalice'`` whose
+  value is ``'version={chalice-version}:stage={stage-name}:app={app-name}'``.
+  Currently only the following chalice deployed resources are tagged:
+  Lambda functions.
+
 
 Examples
 --------

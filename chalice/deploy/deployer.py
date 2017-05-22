@@ -20,6 +20,7 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
+from chalice.utils import get_application_tags
 from chalice.utils import OSUtils
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
 from chalice.policy import AppPolicyGenerator
@@ -324,18 +325,19 @@ class LambdaDeployer(object):
             config.project_dir)
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
-        return self._aws_client.create_function(
-            function_name, role_arn, zip_contents,
-            config.environment_variables,
-            config.lambda_python_version,
-            self._function_tags(config, stage_name),
-        )
-
-    def _function_tags(self, config, stage_name):
-        # type: (Config, str) -> Dict[str, str]
-        tag = 'version=%s:stage=%s:app=%s' % (chalice_version,
-                                              stage_name, config.app_name)
-        return {'aws-chalice': tag}
+        client_kwargs = {
+            'function_name': function_name,
+            'role_arn': role_arn,
+            'zip_contents': zip_contents,
+            'environment_variables': config.environment_variables,
+            'runtime': config.lambda_python_version,
+            'tags': get_application_tags(config)
+        }  # type: Dict[str, Any]
+        if config.lambda_timeout is not None:
+            client_kwargs['timeout'] = config.lambda_timeout
+        if config.lambda_memory_size is not None:
+            client_kwargs['memory_size'] = config.lambda_memory_size
+        return self._aws_client.create_function(**client_kwargs)
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> None
@@ -357,7 +359,9 @@ class LambdaDeployer(object):
             lambda_name, zip_contents,
             config.environment_variables,
             config.lambda_python_version,
-            self._function_tags(config, stage_name),
+            tags=get_application_tags(config),
+            timeout=config.lambda_timeout,
+            memory_size=config.lambda_memory_size
         )
 
     def _write_config_to_disk(self, config):

@@ -29,6 +29,7 @@ from chalice.constants import DEFAULT_STAGE_NAME
 
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
+_OPT_INT = Optional[int]
 
 
 class ResourceDoesNotExistError(Exception):
@@ -65,15 +66,16 @@ class TypedAWSClient(object):
 
     def create_function(self, function_name, role_arn, zip_contents,
                         environment_variables=None, runtime='python2.7',
-                        tags=None):
-        # type: (str, str, str, _STR_MAP, str, _STR_MAP) -> str
+                        tags=None, timeout=60, memory_size=128):
+        # type: (str, str, str, _STR_MAP, str, _STR_MAP, int, int) -> str
         kwargs = {
             'FunctionName': function_name,
             'Runtime': runtime,
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
-            'Timeout': 60,
+            'Timeout': timeout,
+            'MemorySize': memory_size,
         }
         if environment_variables is not None:
             kwargs['Environment'] = {"Variables": environment_variables}
@@ -104,10 +106,16 @@ class TypedAWSClient(object):
         except lambda_client.exceptions.ResourceNotFoundException:
             raise ResourceDoesNotExistError(function_name)
 
-    def update_function(self, function_name, zip_contents,
-                        environment_variables=None,
-                        runtime=None, tags=None):
-        # type: (str, str, _STR_MAP, _OPT_STR, _STR_MAP) -> Dict[str, Any]
+    def update_function(self,
+                        function_name,  # type: str
+                        zip_contents,   # type: str
+                        environment_variables=None,  # type: _STR_MAP
+                        runtime=None,  # type: _OPT_STR
+                        tags=None,  # type: _STR_MAP
+                        timeout=None,  # type: _OPT_INT
+                        memory_size=None  # type: _OPT_INT
+                        ):
+        # type: (...) -> Dict[str, Any]
         lambda_client = self._client('lambda')
         return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
@@ -121,14 +129,54 @@ class TypedAWSClient(object):
             # We're going to need this moving forward anyways,
             # more config options besides env vars will be added.
             'Environment': {'Variables': environment_variables},
-        }
+        }  # type: Dict[str, Any]
         if runtime is not None:
             kwargs['Runtime'] = runtime
+        if timeout is not None:
+            kwargs['Timeout'] = timeout
+        if memory_size is not None:
+            kwargs['MemorySize'] = memory_size
         lambda_client.update_function_configuration(**kwargs)
         if tags is not None:
-            lambda_client.tag_resource(Resource=return_value['FunctionArn'],
-                                       Tags=tags)
+            function_arn = return_value['FunctionArn']
+            remote_tags = lambda_client.list_tags(
+                Resource=function_arn)['Tags']
+
+            # Remove any tags that exist remotely but are not included
+            # in the update request
+            tag_keys_to_remove = self._get_tags_keys_to_remove(
+                tags, remote_tags)
+            if tag_keys_to_remove:
+                lambda_client.untag_resource(
+                    Resource=function_arn, TagKeys=tag_keys_to_remove)
+
+            # Add any requested tags that do not exist remotely or
+            # have a different value than what exists remotely.
+            tags_to_add = self._get_tags_to_add(tags, remote_tags)
+            if tags_to_add:
+                lambda_client.tag_resource(
+                    Resource=function_arn, Tags=tags_to_add)
+
         return return_value
+
+    def _get_tags_keys_to_remove(self, tags_requested, remote_tags):
+        # type: (Dict[str, str], Dict[str, str]) -> List[str]
+        tag_keys_to_remove = []
+        for tag_key in remote_tags:
+            if tag_key not in tags_requested:
+                tag_keys_to_remove.append(tag_key)
+        return tag_keys_to_remove
+
+    def _get_tags_to_add(self, tags_requested, remote_tags):
+        # type: (Dict[str, str], Dict[str, str]) -> Dict[str, str]
+        tags_to_add = {}
+        for tag_key, tag_value in tags_requested.items():
+            if tag_key not in remote_tags:
+                tags_to_add[tag_key] = tag_value
+            else:
+                if tag_value != remote_tags[tag_key]:
+                    tags_to_add[tag_key] = tag_value
+        return tags_to_add
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
