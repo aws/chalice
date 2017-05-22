@@ -3,6 +3,8 @@ sudo: false
 matrix:
   include:
   - python: "3.6"
+    env: TEST_TYPE=check
+  - python: "3.6"
     env: TEST_TYPE=typecheck
   - python: "3.6"
     env: TEST_TYPE=coverage
