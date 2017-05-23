@@ -1,6 +1,6 @@
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice import CORSConfig
-from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
+from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer
 
 import pytest
 from pytest import fixture
@@ -309,6 +309,23 @@ def test_can_use_authorizer_object(sample_app, swagger_gen):
         }
     }
 
+def test_can_use_iam_authorizer_object(sample_app, swagger_gen):
+    authorizer = IAMAuthorizer()
+    @sample_app.route('/auth', authorizer=authorizer)
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{'sigv4': []}]
+    security_definitions = doc['securityDefinitions']
+    assert 'sigv4' in security_definitions
+    assert security_definitions['sigv4'] == {
+          "in": "header",
+          "type": "apiKey",
+          "name": "Authorization",
+          "x-amazon-apigateway-authtype": "awsSigv4"
+    }
 
 def test_can_use_cognito_auth_object(sample_app, swagger_gen):
     authorizer = CognitoUserPoolAuthorizer('MyUserPool',

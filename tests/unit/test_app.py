@@ -559,6 +559,14 @@ def test_can_serialize_cognito_auth():
         }
     }
 
+def test_can_serialize_iam_auth():
+    auth = app.IAMAuthorizer()
+    assert auth.to_swagger() == {
+            'in': 'header',
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'x-amazon-apigateway-authtype': 'awsSigv4',
+        }
 
 def test_typecheck_list_type():
     with pytest.raises(TypeError):
