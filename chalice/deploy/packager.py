@@ -6,9 +6,9 @@ import shutil
 import subprocess
 import zipfile
 
+import virtualenv
 from typing import Any, Optional  # noqa
 
-import virtualenv
 import chalice
 from chalice import compat, app
 

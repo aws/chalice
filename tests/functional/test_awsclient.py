@@ -250,7 +250,7 @@ class TestDeleteLambdaFunction(object):
                        .delete_function(FunctionName='name').returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.delete_function('name') is None
+        assert awsclient.delete_function('name') == None
         stubbed_session.verify_stubs()
 
     def test_lambda_delete_function_already_deleted(self, stubbed_session):
@@ -271,7 +271,7 @@ class TestDeleteRestAPI(object):
                        .delete_rest_api(restApiId='name').returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.delete_rest_api('name') is None
+        assert awsclient.delete_rest_api('name') == None
         stubbed_session.verify_stubs()
 
     def test_rest_api_delete_already_deleted(self, stubbed_session):

@@ -4,9 +4,8 @@ import json
 import importlib
 import logging
 
-from typing import Any, Optional, Dict  # noqa
-
 from botocore.session import Session
+from typing import Any, Optional, Dict  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.awsclient import TypedAWSClient

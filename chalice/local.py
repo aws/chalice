@@ -7,9 +7,9 @@ from __future__ import print_function
 import functools
 from collections import namedtuple
 
-from typing import List, Any, Dict, Tuple, Callable  # noqa
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
+from typing import List, Any, Dict, Tuple, Callable  # noqa
 
 from chalice.app import Chalice, CORSConfig  # noqa
 from chalice.compat import urlparse, parse_qs
