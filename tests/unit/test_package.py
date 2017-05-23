@@ -148,6 +148,20 @@ def test_custom_tags_added_to_function(sample_app,
     }
 
 
+def test_default_function_timeout(sample_app,
+                                  mock_swagger_generator,
+                                  mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev')
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['Timeout'] == 60
+
+
 def test_timeout_added_to_function(sample_app,
                                    mock_swagger_generator,
                                    mock_policy_generator):
@@ -161,6 +175,20 @@ def test_timeout_added_to_function(sample_app,
     template = p.generate_sam_template(config)
     properties = template['Resources']['APIHandler']['Properties']
     assert properties['Timeout'] == 240
+
+
+def test_default_function_memory_size(sample_app,
+                                      mock_swagger_generator,
+                                      mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev')
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['MemorySize'] == 128
 
 
 def test_memory_size_added_to_function(sample_app,

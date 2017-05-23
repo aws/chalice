@@ -9,6 +9,8 @@ from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.deployer import ApplicationPolicyHandler
+from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
+from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.utils import get_application_tags
 from chalice.utils import OSUtils
 from chalice.config import Config  # noqa
@@ -105,6 +107,8 @@ class SAMTemplateGenerator(object):
             'Events': self._generate_function_events(config.chalice_app),
             'Policies': [self._generate_iam_policy()],
             'Tags': get_application_tags(config),
+            'Timeout': DEFAULT_LAMBDA_TIMEOUT,
+            'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }
         if config.environment_variables:
             properties['Environment'] = {

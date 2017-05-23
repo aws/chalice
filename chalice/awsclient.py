@@ -25,6 +25,8 @@ import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
+from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 
 
 _STR_MAP = Optional[Dict[str, str]]
@@ -66,7 +68,8 @@ class TypedAWSClient(object):
 
     def create_function(self, function_name, role_arn, zip_contents,
                         environment_variables=None, runtime='python2.7',
-                        tags=None, timeout=60, memory_size=128):
+                        tags=None, timeout=DEFAULT_LAMBDA_TIMEOUT,
+                        memory_size=DEFAULT_LAMBDA_MEMORY_SIZE):
         # type: (str, str, str, _STR_MAP, str, _STR_MAP, int, int) -> str
         kwargs = {
             'FunctionName': function_name,
