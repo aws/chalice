@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for ``IAM`` authorizer
+  (`#334 <https://github.com/awslabs/chalice/pull/334>`__)
+
+
 0.8.2
 =====
 
