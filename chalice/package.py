@@ -5,6 +5,7 @@ import hashlib
 
 from typing import Any, Dict  # noqa
 
+from chalice import __version__ as chalice_version
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
@@ -103,6 +104,7 @@ class SAMTemplateGenerator(object):
             'CodeUri': code_uri,
             'Events': self._generate_function_events(config.chalice_app),
             'Policies': [self._generate_iam_policy()],
+            'Tags': self._function_tags(config),
         }
         if config.environment_variables:
             properties['Environment'] = {
@@ -112,6 +114,13 @@ class SAMTemplateGenerator(object):
             'Type': 'AWS::Serverless::Function',
             'Properties': properties,
         }
+
+    def _function_tags(self, config):
+        # type: (Config) -> Dict[str, str]
+        tag = 'version=%s:stage=%s:app=%s' % (chalice_version,
+                                              config.chalice_stage,
+                                              config.app_name)
+        return {'aws-chalice': tag}
 
     def _generate_function_events(self, app):
         # type: (Chalice) -> Dict[str, Any]

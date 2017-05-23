@@ -476,7 +476,10 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     # And should result in the lambda function being updated with the API.
     aws_client.update_function.assert_called_with(
         lambda_function_name, b'package contents', {"FOO": "BAR"},
-        cfg.lambda_python_version)
+        cfg.lambda_python_version,
+        {'aws-chalice': 'version=%s:stage=%s:app=%s' % (chalice_version,
+                                                        'dev', 'appname')}
+    )
 
 
 def test_lambda_deployer_delete():
@@ -576,7 +579,9 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
     }
     aws_client.create_function.assert_called_with(
         'myapp-dev', 'role-arn', b'package contents',
-        {"FOO": "BAR"}, cfg.lambda_python_version)
+        {"FOO": "BAR"}, cfg.lambda_python_version,
+        {'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version}
+    )
 
 
 def test_cant_have_options_with_cors(sample_app):
