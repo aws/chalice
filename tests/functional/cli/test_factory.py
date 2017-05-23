@@ -97,3 +97,22 @@ def test_filename_and_lineno_included_in_syntax_error(clifactory):
     message = str(excinfo.value)
     assert 'app.py' in message
     assert 'line 1' in message
+
+
+def test_can_import_vendor_package(clifactory):
+    # Tests that vendor packages can be imported during config loading.
+    vendedlib_dir = os.path.join(clifactory.project_dir, 'vendor', 'vendedlib')
+    os.makedirs(vendedlib_dir)
+    open(os.path.join(vendedlib_dir, '__init__.py'), 'a').close()
+    with open(os.path.join(vendedlib_dir, 'utils.py'), 'w') as f:
+        f.write(
+            'def data_getter():\n'
+            '    return "some data value"\n'
+        )
+    app_py = os.path.join(clifactory.project_dir, 'app.py')
+    with open(app_py, 'r+') as f:
+        data = f.read()
+        f.seek(0, 0)
+        f.write('from vendedlib.utils import data_getter\n%s' % data)
+    config = clifactory.create_config_obj()
+    assert isinstance(config, Config)

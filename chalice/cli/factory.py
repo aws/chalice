@@ -131,6 +131,15 @@ class CLIFactory(object):
         # type: () -> Chalice
         if self.project_dir not in sys.path:
             sys.path.insert(0, self.project_dir)
+        # The vendor directory has its contents copied up to the top level of
+        # the deployment package. This means that imports will work in the
+        # lambda function as if the vendor directory is on the python path.
+        # For loading the config locally we must add the vendor directory to
+        # the path so it will be treated the same as if it were running on
+        # lambda.
+        vendor_dir = os.path.join(self.project_dir, 'vendor')
+        if os.path.isdir(vendor_dir):
+            sys.path.insert(0, vendor_dir)
         try:
             app = importlib.import_module('app')
             chalice_app = getattr(app, 'app')
