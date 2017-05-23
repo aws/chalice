@@ -104,15 +104,11 @@ def test_can_import_vendor_package(clifactory):
     vendedlib_dir = os.path.join(clifactory.project_dir, 'vendor', 'vendedlib')
     os.makedirs(vendedlib_dir)
     open(os.path.join(vendedlib_dir, '__init__.py'), 'a').close()
-    with open(os.path.join(vendedlib_dir, 'utils.py'), 'w') as f:
-        f.write(
-            'def data_getter():\n'
-            '    return "some data value"\n'
-        )
+    open(os.path.join(vendedlib_dir, 'submodule.py'), 'a').close()
     app_py = os.path.join(clifactory.project_dir, 'app.py')
     with open(app_py, 'r+') as f:
         data = f.read()
         f.seek(0, 0)
-        f.write('from vendedlib.utils import data_getter\n%s' % data)
+        f.write('from vendedlib import submodule\n%s' % data)
     config = clifactory.create_config_obj()
     assert isinstance(config, Config)

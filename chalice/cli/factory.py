@@ -138,7 +138,7 @@ class CLIFactory(object):
         # the path so it will be treated the same as if it were running on
         # lambda.
         vendor_dir = os.path.join(self.project_dir, 'vendor')
-        if os.path.isdir(vendor_dir):
+        if os.path.isdir(vendor_dir) and vendor_dir not in sys.path:
             sys.path.insert(0, vendor_dir)
         try:
             app = importlib.import_module('app')
