@@ -1,5 +1,6 @@
 import sys
 
+from chalice import __version__ as chalice_version
 from chalice.config import Config, DeployedResources
 
 
@@ -157,3 +158,141 @@ def test_can_load_python_version():
         3: 'python3.6',
     }[sys.version_info[0]]
     assert c.lambda_python_version == expected_runtime
+
+
+class TestConfigureLambdaMemorySize(object):
+    def test_not_set(self):
+        c = Config('dev', config_from_disk={})
+        assert c.lambda_memory_size is None
+
+    def test_set_lambda_memory_size_global(self):
+        config_from_disk = {
+            'lambda_memory_size': 256
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_memory_size == 256
+
+    def test_set_lambda_memory_size_stage(self):
+        config_from_disk = {
+            'stages': {
+                'dev': {
+                    'lambda_memory_size': 256
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_memory_size == 256
+
+    def test_set_lambda_memory_size_override(self):
+        config_from_disk = {
+            'lambda_memory_size': 128,
+            'stages': {
+                'dev': {
+                    'lambda_memory_size': 256
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_memory_size == 256
+
+
+class TestConfigureLambdaTimeout(object):
+    def test_not_set(self):
+        c = Config('dev', config_from_disk={})
+        assert c.lambda_timeout is None
+
+    def test_set_lambda_timeout_global(self):
+        config_from_disk = {
+            'lambda_timeout': 120
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_timeout == 120
+
+    def test_set_lambda_memory_size_stage(self):
+        config_from_disk = {
+            'stages': {
+                'dev': {
+                    'lambda_timeout': 120
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_timeout == 120
+
+    def test_set_lambda_memory_size_override(self):
+        config_from_disk = {
+            'lambda_timeout': 60,
+            'stages': {
+                'dev': {
+                    'lambda_timeout': 120
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_timeout == 120
+
+
+class TestConfigureTags(object):
+    def test_default_tags(self):
+        c = Config('dev', config_from_disk={'app_name': 'myapp'})
+        assert c.tags == {
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
+
+    def test_tags_global(self):
+        config_from_disk = {
+            'app_name': 'myapp',
+            'tags': {'mykey': 'myvalue'}
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.tags == {
+            'mykey': 'myvalue',
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
+
+    def test_tags_stage(self):
+        config_from_disk = {
+            'app_name': 'myapp',
+            'stages': {
+                'dev': {
+                    'tags': {'mykey': 'myvalue'}
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.tags == {
+            'mykey': 'myvalue',
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
+
+    def test_tags_merge(self):
+        config_from_disk = {
+            'app_name': 'myapp',
+            'tags': {
+                'onlyglobalkey': 'globalvalue',
+                'sharedkey': 'globalvalue'
+            },
+            'stages': {
+                'dev': {
+                    'tags': {
+                        'sharedkey': 'stagevalue',
+                        'onlystagekey': 'stagevalue'
+                    }
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.tags == {
+            'onlyglobalkey': 'globalvalue',
+            'sharedkey': 'stagevalue',
+            'onlystagekey': 'stagevalue',
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
+
+    def test_tags_specified_does_not_override_chalice_tag(self):
+        c = Config.create(
+            chalice_stage='dev', app_name='myapp',
+            tags={'aws-chalice': 'attempted-override'})
+        assert c.tags == {
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
+        }

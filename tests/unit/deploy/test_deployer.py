@@ -454,6 +454,9 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
         iam_role_arn=True,
         project_dir='./myproject',
         environment_variables={"FOO": "BAR"},
+        lambda_timeout=120,
+        lambda_memory_size=256,
+        tags={'mykey': 'myvalue'}
     )
     aws_client.get_function_configuration.return_value = {
         'Runtime': cfg.lambda_python_version,
@@ -477,8 +480,12 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     aws_client.update_function.assert_called_with(
         lambda_function_name, b'package contents', {"FOO": "BAR"},
         cfg.lambda_python_version,
-        {'aws-chalice': 'version=%s:stage=%s:app=%s' % (chalice_version,
-                                                        'dev', 'appname')}
+        tags={
+            'aws-chalice': 'version=%s:stage=%s:app=%s' % (
+                chalice_version, 'dev', 'appname'),
+            'mykey': 'myvalue'
+        },
+        timeout=120, memory_size=256
     )
 
 
@@ -569,6 +576,9 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
         iam_role_arn='role-arn',
         project_dir='.',
         environment_variables={"FOO": "BAR"},
+        lambda_timeout=120,
+        lambda_memory_size=256,
+        tags={'mykey': 'myvalue'}
     )
 
     d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
@@ -578,9 +588,15 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
         'api_handler_name': 'myapp-dev',
     }
     aws_client.create_function.assert_called_with(
-        'myapp-dev', 'role-arn', b'package contents',
-        {"FOO": "BAR"}, cfg.lambda_python_version,
-        {'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version}
+        function_name='myapp-dev', role_arn='role-arn',
+        zip_contents=b'package contents',
+        environment_variables={"FOO": "BAR"},
+        runtime=cfg.lambda_python_version,
+        tags={
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
+            'mykey': 'myvalue'
+        },
+        timeout=120, memory_size=256
     )
 
 

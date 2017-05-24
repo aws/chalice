@@ -25,10 +25,13 @@ import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
+from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 
 
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
+_OPT_INT = Optional[int]
 
 
 class ResourceDoesNotExistError(Exception):
@@ -63,22 +66,36 @@ class TypedAWSClient(object):
             FunctionName=name)
         return response
 
-    def create_function(self, function_name, role_arn, zip_contents,
-                        environment_variables=None, runtime='python2.7',
-                        tags=None):
-        # type: (str, str, str, _STR_MAP, str, _STR_MAP) -> str
+    def create_function(self,
+                        function_name,               # type: str
+                        role_arn,                    # type: str
+                        zip_contents,                # type: str
+                        environment_variables=None,  # type: _STR_MAP
+                        runtime=None,                # type: _OPT_STR
+                        tags=None,                   # type: _STR_MAP
+                        timeout=None,                # type: _OPT_INT
+                        memory_size=None             # type: _OPT_INT
+                        ):
+        # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
-            'Runtime': runtime,
+            'Runtime': 'python2.7',
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
-            'Timeout': 60,
+            'Timeout': DEFAULT_LAMBDA_TIMEOUT,
+            'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE,
         }
         if environment_variables is not None:
             kwargs['Environment'] = {"Variables": environment_variables}
+        if runtime is not None:
+            kwargs['Runtime'] = runtime
         if tags is not None:
             kwargs['Tags'] = tags
+        if timeout is not None:
+            kwargs['Timeout'] = timeout
+        if memory_size is not None:
+            kwargs['MemorySize'] = memory_size
         client = self._client('lambda')
         attempts = 0
         while True:
@@ -104,10 +121,16 @@ class TypedAWSClient(object):
         except lambda_client.exceptions.ResourceNotFoundException:
             raise ResourceDoesNotExistError(function_name)
 
-    def update_function(self, function_name, zip_contents,
-                        environment_variables=None,
-                        runtime=None, tags=None):
-        # type: (str, str, _STR_MAP, _OPT_STR, _STR_MAP) -> Dict[str, Any]
+    def update_function(self,
+                        function_name,               # type: str
+                        zip_contents,                # type: str
+                        environment_variables=None,  # type: _STR_MAP
+                        runtime=None,                # type: _OPT_STR
+                        tags=None,                   # type: _STR_MAP
+                        timeout=None,                # type: _OPT_INT
+                        memory_size=None             # type: _OPT_INT
+                        ):
+        # type: (...) -> Dict[str, Any]
         lambda_client = self._client('lambda')
         return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
@@ -121,14 +144,43 @@ class TypedAWSClient(object):
             # We're going to need this moving forward anyways,
             # more config options besides env vars will be added.
             'Environment': {'Variables': environment_variables},
-        }
+        }  # type: Dict[str, Any]
         if runtime is not None:
             kwargs['Runtime'] = runtime
+        if timeout is not None:
+            kwargs['Timeout'] = timeout
+        if memory_size is not None:
+            kwargs['MemorySize'] = memory_size
         lambda_client.update_function_configuration(**kwargs)
         if tags is not None:
-            lambda_client.tag_resource(Resource=return_value['FunctionArn'],
-                                       Tags=tags)
+            self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
+
+    def _update_function_tags(self, function_arn, requested_tags):
+        # type: (str, Dict[str, str]) -> None
+        remote_tags = self._client('lambda').list_tags(
+            Resource=function_arn)['Tags']
+        self._remove_unrequested_remote_tags(
+            function_arn, requested_tags, remote_tags)
+        self._add_missing_or_differing_value_requested_tags(
+            function_arn, requested_tags, remote_tags)
+
+    def _remove_unrequested_remote_tags(
+            self, function_arn, requested_tags, remote_tags):
+        # type: (str, Dict[Any, Any], Dict[Any, Any]) -> None
+        tag_keys_to_remove = list(set(remote_tags) - set(requested_tags))
+        if tag_keys_to_remove:
+            self._client('lambda').untag_resource(
+                Resource=function_arn, TagKeys=tag_keys_to_remove)
+
+    def _add_missing_or_differing_value_requested_tags(
+            self, function_arn, requested_tags, remote_tags):
+        # type: (str, Dict[Any, Any], Dict[Any, Any]) -> None
+        tags_to_add = {k: v for k, v in requested_tags.items()
+                       if k not in remote_tags or v != remote_tags[k]}
+        if tags_to_add:
+            self._client('lambda').tag_resource(
+                Resource=function_arn, Tags=tags_to_add)
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str

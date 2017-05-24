@@ -325,17 +325,15 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
         return self._aws_client.create_function(
-            function_name, role_arn, zip_contents,
-            config.environment_variables,
-            config.lambda_python_version,
-            self._function_tags(config, stage_name),
+            function_name=function_name,
+            role_arn=role_arn,
+            zip_contents=zip_contents,
+            environment_variables=config.environment_variables,
+            runtime=config.lambda_python_version,
+            tags=config.tags,
+            timeout=config.lambda_timeout,
+            memory_size=config.lambda_memory_size
         )
-
-    def _function_tags(self, config, stage_name):
-        # type: (Config, str) -> Dict[str, str]
-        tag = 'version=%s:stage=%s:app=%s' % (chalice_version,
-                                              stage_name, config.app_name)
-        return {'aws-chalice': tag}
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> None
@@ -357,7 +355,9 @@ class LambdaDeployer(object):
             lambda_name, zip_contents,
             config.environment_variables,
             config.lambda_python_version,
-            self._function_tags(config, stage_name),
+            tags=config.tags,
+            timeout=config.lambda_timeout,
+            memory_size=config.lambda_memory_size
         )
 
     def _write_config_to_disk(self, config):

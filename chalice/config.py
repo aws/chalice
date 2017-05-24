@@ -3,6 +3,7 @@ import sys
 import json
 
 from typing import Dict, Any, Optional  # noqa
+from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 
@@ -140,6 +141,26 @@ class Config(object):
         # we attempt to match your python version to the closest version
         # supported by lambda.
         return self._PYTHON_VERSIONS[sys.version_info[0]]
+
+    @property
+    def lambda_memory_size(self):
+        # type: () -> int
+        return self._chain_lookup(
+            'lambda_memory_size', varies_per_chalice_stage=True)
+
+    @property
+    def lambda_timeout(self):
+        # type: () -> int
+        return self._chain_lookup(
+            'lambda_timeout', varies_per_chalice_stage=True)
+
+    @property
+    def tags(self):
+        # type: () -> Dict[str, str]
+        tags = self._chain_merge('tags')
+        tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
+            current_chalice_version, self.chalice_stage, self.app_name)
+        return tags
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any

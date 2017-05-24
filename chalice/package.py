@@ -5,11 +5,12 @@ import hashlib
 
 from typing import Any, Dict  # noqa
 
-from chalice import __version__ as chalice_version
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.deployer import ApplicationPolicyHandler
+from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
+from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.utils import OSUtils
 from chalice.config import Config  # noqa
 from chalice.app import Chalice  # noqa
@@ -104,23 +105,22 @@ class SAMTemplateGenerator(object):
             'CodeUri': code_uri,
             'Events': self._generate_function_events(config.chalice_app),
             'Policies': [self._generate_iam_policy()],
-            'Tags': self._function_tags(config),
+            'Tags': config.tags,
+            'Timeout': DEFAULT_LAMBDA_TIMEOUT,
+            'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }
         if config.environment_variables:
             properties['Environment'] = {
                 'Variables': config.environment_variables
             }
+        if config.lambda_timeout is not None:
+            properties['Timeout'] = config.lambda_timeout
+        if config.lambda_memory_size is not None:
+            properties['MemorySize'] = config.lambda_memory_size
         return {
             'Type': 'AWS::Serverless::Function',
             'Properties': properties,
         }
-
-    def _function_tags(self, config):
-        # type: (Config) -> Dict[str, str]
-        tag = 'version=%s:stage=%s:app=%s' % (chalice_version,
-                                              config.chalice_stage,
-                                              config.app_name)
-        return {'aws-chalice': tag}
 
     def _generate_function_events(self, app):
         # type: (Chalice) -> Dict[str, Any]
