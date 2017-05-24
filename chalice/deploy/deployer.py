@@ -20,7 +20,6 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
-from chalice.utils import get_application_tags
 from chalice.utils import OSUtils
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
 from chalice.policy import AppPolicyGenerator
@@ -331,7 +330,7 @@ class LambdaDeployer(object):
             'zip_contents': zip_contents,
             'environment_variables': config.environment_variables,
             'runtime': config.lambda_python_version,
-            'tags': get_application_tags(config)
+            'tags': config.tags
         }  # type: Dict[str, Any]
         if config.lambda_timeout is not None:
             client_kwargs['timeout'] = config.lambda_timeout
@@ -359,7 +358,7 @@ class LambdaDeployer(object):
             lambda_name, zip_contents,
             config.environment_variables,
             config.lambda_python_version,
-            tags=get_application_tags(config),
+            tags=config.tags,
             timeout=config.lambda_timeout,
             memory_size=config.lambda_memory_size
         )

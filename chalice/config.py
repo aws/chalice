@@ -3,6 +3,7 @@ import sys
 import json
 
 from typing import Dict, Any, Optional  # noqa
+from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 
@@ -156,7 +157,10 @@ class Config(object):
     @property
     def tags(self):
         # type: () -> Dict[str, str]
-        return self._chain_merge('tags')
+        tags = self._chain_merge('tags')
+        tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
+            current_chalice_version, self.chalice_stage, self.app_name)
+        return tags
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False):
         # type: (str, bool) -> Any

@@ -11,7 +11,6 @@ from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
-from chalice.utils import get_application_tags
 from chalice.utils import OSUtils
 from chalice.config import Config  # noqa
 from chalice.app import Chalice  # noqa
@@ -106,7 +105,7 @@ class SAMTemplateGenerator(object):
             'CodeUri': code_uri,
             'Events': self._generate_function_events(config.chalice_app),
             'Policies': [self._generate_iam_policy()],
-            'Tags': get_application_tags(config),
+            'Tags': config.tags,
             'Timeout': DEFAULT_LAMBDA_TIMEOUT,
             'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }

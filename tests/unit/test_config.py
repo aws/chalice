@@ -1,5 +1,6 @@
 import sys
 
+from chalice import __version__ as chalice_version
 from chalice.config import Config, DeployedResources
 
 
@@ -232,19 +233,26 @@ class TestConfigureLambdaTimeout(object):
 
 
 class TestConfigureTags(object):
-    def test_not_set(self):
-        c = Config('dev', config_from_disk={})
-        assert c.tags == {}
+    def test_default_tags(self):
+        c = Config('dev', config_from_disk={'app_name': 'myapp'})
+        assert c.tags == {
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
 
-    def test_set_tags_global(self):
+    def test_tags_global(self):
         config_from_disk = {
+            'app_name': 'myapp',
             'tags': {'mykey': 'myvalue'}
         }
         c = Config('dev', config_from_disk=config_from_disk)
-        assert c.tags == {'mykey': 'myvalue'}
+        assert c.tags == {
+            'mykey': 'myvalue',
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
 
-    def test_set_lambda_memory_size_stage(self):
+    def test_tags_stage(self):
         config_from_disk = {
+            'app_name': 'myapp',
             'stages': {
                 'dev': {
                     'tags': {'mykey': 'myvalue'}
@@ -252,10 +260,14 @@ class TestConfigureTags(object):
             }
         }
         c = Config('dev', config_from_disk=config_from_disk)
-        assert c.tags == {'mykey': 'myvalue'}
+        assert c.tags == {
+            'mykey': 'myvalue',
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
 
-    def test_set_tags_merge(self):
+    def test_tags_merge(self):
         config_from_disk = {
+            'app_name': 'myapp',
             'tags': {
                 'onlyglobalkey': 'globalvalue',
                 'sharedkey': 'globalvalue'
@@ -273,5 +285,14 @@ class TestConfigureTags(object):
         assert c.tags == {
             'onlyglobalkey': 'globalvalue',
             'sharedkey': 'stagevalue',
-            'onlystagekey': 'stagevalue'
+            'onlystagekey': 'stagevalue',
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
+        }
+
+    def test_tags_specified_does_not_override_chalice_tag(self):
+        c = Config.create(
+            chalice_stage='dev', app_name='myapp',
+            tags={'aws-chalice': 'attempted-override'})
+        assert c.tags == {
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
         }
