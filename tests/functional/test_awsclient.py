@@ -285,7 +285,6 @@ class TestCreateRole(object):
 
 
 class TestCreateLambdaFunction(object):
-
     def test_create_function_succeeds_first_try(self, stubbed_session):
         stubbed_session.stub('lambda').create_function(
             FunctionName='name',
@@ -303,6 +302,54 @@ class TestCreateLambdaFunction(object):
         assert awsclient.create_function(
             'name', 'myarn', b'foo', {'FOO': 'BAR'},
             tags={'MyKey': 'MyValue'}) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_runtime(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python3.6',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=60,
+            MemorySize=128
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', runtime='python3.6') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_timeout(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=240,
+            MemorySize=128
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', timeout=240) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_memory_size(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=60,
+            MemorySize=256
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', memory_size=256) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
