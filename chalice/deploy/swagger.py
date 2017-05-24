@@ -32,8 +32,13 @@ class SwaggerGenerator(object):
         # type: (Chalice) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
+        self._add_binary_types(api, app)
         self._add_route_paths(api, app)
         return api
+
+    def _add_binary_types(self, api, app):
+        # type: (Dict[str, Any], Chalice) -> None
+        api['x-amazon-apigateway-binary-media-types'] = app.api.binary_types
 
     def _add_route_paths(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None

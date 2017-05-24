@@ -73,6 +73,17 @@ def form_encoded():
     }
 
 
+@app.route('/binary', methods=['POST'],
+           content_types=['application/octet-stream'])
+def binary_round_trip():
+    return Response(
+        app.current_request.raw_body,
+        headers={
+            'Content-Type': 'application/octet-stream'
+        },
+        status_code=200)
+
+
 @app.route('/json-only', content_types=['application/json'])
 def json_only():
     return {'success': True}

@@ -31,7 +31,9 @@ def create_event(uri, method, path, content_type='application/json'):
         'stageVariables': {},
     }
 
-def create_empty_header_event(uri, method, path, content_type='application/json'):
+
+def create_empty_header_event(uri, method, path,
+                              content_type='application/json'):
     return {
         'requestContext': {
             'httpMethod': method,
@@ -77,6 +79,26 @@ def sample_app():
     return demo
 
 
+def test_invalid_binary_response_body_throws_value_error(sample_app):
+    response = app.Response(
+        status_code=200,
+        body={'foo': 'bar'},
+        headers={'Content-Type': 'application/octet-stream'}
+    )
+    with pytest.raises(ValueError):
+        response.to_dict(sample_app.api.binary_types)
+
+
+def test_can_encode_binary_body_as_base64(sample_app):
+    response = app.Response(
+        status_code=200,
+        body=b'foobar',
+        headers={'Content-Type': 'application/octet-stream'}
+    )
+    encoded_response = response.to_dict(sample_app.api.binary_types)
+    assert encoded_response['body'] == 'Zm9vYmFy'
+
+
 def test_can_parse_route_view_args():
     entry = app.RouteEntry(lambda: {"foo": "bar"}, 'view-name',
                            '/foo/{bar}/baz/{qux}', methods=['GET'])
@@ -90,9 +112,9 @@ def test_can_route_single_view():
     def index_view():
         return {}
 
-    assert demo.routes['/index'] == app.RouteEntry(index_view, 'index_view',
-                                                   '/index', ['GET'],
-                                                   content_types=['application/json'])
+    assert demo.routes['/index'] == app.RouteEntry(
+        index_view, 'index_view', '/index', ['GET'],
+        content_types=['application/json'])
 
 
 def test_can_handle_multiple_routes():
@@ -176,7 +198,6 @@ def test_can_access_raw_body():
     def index_view():
         return {'rawbody': demo.current_request.raw_body}
 
-
     event = create_event('/index', 'GET', {})
     event['body'] = '{"hello": "world"}'
 
@@ -195,7 +216,6 @@ def test_raw_body_cache_returns_same_result():
         # Both should be the same value
         return {'rawbody': demo.current_request.raw_body,
                 'rawbody2': demo.current_request.raw_body}
-
 
     event = create_event('/index', 'GET', {})
     event['base64-body'] = base64.b64encode(
@@ -225,7 +245,6 @@ def test_json_body_available_with_right_content_type():
     @demo.route('/', methods=['POST'])
     def index():
         return demo.current_request.json_body
-
 
     event = create_event('/', 'POST', {})
     event['body'] = json.dumps({'foo': 'bar'})
@@ -359,6 +378,7 @@ def test_headers_have_basic_validation():
     assert 'Invalid-Header' not in response['headers']
     assert json.loads(response['body'])['Code'] == 'InternalServerError'
 
+
 def test_empty_headers_have_basic_validation():
     demo = app.Chalice('app-name')
 
@@ -370,6 +390,7 @@ def test_empty_headers_have_basic_validation():
     event = create_empty_header_event('/index', 'GET', {})
     response = demo(event, context=None)
     assert response['statusCode'] == 200
+
 
 def test_no_content_type_is_still_allowed():
     # When the content type validation happens in API gateway, it appears
@@ -387,6 +408,24 @@ def test_no_content_type_is_still_allowed():
 
     json_response = json_response_body(demo(event, context=None))
     assert json_response == {'success': True}
+
+
+def test_can_base64_encode_binary_media_types_bytes():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(
+            status_code=200,
+            body=b'\u2713',
+            headers={'Content-Type': 'application/octet-stream'})
+
+    event = create_event('/index', 'GET', {})
+    response = demo(event, context=None)
+    assert response['statusCode'] == 200
+    assert response['isBase64Encoded'] is True
+    assert response['body'] == 'XHUyNzEz'
+    assert response['headers']['Content-Type'] == 'application/octet-stream'
 
 
 def test_route_equality():
@@ -545,6 +584,27 @@ def test_json_body_available_when_content_type_matches(content_type, is_json):
         assert request.json_body is None
 
 
+def test_can_receive_binary_data():
+    content_type = 'application/octet-stream'
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/bincat', methods=['POST'], content_types=[content_type])
+    def bincat():
+        raw_body = demo.current_request.raw_body
+        return app.Response(
+            status_code=200,
+            body=raw_body,
+            headers={'Content-Type': content_type})
+
+    body = 'L3UyNzEz'
+    event = create_event_with_body(body, '/bincat', 'POST', content_type)
+    event['isBase64Encoded'] = True
+    response = demo(event, context=None)
+
+    assert response['statusCode'] == 200
+    assert response['body'] == body
+
+
 def test_can_serialize_cognito_auth():
     auth = app.CognitoUserPoolAuthorizer(
         'Name', provider_arns=['Foo'], header='Authorization')
@@ -559,6 +619,7 @@ def test_can_serialize_cognito_auth():
         }
     }
 
+
 def test_can_serialize_iam_auth():
     auth = app.IAMAuthorizer()
     assert auth.to_swagger() == {
@@ -567,6 +628,7 @@ def test_can_serialize_iam_auth():
             'name': 'Authorization',
             'x-amazon-apigateway-authtype': 'awsSigv4',
         }
+
 
 def test_typecheck_list_type():
     with pytest.raises(TypeError):

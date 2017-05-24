@@ -1,6 +1,6 @@
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice import CORSConfig
-from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer
+from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer, Chalice
 
 import pytest
 from pytest import fixture
@@ -10,6 +10,18 @@ from pytest import fixture
 def swagger_gen():
     return SwaggerGenerator(region='us-west-2',
                             lambda_arn='lambda_arn')
+
+
+def test_can_add_binary_media_types(swagger_gen):
+    app = Chalice('test-binary')
+    doc = swagger_gen.generate_swagger(app)
+    media_types = doc.get('x-amazon-apigateway-binary-media-types')
+    assert sorted(media_types) == sorted([
+        'application/octet-stream',
+        'image/png',
+        'image/jpg',
+        'image/gif'
+    ])
 
 
 def test_can_produce_swagger_top_level_keys(sample_app, swagger_gen):

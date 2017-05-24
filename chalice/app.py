@@ -6,6 +6,7 @@ import json
 import traceback
 import decimal
 import warnings
+import base64
 from collections import Mapping
 
 # Implementation note:  This file is intended to be a standalone file
@@ -15,6 +16,13 @@ from collections import Mapping
 
 
 _PARAMS = re.compile(r'{\w+}')
+
+
+def base64decode(encoded):
+    if not isinstance(encoded, bytes):
+        encoded = encoded.encode('ascii')
+    output = base64.b64decode(encoded)
+    return output
 
 
 def handle_decimals(obj):
@@ -266,15 +274,29 @@ class Response(object):
         self.headers = headers
         self.status_code = status_code
 
-    def to_dict(self):
+    def _base64encode(self, data):
+        if not isinstance(data, bytes):
+            raise ValueError('Expected bytes type for body with binary '
+                             'Content-Type. Got %s type body instead.'
+                             % type(data))
+        data = base64.b64encode(data)
+        return data.decode('ascii')
+
+    def to_dict(self, binary_types=None):
+        if binary_types is None:
+            binary_types = []
         body = self.body
-        if not isinstance(body, str):
-            body = json.dumps(body, default=handle_decimals)
-        return {
+        response = {
             'headers': self.headers,
             'statusCode': self.status_code,
-            'body': body,
         }
+        if self.headers.get('Content-Type') in binary_types:
+            body = self._base64encode(body)
+            response['isBase64Encoded'] = True
+        elif not isinstance(body, str):
+            body = json.dumps(body, default=handle_decimals)
+        response['body'] = body
+        return response
 
 
 class RouteEntry(object):
@@ -317,12 +339,30 @@ class RouteEntry(object):
         return self.__dict__ == other.__dict__
 
 
+class APIGateway(object):
+
+    _DEFAULT_BINARY_TYPES = [
+        'application/octet-stream',
+        'image/png',
+        'image/jpg',
+        'image/gif'
+    ]
+
+    def __init__(self):
+        self._binary_types = set(self._DEFAULT_BINARY_TYPES)
+
+    @property
+    def binary_types(self):
+        return [binary_type for binary_type in self._binary_types]
+
+
 class Chalice(object):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
     def __init__(self, app_name, configure_logs=True):
         self.app_name = app_name
+        self.api = APIGateway()
         self.routes = {}
         self.current_request = None
         self.debug = False
@@ -426,11 +466,14 @@ class Chalice(object):
         view_function = route_entry.view_function
         function_args = [event['pathParameters'][name]
                          for name in route_entry.view_args]
+        body = event['body']
+        if event.get('isBase64Encoded'):
+            body = base64decode(body)
         self.current_request = Request(event['queryStringParameters'],
                                        event['headers'],
                                        event['pathParameters'],
                                        event['requestContext']['httpMethod'],
-                                       event['body'],
+                                       body,
                                        event['requestContext'],
                                        event['stageVariables'])
         # We're doing the header validation after creating the request
@@ -450,7 +493,8 @@ class Chalice(object):
                                                     function_args)
         if self._cors_enabled_for_route(route_entry):
             self._add_cors_headers(response, route_entry.cors)
-        return response.to_dict()
+        response = response.to_dict(self.api.binary_types)
+        return response
 
     def _matches_content_type(self, content_type, valid_content_types):
         if ';' in content_type:

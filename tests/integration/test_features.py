@@ -214,6 +214,19 @@ def test_form_encoded_content_type(smoke_test_app):
     assert response.json() == {'parsed': {'foo': ['bar']}}
 
 
+def test_can_round_trip_binary(smoke_test_app):
+    # xde xed xbe xef will fail unicode decoding because xbe is an invalid
+    # start byte in utf-8.
+    bin_data = b'\xDE\xAD\xBE\xEF'
+    response = requests.post(smoke_test_app.url + '/binary',
+                             headers={
+                                 'Content-Type': 'application/octet-stream',
+                                 'Accept': 'application/octet-stream',
+                             },
+                             data=bin_data)
+    assert response.content == bin_data
+
+
 def test_can_support_cors(smoke_test_app):
     response = requests.get(smoke_test_app.url + '/cors')
     response.raise_for_status()
