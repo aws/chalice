@@ -110,13 +110,13 @@ class TypedAWSClient(object):
             raise ResourceDoesNotExistError(function_name)
 
     def update_function(self,
-                        function_name,  # type: str
-                        zip_contents,   # type: str
+                        function_name,               # type: str
+                        zip_contents,                # type: str
                         environment_variables=None,  # type: _STR_MAP
-                        runtime=None,  # type: _OPT_STR
-                        tags=None,  # type: _STR_MAP
-                        timeout=None,  # type: _OPT_INT
-                        memory_size=None  # type: _OPT_INT
+                        runtime=None,                # type: _OPT_STR
+                        tags=None,                   # type: _STR_MAP
+                        timeout=None,                # type: _OPT_INT
+                        memory_size=None             # type: _OPT_INT
                         ):
         # type: (...) -> Dict[str, Any]
         lambda_client = self._client('lambda')
@@ -141,45 +141,34 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         lambda_client.update_function_configuration(**kwargs)
         if tags is not None:
-            function_arn = return_value['FunctionArn']
-            remote_tags = lambda_client.list_tags(
-                Resource=function_arn)['Tags']
-
-            # Remove any tags that exist remotely but are not included
-            # in the update request
-            tag_keys_to_remove = self._get_tags_keys_to_remove(
-                tags, remote_tags)
-            if tag_keys_to_remove:
-                lambda_client.untag_resource(
-                    Resource=function_arn, TagKeys=tag_keys_to_remove)
-
-            # Add any requested tags that do not exist remotely or
-            # have a different value than what exists remotely.
-            tags_to_add = self._get_tags_to_add(tags, remote_tags)
-            if tags_to_add:
-                lambda_client.tag_resource(
-                    Resource=function_arn, Tags=tags_to_add)
-
+            self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
 
-    def _get_tags_keys_to_remove(self, tags_requested, remote_tags):
-        # type: (Dict[str, str], Dict[str, str]) -> List[str]
-        tag_keys_to_remove = []
-        for tag_key in remote_tags:
-            if tag_key not in tags_requested:
-                tag_keys_to_remove.append(tag_key)
-        return tag_keys_to_remove
+    def _update_function_tags(self, function_arn, requested_tags):
+        # type: (str, Dict[str, str]) -> None
+        remote_tags = self._client('lambda').list_tags(
+            Resource=function_arn)['Tags']
+        self._remove_unrequested_remote_tags(
+            function_arn, requested_tags, remote_tags)
+        self._add_missing_or_differing_value_requested_tags(
+            function_arn, requested_tags, remote_tags)
 
-    def _get_tags_to_add(self, tags_requested, remote_tags):
-        # type: (Dict[str, str], Dict[str, str]) -> Dict[str, str]
-        tags_to_add = {}
-        for tag_key, tag_value in tags_requested.items():
-            if tag_key not in remote_tags:
-                tags_to_add[tag_key] = tag_value
-            else:
-                if tag_value != remote_tags[tag_key]:
-                    tags_to_add[tag_key] = tag_value
-        return tags_to_add
+    def _remove_unrequested_remote_tags(
+            self, function_arn, requested_tags, remote_tags):
+        # type: (str, Dict[Any, Any], Dict[Any, Any]) -> None
+        tag_keys_to_remove = list(set(remote_tags) - set(requested_tags))
+        if tag_keys_to_remove:
+            self._client('lambda').untag_resource(
+                Resource=function_arn, TagKeys=tag_keys_to_remove)
+
+    def _add_missing_or_differing_value_requested_tags(
+            self, function_arn, requested_tags, remote_tags):
+        # type: (str, Dict[Any, Any], Dict[Any, Any]) -> None
+        tags_to_add = {k: v for k, v in requested_tags.items()
+                       if k not in remote_tags or v != remote_tags[k]}
+        if tags_to_add:
+            self._client('lambda').tag_resource(
+                Resource=function_arn, Tags=tags_to_add)
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
