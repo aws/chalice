@@ -7,6 +7,12 @@ Next Release (TBD)
 
 * Add support for ``IAM`` authorizer
   (`#334 <https://github.com/awslabs/chalice/pull/334>`__)
+* Add support for ``lambda_timeout`` configuration
+  (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
+* Add support for ``lambda_memory_size`` configuration
+  (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
+* Add support for ``tags`` configuration
+  (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
 
 
 0.8.2
