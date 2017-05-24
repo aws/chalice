@@ -13,7 +13,8 @@ Next Release (TBD)
   (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
 * Add support for ``tags`` configuration
   (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
-
+* Fix vendor directory contents not being importable locally
+  (`#350 <https://github.com/awslabs/chalice/pull/350>`__)
 
 0.8.2
 =====

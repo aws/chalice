@@ -107,11 +107,8 @@ def test_can_import_vendor_package(clifactory):
     with open(os.path.join(vendedlib_dir, 'submodule.py'), 'a') as f:
         f.write('CONST = "foo bar"\n')
     app_py = os.path.join(clifactory.project_dir, 'app.py')
-    with open(app_py, 'r+') as f:
-        data = f.read()
-        f.seek(0, 0)
-        f.write('from vendedlib import submodule\n%s' % data)
-        f.seek(0, 1)
-        f.write('app.imported_value = submodule.CONST')
+    with open(app_py, 'a') as f:
+        f.write('from vendedlib import submodule\n')
+        f.write('app.imported_value = submodule.CONST\n')
     app = clifactory.load_chalice_app()
     assert app.imported_value == 'foo bar'
