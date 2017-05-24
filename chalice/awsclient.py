@@ -66,24 +66,36 @@ class TypedAWSClient(object):
             FunctionName=name)
         return response
 
-    def create_function(self, function_name, role_arn, zip_contents,
-                        environment_variables=None, runtime='python2.7',
-                        tags=None, timeout=DEFAULT_LAMBDA_TIMEOUT,
-                        memory_size=DEFAULT_LAMBDA_MEMORY_SIZE):
-        # type: (str, str, str, _STR_MAP, str, _STR_MAP, int, int) -> str
+    def create_function(self,
+                        function_name,               # type: str
+                        role_arn,                    # type: str
+                        zip_contents,                # type: str
+                        environment_variables=None,  # type: _STR_MAP
+                        runtime=None,                # type: _OPT_STR
+                        tags=None,                   # type: _STR_MAP
+                        timeout=None,                # type: _OPT_INT
+                        memory_size=None             # type: _OPT_INT
+                        ):
+        # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
-            'Runtime': runtime,
+            'Runtime': 'python2.7',
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
-            'Timeout': timeout,
-            'MemorySize': memory_size,
+            'Timeout': DEFAULT_LAMBDA_TIMEOUT,
+            'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE,
         }
         if environment_variables is not None:
             kwargs['Environment'] = {"Variables": environment_variables}
+        if runtime is not None:
+            kwargs['Runtime'] = runtime
         if tags is not None:
             kwargs['Tags'] = tags
+        if timeout is not None:
+            kwargs['Timeout'] = timeout
+        if memory_size is not None:
+            kwargs['MemorySize'] = memory_size
         client = self._client('lambda')
         attempts = 0
         while True:

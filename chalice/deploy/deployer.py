@@ -324,19 +324,16 @@ class LambdaDeployer(object):
             config.project_dir)
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
-        client_kwargs = {
-            'function_name': function_name,
-            'role_arn': role_arn,
-            'zip_contents': zip_contents,
-            'environment_variables': config.environment_variables,
-            'runtime': config.lambda_python_version,
-            'tags': config.tags
-        }  # type: Dict[str, Any]
-        if config.lambda_timeout is not None:
-            client_kwargs['timeout'] = config.lambda_timeout
-        if config.lambda_memory_size is not None:
-            client_kwargs['memory_size'] = config.lambda_memory_size
-        return self._aws_client.create_function(**client_kwargs)
+        return self._aws_client.create_function(
+            function_name=function_name,
+            role_arn=role_arn,
+            zip_contents=zip_contents,
+            environment_variables=config.environment_variables,
+            runtime=config.lambda_python_version,
+            tags=config.tags,
+            timeout=config.lambda_timeout,
+            memory_size=config.lambda_memory_size
+        )
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> None
