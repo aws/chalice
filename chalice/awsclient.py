@@ -25,6 +25,7 @@ import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_LAMBDA_RUNTIME
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 
@@ -79,7 +80,7 @@ class TypedAWSClient(object):
         # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
-            'Runtime': 'python2.7',
+            'Runtime': DEFAULT_LAMBDA_RUNTIME,
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
@@ -136,6 +137,8 @@ class TypedAWSClient(object):
             FunctionName=function_name, ZipFile=zip_contents)
         if environment_variables is None:
             environment_variables = {}
+        if tags is None:
+            tags = {}
         kwargs = {
             'FunctionName': function_name,
             # We need to handle the case where the user removes
@@ -144,6 +147,9 @@ class TypedAWSClient(object):
             # We're going to need this moving forward anyways,
             # more config options besides env vars will be added.
             'Environment': {'Variables': environment_variables},
+            'Runtime': DEFAULT_LAMBDA_RUNTIME,
+            'Timeout': DEFAULT_LAMBDA_TIMEOUT,
+            'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }  # type: Dict[str, Any]
         if runtime is not None:
             kwargs['Runtime'] = runtime
@@ -152,8 +158,7 @@ class TypedAWSClient(object):
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
         lambda_client.update_function_configuration(**kwargs)
-        if tags is not None:
-            self._update_function_tags(return_value['FunctionArn'], tags)
+        self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
 
     def _update_function_tags(self, function_arn, requested_tags):

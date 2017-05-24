@@ -452,39 +452,60 @@ class TestCreateLambdaFunction(object):
 
 
 class TestUpdateLambdaFunction(object):
-    def test_always_update_function_code(self, stubbed_session):
+    def test_always_update_function_code_with_defaults(self, stubbed_session):
+        function_arn = 'arn'
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(
+                 {'FunctionArn': function_arn})
         # Even if there's only a code change, we'll always call
         # update_function_configuration.
         lambda_client.update_function_configuration(
-            FunctionName='name', Environment={'Variables': {}}).returns({})
+            FunctionName='name',
+            Environment={'Variables': {}},
+            Runtime='python2.7',
+            Timeout=60,
+            MemorySize=128).returns({})
+        lambda_client.list_tags(
+            Resource=function_arn).returns({'Tags': {}})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo')
         stubbed_session.verify_stubs()
 
     def test_update_function_code_with_runtime(self, stubbed_session):
+        function_arn = 'arn'
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
             Runtime='python3.6',
-            Environment={'Variables': {}}).returns({})
+            Environment={'Variables': {}},
+            Timeout=60,
+            MemorySize=128).returns({})
+        lambda_client.list_tags(
+            Resource=function_arn).returns({'Tags': {}})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', runtime='python3.6')
         stubbed_session.verify_stubs()
 
     def test_update_function_code_with_environment_vars(self, stubbed_session):
+        function_arn = 'arn'
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Environment={'Variables': {"FOO": "BAR"}}).returns({})
+            Environment={'Variables': {"FOO": "BAR"}},
+            Runtime='python2.7',
+            Timeout=60,
+            MemorySize=128).returns({})
+        lambda_client.list_tags(
+            Resource=function_arn).returns({'Tags': {}})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function(
@@ -492,26 +513,38 @@ class TestUpdateLambdaFunction(object):
         stubbed_session.verify_stubs()
 
     def test_update_function_code_with_timeout(self, stubbed_session):
+        function_arn = 'arn'
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
+            Runtime='python2.7',
             Timeout=240,
+            MemorySize=128,
             Environment={'Variables': {}}).returns({})
+        lambda_client.list_tags(
+            Resource=function_arn).returns({'Tags': {}})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', timeout=240)
         stubbed_session.verify_stubs()
 
     def test_update_function_code_with_memory(self, stubbed_session):
+        function_arn = 'arn'
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
+            Runtime='python2.7',
+            Timeout=60,
             MemorySize=256,
             Environment={'Variables': {}}).returns({})
+        lambda_client.list_tags(
+            Resource=function_arn).returns({'Tags': {}})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', memory_size=256)
@@ -526,6 +559,9 @@ class TestUpdateLambdaFunction(object):
                 {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
+            Runtime='python2.7',
+            Timeout=60,
+            MemorySize=128,
             Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {}})
@@ -546,6 +582,9 @@ class TestUpdateLambdaFunction(object):
                 {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
+            Runtime='python2.7',
+            Timeout=60,
+            MemorySize=128,
             Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {'MyKey': 'MyOrigValue'}})
@@ -566,6 +605,9 @@ class TestUpdateLambdaFunction(object):
                 {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
+            Runtime='python2.7',
+            Timeout=60,
+            MemorySize=128,
             Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns(
@@ -587,6 +629,9 @@ class TestUpdateLambdaFunction(object):
                 {'FunctionArn': function_arn})
         lambda_client.update_function_configuration(
             FunctionName='name',
+            Runtime='python2.7',
+            Timeout=60,
+            MemorySize=128,
             Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {'MyKey': 'SameValue'}})
