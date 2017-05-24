@@ -263,7 +263,8 @@ def test_lambda_event_contains_source_ip():
         path='/foo/bar',
         headers={'content-type': 'application/json'}
     )
-    assert event.get('requestContext').get('identity').get('sourceIp') == local.LambdaEventConverter.local_source_ip
+    source_ip = event.get('requestContext').get('identity').get('sourceIp')
+    assert source_ip == local.LambdaEventConverter.LOCAL_SOURCE_IP
 
 
 def test_can_create_lambda_event():
@@ -279,7 +280,7 @@ def test_can_create_lambda_event():
             'httpMethod': 'GET',
             'resourcePath': '/foo/{capture}',
             'identity': {
-                'sourceIp': local.LambdaEventConverter.local_source_ip
+                'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
             },
         },
         'headers': {'content-type': 'application/json'},
@@ -304,7 +305,7 @@ def test_can_create_lambda_event_for_put_request():
             'httpMethod': 'PUT',
             'resourcePath': '/foo/{capture}',
             'identity': {
-                'sourceIp': local.LambdaEventConverter.local_source_ip
+                'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
             },
         },
         'headers': {'content-type': 'application/json'},
@@ -330,7 +331,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
             'httpMethod': 'POST',
             'resourcePath': '/foo/{capture}',
             'identity': {
-                'sourceIp': local.LambdaEventConverter.local_source_ip
+                'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
             },
         },
         'headers': {'content-type': 'application/x-www-form-urlencoded'},
