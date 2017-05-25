@@ -25,8 +25,6 @@ import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
-from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
-from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 
 
 _STR_MAP = Optional[Dict[str, str]]
@@ -70,8 +68,8 @@ class TypedAWSClient(object):
                         function_name,               # type: str
                         role_arn,                    # type: str
                         zip_contents,                # type: str
+                        runtime,                     # type: str
                         environment_variables=None,  # type: _STR_MAP
-                        runtime=None,                # type: _OPT_STR
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
                         memory_size=None             # type: _OPT_INT
@@ -79,17 +77,13 @@ class TypedAWSClient(object):
         # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
-            'Runtime': 'python2.7',
+            'Runtime': runtime,
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
-            'Timeout': DEFAULT_LAMBDA_TIMEOUT,
-            'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE,
-        }
+        }  # type: Dict[str, Any]
         if environment_variables is not None:
             kwargs['Environment'] = {"Variables": environment_variables}
-        if runtime is not None:
-            kwargs['Runtime'] = runtime
         if tags is not None:
             kwargs['Tags'] = tags
         if timeout is not None:
@@ -131,27 +125,28 @@ class TypedAWSClient(object):
                         memory_size=None             # type: _OPT_INT
                         ):
         # type: (...) -> Dict[str, Any]
+        """Update a Lambda function's code and configuration.
+
+        This method only updates the values provided to it. If a parameter
+        is not provided, no changes will be made for that that parameter on
+        the targeted lambda function.
+        """
         lambda_client = self._client('lambda')
         return_value = lambda_client.update_function_code(
             FunctionName=function_name, ZipFile=zip_contents)
-        if environment_variables is None:
-            environment_variables = {}
-        kwargs = {
-            'FunctionName': function_name,
-            # We need to handle the case where the user removes
-            # all env vars from their config.json file.  We'll
-            # just call update_function_configuration every time.
-            # We're going to need this moving forward anyways,
-            # more config options besides env vars will be added.
-            'Environment': {'Variables': environment_variables},
-        }  # type: Dict[str, Any]
+
+        kwargs = {}  # type: Dict[str, Any]
+        if environment_variables is not None:
+            kwargs['Environment'] = {'Variables': environment_variables}
         if runtime is not None:
             kwargs['Runtime'] = runtime
         if timeout is not None:
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        lambda_client.update_function_configuration(**kwargs)
+        if kwargs:
+            kwargs['FunctionName'] = function_name
+            lambda_client.update_function_configuration(**kwargs)
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
