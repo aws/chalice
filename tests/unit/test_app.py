@@ -12,7 +12,7 @@ def create_request_with_content_type(content_type):
     body = '{"json": "body"}'
     return app.Request(
         {}, {'Content-Type': content_type}, {}, 'GET',
-        body, {}, {}
+        body, {}, {}, False
     )
 
 
@@ -63,7 +63,6 @@ def assert_response_body_is(response, body):
 def json_response_body(response):
     return json.loads(response['body'])
 
-
 @fixture
 def sample_app():
     demo = app.Chalice('demo-app')
@@ -79,6 +78,16 @@ def sample_app():
     return demo
 
 
+def test_mixed_content_types():
+    demo = app.Chalice('demo-app')
+
+    with pytest.raises(ValueError):
+        @demo.route('/index', content_types=['application/octet-stream',
+                                         'text/plain'])
+        def index():
+            return {'hello': 'world'}
+
+
 def test_invalid_binary_response_body_throws_value_error(sample_app):
     response = app.Response(
         status_code=200,
@@ -86,7 +95,7 @@ def test_invalid_binary_response_body_throws_value_error(sample_app):
         headers={'Content-Type': 'application/octet-stream'}
     )
     with pytest.raises(ValueError):
-        response.to_dict(sample_app.api.binary_types)
+        response.encode_as_binary()
 
 
 def test_can_encode_binary_body_as_base64(sample_app):
@@ -95,8 +104,21 @@ def test_can_encode_binary_body_as_base64(sample_app):
         body=b'foobar',
         headers={'Content-Type': 'application/octet-stream'}
     )
-    encoded_response = response.to_dict(sample_app.api.binary_types)
+    response.encode_as_binary()
+    encoded_response = response.to_dict()
     assert encoded_response['body'] == 'Zm9vYmFy'
+
+
+def test_can_encode_binary_json(sample_app):
+    sample_app.api.binary_types.extend(['application/json'])
+    response = app.Response(
+        status_code=200,
+        body={'foo': 'bar'},
+        headers={'Content-Type': 'application/json'}
+    )
+    response.encode_as_binary()
+    encoded_response = response.to_dict()
+    assert encoded_response['body'] == 'eyJmb28iOiAiYmFyIn0='
 
 
 def test_can_parse_route_view_args():

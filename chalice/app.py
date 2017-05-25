@@ -18,13 +18,6 @@ from collections import Mapping
 _PARAMS = re.compile(r'{\w+}')
 
 
-def base64decode(encoded):
-    if not isinstance(encoded, bytes):
-        encoded = encoded.encode('ascii')
-    output = base64.b64decode(encoded)
-    return output
-
-
 def handle_decimals(obj):
     # Lambda will automatically serialize decimals so we need
     # to support that as well.
@@ -238,11 +231,13 @@ class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
-                 context, stage_vars):
+                 context, stage_vars, is_base64_encoded):
         self.query_params = query_params
         self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
+        if is_base64_encoded:
+            body = self._base64decode(body)
         self.raw_body = body
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
@@ -250,6 +245,12 @@ class Request(object):
         self._json_body = None
         self.context = context
         self.stage_vars = stage_vars
+
+    def _base64decode(self, encoded):
+        if not isinstance(encoded, bytes):
+            encoded = encoded.encode('ascii')
+        output = base64.b64decode(encoded)
+        return output
 
     @property
     def json_body(self):
@@ -272,7 +273,9 @@ class Response(object):
         if headers is None:
             headers = {}
         self.headers = headers
+        self.case_insensitive_headers = CaseInsensitiveMapping(headers)
         self.status_code = status_code
+        self._is_base64_encoded = False
 
     def _base64encode(self, data):
         if not isinstance(data, bytes):
@@ -282,16 +285,23 @@ class Response(object):
         data = base64.b64encode(data)
         return data.decode('ascii')
 
-    def to_dict(self, binary_types=None):
-        if binary_types is None:
-            binary_types = []
+    def encode_as_binary(self):
+        # To keep json types working as expected they are encoded to a utf-8
+        # byte sequence if the content type is application/json before being
+        # converted to a base64 string.
+        if self.case_insensitive_headers.get('content-type', '').startswith(
+                'application/json'):
+            self.body = json.dumps(self.body).encode('utf-8')
+        self.body = self._base64encode(self.body)
+        self._is_base64_encoded = True
+
+    def to_dict(self):
         body = self.body
         response = {
             'headers': self.headers,
             'statusCode': self.status_code,
         }
-        if self.headers.get('Content-Type') in binary_types:
-            body = self._base64encode(body)
+        if self._is_base64_encoded:
             response['isBase64Encoded'] = True
         elif not isinstance(body, str):
             body = json.dumps(body, default=handle_decimals)
@@ -349,11 +359,11 @@ class APIGateway(object):
     ]
 
     def __init__(self):
-        self._binary_types = set(self._DEFAULT_BINARY_TYPES)
+        self.binary_types = self.default_binary_types
 
     @property
-    def binary_types(self):
-        return [binary_type for binary_type in self._binary_types]
+    def default_binary_types(self):
+        return list(self._DEFAULT_BINARY_TYPES)
 
 
 class Chalice(object):
@@ -419,6 +429,20 @@ class Chalice(object):
             return view_func
         return _register_view
 
+    def _validate_route_content_types(self, name, content_types):
+        # A routes content_types be homogeneous in their binary support.
+        binary, non_binary = [], []
+        for content_type in content_types:
+            if content_type in self.api.binary_types:
+                binary.append(content_type)
+            else:
+                non_binary.append(content_type)
+        if binary and non_binary:
+            raise ValueError(
+                'In view function "%s", the content_types %s support binary '
+                'and %s do not. All content_types must be consistent in their '
+                'binary support.' % (name, binary, non_binary))
+
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
         methods = kwargs.pop('methods', ['GET'])
@@ -434,6 +458,7 @@ class Chalice(object):
         if kwargs:
             raise TypeError('TypeError: route() got unexpected keyword '
                             'arguments: %s' % ', '.join(list(kwargs)))
+        self._validate_route_content_types(name, content_types)
 
         if path in self.routes:
             raise ValueError(
@@ -466,16 +491,14 @@ class Chalice(object):
         view_function = route_entry.view_function
         function_args = [event['pathParameters'][name]
                          for name in route_entry.view_args]
-        body = event['body']
-        if event.get('isBase64Encoded'):
-            body = base64decode(body)
         self.current_request = Request(event['queryStringParameters'],
                                        event['headers'],
                                        event['pathParameters'],
                                        event['requestContext']['httpMethod'],
-                                       body,
+                                       event['body'],
                                        event['requestContext'],
-                                       event['stageVariables'])
+                                       event['stageVariables'],
+                                       event.get('isBase64Encoded', False))
         # We're doing the header validation after creating the request
         # so can leverage the case insensitive dict that the Request class
         # uses for headers.
@@ -493,7 +516,10 @@ class Chalice(object):
                                                     function_args)
         if self._cors_enabled_for_route(route_entry):
             self._add_cors_headers(response, route_entry.cors)
-        response = response.to_dict(self.api.binary_types)
+        if self._matches_content_type(response.case_insensitive_headers.get(
+                'content-type', 'application/json'), self.api.binary_types):
+            response.encode_as_binary()
+        response = response.to_dict()
         return response
 
     def _matches_content_type(self, content_type, valid_content_types):
