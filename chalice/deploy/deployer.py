@@ -353,8 +353,8 @@ class LambdaDeployer(object):
         print("Sending changes to lambda.")
         self._aws_client.update_function(
             lambda_name, zip_contents,
-            config.environment_variables,
             config.lambda_python_version,
+            config.environment_variables,
             tags=config.tags,
             timeout=config.lambda_timeout,
             memory_size=config.lambda_memory_size

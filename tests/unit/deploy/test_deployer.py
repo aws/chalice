@@ -478,8 +478,9 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
 
     # And should result in the lambda function being updated with the API.
     aws_client.update_function.assert_called_with(
-        lambda_function_name, b'package contents', {"FOO": "BAR"},
-        cfg.lambda_python_version,
+        lambda_function_name, b'package contents',
+        cfg.lambda_python_version,        
+        {"FOO": "BAR"},
         tags={
             'aws-chalice': 'version=%s:stage=%s:app=%s' % (
                 chalice_version, 'dev', 'appname'),

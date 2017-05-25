@@ -25,7 +25,6 @@ import botocore.session  # noqa
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
-from chalice.constants import DEFAULT_LAMBDA_RUNTIME
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 
@@ -71,8 +70,8 @@ class TypedAWSClient(object):
                         function_name,               # type: str
                         role_arn,                    # type: str
                         zip_contents,                # type: str
+                        runtime,                     # type: str
                         environment_variables=None,  # type: _STR_MAP
-                        runtime=None,                # type: _OPT_STR
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
                         memory_size=None             # type: _OPT_INT
@@ -80,7 +79,7 @@ class TypedAWSClient(object):
         # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
-            'Runtime': DEFAULT_LAMBDA_RUNTIME,
+            'Runtime': runtime,
             'Code': {'ZipFile': zip_contents},
             'Handler': 'app.app',
             'Role': role_arn,
@@ -89,8 +88,6 @@ class TypedAWSClient(object):
         }
         if environment_variables is not None:
             kwargs['Environment'] = {"Variables": environment_variables}
-        if runtime is not None:
-            kwargs['Runtime'] = runtime
         if tags is not None:
             kwargs['Tags'] = tags
         if timeout is not None:
@@ -125,8 +122,8 @@ class TypedAWSClient(object):
     def update_function(self,
                         function_name,               # type: str
                         zip_contents,                # type: str
+                        runtime,                     # type: str
                         environment_variables=None,  # type: _STR_MAP
-                        runtime=None,                # type: _OPT_STR
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
                         memory_size=None             # type: _OPT_INT
@@ -141,18 +138,16 @@ class TypedAWSClient(object):
             tags = {}
         kwargs = {
             'FunctionName': function_name,
+            'Runtime': runtime,
             # We need to handle the case where the user removes
             # all env vars from their config.json file.  We'll
             # just call update_function_configuration every time.
             # We're going to need this moving forward anyways,
             # more config options besides env vars will be added.
             'Environment': {'Variables': environment_variables},
-            'Runtime': DEFAULT_LAMBDA_RUNTIME,
             'Timeout': DEFAULT_LAMBDA_TIMEOUT,
             'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }  # type: Dict[str, Any]
-        if runtime is not None:
-            kwargs['Runtime'] = runtime
         if timeout is not None:
             kwargs['Timeout'] = timeout
         if memory_size is not None:
