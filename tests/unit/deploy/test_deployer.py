@@ -478,8 +478,10 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
 
     # And should result in the lambda function being updated with the API.
     aws_client.update_function.assert_called_with(
-        lambda_function_name, b'package contents', {"FOO": "BAR"},
-        cfg.lambda_python_version,
+        function_name=lambda_function_name,
+        zip_contents=b'package contents',
+        runtime=cfg.lambda_python_version,
+        environment_variables={"FOO": "BAR"},
         tags={
             'aws-chalice': 'version=%s:stage=%s:app=%s' % (
                 chalice_version, 'dev', 'appname'),
@@ -607,3 +609,284 @@ def test_cant_have_options_with_cors(sample_app):
 
     with pytest.raises(ValueError):
         validate_routes(sample_app.routes)
+
+
+class TestLambdaInitialDeploymentWithConfigurations(object):
+    @fixture(autouse=True)
+    def setup(self, app_policy):
+        self.package_name = 'packages.zip'
+        self.package_contents = b'package contents'
+        self.lambda_arn = 'lambda-arn'
+        self.osutils = InMemoryOSUtils(
+            {self.package_name: self.package_contents})
+        self.aws_client = mock.Mock(spec=TypedAWSClient)
+        self.aws_client.create_function.return_value = self.lambda_arn
+        self.packager = mock.Mock(LambdaDeploymentPackager)
+        self.packager.create_deployment_package.return_value =\
+            self.package_name
+        self.app_policy = app_policy
+
+    def test_lambda_deployer_defaults(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.'
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, None, 'dev')
+        self.aws_client.create_function.assert_called_with(
+            function_name='myapp-dev', role_arn='role-arn',
+            zip_contents=b'package contents',
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version)
+            },
+            environment_variables={},
+            timeout=60, memory_size=128
+        )
+
+    def test_lambda_deployer_with_environment_vars(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', environment_variables={'FOO': 'BAR'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, None, 'dev')
+        self.aws_client.create_function.assert_called_with(
+            function_name='myapp-dev', role_arn='role-arn',
+            zip_contents=b'package contents',
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version)
+            },
+            environment_variables={'FOO': 'BAR'},
+            timeout=60, memory_size=128
+        )
+
+    def test_lambda_deployer_with_timeout_configured(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', lambda_timeout=120
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, None, 'dev')
+        self.aws_client.create_function.assert_called_with(
+            function_name='myapp-dev', role_arn='role-arn',
+            zip_contents=b'package contents',
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version)
+            },
+            environment_variables={},
+            timeout=120, memory_size=128
+        )
+
+    def test_lambda_deployer_with_memory_size_configured(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', lambda_memory_size=256
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, None, 'dev')
+        self.aws_client.create_function.assert_called_with(
+            function_name='myapp-dev', role_arn='role-arn',
+            zip_contents=b'package contents',
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version)
+            },
+            environment_variables={},
+            timeout=60, memory_size=256
+        )
+
+    def test_lambda_deployer_with_tags(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', tags={'mykey': 'myvalue'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, None, 'dev')
+        self.aws_client.create_function.assert_called_with(
+            function_name='myapp-dev', role_arn='role-arn',
+            zip_contents=b'package contents',
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+                'mykey': 'myvalue'
+            },
+            environment_variables={},
+            timeout=60, memory_size=128
+        )
+
+
+class TestLambdaUpdateDeploymentWithConfigurations(object):
+    @fixture(autouse=True)
+    def setup(self, app_policy):
+        self.package_name = 'packages.zip'
+        self.package_contents = b'package contents'
+        self.lambda_arn = 'lambda-arn'
+        self.lambda_function_name = 'lambda_function_name'
+
+        self.osutils = InMemoryOSUtils(
+            {self.package_name: self.package_contents})
+
+        self.aws_client = mock.Mock(spec=TypedAWSClient)
+        self.aws_client.lambda_function_exists.return_value = True
+        self.aws_client.update_function.return_value = {
+            'FunctionArn': self.lambda_arn}
+        self.aws_client.get_function_configuration.return_value = {
+            'Runtime': 'python2.7',
+        }
+
+        self.prompter = mock.Mock(spec=NoPrompt)
+        self.prompter.confirm.return_value = True
+
+        self.packager = mock.Mock(LambdaDeploymentPackager)
+        self.packager.create_deployment_package.return_value =\
+            self.package_name
+
+        self.app_policy = app_policy
+
+        self.deployed_resources = DeployedResources(
+            'api', 'api_handler_arn', self.lambda_function_name,
+            None, 'dev', None, None)
+
+    def test_lambda_deployer_defaults(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.',
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+            },
+            environment_variables={},
+            timeout=60, memory_size=128
+        )
+
+    def test_lambda_deployer_with_environment_vars(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', environment_variables={'FOO': 'BAR'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+            },
+            environment_variables={'FOO': 'BAR'},
+            timeout=60, memory_size=128
+        )
+
+    def test_lambda_deployer_with_timeout_configured(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', lambda_timeout=120
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+            },
+            environment_variables={},
+            timeout=120, memory_size=128
+        )
+
+    def test_lambda_deployer_with_memory_size_configured(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', lambda_memory_size=256
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+            },
+            environment_variables={},
+            timeout=60, memory_size=256
+        )
+
+    def test_lambda_deployer_with_tags(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', tags={'mykey': 'myvalue'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+                'mykey': 'myvalue'
+            },
+            environment_variables={},
+            timeout=60, memory_size=128
+        )
