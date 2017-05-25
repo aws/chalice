@@ -613,7 +613,14 @@ def test_cant_have_options_with_cors(sample_app):
 
 class TestLambdaInitialDeploymentWithConfigurations(object):
     @fixture(autouse=True)
-    def setup(self, app_policy):
+    def setup_deployer_dependencies(self, app_policy):
+        # This autouse fixture is used instead of ``setup_method`` because it:
+        # * Is ran for every test
+        # * Allows additional fixtures to be passed in to reduce the number
+        #   of fixtures that need to be supplied for the test methods.
+        # * ``setup_method`` is called before fixtures get applied so
+        #   they cannot be applied to the ``setup_method`` or you will
+        #   will get a TypeError for too few arguments.
         self.package_name = 'packages.zip'
         self.package_contents = b'package contents'
         self.lambda_arn = 'lambda-arn'
@@ -745,7 +752,14 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
 
 class TestLambdaUpdateDeploymentWithConfigurations(object):
     @fixture(autouse=True)
-    def setup(self, app_policy):
+    def setup_deployer_dependencies(self, app_policy):
+        # This autouse fixture is used instead of ``setup_method`` because it:
+        # * Is ran for every test
+        # * Allows additional fixtures to be passed in to reduce the number
+        #   of fixtures that need to be supplied for the test methods.
+        # * ``setup_method`` is called before fixtures get applied so
+        #   they cannot be applied to the ``setup_method`` or you will
+        #   will get a TypeError for too few arguments.
         self.package_name = 'packages.zip'
         self.package_contents = b'package contents'
         self.lambda_arn = 'lambda-arn'
