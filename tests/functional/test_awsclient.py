@@ -291,33 +291,58 @@ class TestCreateLambdaFunction(object):
             Runtime='python2.7',
             Code={'ZipFile': b'foo'},
             Handler='app.app',
-            Role='myarn',
-            Timeout=60,
-            MemorySize=128,
-            Environment={'Variables': {'FOO': 'BAR'}},
-            Tags={'MyKey': 'MyValue'}
+            Role='myarn'
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', {'FOO': 'BAR'},
-            tags={'MyKey': 'MyValue'}) == 'arn:12345:name'
+            'name', 'myarn', b'foo', 'python2.7') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
-    def test_create_function_with_runtime(self, stubbed_session):
+    def test_create_function_with_non_python2_runtime(self, stubbed_session):
         stubbed_session.stub('lambda').create_function(
             FunctionName='name',
             Runtime='python3.6',
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-            Timeout=60,
-            MemorySize=128
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
             'name', 'myarn', b'foo', runtime='python3.6') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_environment_variables(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Environment={'Variables': {'FOO': 'BAR'}}
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', 'python2.7',
+            environment_variables={'FOO': 'BAR'}) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_tags(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            Timeout=240
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', 'python2.7',
+            timeout=240) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_with_timeout(self, stubbed_session):
@@ -327,13 +352,13 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-            Timeout=240,
-            MemorySize=128
+            Tags={'mykey': 'myvalue'}
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', timeout=240) == 'arn:12345:name'
+            'name', 'myarn', b'foo', 'python2.7',
+            tags={'mykey': 'myvalue'}) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_with_memory_size(self, stubbed_session):
@@ -343,13 +368,13 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-            Timeout=60,
             MemorySize=256
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', memory_size=256) == 'arn:12345:name'
+            'name', 'myarn', b'foo', 'python2.7',
+            memory_size=256) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
@@ -359,8 +384,6 @@ class TestCreateLambdaFunction(object):
             'Code': {'ZipFile': b'foo'},
             'Handler': 'app.app',
             'Role': 'myarn',
-            'Timeout': 60,
-            'MemorySize': 128,
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -373,7 +396,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
-            'name', 'myarn', b'foo') == 'arn:12345:name'
+            'name', 'myarn', b'foo', 'python2.7') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -383,7 +406,6 @@ class TestCreateLambdaFunction(object):
             'Code': {'ZipFile': b'foo'},
             'Handler': 'app.app',
             'Role': 'myarn',
-            'Timeout': 60,
         }
         for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
             stubbed_session.stub('lambda').create_function(
@@ -393,7 +415,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo')
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7')
         stubbed_session.verify_stubs()
 
     def test_can_pass_python_runtime(self, stubbed_session):
@@ -403,8 +425,6 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-            Timeout=60,
-            MemorySize=128,
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
@@ -419,7 +439,6 @@ class TestCreateLambdaFunction(object):
             'Code': {'ZipFile': b'foo'},
             'Handler': 'app.app',
             'Role': 'myarn',
-            'Timeout': 60,
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
@@ -427,7 +446,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo')
+            awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7')
         stubbed_session.verify_stubs()
 
     def test_can_provide_tags(self, stubbed_session):
@@ -437,8 +456,6 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-            Timeout=60,
-            MemorySize=128,
             Tags={'key': 'value'},
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
@@ -447,6 +464,7 @@ class TestCreateLambdaFunction(object):
             function_name='name',
             role_arn='myarn',
             zip_contents=b'foo',
+            runtime='python2.7',
             tags={'key': 'value'}) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
@@ -456,10 +474,6 @@ class TestUpdateLambdaFunction(object):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns({})
-        # Even if there's only a code change, we'll always call
-        # update_function_configuration.
-        lambda_client.update_function_configuration(
-            FunctionName='name', Environment={'Variables': {}}).returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo')
@@ -471,8 +485,7 @@ class TestUpdateLambdaFunction(object):
             FunctionName='name', ZipFile=b'foo').returns({})
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Runtime='python3.6',
-            Environment={'Variables': {}}).returns({})
+            Runtime='python3.6').returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', runtime='python3.6')
@@ -497,8 +510,7 @@ class TestUpdateLambdaFunction(object):
             FunctionName='name', ZipFile=b'foo').returns({})
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Timeout=240,
-            Environment={'Variables': {}}).returns({})
+            Timeout=240).returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', timeout=240)
@@ -510,8 +522,7 @@ class TestUpdateLambdaFunction(object):
             FunctionName='name', ZipFile=b'foo').returns({})
         lambda_client.update_function_configuration(
             FunctionName='name',
-            MemorySize=256,
-            Environment={'Variables': {}}).returns({})
+            MemorySize=256).returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', memory_size=256)
@@ -524,9 +535,6 @@ class TestUpdateLambdaFunction(object):
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
                 {'FunctionArn': function_arn})
-        lambda_client.update_function_configuration(
-            FunctionName='name',
-            Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {}})
         lambda_client.tag_resource(
@@ -544,9 +552,6 @@ class TestUpdateLambdaFunction(object):
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
                 {'FunctionArn': function_arn})
-        lambda_client.update_function_configuration(
-            FunctionName='name',
-            Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {'MyKey': 'MyOrigValue'}})
         lambda_client.tag_resource(
@@ -564,9 +569,6 @@ class TestUpdateLambdaFunction(object):
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
                 {'FunctionArn': function_arn})
-        lambda_client.update_function_configuration(
-            FunctionName='name',
-            Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns(
                 {'Tags': {'KeyToRemove': 'Value'}})
@@ -585,9 +587,6 @@ class TestUpdateLambdaFunction(object):
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
                 {'FunctionArn': function_arn})
-        lambda_client.update_function_configuration(
-            FunctionName='name',
-            Environment={'Variables': {}}).returns({})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {'MyKey': 'SameValue'}})
         stubbed_session.activate_stubs()

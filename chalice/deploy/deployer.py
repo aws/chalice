@@ -22,6 +22,8 @@ from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice.utils import OSUtils
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
+from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
+from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.policy import AppPolicyGenerator
 
 
@@ -324,6 +326,7 @@ class LambdaDeployer(object):
             config.project_dir)
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
+
         return self._aws_client.create_function(
             function_name=function_name,
             role_arn=role_arn,
@@ -331,9 +334,21 @@ class LambdaDeployer(object):
             environment_variables=config.environment_variables,
             runtime=config.lambda_python_version,
             tags=config.tags,
-            timeout=config.lambda_timeout,
-            memory_size=config.lambda_memory_size
+            timeout=self._get_lambda_timeout(config),
+            memory_size=self._get_lambda_memory_size(config)
         )
+
+    def _get_lambda_timeout(self, config):
+        # type: (Config) -> int
+        if config.lambda_timeout is None:
+            return DEFAULT_LAMBDA_TIMEOUT
+        return config.lambda_timeout
+
+    def _get_lambda_memory_size(self, config):
+        # type: (Config) -> int
+        if config.lambda_memory_size is None:
+            return DEFAULT_LAMBDA_MEMORY_SIZE
+        return config.lambda_memory_size
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> None
@@ -352,12 +367,13 @@ class LambdaDeployer(object):
             deployment_package_filename, binary=True)
         print("Sending changes to lambda.")
         self._aws_client.update_function(
-            lambda_name, zip_contents,
-            config.environment_variables,
-            config.lambda_python_version,
+            function_name=lambda_name,
+            zip_contents=zip_contents,
+            runtime=config.lambda_python_version,
+            environment_variables=config.environment_variables,
             tags=config.tags,
-            timeout=config.lambda_timeout,
-            memory_size=config.lambda_memory_size
+            timeout=self._get_lambda_timeout(config),
+            memory_size=self._get_lambda_memory_size(config)
         )
 
     def _write_config_to_disk(self, config):
