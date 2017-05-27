@@ -1,3 +1,4 @@
+import sys
 import base64
 import logging
 import json
@@ -63,6 +64,7 @@ def assert_response_body_is(response, body):
 def json_response_body(response):
     return json.loads(response['body'])
 
+
 @fixture
 def sample_app():
     demo = app.Chalice('demo-app')
@@ -78,16 +80,9 @@ def sample_app():
     return demo
 
 
-def test_mixed_content_types():
-    demo = app.Chalice('demo-app')
-
-    with pytest.raises(ValueError):
-        @demo.route('/index', content_types=['application/octet-stream',
-                                         'text/plain'])
-        def index():
-            return {'hello': 'world'}
-
-
+@pytest.mark.skipif(sys.version[0] == '2',
+                    reason=('Test is irrelevant under python 2, since str and '
+                            'bytes are interchangable.'))
 def test_invalid_binary_response_body_throws_value_error(sample_app):
     response = app.Response(
         status_code=200,
@@ -95,7 +90,8 @@ def test_invalid_binary_response_body_throws_value_error(sample_app):
         headers={'Content-Type': 'application/octet-stream'}
     )
     with pytest.raises(ValueError):
-        response.encode_as_binary()
+        app.prepare_response_for_apigateway(response,
+                                            sample_app.api.binary_types)
 
 
 def test_can_encode_binary_body_as_base64(sample_app):
@@ -104,8 +100,19 @@ def test_can_encode_binary_body_as_base64(sample_app):
         body=b'foobar',
         headers={'Content-Type': 'application/octet-stream'}
     )
-    response.encode_as_binary()
-    encoded_response = response.to_dict()
+    encoded_response = app.prepare_response_for_apigateway(
+        response, sample_app.api.binary_types)
+    assert encoded_response['body'] == 'Zm9vYmFy'
+
+
+def test_can_encode_binary_body_with_header_charset(sample_app):
+    response = app.Response(
+        status_code=200,
+        body=b'foobar',
+        headers={'Content-Type': 'application/octet-stream; charset=binary'}
+    )
+    encoded_response = app.prepare_response_for_apigateway(
+        response, sample_app.api.binary_types)
     assert encoded_response['body'] == 'Zm9vYmFy'
 
 
@@ -116,8 +123,8 @@ def test_can_encode_binary_json(sample_app):
         body={'foo': 'bar'},
         headers={'Content-Type': 'application/json'}
     )
-    response.encode_as_binary()
-    encoded_response = response.to_dict()
+    encoded_response = app.prepare_response_for_apigateway(
+        response, sample_app.api.binary_types)
     assert encoded_response['body'] == 'eyJmb28iOiAiYmFyIn0='
 
 
@@ -218,11 +225,10 @@ def test_can_access_raw_body():
 
     @demo.route('/index')
     def index_view():
-        return {'rawbody': demo.current_request.raw_body}
+        return {'rawbody': demo.current_request.raw_body.decode('utf-8')}
 
     event = create_event('/index', 'GET', {})
     event['body'] = '{"hello": "world"}'
-
     result = demo(event, context=None)
     result = json_response_body(result)
     assert result == {'rawbody': '{"hello": "world"}'}
@@ -236,8 +242,8 @@ def test_raw_body_cache_returns_same_result():
         # The first raw_body decodes base64,
         # the second value should return the cached value.
         # Both should be the same value
-        return {'rawbody': demo.current_request.raw_body,
-                'rawbody2': demo.current_request.raw_body}
+        return {'rawbody': demo.current_request.raw_body.decode('utf-8'),
+                'rawbody2': demo.current_request.raw_body.decode('utf-8')}
 
     event = create_event('/index', 'GET', {})
     event['base64-body'] = base64.b64encode(
@@ -281,7 +287,8 @@ def test_cant_access_json_body_with_wrong_content_type():
 
     @demo.route('/', methods=['POST'], content_types=['application/xml'])
     def index():
-        return (demo.current_request.json_body, demo.current_request.raw_body)
+        return (demo.current_request.json_body,
+                demo.current_request.raw_body.decode('utf-8'))
 
     event = create_event('/', 'POST', {}, content_type='application/xml')
     event['body'] = '<Message>hello</Message>'
@@ -298,7 +305,8 @@ def test_json_body_available_on_multiple_content_types():
     @demo.route('/', methods=['POST'],
                 content_types=['application/xml', 'application/json'])
     def index():
-        return (demo.current_request.json_body, demo.current_request.raw_body)
+        return (demo.current_request.json_body,
+                demo.current_request.raw_body.decode('utf-8'))
 
     event = create_event_with_body('<Message>hello</Message>',
                                    content_type='application/xml')
@@ -323,7 +331,8 @@ def test_json_body_available_with_lowercase_content_type_key():
 
     @demo.route('/', methods=['POST'])
     def index():
-        return (demo.current_request.json_body, demo.current_request.raw_body)
+        return (demo.current_request.json_body,
+                demo.current_request.raw_body.decode('utf-8'))
 
     event = create_event_with_body({'foo': 'bar'})
     del event['headers']['Content-Type']
@@ -443,6 +452,7 @@ def test_can_base64_encode_binary_media_types_bytes():
             headers={'Content-Type': 'application/octet-stream'})
 
     event = create_event('/index', 'GET', {})
+    event['headers']['Accept'] = 'application/octet-stream'
     response = demo(event, context=None)
     assert response['statusCode'] == 200
     assert response['isBase64Encoded'] is True
@@ -614,17 +624,35 @@ def test_can_receive_binary_data():
     def bincat():
         raw_body = demo.current_request.raw_body
         return app.Response(
-            status_code=200,
-            body=raw_body,
-            headers={'Content-Type': content_type})
+            raw_body,
+            headers={'Content-Type': content_type},
+            status_code=200)
 
     body = 'L3UyNzEz'
     event = create_event_with_body(body, '/bincat', 'POST', content_type)
+    event['headers']['Accept'] = content_type
     event['isBase64Encoded'] = True
     response = demo(event, context=None)
 
     assert response['statusCode'] == 200
     assert response['body'] == body
+
+
+def test_cannot_receive_base64_string_with_binary_response():
+    content_type = 'application/octet-stream'
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/bincat', methods=['GET'], content_types=[content_type])
+    def bincat():
+        return app.Response(
+            status_code=200,
+            body=b'\u2713',
+            headers={'Content-Type': content_type})
+
+    event = create_event_with_body('', '/bincat', 'GET', content_type)
+    response = demo(event, context=None)
+
+    assert response['statusCode'] == 400
 
 
 def test_can_serialize_cognito_auth():

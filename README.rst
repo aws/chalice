@@ -706,62 +706,6 @@ This will result in a plain text response body::
     hello world!
 
 
-Tutorial: Binary Content
-========================
-
-Chalice supports binary payloads through its ``app.api.binary_types`` list. Any
-type in this list is considered a binary ``Content-Type``. Whenever a request
-with a ``Content-Type`` header is encountered that matches an entry in the
-``binary_types`` list, its body will be available as a ``bytes`` type on the
-property ``app.current_request.raw_body``. Similarly, in order to send binary
-data back in a response, simply set your ``Content-Type`` header to something
-present in the ``binary_types`` list. Note that you can override the default
-types by modifying the ``app.api.binary_types`` list at the module level.
-
-Here is an example app which simply echos back binary content:
-
-.. code-block:: python
-
-   from chalice import Chalice, Response
-
-   app = Chalice(app_name="binary-response")
-
-   @app.route('/bin-echo', methods=['POST'],
-              content_types=['application/octet-stream'])
-   def bin_echo():
-       raw_request_body = app.current_request.raw_body
-       return Response(body=raw_request_body,
-                       status_code=200,
-		       headers={'Content-Type': 'application/octet-stream'})
-
-You can see this app echo back binary data sent to it::
-
-  $ echo -n -e "\xFE\xED" | http POST $(chalice url)bin-echo Accept:application/octet-stream Content-Type:application/octet-stream | xxd
-  0000000: feed                                     ..
-
-Note that both the ``Accept`` and ``Content-Type`` header are required. If
-you fail to set the ``Content-Type`` header on the request will result in a
-``415 UnsupportedMediaType`` error. Care must be taken when configuring what
-``content_types`` a route accepts, they must all be valid binary types, or they
-must all be non-binary types. The ``Accept`` header must also be set if the
-data returned is to be the raw binary, if is omitted the call will succeed but
-a base64 encoding of the binary will be sent back instead of the bytes expected
-.
-
-For example::
-
-  $ echo -n -e "\xFE\xED" | http POST  $(chalice url)bin-echo Content-Type:application/octet-stream
-  HTTP/1.1 200 OK
-  Connection: keep-alive
-  Content-Length: 4
-  Content-Type: application/octet-stream
-
-  /u0=
-
-This results in the payload being larger than the acutal binary since base64
-encoding results in data being roughly ``4/3`` the size of the original data.
-
-
 Tutorial: CORS Support
 ======================
 

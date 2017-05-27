@@ -4,6 +4,7 @@ This is intended only for local development purposes.
 
 """
 from __future__ import print_function
+import base64
 import functools
 from collections import namedtuple
 
@@ -71,16 +72,21 @@ class LambdaEventConverter(object):
     LOCAL_SOURCE_IP = '127.0.0.1'
 
     """Convert an HTTP request to an event dict used by lambda."""
-    def __init__(self, route_matcher):
-        # type: (RouteMatcher) -> None
+    def __init__(self, route_matcher, binary_types=None):
+        # type: (RouteMatcher, List[str]) -> None
         self._route_matcher = route_matcher
+        if binary_types is None:
+            binary_types = []
+        self._binary_types = binary_types
+
+    def _is_binary(self, headers):
+        # type: (Dict[str,Any]) -> bool
+        return headers.get('content-type', '') in self._binary_types
 
     def create_lambda_event(self, method, path, headers, body=None):
         # type: (str, str, Dict[str, str], str) -> EventType
         view_route = self._route_matcher.match_route(path)
-        if body is None:
-            body = '{}'
-        return {
+        event = {
             'requestContext': {
                 'httpMethod': method,
                 'resourcePath': view_route.route,
@@ -90,10 +96,17 @@ class LambdaEventConverter(object):
             },
             'headers': dict(headers),
             'queryStringParameters': view_route.query_params,
-            'body': body,
             'pathParameters': view_route.captured,
             'stageVariables': {},
         }
+        if body is None:
+            event['body'] = '{}'
+        elif self._is_binary(headers):
+            event['body'] = base64.b64encode(body).decode('ascii')
+            event['isBase64Encoded'] = True
+        else:
+            event['body'] = body
+        return event
 
 
 class ChaliceRequestHandler(BaseHTTPRequestHandler):
@@ -104,7 +117,9 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         # type: (bytes, Tuple[str, int], HTTPServer, Chalice) -> None
         self.app_object = app_object
         self.event_converter = LambdaEventConverter(
-            RouteMatcher(list(app_object.routes)))
+            RouteMatcher(list(app_object.routes)),
+            self.app_object.api.binary_types
+        )
         BaseHTTPRequestHandler.__init__(
             self, request, client_address, server)  # type: ignore
 
@@ -113,10 +128,18 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         lambda_event = self._generate_lambda_event()
         self._do_invoke_view_function(lambda_event)
 
+    def _handle_binary(self, response):
+        # type: (Dict[str,Any]) -> Dict[str,Any]
+        if response.get('isBase64Encoded'):
+            body = base64.b64decode(response['body'])
+            response['body'] = body
+        return response
+
     def _do_invoke_view_function(self, lambda_event):
         # type: (EventType) -> None
         lambda_context = None
         response = self.app_object(lambda_event, lambda_context)
+        response = self._handle_binary(response)
         self._send_http_response(lambda_event, response)
 
     def _send_http_response(self, lambda_event, response):
@@ -130,7 +153,10 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         for header in headers:
             self.send_header(header, headers[header])
         self.end_headers()
-        self.wfile.write(response['body'].encode('utf-8'))
+        body = response['body']
+        if not isinstance(body, bytes):
+            body = body.encode('utf-8')
+        self.wfile.write(body)
 
     def _generate_lambda_event(self):
         # type: () -> EventType

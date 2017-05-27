@@ -18,9 +18,20 @@ def test_can_add_binary_media_types(swagger_gen):
     media_types = doc.get('x-amazon-apigateway-binary-media-types')
     assert sorted(media_types) == sorted([
         'application/octet-stream',
+        'application/x-tar',
+        'application/zip',
+        'audio/basic',
+        'audio/ogg',
+        'audio/mp4',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/webm',
         'image/png',
         'image/jpg',
-        'image/gif'
+        'image/gif',
+        'video/ogg',
+        'video/mpeg',
+        'video/webm',
     ])
 
 

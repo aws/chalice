@@ -18,6 +18,25 @@ from collections import Mapping
 _PARAMS = re.compile(r'{\w+}')
 
 
+def prepare_response_for_apigateway(response, binary_types):
+    response_dict = response.to_dict()
+    response_headers = CaseInsensitiveMapping(response_dict['headers'])
+    content_type = response_headers.get('content-type', '')
+    body = response_dict['body']
+
+    # Encode the response as binary if required.
+    # To keep json types working as expected they are encoded to a utf-8
+    # byte sequence if the content type is application/json before being
+    # converted to a base64 string.
+    if _matches_content_type(content_type, binary_types):
+        if content_type.startswith('application/json'):
+            body = body.encode('utf-8')
+        body = _base64encode(body)
+        response_dict['isBase64Encoded'] = True
+    response_dict['body'] = body
+    return response_dict
+
+
 def handle_decimals(obj):
     # Lambda will automatically serialize decimals so we need
     # to support that as well.
@@ -30,6 +49,21 @@ def error_response(message, error_code, http_status_code):
     body = {'Code': error_code, 'Message': message}
     response = Response(body=body, status_code=http_status_code)
     return response.to_dict()
+
+
+def _base64encode(data):
+    if not isinstance(data, bytes):
+        raise ValueError('Expected bytes type for body with binary '
+                         'Content-Type. Got %s type body instead.'
+                         % type(data))
+    data = base64.b64encode(data)
+    return data.decode('ascii')
+
+
+def _matches_content_type(content_type, valid_content_types):
+    if ';' in content_type:
+        content_type = content_type.split(';', 1)[0].strip()
+    return content_type in valid_content_types
 
 
 class ChaliceError(Exception):
@@ -236,13 +270,13 @@ class Request(object):
         self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
-        if is_base64_encoded:
-            body = self._base64decode(body)
-        self.raw_body = body
+        self._is_base64_encoded = is_base64_encoded
+        self._body = body
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
         self._json_body = None
+        self._raw_body = None
         self.context = context
         self.stage_vars = stage_vars
 
@@ -251,6 +285,17 @@ class Request(object):
             encoded = encoded.encode('ascii')
         output = base64.b64decode(encoded)
         return output
+
+    @property
+    def raw_body(self):
+        if self._raw_body is None:
+            if self._is_base64_encoded:
+                self._raw_body = self._base64decode(self._body)
+            elif not isinstance(self._body, bytes):
+                self._raw_body = self._body.encode('utf-8')
+            else:
+                self._raw_body = self._body
+        return self._raw_body
 
     @property
     def json_body(self):
@@ -273,39 +318,17 @@ class Response(object):
         if headers is None:
             headers = {}
         self.headers = headers
-        self.case_insensitive_headers = CaseInsensitiveMapping(headers)
         self.status_code = status_code
-        self._is_base64_encoded = False
-
-    def _base64encode(self, data):
-        if not isinstance(data, bytes):
-            raise ValueError('Expected bytes type for body with binary '
-                             'Content-Type. Got %s type body instead.'
-                             % type(data))
-        data = base64.b64encode(data)
-        return data.decode('ascii')
-
-    def encode_as_binary(self):
-        # To keep json types working as expected they are encoded to a utf-8
-        # byte sequence if the content type is application/json before being
-        # converted to a base64 string.
-        if self.case_insensitive_headers.get('content-type', '').startswith(
-                'application/json'):
-            self.body = json.dumps(self.body).encode('utf-8')
-        self.body = self._base64encode(self.body)
-        self._is_base64_encoded = True
 
     def to_dict(self):
         body = self.body
+        if not isinstance(body, str) and not isinstance(body, bytes):
+            body = json.dumps(body, default=handle_decimals)
         response = {
             'headers': self.headers,
             'statusCode': self.status_code,
+            'body': body
         }
-        if self._is_base64_encoded:
-            response['isBase64Encoded'] = True
-        elif not isinstance(body, str):
-            body = json.dumps(body, default=handle_decimals)
-        response['body'] = body
         return response
 
 
@@ -353,9 +376,20 @@ class APIGateway(object):
 
     _DEFAULT_BINARY_TYPES = [
         'application/octet-stream',
+        'application/x-tar',
+        'application/zip',
+        'audio/basic',
+        'audio/ogg',
+        'audio/mp4',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/webm',
         'image/png',
         'image/jpg',
-        'image/gif'
+        'image/gif',
+        'video/ogg',
+        'video/mpeg',
+        'video/webm',
     ]
 
     def __init__(self):
@@ -429,20 +463,6 @@ class Chalice(object):
             return view_func
         return _register_view
 
-    def _validate_route_content_types(self, name, content_types):
-        # A routes content_types be homogeneous in their binary support.
-        binary, non_binary = [], []
-        for content_type in content_types:
-            if content_type in self.api.binary_types:
-                binary.append(content_type)
-            else:
-                non_binary.append(content_type)
-        if binary and non_binary:
-            raise ValueError(
-                'In view function "%s", the content_types %s support binary '
-                'and %s do not. All content_types must be consistent in their '
-                'binary support.' % (name, binary, non_binary))
-
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
         methods = kwargs.pop('methods', ['GET'])
@@ -458,8 +478,6 @@ class Chalice(object):
         if kwargs:
             raise TypeError('TypeError: route() got unexpected keyword '
                             'arguments: %s' % ', '.join(list(kwargs)))
-        self._validate_route_content_types(name, content_types)
-
         if path in self.routes:
             raise ValueError(
                 "Duplicate route detected: '%s'\n"
@@ -505,8 +523,8 @@ class Chalice(object):
         if route_entry.content_types:
             content_type = self.current_request.headers.get(
                 'content-type', 'application/json')
-            if not self._matches_content_type(content_type,
-                                              route_entry.content_types):
+            if not _matches_content_type(content_type,
+                                         route_entry.content_types):
                 return error_response(
                     error_code='UnsupportedMediaType',
                     message='Unsupported media type: %s' % content_type,
@@ -516,16 +534,36 @@ class Chalice(object):
                                                     function_args)
         if self._cors_enabled_for_route(route_entry):
             self._add_cors_headers(response, route_entry.cors)
-        if self._matches_content_type(response.case_insensitive_headers.get(
-                'content-type', 'application/json'), self.api.binary_types):
-            response.encode_as_binary()
-        response = response.to_dict()
+
+        response_headers = CaseInsensitiveMapping(response.headers)
+        if not self._validate_binary_response(
+                self.current_request.headers, response_headers):
+            content_type = response_headers.get('content-type', '')
+            return error_response(
+                error_code='BadRequest',
+                message=('Request did not specify an Accept header with %s, '
+                         'The response has a Content-Type of %s. If a '
+                         'response has a binary Content-Type then the request '
+                         'must specify an Accept header that matches.'
+                         % (content_type, content_type)),
+                http_status_code=400
+            )
+        response = prepare_response_for_apigateway(response,
+                                                   self.api.binary_types)
         return response
 
-    def _matches_content_type(self, content_type, valid_content_types):
-        if ';' in content_type:
-            content_type = content_type.split(';', 1)[0].strip()
-        return content_type in valid_content_types
+    def _validate_binary_response(self, request_headers, response_headers):
+        # Validates that a response is valid given the request. If the response
+        # content-type specifies a binary type, there must be an accept header
+        # that is a binary type as well.
+        request_accept_header = request_headers.get('accept')
+        response_content_type = response_headers.get(
+            'content-type', 'application/json')
+        response_is_binary = response_content_type in self.api.binary_types
+        request_accepts_binary = request_accept_header in self.api.binary_types
+        if response_is_binary != request_accepts_binary:
+            return False
+        return True
 
     def _get_view_function_response(self, view_function, function_args):
         try:

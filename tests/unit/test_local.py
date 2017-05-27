@@ -83,6 +83,13 @@ def sample_app():
                         status_code=200,
                         headers={'Content-Type': 'text/plain'})
 
+    @demo.route('/binary', methods=['POST'],
+                content_types=['application/octet-stream'])
+    def binary_round_trip():
+        return Response(body=demo.current_request.raw_body,
+                        status_code=200,
+                        headers={'Content-Type': 'application/octet-stream'})
+
     return demo
 
 
@@ -94,12 +101,17 @@ def handler(sample_app):
     return chalice_handler
 
 
-def _get_body_from_response_stream(handler):
+def _get_raw_body_from_response_stream(handler):
     # This is going to include things like status code and
     # response headers in the raw stream.  We just care about the
     # body for now so we'll split lines.
     raw_response = handler.wfile.getvalue()
     body = raw_response.splitlines()[-1]
+    return body
+
+
+def _get_body_from_response_stream(handler):
+    body = _get_raw_body_from_response_stream(handler)
     return json.loads(body)
 
 
@@ -152,7 +164,6 @@ def test_will_respond_with_custom_cors_enabled(handler):
                         headers=headers)
     handler.do_GET()
     response = handler.wfile.getvalue().splitlines()
-    print(response)
     assert b'Access-Control-Allow-Origin: https://foo.bar' in response
     assert (b'Access-Control-Allow-Headers: Authorization,Content-Type,'
             b'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
@@ -213,6 +224,24 @@ def test_unsupported_methods_raise_error(handler):
         'Code': 'MethodNotAllowedError',
         'Message': 'Unsupported method: POST'
     }
+
+
+def test_can_round_trip_binary(handler):
+    body = b'\xFE\xED'
+    set_current_request(
+        handler, method='POST', path='/binary',
+        headers={
+            'content-type': 'application/octet-stream',
+            'accept': 'application/octet-stream',
+            'content-length': len(body)
+        }
+    )
+    handler.rfile.write(body)
+    handler.rfile.seek(0)
+
+    handler.do_POST()
+    response = _get_raw_body_from_response_stream(handler)
+    assert response == body
 
 
 def test_querystring_is_mapped(handler):
