@@ -29,7 +29,7 @@ def prepare_response_for_apigateway(response, binary_types):
     # byte sequence if the content type is application/json before being
     # converted to a base64 string.
     if _matches_content_type(content_type, binary_types):
-        if content_type.startswith('application/json'):
+        if _matches_content_type(content_type, ['application/json']):
             body = body.encode('utf-8')
         body = _base64encode(body)
         response_dict['isBase64Encoded'] = True
