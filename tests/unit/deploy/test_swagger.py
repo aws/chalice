@@ -16,23 +16,7 @@ def test_can_add_binary_media_types(swagger_gen):
     app = Chalice('test-binary')
     doc = swagger_gen.generate_swagger(app)
     media_types = doc.get('x-amazon-apigateway-binary-media-types')
-    assert sorted(media_types) == sorted([
-        'application/octet-stream',
-        'application/x-tar',
-        'application/zip',
-        'audio/basic',
-        'audio/ogg',
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/wav',
-        'audio/webm',
-        'image/png',
-        'image/jpg',
-        'image/gif',
-        'video/ogg',
-        'video/mpeg',
-        'video/webm',
-    ])
+    assert sorted(media_types) == sorted(app.api.binary_types)
 
 
 def test_can_produce_swagger_top_level_keys(sample_app, swagger_gen):
