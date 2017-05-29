@@ -16,7 +16,7 @@ Next Release (TBD)
 * Fix vendor directory contents not being importable locally
   (`#350 <https://github.com/awslabs/chalice/pull/350>`__)
 * Add support for binary payloads
-  (`#352 <https://github.com/awslabs/chalice/pull/352>`__)
+  (`#348 <https://github.com/awslabs/chalice/issues/348>`__)
 
 
 0.8.2
