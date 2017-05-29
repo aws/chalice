@@ -90,8 +90,7 @@ def test_invalid_binary_response_body_throws_value_error(sample_app):
         headers={'Content-Type': 'application/octet-stream'}
     )
     with pytest.raises(ValueError):
-        app.prepare_response_for_apigateway(response,
-                                            sample_app.api.binary_types)
+        response.to_dict(sample_app.api.binary_types)
 
 
 def test_can_encode_binary_body_as_base64(sample_app):
@@ -100,8 +99,7 @@ def test_can_encode_binary_body_as_base64(sample_app):
         body=b'foobar',
         headers={'Content-Type': 'application/octet-stream'}
     )
-    encoded_response = app.prepare_response_for_apigateway(
-        response, sample_app.api.binary_types)
+    encoded_response = response.to_dict(sample_app.api.binary_types)
     assert encoded_response['body'] == 'Zm9vYmFy'
 
 
@@ -111,8 +109,7 @@ def test_can_encode_binary_body_with_header_charset(sample_app):
         body=b'foobar',
         headers={'Content-Type': 'application/octet-stream; charset=binary'}
     )
-    encoded_response = app.prepare_response_for_apigateway(
-        response, sample_app.api.binary_types)
+    encoded_response = response.to_dict(sample_app.api.binary_types)
     assert encoded_response['body'] == 'Zm9vYmFy'
 
 
@@ -123,8 +120,7 @@ def test_can_encode_binary_json(sample_app):
         body={'foo': 'bar'},
         headers={'Content-Type': 'application/json'}
     )
-    encoded_response = app.prepare_response_for_apigateway(
-        response, sample_app.api.binary_types)
+    encoded_response = response.to_dict(sample_app.api.binary_types)
     assert encoded_response['body'] == 'eyJmb28iOiAiYmFyIn0='
 
 

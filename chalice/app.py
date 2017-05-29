@@ -18,25 +18,6 @@ from collections import Mapping
 _PARAMS = re.compile(r'{\w+}')
 
 
-def prepare_response_for_apigateway(response, binary_types):
-    response_dict = response.to_dict()
-    response_headers = CaseInsensitiveMapping(response_dict['headers'])
-    content_type = response_headers.get('content-type', '')
-    body = response_dict['body']
-
-    # Encode the response as binary if required.
-    # To keep json types working as expected they are encoded to a utf-8
-    # byte sequence if the content type is application/json before being
-    # converted to a base64 string.
-    if _matches_content_type(content_type, binary_types):
-        if _matches_content_type(content_type, ['application/json']):
-            body = body.encode('utf-8')
-        body = _base64encode(body)
-        response_dict['isBase64Encoded'] = True
-    response_dict['body'] = body
-    return response_dict
-
-
 def handle_decimals(obj):
     # Lambda will automatically serialize decimals so we need
     # to support that as well.
@@ -49,15 +30,6 @@ def error_response(message, error_code, http_status_code):
     body = {'Code': error_code, 'Message': message}
     response = Response(body=body, status_code=http_status_code)
     return response.to_dict()
-
-
-def _base64encode(data):
-    if not isinstance(data, bytes):
-        raise ValueError('Expected bytes type for body with binary '
-                         'Content-Type. Got %s type body instead.'
-                         % type(data))
-    data = base64.b64encode(data)
-    return data.decode('ascii')
 
 
 def _matches_content_type(content_type, valid_content_types):
@@ -320,7 +292,7 @@ class Response(object):
         self.headers = headers
         self.status_code = status_code
 
-    def to_dict(self):
+    def to_dict(self, binary_types=None):
         body = self.body
         if not isinstance(body, str) and not isinstance(body, bytes):
             body = json.dumps(body, default=handle_decimals)
@@ -329,7 +301,33 @@ class Response(object):
             'statusCode': self.status_code,
             'body': body
         }
+        if binary_types is not None:
+            self._b64encode_body_if_needed(response, binary_types)
         return response
+
+    def _b64encode_body_if_needed(self, response_dict, binary_types):
+        response_headers = CaseInsensitiveMapping(response_dict['headers'])
+        content_type = response_headers.get('content-type', '')
+        body = response_dict['body']
+
+        # Encode the response as binary if required.
+        # To keep json types working as expected they are encoded to a utf-8
+        # byte sequence if the content type is application/json before being
+        # converted to a base64 string.
+        if _matches_content_type(content_type, binary_types):
+            if _matches_content_type(content_type, ['application/json']):
+                body = body.encode('utf-8')
+            body = self._base64encode(body)
+            response_dict['isBase64Encoded'] = True
+        response_dict['body'] = body
+
+    def _base64encode(self, data):
+        if not isinstance(data, bytes):
+            raise ValueError('Expected bytes type for body with binary '
+                             'Content-Type. Got %s type body instead.'
+                             % type(data))
+        data = base64.b64encode(data)
+        return data.decode('ascii')
 
 
 class RouteEntry(object):
@@ -548,8 +546,7 @@ class Chalice(object):
                          % (content_type, content_type)),
                 http_status_code=400
             )
-        response = prepare_response_for_apigateway(response,
-                                                   self.api.binary_types)
+        response = response.to_dict(self.api.binary_types)
         return response
 
     def _validate_binary_response(self, request_headers, response_headers):
