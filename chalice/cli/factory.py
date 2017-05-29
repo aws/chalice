@@ -139,7 +139,17 @@ class CLIFactory(object):
         # lambda.
         vendor_dir = os.path.join(self.project_dir, 'vendor')
         if os.path.isdir(vendor_dir) and vendor_dir not in sys.path:
-            sys.path.insert(0, vendor_dir)
+            # This is a tradeoff we have to make for local use.
+            # The common use case of vendor/ is to include
+            # extension modules built for AWS Lambda.  If you're
+            # running on a non-linux dev machine, then attempting
+            # to import these files will raise exceptions.  As
+            # a workaround, the vendor is added to the end of
+            # sys.path so it's after `./lib/site-packages`.
+            # This gives you a change to install the correct
+            # version locally and still keep the lambda
+            # specific one in vendor/
+            sys.path.append(vendor_dir)
         try:
             app = importlib.import_module('app')
             chalice_app = getattr(app, 'app')
