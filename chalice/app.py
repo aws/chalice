@@ -294,7 +294,7 @@ class Response(object):
 
     def to_dict(self, binary_types=None):
         body = self.body
-        if not isinstance(body, str) and not isinstance(body, bytes):
+        if not isinstance(body, (str, bytes)):
             body = json.dumps(body, default=handle_decimals)
         response = {
             'headers': self.headers,
