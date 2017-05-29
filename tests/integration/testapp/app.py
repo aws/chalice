@@ -68,7 +68,7 @@ def raise_arbitrary_error():
 @app.route('/formencoded', methods=['POST'],
            content_types=['application/x-www-form-urlencoded'])
 def form_encoded():
-    parsed = parse_qs(app.current_request.raw_body)
+    parsed = parse_qs(app.current_request.raw_body.decode('utf-8'))
     return {
         'parsed': parsed
     }
