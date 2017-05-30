@@ -631,8 +631,8 @@ def test_can_validate_updated_custom_binary_types(sample_app):
     def index():
         return {'hello': 'world'}
 
-    validate_route_content_types(sample_app.routes,
-                                 sample_app.api.binary_types)
+    assert validate_route_content_types(sample_app.routes,
+                                        sample_app.api.binary_types) is None
 
 
 class TestLambdaInitialDeploymentWithConfigurations(object):
