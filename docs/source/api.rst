@@ -268,7 +268,8 @@ There is a single instance of :class:`APIGateway` attached to each
    The value of ``default_binary_types`` are the ``Content-Types`` that are
    considered binary by default. This value should not be changed, instead you
    should modify the ``binary_types`` list to change the behavior of a content
-   type.
+   type. Its value is: ``application/octet-stream``, ``application/x-tar``, ``application/zip``, ``audio/basic``, ``audio/ogg``, ``audio/mp4``, ``audio/mpeg``, ``audio/wav``, ``audio/webm``, ``image/png``, ``image/jpg``, ``image/gif``, ``video/ogg``, ``video/mpeg``, ``video/webm``.
+
 
 .. attribute:: binary_types
 
