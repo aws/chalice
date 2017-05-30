@@ -1,10 +1,8 @@
-import botocore.session
 import json
 import os
 
 import pytest
 import mock
-from botocore.stub import Stubber
 from pytest import fixture
 
 from chalice import __version__ as chalice_version
@@ -22,9 +20,6 @@ from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
 from chalice.deploy.deployer import validate_python_version
 from chalice.deploy.packager import LambdaDeploymentPackager
-
-
-_SESSION = None
 
 
 class SimpleStub(object):
@@ -60,16 +55,6 @@ class CustomConfirmPrompt():
 
 
 @fixture
-def stubbed_api_gateway():
-    return stubbed_client('apigateway')
-
-
-@fixture
-def stubbed_lambda():
-    return stubbed_client('lambda')
-
-
-@fixture
 def in_memory_osutils():
     return InMemoryOSUtils()
 
@@ -79,16 +64,6 @@ def app_policy(in_memory_osutils):
     return ApplicationPolicyHandler(
         in_memory_osutils,
         AppPolicyGenerator(in_memory_osutils))
-
-
-def stubbed_client(service_name):
-    global _SESSION
-    if _SESSION is None:
-        _SESSION = botocore.session.get_session()
-    client = _SESSION.create_client(service_name,
-                                    region_name='us-west-2')
-    stubber = Stubber(client)
-    return client, stubber
 
 
 @fixture

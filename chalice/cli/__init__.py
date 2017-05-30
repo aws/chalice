@@ -23,7 +23,9 @@ from chalice.logs import display_logs
 from chalice.utils import create_zip_file
 from chalice.utils import record_deployed_values
 from chalice.utils import remove_stage_from_deployed_values
+from chalice.utils import record_ssm_parameters
 from chalice.deploy.deployer import validate_python_version
+from chalice.deploy.paramstore import ParameterStoreError
 from chalice.utils import getting_started_prompt
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -71,6 +73,103 @@ def cli(ctx, project_dir, debug=False):
     ctx.obj['debug'] = debug
     ctx.obj['factory'] = CLIFactory(project_dir, debug)
     os.chdir(project_dir)
+
+
+@cli.group()
+@click.pass_context
+def param(ctx):
+    # type: (click.Context) -> None
+    pass
+
+
+@param.command('set')
+@click.option('--key',
+              required=True,
+              help=('The parameter key name to store.'))
+@click.option('--value',
+              required=True,
+              help=('The parameter value to store.'))
+@click.option('--overwrite/---no-overwrite',
+              required=False,
+              default=False,
+              help=('If set overwrite will replace existing parameter keys.'))
+@click.option('--param-type',
+              required=False,
+              default='SecureString',
+              type=click.Choice(['String', 'StringList', 'SecureString']),
+              help=('Type of parameter to store.'))
+@click.pass_context
+def param_set(ctx, key, value, overwrite, param_type):
+    # type: (click.Context, str, str, bool, str) -> None
+    factory = ctx.obj['factory']  # type: CLIFactory
+    session = factory.create_botocore_session()
+    config = factory.create_config_obj()
+    param_store = factory.create_default_parameter_store(
+        session, config.app_name)
+
+    param_store.set_param(key, value, overwrite, param_type)
+    param_names = set(config.ssm_parameters)
+    if key not in param_names:
+        param_names.add(key)
+    record_ssm_parameters(list(param_names), os.path.join(
+        config.project_dir, '.chalice', 'config.json'))
+
+
+@param.command('get')
+@click.option('--key',
+              required=True,
+              help=('The parameter key name to fetch and print to stdout.'))
+@click.option('--decrypt/---no-decrypt',
+              required=False,
+              default=False,
+              help=('If set override will replace existing parameter keys.'))
+@click.pass_context
+def param_get(ctx, key, decrypt):
+    # type: (click.Context, str, bool) -> None
+    factory = ctx.obj['factory']  # type: CLIFactory
+    session = factory.create_botocore_session()
+    config = factory.create_config_obj()
+    param_store = factory.create_default_parameter_store(
+        session, config.app_name)
+    value = param_store.get_param(key, decrypt)
+    click.echo(value)
+
+
+@param.command('delete')
+@click.option('--key',
+              required=True,
+              help=('The parameter key name to fetch and print to stdout.'))
+@click.pass_context
+def param_delete(ctx, key):
+    # type: (click.Context, str) -> None
+    factory = ctx.obj['factory']  # type: CLIFactory
+    session = factory.create_botocore_session()
+    config = factory.create_config_obj()
+    param_store = factory.create_default_parameter_store(
+        session, config.app_name)
+
+    try:
+        param_store.delete_param(key)
+    except ParameterStoreError:
+        click.echo('Parameter %s does not exist.' % key)
+    param_names = set(config.ssm_parameters)
+    if key in param_names:
+        param_names.remove(key)
+        record_ssm_parameters(list(param_names), os.path.join(
+            config.project_dir, '.chalice', 'config.json'))
+
+
+@param.command('list')
+@click.pass_context
+def param_list(ctx):
+    # type: (click.Context) -> None
+    factory = ctx.obj['factory']  # type: CLIFactory
+    config = factory.create_config_obj()
+    parameters = config.ssm_parameters
+    if parameters:
+        click.echo(', '.join(parameters))
+    else:
+        click.echo('No parameters set.')
 
 
 @cli.command()
@@ -139,6 +238,20 @@ def delete(ctx, profile, stage):
     factory.profile = profile
     config = factory.create_config_obj(chalice_stage_name=stage)
     session = factory.create_botocore_session()
+
+    # Delete parameters
+    param_store = factory.create_default_parameter_store(
+        session, config.app_name)
+    for param_name in config.ssm_parameters:
+        try:
+            param_store.delete_param(param_name)
+            click.echo('Deleted parameter: %s' % param_name)
+        except ParameterStoreError:
+            click.echo('Parameter %s was already deleted.' % param_name)
+    record_ssm_parameters([], os.path.join(
+        config.project_dir, '.chalice', 'config.json'))
+
+    # Delete deployed resources
     d = factory.create_default_deployer(session=session, prompter=click)
     d.delete(config, chalice_stage_name=stage)
     remove_stage_from_deployed_values(stage, os.path.join(

@@ -12,6 +12,8 @@ from chalice.awsclient import TypedAWSClient
 from chalice.app import Chalice  # noqa
 from chalice.config import Config
 from chalice.deploy import deployer
+from chalice.deploy import paramstore
+from chalice.deploy.paramstore import ParameterStore  # noqa
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -106,6 +108,10 @@ class CLIFactory(object):
         config = Config(chalice_stage_name, user_provided_params,
                         config_from_disk, default_params)
         return config
+
+    def create_default_parameter_store(self, session, app_name):
+        # type: (Session, str) -> ParameterStore
+        return paramstore.create_default_parameter_store(session, app_name)
 
     def _validate_config_from_disk(self, config):
         # type: (Dict[str, Any]) -> None

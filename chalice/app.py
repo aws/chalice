@@ -8,6 +8,8 @@ import decimal
 import warnings
 from collections import Mapping
 
+import botocore.session
+
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
@@ -331,6 +333,8 @@ class Chalice(object):
         self._authorizers = {}
         if self.configure_logs:
             self._configure_logging()
+        self._param_cache = {}
+        self._ssm_client = None
 
     def _configure_logging(self):
         log = logging.getLogger(self.app_name)
@@ -357,6 +361,25 @@ class Chalice(object):
                 if handler.stream == sys.stdout:
                     return True
         return False
+
+    def get_param(self, key, cache=False):
+        if cache and key in self._param_cache:
+            return self._param_cache[key]
+        if self._ssm_client is None:
+            session = botocore.session.get_session()
+            self._ssm_client = session.create_client('ssm')
+        key_name = 'chalice.%s.%s' % (self.app_name, key)
+        results = self._ssm_client.get_parameters(
+            Names=[key_name],
+            WithDecryption=True
+        )
+        try:
+            result = results['Parameters'][0]['Value']
+        except (KeyError, IndexError):
+            result = None
+        if cache:
+            self._param_cache[key] = result
+        return result
 
     @property
     def authorizers(self):

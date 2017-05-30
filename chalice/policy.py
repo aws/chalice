@@ -13,7 +13,7 @@ import uuid
 from typing import Any, List, Dict, Set  # noqa
 import botocore.session
 
-from chalice.constants import CLOUDWATCH_LOGS
+from chalice.constants import CLOUDWATCH_LOGS, SSM_PARAMETERS
 from chalice.utils import OSUtils  # noqa
 from chalice.config import Config  # noqa
 
@@ -79,6 +79,7 @@ class AppPolicyGenerator(object):
         app_source = self._osutils.get_file_contents(app_py, binary=False)
         app_policy = policy_from_source_code(app_source)
         app_policy['Statement'].append(CLOUDWATCH_LOGS)
+        app_policy['Statement'].append(SSM_PARAMETERS)
         return app_policy
 
 

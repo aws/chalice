@@ -14,6 +14,59 @@ def test_region_name_is_exposed(stubbed_session):
     assert TypedAWSClient(stubbed_session).region_name == 'us-west-2'
 
 
+def test_ssm_put_param(stubbed_session):
+    stub_client = stubbed_session.stub('ssm')
+    stub_client.put_parameter(
+        Name='foo',
+        Value='bar',
+        Type='String',
+        Overwrite=False
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.ssm_put_param('foo', 'bar', False, 'String')
+    stubbed_session.verify_stubs()
+
+
+def test_ssm_get_param(stubbed_session):
+    stub_client = stubbed_session.stub('ssm')
+    response = {'Parameters': [{'Value': 'bar'}]}
+    stub_client.get_parameters(
+        Names=['foo'],
+        WithDecryption=True
+    ).returns(response)
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    result = awsclient.ssm_get_param('foo', True)
+    assert result == 'bar'
+    stubbed_session.verify_stubs()
+
+
+def test_ssm_delete_param(stubbed_session):
+    stub_client = stubbed_session.stub('ssm')
+    stub_client.delete_parameter(
+        Name='foo',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.ssm_delete_param('foo')
+    stubbed_session.verify_stubs()
+
+
+def test_ssm_delete_param_error(stubbed_session):
+    stub_client = stubbed_session.stub('ssm')
+    stub_client.delete_parameter(
+        Name='foo',
+    ).raises_error('ParameterNotFound', 'Param not found.')
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    with pytest.raises(ResourceDoesNotExistError):
+        awsclient.ssm_delete_param('foo')
+
+
 def test_deploy_rest_api(stubbed_session):
     stub_client = stubbed_session.stub('apigateway')
     stub_client.create_deployment(
@@ -102,7 +155,8 @@ def test_can_iterate_logs(stubbed_session):
          'timestamp': timestamp,
          'message': 'message',
          'ingestionTime': timestamp,
-         'eventId': 'eventId',}
+         'eventId': 'eventId',
+        }
     ]
 
     stubbed_session.verify_stubs()

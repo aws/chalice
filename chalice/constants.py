@@ -76,6 +76,15 @@ CLOUDWATCH_LOGS = {
 }
 
 
+SSM_PARAMETERS = {
+    "Effect": "Allow",
+    "Action": [
+        "ssm:GetParameters"
+    ],
+    "Resource": "arn:aws:ssm:*:*:*"
+}
+
+
 CODEBUILD_POLICY = {
     "Version": "2012-10-17",
     # This is the policy straight from the console.

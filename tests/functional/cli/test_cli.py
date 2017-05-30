@@ -9,8 +9,11 @@ import mock
 from chalice import cli
 from chalice.cli import factory
 from chalice.deploy.deployer import Deployer
+from chalice.deploy.paramstore import ParameterStore
 from chalice.config import Config
 from chalice.utils import record_deployed_values
+from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ResourceDoesNotExistError
 
 
 @pytest.fixture
@@ -26,11 +29,18 @@ def mock_deployer():
 
 
 @pytest.fixture
-def mock_cli_factory(mock_deployer):
+def mock_param_store():
+    s = mock.Mock(spec=ParameterStore)
+    return s
+
+
+@pytest.fixture
+def mock_cli_factory(mock_deployer, mock_param_store):
     cli_factory = mock.Mock(spec=factory.CLIFactory)
     cli_factory.create_config_obj.return_value = Config.create(project_dir='.')
     cli_factory.create_botocore_session.return_value = mock.sentinel.Session
     cli_factory.create_default_deployer.return_value = mock_deployer
+    cli_factory.create_default_parameter_store.return_value = mock_param_store
     return cli_factory
 
 
@@ -51,7 +61,8 @@ def _run_cli_command(runner, function, args, cli_factory=None):
         cli_factory = factory.CLIFactory('.')
     result = runner.invoke(
         function, args, obj={'project_dir': '.', 'debug': False,
-                             'factory': cli_factory})
+                             'factory': cli_factory},
+        catch_exceptions=False)
     return result
 
 
@@ -306,3 +317,104 @@ def test_can_generate_pipeline_for_all(runner):
             # tests.  Just a sanity check that it looks right.
             assert "AWSTemplateFormatVersion" in template
             assert "Outputs" in template
+
+
+def test_can_put_ssm_parameter(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.param_set, ['--key', 'foo', '--value', 'bar'],
+            cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        assert result.output == ''
+
+
+def test_can_get_ssm_parameter(runner, mock_cli_factory, mock_param_store):
+    mock_param_store.get_param.return_value = 'bar'
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.param_get, ['--key', 'foo'],
+            cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        assert result.output == 'bar\n'
+
+
+def test_can_delete_ssm_parameter(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({
+                'ssm_parameters': ['foo', 'bar']
+            }).encode('utf-8'))
+        cli_factory = factory.CLIFactory('.')
+        config = cli_factory.create_config_obj()
+        mock_cli_factory.create_config_obj.return_value = config
+
+        result = _run_cli_command(
+            runner, cli.param_delete, ['--key', 'foo'],
+            cli_factory=mock_cli_factory
+        )
+        assert result.exit_code == 0
+        assert result.output == ''
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+        assert data.get('ssm_parameters', []) == ['bar']
+
+
+def test_delete_nonexistant_param_does_raise_error(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({
+                'ssm_parameters': ['foo', 'bar']
+            }).encode('utf-8'))
+        cli_factory = factory.CLIFactory('.')
+        config = cli_factory.create_config_obj()
+        aws_client = mock.Mock(spec=TypedAWSClient)
+        aws_client.ssm_delete_param.side_effect = ResourceDoesNotExistError
+        store = ParameterStore(aws_client, 'testproject')
+        mock_cli_factory.create_config_obj.return_value = config
+        mock_cli_factory.create_default_parameter_store.return_value = store
+
+        result = _run_cli_command(
+            runner, cli.param_delete, ['--key', 'baz'],
+            cli_factory=mock_cli_factory
+        )
+        assert result.exit_code == 0
+        assert result.output == 'Parameter baz does not exist.\n'
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+        assert data.get('ssm_parameters', []) == ['foo', 'bar']
+
+
+def test_can_list_ssm_parameters(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({
+                'ssm_parameters': ['var_1', 'var_2']
+            }).encode('utf-8'))
+        result = _run_cli_command(runner, cli.param_list, [])
+        assert result.exit_code == 0
+        assert result.output == 'var_1, var_2\n'
+
+
+def test_can_list_no_ssm_parameters_set(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'wb') as f:
+            f.write(json.dumps({}).encode('utf-8'))
+        result = _run_cli_command(runner, cli.param_list, [])
+        assert result.exit_code == 0
+        assert result.output == 'No parameters set.\n'

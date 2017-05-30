@@ -27,6 +27,11 @@ def test_default_value_of_manage_iam_role():
     assert c.manage_iam_role
 
 
+def test_default_value_of_ssm_parameters():
+    c = Config()
+    assert c.ssm_parameters == []
+
+
 def test_manage_iam_role_explicitly_set():
     c = Config.create(manage_iam_role=False)
     assert not c.manage_iam_role
@@ -42,6 +47,7 @@ def test_can_chain_lookup():
     config_from_disk = {
         'api_gateway_stage': 'config_from_disk',
         'app_name': 'config_from_disk',
+        'ssm_parameters': ['param_a', 'param_b']
     }
 
     default_params = {
@@ -54,6 +60,7 @@ def test_can_chain_lookup():
     assert c.api_gateway_stage == 'user_provided_params'
     assert c.app_name == 'config_from_disk'
     assert c.project_dir == 'default_params'
+    assert c.ssm_parameters == ['param_a', 'param_b']
 
     assert c.config_from_disk == config_from_disk
 
