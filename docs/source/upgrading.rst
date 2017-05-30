@@ -7,6 +7,19 @@ interested in the high level changes, see the
 `CHANGELOG.rst <https://github.com/awslabs/chalice/blob/master/CHANGELOG.rst>`__)
 file.
 
+.. _v0-9-0:
+
+0.9.0
+-----
+
+The 0.9.0 release changed the type of ``app.current_request.raw_body`` to
+always be of type ``bytes()``.  This only affects users that were using
+python3.  Previously you would get a type ``str()``, but with the introduction
+of `binary content type support
+<https://github.com/awslabs/chalice/issues/348>`__, the ``raw_body`` attribute
+was made consistent to always return a type ``bytes()``.
+
+
 .. _v0-8-1:
 
 0.8.1
