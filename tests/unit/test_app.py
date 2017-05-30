@@ -456,6 +456,24 @@ def test_can_base64_encode_binary_media_types_bytes():
     assert response['headers']['Content-Type'] == 'application/octet-stream'
 
 
+def test_can_return_text_even_with_binary_content_type_configured():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(
+            status_code=200,
+            body='Plain text',
+            headers={'Content-Type': 'text/plain'})
+
+    event = create_event('/index', 'GET', {})
+    event['headers']['Accept'] = 'application/octet-stream'
+    response = demo(event, context=None)
+    assert response['statusCode'] == 200
+    assert response['body'] == 'Plain text'
+    assert response['headers']['Content-Type'] == 'text/plain'
+
+
 def test_route_equality():
     view_function = lambda: {"hello": "world"}
     a = app.RouteEntry(
