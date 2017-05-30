@@ -259,12 +259,13 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200):
+    def __init__(self, body, headers=None, status_code=200, is_base_64_encoded=False):
         self.body = body
         if headers is None:
             headers = {}
         self.headers = headers
         self.status_code = status_code
+        self.is_base_64_encoded = is_base_64_encoded
 
     def to_dict(self):
         body = self.body
@@ -274,6 +275,7 @@ class Response(object):
             'headers': self.headers,
             'statusCode': self.status_code,
             'body': body,
+            'isBase64Encoded': self.is_base_64_encoded,
         }
 
 
