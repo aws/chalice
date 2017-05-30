@@ -101,7 +101,8 @@ def test_filename_and_lineno_included_in_syntax_error(clifactory):
 
 def test_can_import_vendor_package(clifactory):
     # Tests that vendor packages can be imported during config loading.
-    vendedlib_dir = os.path.join(clifactory.project_dir, 'vendor', 'vendedlib')
+    vendor_lib = os.path.join(clifactory.project_dir, 'vendor')
+    vendedlib_dir = os.path.join(vendor_lib, 'vendedlib')
     os.makedirs(vendedlib_dir)
     open(os.path.join(vendedlib_dir, '__init__.py'), 'a').close()
     with open(os.path.join(vendedlib_dir, 'submodule.py'), 'a') as f:
@@ -112,3 +113,4 @@ def test_can_import_vendor_package(clifactory):
         f.write('app.imported_value = submodule.CONST\n')
     app = clifactory.load_chalice_app()
     assert app.imported_value == 'foo bar'
+    assert sys.path[-1] == vendor_lib
