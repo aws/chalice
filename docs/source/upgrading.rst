@@ -17,7 +17,7 @@ always be of type ``bytes()``.  This only affects users that were using
 python3.  Previously you would get a type ``str()``, but with the introduction
 of `binary content type support
 <https://github.com/awslabs/chalice/issues/348>`__, the ``raw_body`` attribute
-was made consistent to always return a type ``bytes()``.
+was made to consistently be of type ``bytes()``.
 
 
 .. _v0-8-1:
