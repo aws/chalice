@@ -366,7 +366,7 @@ class Chalice(object):
         warnings.warn(
             "define_authorizer() is deprecated and will be removed in future "
             "versions of chalice.  Please use CognitoUserPoolAuthorizer(...) "
-            "instead", PendingDeprecationWarning)
+            "instead", DeprecationWarning)
         self._authorizers[name] = {
             'header': header,
             'auth_type': auth_type,
