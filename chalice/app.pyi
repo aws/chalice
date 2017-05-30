@@ -94,8 +94,13 @@ class RouteEntry(object):
     def __eq__(self, other: object) -> bool: ...
 
 
+class APIGateway(object):
+    binary_types = ... # type: List[str]
+
+
 class Chalice(object):
     app_name = ... # type: str
+    api = ... # type: APIGateway
     routes = ... # type: Dict[str, RouteEntry]
     current_request = ... # type: Request
     debug = ... # type: bool

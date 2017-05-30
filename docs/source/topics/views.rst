@@ -61,6 +61,9 @@ of the view function.  There are several options available:
 
 * Returning an instance of :class:`Response`.  This gives you
   complete control over what gets returned back to the customer.
+* A ``bytes`` type response body must have a ``Content-Type`` header value
+  that is present in the ``app.api.binary_types`` list in order to be handled
+  properly.
 * Any other return value will be serialized as JSON and sent back
   as the response body with content type ``application/json``.
 * Any subclass of ``ChaliceViewError`` will result in an HTTP
@@ -131,6 +134,68 @@ for errors.  For example:
         return Response(message='Plain text error message',
                         headers={'Content-Type': 'text/plain'},
                         status_code=400)
+
+
+Binary Content
+--------------
+
+Chalice supports binary payloads through its ``app.api.binary_types`` list. Any
+type in this list is considered a binary ``Content-Type``. Whenever a request
+with a ``Content-Type`` header is encountered that matches an entry in the
+``binary_types`` list, its body will be available as a ``bytes`` type on the
+property ``app.current_request.raw_body``. Similarly, in order to send binary
+data back in a response, simply set your ``Content-Type`` header to something
+present in the ``binary_types`` list. Note that you can override the default
+types by modifying the ``app.api.binary_types`` list at the module level.
+
+Here is an example app which simply echos back binary content:
+
+.. code-block:: python
+
+   from chalice import Chalice, Response
+
+   app = Chalice(app_name="binary-response")
+
+   @app.route('/bin-echo', methods=['POST'],
+              content_types=['application/octet-stream'])
+   def bin_echo():
+       raw_request_body = app.current_request.raw_body
+       return Response(body=raw_request_body,
+                       status_code=200,
+                       headers={'Content-Type': 'application/octet-stream'})
+
+You can see this app echo back binary data sent to it::
+
+  $ echo -n -e "\xFE\xED" | http POST $(chalice url)bin-echo \
+    Accept:application/octet-stream Content-Type:application/octet-stream | xxd
+  0000000: feed                                     ..
+
+Note that both the ``Accept`` and ``Content-Type`` header are required. If
+you fail to set the ``Content-Type`` header on the request will result in a
+``415 UnsupportedMediaType`` error. Care must be taken when configuring what
+``content_types`` a route accepts, they must all be valid binary types, or they
+must all be non-binary types. The ``Accept`` header must also be set if the
+data returned is to be the raw binary, if is omitted the call return a ``400``
+Bad Request response.
+
+For example, here is the same call as above without the ``Accept`` header::
+
+  $ echo -n -e "\xFE\xED" | http POST  $(chalice url)bin-echo \
+    Content-Type:application/octet-stream
+  HTTP/1.1 400 Bad Request
+  Connection: keep-alive
+  Content-Length: 270
+  Content-Type: application/json
+  Date: Sat, 27 May 2017 07:09:51 GMT
+
+  {
+    "Code": "BadRequest",
+    "Message": "Request did not specify an Accept header with
+      application/octet-stream, The response has a Content-Type of
+      application/octet-stream. If a response has a binary Content-Type then
+      the request must specify an Accept header that matches."
+  }
+
 
 
 Usage Recommendations

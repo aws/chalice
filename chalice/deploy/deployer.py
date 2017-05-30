@@ -59,6 +59,7 @@ def validate_configuration(config):
     """
     routes = config.chalice_app.routes
     validate_routes(routes)
+    validate_route_content_types(routes, config.chalice_app.api.binary_types)
     _validate_manage_iam_role(config)
     validate_python_version(config)
 
@@ -106,6 +107,23 @@ def validate_python_version(config, actual_py_version=None):
                       "deployment issues. " %
                       (actual_py_version, lambda_version, lambda_version),
                       stacklevel=2)
+
+
+def validate_route_content_types(routes, binary_types):
+    # type: (Dict[str,Any], List[str]) -> None
+    for route_name, route_entry in routes.items():
+        binary, non_binary = [], []
+        for content_type in route_entry.content_types:
+            if content_type in binary_types:
+                binary.append(content_type)
+            else:
+                non_binary.append(content_type)
+        if binary and non_binary:
+            # A routes content_types be homogeneous in their binary support.
+            raise ValueError(
+                'In view function "%s", the content_types %s support binary '
+                'and %s do not. All content_types must be consistent in their '
+                'binary support.' % (route_name, binary, non_binary))
 
 
 def _validate_route_entry(route_url, route_entry):

@@ -11,6 +11,7 @@ except:
 # and helps prevent regressions.
 
 app = Chalice(app_name='smoketestapp')
+app.api.binary_types.append('application/binary')
 
 
 @app.route('/')
@@ -67,7 +68,7 @@ def raise_arbitrary_error():
 @app.route('/formencoded', methods=['POST'],
            content_types=['application/x-www-form-urlencoded'])
 def form_encoded():
-    parsed = parse_qs(app.current_request.raw_body)
+    parsed = parse_qs(app.current_request.raw_body.decode('utf-8'))
     return {
         'parsed': parsed
     }
@@ -115,3 +116,25 @@ def custom_response():
 @app.route('/api-key-required', methods=['GET'], api_key_required=True)
 def api_key_required():
     return {"success": True}
+
+
+@app.route('/binary', methods=['POST'],
+           content_types=['application/octet-stream'])
+def binary_round_trip():
+    return Response(
+        app.current_request.raw_body,
+        headers={
+            'Content-Type': 'application/octet-stream'
+        },
+        status_code=200)
+
+
+@app.route('/custom-binary', methods=['POST'],
+           content_types=['application/binary'])
+def custom_binary_round_trip():
+    return Response(
+        app.current_request.raw_body,
+        headers={
+            'Content-Type': 'application/binary'
+        },
+        status_code=200)

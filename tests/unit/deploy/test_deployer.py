@@ -20,6 +20,7 @@ from chalice.deploy.deployer import LambdaDeployer
 from chalice.deploy.deployer import NoPrompt
 from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
+from chalice.deploy.deployer import validate_route_content_types
 from chalice.deploy.deployer import validate_python_version
 from chalice.deploy.packager import LambdaDeploymentPackager
 
@@ -609,6 +610,29 @@ def test_cant_have_options_with_cors(sample_app):
 
     with pytest.raises(ValueError):
         validate_routes(sample_app.routes)
+
+
+def test_cant_have_mixed_content_types(sample_app):
+    @sample_app.route('/index', content_types=['application/octet-stream',
+                                               'text/plain'])
+    def index():
+        return {'hello': 'world'}
+
+    with pytest.raises(ValueError):
+        validate_route_content_types(sample_app.routes,
+                                     sample_app.api.binary_types)
+
+
+def test_can_validate_updated_custom_binary_types(sample_app):
+    sample_app.api.binary_types.extend(['text/plain'])
+
+    @sample_app.route('/index', content_types=['application/octet-stream',
+                                               'text/plain'])
+    def index():
+        return {'hello': 'world'}
+
+    assert validate_route_content_types(sample_app.routes,
+                                        sample_app.api.binary_types) is None
 
 
 class TestLambdaInitialDeploymentWithConfigurations(object):
