@@ -561,10 +561,10 @@ class Chalice(object):
                                                    self.api.binary_types)
         expects_binary_response = False
         if request_accept_header is not None:
-            expects_binary_response = _matches_content_type(request_accept_header,
-                                                            self.api.binary_types)
+            expects_binary_response = _matches_content_type(
+                request_accept_header, self.api.binary_types)
         if response_is_binary and not expects_binary_response:
-                return False
+            return False
         return True
 
     def _get_view_function_response(self, view_function, function_args):
