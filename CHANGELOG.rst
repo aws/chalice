@@ -2,17 +2,14 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.9.0
+=====
 
 * Add support for ``IAM`` authorizer
   (`#334 <https://github.com/awslabs/chalice/pull/334>`__)
-* Add support for ``lambda_timeout`` configuration
-  (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
-* Add support for ``lambda_memory_size`` configuration
-  (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
-* Add support for ``tags`` configuration
-  (`#351 <https://github.com/awslabs/chalice/pull/351>`__)
+* Add support for configuring ``lambda_timeout``, ``lambda_memory_size``,
+  and ``tags`` in your AWS Lambda function
+  (`#347 <https://github.com/awslabs/chalice/issues/347>`__)
 * Fix vendor directory contents not being importable locally
   (`#350 <https://github.com/awslabs/chalice/pull/350>`__)
 * Add support for binary payloads
