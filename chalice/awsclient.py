@@ -122,7 +122,8 @@ class TypedAWSClient(object):
                         runtime=None,                # type: _OPT_STR
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
-                        memory_size=None             # type: _OPT_INT
+                        memory_size=None,            # type: _OPT_INT
+                        role_arn=None                # type: _OPT_STR
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -144,6 +145,8 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        if role_arn is not None:
+            kwargs['Role'] = role_arn
         if kwargs:
             kwargs['FunctionName'] = function_name
             lambda_client.update_function_configuration(**kwargs)

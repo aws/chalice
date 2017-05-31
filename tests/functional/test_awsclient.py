@@ -595,6 +595,22 @@ class TestUpdateLambdaFunction(object):
         awsclient.update_function('name', b'foo', tags={'MyKey': 'SameValue'})
         stubbed_session.verify_stubs()
 
+    def test_update_function_with_iam_role(self, stubbed_session):
+        function_arn = 'arn'
+
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': function_arn})
+        lambda_client.update_function_configuration(
+            FunctionName='name',
+            Role='role-arn').returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function('name', b'foo', role_arn='role-arn')
+        stubbed_session.verify_stubs()
+
 
 class TestCanDeleteRolePolicy(object):
     def test_can_delete_role_policy(self, stubbed_session):
