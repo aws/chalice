@@ -90,22 +90,27 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        return self._create_or_update_function_with_retries(
+            'create_function', kwargs)['FunctionArn']
+
+    def _create_or_update_function_with_retries(self, method_name, kwargs):
+        # type: (str, Dict[str, Any]) -> Dict[str, Any]
         client = self._client('lambda')
         attempts = 0
         while True:
             try:
-                response = client.create_function(**kwargs)
+                response = getattr(client, method_name)(**kwargs)
             except client.exceptions.InvalidParameterValueException:
                 # We're assuming that if we receive an
                 # InvalidParameterValueException, it's because
                 # the role we just created can't be used by
-                # Lambda.
+                # Lambda so retry until it can be.
                 self._sleep(self.DELAY_TIME)
                 attempts += 1
                 if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
                     raise
                 continue
-            return response['FunctionArn']
+            return response
 
     def delete_function(self, function_name):
         # type: (str) -> None
@@ -149,7 +154,8 @@ class TypedAWSClient(object):
             kwargs['Role'] = role_arn
         if kwargs:
             kwargs['FunctionName'] = function_name
-            lambda_client.update_function_configuration(**kwargs)
+            self._create_or_update_function_with_retries(
+                'update_function_configuration', kwargs)
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
