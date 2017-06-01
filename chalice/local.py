@@ -189,17 +189,10 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             # generate.
             self._send_autogen_options_response()
 
-    def _cors_enabled_for_route(self, lambda_event):
-        # type: (EventType) -> CORSConfig
-        route_key = lambda_event['requestContext']['resourcePath']
-        route_entry = self.app_object.routes[route_key]
-        return route_entry.cors
-
     def _has_user_defined_options_method(self, lambda_event):
         # type: (EventType) -> bool
         route_key = lambda_event['requestContext']['resourcePath']
-        route_entry = self.app_object.routes[route_key]
-        return 'OPTIONS' in route_entry.methods
+        return 'OPTIONS' in self.app_object.routes[route_key]
 
     def _send_autogen_options_response(self):
         # type:() -> None

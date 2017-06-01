@@ -65,22 +65,17 @@ def validate_configuration(config):
 
 
 def validate_routes(routes):
-    # type: (Dict[str, Any]) -> None
+    # type: (Dict[str, Dict[str, app.RouteEntry]]) -> None
     # We're trying to validate any kind of route that will fail
     # when we send the request to API gateway.
     # We check for:
     #
     # * any routes that end with a trailing slash.
-    for route_name, route_entry in routes.items():
+    for route_name, methods in routes.items():
         if route_name != '/' and route_name.endswith('/'):
             raise ValueError("Route cannot end with a trailing slash: %s"
                              % route_name)
-        if route_entry is not None:
-            # This 'is not None' check is not strictly needed.
-            # It's used because some of the tests don't populate
-            # a route_entry when creating test routes.
-            # This should be cleaned up.
-            _validate_route_entry(route_name, route_entry)
+        _validate_cors_for_route(route_name, methods)
 
 
 def validate_python_version(config, actual_py_version=None):
@@ -110,35 +105,52 @@ def validate_python_version(config, actual_py_version=None):
 
 
 def validate_route_content_types(routes, binary_types):
-    # type: (Dict[str,Any], List[str]) -> None
-    for route_name, route_entry in routes.items():
-        binary, non_binary = [], []
-        for content_type in route_entry.content_types:
-            if content_type in binary_types:
-                binary.append(content_type)
-            else:
-                non_binary.append(content_type)
-        if binary and non_binary:
-            # A routes content_types be homogeneous in their binary support.
-            raise ValueError(
-                'In view function "%s", the content_types %s support binary '
-                'and %s do not. All content_types must be consistent in their '
-                'binary support.' % (route_name, binary, non_binary))
+    # type: (Dict[str, Dict[str, app.RouteEntry]], List[str]) -> None
+    for methods in routes.values():
+        for route_entry in methods.values():
+            _validate_entry_content_type(route_entry, binary_types)
 
 
-def _validate_route_entry(route_url, route_entry):
-    # type: (str, app.RouteEntry) -> None
-    if route_entry.cors:
-        # If the user has enabled CORS, they can't also have an OPTIONS method
-        # because we'll create one for them.  API gateway will raise an error
-        # about duplicate methods.
-        if 'OPTIONS' in route_entry.methods:
+def _validate_entry_content_type(route_entry, binary_types):
+    # type: (app.RouteEntry, List[str]) -> None
+    binary, non_binary = [], []
+    for content_type in route_entry.content_types:
+        if content_type in binary_types:
+            binary.append(content_type)
+        else:
+            non_binary.append(content_type)
+    if binary and non_binary:
+        # A routes content_types be homogeneous in their binary support.
+        raise ValueError(
+            'In view function "%s", the content_types %s support binary '
+            'and %s do not. All content_types must be consistent in their '
+            'binary support.' % (route_entry.view_name, binary, non_binary))
+
+
+def _validate_cors_for_route(route_url, route_methods):
+    # type: (str, Dict[str, app.RouteEntry]) -> None
+    entries_with_cors = [
+        entry for _, entry in route_methods.items() if entry.cors
+    ]
+    if entries_with_cors:
+        # If the user has enabled CORS, they can't also have an OPTIONS
+        # method because we'll create one for them.  API gateway will
+        # raise an error about duplicate methods.
+        if 'OPTIONS' in route_methods:
             raise ValueError(
                 "Route entry cannot have both cors=True and "
                 "methods=['OPTIONS', ...] configured.  When "
                 "CORS is enabled, an OPTIONS method is automatically "
                 "added for you.  Please remove 'OPTIONS' from the list of "
                 "configured HTTP methods for: %s" % route_url)
+
+        if not all(entries_with_cors[0].cors == entry.cors for entry in
+                   entries_with_cors):
+            raise ValueError(
+                "Route may not have mulitple differing CORS configurations. "
+                "Please ensure all views for \"%s\" that have CORS configured "
+                "have the same CORS configuration." % route_url
+            )
 
 
 def _validate_manage_iam_role(config):

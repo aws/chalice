@@ -2,7 +2,7 @@ import copy
 
 from typing import Any, List, Dict  # noqa
 
-from chalice.app import Chalice, RouteEntry, Authorizer  # noqa
+from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 
 
 class SwaggerGenerator(object):
@@ -42,17 +42,28 @@ class SwaggerGenerator(object):
 
     def _add_route_paths(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None
-        for path, view in app.routes.items():
+        for path, methods in app.routes.items():
             swagger_for_path = {}  # type: Dict[str, Any]
             api['paths'][path] = swagger_for_path
-            for http_method in view.methods:
+
+            cors_config = None
+            methods_with_cors = []
+            for http_method, view in methods.items():
                 current = self._generate_route_method(view)
                 if 'security' in current:
                     self._add_to_security_definition(
                         current['security'], api, app.authorizers, view)
                 swagger_for_path[http_method.lower()] = current
-            if view.cors is not None:
-                self._add_preflight_request(view, swagger_for_path)
+                if view.cors is not None:
+                    cors_config = view.cors
+                    methods_with_cors.append(http_method)
+
+            # Chalice ensures that routes with multiple views have the same
+            # CORS configuration. So if any entry has CORS enabled, use that
+            # entry's CORS configuration for the preflight setup.
+            if cors_config is not None:
+                self._add_preflight_request(
+                    cors_config, methods_with_cors, swagger_for_path)
 
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
@@ -177,10 +188,9 @@ class SwaggerGenerator(object):
             for name in view_args
         ]
 
-    def _add_preflight_request(self, view, swagger_for_path):
-        # type: (RouteEntry, Dict[str, Any]) -> None
-        cors = view.cors
-        methods = view.methods + ['OPTIONS']
+    def _add_preflight_request(self, cors, methods, swagger_for_path):
+        # type: (CORSConfig, List[str], Dict[str, Any]) -> None
+        methods = methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
 
         response_params = {

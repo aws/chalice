@@ -32,6 +32,8 @@ class CORSConfig:
     allow_headers = ... # type: str
     get_access_control_headers = ... # type: Callable[..., Dict[str, str]]
 
+    def __eq__(self, other: object) -> bool: ...
+
 
 class Request:
     query_params = ... # type: Dict[str, str]
@@ -73,7 +75,7 @@ class RouteEntry(object):
     # TODO: How so I specify *args, where args is a tuple of strings.
     view_function = ... # type: Callable[..., Any]
     view_name = ... # type: str
-    methods = ... # type: List[str]
+    method = ... # type: str
     uri_pattern = ... # type: str
     authorizer_name = ... # type: str
     authorizer = ... # type: Optional[Authorizer]
@@ -101,7 +103,7 @@ class APIGateway(object):
 class Chalice(object):
     app_name = ... # type: str
     api = ... # type: APIGateway
-    routes = ... # type: Dict[str, RouteEntry]
+    routes = ... # type: Dict[str, Dict[str, RouteEntry]]
     current_request = ... # type: Request
     debug = ... # type: bool
     authorizers = ... # type: Dict[str, Dict[str, Any]]
