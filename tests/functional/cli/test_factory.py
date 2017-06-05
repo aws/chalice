@@ -72,7 +72,18 @@ def test_can_create_config_obj_without_autogen_policy(clifactory):
     config = clifactory.create_config_obj()
     # Should not be found since No user provided value was provided and the
     # disk config is empty in the clifactory fixture.
-    assert config.autogen_policy == None
+    assert config.autogen_policy is None
+    assert config.api_gateway_stage is None
+
+
+def test_can_create_config_obj_with_override_autogen(clifactory):
+    config = clifactory.create_config_obj(autogen_policy=True)
+    assert config.autogen_policy is True
+
+
+def test_can_create_config_obj_with_api_gateway_stage(clifactory):
+    config = clifactory.create_config_obj(api_gateway_stage='custom-stage')
+    assert config.api_gateway_stage == 'custom-stage'
 
 
 def test_cant_load_config_obj_with_bad_project(clifactory):
