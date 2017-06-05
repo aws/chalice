@@ -68,6 +68,13 @@ def test_can_create_config_obj(clifactory):
     assert isinstance(obj, Config)
 
 
+def test_can_create_config_obj_without_autogen_policy(clifactory):
+    config = clifactory.create_config_obj()
+    # Should not be found since No user provided value was provided and the
+    # disk config is empty in the clifactory fixture.
+    assert config.autogen_policy == None
+
+
 def test_cant_load_config_obj_with_bad_project(clifactory):
     clifactory.project_dir = 'nowhere-asdfasdfasdfas'
     with pytest.raises(RuntimeError):
