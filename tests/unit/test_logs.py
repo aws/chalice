@@ -79,6 +79,7 @@ def test_can_display_logs():
     ]
     stream = StringIO()
     logs.display_logs(retriever, max_entries=None,
+                      start_time=None,
                       include_lambda_messages=True,
                       stream=stream)
     assert stream.getvalue().splitlines() == [
