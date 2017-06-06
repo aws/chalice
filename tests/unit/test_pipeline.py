@@ -17,7 +17,7 @@ def test_app_name_in_param_default(pipeline_gen):
 def test_python_version_in_param_default(pipeline_gen):
     template = pipeline_gen.create_template('app', 'python2.7')
     assert template['Parameters']['CodeBuildImage']['Default'] == \
-        'python:2.7.12'
+        'aws/codebuild/python:2.7.12'
 
 
 def test_py3_throws_error(pipeline_gen):

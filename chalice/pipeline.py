@@ -36,7 +36,7 @@ class CreatePipelineTemplate(object):
                 "Description": "Enter the name of your application"
             },
             "CodeBuildImage": {
-                "Default": "python:2.7.12",
+                "Default": "aws/codebuild/python:2.7.12",
                 "Type": "String",
                 "Description": "Name of codebuild image to use."
             }
@@ -52,8 +52,8 @@ class CreatePipelineTemplate(object):
     def _codebuild_image(self, lambda_python_version):
         # type: (str) -> str
         try:
-            image = self._CODEBUILD_IMAGE[lambda_python_version]
-            return image
+            image_suffix = self._CODEBUILD_IMAGE[lambda_python_version]
+            return 'aws/codebuild/%s' % image_suffix
         except KeyError as e:
             raise InvalidCodeBuildPythonVersion(str(e))
 
@@ -121,9 +121,7 @@ class CodeBuild(BaseResource):
                 "Environment": {
                     "ComputeType": "BUILD_GENERAL1_SMALL",
                     "Image": {
-                        "Fn::Join": [
-                            "", ["aws/codebuild/", {"Ref": "PythonVersion"}]
-                        ]
+                        "Ref": "CodeBuildImage"
                     },
                     "Type": "LINUX_CONTAINER",
                     "EnvironmentVariables": [
