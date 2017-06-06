@@ -595,6 +595,66 @@ class TestUpdateLambdaFunction(object):
         awsclient.update_function('name', b'foo', tags={'MyKey': 'SameValue'})
         stubbed_session.verify_stubs()
 
+    def test_update_function_with_iam_role(self, stubbed_session):
+        function_arn = 'arn'
+
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': function_arn})
+        lambda_client.update_function_configuration(
+            FunctionName='name',
+            Role='role-arn').returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function('name', b'foo', role_arn='role-arn')
+        stubbed_session.verify_stubs()
+
+    def test_update_function_is_retried_and_succeeds(self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': 'arn'})
+
+        update_config_kwargs = {
+            'FunctionName': 'name',
+            'Role': 'role-arn'
+        }
+        # This should fail two times with retryable exceptions and
+        # then succeed to update the lambda function.
+        stubbed_session.stub('lambda').update_function_configuration(
+            **update_config_kwargs).raises_error(
+                error_code='InvalidParameterValueException', message='')
+        stubbed_session.stub('lambda').update_function_configuration(
+            **update_config_kwargs).raises_error(
+            error_code='InvalidParameterValueException', message='')
+        stubbed_session.stub('lambda').update_function_configuration(
+            **update_config_kwargs).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        awsclient.update_function('name', b'foo', role_arn='role-arn')
+        stubbed_session.verify_stubs()
+
+    def test_update_function_fails_after_max_retries(self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns(
+                {'FunctionArn': 'arn'})
+
+        update_config_kwargs = {
+            'FunctionName': 'name',
+            'Role': 'role-arn'
+        }
+        for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
+            stubbed_session.stub('lambda').update_function_configuration(
+                **update_config_kwargs).raises_error(
+                    error_code='InvalidParameterValueException', message='')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.update_function('name', b'foo', role_arn='role-arn')
+        stubbed_session.verify_stubs()
+
 
 class TestCanDeleteRolePolicy(object):
     def test_can_delete_role_policy(self, stubbed_session):

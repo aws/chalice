@@ -383,6 +383,7 @@ class LambdaDeployer(object):
                 project_dir)
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
+        role_arn = self._get_or_create_lambda_role_arn(config, lambda_name)
         print("Sending changes to lambda.")
         self._aws_client.update_function(
             function_name=lambda_name,
@@ -391,7 +392,8 @@ class LambdaDeployer(object):
             environment_variables=config.environment_variables,
             tags=config.tags,
             timeout=self._get_lambda_timeout(config),
-            memory_size=self._get_lambda_memory_size(config)
+            memory_size=self._get_lambda_memory_size(config),
+            role_arn=role_arn
         )
 
     def _write_config_to_disk(self, config):

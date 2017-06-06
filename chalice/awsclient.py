@@ -30,6 +30,7 @@ from chalice.constants import DEFAULT_STAGE_NAME
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 _OPT_INT = Optional[int]
+_CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
 class ResourceDoesNotExistError(Exception):
@@ -90,22 +91,27 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        return self._call_client_method_with_retries(
+            self._client('lambda').create_function, kwargs)['FunctionArn']
+
+    def _call_client_method_with_retries(self, method, kwargs):
+        # type: (_CLIENT_METHOD, Dict[str, Any]) -> Dict[str, Any]
         client = self._client('lambda')
         attempts = 0
         while True:
             try:
-                response = client.create_function(**kwargs)
+                response = method(**kwargs)
             except client.exceptions.InvalidParameterValueException:
                 # We're assuming that if we receive an
                 # InvalidParameterValueException, it's because
                 # the role we just created can't be used by
-                # Lambda.
+                # Lambda so retry until it can be.
                 self._sleep(self.DELAY_TIME)
                 attempts += 1
                 if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
                     raise
                 continue
-            return response['FunctionArn']
+            return response
 
     def delete_function(self, function_name):
         # type: (str) -> None
@@ -122,7 +128,8 @@ class TypedAWSClient(object):
                         runtime=None,                # type: _OPT_STR
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
-                        memory_size=None             # type: _OPT_INT
+                        memory_size=None,            # type: _OPT_INT
+                        role_arn=None                # type: _OPT_STR
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -144,9 +151,12 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        if role_arn is not None:
+            kwargs['Role'] = role_arn
         if kwargs:
             kwargs['FunctionName'] = function_name
-            lambda_client.update_function_configuration(**kwargs)
+            self._call_client_method_with_retries(
+                lambda_client.update_function_configuration, kwargs)
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value

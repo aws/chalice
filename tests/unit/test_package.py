@@ -76,6 +76,7 @@ def test_sam_injects_policy(sample_app,
     assert template['Resources']['APIHandler']['Properties']['Policies'] == [{
         'iam': 'policy',
     }]
+    assert 'Role' not in template['Resources']['APIHandler']['Properties']
 
 
 def test_sam_injects_swagger_doc(sample_app,
@@ -240,3 +241,20 @@ def test_maps_python_version(sample_app,
     expected = config.lambda_python_version
     actual = template['Resources']['APIHandler']['Properties']['Runtime']
     assert actual == expected
+
+
+def test_role_arn_added_to_function(sample_app,
+                                    mock_swagger_generator,
+                                    mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app, api_gateway_stage='dev', app_name='myapp',
+        manage_iam_role=False, iam_role_arn='role-arn')
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['Role'] == 'role-arn'
+    assert 'Policies' not in properties

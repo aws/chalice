@@ -452,7 +452,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
         chalice_app=sample_app,
         manage_iam_role=False,
         app_name='appname',
-        iam_role_arn=True,
+        iam_role_arn='role-arn',
         project_dir='./myproject',
         environment_variables={"FOO": "BAR"},
         lambda_timeout=120,
@@ -488,7 +488,8 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
                 chalice_version, 'dev', 'appname'),
             'mykey': 'myvalue'
         },
-        timeout=120, memory_size=256
+        timeout=120, memory_size=256,
+        role_arn='role-arn'
     )
 
 
@@ -833,7 +834,8 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
                     chalice_version),
             },
             environment_variables={},
-            timeout=60, memory_size=128
+            timeout=60, memory_size=128,
+            role_arn='role-arn'
         )
 
     def test_lambda_deployer_with_environment_vars(self, sample_app):
@@ -856,7 +858,8 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
                     chalice_version),
             },
             environment_variables={'FOO': 'BAR'},
-            timeout=60, memory_size=128
+            timeout=60, memory_size=128,
+            role_arn='role-arn'
         )
 
     def test_lambda_deployer_with_timeout_configured(self, sample_app):
@@ -879,7 +882,8 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
                     chalice_version),
             },
             environment_variables={},
-            timeout=120, memory_size=128
+            timeout=120, memory_size=128,
+            role_arn='role-arn'
         )
 
     def test_lambda_deployer_with_memory_size_configured(self, sample_app):
@@ -902,7 +906,8 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
                     chalice_version),
             },
             environment_variables={},
-            timeout=60, memory_size=256
+            timeout=60, memory_size=256,
+            role_arn='role-arn'
         )
 
     def test_lambda_deployer_with_tags(self, sample_app):
@@ -926,5 +931,6 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
                 'mykey': 'myvalue'
             },
             environment_variables={},
-            timeout=60, memory_size=128
+            timeout=60, memory_size=128,
+            role_arn='role-arn'
         )

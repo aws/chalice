@@ -104,7 +104,6 @@ class SAMTemplateGenerator(object):
             'Handler': 'app.app',
             'CodeUri': code_uri,
             'Events': self._generate_function_events(config.chalice_app),
-            'Policies': [self._generate_iam_policy()],
             'Tags': config.tags,
             'Timeout': DEFAULT_LAMBDA_TIMEOUT,
             'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
@@ -117,6 +116,10 @@ class SAMTemplateGenerator(object):
             properties['Timeout'] = config.lambda_timeout
         if config.lambda_memory_size is not None:
             properties['MemorySize'] = config.lambda_memory_size
+        if not config.manage_iam_role:
+            properties['Role'] = config.iam_role_arn
+        else:
+            properties['Policies'] = [self._generate_iam_policy()]
         return {
             'Type': 'AWS::Serverless::Function',
             'Properties': properties,
