@@ -564,3 +564,29 @@ class TypedAWSClient(object):
             self._client_cache[service_name] = self._session.create_client(
                 service_name)
         return self._client_cache[service_name]
+
+    def add_permission_for_authorizer(self, rest_api_id, function_arn,
+                                      random_id):
+        # type: (str, str, str) -> None
+        client = self._client('apigateway')
+        authorizers = client.get_authorizers(restApiId=rest_api_id)
+        for authorizer in authorizers['items']:
+            if function_arn in authorizer['authorizerUri']:
+                authorizer_id = authorizer['id']
+                break
+        else:
+            raise ValueError("Unable to find authorizer associated "
+                             "with function ARN: %s" % function_arn)
+        parts = function_arn.split(':')
+        region_name = parts[3]
+        account_id = parts[4]
+        function_name = parts[-1]
+        source_arn = ("arn:aws:execute-api:%s:%s:%s/authorizers/%s" %
+                      (region_name, account_id, rest_api_id, authorizer_id))
+        self._client('lambda').add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_name,
+            StatementId=random_id,
+            Principal='apigateway.amazonaws.com',
+            SourceArn=source_arn,
+        )

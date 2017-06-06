@@ -927,43 +927,100 @@ class TestAddPermissionsForAPIGateway(object):
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
-    def test_get_sdk(self, stubbed_session):
-        apig = stubbed_session.stub('apigateway')
-        apig.get_sdk(
-            restApiId='rest-api-id',
-            stageName='dev',
-            sdkType='javascript').returns({'body': 'foo'})
+
+class TestAddPermissionsForAuthorizer(object):
+    def test_can_add_permission_for_authorizer(self, stubbed_session):
+        apigateway = stubbed_session.stub('apigateway')
+        function_arn =(
+            'arn:aws:lambda:us-west-2:1:function:app-dev-name'
+        )
+        good_arn = (
+            'arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/'
+            '%s/invocations' % function_arn
+        )
+        apigateway.get_authorizers(restApiId='rest-api-id').returns({
+            'items': [
+                {'authorizerUri': 'not:arn', 'id': 'bad'},
+                {'authorizerUri': good_arn, 'id': 'good'},
+            ]
+        })
+        source_arn = 'james'
+        source_arn = (
+            'arn:aws:execute-api:us-west-2:1:rest-api-id/authorizers/good'
+        )
+        # We should call the appropriate add_permission call.
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName='app-dev-name',
+            StatementId='random-id',
+            Principal='apigateway.amazonaws.com',
+            SourceArn=source_arn
+        ).returns({})
         stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
-        response = awsclient.get_sdk_download_stream(
-            'rest-api-id', 'dev', 'javascript')
+
+        TypedAWSClient(stubbed_session).add_permission_for_authorizer(
+            'rest-api-id', function_arn, 'random-id'
+        )
         stubbed_session.verify_stubs()
-        assert response == 'foo'
 
-    def test_import_rest_api(self, stubbed_session):
-        apig = stubbed_session.stub('apigateway')
-        swagger_doc = {'swagger': 'doc'}
-        apig.import_rest_api(
-            body=json.dumps(swagger_doc, indent=2)).returns(
-                {'id': 'rest_api_id'})
-
+    def test_value_error_raised_for_unknown_function(self, stubbed_session):
+        apigateway = stubbed_session.stub('apigateway')
+        apigateway.get_authorizers(restApiId='rest-api-id').returns({
+            'items': [
+                {'authorizerUri': 'not:arn', 'id': 'bad'},
+                {'authorizerUri': 'also-not:arn', 'id': 'alsobad'},
+            ]
+        })
         stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
-        rest_api_id = awsclient.import_rest_api(swagger_doc)
+
+        unknown_function_arn = 'function:arn'
+        with pytest.raises(ValueError):
+            TypedAWSClient(stubbed_session).add_permission_for_authorizer(
+                'rest-api-id', unknown_function_arn, 'random-id'
+            )
         stubbed_session.verify_stubs()
-        assert rest_api_id == 'rest_api_id'
 
-    def test_update_api_from_swagger(self, stubbed_session):
-        apig = stubbed_session.stub('apigateway')
-        swagger_doc = {'swagger': 'doc'}
-        apig.put_rest_api(
-            restApiId='rest_api_id',
-            mode='overwrite',
-            body=json.dumps(swagger_doc, indent=2)).returns({})
 
-        stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
+def test_get_sdk(stubbed_session):
+    apig = stubbed_session.stub('apigateway')
+    apig.get_sdk(
+        restApiId='rest-api-id',
+        stageName='dev',
+        sdkType='javascript').returns({'body': 'foo'})
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    response = awsclient.get_sdk_download_stream(
+        'rest-api-id', 'dev', 'javascript')
+    stubbed_session.verify_stubs()
+    assert response == 'foo'
 
-        awsclient.update_api_from_swagger('rest_api_id',
-                                          swagger_doc)
-        stubbed_session.verify_stubs()
+
+def test_import_rest_api(stubbed_session):
+    apig = stubbed_session.stub('apigateway')
+    swagger_doc = {'swagger': 'doc'}
+    apig.import_rest_api(
+        body=json.dumps(swagger_doc, indent=2)).returns(
+            {'id': 'rest_api_id'})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    rest_api_id = awsclient.import_rest_api(swagger_doc)
+    stubbed_session.verify_stubs()
+    assert rest_api_id == 'rest_api_id'
+
+
+def test_update_api_from_swagger(stubbed_session):
+    apig = stubbed_session.stub('apigateway')
+    swagger_doc = {'swagger': 'doc'}
+    apig.put_rest_api(
+        restApiId='rest_api_id',
+        mode='overwrite',
+        body=json.dumps(swagger_doc, indent=2)).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+
+    awsclient.update_api_from_swagger('rest_api_id',
+                                        swagger_doc)
+    stubbed_session.verify_stubs()

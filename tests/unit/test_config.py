@@ -98,6 +98,7 @@ def test_can_create_deployed_resource_from_dict():
         'api_gateway_stage': 'stage',
         'region': 'region',
         'chalice_version': '1.0.0',
+        'lambda_functions': {},
     })
     assert d.backend == 'api'
     assert d.api_handler_arn == 'arn'
@@ -106,6 +107,7 @@ def test_can_create_deployed_resource_from_dict():
     assert d.api_gateway_stage == 'stage'
     assert d.region == 'region'
     assert d.chalice_version == '1.0.0'
+    assert d.lambda_functions == {}
 
 
 def test_environment_from_top_level():

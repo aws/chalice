@@ -262,8 +262,8 @@ class Config(object):
 class DeployedResources(object):
     def __init__(self, backend, api_handler_arn,
                  api_handler_name, rest_api_id, api_gateway_stage,
-                 region, chalice_version):
-        # type: (str, str, str, str, str, str, str) -> None
+                 region, chalice_version, lambda_functions):
+        # type: (str, str, str, str, str, str, str, StrMap) -> None
         self.backend = backend
         self.api_handler_arn = api_handler_arn
         self.api_handler_name = api_handler_name
@@ -271,10 +271,11 @@ class DeployedResources(object):
         self.api_gateway_stage = api_gateway_stage
         self.region = region
         self.chalice_version = chalice_version
+        self.lambda_functions = lambda_functions
 
     @classmethod
     def from_dict(cls, data):
-        # type: (Dict[str, str]) -> DeployedResources
+        # type: (Dict[str, Any]) -> DeployedResources
         return cls(
             data['backend'],
             data['api_handler_arn'],
@@ -283,4 +284,5 @@ class DeployedResources(object):
             data['api_gateway_stage'],
             data['region'],
             data['chalice_version'],
+            data['lambda_functions'],
         )

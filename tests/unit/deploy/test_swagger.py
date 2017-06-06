@@ -1,6 +1,7 @@
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice import CORSConfig
-from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer, Chalice
+from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
+from chalice.app import IAMAuthorizer, Chalice
 
 import mock
 import pytest
@@ -438,3 +439,42 @@ def test_auth_defined_for_multiple_methods(sample_app, swagger_gen):
     doc = swagger_gen.generate_swagger(sample_app)
     assert 'securityDefinitions' in doc
     assert len(doc['securityDefinitions']) == 1
+
+
+def test_builtin_auth(sample_app):
+    swagger_gen = SwaggerGenerator(
+        region='us-west-2',
+        deployed_resources={
+            'api_handler_arn': 'lambda_arn',
+            'api_handler_name': 'api-dev',
+            'lambda_functions': {
+                'api-dev-myauth': 'auth_arn',
+            }
+        }
+    )
+
+    @sample_app.authorizer(name='myauth',
+                           ttl_seconds=10,
+                           execution_role='arn:role')
+    def auth(auth_request):
+        pass
+
+    @sample_app.route('/auth', authorizer=auth)
+    def foo():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions']['myauth'] == {
+        'in': 'header',
+        'name': 'Authorization',
+        'type': 'apiKey',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'token',
+            'authorizerCredentials': 'arn:role',
+            'authorizerResultTtlInSeconds': 10,
+            'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
+                              '/2015-03-31/functions/auth_arn/invocations'),
+        }
+    }

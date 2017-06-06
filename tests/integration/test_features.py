@@ -327,6 +327,37 @@ def test_can_handle_charset(smoke_test_app):
     assert response.status_code == 200
 
 
+def test_can_use_builtin_custom_auth(smoke_test_app):
+    url = smoke_test_app.url + '/builtin-auth'
+    # First time without an Auth header, we should fail.
+    response = requests.get(url)
+    assert response.status_code == 401
+    # Now with the proper auth header, things should work.
+    response = requests.get(url, headers={'Authorization': 'yes'})
+    assert response.status_code == 200
+    context = response.json()['context']
+    assert 'authorizer' in context
+    # The keyval context we added shuld also be in the authorizer
+    # dict.
+    assert context['authorizer']['foo'] == 'bar'
+
+
+def test_can_use_shared_auth(smoke_test_app):
+    url = smoke_test_app.url + '/fake-profile'
+    response = requests.get(url)
+    # GETs are allowed
+    assert response.status_code == 200
+    # However, POSTs require auth.
+    # This has the same auth config as /builtin-auth,
+    # so we're testing the auth handler can be shared.
+    assert requests.post(url).status_code == 401
+    response = requests.post(url, headers={'Authorization': 'yes'})
+    assert response.status_code == 200
+    context = response.json()['context']
+    assert 'authorizer' in context
+    assert context['authorizer']['foo'] == 'bar'
+
+
 @pytest.mark.on_redeploy
 def test_redeploy_no_change_view(smoke_test_app):
     smoke_test_app.redeploy_once()

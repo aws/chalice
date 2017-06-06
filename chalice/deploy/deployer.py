@@ -375,13 +375,10 @@ class LambdaDeployer(object):
 
     def delete(self, existing_resources):
         # type: (DeployedResources) -> None
-        handler_name = existing_resources.api_handler_name
-        role_arn = self._get_lambda_role_arn(handler_name)
-        print('Deleting lambda function %s' % handler_name)
-        try:
-            self._aws_client.delete_function(handler_name)
-        except ResourceDoesNotExistError as e:
-            print('No lambda function named %s found.' % e)
+        self._delete_api_handler(existing_resources)
+        self._delete_auth_handlers(existing_resources)
+        role_arn = self._get_lambda_role_arn(
+            existing_resources.api_handler_name)
         if role_arn is not None:
             role_name = role_arn.split('/')[1]
             if self._prompter.confirm(
@@ -390,9 +387,40 @@ class LambdaDeployer(object):
                 print('Deleting role name %s' % role_name)
                 self._aws_client.delete_role(role_name)
 
+    def _delete_api_handler(self, existing_resources):
+        # type: (DeployedResources) -> None
+        handler_name = existing_resources.api_handler_name
+        print('Deleting lambda function %s' % handler_name)
+        try:
+            self._aws_client.delete_function(handler_name)
+        except ResourceDoesNotExistError as e:
+            print('No lambda function named %s found.' % e)
+
+    def _delete_auth_handlers(self, existing_resources):
+        # type: (DeployedResources) -> None
+        if not existing_resources.lambda_functions:
+            return
+        for function_arn in existing_resources.lambda_functions.values():
+            # We could use the key names, but we're using the
+            # Lambda ARNs to ensure we have the right lambda
+            # function.
+            try:
+                self._aws_client.delete_function(function_arn)
+            except ResourceDoesNotExistError as e:
+                print('No lambda function named %s found.' % e)
+
     def deploy(self, config, existing_resources, stage_name):
         # type: (Config, OPT_RESOURCES, str) -> Dict[str, Any]
-        deployed_values = {}
+        deployed_values = {}  # type: Dict[str, Any]
+        self._deploy_api_handler(config, existing_resources, stage_name,
+                                 deployed_values)
+        self._deploy_auth_handlers(config, existing_resources, stage_name,
+                                   deployed_values)
+        return deployed_values
+
+    def _deploy_api_handler(self, config, existing_resources, stage_name,
+                            deployed_values):
+        # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
         if existing_resources is not None and \
                 self._aws_client.lambda_function_exists(
                     existing_resources.api_handler_name):
@@ -408,7 +436,48 @@ class LambdaDeployer(object):
                 config, function_name, stage_name)
             deployed_values['api_handler_name'] = function_name
         deployed_values['api_handler_arn'] = function_arn
-        return deployed_values
+
+    def _deploy_auth_handlers(self, config, existing_resources, stage_name,
+                              deployed_values):
+        # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
+        # The method makes the assumption that _deploy_api_handler
+        # has already been called.  As a result, it reused portions of that
+        # functions configuration:
+        auth_handlers = config.chalice_app.builtin_auth_handlers
+        if not auth_handlers:
+            return
+        for auth_config in auth_handlers:
+            self._deploy_auth_handler(
+                config, auth_config, stage_name, deployed_values)
+
+    def _deploy_auth_handler(self, config, auth_config,
+                             stage_name, deployed_values):
+        # type: (Config, app.BuiltinAuthConfig, str, Dict[str, Any]) -> None
+        api_handler_name = deployed_values['api_handler_name']
+        role_arn = self._get_or_create_lambda_role_arn(
+            config, api_handler_name)
+        zip_contents = self._osutils.get_file_contents(
+            self._packager.deployment_package_filename(config.project_dir),
+            binary=True)
+        function_name = api_handler_name + '-' + auth_config.name
+        if self._aws_client.lambda_function_exists(function_name):
+            response = self._update_lambda_function(
+                config, function_name, stage_name)
+            function_arn = response['FunctionArn']
+        else:
+            function_arn = self._aws_client.create_function(
+                function_name=function_name,
+                role_arn=role_arn,
+                zip_contents=zip_contents,
+                environment_variables=config.environment_variables,
+                runtime=config.lambda_python_version,
+                handler=auth_config.handler_string,
+                tags=config.tags,
+                timeout=self._get_lambda_timeout(config),
+                memory_size=self._get_lambda_memory_size(config),
+            )
+        deployed_values.setdefault(
+            'lambda_functions', {})[function_name] = function_arn
 
     def _confirm_any_runtime_changes(self, config, handler_name):
         # type: (Config, str) -> None
@@ -511,7 +580,7 @@ class LambdaDeployer(object):
         return config.lambda_memory_size
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
-        # type: (Config, str, str) -> None
+        # type: (Config, str, str) -> Dict[str, Any]
         print("Updating lambda function...")
         project_dir = config.project_dir
         packager = self._packager
@@ -527,7 +596,7 @@ class LambdaDeployer(object):
             deployment_package_filename, binary=True)
         role_arn = self._get_or_create_lambda_role_arn(config, lambda_name)
         print("Sending changes to lambda.")
-        self._aws_client.update_function(
+        return self._aws_client.update_function(
             function_name=lambda_name,
             zip_contents=zip_contents,
             runtime=config.lambda_python_version,
@@ -634,6 +703,12 @@ class APIGatewayDeployer(object):
             rest_api_id,
             str(uuid.uuid4()),
         )
+        lambda_functions = deployed_resources.get('lambda_functions', {})
+        if lambda_functions:
+            # Assuming these are just authorizers for now.
+            for function_arn in lambda_functions.values():
+                self._aws_client.add_permission_for_authorizer(
+                    rest_api_id, function_arn, str(uuid.uuid4()))
 
 
 class ApplicationPolicyHandler(object):

@@ -1,5 +1,5 @@
 from chalice import Chalice, BadRequestError, NotFoundError, Response,\
-    CORSConfig
+    CORSConfig, UnauthorizedError, AuthResponse, AuthRoute
 
 try:
     from urllib.parse import parse_qs
@@ -12,6 +12,19 @@ except:
 
 app = Chalice(app_name='smoketestapp')
 app.api.binary_types.append('application/binary')
+
+
+@app.authorizer(ttl_seconds=300)
+def dummy_auth(auth_request):
+    if auth_request.token == 'yes':
+        return AuthResponse(
+            routes=['/builtin-auth',
+                    AuthRoute('/fake-profile', methods=['POST'])],
+            context={'foo': 'bar'},
+            principal_id='foo'
+        )
+    else:
+        raise UnauthorizedError('Authorization failed')
 
 
 @app.route('/')
@@ -148,3 +161,22 @@ def shared_get():
 @app.route('/shared', methods=['POST'])
 def shared_post():
     return {'method': 'POST'}
+
+
+@app.route('/builtin-auth', authorizer=dummy_auth)
+def builtin_auth():
+    return {'success': True, 'context': app.current_request.context}
+
+
+# Testing a common use case where you can have read only GET access
+# but you need to be auth'd to POST.
+
+@app.route('/fake-profile', methods=['GET'])
+def fake_profile_read_only():
+    return {'success': True, 'context': app.current_request.context}
+
+
+@app.route('/fake-profile', authorizer=dummy_auth,
+           methods=['POST'])
+def fake_profile_post():
+    return {'success': True, 'context': app.current_request.context}
