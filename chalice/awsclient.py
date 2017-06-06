@@ -30,6 +30,7 @@ from chalice.constants import DEFAULT_STAGE_NAME
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 _OPT_INT = Optional[int]
+_CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
 class ResourceDoesNotExistError(Exception):
@@ -90,16 +91,16 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        return self._create_or_update_function_with_retries(
-            'create_function', kwargs)['FunctionArn']
+        return self._call_client_method_with_retries(
+            self._client('lambda').create_function, kwargs)['FunctionArn']
 
-    def _create_or_update_function_with_retries(self, method_name, kwargs):
-        # type: (str, Dict[str, Any]) -> Dict[str, Any]
+    def _call_client_method_with_retries(self, method, kwargs):
+        # type: (_CLIENT_METHOD, Dict[str, Any]) -> Dict[str, Any]
         client = self._client('lambda')
         attempts = 0
         while True:
             try:
-                response = getattr(client, method_name)(**kwargs)
+                response = method(**kwargs)
             except client.exceptions.InvalidParameterValueException:
                 # We're assuming that if we receive an
                 # InvalidParameterValueException, it's because
@@ -154,8 +155,8 @@ class TypedAWSClient(object):
             kwargs['Role'] = role_arn
         if kwargs:
             kwargs['FunctionName'] = function_name
-            self._create_or_update_function_with_retries(
-                'update_function_configuration', kwargs)
+            self._call_client_method_with_retries(
+                lambda_client.update_function_configuration, kwargs)
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
