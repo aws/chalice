@@ -26,7 +26,7 @@ def create_app_packager(config):
         # We're add place holder values that will be filled in once the
         # lambda function is deployed.
         SAMTemplateGenerator(
-            CFNSwaggerGenerator('{region}', '{lambda_arn}'),
+            CFNSwaggerGenerator('{region}', {}),
             PreconfiguredPolicyGenerator(
                 config,
                 ApplicationPolicyHandler(

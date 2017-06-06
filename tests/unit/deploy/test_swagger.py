@@ -8,8 +8,9 @@ from pytest import fixture
 
 @fixture
 def swagger_gen():
-    return SwaggerGenerator(region='us-west-2',
-                            lambda_arn='lambda_arn')
+    return SwaggerGenerator(
+        region='us-west-2',
+        deployed_resources={'api_handler_arn': 'lambda_arn'})
 
 
 def test_can_add_binary_media_types(swagger_gen):

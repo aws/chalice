@@ -198,19 +198,20 @@ class Deployer(object):
         existing_resources = config.deployed_resources(chalice_stage_name)
         deployed_values = self._lambda_deploy.deploy(
             config, existing_resources, chalice_stage_name)
+        deployed_values.update({
+            'backend': self.BACKEND_NAME,
+            'chalice_version': chalice_version,
+        })
         rest_api_id, region_name, apig_stage = self._apigateway_deploy.deploy(
-            config, existing_resources,
-            deployed_values['api_handler_arn'])
+            config, existing_resources, deployed_values)
         print(
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
             .format(api_id=rest_api_id, region=region_name, stage=apig_stage)
         )
         deployed_values.update({
             'rest_api_id': rest_api_id,
-            'region': region_name,
             'api_gateway_stage': apig_stage,
-            'backend': self.BACKEND_NAME,
-            'chalice_version': chalice_version,
+            'region': region_name,
         })
         return {
             chalice_stage_name: deployed_values
@@ -250,7 +251,7 @@ class LambdaDeployer(object):
                 self._aws_client.delete_role(role_name)
 
     def deploy(self, config, existing_resources, stage_name):
-        # type: (Config, OPT_RESOURCES, str) -> Dict[str, str]
+        # type: (Config, OPT_RESOURCES, str) -> Dict[str, Any]
         deployed_values = {}
         if existing_resources is not None and \
                 self._aws_client.lambda_function_exists(
@@ -433,21 +434,22 @@ class APIGatewayDeployer(object):
         except ResourceDoesNotExistError as e:
             print('No rest API with id %s found.' % e)
 
-    def deploy(self, config, existing_resources, lambda_arn):
-        # type: (Config, OPT_RESOURCES, str) -> Tuple[str, str, str]
+    def deploy(self, config, existing_resources, deployed_resources):
+        # type: (Config, OPT_RESOURCES, Dict[str, Any]) -> Tuple[str, str, str]
         if existing_resources is not None and \
                 self._aws_client.rest_api_exists(
                     existing_resources.rest_api_id):
             print("API Gateway rest API already found.")
             rest_api_id = existing_resources.rest_api_id
-            return self._create_resources_for_api(config, rest_api_id,
-                                                  lambda_arn)
+            return self._create_resources_for_api(
+                config, rest_api_id, deployed_resources)
         print("Initiating first time deployment...")
-        return self._first_time_deploy(config, lambda_arn)
+        return self._first_time_deploy(config, deployed_resources)
 
-    def _first_time_deploy(self, config, lambda_arn):
-        # type: (Config, str) -> Tuple[str, str, str]
-        generator = SwaggerGenerator(self._aws_client.region_name, lambda_arn)
+    def _first_time_deploy(self, config, deployed_resources):
+        # type: (Config, Dict[str, Any]) -> Tuple[str, str, str]
+        generator = SwaggerGenerator(self._aws_client.region_name,
+                                     deployed_resources)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         # The swagger_doc that's generated will contain the "name" which is
         # used to set the name for the restAPI.  API Gateway allows you
@@ -457,26 +459,36 @@ class APIGatewayDeployer(object):
         # information into the swagger generator.
         rest_api_id = self._aws_client.import_rest_api(swagger_doc)
         api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
-        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, lambda_arn)
+        self._deploy_api_to_stage(rest_api_id, api_gateway_stage,
+                                  deployed_resources)
         return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
-    def _create_resources_for_api(self, config, rest_api_id, lambda_arn):
-        # type: (Config, str, str) -> Tuple[str, str, str]
-        generator = SwaggerGenerator(self._aws_client.region_name, lambda_arn)
+    def _create_resources_for_api(self, config, rest_api_id,
+                                  deployed_resources):
+        # type: (Config, str, Dict[str, Any]) -> Tuple[str, str, str]
+        generator = SwaggerGenerator(self._aws_client.region_name,
+                                     deployed_resources)
         swagger_doc = generator.generate_swagger(config.chalice_app)
         self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
         api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
-        self._deploy_api_to_stage(rest_api_id, api_gateway_stage, lambda_arn)
+        self._deploy_api_to_stage(
+            rest_api_id, api_gateway_stage,
+            deployed_resources)
         return rest_api_id, self._aws_client.region_name, api_gateway_stage
 
-    def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage, lambda_arn):
-        # type: (str, str, str) -> None
+    def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage,
+                             deployed_resources):
+        # type: (str, str, Dict[str, Any]) -> None
         print("Deploying to: %s" % api_gateway_stage)
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
+        api_handler_arn_parts = deployed_resources[
+            'api_handler_arn'].split(':')
+        function_name = api_handler_arn_parts[-1]
+        account_id = api_handler_arn_parts[4]
         self._aws_client.add_permission_for_apigateway_if_needed(
-            lambda_arn.split(':')[-1],
+            function_name,
             self._aws_client.region_name,
-            lambda_arn.split(':')[4],
+            account_id,
             rest_api_id,
             str(uuid.uuid4()),
         )

@@ -23,10 +23,10 @@ class SwaggerGenerator(object):
         }
     }  # type: Dict[str, Any]
 
-    def __init__(self, region, lambda_arn):
-        # type: (str, str) -> None
+    def __init__(self, region, deployed_resources):
+        # type: (str, Dict[str, Any]) -> None
         self._region = region
-        self._lambda_arn = lambda_arn
+        self._deployed_resources = deployed_resources
 
     def generate_swagger(self, app):
         # type: (Chalice) -> Dict[str, Any]
@@ -147,9 +147,10 @@ class SwaggerGenerator(object):
 
     def _uri(self):
         # type: () -> Any
+        lambda_arn = self._deployed_resources['api_handler_arn']
         return ('arn:aws:apigateway:{region}:lambda:path/2015-03-31'
                 '/functions/{lambda_arn}/invocations').format(
-                    region=self._region, lambda_arn=self._lambda_arn)
+                    region=self._region, lambda_arn=lambda_arn)
 
     def _generate_apig_integ(self, view):
         # type: (RouteEntry) -> Dict[str, Any]
