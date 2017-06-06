@@ -109,18 +109,12 @@ CODEPIPELINE_POLICY = {
             "Action": [
                 "s3:GetObject",
                 "s3:GetObjectVersion",
-                "s3:GetBucketVersioning"
+                "s3:GetBucketVersioning",
+                "s3:CreateBucket",
+                "s3:PutObject",
+                "s3:PutBucketVersioning"
             ],
             "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:PutObject"
-            ],
-            "Resource": [
-                "arn:aws:s3:::codepipeline*"
-            ],
             "Effect": "Allow"
         },
         {
@@ -136,20 +130,7 @@ CODEPIPELINE_POLICY = {
         },
         {
             "Action": [
-                "codedeploy:CreateDeployment",
-                "codedeploy:GetApplicationRevision",
-                "codedeploy:GetDeployment",
-                "codedeploy:GetDeploymentConfig",
-                "codedeploy:RegisterApplicationRevision"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
                 "cloudwatch:*",
-                "s3:*",
-                "cloudformation:*",
                 "iam:PassRole"
             ],
             "Resource": "*",
