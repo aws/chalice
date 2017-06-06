@@ -296,7 +296,8 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', 'python2.7') == 'arn:12345:name'
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_with_non_python2_runtime(self, stubbed_session):
@@ -310,7 +311,8 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', runtime='python3.6') == 'arn:12345:name'
+            'name', 'myarn', b'foo', runtime='python3.6',
+            handler='app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_with_environment_variables(self, stubbed_session):
@@ -326,6 +328,7 @@ class TestCreateLambdaFunction(object):
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
             'name', 'myarn', b'foo', 'python2.7',
+            handler='app.app',
             environment_variables={'FOO': 'BAR'}) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
@@ -341,7 +344,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', 'python2.7',
+            'name', 'myarn', b'foo', 'python2.7', 'app.app',
             timeout=240) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
@@ -357,7 +360,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', 'python2.7',
+            'name', 'myarn', b'foo', 'python2.7', 'app.app',
             tags={'mykey': 'myvalue'}) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
@@ -373,7 +376,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', 'python2.7',
+            'name', 'myarn', b'foo', 'python2.7', 'app.app',
             memory_size=256) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
@@ -396,7 +399,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', 'python2.7') == 'arn:12345:name'
+            'name', 'myarn', b'foo', 'python2.7', 'app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -415,7 +418,8 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo', 'python2.7')
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
+                                      'app.app')
         stubbed_session.verify_stubs()
 
     def test_can_pass_python_runtime(self, stubbed_session):
@@ -429,7 +433,8 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', runtime='python3.6') == 'arn:12345:name'
+            'name', 'myarn', b'foo',
+            runtime='python3.6', handler='app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_propagates_unknown_error(self, stubbed_session):
@@ -446,7 +451,8 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7')
+            awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7',
+                                      'app.app')
         stubbed_session.verify_stubs()
 
     def test_can_provide_tags(self, stubbed_session):
@@ -465,7 +471,8 @@ class TestCreateLambdaFunction(object):
             role_arn='myarn',
             zip_contents=b'foo',
             runtime='python2.7',
-            tags={'key': 'value'}) == 'arn:12345:name'
+            tags={'key': 'value'},
+            handler='app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
 

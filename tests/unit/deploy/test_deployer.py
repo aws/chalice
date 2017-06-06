@@ -599,7 +599,8 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
             'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
             'mykey': 'myvalue'
         },
-        timeout=120, memory_size=256
+        handler='app.app',
+        timeout=120, memory_size=256,
     )
 
 
@@ -677,6 +678,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={},
+            handler='app.app',
             timeout=60, memory_size=128
         )
 
@@ -700,6 +702,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={'FOO': 'BAR'},
+            handler='app.app',
             timeout=60, memory_size=128
         )
 
@@ -723,6 +726,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={},
+            handler='app.app',
             timeout=120, memory_size=128
         )
 
@@ -746,6 +750,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={},
+            handler='app.app',
             timeout=60, memory_size=256
         )
 
@@ -770,6 +775,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                 'mykey': 'myvalue'
             },
             environment_variables={},
+            handler='app.app',
             timeout=60, memory_size=128
         )
 

@@ -352,6 +352,7 @@ class LambdaDeployer(object):
             environment_variables=config.environment_variables,
             runtime=config.lambda_python_version,
             tags=config.tags,
+            handler='app.app',
             timeout=self._get_lambda_timeout(config),
             memory_size=self._get_lambda_memory_size(config)
         )
