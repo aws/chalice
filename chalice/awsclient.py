@@ -452,7 +452,7 @@ class TypedAWSClient(object):
         logs = self._client('logs')
         paginator = logs.get_paginator('filter_log_events')
         for page in paginator.paginate(logGroupName=log_group_name,
-                                       interleaved=True,
+                                       interleaved=interleaved,
                                        startTime=start_time):
             events = page['events']
             for event in events:
