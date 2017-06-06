@@ -470,7 +470,7 @@ class TypedAWSClient(object):
         return datetime.datetime.fromtimestamp(integer_timestamp / 1000.0)
 
     def _convert_to_integer_timestamp(self, string_datetime):
-        # type: (str) -> int
+        # type: (Optional[str]) -> int
         if string_datetime is None:
             return 0
 
