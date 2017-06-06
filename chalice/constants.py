@@ -109,19 +109,12 @@ CODEPIPELINE_POLICY = {
             "Action": [
                 "s3:GetObject",
                 "s3:GetObjectVersion",
-                "s3:GetBucketVersioning"
+                "s3:GetBucketVersioning",
+                "s3:CreateBucket",
+                "s3:PutObject",
+                "s3:PutBucketVersioning"
             ],
             "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:PutObject"
-            ],
-            "Resource": [
-                "arn:aws:s3:::codepipeline*",
-                "arn:aws:s3:::elasticbeanstalk*"
-            ],
             "Effect": "Allow"
         },
         {
@@ -137,28 +130,7 @@ CODEPIPELINE_POLICY = {
         },
         {
             "Action": [
-                "codedeploy:CreateDeployment",
-                "codedeploy:GetApplicationRevision",
-                "codedeploy:GetDeployment",
-                "codedeploy:GetDeploymentConfig",
-                "codedeploy:RegisterApplicationRevision"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "elasticbeanstalk:*",
-                "ec2:*",
-                "elasticloadbalancing:*",
-                "autoscaling:*",
                 "cloudwatch:*",
-                "s3:*",
-                "sns:*",
-                "cloudformation:*",
-                "rds:*",
-                "sqs:*",
-                "ecs:*",
                 "iam:PassRole"
             ],
             "Resource": "*",
@@ -168,20 +140,6 @@ CODEPIPELINE_POLICY = {
             "Action": [
                 "lambda:InvokeFunction",
                 "lambda:ListFunctions"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "opsworks:CreateDeployment",
-                "opsworks:DescribeApps",
-                "opsworks:DescribeCommands",
-                "opsworks:DescribeDeployments",
-                "opsworks:DescribeInstances",
-                "opsworks:DescribeStacks",
-                "opsworks:UpdateApp",
-                "opsworks:UpdateStack"
             ],
             "Resource": "*",
             "Effect": "Allow"
