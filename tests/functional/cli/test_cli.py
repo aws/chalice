@@ -1,6 +1,7 @@
 import json
 import zipfile
 import os
+import sys
 
 import pytest
 from click.testing import CliRunner
@@ -292,6 +293,10 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
         assert 'not find' in result.output
 
 
+@pytest.mark.skipif(sys.version_info[0] == 3,
+                    reason=('Python Version 3 cannot create pipelines due to '
+                            'CodeBuild not having a Python 3.6 image. This '
+                            'mark can be removed when that image exists.'))
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')

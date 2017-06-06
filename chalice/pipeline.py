@@ -9,10 +9,23 @@ from chalice import constants
 def create_pipeline_template(config):
     # type: (Config) -> Dict[str, Any]
     pipeline = CreatePipelineTemplate()
-    return pipeline.create_template(config.app_name)
+    return pipeline.create_template(config.app_name,
+                                    config.lambda_python_version)
+
+
+class InvalidCodeBuildPythonVersion(Exception):
+    def __init__(self, version):
+        # type: (str) -> None
+        super(InvalidCodeBuildPythonVersion, self).__init__(
+            'CodeBuild does not yet support python version %s.' % version
+        )
 
 
 class CreatePipelineTemplate(object):
+
+    _CODEBUILD_IMAGE = {
+        'python2.7': 'python:2.7.12',
+    }
 
     _BASE_TEMPLATE = {
         "AWSTemplateFormatVersion": "2010-09-09",
@@ -21,6 +34,11 @@ class CreatePipelineTemplate(object):
                 "Default": "ChaliceApp",
                 "Type": "String",
                 "Description": "Enter the name of your application"
+            },
+            "CodeBuildImage": {
+                "Default": "python:2.7.12",
+                "Type": "String",
+                "Description": "Name of codebuild image to use."
             }
         },
         "Resources": {},
@@ -31,10 +49,21 @@ class CreatePipelineTemplate(object):
         # type: () -> None
         pass
 
-    def create_template(self, app_name):
-        # type: (str) -> Dict[str, Any]
+    def _codebuild_image(self, lambda_python_version):
+        # type: (str) -> str
+        try:
+            image = self._CODEBUILD_IMAGE[lambda_python_version]
+            return image
+        except KeyError as e:
+            raise InvalidCodeBuildPythonVersion(str(e))
+
+    def create_template(self, app_name, python_lambda_version):
+        # type: (str, str) -> Dict[str, Any]
         t = copy.deepcopy(self._BASE_TEMPLATE)  # type: Dict[str, Any]
         t['Parameters']['ApplicationName']['Default'] = app_name
+        t['Parameters']['CodeBuildImage']['Default'] = self._codebuild_image(
+            python_lambda_version)
+
         resources = [SourceRepository, CodeBuild, CodePipeline]
         for resource_cls in resources:
             resource_cls().add_to_template(t)
@@ -91,7 +120,11 @@ class CodeBuild(BaseResource):
                 },
                 "Environment": {
                     "ComputeType": "BUILD_GENERAL1_SMALL",
-                    "Image": "aws/codebuild/python:2.7.12",
+                    "Image": {
+                        "Fn::Join": [
+                            "", ["aws/codebuild/", {"Ref": "PythonVersion"}]
+                        ]
+                    },
                     "Type": "LINUX_CONTAINER",
                     "EnvironmentVariables": [
                         {
