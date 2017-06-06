@@ -1,8 +1,9 @@
 import copy
 
-from typing import Any, List, Dict  # noqa
+from typing import Any, List, Dict, Optional  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
+from chalice.app import ChaliceAuthorizer
 
 
 class SwaggerGenerator(object):
@@ -67,7 +68,27 @@ class SwaggerGenerator(object):
 
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
-        config = authorizer.to_swagger()
+        if isinstance(authorizer, ChaliceAuthorizer):
+            function_name = '%s-%s' % (
+                self._deployed_resources['api_handler_name'],
+                authorizer.config.name
+            )
+            arn = self._deployed_resources['lambda_functions'][function_name]
+            auth_config = authorizer.config
+            config = {
+                'in': 'header',
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'x-amazon-apigateway-authtype': 'custom',
+                'x-amazon-apigateway-authorizer': {
+                    'type': 'token',
+                    'authorizerCredentials': auth_config.execution_role,
+                    'authorizerUri': self._uri(arn),
+                    'authorizerResultTtlInSeconds': auth_config.ttl_seconds,
+                }
+            }
+        else:
+            config = authorizer.to_swagger()
         api_config.setdefault(
             'securityDefinitions', {})[authorizer.name] = config
 
@@ -156,9 +177,10 @@ class SwaggerGenerator(object):
         }
         return responses
 
-    def _uri(self):
-        # type: () -> Any
-        lambda_arn = self._deployed_resources['api_handler_arn']
+    def _uri(self, lambda_arn=None):
+        # type: (Optional[str]) -> Any
+        if lambda_arn is None:
+            lambda_arn = self._deployed_resources['api_handler_arn']
         return ('arn:aws:apigateway:{region}:lambda:path/2015-03-31'
                 '/functions/{lambda_arn}/invocations').format(
                     region=self._region, lambda_arn=lambda_arn)
@@ -230,8 +252,8 @@ class SwaggerGenerator(object):
 
 
 class CFNSwaggerGenerator(SwaggerGenerator):
-    def _uri(self):
-        # type: () -> Any
+    def _uri(self, lambda_arn=None):
+        # type: (Optional[str]) -> Any
         # TODO: Does this have to be return type Any?
         return {
             'Fn::Sub': (

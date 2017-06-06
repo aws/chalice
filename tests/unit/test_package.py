@@ -258,3 +258,18 @@ def test_role_arn_added_to_function(sample_app,
     properties = template['Resources']['APIHandler']['Properties']
     assert properties['Role'] == 'role-arn'
     assert 'Policies' not in properties
+
+
+def test_fails_with_custom_auth(sample_app_with_auth,
+                                mock_swagger_generator,
+                                mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app_with_auth, api_gateway_stage='dev', app_name='myapp',
+        manage_iam_role=False, iam_role_arn='role-arn')
+    with pytest.raises(package.UnsupportedFeatureError):
+        p.generate_sam_template(config)

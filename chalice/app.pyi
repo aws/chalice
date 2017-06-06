@@ -13,6 +13,8 @@ class TooManyRequestsError(ChaliceViewError): ...
 
 
 ALL_ERRORS = ... # type: List[ChaliceViewError]
+_BUILTIN_AUTH_FUNC = Callable[
+    [AuthRequest], Union[AuthResponse, Dict[str, Any]]]
 
 
 class Authorizer:
@@ -107,6 +109,7 @@ class Chalice(object):
     current_request = ... # type: Request
     debug = ... # type: bool
     authorizers = ... # type: Dict[str, Dict[str, Any]]
+    builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
 
     def __init__(self, app_name: str) -> None: ...
 
@@ -116,3 +119,32 @@ class Chalice(object):
     def _get_view_function_response(self,
                                     view_function: Callable[..., Any],
                                     function_args: List[Any]) -> Response: ...
+
+
+class ChaliceAuthorizer(object):
+    name = ... # type: str
+    func = ... # type: _BUILTIN_AUTH_FUNC
+    config = ... # type: BuiltinAuthConfig
+
+
+class BuiltinAuthConfig(object):
+    name = ... # type: str
+    handler_string = ... # type: str
+
+
+class AuthRequest(object):
+    auth_type = ... # type: str
+    token = ... # type: str
+    method_arn = ... # type: str
+
+
+class AuthRoute(object):
+    path = ... # type: str
+    methods = ... # type: List[str]
+
+
+class AuthResponse(object):
+    ALL_HTTP_METHODS = ... # type: List[str]
+    routes = ... # type: Union[str, AuthRoute]
+    principal_id = ... # type: str
+    context = ... # type: Optional[Dict[str, str]]

@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional  # noqa
 from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_HANDLER_NAME
 
 
 StrMap = Dict[str, Any]
@@ -79,13 +80,15 @@ class Config(object):
 
     def __init__(self,
                  chalice_stage=DEFAULT_STAGE_NAME,
+                 function_name=DEFAULT_HANDLER_NAME,
                  user_provided_params=None,
                  config_from_disk=None,
                  default_params=None):
-        # type: (str, StrMap, StrMap, StrMap) -> None
+        # type: (str, str, StrMap, StrMap, StrMap) -> None
         #: Params that a user provided explicitly,
         #: typically via the command line.
         self.chalice_stage = chalice_stage
+        self.function_name = function_name
         if user_provided_params is None:
             user_provided_params = {}
         self._user_provided_params = user_provided_params
@@ -98,8 +101,10 @@ class Config(object):
         self._default_params = default_params
 
     @classmethod
-    def create(cls, chalice_stage=DEFAULT_STAGE_NAME, **kwargs):
-        # type: (str, **Any) -> Config
+    def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
+               function_name=DEFAULT_HANDLER_NAME,
+               **kwargs):
+        # type: (str, str, **Any) -> Config
         return cls(chalice_stage=chalice_stage,
                    user_provided_params=kwargs.copy())
 
@@ -129,12 +134,6 @@ class Config(object):
         return self._config_from_disk
 
     @property
-    def iam_policy_file(self):
-        # type: () -> str
-        return self._chain_lookup('iam_policy_file',
-                                  varies_per_chalice_stage=True)
-
-    @property
     def lambda_python_version(self):
         # type: () -> str
         # We may open this up to configuration later, but for now,
@@ -142,29 +141,15 @@ class Config(object):
         # supported by lambda.
         return self._PYTHON_VERSIONS[sys.version_info[0]]
 
-    @property
-    def lambda_memory_size(self):
-        # type: () -> int
-        return self._chain_lookup(
-            'lambda_memory_size', varies_per_chalice_stage=True)
-
-    @property
-    def lambda_timeout(self):
-        # type: () -> int
-        return self._chain_lookup(
-            'lambda_timeout', varies_per_chalice_stage=True)
-
-    @property
-    def tags(self):
-        # type: () -> Dict[str, str]
-        tags = self._chain_merge('tags')
-        tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
-            current_chalice_version, self.chalice_stage, self.app_name)
-        return tags
-
-    def _chain_lookup(self, name, varies_per_chalice_stage=False):
-        # type: (str, bool) -> Any
+    def _chain_lookup(self, name, varies_per_chalice_stage=False,
+                      varies_per_function=False):
+        # type: (str, bool, bool) -> Any
         search_dicts = [self._user_provided_params]
+        if varies_per_function:
+            search_dicts.append(
+                self._config_from_disk.get('stages', {}).get(
+                    self.chalice_stage, {}).get('lambda_functions', {}).get(
+                        self.function_name, {}))
         if varies_per_chalice_stage:
             search_dicts.append(
                 self._config_from_disk.get('stages', {}).get(
@@ -184,6 +169,9 @@ class Config(object):
             self._config_from_disk,
             self._config_from_disk.get('stages', {}).get(
                 self.chalice_stage, {}),
+            self._config_from_disk.get('stages', {}).get(
+                self.chalice_stage, {}).get('lambda_functions', {}).get(
+                    self.function_name, {}),
             self._user_provided_params,
         ]
         final = {}
@@ -208,16 +196,39 @@ class Config(object):
                                   varies_per_chalice_stage=True)
 
     @property
+    def iam_policy_file(self):
+        # type: () -> str
+        return self._chain_lookup('iam_policy_file',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
+    def lambda_memory_size(self):
+        # type: () -> int
+        return self._chain_lookup('lambda_memory_size',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
+    def lambda_timeout(self):
+        # type: () -> int
+        return self._chain_lookup('lambda_timeout',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
     def iam_role_arn(self):
         # type: () -> str
         return self._chain_lookup('iam_role_arn',
-                                  varies_per_chalice_stage=True)
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
 
     @property
     def manage_iam_role(self):
         # type: () -> bool
         result = self._chain_lookup('manage_iam_role',
-                                    varies_per_chalice_stage=True)
+                                    varies_per_chalice_stage=True,
+                                    varies_per_function=True)
         if result is None:
             # To simplify downstream code, if manage_iam_role
             # is None (indicating the user hasn't configured/specified this
@@ -231,12 +242,37 @@ class Config(object):
     def autogen_policy(self):
         # type: () -> bool
         return self._chain_lookup('autogen_policy',
-                                  varies_per_chalice_stage=True)
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
 
     @property
     def environment_variables(self):
         # type: () -> Dict[str, str]
         return self._chain_merge('environment_variables')
+
+    @property
+    def tags(self):
+        # type: () -> Dict[str, str]
+        tags = self._chain_merge('tags')
+        tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
+            current_chalice_version, self.chalice_stage, self.app_name)
+        return tags
+
+    def scope(self, chalice_stage, function_name):
+        # type: (str, str) -> Config
+        # Used to create a new config object that's scoped to a different
+        # stage and/or function.  This creates a completely separate copy.
+        # This is preferred over mutating the existing config obj.
+        # We technically don't need to do a copy here, but this avoids
+        # any possible issues if we ever mutate the config values.
+        clone = self.__class__(
+            chalice_stage=chalice_stage,
+            function_name=function_name,
+            user_provided_params=self._user_provided_params,
+            config_from_disk=self._config_from_disk,
+            default_params=self._default_params,
+        )
+        return clone
 
     def deployed_resources(self, chalice_stage_name):
         # type: (str) -> Optional[DeployedResources]
@@ -262,8 +298,8 @@ class Config(object):
 class DeployedResources(object):
     def __init__(self, backend, api_handler_arn,
                  api_handler_name, rest_api_id, api_gateway_stage,
-                 region, chalice_version):
-        # type: (str, str, str, str, str, str, str) -> None
+                 region, chalice_version, lambda_functions):
+        # type: (str, str, str, str, str, str, str, StrMap) -> None
         self.backend = backend
         self.api_handler_arn = api_handler_arn
         self.api_handler_name = api_handler_name
@@ -271,10 +307,11 @@ class DeployedResources(object):
         self.api_gateway_stage = api_gateway_stage
         self.region = region
         self.chalice_version = chalice_version
+        self.lambda_functions = lambda_functions
 
     @classmethod
     def from_dict(cls, data):
-        # type: (Dict[str, str]) -> DeployedResources
+        # type: (Dict[str, Any]) -> DeployedResources
         return cls(
             data['backend'],
             data['api_handler_arn'],
@@ -283,4 +320,5 @@ class DeployedResources(object):
             data['api_gateway_stage'],
             data['region'],
             data['chalice_version'],
+            data['lambda_functions'],
         )

@@ -80,6 +80,14 @@ def sample_app():
     return demo
 
 
+@fixture
+def auth_request():
+    method_arn = (
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth")
+    request = app.AuthRequest('TOKEN', 'authtoken', method_arn)
+    return request
+
+
 @pytest.mark.skipif(sys.version[0] == '2',
                     reason=('Test is irrelevant under python 2, since str and '
                             'bytes are interchangable.'))
@@ -773,3 +781,226 @@ class TestCORSConfig(object):
             allow_credentials=True
         )
         assert custom_cors == same_custom_cors
+
+
+def test_can_handle_builtin_auth():
+    demo = app.Chalice('builtin-auth')
+
+    @demo.authorizer()
+    def my_auth(auth_request):
+        pass
+
+
+    @demo.route('/', authorizer=my_auth)
+    def index_view():
+        return {}
+
+    assert len(demo.builtin_auth_handlers) == 1
+    authorizer = demo.builtin_auth_handlers[0]
+    assert isinstance(authorizer, app.BuiltinAuthConfig)
+    assert authorizer.name == 'my_auth'
+    assert authorizer.handler_string == 'app.my_auth'
+
+
+def test_builtin_auth_can_transform_event():
+    event = {
+        'type': 'TOKEN',
+        'authorizationToken': 'authtoken',
+        'methodArn': 'arn:aws:execute-api:...:foo',
+    }
+    auth_app = app.Chalice('builtin-auth')
+
+    request = []
+
+    @auth_app.authorizer()
+    def builtin_auth(auth_request):
+        request.append(auth_request)
+
+    builtin_auth(event, None)
+
+    assert len(request) == 1
+    transformed = request[0]
+    assert transformed.auth_type == 'TOKEN'
+    assert transformed.token == 'authtoken'
+    assert transformed.method_arn == 'arn:aws:execute-api:...:foo'
+
+
+def test_can_return_auth_dict_directly():
+    # A user can bypass our AuthResponse and return the auth response
+    # dict that API gateway expects.
+    event = {
+        'type': 'TOKEN',
+        'authorizationToken': 'authtoken',
+        'methodArn': 'arn:aws:execute-api:...:foo',
+    }
+    auth_app = app.Chalice('builtin-auth')
+
+    response = {
+        'context': {'foo': 'bar'},
+        'principalId': 'user',
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': []
+        }
+    }
+
+    @auth_app.authorizer()
+    def builtin_auth(auth_request):
+        return response
+
+    actual = builtin_auth(event, None)
+    assert actual == response
+
+
+def test_can_specify_extra_auth_attributes():
+    auth_app = app.Chalice('builtin-auth')
+
+    @auth_app.authorizer(ttl_seconds=10, execution_role='arn:my-role')
+    def builtin_auth(auth_request):
+        pass
+
+    handler = auth_app.builtin_auth_handlers[0]
+    assert handler.ttl_seconds == 10
+    assert handler.execution_role == 'arn:my-role'
+
+
+def test_validation_raised_on_unknown_kwargs():
+    auth_app = app.Chalice('builtin-auth')
+
+    with pytest.raises(TypeError):
+        @auth_app.authorizer(this_is_an_unknown_kwarg=True)
+        def builtin_auth(auth_request):
+            pass
+
+def test_can_return_auth_response():
+    event = {
+        'type': 'TOKEN',
+        'authorizationToken': 'authtoken',
+        'methodArn': 'arn:aws:execute-api:us-west-2:1:id/dev/GET/a',
+    }
+    auth_app = app.Chalice('builtin-auth')
+
+    response = {
+        'context': {},
+        'principalId': 'principal',
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': [
+                {'Action': 'execute-api:Invoke',
+                 'Effect': 'Allow',
+                 'Resource': [
+                     'arn:aws:execute-api:us-west-2:1:id/dev/%s/a' %
+                     method for method in app.AuthResponse.ALL_HTTP_METHODS
+                 ]}
+            ]
+        }
+    }
+
+    @auth_app.authorizer()
+    def builtin_auth(auth_request):
+        return app.AuthResponse(['/a'], 'principal')
+
+    actual = builtin_auth(event, None)
+    assert actual == response
+
+
+def test_auth_response_serialization():
+    method_arn = (
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth")
+    request = app.AuthRequest('TOKEN', 'authtoken', method_arn)
+    response = app.AuthResponse(routes=['/needs/auth'], principal_id='foo')
+    response_dict = response.to_dict(request)
+    expected = [
+        method_arn.replace('GET', method)
+        for method in app.AuthResponse.ALL_HTTP_METHODS
+    ]
+    assert response_dict == {
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': [
+                {
+                    'Action': 'execute-api:Invoke',
+                    'Resource': expected,
+                    'Effect': 'Allow'
+                }
+            ]
+        },
+        'context': {},
+        'principalId': 'foo',
+    }
+
+
+def test_auth_response_can_include_context(auth_request):
+    response = app.AuthResponse(['/foo'], 'principal', {'foo': 'bar'})
+    serialized = response.to_dict(auth_request)
+    assert serialized['context'] == {'foo': 'bar'}
+
+
+def test_can_use_auth_routes_instead_of_strings(auth_request):
+    expected = [
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a",
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a/b",
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/POST/a/b",
+    ]
+    response = app.AuthResponse(
+        [app.AuthRoute('/a', ['GET']),
+         app.AuthRoute('/a/b', ['GET', 'POST'])],
+        'principal')
+    serialized = response.to_dict(auth_request)
+    assert serialized['policyDocument'] == {
+        'Version': '2012-10-17',
+        'Statement': [{
+            'Action': 'execute-api:Invoke',
+            'Effect': 'Allow',
+            'Resource': expected,
+        }]
+    }
+
+
+def test_can_mix_auth_routes_and_strings(auth_request):
+    expected = [
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/DELETE/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/HEAD/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/OPTIONS/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/PATCH/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/POST/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/PUT/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a/b',
+    ]
+    response = app.AuthResponse(
+        ['/a', app.AuthRoute('/a/b', ['GET'])],
+        'principal')
+    serialized = response.to_dict(auth_request)
+    assert serialized['policyDocument'] == {
+        'Version': '2012-10-17',
+        'Statement': [{
+            'Action': 'execute-api:Invoke',
+            'Effect': 'Allow',
+            'Resource': expected,
+        }]
+    }
+
+
+
+def test_special_cased_root_resource(auth_request):
+    # Not sure why, but API gateway uses `//` for the root
+    # resource.  I've confirmed it doesn't do this for non-root
+    # URLs.  We don't to let that leak out to the APIs we expose.
+    auth_request.method_arn = (
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET//")
+    expected = [
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET//"
+    ]
+    response = app.AuthResponse(
+        [app.AuthRoute('/', ['GET'])],
+        'principal')
+    serialized = response.to_dict(auth_request)
+    assert serialized['policyDocument'] == {
+        'Version': '2012-10-17',
+        'Statement': [{
+            'Action': 'execute-api:Invoke',
+            'Effect': 'Allow',
+            'Resource': expected,
+        }]
+    }

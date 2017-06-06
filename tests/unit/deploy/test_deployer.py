@@ -22,6 +22,7 @@ from chalice.awsclient import LambdaErrorContext
 from chalice.config import Config, DeployedResources
 from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
+from chalice import constants
 from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
@@ -143,7 +144,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
     # The rest_api_id does not exist which will trigger
     # the initial import
     deployed = DeployedResources(
-        None, None, None, 'existing-id', 'dev', None, None)
+        None, None, None, 'existing-id', 'dev', None, None, None)
     aws_client.rest_api_exists.return_value = True
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
@@ -167,7 +168,7 @@ def test_api_gateway_deployer_delete(config_obj):
 
     rest_api_id = 'abcdef1234'
     deployed = DeployedResources(
-        None, None, None, rest_api_id, 'dev', None, None)
+        None, None, None, rest_api_id, 'dev', None, None, None)
     aws_client.rest_api_exists.return_value = True
 
     d = APIGatewayDeployer(aws_client)
@@ -181,7 +182,7 @@ def test_api_gateway_deployer_delete_already_deleted(capsys):
     aws_client.delete_rest_api.side_effect = ResourceDoesNotExistError(
         rest_api_id)
     deployed = DeployedResources(
-        None, None, None, rest_api_id, 'dev', None, None)
+        None, None, None, rest_api_id, 'dev', None, None, None)
     aws_client.rest_api_exists.return_value = True
     d = APIGatewayDeployer(aws_client)
     d.delete(deployed)
@@ -547,7 +548,7 @@ class TestDeployer(object):
         }
 
     def test_deployer_delete_calls_deletes(self):
-        # Check that athe deployer class calls other deployer classes delete
+        # Check that the deployer class calls other deployer classes delete
         # methods.
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
@@ -560,6 +561,7 @@ class TestDeployer(object):
             'api_gateway_stage': 'dev',
             'region': 'us-west-2',
             'chalice_version': '0',
+            'lambda_functions': {},
         })
         cfg.deployed_resources.return_value = deployed_resources
 
@@ -700,7 +702,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
         'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None)
+        None, 'dev', None, None, {})
     d.deploy(cfg, deployed, 'dev')
 
     # Should result in injecting the latest app code.
@@ -726,16 +728,19 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
 def test_lambda_deployer_delete():
     aws_client = mock.Mock(spec=TypedAWSClient)
     aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
-    lambda_function_name = 'lambda_name'
+    lambda_function_name = 'api-handler'
     deployed = DeployedResources(
         'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None)
+        None, 'dev', None, None, {'name': 'auth-arn'})
     d = LambdaDeployer(
         aws_client, None, CustomConfirmPrompt(True), None, None)
     d.delete(deployed)
 
     aws_client.get_role_arn_for_name.assert_called_with(lambda_function_name)
-    aws_client.delete_function.assert_called_with(lambda_function_name)
+    assert aws_client.delete_function.call_args_list == [
+        mock.call('api-handler'),
+        mock.call('auth-arn'),
+    ]
     aws_client.delete_role.assert_called_with('role_name')
 
 
@@ -747,7 +752,7 @@ def test_lambda_deployer_delete_already_deleted(capsys):
         lambda_function_name)
     deployed = DeployedResources(
         'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None)
+        None, 'dev', None, None, None)
     d = LambdaDeployer(
         aws_client, None, NoPrompt(), None, None)
     d.delete(deployed)
@@ -785,7 +790,7 @@ def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
         'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None)
+        None, 'dev', None, None, None)
     with pytest.raises(RuntimeError):
         d.deploy(cfg, deployed, 'dev')
 
@@ -820,6 +825,7 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
     assert deployed == {
         'api_handler_arn': 'lambda-arn',
         'api_handler_name': 'myapp-dev',
+        'lambda_functions': {},
     }
     aws_client.create_function.assert_called_with(
         function_name='myapp-dev', role_arn='role-arn',
@@ -955,6 +961,36 @@ def test_can_validate_updated_custom_binary_types(sample_app):
                                         sample_app.api.binary_types) is None
 
 
+class TestAuthHandlersAreAuthorized(object):
+    def tests_apigateway_adds_auth_handler_policy(self, sample_app_with_auth):
+        # When we create authorizers in API gateway, we also need to
+        # give the authorizers permission to invoke the lambda functions
+        # we've created.
+        aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp',
+            chalice_app=sample_app_with_auth,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.'
+        )
+        d = APIGatewayDeployer(aws_client)
+        deployed_resources = {
+            'api_handler_arn': (
+                'arn:aws:lambda:us-west-2:1:function:myapp-dev'
+            ),
+            'api_handler_name': 'myapp-dev',
+            'lambda_functions': {
+                'myapp-dev-myauth': 'myauth:arn',
+            },
+        }
+        aws_client.import_rest_api.return_value = 'rest-api-id'
+        d.deploy(cfg, None, deployed_resources)
+        # We should have add permission for the authorizer to invoke
+        # the auth lambda function.
+        aws_client.add_permission_for_authorizer.assert_called_with(
+            'rest-api-id', 'myauth:arn', mock.ANY)
+
+
 class TestLambdaInitialDeploymentWithConfigurations(object):
     @fixture(autouse=True)
     def setup_deployer_dependencies(self, app_policy):
@@ -971,18 +1007,170 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.osutils = InMemoryOSUtils(
             {self.package_name: self.package_contents})
         self.aws_client = mock.Mock(spec=TypedAWSClient)
-        self.aws_client.create_function.return_value = self.lambda_arn
+        self.aws_client.create_function.side_effect = [self.lambda_arn]
         self.packager = mock.Mock(LambdaDeploymentPackager)
         self.packager.create_deployment_package.return_value =\
             self.package_name
+        self.packager.deployment_package_filename.return_value =\
+            self.package_name
         self.app_policy = app_policy
 
-    def test_lambda_deployer_defaults(self, sample_app):
+    def create_config_obj(self, sample_app):
         cfg = Config.create(
             chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
             manage_iam_role=False, iam_role_arn='role-arn',
             project_dir='.'
         )
+        return cfg
+
+    def test_can_create_auth_handlers(self, sample_app_with_auth):
+        config = self.create_config_obj(sample_app_with_auth)
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:auth-function']
+        deployed = deployer.deploy(config, None, stage_name='dev')
+        assert 'lambda_functions' in deployed
+        assert deployed['lambda_functions'] == {
+            'myapp-dev-myauth': 'arn:auth-function',
+        }
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-myauth',
+            handler='app.myauth',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents=b'package contents',
+        )
+
+    def test_can_update_auth_handlers(self, sample_app_with_auth):
+        config = self.create_config_obj(sample_app_with_auth)
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = True
+        self.aws_client.update_function.return_value = {
+            'FunctionArn': 'arn:auth-function'
+        }
+        deployed = deployer.deploy(config, None, stage_name='dev')
+        assert 'lambda_functions' in deployed
+        assert deployed['lambda_functions'] == {
+            'myapp-dev-myauth': 'arn:auth-function',
+        }
+        self.aws_client.update_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-myauth',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents=b'package contents',
+        )
+
+    def test_can_create_auth_with_different_config(self, sample_app_with_auth):
+        # We're not using create_config_obj because we want to approximate
+        # loading config from disk which contains per-lambda configuration.
+        disk_config = {
+            'app_name': 'myapp',
+            'iam_role_arn': 'role-arn',
+            'manage_iam_role': False,
+            'stages': {
+                'dev': {
+                    'lambda_timeout': 10,
+                    'lambda_memory_size': 128,
+                    'lambda_functions': {
+                        'myauth': {
+                            'lambda_timeout': 20,
+                            'lambda_memory_size': 512,
+                        }
+                    }
+                }
+            }
+        }
+        config = Config(
+            'dev',
+            config_from_disk=disk_config,
+            user_provided_params={'chalice_app': sample_app_with_auth,
+                                  'project_dir': '.'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:auth-function']
+        deployer.deploy(config, None, stage_name='dev')
+        create_function_calls = self.aws_client.create_function.call_args_list
+        assert create_function_calls == [
+            mock.call(
+                environment_variables={},
+                function_name='myapp-dev',
+                handler='app.app',
+                role_arn='role-arn',
+                runtime=mock.ANY,
+                tags=mock.ANY,
+                zip_contents=b'package contents',
+                # These come frmo the stage level config above.
+                timeout=10,
+                memory_size=128,
+            ),
+            mock.call(
+                environment_variables={},
+                function_name='myapp-dev-myauth',
+                handler='app.myauth',
+                role_arn='role-arn',
+                runtime=mock.ANY,
+                tags=mock.ANY,
+                zip_contents=b'package contents',
+                # These come from the 'lambda_functions.myauth' section
+                # in the config above.
+                timeout=20,
+                memory_size=512,
+            )
+        ]
+
+    def test_unreferenced_functions_are_deleted(self, sample_app_with_auth):
+        # Existing resources is the set of resources that have
+        # *previously* been deployed.
+        existing_lambda_functions = {
+            'old-function': 'arn:not-referenced-anymore',
+        }
+        existing = DeployedResources(
+            'api', 'api-handler-arn', 'api-handler-name',
+            'existing-id', 'dev', None, None,
+            existing_lambda_functions)
+        self.aws_client.lambda_function_exists.return_value = True
+        self.aws_client.update_function.return_value = {
+            'FunctionArn': 'arn:new-auth-function'
+        }
+        config = self.create_config_obj(sample_app_with_auth)
+        self.aws_client.get_function_configuration.return_value = {
+            'Runtime': config.lambda_python_version,
+        }
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        deployed = deployer.deploy(config, existing, stage_name='dev')
+        # Because the "old-function" was not referenced in the update
+        # function calls, we should expect that it was deleted.
+        self.aws_client.delete_function.assert_called_with(
+            'arn:not-referenced-anymore')
+        # And the old-arn is not in the deployed resources
+        assert deployed['lambda_functions'] == {
+            'api-handler-name-myauth': 'arn:new-auth-function'}
+
+    def test_lambda_deployer_defaults(self, sample_app):
+        cfg = self.create_config_obj(sample_app)
         deployer = LambdaDeployer(
             self.aws_client, self.packager, None, self.osutils,
             self.app_policy)
@@ -1136,7 +1324,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
 
         self.deployed_resources = DeployedResources(
             'api', 'api_handler_arn', self.lambda_function_name,
-            None, 'dev', None, None)
+            None, 'dev', None, None, {})
 
     def test_lambda_deployer_defaults(self, sample_app):
         cfg = Config.create(
