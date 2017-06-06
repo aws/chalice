@@ -66,7 +66,7 @@ class LogRetriever(object):
 
     def retrieve_logs(self, include_lambda_messages=True, max_entries=None,
                       start_time=None):
-        # type: (bool, Optional[int], Optional[str]) -> Iterator[Dict[str, Any]] # noqa
+        # type: (bool, Optional[int], Optional[str])->Iterator[Dict[str, Any]]
         """Retrieve logs from a log group.
 
         :type include_lambda_messages: boolean
