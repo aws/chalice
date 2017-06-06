@@ -119,8 +119,7 @@ CODEPIPELINE_POLICY = {
                 "s3:PutObject"
             ],
             "Resource": [
-                "arn:aws:s3:::codepipeline*",
-                "arn:aws:s3:::elasticbeanstalk*"
+                "arn:aws:s3:::codepipeline*"
             ],
             "Effect": "Allow"
         },
@@ -148,17 +147,9 @@ CODEPIPELINE_POLICY = {
         },
         {
             "Action": [
-                "elasticbeanstalk:*",
-                "ec2:*",
-                "elasticloadbalancing:*",
-                "autoscaling:*",
                 "cloudwatch:*",
                 "s3:*",
-                "sns:*",
                 "cloudformation:*",
-                "rds:*",
-                "sqs:*",
-                "ecs:*",
                 "iam:PassRole"
             ],
             "Resource": "*",
@@ -168,20 +159,6 @@ CODEPIPELINE_POLICY = {
             "Action": [
                 "lambda:InvokeFunction",
                 "lambda:ListFunctions"
-            ],
-            "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "opsworks:CreateDeployment",
-                "opsworks:DescribeApps",
-                "opsworks:DescribeCommands",
-                "opsworks:DescribeDeployments",
-                "opsworks:DescribeInstances",
-                "opsworks:DescribeStacks",
-                "opsworks:UpdateApp",
-                "opsworks:UpdateStack"
             ],
             "Resource": "*",
             "Effect": "Allow"
