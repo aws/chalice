@@ -11,6 +11,9 @@ Next Release (TBD)
   (`#339 <https://github.com/awslabs/chalice/issues/339>`__)
 * Fix ``autogen_policy`` in config being ignored
   (`#367 <https://github.com/awslabs/chalice/pull/367>`__)
+* Add support for view functions that share the same view url but
+  differ by HTTP method
+  (`#81 <https://github.com/awslabs/chalice/issues/81>`__)
 
 
 0.9.0
