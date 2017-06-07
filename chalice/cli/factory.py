@@ -88,7 +88,8 @@ class CLIFactory(object):
                           autogen_policy=None, api_gateway_stage=None):
         # type: (str, Optional[bool], Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
-        default_params = {'project_dir': self.project_dir}
+        default_params = {'project_dir': self.project_dir,
+                          'autogen_policy': True}
         try:
             config_from_disk = self.load_project_config()
         except (OSError, IOError):

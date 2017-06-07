@@ -68,17 +68,18 @@ def test_can_create_config_obj(clifactory):
     assert isinstance(obj, Config)
 
 
-def test_can_create_config_obj_without_autogen_policy(clifactory):
-    config = clifactory.create_config_obj()
-    # Should not be found since No user provided value was provided and the
-    # disk config is empty in the clifactory fixture.
-    assert config.autogen_policy is None
-    assert config.api_gateway_stage is None
-
-
 def test_can_create_config_obj_with_override_autogen(clifactory):
-    config = clifactory.create_config_obj(autogen_policy=True)
-    assert config.autogen_policy is True
+    config = clifactory.create_config_obj(autogen_policy=False)
+    assert config.autogen_policy is False
+
+
+def test_config_file_override_autogen_policy(clifactory):
+    config_file = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(config_file, 'w') as f:
+        f.write('{"autogen_policy": false}')
+    config = clifactory.create_config_obj()
+    assert config.autogen_policy is False
 
 
 def test_can_create_config_obj_with_api_gateway_stage(clifactory):
