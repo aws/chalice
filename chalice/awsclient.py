@@ -455,12 +455,15 @@ class TypedAWSClient(object):
         # type: () -> str
         return self._client('apigateway').meta.region_name
 
-    def iter_log_events(self, log_group_name, interleaved=True):
-        # type: (str, bool) -> Iterator[Dict[str, Any]]
+    def iter_log_events(self, log_group_name, interleaved=True,
+                        string_start_time=None):
+        # type: (str, bool, Optional[str]) -> Iterator[Dict[str, Any]]
+        start_time = self._convert_to_integer_timestamp(string_start_time)
         logs = self._client('logs')
         paginator = logs.get_paginator('filter_log_events')
         for page in paginator.paginate(logGroupName=log_group_name,
-                                       interleaved=True):
+                                       interleaved=interleaved,
+                                       startTime=start_time):
             events = page['events']
             for event in events:
                 # timestamp is modeled as a 'long', so we'll
@@ -475,6 +478,14 @@ class TypedAWSClient(object):
     def _convert_to_datetime(self, integer_timestamp):
         # type: (int) -> datetime.datetime
         return datetime.datetime.fromtimestamp(integer_timestamp / 1000.0)
+
+    def _convert_to_integer_timestamp(self, string_datetime):
+        # type: (Union[str, None]) -> int
+        if string_datetime is None:
+            return 0
+
+        dt = datetime.datetime.strptime(string_datetime, '%Y-%m-%d %H:%M:%S')
+        return int(dt.timestamp() * 1000.0)
 
     def _client(self, service_name):
         # type: (str) -> Any

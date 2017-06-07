@@ -10,12 +10,12 @@ from botocore.session import Session  # noqa
 from chalice.awsclient import TypedAWSClient  # noqa
 
 
-def display_logs(retriever, max_entries,
+def display_logs(retriever, max_entries, start_time,
                  include_lambda_messages, stream):
-    # type: (LogRetriever, int, bool, IO[str]) -> None
+    # type: (LogRetriever, int, str, bool, IO[str]) -> None
     events = retriever.retrieve_logs(
         include_lambda_messages=include_lambda_messages,
-        max_entries=max_entries)
+        max_entries=max_entries, start_time=start_time)
     for event in events:
         stream.write('%s %s %s\n' % (
             event['timestamp'],
@@ -64,8 +64,9 @@ class LogRetriever(object):
                                'END RequestId',
                                'REPORT RequestId'))
 
-    def retrieve_logs(self, include_lambda_messages=True, max_entries=None):
-        # type: (bool, Optional[int]) -> Iterator[Dict[str, Any]]
+    def retrieve_logs(self, include_lambda_messages=True, max_entries=None,
+                      start_time=None):
+        # type: (bool, Optional[int], Optional[str]) -> Iterator[Dict[str, Any]] # noqa
         """Retrieve logs from a log group.
 
         :type include_lambda_messages: boolean
@@ -88,10 +89,11 @@ class LogRetriever(object):
             * logShortId -> (string) Short identifier for logStreamName.
 
         """
-        # TODO: Add support for startTime/endTime.
+        # TODO: Add support for endTime.
         shown = 0
-        for event in self._client.iter_log_events(self._log_group_name,
-                                                  interleaved=True):
+        for event in self._client.iter_log_events(
+                self._log_group_name, interleaved=True,
+                string_start_time=start_time):
             if not include_lambda_messages and \
                     self._is_lambda_message(event):
                 continue
