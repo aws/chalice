@@ -426,9 +426,30 @@ specified resource.  For example:
         pass
 
 The above view function will be called when either an HTTP POST or
-PUT is sent to ``/myview``.  In the next section we'll go over
-how you can introspect the given request in order to differentiate between
-various HTTP methods.
+PUT is sent to ``/myview``.
+
+Alternatively if you do not want to share the same view function across
+multiple HTTP methods for the same route url, you may define separate view
+functions to the same route url but have the view functions differ by
+HTTP method. For example:
+
+.. code-block:: python
+
+    @app.route('/myview', methods=['POST'])
+    def myview_post():
+        pass
+
+    @app.route('/myview', methods=['PUT'])
+    def myview_put():
+        pass
+
+This setup will route all HTTP POST's to ``/myview`` to the ``myview_post()``
+view function and route all HTTP PUT's to ``/myview`` to the ``myview_put()``
+view function.
+
+In the next section we'll go over how you can introspect the given request
+in order to differentiate between various HTTP methods.
+
 
 Tutorial: Request Metadata
 ==========================
