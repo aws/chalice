@@ -756,3 +756,20 @@ class TestCORSConfig(object):
         differing_cors_config = app.CORSConfig(
             allow_origin='https://foo.example.com')
         assert cors_config != differing_cors_config
+
+    def test_eq_non_default_configurations(self):
+        custom_cors = app.CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        same_custom_cors = app.CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        assert custom_cors == same_custom_cors

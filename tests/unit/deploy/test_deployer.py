@@ -659,6 +659,38 @@ class TestValidateCORS(object):
                 'route and CORS configuration.'
             )
 
+    def test_can_have_same_custom_cors_configurations(self, sample_app):
+        custom_cors = CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        @sample_app.route('/cors', methods=['GET'], cors=custom_cors)
+        def cors():
+            pass
+
+        same_custom_cors = CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        @sample_app.route('/cors', methods=['PUT'], cors=same_custom_cors)
+        def same_cors():
+            pass
+
+        try:
+            validate_routes(sample_app.routes)
+        except ValueError:
+            pytest.fail(
+                'A ValueError was unexpectedly thrown. Applications '
+                'may have multiple view functions that share the same '
+                'route and CORS configuration.'
+            )
+
     def test_can_have_one_cors_configured_and_others_not(self, sample_app):
         @sample_app.route('/cors', methods=['GET'], cors=True)
         def cors():
