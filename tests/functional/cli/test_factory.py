@@ -68,6 +68,20 @@ def test_can_create_config_obj(clifactory):
     assert isinstance(obj, Config)
 
 
+def test_can_create_config_obj_default_autogen_policy_true(clifactory):
+    config = clifactory.create_config_obj()
+    assert config.autogen_policy is True
+
+
+def test_provided_autogen_policy_overrides_config_file(clifactory):
+    config_file = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(config_file, 'w') as f:
+        f.write('{"autogen_policy": false}')
+    config = clifactory.create_config_obj(autogen_policy=True)
+    assert config.autogen_policy is True
+
+
 def test_can_create_config_obj_with_override_autogen(clifactory):
     config = clifactory.create_config_obj(autogen_policy=False)
     assert config.autogen_policy is False
