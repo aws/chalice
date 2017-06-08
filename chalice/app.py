@@ -7,7 +7,7 @@ import traceback
 import decimal
 import warnings
 import base64
-from collections import Mapping
+from collections import defaultdict, Mapping
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -232,6 +232,11 @@ class CORSConfig(object):
 
         return headers
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.get_access_control_headers() == \
+                other.get_access_control_headers()
+
 
 class Request(object):
     """The current request from API gateway."""
@@ -333,14 +338,14 @@ class Response(object):
 
 class RouteEntry(object):
 
-    def __init__(self, view_function, view_name, path, methods,
+    def __init__(self, view_function, view_name, path, method,
                  authorizer_name=None,
                  api_key_required=None, content_types=None,
                  cors=False, authorizer=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
-        self.methods = methods
+        self.method = method
         self.authorizer_name = authorizer_name
         self.api_key_required = api_key_required
         #: A list of names to extract from path:
@@ -406,7 +411,7 @@ class Chalice(object):
     def __init__(self, app_name, configure_logs=True):
         self.app_name = app_name
         self.api = APIGateway()
-        self.routes = {}
+        self.routes = defaultdict(dict)
         self.current_request = None
         self.debug = False
         self.configure_logs = configure_logs
@@ -477,14 +482,20 @@ class Chalice(object):
         if kwargs:
             raise TypeError('TypeError: route() got unexpected keyword '
                             'arguments: %s' % ', '.join(list(kwargs)))
-        if path in self.routes:
-            raise ValueError(
-                "Duplicate route detected: '%s'\n"
-                "URL paths must be unique." % path)
-        entry = RouteEntry(view_func, name, path, methods,
-                           authorizer_name, api_key_required,
-                           content_types, cors, authorizer)
-        self.routes[path] = entry
+        for method in methods:
+            if method in self.routes[path]:
+                raise ValueError(
+                    "Duplicate method: '%s' detected for route: '%s'\n"
+                    "between view functions: \"%s\" and \"%s\". A specific "
+                    "method may only be specified once for "
+                    "a particular path." % (
+                        method, path, self.routes[path][method].view_name,
+                        name)
+                )
+            entry = RouteEntry(view_func, name, path, method,
+                               authorizer_name, api_key_required,
+                               content_types, cors, authorizer)
+            self.routes[path][method] = entry
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
@@ -499,12 +510,12 @@ class Chalice(object):
         http_method = event['requestContext']['httpMethod']
         if resource_path not in self.routes:
             raise ChaliceError("No view function for: %s" % resource_path)
-        route_entry = self.routes[resource_path]
-        if http_method not in route_entry.methods:
+        if http_method not in self.routes[resource_path]:
             return error_response(
                 error_code='MethodNotAllowedError',
                 message='Unsupported method: %s' % http_method,
                 http_status_code=405)
+        route_entry = self.routes[resource_path][http_method]
         view_function = route_entry.view_function
         function_args = [event['pathParameters'][name]
                          for name in route_entry.view_args]

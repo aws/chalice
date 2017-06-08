@@ -168,6 +168,14 @@ def test_supports_put(smoke_test_app):
         response.raise_for_status()
 
 
+def test_supports_shared_routes(smoke_test_app):
+    app_url = smoke_test_app.url
+    response = requests.get(app_url + '/shared')
+    assert response.json() == {'method': 'GET'}
+    response = requests.post(app_url + '/shared')
+    assert response.json() == {'method': 'POST'}
+
+
 def test_can_read_json_body_on_post(smoke_test_app):
     app_url = smoke_test_app.url
     response = requests.post(

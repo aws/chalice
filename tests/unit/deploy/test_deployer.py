@@ -9,6 +9,7 @@ from pytest import fixture
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice
+from chalice.app import CORSConfig
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
 from chalice.config import Config, DeployedResources
@@ -611,14 +612,102 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
         timeout=120, memory_size=256,
     )
 
+class TestValidateCORS(object):
+    def test_cant_have_options_with_cors(self, sample_app):
+        @sample_app.route('/badcors', methods=['GET', 'OPTIONS'], cors=True)
+        def badview():
+            pass
 
-def test_cant_have_options_with_cors(sample_app):
-    @sample_app.route('/badcors', methods=['GET', 'OPTIONS'], cors=True)
-    def badview():
-        pass
+        with pytest.raises(ValueError):
+            validate_routes(sample_app.routes)
 
-    with pytest.raises(ValueError):
-        validate_routes(sample_app.routes)
+    def test_cant_have_differing_cors_configurations(self, sample_app):
+        custom_cors = CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+
+        @sample_app.route('/cors', methods=['GET'], cors=True)
+        def cors():
+            pass
+
+        @sample_app.route('/cors', methods=['PUT'], cors=custom_cors)
+        def different_cors():
+            pass
+
+        with pytest.raises(ValueError):
+            validate_routes(sample_app.routes)
+
+    def test_can_have_same_cors_configurations(self, sample_app):
+        @sample_app.route('/cors', methods=['GET'], cors=True)
+        def cors():
+            pass
+
+        @sample_app.route('/cors', methods=['PUT'], cors=True)
+        def same_cors():
+            pass
+
+        try:
+            validate_routes(sample_app.routes)
+        except ValueError:
+            pytest.fail(
+                'A ValueError was unexpectedly thrown. Applications '
+                'may have multiple view functions that share the same '
+                'route and CORS configuration.'
+            )
+
+    def test_can_have_same_custom_cors_configurations(self, sample_app):
+        custom_cors = CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        @sample_app.route('/cors', methods=['GET'], cors=custom_cors)
+        def cors():
+            pass
+
+        same_custom_cors = CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        @sample_app.route('/cors', methods=['PUT'], cors=same_custom_cors)
+        def same_cors():
+            pass
+
+        try:
+            validate_routes(sample_app.routes)
+        except ValueError:
+            pytest.fail(
+                'A ValueError was unexpectedly thrown. Applications '
+                'may have multiple view functions that share the same '
+                'route and CORS configuration.'
+            )
+
+    def test_can_have_one_cors_configured_and_others_not(self, sample_app):
+        @sample_app.route('/cors', methods=['GET'], cors=True)
+        def cors():
+            pass
+
+        @sample_app.route('/cors', methods=['PUT'])
+        def no_cors():
+            pass
+
+        try:
+            validate_routes(sample_app.routes)
+        except ValueError:
+            pytest.fail(
+                'A ValueError was unexpectedly thrown. Applications '
+                'may have multiple view functions that share the same '
+                'route but only one is configured for CORS.'
+            )
 
 
 def test_cant_have_mixed_content_types(sample_app):

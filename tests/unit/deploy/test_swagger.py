@@ -2,6 +2,7 @@ from chalice.deploy.swagger import SwaggerGenerator
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer, Chalice
 
+import mock
 import pytest
 from pytest import fixture
 
@@ -82,123 +83,186 @@ def test_can_add_multiple_http_methods(sample_app, swagger_gen):
     assert view_config['get'] == view_config['post']
 
 
-def test_can_add_preflight_cors(sample_app, swagger_gen):
-    @sample_app.route('/cors', methods=['GET', 'POST'], cors=CORSConfig(
-        allow_origin='http://foo.com',
-        allow_headers=['X-ZZ-Top', 'X-Special-Header'],
-        expose_headers=['X-Exposed', 'X-Special'],
-        max_age=600,
-        allow_credentials=True))
-    def cors_request():
+def test_can_use_same_route_with_diff_http_methods(sample_app, swagger_gen):
+    @sample_app.route('/multimethod', methods=['GET'])
+    def multiple_methods_get():
+        pass
+
+    @sample_app.route('/multimethod', methods=['POST'])
+    def multiple_methods_post():
         pass
 
     doc = swagger_gen.generate_swagger(sample_app)
-    view_config = doc['paths']['/cors']
-    # We should add an OPTIONS preflight request automatically.
-    assert 'options' in view_config, (
-        'Preflight OPTIONS method not added to CORS view')
-    options = view_config['options']
-    expected_response_params = {
-        'method.response.header.Access-Control-Allow-Methods': (
-            "'GET,POST,OPTIONS'"),
-        'method.response.header.Access-Control-Allow-Headers': (
-            "'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,"
-            "X-Api-Key,X-Special-Header,X-ZZ-Top'"),
-        'method.response.header.Access-Control-Allow-Origin': (
-            "'http://foo.com'"),
-        'method.response.header.Access-Control-Expose-Headers': (
-            "'X-Exposed,X-Special'"),
-        'method.response.header.Access-Control-Max-Age': (
-            "'600'"),
-        'method.response.header.Access-Control-Allow-Credentials': (
-            "'true'"),
+    view_config = doc['paths']['/multimethod']
+    assert 'get' in view_config
+    assert 'post' in view_config
+    assert view_config['get'] == view_config['post']
 
-    }
-    assert options == {
-        'consumes': ['application/json'],
-        'produces': ['application/json'],
-        'responses': {
-            '200': {
-                'description': '200 response',
-                'schema': {
-                    '$ref': '#/definitions/Empty'
-                },
-                'headers': {
-                    'Access-Control-Allow-Origin': {'type': 'string'},
-                    'Access-Control-Allow-Methods': {'type': 'string'},
-                    'Access-Control-Allow-Headers': {'type': 'string'},
-                    'Access-Control-Expose-Headers': {'type': 'string'},
-                    'Access-Control-Max-Age': {'type': 'string'},
-                    'Access-Control-Allow-Credentials': {'type': 'string'},
-                }
-            }
-        },
-        'x-amazon-apigateway-integration': {
+class TestPreflightCORS(object):
+    def get_access_control_methods(self, view_config):
+        return view_config['options'][
+            'x-amazon-apigateway-integration']['responses']['default'][
+                'responseParameters'][
+                    'method.response.header.Access-Control-Allow-Methods']
+
+    def test_can_add_preflight_cors(self, sample_app, swagger_gen):
+        @sample_app.route('/cors', methods=['GET', 'POST'], cors=CORSConfig(
+            allow_origin='http://foo.com',
+            allow_headers=['X-ZZ-Top', 'X-Special-Header'],
+            expose_headers=['X-Exposed', 'X-Special'],
+            max_age=600,
+            allow_credentials=True))
+        def cors_request():
+            pass
+
+        doc = swagger_gen.generate_swagger(sample_app)
+        view_config = doc['paths']['/cors']
+        # We should add an OPTIONS preflight request automatically.
+        assert 'options' in view_config, (
+            'Preflight OPTIONS method not added to CORS view')
+        options = view_config['options']
+        expected_response_params = {
+            'method.response.header.Access-Control-Allow-Methods': mock.ANY,
+            'method.response.header.Access-Control-Allow-Headers': (
+                "'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,"
+                "X-Api-Key,X-Special-Header,X-ZZ-Top'"),
+            'method.response.header.Access-Control-Allow-Origin': (
+                "'http://foo.com'"),
+            'method.response.header.Access-Control-Expose-Headers': (
+                "'X-Exposed,X-Special'"),
+            'method.response.header.Access-Control-Max-Age': (
+                "'600'"),
+            'method.response.header.Access-Control-Allow-Credentials': (
+                "'true'"),
+
+        }
+        assert options == {
+            'consumes': ['application/json'],
+            'produces': ['application/json'],
             'responses': {
-                'default': {
-                    'statusCode': '200',
-                    'responseParameters': expected_response_params,
+                '200': {
+                    'description': '200 response',
+                    'schema': {
+                        '$ref': '#/definitions/Empty'
+                    },
+                    'headers': {
+                        'Access-Control-Allow-Origin': {'type': 'string'},
+                        'Access-Control-Allow-Methods': {'type': 'string'},
+                        'Access-Control-Allow-Headers': {'type': 'string'},
+                        'Access-Control-Expose-Headers': {'type': 'string'},
+                        'Access-Control-Max-Age': {'type': 'string'},
+                        'Access-Control-Allow-Credentials': {'type': 'string'},
+                    }
                 }
             },
-            'requestTemplates': {
-                'application/json': '{"statusCode": 200}'
-            },
-            'passthroughBehavior': 'when_no_match',
-            'type': 'mock',
-        },
-    }
-
-
-def test_can_add_preflight_custom_cors(sample_app, swagger_gen):
-    @sample_app.route('/cors', methods=['GET', 'POST'], cors=True)
-    def cors_request():
-        pass
-
-    doc = swagger_gen.generate_swagger(sample_app)
-    view_config = doc['paths']['/cors']
-    # We should add an OPTIONS preflight request automatically.
-    assert 'options' in view_config, (
-        'Preflight OPTIONS method not added to CORS view')
-    options = view_config['options']
-    expected_response_params = {
-        'method.response.header.Access-Control-Allow-Methods': (
-            "'GET,POST,OPTIONS'"),
-        'method.response.header.Access-Control-Allow-Headers': (
-            "'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,"
-            "X-Api-Key'"),
-        'method.response.header.Access-Control-Allow-Origin': "'*'",
-    }
-    assert options == {
-        'consumes': ['application/json'],
-        'produces': ['application/json'],
-        'responses': {
-            '200': {
-                'description': '200 response',
-                'schema': {
-                    '$ref': '#/definitions/Empty'
+            'x-amazon-apigateway-integration': {
+                'responses': {
+                    'default': {
+                        'statusCode': '200',
+                        'responseParameters': expected_response_params,
+                    }
                 },
-                'headers': {
-                    'Access-Control-Allow-Origin': {'type': 'string'},
-                    'Access-Control-Allow-Methods': {'type': 'string'},
-                    'Access-Control-Allow-Headers': {'type': 'string'},
-                }
-            }
-        },
-        'x-amazon-apigateway-integration': {
-            'responses': {
-                'default': {
-                    'statusCode': '200',
-                    'responseParameters': expected_response_params,
-                }
+                'requestTemplates': {
+                    'application/json': '{"statusCode": 200}'
+                },
+                'passthroughBehavior': 'when_no_match',
+                'type': 'mock',
             },
-            'requestTemplates': {
-                'application/json': '{"statusCode": 200}'
-            },
-            'passthroughBehavior': 'when_no_match',
-            'type': 'mock',
-        },
-    }
+        }
 
+        allow_methods = self.get_access_control_methods(view_config)
+        # Typically the header will follow the form of:
+        # "METHOD,METHOD,...OPTIONS"
+        # The individual assertions is needed because there is no guarantee
+        # on the order of these methods in the string because the order is
+        # derived from iterating through a dictionary, which is not ordered
+        # in python 2.7. So instead assert the correct methods are present in
+        # the string.
+        assert 'GET' in allow_methods
+        assert 'POST' in allow_methods
+        assert 'OPTIONS' in allow_methods
+
+    def test_can_add_preflight_custom_cors(self, sample_app, swagger_gen):
+        @sample_app.route('/cors', methods=['GET', 'POST'], cors=True)
+        def cors_request():
+            pass
+
+        doc = swagger_gen.generate_swagger(sample_app)
+        view_config = doc['paths']['/cors']
+        # We should add an OPTIONS preflight request automatically.
+        assert 'options' in view_config, (
+            'Preflight OPTIONS method not added to CORS view')
+        options = view_config['options']
+        expected_response_params = {
+            'method.response.header.Access-Control-Allow-Methods': mock.ANY,
+            'method.response.header.Access-Control-Allow-Headers': (
+                "'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,"
+                "X-Api-Key'"),
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+        }
+        assert options == {
+            'consumes': ['application/json'],
+            'produces': ['application/json'],
+            'responses': {
+                '200': {
+                    'description': '200 response',
+                    'schema': {
+                        '$ref': '#/definitions/Empty'
+                    },
+                    'headers': {
+                        'Access-Control-Allow-Origin': {'type': 'string'},
+                        'Access-Control-Allow-Methods': {'type': 'string'},
+                        'Access-Control-Allow-Headers': {'type': 'string'},
+                    }
+                }
+            },
+            'x-amazon-apigateway-integration': {
+                'responses': {
+                    'default': {
+                        'statusCode': '200',
+                        'responseParameters': expected_response_params,
+                    }
+                },
+                'requestTemplates': {
+                    'application/json': '{"statusCode": 200}'
+                },
+                'passthroughBehavior': 'when_no_match',
+                'type': 'mock',
+            },
+        }
+
+        allow_methods = self.get_access_control_methods(view_config)
+        # Typically the header will follow the form of:
+        # "METHOD,METHOD,...OPTIONS"
+        # The individual assertions is needed because there is no guarantee
+        # on the order of these methods in the string because the order is
+        # derived from iterating through a dictionary, which is not ordered
+        # in python 2.7. So instead assert the correct methods are present in
+        # the string.
+        assert 'GET' in allow_methods
+        assert 'POST' in allow_methods
+        assert 'OPTIONS' in allow_methods
+
+    def test_can_add_preflight_cors_for_shared_routes(
+            self, sample_app, swagger_gen):
+
+        @sample_app.route('/cors', methods=['GET'], cors=True)
+        def cors_request():
+            pass
+
+        @sample_app.route('/cors', methods=['PUT'])
+        def non_cors_request():
+            pass
+
+        doc = swagger_gen.generate_swagger(sample_app)
+        view_config = doc['paths']['/cors']
+        # We should add an OPTIONS preflight request automatically.
+        assert 'options' in view_config, (
+            'Preflight OPTIONS method not added to CORS view')
+        allow_methods = self.get_access_control_methods(view_config)
+        # PUT should not be included in allowed methods as it was not enabled
+        # for CORS.
+        assert allow_methods == "'GET,OPTIONS'"
 
 def test_can_add_api_key(sample_app, swagger_gen):
     @sample_app.route('/api-key-required', api_key_required=True)

@@ -126,7 +126,7 @@ def test_can_encode_binary_json(sample_app):
 
 def test_can_parse_route_view_args():
     entry = app.RouteEntry(lambda: {"foo": "bar"}, 'view-name',
-                           '/foo/{bar}/baz/{qux}', methods=['GET'])
+                           '/foo/{bar}/baz/{qux}', method='GET')
     assert entry.view_args == ['bar', 'qux']
 
 
@@ -137,8 +137,8 @@ def test_can_route_single_view():
     def index_view():
         return {}
 
-    assert demo.routes['/index'] == app.RouteEntry(
-        index_view, 'index_view', '/index', ['GET'],
+    assert demo.routes['/index']['GET'] == app.RouteEntry(
+        index_view, 'index_view', '/index', 'GET',
         content_types=['application/json'])
 
 
@@ -156,8 +156,8 @@ def test_can_handle_multiple_routes():
     assert len(demo.routes) == 2, demo.routes
     assert '/index' in demo.routes, demo.routes
     assert '/other' in demo.routes, demo.routes
-    assert demo.routes['/index'].view_function == index_view
-    assert demo.routes['/other'].view_function == other_view
+    assert demo.routes['/index']['GET'].view_function == index_view
+    assert demo.routes['/other']['GET'].view_function == other_view
 
 
 def test_error_on_unknown_event(sample_app):
@@ -250,7 +250,30 @@ def test_raw_body_cache_returns_same_result():
     assert result['rawbody'] == result['rawbody2']
 
 
-def test_error_on_duplicate_routes():
+def test_can_have_views_of_same_route_but_different_methods():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index', methods=['GET'])
+    def get_view():
+        return {'method': 'GET'}
+
+    @demo.route('/index', methods=['PUT'])
+    def put_view():
+        return {'method': 'PUT'}
+
+    assert demo.routes['/index']['GET'].view_function == get_view
+    assert demo.routes['/index']['PUT'].view_function == put_view
+
+    event = create_event('/index', 'GET', {})
+    result = demo(event, context=None)
+    assert json_response_body(result) == {'method': 'GET'}
+
+    event = create_event('/index', 'PUT', {})
+    result = demo(event, context=None)
+    assert json_response_body(result) == {'method': 'PUT'}
+
+
+def test_error_on_duplicate_route_methods():
     demo = app.Chalice('app-name')
 
     @demo.route('/index', methods=['PUT'])
@@ -258,8 +281,8 @@ def test_error_on_duplicate_routes():
         return {'foo': 'bar'}
 
     with pytest.raises(ValueError):
-        @demo.route('/index', methods=['POST'])
-        def index_post():
+        @demo.route('/index', methods=['PUT'])
+        def index_view_dup():
             return {'foo': 'bar'}
 
 
@@ -479,14 +502,14 @@ def test_route_equality():
     a = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
-        methods=['GET'],
+        method='GET',
         api_key_required=True,
         content_types=['application/json'],
     )
     b = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
-        methods=['GET'],
+        method='GET',
         api_key_required=True,
         content_types=['application/json'],
     )
@@ -498,14 +521,14 @@ def test_route_inequality():
     a = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
-        methods=['GET'],
+        method='GET',
         api_key_required=True,
         content_types=['application/json'],
     )
     b = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
-        methods=['GET'],
+        method='GET',
         api_key_required=True,
         # Different content types
         content_types=['application/xml'],
@@ -715,3 +738,38 @@ def test_can_serialize_custom_authorizer():
             'authorizerResultTtlInSeconds': 10,
         }
     }
+
+
+class TestCORSConfig(object):
+    def test_eq(self):
+        cors_config = app.CORSConfig()
+        other_cors_config = app.CORSConfig()
+        assert cors_config == other_cors_config
+
+    def test_not_eq_different_type(self):
+        cors_config = app.CORSConfig()
+        different_type_obj = object()
+        assert cors_config != different_type_obj
+
+    def test_not_eq_differing_configurations(self):
+        cors_config = app.CORSConfig()
+        differing_cors_config = app.CORSConfig(
+            allow_origin='https://foo.example.com')
+        assert cors_config != differing_cors_config
+
+    def test_eq_non_default_configurations(self):
+        custom_cors = app.CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        same_custom_cors = app.CORSConfig(
+            allow_origin='https://foo.example.com',
+            allow_headers=['X-Special-Header'],
+            max_age=600,
+            expose_headers=['X-Special-Header'],
+            allow_credentials=True
+        )
+        assert custom_cors == same_custom_cors

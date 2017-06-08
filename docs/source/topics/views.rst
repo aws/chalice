@@ -136,6 +136,86 @@ for errors.  For example:
                         status_code=400)
 
 
+
+Specifying HTTP Methods
+-----------------------
+
+So far, our examples have only allowed GET requests. It's actually possible
+to support additional HTTP methods. Here's an example of a view function that
+supports PUT:
+
+.. code-block:: python
+
+    @app.route('/resource/{value}', methods=['PUT'])
+    def put_test(value):
+        return {"value": value}
+
+We can test this method using the ``http`` command::
+
+    $ http PUT https://endpoint/dev/resource/foo
+    HTTP/1.1 200 OK
+
+    {
+        "value": "foo"
+    }
+
+Note that the ``methods`` kwarg accepts a list of methods.  Your view function
+will be called when any of the HTTP methods you specify are used for the
+specified resource.  For example:
+
+.. code-block:: python
+
+    @app.route('/myview', methods=['POST', 'PUT'])
+    def myview():
+        pass
+
+The above view function will be called when either an HTTP POST or
+PUT is sent to ``/myview`` as shown below::
+
+    POST /myview   --> myview()
+    PUT /myview  --> myview()
+
+Alternatively if you do not want to share the same view function across
+multiple HTTP methods for the same route url, you may define separate view
+functions to the same route url but have the view functions differ by
+HTTP method. For example:
+
+.. code-block:: python
+
+    @app.route('/myview', methods=['POST'])
+    def myview_post():
+        pass
+
+    @app.route('/myview', methods=['PUT'])
+    def myview_put():
+        pass
+
+This setup will route all HTTP POST's to ``/myview`` to the ``myview_post()``
+view function and route all HTTP PUT's to ``/myview`` to the ``myview_put()``
+view function as shown below::
+
+    POST /myview   --> myview_post()
+    PUT /myview  --> myview_put()
+
+If you do chose to use separate view functions for the same route path, it is
+important to know:
+
+* View functions that share the same route cannot have the same names.
+  For example, two view functions that both share the same route path cannot
+  both be named ``view()``.
+
+* View functions that share the same route cannot overlap in supported HTTP
+  methods. For example if two view function both share the same route path,
+  they both cannot contain ``'PUT'`` in their route ``methods`` list.
+
+* View functions that share the same route path and have CORS configured cannot
+  have differing CORS configuration. For example, if two view functions that
+  both share the same route path, the route configuration for one of the
+  view functions cannot set ``cors=True`` while having the route
+  configuration of the other view function be set to
+  ``cors=app.CORSConfig(allow_origin='https://foo.example.com')``.
+
+
 Binary Content
 --------------
 

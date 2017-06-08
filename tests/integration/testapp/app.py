@@ -138,3 +138,13 @@ def custom_binary_round_trip():
             'Content-Type': 'application/binary'
         },
         status_code=200)
+
+
+@app.route('/shared', methods=['GET'])
+def shared_get():
+    return {'method': 'GET'}
+
+
+@app.route('/shared', methods=['POST'])
+def shared_post():
+    return {'method': 'POST'}
