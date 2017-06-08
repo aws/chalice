@@ -111,7 +111,7 @@ def test_api_gateway_deployer_initial_deploy(config_obj):
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
     d = APIGatewayDeployer(aws_client)
-    d.deploy(config_obj, None, lambda_arn)
+    d.deploy(config_obj, None, {'api_handler_arn': lambda_arn})
 
     # mock.ANY because we don't want to test the contents of the swagger
     # doc.  That's tested exhaustively elsewhere.
@@ -139,7 +139,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
     d = APIGatewayDeployer(aws_client)
-    d.deploy(config_obj, deployed, lambda_arn)
+    d.deploy(config_obj, deployed, {'api_handler_arn': lambda_arn})
 
     aws_client.update_api_from_swagger.assert_called_with('existing-id',
                                                           mock.ANY)
@@ -355,7 +355,14 @@ def test_can_deploy_apig_and_lambda(sample_app):
         project_dir='.')
     d.deploy(cfg)
     lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
-    apig_deploy.deploy.assert_called_with(cfg, None, 'my_lambda_arn')
+    apig_deploy.deploy.assert_called_with(cfg, None, {
+        'rest_api_id': 'api_id',
+        'chalice_version': chalice_version,
+        'region': 'region',
+        'api_gateway_stage': 'stage',
+        'api_handler_name': 'lambda_function',
+        'api_handler_arn': 'my_lambda_arn', 'backend': 'api'
+    })
 
 
 def test_deployer_returns_deployed_resources(sample_app):
@@ -600,7 +607,8 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
             'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
             'mykey': 'myvalue'
         },
-        timeout=120, memory_size=256
+        handler='app.app',
+        timeout=120, memory_size=256,
     )
 
 
@@ -678,6 +686,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={},
+            handler='app.app',
             timeout=60, memory_size=128
         )
 
@@ -701,6 +710,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={'FOO': 'BAR'},
+            handler='app.app',
             timeout=60, memory_size=128
         )
 
@@ -724,6 +734,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={},
+            handler='app.app',
             timeout=120, memory_size=128
         )
 
@@ -747,6 +758,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                     chalice_version)
             },
             environment_variables={},
+            handler='app.app',
             timeout=60, memory_size=256
         )
 
@@ -771,6 +783,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                 'mykey': 'myvalue'
             },
             environment_variables={},
+            handler='app.app',
             timeout=60, memory_size=128
         )
 

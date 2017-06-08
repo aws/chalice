@@ -70,6 +70,7 @@ class TypedAWSClient(object):
                         role_arn,                    # type: str
                         zip_contents,                # type: str
                         runtime,                     # type: str
+                        handler,                     # type: str
                         environment_variables=None,  # type: _STR_MAP
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
@@ -80,7 +81,7 @@ class TypedAWSClient(object):
             'FunctionName': function_name,
             'Runtime': runtime,
             'Code': {'ZipFile': zip_contents},
-            'Handler': 'app.app',
+            'Handler': handler,
             'Role': role_arn,
         }  # type: Dict[str, Any]
         if environment_variables is not None:
