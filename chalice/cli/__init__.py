@@ -91,7 +91,7 @@ def local(ctx, port=8000):
 
 @cli.command()
 @click.option('--autogen-policy/--no-autogen-policy',
-              default=True,
+              default=None,
               help='Automatically generate IAM policy for app code.')
 @click.option('--profile', help='Override profile at deploy time.')
 @click.option('--api-gateway-stage',
@@ -104,7 +104,7 @@ def local(ctx, port=8000):
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
            deprecated_api_gateway_stage):
-    # type: (click.Context, bool, str, str, str, str) -> None
+    # type: (click.Context, Optional[bool], str, str, str, str) -> None
     if api_gateway_stage is not None and \
             deprecated_api_gateway_stage is not None:
         raise _create_deprecated_stage_error(api_gateway_stage,

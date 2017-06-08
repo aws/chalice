@@ -236,7 +236,7 @@ def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
                                   cli_factory=mock_cli_factory)
         assert result.exit_code == 0
         mock_cli_factory.create_config_obj.assert_called_with(
-            autogen_policy=True, chalice_stage_name='dev',
+            autogen_policy=None, chalice_stage_name='dev',
             api_gateway_stage='notdev'
         )
 
