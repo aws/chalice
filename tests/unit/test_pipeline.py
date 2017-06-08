@@ -1,6 +1,7 @@
 import pytest
 
 from chalice import pipeline
+from chalice.pipeline import InvalidCodeBuildPythonVersion
 
 
 @pytest.fixture
@@ -9,8 +10,25 @@ def pipeline_gen():
 
 
 def test_app_name_in_param_default(pipeline_gen):
-    template = pipeline_gen.create_template('appname')
+    template = pipeline_gen.create_template('appname', 'python2.7')
     assert template['Parameters']['ApplicationName']['Default'] == 'appname'
+
+
+def test_python_version_in_param_default(pipeline_gen):
+    template = pipeline_gen.create_template('app', 'python2.7')
+    assert template['Parameters']['CodeBuildImage']['Default'] == \
+        'aws/codebuild/python:2.7.12'
+
+
+def test_py3_throws_error(pipeline_gen):
+    # This test can be removed when there is a 3.6 codebuild image available
+    with pytest.raises(InvalidCodeBuildPythonVersion):
+        pipeline_gen.create_template('app', 'python3.6')
+
+
+def test_nonsense_py_version_throws_error(pipeline_gen):
+    with pytest.raises(InvalidCodeBuildPythonVersion):
+        pipeline_gen.create_template('app', 'foobar')
 
 
 def test_source_repo_resource(pipeline_gen):
