@@ -130,7 +130,7 @@ def _validate_entry_content_type(route_entry, binary_types):
 def _validate_cors_for_route(route_url, route_methods):
     # type: (str, Dict[str, app.RouteEntry]) -> None
     entries_with_cors = [
-        entry for _, entry in route_methods.items() if entry.cors
+        entry for entry in route_methods.values() if entry.cors
     ]
     if entries_with_cors:
         # If the user has enabled CORS, they can't also have an OPTIONS
@@ -147,7 +147,7 @@ def _validate_cors_for_route(route_url, route_methods):
         if not all(entries_with_cors[0].cors == entry.cors for entry in
                    entries_with_cors):
             raise ValueError(
-                "Route may not have mulitple differing CORS configurations. "
+                "Route may not have multiple differing CORS configurations. "
                 "Please ensure all views for \"%s\" that have CORS configured "
                 "have the same CORS configuration." % route_url
             )

@@ -486,8 +486,12 @@ class Chalice(object):
             if method in self.routes[path]:
                 raise ValueError(
                     "Duplicate method: '%s' detected for route: '%s'\n"
-                    "A specific method may only be specified once for "
-                    "a particular path." % (method, path))
+                    "between view functions: \"%s\" and \"%s\". A specific "
+                    "method may only be specified once for "
+                    "a particular path." % (
+                        method, path, self.routes[path][method].view_name,
+                        name)
+                )
             entry = RouteEntry(view_func, name, path, method,
                                authorizer_name, api_key_required,
                                content_types, cors, authorizer)
