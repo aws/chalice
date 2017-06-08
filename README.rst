@@ -445,7 +445,9 @@ HTTP method. For example:
 
 This setup will route all HTTP POST's to ``/myview`` to the ``myview_post()``
 view function and route all HTTP PUT's to ``/myview`` to the ``myview_put()``
-view function.
+view function. It is also important to note that the view functions
+**must** have unique names. For example, both view functions cannot be
+named ``myview()``.
 
 In the next section we'll go over how you can introspect the given request
 in order to differentiate between various HTTP methods.
