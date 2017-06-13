@@ -17,6 +17,7 @@ from chalice import app  # noqa
 from chalice import __version__ as chalice_version
 from chalice import policy
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
+from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
@@ -29,6 +30,7 @@ from chalice.policy import AppPolicyGenerator
 
 NULLARY = Callable[[], str]
 OPT_RESOURCES = Optional[DeployedResources]
+OPT_STR = Optional[str]
 
 
 def create_default_deployer(session, prompter=None):
@@ -169,6 +171,19 @@ def _validate_manage_iam_role(config):
             )
 
 
+class ChaliceDeploymentError(Exception):
+    def __init__(self, error_msg, where=None, suggestion=None):
+        # type: (str, OPT_STR, OPT_STR) -> None
+        msg = 'DEPLOYMENT ERROR - '
+        if where:
+            msg += 'While %s, received the following error: ' % where
+        msg += error_msg
+        if suggestion:
+            msg += '. '
+            msg += suggestion
+        super(ChaliceDeploymentError, self).__init__(msg)
+
+
 class NoPrompt(object):
     def confirm(self, text, default=False, abort=False):
         # type: (str, bool, bool) -> bool
@@ -206,6 +221,13 @@ class Deployer(object):
             rest api, lambda function, role, etc.
 
         """
+        try:
+            return self._do_deploy(config, chalice_stage_name)
+        except Exception as error:
+            raise self._get_chalice_deployment_error(error)
+
+    def _do_deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
+        # type: (Config, str) -> Dict[str, Any]
         validate_configuration(config)
         existing_resources = config.deployed_resources(chalice_stage_name)
         deployed_values = self._lambda_deploy.deploy(
@@ -228,6 +250,22 @@ class Deployer(object):
         return {
             chalice_stage_name: deployed_values
         }
+
+    def _get_chalice_deployment_error(self, error):
+        # type: (Any) -> ChaliceDeploymentError
+        suggestion = None
+        where = None
+        if isinstance(error, DeploymentPackageTooLargeError):
+            where = 'sending your chalice handler code to Lambda'
+            suggestion = (
+                'To avoid this error, decrease the size of your chalice '
+                'application by removing code or removing '
+                'dependencies from your chalice application.'
+            )
+            if error.additional_details:
+                suggestion = error.additional_details + ' ' + suggestion
+        return ChaliceDeploymentError(
+            str(error), where=where, suggestion=suggestion)
 
 
 class LambdaDeployer(object):

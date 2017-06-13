@@ -12,8 +12,10 @@ from chalice.app import Chalice
 from chalice.app import CORSConfig
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
+from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.config import Config, DeployedResources
 from chalice.policy import AppPolicyGenerator
+from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
@@ -338,103 +340,178 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
     with pytest.raises(ValueError):
         validate_configuration(config)
 
+class TestDeployer(object):
+    def test_can_deploy_apig_and_lambda(self, sample_app):
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
 
-def test_can_deploy_apig_and_lambda(sample_app):
-    lambda_deploy = mock.Mock(spec=LambdaDeployer)
-    apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-
-    lambda_deploy.deploy.return_value = {
-        'api_handler_name': 'lambda_function',
-        'api_handler_arn': 'my_lambda_arn',
-    }
-    apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
-
-    d = Deployer(apig_deploy, lambda_deploy)
-    cfg = Config.create(
-        chalice_stage='dev',
-        chalice_app=sample_app,
-        project_dir='.')
-    d.deploy(cfg)
-    lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
-    apig_deploy.deploy.assert_called_with(cfg, None, {
-        'rest_api_id': 'api_id',
-        'chalice_version': chalice_version,
-        'region': 'region',
-        'api_gateway_stage': 'stage',
-        'api_handler_name': 'lambda_function',
-        'api_handler_arn': 'my_lambda_arn', 'backend': 'api'
-    })
-
-
-def test_deployer_returns_deployed_resources(sample_app):
-    cfg = Config.create(
-        chalice_stage='dev',
-        chalice_app=sample_app,
-        project_dir='.',
-    )
-    lambda_deploy = mock.Mock(spec=LambdaDeployer)
-    apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-
-    apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
-    lambda_deploy.deploy.return_value = {
-        'api_handler_name': 'lambda_function',
-        'api_handler_arn': 'my_lambda_arn',
-    }
-
-    d = Deployer(apig_deploy, lambda_deploy)
-    deployed_values = d.deploy(cfg)
-    assert deployed_values == {
-        'dev': {
-            'backend': 'api',
-            'api_handler_arn': 'my_lambda_arn',
+        lambda_deploy.deploy.return_value = {
             'api_handler_name': 'lambda_function',
-            'rest_api_id': 'api_id',
-            'api_gateway_stage': 'stage',
-            'region': 'region',
-            'chalice_version': chalice_version,
+            'api_handler_arn': 'my_lambda_arn',
         }
-    }
+        apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
 
+        d = Deployer(apig_deploy, lambda_deploy)
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.')
+        d.deploy(cfg)
+        lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
+        apig_deploy.deploy.assert_called_with(cfg, None, {
+            'rest_api_id': 'api_id',
+            'chalice_version': chalice_version,
+            'region': 'region',
+            'api_gateway_stage': 'stage',
+            'api_handler_name': 'lambda_function',
+            'api_handler_arn': 'my_lambda_arn', 'backend': 'api'
+        })
 
-def test_deployer_delete_calls_deletes():
-    # Check that athe deployer class calls other deployer classes delete
-    # methods.
-    lambda_deploy = mock.Mock(spec=LambdaDeployer)
-    apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-    cfg = mock.Mock(spec=Config)
-    deployed_resources = DeployedResources.from_dict({
-        'backend': 'api',
-        'api_handler_arn': 'lambda_arn',
-        'api_handler_name': 'lambda_name',
-        'rest_api_id': 'rest_id',
-        'api_gateway_stage': 'dev',
-        'region': 'us-west-2',
-        'chalice_version': '0',
-    })
-    cfg.deployed_resources.return_value = deployed_resources
+    def test_deployer_returns_deployed_resources(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.',
+        )
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
 
-    d = Deployer(apig_deploy, lambda_deploy)
-    d.delete(cfg)
+        apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
+        lambda_deploy.deploy.return_value = {
+            'api_handler_name': 'lambda_function',
+            'api_handler_arn': 'my_lambda_arn',
+        }
 
-    lambda_deploy.delete.assert_called_with(deployed_resources)
-    apig_deploy.delete.assert_called_with(deployed_resources)
+        d = Deployer(apig_deploy, lambda_deploy)
+        deployed_values = d.deploy(cfg)
+        assert deployed_values == {
+            'dev': {
+                'backend': 'api',
+                'api_handler_arn': 'my_lambda_arn',
+                'api_handler_name': 'lambda_function',
+                'rest_api_id': 'api_id',
+                'api_gateway_stage': 'stage',
+                'region': 'region',
+                'chalice_version': chalice_version,
+            }
+        }
 
+    def test_deployer_delete_calls_deletes(self):
+        # Check that athe deployer class calls other deployer classes delete
+        # methods.
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        cfg = mock.Mock(spec=Config)
+        deployed_resources = DeployedResources.from_dict({
+            'backend': 'api',
+            'api_handler_arn': 'lambda_arn',
+            'api_handler_name': 'lambda_name',
+            'rest_api_id': 'rest_id',
+            'api_gateway_stage': 'dev',
+            'region': 'us-west-2',
+            'chalice_version': '0',
+        })
+        cfg.deployed_resources.return_value = deployed_resources
 
-def test_deployer_does_not_call_delete_when_no_resources(capsys):
-    # If there is nothing to clean up the deployer should not call delete.
-    lambda_deploy = mock.Mock(spec=LambdaDeployer)
-    apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-    cfg = mock.Mock(spec=Config)
-    deployed_resources = None
-    cfg.deployed_resources.return_value = deployed_resources
-    d = Deployer(apig_deploy, lambda_deploy)
-    d.delete(cfg)
+        d = Deployer(apig_deploy, lambda_deploy)
+        d.delete(cfg)
 
-    out, _ = capsys.readouterr()
-    assert 'No existing resources found for stage dev' in out
-    lambda_deploy.delete.assert_not_called()
-    apig_deploy.delete.assert_not_called()
+        lambda_deploy.delete.assert_called_with(deployed_resources)
+        apig_deploy.delete.assert_called_with(deployed_resources)
 
+    def test_deployer_does_not_call_delete_when_no_resources(self, capsys):
+        # If there is nothing to clean up the deployer should not call delete.
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        cfg = mock.Mock(spec=Config)
+        deployed_resources = None
+        cfg.deployed_resources.return_value = deployed_resources
+        d = Deployer(apig_deploy, lambda_deploy)
+        d.delete(cfg)
+
+        out, _ = capsys.readouterr()
+        assert 'No existing resources found for stage dev' in out
+        lambda_deploy.delete.assert_not_called()
+        apig_deploy.delete.assert_not_called()
+
+    def test_raises_deployment_error_for_general_lambda_error(self,
+                                                              sample_app):
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        lambda_deploy.deploy.side_effect = RuntimeError('my error')
+        d = Deployer(apig_deploy, lambda_deploy)
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.',
+        )
+        with pytest.raises(ChaliceDeploymentError) as excinfo:
+            d.deploy(cfg)
+        assert excinfo.match('DEPLOYMENT ERROR - my error')
+
+    def test_raises_deployment_error_for_general_apig_error(self, sample_app):
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        lambda_deploy.deploy.return_value = {
+            'api_handler_name': 'lambda_function',
+            'api_handler_arn': 'my_lambda_arn',
+        }
+        apig_deploy.deploy.side_effect = RuntimeError('my error')
+        d = Deployer(apig_deploy, lambda_deploy)
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.',
+        )
+        with pytest.raises(ChaliceDeploymentError) as excinfo:
+            d.deploy(cfg)
+        assert excinfo.match('DEPLOYMENT ERROR - my error')
+
+    def test_gives_where_and_suggestion_for_too_large_deployment_error(
+            self, sample_app):
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        lambda_deploy.deploy.side_effect = DeploymentPackageTooLargeError(
+            'Too large of deployment pacakge')
+        d = Deployer(apig_deploy, lambda_deploy)
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.',
+        )
+        with pytest.raises(ChaliceDeploymentError) as excinfo:
+            d.deploy(cfg)
+        assert excinfo.match(
+            'DEPLOYMENT ERROR - While sending your chalice handler code to '
+            'Lambda, received the following error: Too large of deployment '
+            'pacakge. To avoid this error, decrease the size of your chalice '
+            'application by removing code or removing dependencies from your '
+            'chalice application.'
+        )
+
+    def test_include_additional_detail_for_too_large_deployment_error(
+            self, sample_app):
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        lambda_deploy.deploy.side_effect = DeploymentPackageTooLargeError(
+            'Too large of deployment pacakge',
+            additional_details='It was over 50MB.')
+        d = Deployer(apig_deploy, lambda_deploy)
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.',
+        )
+
+        with pytest.raises(ChaliceDeploymentError) as excinfo:
+            d.deploy(cfg)
+        assert excinfo.match(
+            'DEPLOYMENT ERROR - While sending your chalice handler code to '
+            'Lambda, received the following error: Too large of deployment '
+            'pacakge. It was over 50MB. To avoid this error, decrease the '
+            'size of your chalice application by removing code or '
+            'removing dependencies from your chalice application.'
+        )
 
 def test_noprompt_always_returns_default():
     assert not NoPrompt().confirm("You sure you want to do this?",

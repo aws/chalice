@@ -22,6 +22,9 @@ import shutil
 import json
 
 import botocore.session  # noqa
+from botocore.exceptions import ClientError
+from botocore.vendored.requests import ConnectionError as \
+    RequestsConnectionError
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -33,8 +36,20 @@ _OPT_INT = Optional[int]
 _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
+def _get_mb(value):
+    # type: (int) -> str
+    return '%.1f MB' % (float(value) / (1024 ** 2))
+
+
 class ResourceDoesNotExistError(Exception):
     pass
+
+
+class DeploymentPackageTooLargeError(Exception):
+    def __init__(self, msg, additional_details=None):
+        # type: (str, str) -> None
+        self.additional_details = additional_details
+        super(DeploymentPackageTooLargeError, self).__init__(msg)
 
 
 class TypedAWSClient(object):
@@ -43,6 +58,7 @@ class TypedAWSClient(object):
     # creation + role propagation.
     LAMBDA_CREATE_ATTEMPTS = 30
     DELAY_TIME = 5
+    MAX_LAMBDA_DEPLOYMENT_SIZE = 50 * (1024 ** 2)
 
     def __init__(self, session, sleep=time.sleep):
         # type: (botocore.session.Session, Callable[[int], None]) -> None
@@ -92,8 +108,12 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        return self._call_client_method_with_retries(
-            self._client('lambda').create_function, kwargs)['FunctionArn']
+        try:
+            return self._call_client_method_with_retries(
+                self._client('lambda').create_function, kwargs)['FunctionArn']
+        except Exception as e:
+            self._raise_large_deployment_related_errors(e, len(zip_contents))
+            raise e
 
     def _call_client_method_with_retries(self, method, kwargs):
         # type: (_CLIENT_METHOD, Dict[str, Any]) -> Dict[str, Any]
@@ -113,6 +133,42 @@ class TypedAWSClient(object):
                     raise
                 continue
             return response
+
+    def _raise_large_deployment_related_errors(self, error,
+                                               deployment_size):
+        # type: (Any, int) -> None
+        error_message = str(error)
+        should_raise = False
+        additional_details = None
+        if (isinstance(error, RequestsConnectionError) and
+                deployment_size > self.MAX_LAMBDA_DEPLOYMENT_SIZE):
+            # When the zip deployment package is too large and Lambda
+            # aborts the connection as chalice is still sending it
+            # data
+            additional_details = (
+                'This is likely because the deployment package is %s. '
+                'Lambda only allows deployment packages that are %s or '
+                'less in size.' % (
+                    _get_mb(deployment_size),
+                    _get_mb(self.MAX_LAMBDA_DEPLOYMENT_SIZE)
+                )
+            )
+            should_raise = True
+        elif isinstance(error, ClientError):
+            code = error.response['Error'].get('Code')
+            message = error.response['Error'].get('Message')
+            if code == 'RequestEntityTooLargeException':
+                # Happens when the zipped deployment package sent to lambda
+                # is too large
+                should_raise = True
+            elif code == 'InvalidParameterValueException' and \
+                    'Unzipped size must be smaller' in message:
+                # Happens when the contents of the unzipped deployment
+                # package sent to lambda is too large
+                should_raise = True
+        if should_raise:
+            raise DeploymentPackageTooLargeError(
+                error_message, additional_details)
 
     def delete_function(self, function_name):
         # type: (str) -> None
@@ -140,8 +196,12 @@ class TypedAWSClient(object):
         the targeted lambda function.
         """
         lambda_client = self._client('lambda')
-        return_value = lambda_client.update_function_code(
-            FunctionName=function_name, ZipFile=zip_contents)
+        try:
+            return_value = lambda_client.update_function_code(
+                FunctionName=function_name, ZipFile=zip_contents)
+        except Exception as e:
+            self._raise_large_deployment_related_errors(e, len(zip_contents))
+            raise e
 
         kwargs = {}  # type: Dict[str, Any]
         if environment_variables is not None:

@@ -1,5 +1,6 @@
 import botocore.session
 from botocore.stub import Stubber
+import mock
 import pytest
 from pytest import fixture
 
@@ -96,6 +97,15 @@ class StubBuilder(object):
 def stubbed_session():
     s = StubbedSession()
     return s
+
+
+@fixture
+def mock_lambda_client():
+    session = botocore.session.Session()
+    lambda_client = session.create_client('lambda')
+    mock_client = mock.Mock(lambda_client)
+    mock_client.exceptions = lambda_client.exceptions
+    return mock_client
 
 
 @fixture

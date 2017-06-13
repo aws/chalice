@@ -5,9 +5,13 @@ import time
 import pytest
 import mock
 import botocore.exceptions
+import botocore.session
+from botocore.vendored.requests import ConnectionError as \
+    RequestsConnectionError
 
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
+from chalice.awsclient import DeploymentPackageTooLargeError
 
 
 def test_region_name_is_exposed(stubbed_session):
@@ -475,6 +479,75 @@ class TestCreateLambdaFunction(object):
             handler='app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
+    def test_raises_large_deployment_error_for_connection_error(
+            self, mock_lambda_client):
+        mock_session = mock.Mock(botocore.session.Session)
+        mock_session.create_client.return_value = mock_lambda_client
+        mock_lambda_client.create_function.side_effect = \
+            RequestsConnectionError
+
+        too_large_content = b'a' * 60 * (1024 ** 2)
+        awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(DeploymentPackageTooLargeError) as excinfo:
+            awsclient.create_function('name', 'myarn', too_large_content,
+                                      'python2.7', 'app.app')
+        assert excinfo.value.additional_details == (
+            'This is likely because the deployment package is 60.0 MB. '
+            'Lambda only allows deployment packages that are 50.0 MB or less '
+            'in size.'
+        )
+
+    def test_no_raise_large_deployment_error_when_small_deployment_size(
+            self, mock_lambda_client):
+        mock_session = mock.Mock(botocore.session.Session)
+        mock_session.create_client.return_value = mock_lambda_client
+        mock_lambda_client.create_function.side_effect = \
+            RequestsConnectionError
+
+        awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(RequestsConnectionError):
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
+                                      'app.app')
+
+    def test_raises_large_deployment_error_request_entity_to_large(
+            self, stubbed_session):
+        kwargs = {
+            'FunctionName': 'name',
+            'Runtime': 'python2.7',
+            'Code': {'ZipFile': b'foo'},
+            'Handler': 'app.app',
+            'Role': 'myarn',
+        }
+        stubbed_session.stub('lambda').create_function(
+            **kwargs).raises_error(
+                error_code='RequestEntityTooLargeException',
+                message='')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(DeploymentPackageTooLargeError):
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
+                                      'app.app')
+        stubbed_session.verify_stubs()
+
+    def test_raises_large_deployment_error_for_too_large_unzip(
+            self, stubbed_session):
+        kwargs = {
+            'FunctionName': 'name',
+            'Runtime': 'python2.7',
+            'Code': {'ZipFile': b'foo'},
+            'Handler': 'app.app',
+            'Role': 'myarn',
+        }
+        stubbed_session.stub('lambda').create_function(
+            **kwargs).raises_error(
+                error_code='InvalidParameterValueException',
+                message='Unzipped size must be smaller than ...')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(DeploymentPackageTooLargeError):
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
+                                      'app.app')
+        stubbed_session.verify_stubs()
 
 class TestUpdateLambdaFunction(object):
     def test_always_update_function_code(self, stubbed_session):
@@ -660,6 +733,58 @@ class TestUpdateLambdaFunction(object):
 
         with pytest.raises(botocore.exceptions.ClientError):
             awsclient.update_function('name', b'foo', role_arn='role-arn')
+        stubbed_session.verify_stubs()
+
+    def test_raises_large_deployment_error_for_connection_error(
+            self, mock_lambda_client):
+        mock_session = mock.Mock(botocore.session.Session)
+        mock_session.create_client.return_value = mock_lambda_client
+        mock_lambda_client.update_function_code.side_effect = \
+            RequestsConnectionError
+
+        too_large_content = b'a' * 60 * (1024 ** 2)
+        awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(DeploymentPackageTooLargeError) as excinfo:
+            awsclient.update_function('name', too_large_content)
+        assert excinfo.value.additional_details == (
+            'This is likely because the deployment package is 60.0 MB. '
+            'Lambda only allows deployment packages that are 50.0 MB or less '
+            'in size.'
+        )
+
+    def test_no_raise_large_deployment_error_when_small_deployment_size(
+            self, mock_lambda_client):
+        mock_session = mock.Mock(botocore.session.Session)
+        mock_session.create_client.return_value = mock_lambda_client
+        mock_lambda_client.update_function_code.side_effect = \
+            RequestsConnectionError
+
+        awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(RequestsConnectionError):
+            awsclient.update_function('name', b'foo')
+
+    def test_raises_large_deployment_error_request_entity_to_large(
+            self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_code(
+            FunctionName='name', ZipFile=b'foo').raises_error(
+                error_code='RequestEntityTooLargeException',
+                message='')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(DeploymentPackageTooLargeError):
+            awsclient.update_function('name', b'foo')
+        stubbed_session.verify_stubs()
+
+    def test_raises_large_deployment_error_for_too_large_unzip(
+            self, stubbed_session):
+        stubbed_session.stub('lambda').update_function_code(
+            FunctionName='name', ZipFile=b'foo').raises_error(
+                error_code='InvalidParameterValueException',
+                message='Unzipped size must be smaller than ...')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        with pytest.raises(DeploymentPackageTooLargeError):
+            awsclient.update_function('name', b'foo')
         stubbed_session.verify_stubs()
 
 
