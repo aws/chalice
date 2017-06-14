@@ -246,6 +246,13 @@ def test_can_round_trip_binary_custom_content_type(smoke_test_app):
     assert response.content == bin_data
 
 
+def _assert_contains_access_control_allow_methods(headers, methods):
+    actual_methods = headers['Access-Control-Allow-Methods'].split(',')
+    assert sorted(methods) == sorted(actual_methods), (
+        'The expected allowed methods does not match the actual allowed '
+        'methods for CORS.')
+
+
 def test_can_support_cors(smoke_test_app):
     response = requests.get(smoke_test_app.url + '/cors')
     response.raise_for_status()
@@ -259,7 +266,8 @@ def test_can_support_cors(smoke_test_app):
     assert headers['Access-Control-Allow-Headers'] == (
         'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,'
         'X-Api-Key')
-    assert headers['Access-Control-Allow-Methods'] == 'GET,POST,PUT,OPTIONS'
+    _assert_contains_access_control_allow_methods(
+        headers, ['GET', 'POST', 'PUT', 'OPTIONS'])
 
 
 def test_can_support_custom_cors(smoke_test_app):
@@ -277,7 +285,8 @@ def test_can_support_custom_cors(smoke_test_app):
     assert headers['Access-Control-Allow-Headers'] == (
         'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,'
         'X-Api-Key,X-Special-Header')
-    assert headers['Access-Control-Allow-Methods'] == 'GET,POST,PUT,OPTIONS'
+    _assert_contains_access_control_allow_methods(
+        headers, ['GET', 'POST', 'PUT', 'OPTIONS'])
     assert headers['Access-Control-Max-Age'] == '600'
     assert headers['Access-Control-Expose-Headers'] == 'X-Special-Header'
     assert headers['Access-Control-Allow-Credentials'] == 'true'
