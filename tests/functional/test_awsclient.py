@@ -394,10 +394,14 @@ class TestCreateLambdaFunction(object):
         }
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
-            error_code='InvalidParameterValueException', message='')
+            error_code='InvalidParameterValueException',
+            message=('The role defined for the function cannot '
+                     'be assumed by Lambda.'))
         stubbed_session.stub('lambda').create_function(
             **kwargs).raises_error(
-            error_code='InvalidParameterValueException', message='')
+            error_code='InvalidParameterValueException',
+            message=('The role defined for the function cannot '
+                     'be assumed by Lambda.'))
         stubbed_session.stub('lambda').create_function(
             **kwargs).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
@@ -417,7 +421,10 @@ class TestCreateLambdaFunction(object):
         for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
             stubbed_session.stub('lambda').create_function(
                 **kwargs).raises_error(
-                error_code='InvalidParameterValueException', message='')
+                error_code='InvalidParameterValueException',
+                message=('The role defined for the function cannot '
+                         'be assumed by Lambda.')
+                )
 
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
@@ -704,10 +711,14 @@ class TestUpdateLambdaFunction(object):
         # then succeed to update the lambda function.
         stubbed_session.stub('lambda').update_function_configuration(
             **update_config_kwargs).raises_error(
-                error_code='InvalidParameterValueException', message='')
+                error_code='InvalidParameterValueException',
+                message=('The role defined for the function cannot '
+                         'be assumed by Lambda.'))
         stubbed_session.stub('lambda').update_function_configuration(
             **update_config_kwargs).raises_error(
-            error_code='InvalidParameterValueException', message='')
+            error_code='InvalidParameterValueException',
+            message=('The role defined for the function cannot '
+                     'be assumed by Lambda.'))
         stubbed_session.stub('lambda').update_function_configuration(
             **update_config_kwargs).returns({})
         stubbed_session.activate_stubs()
@@ -727,7 +738,9 @@ class TestUpdateLambdaFunction(object):
         for _ in range(TypedAWSClient.LAMBDA_CREATE_ATTEMPTS):
             stubbed_session.stub('lambda').update_function_configuration(
                 **update_config_kwargs).raises_error(
-                    error_code='InvalidParameterValueException', message='')
+                    error_code='InvalidParameterValueException',
+                    message=('The role defined for the function cannot '
+                             'be assumed by Lambda.'))
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
 

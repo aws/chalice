@@ -122,14 +122,20 @@ class TypedAWSClient(object):
         while True:
             try:
                 response = method(**kwargs)
-            except client.exceptions.InvalidParameterValueException:
+            except client.exceptions.InvalidParameterValueException as e:
                 # We're assuming that if we receive an
                 # InvalidParameterValueException, it's because
                 # the role we just created can't be used by
                 # Lambda so retry until it can be.
                 self._sleep(self.DELAY_TIME)
                 attempts += 1
-                if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
+                message = e.response['Error'].get('Message', '')
+                retryable_message = (
+                    'The role defined for the function cannot be assumed '
+                    'by Lambda.'
+                )
+                if attempts >= self.LAMBDA_CREATE_ATTEMPTS or \
+                        retryable_message not in message:
                     raise
                 continue
             return response
