@@ -6,6 +6,7 @@ Handles Lambda and API Gateway deployments.
 from __future__ import print_function
 import json
 import os
+import textwrap
 import sys
 import uuid
 import warnings
@@ -172,16 +173,44 @@ def _validate_manage_iam_role(config):
 
 
 class ChaliceDeploymentError(Exception):
-    def __init__(self, error_msg, where=None, suggestion=None):
-        # type: (str, OPT_STR, OPT_STR) -> None
-        msg = 'DEPLOYMENT ERROR - '
-        if where:
-            msg += 'While %s, received the following error: ' % where
-        msg += error_msg
+    def __init__(self, error):
+        # type: (Any) -> None
+        where, suggestion = self._get_location_of_error_and_suggestion(
+            error)
+
+        msg = self._wrap_text(
+            'ERROR - %s, received the following error:' % where
+        )
+        msg += '\n\n'
+        msg += self._wrap_text(str(error), indent=' ')
+        msg += '\n\n'
         if suggestion:
-            msg += '. '
-            msg += suggestion
+            msg += self._wrap_text(suggestion)
         super(ChaliceDeploymentError, self).__init__(msg)
+
+    def _get_location_of_error_and_suggestion(self, error):
+        # type: (Any) -> Tuple[str, OPT_STR]
+        suggestion = None
+        where = 'While deploying your chalice application'
+        if isinstance(error, DeploymentPackageTooLargeError):
+            where = 'While sending your chalice API handler code to Lambda'
+            suggestion = (
+                'To avoid this error, decrease the size of your chalice '
+                'application by removing code or removing '
+                'dependencies from your chalice application.'
+            )
+            if error.additional_details:
+                suggestion = error.additional_details + ' ' + suggestion
+        return where, suggestion
+
+    def _wrap_text(self, text, indent=''):
+        # type: (str, OPT_STR) -> str
+        return '\n'.join(
+            textwrap.wrap(
+                text, 79, replace_whitespace=False, drop_whitespace=False,
+                initial_indent=indent, subsequent_indent=indent
+            )
+        )
 
 
 class NoPrompt(object):
@@ -224,7 +253,7 @@ class Deployer(object):
         try:
             return self._do_deploy(config, chalice_stage_name)
         except Exception as error:
-            raise self._get_chalice_deployment_error(error)
+            raise ChaliceDeploymentError(error)
 
     def _do_deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
         # type: (Config, str) -> Dict[str, Any]
@@ -250,22 +279,6 @@ class Deployer(object):
         return {
             chalice_stage_name: deployed_values
         }
-
-    def _get_chalice_deployment_error(self, error):
-        # type: (Any) -> ChaliceDeploymentError
-        suggestion = None
-        where = None
-        if isinstance(error, DeploymentPackageTooLargeError):
-            where = 'sending your chalice handler code to Lambda'
-            suggestion = (
-                'To avoid this error, decrease the size of your chalice '
-                'application by removing code or removing '
-                'dependencies from your chalice application.'
-            )
-            if error.additional_details:
-                suggestion = error.additional_details + ' ' + suggestion
-        return ChaliceDeploymentError(
-            str(error), where=where, suggestion=suggestion)
 
 
 class LambdaDeployer(object):

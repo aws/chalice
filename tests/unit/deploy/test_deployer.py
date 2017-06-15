@@ -340,6 +340,43 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
     with pytest.raises(ValueError):
         validate_configuration(config)
 
+class TestChaliceDeploymentError(object):
+    def test_general_exception(self):
+        general_exception = Exception('My Exception')
+        deploy_error = ChaliceDeploymentError(general_exception)
+        deploy_error_msg = str(deploy_error)
+        assert (
+            'ERROR - While deploying your chalice application'
+            in deploy_error_msg
+        )
+        assert 'My Exception' in deploy_error_msg
+
+    def test_gives_where_and_suggestion_for_too_large_deployment_error(self):
+        too_large_error = DeploymentPackageTooLargeError(
+            'Too large of deployment pacakge')
+        deploy_error = ChaliceDeploymentError(too_large_error)
+        deploy_error_msg = str(deploy_error)
+        assert (
+            'ERROR - While sending your chalice API handler code to '
+            'Lambda' in deploy_error_msg
+        )
+        assert 'Too large of deployment pacakge' in deploy_error_msg
+        assert (
+            'To avoid this error, decrease the size of your chalice '
+            'application ' in deploy_error_msg
+        )
+
+    def test_include_additional_detail_for_too_large_deployment_error(self):
+        too_large_error = DeploymentPackageTooLargeError(
+            'Too large of deployment pacakge',
+            additional_details='It was over 50MB.')
+        deploy_error = ChaliceDeploymentError(too_large_error)
+        deploy_error_msg = str(deploy_error)
+        assert (
+            'It was over 50MB. To avoid this error' in deploy_error_msg
+        )
+
+
 class TestDeployer(object):
     def test_can_deploy_apig_and_lambda(self, sample_app):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
@@ -447,7 +484,8 @@ class TestDeployer(object):
         )
         with pytest.raises(ChaliceDeploymentError) as excinfo:
             d.deploy(cfg)
-        assert excinfo.match('DEPLOYMENT ERROR - my error')
+        assert excinfo.match('ERROR - While deploying')
+        assert excinfo.match('my error')
 
     def test_raises_deployment_error_for_general_apig_error(self, sample_app):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
@@ -465,53 +503,9 @@ class TestDeployer(object):
         )
         with pytest.raises(ChaliceDeploymentError) as excinfo:
             d.deploy(cfg)
-        assert excinfo.match('DEPLOYMENT ERROR - my error')
+        assert excinfo.match('ERROR - While deploying')
+        assert excinfo.match('my error')
 
-    def test_gives_where_and_suggestion_for_too_large_deployment_error(
-            self, sample_app):
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        lambda_deploy.deploy.side_effect = DeploymentPackageTooLargeError(
-            'Too large of deployment pacakge')
-        d = Deployer(apig_deploy, lambda_deploy)
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.',
-        )
-        with pytest.raises(ChaliceDeploymentError) as excinfo:
-            d.deploy(cfg)
-        assert excinfo.match(
-            'DEPLOYMENT ERROR - While sending your chalice handler code to '
-            'Lambda, received the following error: Too large of deployment '
-            'pacakge. To avoid this error, decrease the size of your chalice '
-            'application by removing code or removing dependencies from your '
-            'chalice application.'
-        )
-
-    def test_include_additional_detail_for_too_large_deployment_error(
-            self, sample_app):
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        lambda_deploy.deploy.side_effect = DeploymentPackageTooLargeError(
-            'Too large of deployment pacakge',
-            additional_details='It was over 50MB.')
-        d = Deployer(apig_deploy, lambda_deploy)
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.',
-        )
-
-        with pytest.raises(ChaliceDeploymentError) as excinfo:
-            d.deploy(cfg)
-        assert excinfo.match(
-            'DEPLOYMENT ERROR - While sending your chalice handler code to '
-            'Lambda, received the following error: Too large of deployment '
-            'pacakge. It was over 50MB. To avoid this error, decrease the '
-            'size of your chalice application by removing code or '
-            'removing dependencies from your chalice application.'
-        )
 
 def test_noprompt_always_returns_default():
     assert not NoPrompt().confirm("You sure you want to do this?",
