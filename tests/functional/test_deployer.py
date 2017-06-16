@@ -1,5 +1,6 @@
 import os
 import zipfile
+import mock
 
 import botocore.session
 from pytest import fixture
@@ -8,6 +9,10 @@ import pytest
 import chalice.deploy.packager
 import chalice.utils
 from chalice.deploy import deployer
+from chalice.deploy.packager import MissingDependencyError
+from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.packager import DependencyBuilder
+from chalice.deploy.packager import Package
 
 
 slow = pytest.mark.skipif(
@@ -213,11 +218,26 @@ def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
         assert 'chalice/app.py' in z.namelist()
 
 
+def test_does_handle_missing_dependency_error(tmpdir, capsys):
+    appdir = _create_app_structure(tmpdir)
+    builder = mock.Mock(spec=DependencyBuilder)
+    fake_package = mock.Mock(spec=Package)
+    fake_package.identifier = 'foo==1.2'
+    builder.build_site_packages.side_effect = MissingDependencyError(
+        set([fake_package]))
+    builder.site_package_dir.return_value = str(appdir.join('site-packages'))
+    packager = LambdaDeploymentPackager(dependency_builder=builder)
+    packager.create_deployment_package(str(appdir))
+
+    out, _ = capsys.readouterr()
+    assert 'Could not install dependencies:\nfoo==1.2' in out
+
+
 def _remove_runtime_from_deployment_package(filename):
     new_filename = os.path.join(os.path.dirname(filename), 'new.zip')
     with zipfile.ZipFile(filename, 'r') as original:
-        with zipfile.ZipFile (new_filename, 'w',
-                              compression=zipfile.ZIP_DEFLATED) as z:
+        with zipfile.ZipFile(new_filename, 'w',
+                             compression=zipfile.ZIP_DEFLATED) as z:
             for item in original.infolist():
                 if item.filename.startswith('chalice/'):
                     continue
