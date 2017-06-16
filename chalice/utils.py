@@ -2,7 +2,7 @@ import os
 import zipfile
 import json
 
-from typing import IO, Dict, Any  # noqa
+from typing import IO, Dict, List, Any  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -100,6 +100,14 @@ class OSUtils(object):
             mode = 'w'
         with open(filename, mode) as f:
             f.write(contents)
+
+    def directory_exists(self, path):
+        # type: (str) -> bool
+        return os.path.isdir(path)
+
+    def get_directory_contents(self, path):
+        # type: (str) -> List[str]
+        return os.listdir(path)
 
 
 def getting_started_prompt(prompter):

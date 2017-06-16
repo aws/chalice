@@ -3,6 +3,8 @@ import platform
 import socket
 import six
 
+from six import StringIO
+
 
 if six.PY3:
     from urllib.parse import urlparse, parse_qs
