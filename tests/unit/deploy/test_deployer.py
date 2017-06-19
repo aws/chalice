@@ -1046,7 +1046,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             # The tag format is tested elsewhere.
             tags=mock.ANY,
             timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
-            zip_contents='package contents',
+            zip_contents=b'package contents',
         )
 
     def test_can_update_auth_handlers(self, sample_app_with_auth):
@@ -1073,7 +1073,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             # The tag format is tested elsewhere.
             tags=mock.ANY,
             timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
-            zip_contents='package contents',
+            zip_contents=b'package contents',
         )
 
     def test_lambda_deployer_defaults(self, sample_app):
