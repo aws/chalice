@@ -1,9 +1,14 @@
+import sys
 import os
 import pytest
 import mock
+import zipfile
+import tarfile
+import io
 
+from chalice.utils import OSUtils
 from chalice.deploy.packager import Package, PipRunner, DependencyBuilder, \
-    InvalidSourceDistributionNameError
+    SdistMetadataFetcher, InvalidSourceDistributionNameError
 
 
 class FakePip(object):
@@ -25,7 +30,26 @@ def pip_runner():
     return pip, pip_runner
 
 
+@pytest.fixture
+def osutils():
+    return OSUtils()
+
+
+@pytest.fixture
+def sdist_reader():
+    return SdistMetadataFetcher()
+
+
 class TestDependencyBuilder(object):
+    # build_site_packages(project_dir)
+
+    def test_build_site_packages(self, pip_runner):
+        pip, runner = pip_runner
+        osutils = mock.Mock()
+        builder = DependencyBuilder(osutils, pip_runner=runner)
+        builder.build_site_packages('directory')
+        print(osutils.call_args_list)
+
     def test_site_package_dir_is_correct(self):
         builder = DependencyBuilder(mock.Mock())
         root = os.path.join('tmp', 'foo', 'bar')
@@ -104,9 +128,14 @@ class TestPipRunner(object):
         pip, runner = pip_runner
         packages = ['foo', 'bar', 'baz']
         runner.download_manylinux_whls(packages, 'directory')
+        if sys.version_info[0] == 2:
+            abi = 'cp27mu'
+        else:
+            abi = 'cp36m'
         expected_prefix = ['download', '--only-binary=:all:', '--no-deps',
                            '--platform', 'manylinux1_x86_64',
-                           '--implementation', 'cp', '--dest', 'directory']
+                           '--implementation', 'cp', '--abi', abi,
+                           '--dest', 'directory']
         for i, package in enumerate(packages):
             assert pip.calls[i] == expected_prefix + [package]
 
@@ -114,3 +143,119 @@ class TestPipRunner(object):
         pip, runner = pip_runner
         runner.download_manylinux_whls([], 'directory')
         assert len(pip.calls) == 0
+
+
+class TestSdistMetadataFetcher(object):
+    _SETUPTOOLS = 'from setuptools import setup'
+    _DISTUTILS = 'from distutils.core import setup'
+    _BOTH = (
+        'try:\n'
+        '    from setuptools import setup\n'
+        'except ImportError:\n'
+        '    from distutils.core import setuptools\n'
+    )
+
+    _SETUP_PY = (
+        '%s\n'
+        'setup(\n'
+        '    name="%s",\n'
+        '    version="%s"\n'
+        ')\n'
+    )
+
+    def _write_fake_sdist(self, setup_py, directory, ext):
+        filename = 'sdist.%s' % ext
+        path = '%s/%s' % (directory, filename)
+        if ext == 'zip':
+            with zipfile.ZipFile(path, 'w',
+                                 compression=zipfile.ZIP_DEFLATED) as z:
+                z.writestr('sdist/setup.py', setup_py)
+        else:
+            with tarfile.open(path, 'w:gz') as tar:
+                tarinfo = tarfile.TarInfo('sdist/setup.py')
+                tarinfo.size = len(setup_py)
+                tar.addfile(tarinfo, io.BytesIO(setup_py.encode()))
+        return directory, filename
+
+    def test_setup_tar_gz(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._SETUPTOOLS, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'tar.gz')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo-bar'
+        assert version == '1.0-2b'
+
+    def test_setup_zip(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._SETUPTOOLS, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'zip')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo-bar'
+        assert version == '1.0-2b'
+
+    def test_distutil_tar_gz(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._DISTUTILS, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'tar.gz')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo-bar'
+        assert version == '1.0-2b'
+
+    def test_distutil_zip(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._DISTUTILS, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'zip')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo-bar'
+        assert version == '1.0-2b'
+
+    def test_both_tar_gz(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._BOTH, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'tar.gz')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo-bar'
+        assert version == '1.0-2b'
+
+    def test_both_zip(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._BOTH, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'zip')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo-bar'
+        assert version == '1.0-2b'
+
+    def test_bad_format(self, osutils, sdist_reader):
+        setup_py = self._SETUP_PY % (
+            self._BOTH, 'foo-bar', '1.0-2b'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'tar.gz2')
+            with pytest.raises(InvalidSourceDistributionNameError):
+                name, version = sdist_reader.get_package_name_and_version(
+                    directory, filename)

@@ -4,19 +4,19 @@ import hashlib
 import inspect
 import os
 import shutil
-import subprocess
 import zipfile
-import tempfile
+import tarfile
 import contextlib
 import pip
+import subprocess
+from email.parser import FeedParser
 
-import virtualenv
 from typing import Any, List, Optional, Tuple, Iterable, Callable  # noqa
-from chalice.compat import StringIO
+from chalice.compat import StringIO, lambda_abi
 from chalice.utils import OSUtils
 
 import chalice
-from chalice import compat, app
+from chalice import app
 
 
 class InvalidSourceDistributionNameError(Exception):
@@ -36,7 +36,7 @@ class LambdaDeploymentPackager(object):
     def _get_requirements_file(self, project_dir):
         # type: (str) -> str
         # Gets the path to a requirements.txt file out of a project dir path
-        return os.path.join(project_dir, 'requirements.txt')
+        return self._osutils.joinpath(project_dir, 'requirements.txt')
 
     def create_deployment_package(self, project_dir, package_filename=None,
                                   dependency_builder=None):
@@ -50,18 +50,19 @@ class LambdaDeploymentPackager(object):
             project_dir)
         if package_filename is None:
             package_filename = deployment_package_filename
-        if not os.path.isfile(package_filename):
+        if not self._osutils.file_exists(package_filename):
             dependency_builder.build_site_packages(project_dir)
         site_packages_dir = dependency_builder.site_package_dir(project_dir)
-        dirname = os.path.dirname(os.path.abspath(package_filename))
+        dirname = self._osutils.dirname(
+            self._osutils.abspath(package_filename))
         if not self._osutils.directory_exists(dirname):
-            os.makedirs(dirname)
+            self._osutils.makedirs(dirname)
         with zipfile.ZipFile(package_filename, 'w',
                              compression=zipfile.ZIP_DEFLATED) as z:
             self._add_py_deps(z, site_packages_dir)
             self._add_app_files(z, project_dir)
-            self._add_vendor_files(z, os.path.join(project_dir,
-                                                   self._VENDOR_DIR))
+            self._add_vendor_files(z, self._osutils.joinpath(project_dir,
+                                                             self._VENDOR_DIR))
             # TODO here we need to check that all the dependencies caluclated
             # during the add_app_files phase are included in the package or
             # warn the user. They can add pre-built amazon linux dependencies
@@ -71,12 +72,12 @@ class LambdaDeploymentPackager(object):
 
     def _add_vendor_files(self, zipped, dirname):
         # type: (zipfile.ZipFile, str) -> None
-        if not os.path.isdir(dirname):
+        if not self._osutils.directory_exists(dirname):
             return
         prefix_len = len(dirname) + 1
-        for root, _, filenames in os.walk(dirname):
+        for root, _, filenames in self._osutils.walk(dirname):
             for filename in filenames:
-                full_path = os.path.join(root, filename)
+                full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
                 zipped.write(full_path, zip_path)
 
@@ -88,8 +89,9 @@ class LambdaDeploymentPackager(object):
         # when we know there's new dependencies we need to install.
         requirements_file = self._get_requirements_file(project_dir)
         hash_contents = self._hash_project_dir(
-            requirements_file, os.path.join(project_dir, self._VENDOR_DIR))
-        deployment_package_filename = os.path.join(
+            requirements_file, self._osutils.joinpath(project_dir,
+                                                      self._VENDOR_DIR))
+        deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', hash_contents + '.zip')
         return deployment_package_filename
 
@@ -102,7 +104,7 @@ class LambdaDeploymentPackager(object):
                 # what we want to include in _add_app_files.
                 dirnames.remove('chalice')
             for filename in filenames:
-                full_path = os.path.join(root, filename)
+                full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
                 zip_fileobj.write(full_path, zip_path)
 
@@ -118,7 +120,7 @@ class LambdaDeploymentPackager(object):
             chalice_init = chalice_init[:-1]
         zip_fileobj.write(chalice_init, 'chalice/__init__.py')
 
-        zip_fileobj.write(os.path.join(project_dir, 'app.py'),
+        zip_fileobj.write(self._osutils.joinpath(project_dir, 'app.py'),
                           'app.py')
         self._add_chalice_lib_if_needed(project_dir, zip_fileobj)
 
@@ -251,7 +253,7 @@ class DependencyBuilder(object):
 
     def _has_at_least_one_package(self, filename):
         # type: (str) -> bool
-        if not os.path.isfile(filename):
+        if not self._osutils.file_exists(filename):
             return False
         with open(filename, 'r') as f:
             # This is meant to be a best effort attempt.
@@ -264,17 +266,8 @@ class DependencyBuilder(object):
                     return True
         return False
 
-    @contextlib.contextmanager
-    def _tempdir(self):
-        # type: () -> Any
-        tempdir = tempfile.mkdtemp()
-        try:
-            yield tempdir
-        finally:
-            shutil.rmtree(tempdir)
-
-    def _download_dependencies(self, directory, requirements_file):
-        # type: (str, str) -> List[Package]
+    def _download_sdists(self, requirements_file, directory):
+        # type: (str, str) -> set[Package]
         # Download raw source dependences to get the transitive closure over
         # the dependency graph. Once all have been download (as .tar.gz, .zip
         # files) the wheels can be downloaded for the target platform
@@ -282,30 +275,36 @@ class DependencyBuilder(object):
         # python environment, as it is assumed that is the environment that is
         # being deployed to lambda.
         self._pip.download_all_dependencies(requirements_file, directory)
-
-        # Try to get binary whls for each package downloaded above.
-        sdists = {Package(filename) for filename
+        sdists = {Package(directory, filename) for filename
                   in self._osutils.get_directory_contents(directory)}
+        return sdists
+
+    def _download_binary_wheels(self, sdists, directory):
+        # type: (set[Package], str) -> set[Package]
+        # Try to get binary whls for each sdist package we already have.
         self._pip.download_manylinux_whls(
             [pkg.identifier for pkg in sdists], directory)
-
-        # Now that `directory` has all the manylinux1 compatible binary
-        # wheels we could get, and all the source distributions. We need to
-        # find all the source dists that do not have a mathcing wheel file,
-        # and try to build it to a wheel file.
-        whls = {Package(filename) for filename
+        whls = {Package(directory, filename) for filename
                 in self._osutils.get_directory_contents(directory)
                 if filename.endswith('.whl')}
-        missing_whls = sdists - whls
+        return whls
 
-        # Try to build the missing whl files
-        for missing_whl in missing_whls:
-            path_to_sdist = os.path.join(directory, missing_whl.filename)
+    def _build_missing_wheels(self, sdists, whls, directory):
+        # type: (set[Package], set[Package], str) -> None
+        # Now that `directory` has all the manylinux1 compatible binary
+        # wheels we could get, and all the source distributions. We need to
+        # find all the source dists that do not have a matching wheel file,
+        # and try to build it to a wheel file.
+        missing_whls = sdists - whls
+        for whl in missing_whls:
+            path_to_sdist = self._osutils.joinpath(directory, whl.filename)
             self._pip.build_wheel(path_to_sdist, directory)
 
+    def _categorize_whl_files(self, directory):
+        # type: (str) -> Tuple[List[Package, List[Package]
         # Final pass through the directory to ensure that all whl files
         # are present and compatible with the lambda environment.
-        final_whls = [Package(filename) for filename
+        final_whls = [Package(directory, filename) for filename
                       in self._osutils.get_directory_contents(directory)
                       if filename.endswith('.whl')]
         valid_whls, invalid_whls = [], []
@@ -314,7 +313,16 @@ class DependencyBuilder(object):
                 valid_whls.append(whl)
             else:
                 invalid_whls.append(whl)
+        return valid_whls, invalid_whls
 
+    def _download_dependencies(self, directory, requirements_file):
+        # type: (str, str) -> List[Package]
+        sdists = self._download_sdists(requirements_file, directory)
+        whls = self._download_binary_wheels(sdists, directory)
+        self._build_missing_wheels(sdists, whls, directory)
+        # TODO make sure that the invalid whls are in package after
+        # vendored stage.
+        valid_whls, _ = self._categorize_whl_files(directory)
         return valid_whls
 
     def _install_whls(self, src_dir, dst_dir, whls):
@@ -323,36 +331,38 @@ class DependencyBuilder(object):
             shutil.rmtree(dst_dir)
         os.makedirs(dst_dir)
         for whl in whls:
-            zipfile_path = os.path.join(src_dir, whl.filename)
+            zipfile_path = self._osutils.joinpath(src_dir, whl.filename)
             with zipfile.ZipFile(zipfile_path, 'r') as z:
                 z.extractall(dst_dir)
 
     def build_site_packages(self, project_dir):
         # type: (str) -> str
-        requirements_file = os.path.join(project_dir, 'requirements.txt')
+        requirements_file = self._osutils.joinpath(
+            project_dir, 'requirements.txt')
         deps_dir = self.site_package_dir(project_dir)
-        print(deps_dir)
         if self._has_at_least_one_package(requirements_file):
-            with self._tempdir() as tempdir:
-                tempdir = os.path.abspath('whls')
-                whls = self._download_dependencies(tempdir, requirements_file)
-                self._install_whls(tempdir, deps_dir, whls)
+            with self._osutils.tempdir() as tempdir:
+                valid_whls = self._download_dependencies(
+                    tempdir, requirements_file)
+                self._install_whls(tempdir, deps_dir, valid_whls)
         return deps_dir
 
     def site_package_dir(self, project_dir):
         # type: (str) -> str
         """Returns the path to the site packages directory."""
-        deps_dir = os.path.join(project_dir, '.chalice', 'site-packages')
+        deps_dir = self._osutils.joinpath(
+            project_dir, '.chalice', 'site-packages')
         return deps_dir
 
 
 class Package(object):
     PYPI_SDIST_EXTS = ['.zip', '.tar.gz']
 
-    def __init__(self, filename):
-        # type: (str) -> None
+    def __init__(self, directory, filename):
+        # type: (str, str) -> None
         self.dist_type = 'whl' if filename.endswith('whl') else 'sdist'
         self.filename = filename
+        self._directory = directory
         self.identifier = self._calculate_identifier()
 
     def __str__(self):
@@ -380,19 +390,81 @@ class Package(object):
             # {platform tag}.whl
             name, version = self.filename.split('-')[:2]
         else:
-            name, version = self._parse_sdist_filename(self.filename)
+            info_fetcher = SdistMetadataFetcher()
+            name, version = info_fetcher.get_package_name_and_version(
+                self._directory, self.filename)
         return '%s==%s' % (name, version)
 
-    def _parse_sdist_filename(self, filename):
-        # type: (str) -> Tuple[str, str]
-        # Filenames are in the format {name}-{version}.tar.gz OR
-        # {name}-{version}.zip. These are the only two formats supported by
-        # PyPi for source distributions.
-        for ext in self.PYPI_SDIST_EXTS:
-            if filename.endswith(ext):
-                name, version = filename[:-len(ext)].split('-')
-                return name, version
-        raise InvalidSourceDistributionNameError(filename)
+
+class SdistMetadataFetcher(object):
+    """This is the "correct" way to get name and version from an sdist."""
+    # https://github.com/pypa/pip/blob/master/pip/utils/setuptools_build.py
+    _SETUPTOOLS_SHIM = (
+        "import setuptools, tokenize;__file__=%r;"
+        "f=getattr(tokenize, 'open', open)(__file__);"
+        "code=f.read().replace('\\r\\n', '\\n');"
+        "f.close();"
+        "exec(compile(code, __file__, 'exec'))"
+    )
+
+    def __init__(self, osutils=None):
+        # type: (OSUtils) -> None
+        if osutils is None:
+            osutils = OSUtils()
+        self._osutils = osutils
+
+    def _parse_pkg_info_file(self, filepath):
+        # type:(str) -> email.Message
+        with open(filepath, 'r') as f:
+            data = f.read()
+        parser = FeedParser()
+        parser.feed(data)
+        return parser.close()
+
+    def _generate_egg_info(self, package_dir):
+        # type: (str) -> str
+        setup_py = self._osutils.joinpath(package_dir, 'setup.py')
+        script = self._SETUPTOOLS_SHIM % setup_py
+
+        cmd = [sys.executable, '-c', script, '--no-user-cfg', 'egg_info']
+        egg_info_dir = self._osutils.joinpath(package_dir, 'egg-info')
+        self._osutils.makedirs(egg_info_dir)
+        cmd += ['--egg-base', 'egg-info']
+        p = subprocess.Popen(cmd, cwd=package_dir,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.communicate()
+        self._osutils.joinpath(egg_info_dir)
+        info_contents = self._osutils.get_directory_contents(egg_info_dir)
+        assert len(info_contents) == 1
+        pkg_info_path = self._osutils.joinpath(
+            egg_info_dir, info_contents[0], 'PKG-INFO')
+        return pkg_info_path
+
+    def _unpack_sdist_into_dir(self, sdist_path, unpack_dir):
+        # type: (str, str) -> str
+        if sdist_path.endswith('zip'):
+            with zipfile.ZipFile(sdist_path, 'r') as z:
+                z.extractall(unpack_dir)
+        elif sdist_path.endswith('.tar.gz'):
+            with tarfile.open(sdist_path, 'r:gz') as tar:
+                tar.extractall(unpack_dir)
+        else:
+            raise InvalidSourceDistributionNameError(sdist_path)
+        # There should only be one directory unpacked.
+        contents = self._osutils.get_directory_contents(unpack_dir)
+        assert len(contents) == 1
+        return self._osutils.joinpath(unpack_dir, contents[0])
+
+    def get_package_name_and_version(self, directory, filename):
+        # type: (str, str) -> Tuple[str, str]
+        sdist_path = self._osutils.joinpath(directory, filename)
+        with self._osutils.tempdir() as tempdir:
+            package_dir = self._unpack_sdist_into_dir(sdist_path, tempdir)
+            pkg_info_filepath = self._generate_egg_info(package_dir)
+            metadata = self._parse_pkg_info_file(pkg_info_filepath)
+            name = metadata['Name']
+            version = metadata['Version']
+        return name, version
 
 
 class PipRunner(object):
@@ -458,5 +530,5 @@ class PipRunner(object):
         for package in packages:
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
                          'manylinux1_x86_64', '--implementation', 'cp',
-                         '--dest', directory, package]
+                         '--abi', lambda_abi, '--dest', directory, package]
             self._execute('download', arguments)

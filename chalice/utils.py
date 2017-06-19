@@ -1,6 +1,9 @@
 import os
 import zipfile
 import json
+import contextlib
+import tempfile
+import shutil
 
 from typing import IO, Dict, List, Any  # noqa
 
@@ -108,6 +111,35 @@ class OSUtils(object):
     def get_directory_contents(self, path):
         # type: (str) -> List[str]
         return os.listdir(path)
+
+    def makedirs(self, path):
+        # type: (str) -> None
+        os.makedirs(path)
+
+    def dirname(self, path):
+        # type: (str) -> str
+        return os.path.dirname(path)
+
+    def abspath(self, path):
+        # type: (str) -> str
+        return os.path.abspath(path)
+
+    def joinpath(self, *args):
+        # type: (List[str]) -> str
+        return os.path.join(*args)
+
+    def walk(self, path):
+        # type: (str) -> Tuple[str, str, str]
+        return os.walk(path)
+
+    @contextlib.contextmanager
+    def tempdir(self):
+        # type: () -> Any
+        tempdir = tempfile.mkdtemp()
+        try:
+            yield tempdir
+        finally:
+            shutil.rmtree(tempdir)
 
 
 def getting_started_prompt(prompter):
