@@ -391,10 +391,7 @@ class LambdaDeployer(object):
         # type: (DeployedResources) -> None
         handler_name = existing_resources.api_handler_name
         print('Deleting lambda function %s' % handler_name)
-        try:
-            self._aws_client.delete_function(handler_name)
-        except ResourceDoesNotExistError as e:
-            print('No lambda function named %s found.' % e)
+        self._delete_lambda_function(handler_name)
 
     def _delete_auth_handlers(self, existing_resources):
         # type: (DeployedResources) -> None
@@ -404,10 +401,15 @@ class LambdaDeployer(object):
             # We could use the key names, but we're using the
             # Lambda ARNs to ensure we have the right lambda
             # function.
-            try:
-                self._aws_client.delete_function(function_arn)
-            except ResourceDoesNotExistError as e:
-                print('No lambda function named %s found.' % e)
+            self._delete_lambda_function(function_arn)
+
+    def _delete_lambda_function(self, function_name_or_arn):
+        # type: (str) -> None
+        # Deletes a function and prints an error if deletion fails.
+        try:
+            self._aws_client.delete_function(function_name_or_arn)
+        except ResourceDoesNotExistError as e:
+            print('No lambda function named %s found.' % e)
 
     def deploy(self, config, existing_resources, stage_name):
         # type: (Config, OPT_RESOURCES, str) -> Dict[str, Any]
@@ -497,7 +499,7 @@ class LambdaDeployer(object):
         try:
             role_arn = self._aws_client.get_role_arn_for_name(role_name)
             return role_arn
-        except ValueError:
+        except ResourceDoesNotExistError:
             return None
 
     def _get_or_create_lambda_role_arn(self, config, role_name):
@@ -512,7 +514,7 @@ class LambdaDeployer(object):
             # We're using the lambda function_name as the role_name.
             role_arn = self._aws_client.get_role_arn_for_name(role_name)
             self._update_role_with_latest_policy(role_name, config)
-        except ValueError:
+        except ResourceDoesNotExistError:
             print("Creating role")
             role_arn = self._create_role_from_source_code(config, role_name)
         return role_arn

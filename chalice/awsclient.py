@@ -21,6 +21,7 @@ import zipfile
 import shutil
 import json
 import re
+import uuid
 
 import botocore.session  # noqa
 from botocore.exceptions import ClientError
@@ -275,7 +276,7 @@ class TypedAWSClient(object):
         try:
             role = client.get_role(RoleName=name)
         except client.exceptions.NoSuchEntityException:
-            raise ValueError("No role ARN found for: %s" % name)
+            raise ResourceDoesNotExistError("No role ARN found for: %s" % name)
         return role['Role']['Arn']
 
     def delete_role_policy(self, role_name, policy_name):
@@ -507,12 +508,14 @@ class TypedAWSClient(object):
         return response['body']
 
     def add_permission_for_apigateway(self, function_name, region_name,
-                                      account_id, rest_api_id, random_id):
-        # type: (str, str, str, str, str) -> None
+                                      account_id, rest_api_id, random_id=None):
+        # type: (str, str, str, str, Optional[str]) -> None
         """Authorize API gateway to invoke a lambda function."""
         client = self._client('lambda')
         source_arn = self._build_source_arn_str(region_name, account_id,
                                                 rest_api_id)
+        if random_id is None:
+            random_id = self._random_id()
         client.add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_name,
@@ -566,23 +569,30 @@ class TypedAWSClient(object):
         return self._client_cache[service_name]
 
     def add_permission_for_authorizer(self, rest_api_id, function_arn,
-                                      random_id):
-        # type: (str, str, str) -> None
+                                      random_id=None):
+        # type: (str, str, Optional[str]) -> None
         client = self._client('apigateway')
+        # This is actually a paginated operation, but botocore does not
+        # support this style of pagination right now.  The max authorizers
+        # for an API is 10, so we're ok for now.  We will need to circle
+        # back on this eventually.
         authorizers = client.get_authorizers(restApiId=rest_api_id)
         for authorizer in authorizers['items']:
             if function_arn in authorizer['authorizerUri']:
                 authorizer_id = authorizer['id']
                 break
         else:
-            raise ValueError("Unable to find authorizer associated "
-                             "with function ARN: %s" % function_arn)
+            raise ResourceDoesNotExistError(
+                "Unable to find authorizer associated "
+                "with function ARN: %s" % function_arn)
         parts = function_arn.split(':')
         region_name = parts[3]
         account_id = parts[4]
         function_name = parts[-1]
         source_arn = ("arn:aws:execute-api:%s:%s:%s/authorizers/%s" %
                       (region_name, account_id, rest_api_id, authorizer_id))
+        if random_id is None:
+            random_id = self._random_id()
         self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_name,
@@ -590,3 +600,7 @@ class TypedAWSClient(object):
             Principal='apigateway.amazonaws.com',
             SourceArn=source_arn,
         )
+
+    def _random_id(self):
+        # type: () -> str
+        return str(uuid.uuid4())

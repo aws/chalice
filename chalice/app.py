@@ -469,14 +469,16 @@ class Chalice(object):
                 auth_name = auth_func.__name__
             ttl_seconds = kwargs.pop('ttl_seconds', None)
             execution_role = kwargs.pop('execution_role', None)
+            if kwargs:
+                raise TypeError(
+                    'TypeError: authorizer() got unexpected keyword '
+                    'arguments: %s' % ', '.join(list(kwargs)))
             auth_config = BuiltinAuthConfig(
                 name=auth_name,
                 handler_string='app.%s' % auth_func.__name__,
                 ttl_seconds=ttl_seconds,
                 execution_role=execution_role,
             )
-            # Do we even need the builtin_auth_handlers attr?  See if we can
-            # remove this and calculate this list on demand.
             self.builtin_auth_handlers.append(auth_config)
             return ChaliceAuthorizer(name, auth_func, auth_config)
         return _register_authorizer

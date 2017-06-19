@@ -22,6 +22,7 @@ from chalice.awsclient import LambdaErrorContext
 from chalice.config import Config, DeployedResources
 from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
+from chalice import constants
 from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
@@ -546,31 +547,6 @@ class TestDeployer(object):
             }
         }
 
-
-    def test_deployer_delete_calls_deletes(self):
-        # Check that athe deployer class calls other deployer classes delete
-        # methods.
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        cfg = mock.Mock(spec=Config)
-        deployed_resources = DeployedResources.from_dict({
-            'backend': 'api',
-            'api_handler_arn': 'lambda_arn',
-            'api_handler_name': 'lambda_name',
-            'rest_api_id': 'rest_id',
-            'api_gateway_stage': 'dev',
-            'region': 'us-west-2',
-            'chalice_version': '0',
-            'lambda_functions': {},
-        })
-        cfg.deployed_resources.return_value = deployed_resources
-
-        d = Deployer(apig_deploy, lambda_deploy)
-        d.delete(cfg)
-
-        lambda_deploy.delete.assert_called_with(deployed_resources)
-        apig_deploy.delete.assert_called_with(deployed_resources)
-
     def test_deployer_delete_calls_deletes(self):
         # Check that the deployer class calls other deployer classes delete
         # methods.
@@ -1059,6 +1035,19 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         assert deployed['lambda_functions'] == {
             'myapp-dev-myauth': 'arn:auth-function',
         }
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-myauth',
+            handler='app.myauth',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents='package contents',
+        )
 
     def test_can_update_auth_handlers(self, sample_app_with_auth):
         config = self.create_config_obj(sample_app_with_auth)
@@ -1074,6 +1063,18 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         assert deployed['lambda_functions'] == {
             'myapp-dev-myauth': 'arn:auth-function',
         }
+        self.aws_client.update_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-myauth',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents='package contents',
+        )
 
     def test_lambda_deployer_defaults(self, sample_app):
         cfg = self.create_config_obj(sample_app)

@@ -864,6 +864,14 @@ def test_can_specify_extra_auth_attributes():
     assert handler.execution_role == 'arn:my-role'
 
 
+def test_validation_raised_on_unknown_kwargs():
+    auth_app = app.Chalice('builtin-auth')
+
+    with pytest.raises(TypeError):
+        @auth_app.authorizer(this_is_an_unknown_kwarg=True)
+        def builtin_auth(auth_request):
+            pass
+
 def test_can_return_auth_response():
     event = {
         'type': 'TOKEN',
@@ -947,6 +955,32 @@ def test_can_use_auth_routes_instead_of_strings(auth_request):
             'Resource': expected,
         }]
     }
+
+
+def test_can_mix_auth_routes_and_strings(auth_request):
+    expected = [
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/DELETE/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/HEAD/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/OPTIONS/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/PATCH/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/POST/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/PUT/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a/b',
+    ]
+    response = app.AuthResponse(
+        ['/a', app.AuthRoute('/a/b', ['GET'])],
+        'principal')
+    serialized = response.to_dict(auth_request)
+    assert serialized['policyDocument'] == {
+        'Version': '2012-10-17',
+        'Statement': [{
+            'Action': 'execute-api:Invoke',
+            'Effect': 'Allow',
+            'Resource': expected,
+        }]
+    }
+
 
 
 def test_special_cased_root_resource(auth_request):
