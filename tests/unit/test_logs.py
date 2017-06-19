@@ -87,3 +87,8 @@ def test_can_display_logs():
         'NOW shortId Two',
         'NOW shortId Three',
     ]
+
+
+def test_convert_to_integer_timestamp():
+    assert TypedAWSClient._convert_to_integer_timestamp(None) == 0
+    assert TypedAWSClient._convert_to_integer_timestamp('2017-01-02 03:04:05') == 1483326245000

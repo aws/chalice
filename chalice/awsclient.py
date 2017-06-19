@@ -465,17 +465,20 @@ class TypedAWSClient(object):
                     event['timestamp'])
                 yield event
 
-    def _convert_to_datetime(self, integer_timestamp):
+    @staticmethod
+    def _convert_to_datetime(integer_timestamp):
         # type: (int) -> datetime.datetime
         return datetime.datetime.fromtimestamp(integer_timestamp / 1000.0)
 
-    def _convert_to_integer_timestamp(self, string_datetime):
+    @staticmethod
+    def _convert_to_integer_timestamp(string_datetime):
         # type: (Optional[str]) -> int
         if string_datetime is None:
             return 0
 
         dt = datetime.datetime.strptime(string_datetime, '%Y-%m-%d %H:%M:%S')
-        return int(dt.timestamp() * 1000.0)
+        timestamp = (dt - datetime.datetime(1970, 1, 1)).total_seconds()
+        return int(timestamp * 1000.0)
 
     def _client(self, service_name):
         # type: (str) -> Any
