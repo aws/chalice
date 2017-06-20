@@ -418,7 +418,19 @@ class LambdaDeployer(object):
                                  deployed_values)
         self._deploy_auth_handlers(config, existing_resources, stage_name,
                                    deployed_values)
+        if existing_resources is not None:
+            self._cleanup_unreferenced_functions(existing_resources,
+                                                 deployed_values)
         return deployed_values
+
+    def _cleanup_unreferenced_functions(self, existing_resources,
+                                        deployed_values):
+        # type: (DeployedResources, Dict[str, Any]) -> None
+        unreferenced = (
+            set(existing_resources.lambda_functions.values()) -
+            set(deployed_values['lambda_functions'].values()))
+        for function_arn in unreferenced:
+            self._delete_lambda_function(function_arn)
 
     def _deploy_api_handler(self, config, existing_resources, stage_name,
                             deployed_values):
@@ -447,6 +459,7 @@ class LambdaDeployer(object):
         # functions configuration:
         auth_handlers = config.chalice_app.builtin_auth_handlers
         if not auth_handlers:
+            deployed_values['lambda_functions'] = {}
             return
         for auth_config in auth_handlers:
             self._deploy_auth_handler(

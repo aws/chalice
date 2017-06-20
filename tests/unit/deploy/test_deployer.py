@@ -702,7 +702,7 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
         'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None, None)
+        None, 'dev', None, None, {})
     d.deploy(cfg, deployed, 'dev')
 
     # Should result in injecting the latest app code.
@@ -825,6 +825,7 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
     assert deployed == {
         'api_handler_arn': 'lambda-arn',
         'api_handler_name': 'myapp-dev',
+        'lambda_functions': {},
     }
     aws_client.create_function.assert_called_with(
         function_name='myapp-dev', role_arn='role-arn',
@@ -1076,6 +1077,36 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             zip_contents=b'package contents',
         )
 
+    def test_unreferenced_functions_are_deleted(self, sample_app_with_auth):
+        # Existing resources is the set of resources that have
+        # *previously* been deployed.
+        existing_lambda_functions = {
+            'old-function': 'arn:not-referenced-anymore',
+        }
+        existing = DeployedResources(
+            'api', 'api-handler-arn', 'api-handler-name',
+            'existing-id', 'dev', None, None,
+            existing_lambda_functions)
+        self.aws_client.lambda_function_exists.return_value = True
+        self.aws_client.update_function.return_value = {
+            'FunctionArn': 'arn:new-auth-function'
+        }
+        config = self.create_config_obj(sample_app_with_auth)
+        self.aws_client.get_function_configuration.return_value = {
+            'Runtime': config.lambda_python_version,
+        }
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        deployed = deployer.deploy(config, existing, stage_name='dev')
+        # Because the "old-function" was not referenced in the update
+        # function calls, we should expect that it was deleted.
+        self.aws_client.delete_function.assert_called_with(
+            'arn:not-referenced-anymore')
+        # And the old-arn is not in the deployed resources
+        assert deployed['lambda_functions'] == {
+            'api-handler-name-myauth': 'arn:new-auth-function'}
+
     def test_lambda_deployer_defaults(self, sample_app):
         cfg = self.create_config_obj(sample_app)
         deployer = LambdaDeployer(
@@ -1231,7 +1262,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
 
         self.deployed_resources = DeployedResources(
             'api', 'api_handler_arn', self.lambda_function_name,
-            None, 'dev', None, None, None)
+            None, 'dev', None, None, {})
 
     def test_lambda_deployer_defaults(self, sample_app):
         cfg = Config.create(
