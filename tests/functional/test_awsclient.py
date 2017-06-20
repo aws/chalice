@@ -12,6 +12,7 @@ from botocore.vendored.requests import ConnectionError as \
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
 from chalice.awsclient import DeploymentPackageTooLargeError
+from chalice.awsclient import LambdaClientError
 
 
 def test_region_name_is_exposed(stubbed_session):
@@ -428,9 +429,11 @@ class TestCreateLambdaFunction(object):
 
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
-        with pytest.raises(botocore.exceptions.ClientError):
-            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
+        with pytest.raises(LambdaClientError) as excinfo:
+            awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7',
                                       'app.app')
+        assert isinstance(
+            excinfo.value.original_error, botocore.exceptions.ClientError)
         stubbed_session.verify_stubs()
 
     def test_can_pass_python_runtime(self, stubbed_session):
@@ -461,9 +464,11 @@ class TestCreateLambdaFunction(object):
             error_code='UnknownException', message='')
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
-        with pytest.raises(botocore.exceptions.ClientError):
+        with pytest.raises(LambdaClientError) as excinfo:
             awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7',
                                       'app.app')
+        assert isinstance(
+            excinfo.value.original_error, botocore.exceptions.ClientError)
         stubbed_session.verify_stubs()
 
     def test_can_provide_tags(self, stubbed_session):
@@ -498,11 +503,8 @@ class TestCreateLambdaFunction(object):
         with pytest.raises(DeploymentPackageTooLargeError) as excinfo:
             awsclient.create_function('name', 'myarn', too_large_content,
                                       'python2.7', 'app.app')
-        assert excinfo.value.additional_details == (
-            'This is likely because the deployment package is 60.0 MB. '
-            'Lambda only allows deployment packages that are 50.0 MB or less '
-            'in size.'
-        )
+        assert excinfo.value.context.function_name ==  'name'
+        assert excinfo.value.context.deployment_size ==  60 * (1024 ** 2)
 
     def test_no_raise_large_deployment_error_when_small_deployment_size(
             self, mock_lambda_client):
@@ -512,9 +514,12 @@ class TestCreateLambdaFunction(object):
             RequestsConnectionError
 
         awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
-        with pytest.raises(RequestsConnectionError):
+        with pytest.raises(LambdaClientError) as excinfo:
             awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
                                       'app.app')
+        assert not isinstance(excinfo.value, DeploymentPackageTooLargeError)
+        assert isinstance(
+            excinfo.value.original_error, RequestsConnectionError)
 
     def test_raises_large_deployment_error_request_entity_to_large(
             self, stubbed_session):
@@ -759,11 +764,8 @@ class TestUpdateLambdaFunction(object):
         awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
         with pytest.raises(DeploymentPackageTooLargeError) as excinfo:
             awsclient.update_function('name', too_large_content)
-        assert excinfo.value.additional_details == (
-            'This is likely because the deployment package is 60.0 MB. '
-            'Lambda only allows deployment packages that are 50.0 MB or less '
-            'in size.'
-        )
+        assert excinfo.value.context.function_name ==  'name'
+        assert excinfo.value.context.deployment_size ==  60 * (1024 ** 2)
 
     def test_no_raise_large_deployment_error_when_small_deployment_size(
             self, mock_lambda_client):
@@ -773,8 +775,11 @@ class TestUpdateLambdaFunction(object):
             RequestsConnectionError
 
         awsclient = TypedAWSClient(mock_session, mock.Mock(spec=time.sleep))
-        with pytest.raises(RequestsConnectionError):
+        with pytest.raises(LambdaClientError) as excinfo:
             awsclient.update_function('name', b'foo')
+        assert not isinstance(excinfo.value, DeploymentPackageTooLargeError)
+        assert isinstance(
+            excinfo.value.original_error, RequestsConnectionError)
 
     def test_raises_large_deployment_error_request_entity_to_large(
             self, stubbed_session):

@@ -1,10 +1,13 @@
 import botocore.session
 import json
 import os
+import socket
 
 import pytest
 import mock
 from botocore.stub import Stubber
+from botocore.vendored.requests import ConnectionError as \
+    RequestsConnectionError
 from pytest import fixture
 
 from chalice import __version__ as chalice_version
@@ -12,7 +15,9 @@ from chalice.app import Chalice
 from chalice.app import CORSConfig
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
+from chalice.awsclient import LambdaClientError
 from chalice.awsclient import DeploymentPackageTooLargeError
+from chalice.awsclient import LambdaErrorContext
 from chalice.config import Config, DeployedResources
 from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
@@ -351,14 +356,35 @@ class TestChaliceDeploymentError(object):
         )
         assert 'My Exception' in deploy_error_msg
 
+    def test_lambda_client_error(self):
+        lambda_error = LambdaClientError(
+            Exception('My Exception'),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=1024 ** 2
+            )
+        )
+        deploy_error = ChaliceDeploymentError(lambda_error)
+        deploy_error_msg = str(deploy_error)
+        assert (
+            'ERROR - While sending your chalice handler code to '
+            'Lambda function "foo"' in deploy_error_msg
+        )
+        assert 'My Exception' in deploy_error_msg
+
     def test_gives_where_and_suggestion_for_too_large_deployment_error(self):
         too_large_error = DeploymentPackageTooLargeError(
-            'Too large of deployment pacakge')
+            Exception('Too large of deployment pacakge'),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=1024 ** 2,
+            )
+        )
         deploy_error = ChaliceDeploymentError(too_large_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'ERROR - While sending your chalice API handler code to '
-            'Lambda' in deploy_error_msg
+            'ERROR - While sending your chalice handler code to '
+            'Lambda function "foo"' in deploy_error_msg
         )
         assert 'Too large of deployment pacakge' in deploy_error_msg
         assert (
@@ -366,14 +392,78 @@ class TestChaliceDeploymentError(object):
             'application ' in deploy_error_msg
         )
 
-    def test_include_additional_detail_for_too_large_deployment_error(self):
+    def test_include_size_context_for_too_large_deployment_error(self):
         too_large_error = DeploymentPackageTooLargeError(
-            'Too large of deployment pacakge',
-            additional_details='It was over 50MB.')
-        deploy_error = ChaliceDeploymentError(too_large_error)
+            Exception('Too large of deployment pacakge'),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=58 * (1024 ** 2),
+            )
+        )
+        deploy_error = ChaliceDeploymentError(
+            too_large_error)
+        deploy_error_msg = str(deploy_error)
+        print(repr(deploy_error_msg))
+        assert 'deployment package is 58.0 MB' in deploy_error_msg
+        assert '50.0 MB or less' in deploy_error_msg
+        assert 'To avoid this error' in deploy_error_msg
+
+    def test_error_msg_for_general_connection(self):
+        lambda_error = DeploymentPackageTooLargeError(
+            RequestsConnectionError(
+                Exception(
+                    'Connection aborted.',
+                    socket.error('Some vague reason')
+                )
+            ),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=1024 ** 2
+            )
+        )
+        deploy_error = ChaliceDeploymentError(lambda_error)
+        deploy_error_msg = str(deploy_error)
+        assert 'Connection aborted.' in deploy_error_msg
+        assert 'Some vague reason' not in deploy_error_msg
+
+    def test_simplifies_error_msg_for_broken_pipe(self):
+        lambda_error = DeploymentPackageTooLargeError(
+            RequestsConnectionError(
+                Exception(
+                    'Connection aborted.',
+                    socket.error(32, 'Broken pipe')
+                )
+            ),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=1024 ** 2
+            )
+        )
+        deploy_error = ChaliceDeploymentError(lambda_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'It was over 50MB. To avoid this error' in deploy_error_msg
+            'Connection aborted. Lambda closed the connection' in
+            deploy_error_msg
+        )
+
+    def test_simplifies_error_msg_for_timeout(self):
+        lambda_error = DeploymentPackageTooLargeError(
+            RequestsConnectionError(
+                Exception(
+                    'Connection aborted.',
+                    socket.timeout('The write operation timed out')
+                )
+            ),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=1024 ** 2
+            )
+        )
+        deploy_error = ChaliceDeploymentError(lambda_error)
+        deploy_error_msg = str(deploy_error)
+        assert (
+            'Connection aborted. Timed out sending your app to Lambda.' in
+            deploy_error_msg
         )
 
 

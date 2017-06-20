@@ -7,11 +7,14 @@ from __future__ import print_function
 import json
 import os
 import textwrap
+import socket
 import sys
 import uuid
 import warnings
 
 import botocore.session  # noqa
+from botocore.vendored.requests import ConnectionError as \
+    RequestsConnectionError
 from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
 
 from chalice import app  # noqa
@@ -19,6 +22,7 @@ from chalice import __version__ as chalice_version
 from chalice import policy
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.awsclient import DeploymentPackageTooLargeError
+from chalice.awsclient import LambdaClientError
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.swagger import SwaggerGenerator
@@ -26,6 +30,7 @@ from chalice.utils import OSUtils
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
+from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 from chalice.policy import AppPolicyGenerator
 
 
@@ -175,42 +180,99 @@ def _validate_manage_iam_role(config):
 class ChaliceDeploymentError(Exception):
     def __init__(self, error):
         # type: (Any) -> None
-        where, suggestion = self._get_location_of_error_and_suggestion(
-            error)
-
+        where = self._get_error_location(error)
         msg = self._wrap_text(
             'ERROR - %s, received the following error:' % where
         )
         msg += '\n\n'
-        msg += self._wrap_text(str(error), indent=' ')
+        msg += self._wrap_text(self._get_error_message(error), indent=' ')
         msg += '\n\n'
+        suggestion = self._get_error_suggestion(error)
         if suggestion:
             msg += self._wrap_text(suggestion)
         super(ChaliceDeploymentError, self).__init__(msg)
 
-    def _get_location_of_error_and_suggestion(self, error):
-        # type: (Any) -> Tuple[str, OPT_STR]
-        suggestion = None
+    def _get_error_location(self, error):
+        # type: (Any) -> str
         where = 'While deploying your chalice application'
+        if isinstance(error, LambdaClientError):
+            where = (
+                'While sending your chalice handler code to Lambda function '
+                '"%s"' % error.context.function_name
+            )
+        return where
+
+    def _get_error_message(self, error):
+        # type: (Any) -> str
+        msg = str(error)
+        if isinstance(error, LambdaClientError):
+            if isinstance(error.original_error, RequestsConnectionError):
+                msg = self._get_error_message_for_connection_error(
+                    error.original_error)
+        return msg
+
+    def _get_error_message_for_connection_error(self, connection_error):
+        # type: (RequestsConnectionError) -> str
+
+        # To get the underlying error that raised the
+        # requests.ConnectionError it is required to go down two levels of
+        # arguments to get the underlying exception. The instantiation of
+        # one of these exceptions looks like this:
+        #
+        # requests.ConnectionError(
+        #     urllib3.exceptions.ProtocolError(
+        #         'Connection aborted.', <SomeException>)
+        # )
+        message = connection_error.args[0].args[0]
+        underlying_error = connection_error.args[0].args[1]
+
+        # In python3, this is a BrokenPipeError. However in python2, this
+        # is a socket.error that has the message 'Broken pipe' in it. So we
+        # don't want to be assuming all socket.error are broken pipes so just
+        # check if the message has 'Broken pipe' in it.
+        if 'Broken pipe' in str(underlying_error):
+            message += (
+                ' Lambda closed the connection before chalice finished '
+                'sending all of the data.'
+            )
+        elif isinstance(underlying_error, socket.timeout):
+            message += ' Timed out sending your app to Lambda.'
+        return message
+
+    def _get_error_suggestion(self, error):
+        # type: (Any) -> OPT_STR
+        suggestion = None
         if isinstance(error, DeploymentPackageTooLargeError):
-            where = 'While sending your chalice API handler code to Lambda'
             suggestion = (
                 'To avoid this error, decrease the size of your chalice '
                 'application by removing code or removing '
                 'dependencies from your chalice application.'
             )
-            if error.additional_details:
-                suggestion = error.additional_details + ' ' + suggestion
-        return where, suggestion
+            deployment_size = error.context.deployment_size
+            if deployment_size > MAX_LAMBDA_DEPLOYMENT_SIZE:
+                size_warning = (
+                    'This is likely because the deployment package is %s. '
+                    'Lambda only allows deployment packages that are %s or '
+                    'less in size.' % (
+                        self._get_mb(deployment_size),
+                        self._get_mb(MAX_LAMBDA_DEPLOYMENT_SIZE)
+                    )
+                )
+                suggestion = size_warning + ' ' + suggestion
+        return suggestion
 
     def _wrap_text(self, text, indent=''):
-        # type: (str, OPT_STR) -> str
+        # type: (str, str) -> str
         return '\n'.join(
             textwrap.wrap(
                 text, 79, replace_whitespace=False, drop_whitespace=False,
                 initial_indent=indent, subsequent_indent=indent
             )
         )
+
+    def _get_mb(self, value):
+        # type: (int) -> str
+        return '%.1f MB' % (float(value) / (1024 ** 2))
 
 
 class NoPrompt(object):
