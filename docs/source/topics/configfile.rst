@@ -89,10 +89,10 @@ be checked.
   default ``lambda_timeout`` is ``60`` seconds.
 
 * ``lambda_memory_size`` - An integer representing the amount of memory, in
-   MB, your Lambda function is given. AWS Lambda uses this memory size
-   to infer the amount of CPU allocated to your function. The default
-   ``lambda_memory_size`` value is ``128``. The value must be a multiple of
-   64 MB.
+  MB, your Lambda function is given. AWS Lambda uses this memory size
+  to infer the amount of CPU allocated to your function. The default
+  ``lambda_memory_size`` value is ``128``. The value must be a multiple of
+  64 MB.
 
 * ``tags`` - A mapping of key value pairs. These key value pairs will
   be set as the tags on the resources running your deployed
