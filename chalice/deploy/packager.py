@@ -7,13 +7,15 @@ import shutil
 import zipfile
 import tarfile
 import contextlib
-import pip
 import subprocess
 from email.parser import FeedParser
+from email.message import Message  # noqa
 
-from typing import Any, List, Optional, Tuple, Iterable, Callable  # noqa
+import pip
+from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
 from chalice.compat import StringIO, lambda_abi
 from chalice.utils import OSUtils
+from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
 
 import chalice
 from chalice import app
@@ -27,32 +29,33 @@ class LambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
     _VENDOR_DIR = 'vendor'
 
-    def __init__(self, osutils=None):
-        # type: (Optional[OSUtils]) -> None
+    def __init__(self, osutils=None, dependency_builder=None):
+        # type: (Optional[OSUtils], Optional[DependencyBuilder]) -> None
         if osutils is None:
             osutils = OSUtils()
+        if dependency_builder is None:
+            dependency_builder = DependencyBuilder(osutils)
         self._osutils = osutils
+        self._dependency_builder = dependency_builder
 
     def _get_requirements_file(self, project_dir):
         # type: (str) -> str
         # Gets the path to a requirements.txt file out of a project dir path
         return self._osutils.joinpath(project_dir, 'requirements.txt')
 
-    def create_deployment_package(self, project_dir, package_filename=None,
-                                  dependency_builder=None):
+    def create_deployment_package(self, project_dir, package_filename=None):
         # type: (str, Optional[str]) -> str
         print("Creating deployment package.")
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
-        if dependency_builder is None:
-            dependency_builder = DependencyBuilder(OSUtils())
         deployment_package_filename = self.deployment_package_filename(
             project_dir)
         if package_filename is None:
             package_filename = deployment_package_filename
         if not self._osutils.file_exists(package_filename):
-            dependency_builder.build_site_packages(project_dir)
-        site_packages_dir = dependency_builder.site_package_dir(project_dir)
+            self._dependency_builder.build_site_packages(project_dir)
+        site_packages_dir = self._dependency_builder.site_package_dir(
+            project_dir)
         dirname = self._osutils.dirname(
             self._osutils.abspath(package_filename))
         if not self._osutils.directory_exists(dirname):
@@ -63,11 +66,6 @@ class LambdaDeploymentPackager(object):
             self._add_app_files(z, project_dir)
             self._add_vendor_files(z, self._osutils.joinpath(project_dir,
                                                              self._VENDOR_DIR))
-            # TODO here we need to check that all the dependencies caluclated
-            # during the add_app_files phase are included in the package or
-            # warn the user. They can add pre-built amazon linux dependencies
-            # in the vendor folder and rerun the deployment and it should
-            # succeed. That warning/error should be issued here.
         return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
@@ -179,7 +177,7 @@ class LambdaDeploymentPackager(object):
         print("Regen deployment package...")
         tmpzip = deployment_package_filename + '.tmp.zip'
         with zipfile.ZipFile(deployment_package_filename, 'r') as inzip:
-            with zipfile.ZipFile(tmpzip, 'w') as outzip:
+            with zipfile.ZipFile(tmpzip, 'w', zipfile.ZIP_DEFLATED) as outzip:
                 for el in inzip.infolist():
                     if self._needs_latest_version(el.filename):
                         continue
@@ -224,6 +222,7 @@ class DependencyBuilder(object):
     _MANYLINUX_COMPATIBLE_PLAT = {'any', 'linux_x86_64', 'manylinux1_x86_64'}
 
     def __init__(self, osutils, pip_runner=None):
+        # type: (OSUtils, Optional[PipRunner]) -> None
         self._osutils = osutils
         if pip_runner is None:
             pip_runner = PipRunner(pip)
@@ -266,18 +265,17 @@ class DependencyBuilder(object):
                     return True
         return False
 
-    def _download_sdists(self, requirements_file, directory):
+    def _download_all_dependencies(self, requirements_file, directory):
         # type: (str, str) -> set[Package]
-        # Download raw source dependences to get the transitive closure over
-        # the dependency graph. Once all have been download (as .tar.gz, .zip
-        # files) the wheels can be downloaded for the target platform
-        # manylinux1_x86_64 and using the python version from the current
-        # python environment, as it is assumed that is the environment that is
-        # being deployed to lambda.
+        # Download dependencies prefering wheel files but falling back to
+        # raw source dependences to get the transitive closure over
+        # the dependency graph. Return the set of all package objects
+        # which will serve as the master list of dependencies needed to deploy
+        # successfully.
         self._pip.download_all_dependencies(requirements_file, directory)
-        sdists = {Package(directory, filename) for filename
-                  in self._osutils.get_directory_contents(directory)}
-        return sdists
+        deps = {Package(directory, filename) for filename
+                in self._osutils.get_directory_contents(directory)}
+        return deps
 
     def _download_binary_wheels(self, sdists, directory):
         # type: (set[Package], str) -> set[Package]
@@ -289,44 +287,47 @@ class DependencyBuilder(object):
                 if filename.endswith('.whl')}
         return whls
 
-    def _build_missing_wheels(self, sdists, whls, directory):
+    def _build_missing_wheels(self, all_deps, whls, directory):
         # type: (set[Package], set[Package], str) -> None
         # Now that `directory` has all the manylinux1 compatible binary
         # wheels we could get, and all the source distributions. We need to
         # find all the source dists that do not have a matching wheel file,
         # and try to build it to a wheel file.
-        missing_whls = sdists - whls
+        missing_whls = all_deps - whls
         for whl in missing_whls:
-            path_to_sdist = self._osutils.joinpath(directory, whl.filename)
-            self._pip.build_wheel(path_to_sdist, directory)
+            if whl.dist_type == 'sdist':
+                path_to_sdist = self._osutils.joinpath(directory, whl.filename)
+                self._pip.build_wheel(path_to_sdist, directory)
 
     def _categorize_whl_files(self, directory):
-        # type: (str) -> Tuple[List[Package, List[Package]
-        # Final pass through the directory to ensure that all whl files
-        # are present and compatible with the lambda environment.
+        # type: (str) -> Tuple[Set[Package], Set[Package]]
         final_whls = [Package(directory, filename) for filename
                       in self._osutils.get_directory_contents(directory)
                       if filename.endswith('.whl')]
-        valid_whls, invalid_whls = [], []
+        valid_whls, invalid_whls = set(), set()
         for whl in final_whls:
             if self._valid_lambda_whl(whl.filename):
-                valid_whls.append(whl)
+                valid_whls.add(whl)
             else:
-                invalid_whls.append(whl)
+                invalid_whls.add(whl)
         return valid_whls, invalid_whls
 
     def _download_dependencies(self, directory, requirements_file):
-        # type: (str, str) -> List[Package]
-        sdists = self._download_sdists(requirements_file, directory)
-        whls = self._download_binary_wheels(sdists, directory)
-        self._build_missing_wheels(sdists, whls, directory)
-        # TODO make sure that the invalid whls are in package after
-        # vendored stage.
+        # type: (str, str) -> Tuple[Set[Package], Set[Package]]
+        deps = self._download_all_dependencies(requirements_file, directory)
+        valid_whls, invalid_whls = self._categorize_whl_files(directory)
+        sdists = deps - valid_whls - invalid_whls
+        missing_whls = sdists | invalid_whls
+        valid_whls = self._download_binary_wheels(missing_whls, directory)
+        self._build_missing_wheels(deps, valid_whls, directory)
+        # Final pass to find the valid whl files and see if there are any
+        # unmet dependencies left over.
         valid_whls, _ = self._categorize_whl_files(directory)
-        return valid_whls
+        missing_whls = deps - valid_whls
+        return valid_whls, missing_whls
 
     def _install_whls(self, src_dir, dst_dir, whls):
-        # type: (str, str, List[Package]) -> None
+        # type: (str, str, Set[Package]) -> None
         if os.path.isdir(dst_dir):
             shutil.rmtree(dst_dir)
         os.makedirs(dst_dir)
@@ -342,14 +343,18 @@ class DependencyBuilder(object):
         deps_dir = self.site_package_dir(project_dir)
         if self._has_at_least_one_package(requirements_file):
             with self._osutils.tempdir() as tempdir:
-                valid_whls = self._download_dependencies(
+                valid_whls, missing_whls = self._download_dependencies(
                     tempdir, requirements_file)
                 self._install_whls(tempdir, deps_dir, valid_whls)
+            if missing_whls:
+                missing_packages = '\n'.join([p.identifier for p
+                                              in missing_whls])
+                print(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
         return deps_dir
 
     def site_package_dir(self, project_dir):
         # type: (str) -> str
-        """Returns the path to the site packages directory."""
+        """Return path to the site packages directory."""
         deps_dir = self._osutils.joinpath(
             project_dir, '.chalice', 'site-packages')
         return deps_dir
@@ -414,7 +419,7 @@ class SdistMetadataFetcher(object):
         self._osutils = osutils
 
     def _parse_pkg_info_file(self, filepath):
-        # type:(str) -> email.Message
+        # type: (str) -> Message
         with open(filepath, 'r') as f:
             data = f.read()
         parser = FeedParser()
@@ -487,10 +492,10 @@ class PipRunner(object):
 
     def _execute(self, command, args):
         # type: (str, List[str]) -> int
-        """Executes a pip command with the given arguments.
+        """Execute a pip command with the given arguments.
 
         As an implementation detail this class assumes that pip was imported
-        and uses pip.main. This gives us the correct version of python that
+        and uses ``pip.main``. This gives us the correct version of python that
         the user is intending to deploy for free, but relies on the pip main
         function not changing, which is very unlikely.
         """
@@ -503,22 +508,19 @@ class PipRunner(object):
 
     def build_wheel(self, wheel, directory):
         # type: (str, str) -> int
-        """This command builds an sdist into a wheel file."""
+        """Build an sdist into a wheel file."""
         arguments = ['--no-deps', '--wheel-dir', directory, wheel]
         return self._execute('wheel', arguments)
 
     def download_all_dependencies(self, requirements_file, directory):
         # type: (str, str) -> int
-        """This command downloads all dependencies as sdists."""
-        # None of these should fail so we can request non-binary versions of
-        # all the packages in one call to `pip download`
-        arguments = ['--no-binary=:all:', '-r', requirements_file, '--dest',
-                     directory]
+        """Download all dependencies as sdist or whl."""
+        arguments = ['-r', requirements_file, '--dest', directory]
         return self._execute('download', arguments)
 
     def download_manylinux_whls(self, packages, directory):
         # type: (List[str], str) -> None
-        """Downloads wheel files for manylinux for all the given packages."""
+        """Download wheel files for manylinux for all the given packages."""
         # If any one of these dependencies fails pip will bail out. Since we
         # are only interested in all the ones we can download, we need to feed
         # each package to pip individually. The return code of pip doesn't

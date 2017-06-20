@@ -5,7 +5,7 @@ import contextlib
 import tempfile
 import shutil
 
-from typing import IO, Dict, List, Any  # noqa
+from typing import IO, Dict, List, Any, Tuple, Iterator  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -125,11 +125,11 @@ class OSUtils(object):
         return os.path.abspath(path)
 
     def joinpath(self, *args):
-        # type: (List[str]) -> str
+        # type: (str) -> str
         return os.path.join(*args)
 
     def walk(self, path):
-        # type: (str) -> Tuple[str, str, str]
+        # type: (str) -> Iterator[Tuple[str, List[str], List[str]]]
         return os.walk(path)
 
     @contextlib.contextmanager

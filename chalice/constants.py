@@ -197,3 +197,15 @@ If you'd like to proceded, then answer the questions
 below.
 
 Please enter the project name"""
+
+
+MISSING_DEPENDENCIES_TEMPLATE = r"""
+Could not install dependencies:
+%s
+You will have to build these yourself and vendor them in
+the chalice vendor folder.
+
+Your deployment will continue but may not work correctly
+if missing dependencies are not present For more information:
+http://chalice.readthedocs.io/en/latest/topics/packaging.html
+"""

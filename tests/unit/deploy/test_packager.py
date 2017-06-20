@@ -1,7 +1,6 @@
 import sys
 import os
 import pytest
-import mock
 import zipfile
 import tarfile
 import io
@@ -41,17 +40,8 @@ def sdist_reader():
 
 
 class TestDependencyBuilder(object):
-    # build_site_packages(project_dir)
-
-    def test_build_site_packages(self, pip_runner):
-        pip, runner = pip_runner
-        osutils = mock.Mock()
-        builder = DependencyBuilder(osutils, pip_runner=runner)
-        builder.build_site_packages('directory')
-        print(osutils.call_args_list)
-
-    def test_site_package_dir_is_correct(self):
-        builder = DependencyBuilder(mock.Mock())
+    def test_site_package_dir_is_correct(self, osutils):
+        builder = DependencyBuilder(osutils)
         root = os.path.join('tmp', 'foo', 'bar')
         site_packages = builder.site_package_dir(root)
         assert site_packages == os.path.join(
@@ -61,46 +51,32 @@ class TestDependencyBuilder(object):
 class TestPackage(object):
     def test_whl_package(self):
         filename = 'foobar-1.0-py3-none-any.whl'
-        pkg = Package(filename)
+        pkg = Package('', filename)
         assert pkg.dist_type == 'whl'
         assert pkg.filename == filename
         assert pkg.identifier == 'foobar==1.0'
         assert str(pkg) == 'foobar==1.0(whl)'
 
-    def test_zip_package(self):
-        filename = 'foobar-1.0.zip'
-        pkg = Package(filename)
-        assert pkg.dist_type == 'sdist'
-        assert pkg.filename == filename
-        assert pkg.identifier == 'foobar==1.0'
-        assert str(pkg) == 'foobar==1.0(sdist)'
-
-    def test_tar_gz_package(self):
-        filename = 'foobar-1.0.tar.gz'
-        pkg = Package(filename)
-        assert pkg.dist_type == 'sdist'
-        assert pkg.filename == filename
-        assert pkg.identifier == 'foobar==1.0'
-        assert str(pkg) == 'foobar==1.0(sdist)'
-
     def test_invalid_package(self):
         with pytest.raises(InvalidSourceDistributionNameError):
-            Package('foobar.jpg')
+            Package('', 'foobar.jpg')
 
-    def test_same_pkg_sdist_and_whl_collide(self):
-        pkgs = set()
-        pkgs.add(Package('foobar-1.0-py3-none-any.whl'))
-        pkgs.add(Package('foobar-1.0.zip'))
-        assert len(pkgs) == 1
+    def test_same_pkg_sdist_and_whl_collide(self, osutils, sdist_builder):
+        with osutils.tempdir() as tempdir:
+            sdist_builder.write_fake_sdist(tempdir, 'foobar', '1.0')
+            pkgs = set()
+            pkgs.add(Package('', 'foobar-1.0-py3-none-any.whl'))
+            pkgs.add(Package(tempdir, 'foobar-1.0.zip'))
+            assert len(pkgs) == 1
 
     def test_diff_pkg_sdist_and_whl_do_not_collide(self):
         pkgs = set()
-        pkgs.add(Package('foobar-1.0-py3-none-any.whl'))
-        pkgs.add(Package('badbaz-1.0-py3-none-any.whl'))
+        pkgs.add(Package('', 'foobar-1.0-py3-none-any.whl'))
+        pkgs.add(Package('', 'badbaz-1.0-py3-none-any.whl'))
         assert len(pkgs) == 2
 
     def test_same_pkg_is_eq(self):
-        pkg = Package('foobar-1.0-py3-none-any.whl')
+        pkg = Package('', 'foobar-1.0-py3-none-any.whl')
         assert pkg == pkg
 
 
@@ -119,7 +95,7 @@ class TestPipRunner(object):
         # for getting all sdists.
         pip, runner = pip_runner
         runner.download_all_dependencies('requirements.txt', 'directory')
-        assert pip.calls[0] == ['download', '--no-binary=:all:', '-r',
+        assert pip.calls[0] == ['download', '-r',
                                 'requirements.txt', '--dest', 'directory']
 
     def test_download_wheels(self, pip_runner):
@@ -179,6 +155,23 @@ class TestSdistMetadataFetcher(object):
 
     def test_setup_tar_gz(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
+            self._SETUPTOOLS, 'foo', '1.0'
+        )
+        with osutils.tempdir() as tempdir:
+            directory, filename = self._write_fake_sdist(
+                setup_py, tempdir, 'tar.gz')
+            name, version = sdist_reader.get_package_name_and_version(
+                directory, filename)
+        assert name == 'foo'
+        assert version == '1.0'
+
+    def test_setup_tar_gz_hyphens_in_name(self, osutils, sdist_reader):
+        # The whole reason we need to use the egg info to get the name and
+        # version is that we cannot deterministically parse that information
+        # from the filenames themselves. This test puts hyphens in the name
+        # and version which would break a simple ``split("-")`` attempt to get
+        # that information.
+        setup_py = self._SETUP_PY % (
             self._SETUPTOOLS, 'foo-bar', '1.0-2b'
         )
         with osutils.tempdir() as tempdir:
@@ -188,42 +181,43 @@ class TestSdistMetadataFetcher(object):
                 directory, filename)
         assert name == 'foo-bar'
         assert version == '1.0-2b'
+
 
     def test_setup_zip(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
-            self._SETUPTOOLS, 'foo-bar', '1.0-2b'
+            self._SETUPTOOLS, 'foo', '1.0'
         )
         with osutils.tempdir() as tempdir:
             directory, filename = self._write_fake_sdist(
                 setup_py, tempdir, 'zip')
             name, version = sdist_reader.get_package_name_and_version(
                 directory, filename)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
+        assert name == 'foo'
+        assert version == '1.0'
 
     def test_distutil_tar_gz(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
-            self._DISTUTILS, 'foo-bar', '1.0-2b'
+            self._DISTUTILS, 'foo', '1.0'
         )
         with osutils.tempdir() as tempdir:
             directory, filename = self._write_fake_sdist(
                 setup_py, tempdir, 'tar.gz')
             name, version = sdist_reader.get_package_name_and_version(
                 directory, filename)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
+        assert name == 'foo'
+        assert version == '1.0'
 
     def test_distutil_zip(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
-            self._DISTUTILS, 'foo-bar', '1.0-2b'
+            self._DISTUTILS, 'foo', '1.0'
         )
         with osutils.tempdir() as tempdir:
             directory, filename = self._write_fake_sdist(
                 setup_py, tempdir, 'zip')
             name, version = sdist_reader.get_package_name_and_version(
                 directory, filename)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
+        assert name == 'foo'
+        assert version == '1.0'
 
     def test_both_tar_gz(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
@@ -239,19 +233,19 @@ class TestSdistMetadataFetcher(object):
 
     def test_both_zip(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
-            self._BOTH, 'foo-bar', '1.0-2b'
+            self._BOTH, 'foo', '1.0'
         )
         with osutils.tempdir() as tempdir:
             directory, filename = self._write_fake_sdist(
                 setup_py, tempdir, 'zip')
             name, version = sdist_reader.get_package_name_and_version(
                 directory, filename)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
+        assert name == 'foo'
+        assert version == '1.0'
 
     def test_bad_format(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
-            self._BOTH, 'foo-bar', '1.0-2b'
+            self._BOTH, 'foo', '1.0'
         )
         with osutils.tempdir() as tempdir:
             directory, filename = self._write_fake_sdist(
