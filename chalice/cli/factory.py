@@ -104,8 +104,10 @@ class CLIFactory(object):
             user_provided_params['profile'] = self.profile
         if api_gateway_stage is not None:
             user_provided_params['api_gateway_stage'] = api_gateway_stage
-        config = Config(chalice_stage_name, user_provided_params,
-                        config_from_disk, default_params)
+        config = Config(chalice_stage=chalice_stage_name,
+                        user_provided_params=user_provided_params,
+                        config_from_disk=config_from_disk,
+                        default_params=default_params)
         return config
 
     def _validate_config_from_disk(self, config):

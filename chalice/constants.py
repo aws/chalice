@@ -51,6 +51,10 @@ DEFAULT_STAGE_NAME = 'dev'
 DEFAULT_LAMBDA_TIMEOUT = 60
 DEFAULT_LAMBDA_MEMORY_SIZE = 128
 MAX_LAMBDA_DEPLOYMENT_SIZE = 50 * (1024 ** 2)
+# This is the name of the main handler used to
+# handle API gateway requests.  This is used as a key
+# in the config module.
+DEFAULT_HANDLER_NAME = 'api_handler'
 
 
 LAMBDA_TRUST_POLICY = {
