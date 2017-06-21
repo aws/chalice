@@ -14,6 +14,11 @@ Next Release (TBD)
 * Add support for view functions that share the same view url but
   differ by HTTP method
   (`#81 <https://github.com/awslabs/chalice/issues/81>`__)
+* Improve deployment error messages for deployment packages that are
+  too large
+  (`#246 <https://github.com/awslabs/chalice/issues/246>`__,
+  `#330 <https://github.com/awslabs/chalice/issues/330>`__,
+  `#380 <https://github.com/awslabs/chalice/pull/380>`__)
 
 
 0.9.0

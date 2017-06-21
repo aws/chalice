@@ -1,5 +1,6 @@
 import botocore.session
 from botocore.stub import Stubber
+import mock
 import pytest
 from pytest import fixture
 
@@ -24,7 +25,7 @@ class StubbedSession(botocore.session.Session):
     def _create_stubbed_client(self, service_name, *args, **kwargs):
         client = super(StubbedSession, self).create_client(
             service_name, *args, **kwargs)
-        stubber = StubBuilder(Stubber(client))
+        stubber = StubBuilder(ChaliceStubber(client))
         self._client_stubs[service_name] = stubber
         return client
 
@@ -79,17 +80,62 @@ class StubBuilder(object):
         # And reset the pending_args for the next stub creation.
         self.pending_args = {}
 
-    def raises_error(self, error_code, message):
+    def raises_error(self, error_code=None, message=None, error=None):
         p = self.pending_args
-        self.stub.add_client_error(p['operation_name'],
-                                   service_error_code=error_code,
-                                   service_message=message)
+        if error_code is not None and message is not None:
+            self.stub.add_client_error(p['operation_name'],
+                                       service_error_code=error_code,
+                                       service_message=message)
+        elif error is not None:
+            self.stub.add_response_error(p['operation_name'],
+                                         error)
+        else:
+            raise ValueError(
+                'Either error_code and message must be provided or '
+                'error must be provided'
+            )
         # Reset pending args for next expectation.
         self.pending_args = {}
 
     def __call__(self, **kwargs):
         self.pending_args['expected_params'] = kwargs
         return self
+
+
+# TODO: Port this functionality to inject non-ClientErrors back to botocore
+class ChaliceStubber(Stubber):
+    def add_response_error(self, method, error, expected_params=None):
+        """Adds a custom exception to the response queue
+
+        :type method: str
+        :param method: Thhe name of the service method to raise the error
+            on.
+
+        :type error: Exception
+        :param error: The customer exception to raise
+
+        :type expected_params: dict
+        :param expected_params: A dictionary of the expected parameters to
+            be called for the provided service response. The parameters match
+            the names of keyword arguments passed to that client call. If
+            any of the parameters differ a ``StubResponseError`` is thrown.
+            You can use stub.ANY to indicate a particular parameter to ignore
+            in validation. stub.ANY is only valid for top level params.
+        """
+        operation_name = self.client.meta.method_to_api_mapping.get(method)
+        response = {
+            'operation_name': operation_name,
+            'response': error,
+            'expected_params': expected_params,
+        }
+        self._queue.append(response)
+
+    def _get_response_handler(self, model, params, **kwargs):
+        response = super(ChaliceStubber, self)._get_response_handler(
+            model, params, **kwargs)
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 @fixture

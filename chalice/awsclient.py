@@ -20,11 +20,16 @@ import datetime
 import zipfile
 import shutil
 import json
+import re
 
 import botocore.session  # noqa
+from botocore.exceptions import ClientError
+from botocore.vendored.requests import ConnectionError as \
+    RequestsConnectionError
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 
 
 _STR_MAP = Optional[Dict[str, str]]
@@ -33,8 +38,37 @@ _OPT_INT = Optional[int]
 _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
+_REMOTE_CALL_ERRORS = (
+    botocore.exceptions.ClientError, RequestsConnectionError
+)
+
+
 class ResourceDoesNotExistError(Exception):
     pass
+
+
+class LambdaClientError(Exception):
+    def __init__(self, original_error, context):
+        # type: (Exception, LambdaErrorContext) -> None
+        self.original_error = original_error
+        self.context = context
+        super(LambdaClientError, self).__init__(str(original_error))
+
+
+class DeploymentPackageTooLargeError(LambdaClientError):
+    pass
+
+
+class LambdaErrorContext(object):
+    def __init__(self,
+                 function_name,       # type: str
+                 client_method_name,  # type: str
+                 deployment_size,     # type: int
+                 ):
+        # type: (...) -> None
+        self.function_name = function_name
+        self.client_method_name = client_method_name
+        self.deployment_size = deployment_size
 
 
 class TypedAWSClient(object):
@@ -92,8 +126,16 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        return self._call_client_method_with_retries(
-            self._client('lambda').create_function, kwargs)['FunctionArn']
+        try:
+            return self._call_client_method_with_retries(
+                self._client('lambda').create_function, kwargs)['FunctionArn']
+        except _REMOTE_CALL_ERRORS as e:
+            context = LambdaErrorContext(
+                function_name,
+                'create_function',
+                len(zip_contents)
+            )
+            raise self._get_lambda_code_deployment_error(e, context)
 
     def _call_client_method_with_retries(self, method, kwargs):
         # type: (_CLIENT_METHOD, Dict[str, Any]) -> Dict[str, Any]
@@ -102,17 +144,48 @@ class TypedAWSClient(object):
         while True:
             try:
                 response = method(**kwargs)
-            except client.exceptions.InvalidParameterValueException:
+            except client.exceptions.InvalidParameterValueException as e:
                 # We're assuming that if we receive an
                 # InvalidParameterValueException, it's because
                 # the role we just created can't be used by
                 # Lambda so retry until it can be.
                 self._sleep(self.DELAY_TIME)
                 attempts += 1
-                if attempts >= self.LAMBDA_CREATE_ATTEMPTS:
+                if attempts >= self.LAMBDA_CREATE_ATTEMPTS or \
+                        not self._is_iam_role_related_error(e):
                     raise
                 continue
             return response
+
+    def _is_iam_role_related_error(self, error):
+        # type: (botocore.exceptions.ClientError) -> bool
+        message = error.response['Error'].get('Message', '')
+        if re.search('role.*cannot be assumed', message):
+            return True
+        return False
+
+    def _get_lambda_code_deployment_error(self, error, context):
+        # type: (Any, LambdaErrorContext) -> LambdaClientError
+        error_cls = LambdaClientError
+        if (isinstance(error, RequestsConnectionError) and
+                context.deployment_size > MAX_LAMBDA_DEPLOYMENT_SIZE):
+            # When the zip deployment package is too large and Lambda
+            # aborts the connection as chalice is still sending it
+            # data
+            error_cls = DeploymentPackageTooLargeError
+        elif isinstance(error, ClientError):
+            code = error.response['Error'].get('Code', '')
+            message = error.response['Error'].get('Message', '')
+            if code == 'RequestEntityTooLargeException':
+                # Happens when the zipped deployment package sent to lambda
+                # is too large
+                error_cls = DeploymentPackageTooLargeError
+            elif code == 'InvalidParameterValueException' and \
+                    'Unzipped size must be smaller' in message:
+                # Happens when the contents of the unzipped deployment
+                # package sent to lambda is too large
+                error_cls = DeploymentPackageTooLargeError
+        return error_cls(error, context)
 
     def delete_function(self, function_name):
         # type: (str) -> None
@@ -140,8 +213,16 @@ class TypedAWSClient(object):
         the targeted lambda function.
         """
         lambda_client = self._client('lambda')
-        return_value = lambda_client.update_function_code(
-            FunctionName=function_name, ZipFile=zip_contents)
+        try:
+            return_value = lambda_client.update_function_code(
+                FunctionName=function_name, ZipFile=zip_contents)
+        except _REMOTE_CALL_ERRORS as e:
+            context = LambdaErrorContext(
+                function_name,
+                'update_function_code',
+                len(zip_contents)
+            )
+            raise self._get_lambda_code_deployment_error(e, context)
 
         kwargs = {}  # type: Dict[str, Any]
         if environment_variables is not None:
