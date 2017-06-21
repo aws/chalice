@@ -462,8 +462,10 @@ class LambdaDeployer(object):
             deployed_values['lambda_functions'] = {}
             return
         for auth_config in auth_handlers:
+            new_config = config.scope(chalice_stage=config.chalice_stage,
+                                      function_name=auth_config.name)
             self._deploy_auth_handler(
-                config, auth_config, stage_name, deployed_values)
+                new_config, auth_config, stage_name, deployed_values)
 
     def _deploy_auth_handler(self, config, auth_config,
                              stage_name, deployed_values):

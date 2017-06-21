@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import copy
 
 from typing import Dict, Any, Optional  # noqa
 from chalice import __version__ as current_chalice_version
@@ -266,9 +265,8 @@ class Config(object):
         # This is preferred over mutating the existing config obj.
         # We technically don't need to do a copy here, but this avoids
         # any possible issues if we ever mutate the config values.
-        instance_data = copy.deepcopy(vars(self))
         clone = self.__class__()
-        clone.__dict__ = instance_data
+        clone.__dict__ = vars(self)
         clone.chalice_stage = chalice_stage
         clone.function_name = function_name
         return clone

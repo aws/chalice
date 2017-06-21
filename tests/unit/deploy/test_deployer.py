@@ -1077,6 +1077,52 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             zip_contents=b'package contents',
         )
 
+    def test_can_create_auth_with_different_config(self, sample_app_with_auth):
+        # We're notusing create_config_obj because we want to approximate
+        # loading config from disk which contains per-lambda configuration.
+        disk_config = {
+            'app_name': 'myapp',
+            'iam_role_arn': 'role-arn',
+            'manage_iam_role': False,
+            'stages': {
+                'dev': {
+                    'lamba_timeout': 10,
+                    'lambda_functions': {
+                        'myauth': {
+                            'lambda_timeout': 20,
+                            'lambda_memory_size': 512,
+                        }
+                    }
+                }
+            }
+        }
+        config = Config(
+            'dev',
+            config_from_disk=disk_config,
+            user_provided_params={'chalice_app': sample_app_with_auth,
+                                  'project_dir': '.'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:auth-function']
+        deployer.deploy(config, None, stage_name='dev')
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-myauth',
+            handler='app.myauth',
+            role_arn='role-arn',
+            runtime=mock.ANY,
+            tags=mock.ANY,
+            zip_contents=b'package contents',
+            # These come from the 'lambda_functions.myauth' section
+            # in the config above.
+            timeout=20,
+            memory_size=512,
+        )
+
     def test_unreferenced_functions_are_deleted(self, sample_app_with_auth):
         # Existing resources is the set of resources that have
         # *previously* been deployed.
