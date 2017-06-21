@@ -38,13 +38,18 @@ _OPT_INT = Optional[int]
 _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
+_REMOTE_CALL_ERRORS = (
+    botocore.exceptions.ClientError, RequestsConnectionError
+)
+
+
 class ResourceDoesNotExistError(Exception):
     pass
 
 
 class LambdaClientError(Exception):
     def __init__(self, original_error, context):
-        # type: (Any, LambdaErrorContext) -> None
+        # type: (Exception, LambdaErrorContext) -> None
         self.original_error = original_error
         self.context = context
         super(LambdaClientError, self).__init__(str(original_error))
@@ -122,7 +127,7 @@ class TypedAWSClient(object):
         try:
             return self._call_client_method_with_retries(
                 self._client('lambda').create_function, kwargs)['FunctionArn']
-        except Exception as e:
+        except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(function_name, len(zip_contents))
             raise self._get_lambda_code_deployment_error(e, context)
 
@@ -140,14 +145,18 @@ class TypedAWSClient(object):
                 # Lambda so retry until it can be.
                 self._sleep(self.DELAY_TIME)
                 attempts += 1
-                message = e.response['Error'].get('Message', '')
-                # Do not retry if exceeded retries or does not have anything
-                # related to IAM roles.
                 if attempts >= self.LAMBDA_CREATE_ATTEMPTS or \
-                        not re.search('role.*cannot be assumed', message):
+                        not self._is_iam_role_related_error(e):
                     raise
                 continue
             return response
+
+    def _is_iam_role_related_error(self, error):
+        # type: (botocore.exceptions.ClientError) -> bool
+        message = error.response['Error'].get('Message', '')
+        if re.search('role.*cannot be assumed', message):
+            return True
+        return False
 
     def _get_lambda_code_deployment_error(self, error, context):
         # type: (Any, LambdaErrorContext) -> LambdaClientError
@@ -159,8 +168,8 @@ class TypedAWSClient(object):
             # data
             error_cls = DeploymentPackageTooLargeError
         elif isinstance(error, ClientError):
-            code = error.response['Error'].get('Code')
-            message = error.response['Error'].get('Message')
+            code = error.response['Error'].get('Code', '')
+            message = error.response['Error'].get('Message', '')
             if code == 'RequestEntityTooLargeException':
                 # Happens when the zipped deployment package sent to lambda
                 # is too large
@@ -201,7 +210,7 @@ class TypedAWSClient(object):
         try:
             return_value = lambda_client.update_function_code(
                 FunctionName=function_name, ZipFile=zip_contents)
-        except Exception as e:
+        except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(function_name, len(zip_contents))
             raise self._get_lambda_code_deployment_error(e, context)
 

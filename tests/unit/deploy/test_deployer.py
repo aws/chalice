@@ -6,6 +6,7 @@ import socket
 import pytest
 import mock
 from botocore.stub import Stubber
+from botocore.exceptions import ClientError
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from pytest import fixture
@@ -561,11 +562,19 @@ class TestDeployer(object):
         lambda_deploy.delete.assert_not_called()
         apig_deploy.delete.assert_not_called()
 
-    def test_raises_deployment_error_for_general_lambda_error(self,
+    def test_raises_deployment_error_for_botcore_client_error(self,
                                                               sample_app):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        lambda_deploy.deploy.side_effect = RuntimeError('my error')
+        lambda_deploy.deploy.side_effect = ClientError(
+            {
+                'Error': {
+                    'Code': 'AccessDenied',
+                    'Message': 'Denied'
+                }
+            },
+            'CreateFunction'
+        )
         d = Deployer(apig_deploy, lambda_deploy)
         cfg = Config.create(
             chalice_stage='dev',
@@ -575,16 +584,45 @@ class TestDeployer(object):
         with pytest.raises(ChaliceDeploymentError) as excinfo:
             d.deploy(cfg)
         assert excinfo.match('ERROR - While deploying')
+        assert excinfo.match('Denied')
+
+    def test_raises_deployment_error_for_lambda_client_error(self, sample_app):
+        lambda_deploy = mock.Mock(spec=LambdaDeployer)
+        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
+        lambda_deploy.deploy.side_effect = LambdaClientError(
+            Exception('my error'),
+            context=LambdaErrorContext(
+                function_name='foo',
+                deployment_size=1024 ** 2
+            )
+        )
+        d = Deployer(apig_deploy, lambda_deploy)
+        cfg = Config.create(
+            chalice_stage='dev',
+            chalice_app=sample_app,
+            project_dir='.',
+        )
+        with pytest.raises(ChaliceDeploymentError) as excinfo:
+            d.deploy(cfg)
+        assert excinfo.match('ERROR - While sending')
         assert excinfo.match('my error')
 
-    def test_raises_deployment_error_for_general_apig_error(self, sample_app):
+    def test_raises_deployment_error_for_apig_error(self, sample_app):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
         lambda_deploy.deploy.return_value = {
             'api_handler_name': 'lambda_function',
             'api_handler_arn': 'my_lambda_arn',
         }
-        apig_deploy.deploy.side_effect = RuntimeError('my error')
+        apig_deploy.deploy.side_effect = ClientError(
+            {
+                'Error': {
+                    'Code': 'AccessDenied',
+                    'Message': 'Denied'
+                }
+            },
+            'CreateStage'
+        )
         d = Deployer(apig_deploy, lambda_deploy)
         cfg = Config.create(
             chalice_stage='dev',
@@ -594,7 +632,7 @@ class TestDeployer(object):
         with pytest.raises(ChaliceDeploymentError) as excinfo:
             d.deploy(cfg)
         assert excinfo.match('ERROR - While deploying')
-        assert excinfo.match('my error')
+        assert excinfo.match('Denied')
 
 
 def test_noprompt_always_returns_default():

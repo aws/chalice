@@ -20,6 +20,7 @@ from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
 from chalice import app  # noqa
 from chalice import __version__ as chalice_version
 from chalice import policy
+from chalice.compat import is_broken_pipe_error
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaClientError
@@ -37,6 +38,11 @@ from chalice.policy import AppPolicyGenerator
 NULLARY = Callable[[], str]
 OPT_RESOURCES = Optional[DeployedResources]
 OPT_STR = Optional[str]
+
+
+_AWSCLIENT_EXCEPTIONS = (
+    botocore.exceptions.ClientError, LambdaClientError
+)
 
 
 def create_default_deployer(session, prompter=None):
@@ -179,7 +185,7 @@ def _validate_manage_iam_role(config):
 
 class ChaliceDeploymentError(Exception):
     def __init__(self, error):
-        # type: (Any) -> None
+        # type: (Exception) -> None
         where = self._get_error_location(error)
         msg = self._wrap_text(
             'ERROR - %s, received the following error:' % where
@@ -188,12 +194,12 @@ class ChaliceDeploymentError(Exception):
         msg += self._wrap_text(self._get_error_message(error), indent=' ')
         msg += '\n\n'
         suggestion = self._get_error_suggestion(error)
-        if suggestion:
+        if suggestion is not None:
             msg += self._wrap_text(suggestion)
         super(ChaliceDeploymentError, self).__init__(msg)
 
     def _get_error_location(self, error):
-        # type: (Any) -> str
+        # type: (Exception) -> str
         where = 'While deploying your chalice application'
         if isinstance(error, LambdaClientError):
             where = (
@@ -203,7 +209,7 @@ class ChaliceDeploymentError(Exception):
         return where
 
     def _get_error_message(self, error):
-        # type: (Any) -> str
+        # type: (Exception) -> str
         msg = str(error)
         if isinstance(error, LambdaClientError):
             if isinstance(error.original_error, RequestsConnectionError):
@@ -226,11 +232,7 @@ class ChaliceDeploymentError(Exception):
         message = connection_error.args[0].args[0]
         underlying_error = connection_error.args[0].args[1]
 
-        # In python3, this is a BrokenPipeError. However in python2, this
-        # is a socket.error that has the message 'Broken pipe' in it. So we
-        # don't want to be assuming all socket.error are broken pipes so just
-        # check if the message has 'Broken pipe' in it.
-        if 'Broken pipe' in str(underlying_error):
+        if is_broken_pipe_error(underlying_error):
             message += (
                 ' Lambda closed the connection before chalice finished '
                 'sending all of the data.'
@@ -240,7 +242,7 @@ class ChaliceDeploymentError(Exception):
         return message
 
     def _get_error_suggestion(self, error):
-        # type: (Any) -> OPT_STR
+        # type: (Exception) -> OPT_STR
         suggestion = None
         if isinstance(error, DeploymentPackageTooLargeError):
             suggestion = (
@@ -314,7 +316,7 @@ class Deployer(object):
         """
         try:
             return self._do_deploy(config, chalice_stage_name)
-        except Exception as error:
+        except _AWSCLIENT_EXCEPTIONS as error:
             raise ChaliceDeploymentError(error)
 
     def _do_deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):

@@ -430,7 +430,7 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(LambdaClientError) as excinfo:
-            awsclient.create_function('name', 'myarn', b'foo', 'pytohn2.7',
+            awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
                                       'app.app')
         assert isinstance(
             excinfo.value.original_error, botocore.exceptions.ClientError)
