@@ -92,6 +92,32 @@ Chalice
         you would like more control over how CORS is configured, you can
         provide an instance of :class:`CORSConfig`.
 
+   .. method:: authorizer(name, \*\*options)
+
+      Register a built-in authorizer.
+
+      .. code-block:: python
+
+         from chalice import Chalice, AuthResponse
+
+         app = Chalice(app_name="appname")
+
+         @app.authorizer(ttl_seconds=30)
+         def my_auth(auth_request):
+             # Validate auth_request.token, and then:
+             return AuthResponse(routes=['/'], principal_id='username')
+
+         @app.route('/', authorizer=my_auth)
+         def viewfunction(value):
+             pass
+
+      :param ttl_seconds: The number of seconds to cache this response.
+        Subsequent requests that require this authorizer will use a
+        cached response if available.  The default is 300 seconds.
+
+      :param execution_role: An optional IAM role to specify when invoking
+        the Lambda function associated with the built-in authorizer.
+
 
 Request
 =======
@@ -255,6 +281,66 @@ for an ``@app.route(authorizer=...)`` call:
   .. attribute:: header
 
      The header where the auth token will be specified.
+
+
+Built-in Authorizers
+--------------------
+
+These classes are used when defining built-in authoriers in Chalice.
+
+.. class:: AuthRequest(auth_type, token, method_arn)
+
+   An instance of this class is passed as the first argument
+   to an authorizer defined via ``@app.authorizer()``.  You
+   generally do not instantiate this class directly.
+
+   .. attribute:: auth_type
+
+      The type of authentication
+
+   .. attribute:: token
+
+      The authorization token.  This is usually the value of the
+      ``Authorization`` header.
+
+   .. attribute:: method_arn
+
+      The ARN of the API gateway being authorized.
+
+.. class:: AuthResponse(routes, principal_id, context=None)
+
+   .. attribute:: routes
+
+      A list of authorized routes.  Each element in the list
+      can either by a string route such as `"/foo/bar"` or
+      an instance of ``AuthRoute``.  If you specify the URL as
+      a string, then all supported HTTP methods will be authorized.
+      If you want to specify which HTTP methods are allowed, you
+      can use ``AuthRoute``.
+
+   .. attribute:: principal_id
+
+      The principal id of the user.
+
+   .. attribute:: context
+
+      An optional dictionary of key value pairs.  This dictionary
+      will be accessible in the ``app.current_request.context``
+      in all subsequent authorized requests for this user.
+
+.. class:: AuthRoute(path, methods)
+
+   This class be used in the ``routes`` attribute of a
+   :class:`AuthResponse` instance to get fine grained control
+   over which HTTP methods are allowed for a given route.
+
+   .. attribute:: path
+
+      The allowed route specified as a string
+
+   .. attribute:: methods
+
+      A list of allowed HTTP methods.
 
 
 APIGateway
