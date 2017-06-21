@@ -79,6 +79,10 @@ class TestPackage(object):
         pkg = Package('', 'foobar-1.0-py3-none-any.whl')
         assert pkg == pkg
 
+    def test_pkg_repr(self):
+        pkg = Package('', 'foobar-1.0-py3-none-any.whl')
+        assert repr(pkg) == 'foobar==1.0(whl)'
+
 
 class TestPipRunner(object):
     def test_build_wheel(self, pip_runner):
@@ -181,7 +185,6 @@ class TestSdistMetadataFetcher(object):
                 directory, filename)
         assert name == 'foo-bar'
         assert version == '1.0-2b'
-
 
     def test_setup_zip(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (

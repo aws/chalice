@@ -206,6 +206,6 @@ You will have to build these yourself and vendor them in
 the chalice vendor folder.
 
 Your deployment will continue but may not work correctly
-if missing dependencies are not present For more information:
+if missing dependencies are not present. For more information:
 http://chalice.readthedocs.io/en/latest/topics/packaging.html
 """

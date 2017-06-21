@@ -281,6 +281,41 @@ class TestDependencyBuilder(object):
         assert len(installed_packages) == 1
         assert 'Could not install dependencies:\nfoo==1.2' in out.getvalue()
 
+    def test_build_into_existing_dir_with_preinstalled_packages(
+            self, tmpdir, osutils, pip_runner):
+        # Same test as above so we should get foo failing and bar succeeding
+        # but in this test we started with a .chalice/site-packages directory
+        # with both foo and bar already installed. It should still fail since
+        # they may be there by happenstance, or from an incompatible version
+        # of python.
+        reqs = ['foo', 'bar']
+        pip, runner = pip_runner
+        pip.add_side_effect('download', [
+            PipSideEffect('foo-1.2.zip'),
+            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl')
+        ])
+        pip.add_side_effect('wheel', [
+            PipSideEffect('foo-1.2-cp36-cp36m-macosx_10_6_intel.whl',
+                          dirarg='--wheel-dir')
+        ])
+
+        appdir = str(_create_app_structure(tmpdir))
+        # Create preexisting installed pacakges foo and bar.
+        site_packages = os.path.join(appdir, '.chalice', 'site-packages')
+        foo = os.path.join(site_packages, 'foo')
+        os.makedirs(foo)
+        bar = os.path.join(site_packages, 'bar')
+        os.makedirs(bar)
+        self._write_requirements_txt('\n'.join(reqs), appdir)
+        builder = DependencyBuilder(osutils, runner)
+        with consume_stdout_and_stderr() as (out, _):
+            site_packages = builder.build_site_packages(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        # bar should succeed and foo should failed.
+        assert len(installed_packages) == 1
+        assert 'Could not install dependencies:\nfoo==1.2' in out.getvalue()
+
 
 def test_can_create_app_packager_with_no_autogen(tmpdir):
     appdir = _create_app_structure(tmpdir)

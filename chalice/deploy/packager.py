@@ -277,27 +277,17 @@ class DependencyBuilder(object):
                 in self._osutils.get_directory_contents(directory)}
         return deps
 
-    def _download_binary_wheels(self, sdists, directory):
-        # type: (set[Package], str) -> set[Package]
-        # Try to get binary whls for each sdist package we already have.
+    def _download_binary_wheels(self, packages, directory):
+        # type: (set[Package], str) -> None
+        # Try to get binary whls for each package that isn't compatible.
         self._pip.download_manylinux_whls(
-            [pkg.identifier for pkg in sdists], directory)
-        whls = {Package(directory, filename) for filename
-                in self._osutils.get_directory_contents(directory)
-                if filename.endswith('.whl')}
-        return whls
+            [pkg.identifier for pkg in packages], directory)
 
-    def _build_missing_wheels(self, all_deps, whls, directory):
-        # type: (set[Package], set[Package], str) -> None
-        # Now that `directory` has all the manylinux1 compatible binary
-        # wheels we could get, and all the source distributions. We need to
-        # find all the source dists that do not have a matching wheel file,
-        # and try to build it to a wheel file.
-        missing_whls = all_deps - whls
-        for whl in missing_whls:
-            if whl.dist_type == 'sdist':
-                path_to_sdist = self._osutils.joinpath(directory, whl.filename)
-                self._pip.build_wheel(path_to_sdist, directory)
+    def _build_sdists(self, sdists, directory):
+        # type: (set[Package], str) -> None
+        for sdist in sdists:
+            path_to_sdist = self._osutils.joinpath(directory, sdist.filename)
+            self._pip.build_wheel(path_to_sdist, directory)
 
     def _categorize_whl_files(self, directory):
         # type: (str) -> Tuple[Set[Package], Set[Package]]
@@ -314,14 +304,31 @@ class DependencyBuilder(object):
 
     def _download_dependencies(self, directory, requirements_file):
         # type: (str, str) -> Tuple[Set[Package], Set[Package]]
+        # Download all dependencies we can, letting pip choose what to download
         deps = self._download_all_dependencies(requirements_file, directory)
+
+        # Sort the downloaded packages into three categories:
+        # - sdists (Pip could not get a wheel so it gave us a sdist)
+        # - valid whls (lambda compatbile wheel files)
+        # - invalid whls (lambda incompatible wheel files)
         valid_whls, invalid_whls = self._categorize_whl_files(directory)
         sdists = deps - valid_whls - invalid_whls
+
+        # Find which packages we do not yet have a valid whl file for. And
+        # try to download them specifically with lambda.
         missing_whls = sdists | invalid_whls
-        valid_whls = self._download_binary_wheels(missing_whls, directory)
-        self._build_missing_wheels(deps, valid_whls, directory)
+        self._download_binary_wheels(missing_whls, directory)
+
+        # Re-count the whl files after the second download pass. Anything
+        # that has a sdist but not a valid whl file is still missing and needs
+        # to be built from source into a wheel file.
+        valid_whls, invalid_whls = self._categorize_whl_files(directory)
+        missing_whls = sdists - valid_whls
+        self._build_sdists(missing_whls, directory)
+
         # Final pass to find the valid whl files and see if there are any
-        # unmet dependencies left over.
+        # unmet dependencies left over. At this point there is nothing we can
+        # do about any missing wheel files.
         valid_whls, _ = self._categorize_whl_files(directory)
         missing_whls = deps - valid_whls
         return valid_whls, missing_whls
@@ -403,7 +410,9 @@ class Package(object):
 
 class SdistMetadataFetcher(object):
     """This is the "correct" way to get name and version from an sdist."""
-    # https://github.com/pypa/pip/blob/master/pip/utils/setuptools_build.py
+    # https://github.com/pypa/pip/blob/0bc3cc9bd927540915cd99dfe351da56c37d71d2
+    # /pip/utils/setuptools_build.py
+    # https://git.io/vQkwV
     _SETUPTOOLS_SHIM = (
         "import setuptools, tokenize;__file__=%r;"
         "f=getattr(tokenize, 'open', open)(__file__);"
