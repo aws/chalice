@@ -63,9 +63,6 @@ cognito user pool configured.
         return {"sucecss": True}
 
 
-Within a request, you can access the ``app.current_request.context`` object
-for metadata about the authenticated request.
-
 For more information about using Cognito user pools with API Gateway,
 see the `Use Amazon Cognito User Pools documentation
 <http://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html>`__.
@@ -123,13 +120,17 @@ Gateway documentation`_.  First, we'll show the code and then walk through it:
     def demo_auth(auth_request):
         token = auth_request.token
         # This is just for demo purposes as shown in the API Gateway docs.
-        # Normally you'd call an oauth provider, validae the
+        # Normally you'd call an oauth provider, validate the
         # jwt token, etc.
         # In this exampe, the token is treated as the status for demo
         # purposes.
         if token == 'allow':
             return AuthResponse(routes=['/'], principal_id='user')
         else:
+            # By specifying an empty list of routes,
+            # we're saying this user is not authorized
+            # for any URLs, which will result in an
+            # Unauthorized response.
             return AuthResponse(routes=[], principal_id='user')
 
 
