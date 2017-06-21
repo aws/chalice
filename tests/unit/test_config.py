@@ -117,13 +117,31 @@ def test_can_create_scope_obj_with_new_function():
         'lambda_timeout': 10,
         'stages': {
             'dev': {
-                'lambda_timeout': 20,
+                'manage_iam_role': True,
+                'iam_role_arn': 'role-arn',
+                'autogen_policy': True,
+                'iam_policy_file': 'policy.json',
+                'environment_variables': {'env': 'stage'},
+                'lambda_timeout': 1,
+                'lambda_memory_size': 1,
+                'tags': {'tag': 'stage'},
                 'lambda_functions': {
                     'api_handler': {
                         'lambda_timeout': 30,
                     },
                     'myauth': {
-                        'lambda_timeout': 40,
+                        # We're purposefully using different
+                        # values for everything in the stage
+                        # level config to ensure we can pull
+                        # from function scoped config properly.
+                        'manage_iam_role': True,
+                        'iam_role_arn': 'auth-role-arn',
+                        'autogen_policy': True,
+                        'iam_policy_file': 'function.json',
+                        'environment_variables': {'env': 'function'},
+                        'lambda_timeout': 2,
+                        'lambda_memory_size': 2,
+                        'tags': {'tag': 'function'},
                     }
                 }
             }
@@ -132,7 +150,14 @@ def test_can_create_scope_obj_with_new_function():
     c = Config(chalice_stage='dev', config_from_disk=disk_config)
     new_config = c.scope(chalice_stage='dev',
                          function_name='myauth')
-    assert new_config.lambda_timeout == 40
+    assert new_config.manage_iam_role == True
+    assert new_config.iam_role_arn == 'auth-role-arn'
+    assert new_config.autogen_policy == True
+    assert new_config.iam_policy_file == 'function.json'
+    assert new_config.environment_variables == {'env': 'function'}
+    assert new_config.lambda_timeout == 2
+    assert new_config.lambda_memory_size == 2
+    assert new_config.tags['tag'] == 'function'
 
 
 @pytest.mark.parametrize('stage_name,function_name,expected', [
@@ -191,9 +216,16 @@ def test_can_create_scope_new_stage_and_function(stage_name, function_name,
     assert new_config.environment_variables == {'from': expected}
 
 
+def test_new_scope_config_is_separate_copy():
+    original = Config(chalice_stage='dev', function_name='foo')
+    new_config = original.scope(chalice_stage='prod', function_name='bar')
 
-def test_can_create_scope_new_stage_only():
-    pass
+    # The original should not have been mutated.
+    assert original.chalice_stage == 'dev'
+    assert original.function_name == 'foo'
+
+    assert new_config.chalice_stage == 'prod'
+    assert new_config.function_name == 'bar'
 
 
 def test_can_create_deployed_resource_from_dict():

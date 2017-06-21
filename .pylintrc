@@ -294,9 +294,7 @@ callbacks=cb_,_cb
 [CLASSES]
 
 # List of method names used to declare (i.e. assign) instance attributes.
-# scope() is from the config obj, which is allowed to define the __dict__
-# attr as part of its implementation.
-defining-attr-methods=__init__,__new__,setUp,scope
+defining-attr-methods=__init__,__new__,setUp
 
 # List of valid names for the first argument in a class method.
 valid-classmethod-first-arg=cls

@@ -1078,7 +1078,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         )
 
     def test_can_create_auth_with_different_config(self, sample_app_with_auth):
-        # We're notusing create_config_obj because we want to approximate
+        # We're not using create_config_obj because we want to approximate
         # loading config from disk which contains per-lambda configuration.
         disk_config = {
             'app_name': 'myapp',
@@ -1086,7 +1086,8 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             'manage_iam_role': False,
             'stages': {
                 'dev': {
-                    'lamba_timeout': 10,
+                    'lambda_timeout': 10,
+                    'lambda_memory_size': 128,
                     'lambda_functions': {
                         'myauth': {
                             'lambda_timeout': 20,
@@ -1109,19 +1110,34 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.aws_client.create_function.side_effect = [
             self.lambda_arn, 'arn:auth-function']
         deployer.deploy(config, None, stage_name='dev')
-        self.aws_client.create_function.assert_called_with(
-            environment_variables={},
-            function_name='myapp-dev-myauth',
-            handler='app.myauth',
-            role_arn='role-arn',
-            runtime=mock.ANY,
-            tags=mock.ANY,
-            zip_contents=b'package contents',
-            # These come from the 'lambda_functions.myauth' section
-            # in the config above.
-            timeout=20,
-            memory_size=512,
-        )
+        create_function_calls = self.aws_client.create_function.call_args_list
+        assert create_function_calls == [
+            mock.call(
+                environment_variables={},
+                function_name='myapp-dev',
+                handler='app.app',
+                role_arn='role-arn',
+                runtime=mock.ANY,
+                tags=mock.ANY,
+                zip_contents=b'package contents',
+                # These come frmo the stage level config above.
+                timeout=10,
+                memory_size=128,
+            ),
+            mock.call(
+                environment_variables={},
+                function_name='myapp-dev-myauth',
+                handler='app.myauth',
+                role_arn='role-arn',
+                runtime=mock.ANY,
+                tags=mock.ANY,
+                zip_contents=b'package contents',
+                # These come from the 'lambda_functions.myauth' section
+                # in the config above.
+                timeout=20,
+                memory_size=512,
+            )
+        ]
 
     def test_unreferenced_functions_are_deleted(self, sample_app_with_auth):
         # Existing resources is the set of resources that have

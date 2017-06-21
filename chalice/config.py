@@ -265,10 +265,13 @@ class Config(object):
         # This is preferred over mutating the existing config obj.
         # We technically don't need to do a copy here, but this avoids
         # any possible issues if we ever mutate the config values.
-        clone = self.__class__()
-        clone.__dict__ = vars(self)
-        clone.chalice_stage = chalice_stage
-        clone.function_name = function_name
+        clone = self.__class__(
+            chalice_stage=chalice_stage,
+            function_name=function_name,
+            user_provided_params=self._user_provided_params,
+            config_from_disk=self._config_from_disk,
+            default_params=self._default_params,
+        )
         return clone
 
     def deployed_resources(self, chalice_stage_name):
