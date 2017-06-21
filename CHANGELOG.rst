@@ -19,6 +19,8 @@ Next Release (TBD)
   (`#246 <https://github.com/awslabs/chalice/issues/246>`__,
   `#330 <https://github.com/awslabs/chalice/issues/330>`__,
   `#380 <https://github.com/awslabs/chalice/pull/380>`__)
+* Add support for built-in authorizers
+  (`#356 <https://github.com/awslabs/chalice/issues/356>`__)
 
 
 0.9.0
