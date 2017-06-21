@@ -511,6 +511,7 @@ class TestCreateLambdaFunction(object):
                                       'python2.7', 'app.app')
         stubbed_session.verify_stubs()
         assert excinfo.value.context.function_name ==  'name'
+        assert excinfo.value.context.client_method_name == 'create_function'
         assert excinfo.value.context.deployment_size ==  60 * (1024 ** 2)
 
     def test_no_raise_large_deployment_error_when_small_deployment_size(
@@ -780,6 +781,8 @@ class TestUpdateLambdaFunction(object):
             awsclient.update_function('name', too_large_content)
         stubbed_session.verify_stubs()
         assert excinfo.value.context.function_name ==  'name'
+        assert (
+            excinfo.value.context.client_method_name == 'update_function_code')
         assert excinfo.value.context.deployment_size ==  60 * (1024 ** 2)
 
     def test_no_raise_large_deployment_error_when_small_deployment_size(

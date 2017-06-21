@@ -362,6 +362,7 @@ class TestChaliceDeploymentError(object):
             Exception('My Exception'),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=1024 ** 2
             )
         )
@@ -369,15 +370,32 @@ class TestChaliceDeploymentError(object):
         deploy_error_msg = str(deploy_error)
         assert (
             'ERROR - While sending your chalice handler code to '
-            'Lambda function "foo"' in deploy_error_msg
+            'Lambda to create function \n"foo"' in deploy_error_msg
         )
         assert 'My Exception' in deploy_error_msg
+
+    def test_lambda_client_error_wording_for_update(self):
+        lambda_error = LambdaClientError(
+            Exception('My Exception'),
+            context=LambdaErrorContext(
+                function_name='foo',
+                client_method_name='update_function_code',
+                deployment_size=1024 ** 2
+            )
+        )
+        deploy_error = ChaliceDeploymentError(lambda_error)
+        deploy_error_msg = str(deploy_error)
+        assert (
+            'sending your chalice handler code to '
+            'Lambda to update function' in deploy_error_msg
+        )
 
     def test_gives_where_and_suggestion_for_too_large_deployment_error(self):
         too_large_error = DeploymentPackageTooLargeError(
             Exception('Too large of deployment pacakge'),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=1024 ** 2,
             )
         )
@@ -385,7 +403,7 @@ class TestChaliceDeploymentError(object):
         deploy_error_msg = str(deploy_error)
         assert (
             'ERROR - While sending your chalice handler code to '
-            'Lambda function "foo"' in deploy_error_msg
+            'Lambda to create function \n"foo"' in deploy_error_msg
         )
         assert 'Too large of deployment pacakge' in deploy_error_msg
         assert (
@@ -398,6 +416,7 @@ class TestChaliceDeploymentError(object):
             Exception('Too large of deployment pacakge'),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=58 * (1024 ** 2),
             )
         )
@@ -419,6 +438,7 @@ class TestChaliceDeploymentError(object):
             ),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=1024 ** 2
             )
         )
@@ -437,6 +457,7 @@ class TestChaliceDeploymentError(object):
             ),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=1024 ** 2
             )
         )
@@ -457,6 +478,7 @@ class TestChaliceDeploymentError(object):
             ),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=1024 ** 2
             )
         )
@@ -593,6 +615,7 @@ class TestDeployer(object):
             Exception('my error'),
             context=LambdaErrorContext(
                 function_name='foo',
+                client_method_name='create_function',
                 deployment_size=1024 ** 2
             )
         )

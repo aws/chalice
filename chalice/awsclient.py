@@ -61,11 +61,13 @@ class DeploymentPackageTooLargeError(LambdaClientError):
 
 class LambdaErrorContext(object):
     def __init__(self,
-                 function_name,             # type: str
-                 deployment_size,           # type: int
+                 function_name,       # type: str
+                 client_method_name,  # type: str
+                 deployment_size,     # type: int
                  ):
         # type: (...) -> None
         self.function_name = function_name
+        self.client_method_name = client_method_name
         self.deployment_size = deployment_size
 
 
@@ -128,7 +130,11 @@ class TypedAWSClient(object):
             return self._call_client_method_with_retries(
                 self._client('lambda').create_function, kwargs)['FunctionArn']
         except _REMOTE_CALL_ERRORS as e:
-            context = LambdaErrorContext(function_name, len(zip_contents))
+            context = LambdaErrorContext(
+                function_name,
+                'create_function',
+                len(zip_contents)
+            )
             raise self._get_lambda_code_deployment_error(e, context)
 
     def _call_client_method_with_retries(self, method, kwargs):
@@ -211,7 +217,11 @@ class TypedAWSClient(object):
             return_value = lambda_client.update_function_code(
                 FunctionName=function_name, ZipFile=zip_contents)
         except _REMOTE_CALL_ERRORS as e:
-            context = LambdaErrorContext(function_name, len(zip_contents))
+            context = LambdaErrorContext(
+                function_name,
+                'update_function_code',
+                len(zip_contents)
+            )
             raise self._get_lambda_code_deployment_error(e, context)
 
         kwargs = {}  # type: Dict[str, Any]

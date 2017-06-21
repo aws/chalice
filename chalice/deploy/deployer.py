@@ -203,8 +203,12 @@ class ChaliceDeploymentError(Exception):
         where = 'While deploying your chalice application'
         if isinstance(error, LambdaClientError):
             where = (
-                'While sending your chalice handler code to Lambda function '
-                '"%s"' % error.context.function_name
+                'While sending your chalice handler code to Lambda to %s '
+                'function "%s"' % (
+                    self._get_verb_from_client_method(
+                        error.context.client_method_name),
+                    error.context.function_name
+                )
             )
         return where
 
@@ -271,6 +275,15 @@ class ChaliceDeploymentError(Exception):
                 initial_indent=indent, subsequent_indent=indent
             )
         )
+
+    def _get_verb_from_client_method(self, client_method_name):
+        # type: (str) -> str
+        client_method_name_to_verb = {
+            'update_function_code': 'update',
+            'create_function': 'create'
+        }
+        return client_method_name_to_verb.get(
+            client_method_name, client_method_name)
 
     def _get_mb(self, value):
         # type: (int) -> str
