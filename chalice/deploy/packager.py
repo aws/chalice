@@ -25,18 +25,20 @@ class InvalidSourceDistributionNameError(Exception):
     pass
 
 
+class MissingDependencyError(Exception):
+    def __init__(self, missing):
+        # type: (Set[Package]) -> None
+        self.missing = missing
+
+
 class LambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
     _VENDOR_DIR = 'vendor'
 
-    def __init__(self, osutils=None, dependency_builder=None):
-        # type: (Optional[OSUtils], Optional[DependencyBuilder]) -> None
-        if osutils is None:
-            osutils = OSUtils()
-        if dependency_builder is None:
-            dependency_builder = DependencyBuilder(osutils)
-        self._osutils = osutils
-        self._dependency_builder = dependency_builder
+    def __init__(self):
+        # type: () -> None
+        self._osutils = OSUtils()
+        self._dependency_builder = DependencyBuilder(self._osutils)
 
     def _get_requirements_file(self, project_dir):
         # type: (str) -> str
@@ -52,8 +54,12 @@ class LambdaDeploymentPackager(object):
             project_dir)
         if package_filename is None:
             package_filename = deployment_package_filename
-        if not self._osutils.file_exists(package_filename):
+        try:
             self._dependency_builder.build_site_packages(project_dir)
+        except MissingDependencyError as e:
+            missing_packages = '\n'.join([p.identifier for p
+                                          in e.missing])
+            print(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
         site_packages_dir = self._dependency_builder.site_package_dir(
             project_dir)
         dirname = self._osutils.dirname(
@@ -344,7 +350,7 @@ class DependencyBuilder(object):
                 z.extractall(dst_dir)
 
     def build_site_packages(self, project_dir):
-        # type: (str) -> str
+        # type: (str) -> None
         requirements_file = self._osutils.joinpath(
             project_dir, 'requirements.txt')
         deps_dir = self.site_package_dir(project_dir)
@@ -354,10 +360,7 @@ class DependencyBuilder(object):
                     tempdir, requirements_file)
                 self._install_whls(tempdir, deps_dir, valid_whls)
             if missing_whls:
-                missing_packages = '\n'.join([p.identifier for p
-                                              in missing_whls])
-                print(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
-        return deps_dir
+                raise MissingDependencyError(missing_whls)
 
     def site_package_dir(self, project_dir):
         # type: (str) -> str

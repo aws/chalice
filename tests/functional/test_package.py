@@ -1,16 +1,16 @@
-import sys
 import os
 import zipfile
-import contextlib
+import mock
 from collections import defaultdict
 
 import pytest
 from chalice.config import Config
 from chalice import Chalice
 from chalice import package
-from chalice.deploy.packager import PipRunner, DependencyBuilder
+from chalice.deploy.packager import PipRunner, DependencyBuilder, \
+    MissingDependencyError
+from chalice.compat import lambda_abi
 from chalice.utils import OSUtils
-from chalice.compat import StringIO
 from tests.conftest import FakeSdistBuilder
 
 
@@ -31,20 +31,21 @@ def sample_app():
     return app
 
 
-@contextlib.contextmanager
-def consume_stdout_and_stderr():
-    try:
-        out, err = sys.stdout, sys.stderr
-        temp_out, temp_err = StringIO(), StringIO()
-        sys.stdout, sys.stderr = temp_out, temp_err
-        yield temp_out, temp_err
-    finally:
-        sys.stdout, sys.stderr = out, err
+class PathArgumentEndingWith(object):
+    def __init__(self, filename):
+        self._filename = filename
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            filename = os.path.split(other)[-1]
+            return self._filename == filename
+        return False
 
 
 class FakePip(object):
     def __init__(self):
         self._calls = defaultdict(lambda: [])
+        self._call_history = []
         self._side_effects = defaultdict(lambda: [])
 
     def main(self, args):
@@ -53,24 +54,37 @@ class FakePip(object):
         try:
             side_effects = self._side_effects[cmd].pop(0)
             for side_effect in side_effects:
+                self._call_history.append((args, side_effect.expected_args))
                 side_effect.execute(args)
         except IndexError:
             pass
 
-    def add_side_effect(self, cmd, side_effect):
-        self._side_effects[cmd].append(side_effect)
+    def packages_to_download(self, expected_args, packages):
+        side_effects = [PipSideEffect(pkg, '--dest', expected_args) for pkg
+                        in packages]
+        self._side_effects['download'].append(side_effects)
+
+    def wheels_to_build(self, expected_args, wheels_to_build):
+        side_effects = [PipSideEffect(pkg, '--wheel-dir', expected_args)
+                        for pkg in wheels_to_build]
+        self._side_effects['wheel'].append(side_effects)
 
     @property
     def calls(self):
         return self._calls
 
+    def validate(self):
+        for call in self._call_history:
+            actual_args, expected_args = call
+            assert expected_args == actual_args
+
 
 class PipSideEffect(object):
-    def __init__(self, filename, dirarg='--dest', consume=True):
+    def __init__(self, filename, dirarg, expected_args):
         self._filename = filename
         self._package_name = filename.split('-')[0]
         self._dirarg = dirarg
-        self._consume = consume
+        self.expected_args = expected_args
 
     def _build_fake_whl(self, filepath):
         if not os.path.isfile(filepath):
@@ -102,7 +116,6 @@ class PipSideEffect(object):
                     self._build_fake_whl(filepath)
                 else:
                     self._build_fake_sdist(filepath)
-        return self._consume
 
 
 @pytest.fixture
@@ -118,59 +131,83 @@ def pip_runner():
 
 
 class TestDependencyBuilder(object):
-    def _write_requirements_txt(self, contents, directory):
+    def _write_requirements_txt(self, packages, directory):
+        contents = '\n'.join(packages)
         filepath = os.path.join(directory, 'requirements.txt')
         with open(filepath, 'w') as f:
             f.write(contents)
 
-    def test_can_get_whls_all_manylinux(self, tmpdir, osutils, pip_runner):
+    def _make_appdir_and_dependency_builder(self, reqs, tmpdir, runner):
+        appdir = str(_create_app_structure(tmpdir))
+        self._write_requirements_txt(reqs, appdir)
+        builder = DependencyBuilder(OSUtils(), runner)
+        return appdir, builder
+
+    def test_can_get_whls_all_manylinux(self, tmpdir, pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'),
-            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl',
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        site_packages = builder.build_site_packages(appdir)
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
+
+        pip.validate()
         for req in reqs:
             assert req in installed_packages
 
     def test_can_get_whls_mixed_compat(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar', 'baz']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.0-cp36-none-any.whl'),
-            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'),
-            PipSideEffect('baz-1.5-cp36-cp36m-linux_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.0-cp36-none-any.whl',
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl',
+                'baz-1.5-cp36-cp36m-linux_x86_64.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        site_packages = builder.build_site_packages(appdir)
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
+
+        pip.validate()
         for req in reqs:
             assert req in installed_packages
 
     def test_can_get_py27_whls(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar', 'baz']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.0-cp27-none-any.whl'),
-            PipSideEffect(
-                'bar-1.2-cp27-none-manylinux1_x86_64.whl'),
-            PipSideEffect('baz-1.5-cp27-cp27mu-linux_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.0-cp27-none-any.whl',
+                'bar-1.2-cp27-none-manylinux1_x86_64.whl',
+                'baz-1.5-cp27-cp27mu-linux_x86_64.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        site_packages = builder.build_site_packages(appdir)
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
+
+        pip.validate()
         for req in reqs:
             assert req in installed_packages
 
@@ -178,77 +215,114 @@ class TestDependencyBuilder(object):
                                               pip_runner):
         reqs = ['baz']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('baz-1.5-cp27-cp27m-linux_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'baz-1.5-cp27-cp27m-linux_x86_64.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        with consume_stdout_and_stderr() as (out, _):
-            site_packages = builder.build_site_packages(appdir)
+        with pytest.raises(MissingDependencyError) as e:
+            builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
+
+        missing_pacakges = list(e.value.missing)
+        pip.validate()
+        assert len(missing_pacakges) == 1
+        assert missing_pacakges[0].identifier == 'baz==1.5'
         assert len(installed_packages) == 0
-        assert 'Could not install dependencies:\nbaz==1.5' in out.getvalue()
 
     def test_does_fail_on_python_1_whl(self, tmpdir, osutils, pip_runner):
         reqs = ['baz']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('baz-1.5-cp14-cp14m-linux_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'baz-1.5-cp14-cp14m-linux_x86_64.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-
-        builder = DependencyBuilder(osutils, runner)
-        with consume_stdout_and_stderr() as (out, _):
-            site_packages = builder.build_site_packages(appdir)
+        with pytest.raises(MissingDependencyError) as e:
+            builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
-        assert len(installed_packages) == 0
-        assert 'Could not install dependencies:\nbaz==1.5' in out.getvalue()
 
-    def test_can_get_replace_incompat_whl(self, tmpdir, osutils, pip_runner):
+        missing_pacakges = list(e.value.missing)
+        pip.validate()
+        assert len(missing_pacakges) == 1
+        assert missing_pacakges[0].identifier == 'baz==1.5'
+        assert len(installed_packages) == 0
+
+    def test_can_replace_incompat_whl(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.0-cp36-none-any.whl'),
-            PipSideEffect('bar-1.2-cp36-cp36m-macosx_10_6_intel.whl'),
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.0-cp36-none-any.whl',
+                'bar-1.2-cp36-cp36m-macosx_10_6_intel.whl'
+            ]
+        )
         # Once the initial download has 1 incompatible whl file. The second,
         # more targeted download, finds manylinux1_x86_64 and downloads that.
-        pip.add_side_effect('download', [
-            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl')
-        ])
+        pip.packages_to_download(
+            expected_args=[
+                '--only-binary=:all:', '--no-deps', '--platform',
+                'manylinux1_x86_64', '--implementation', 'cp',
+                '--abi', lambda_abi, '--dest', mock.ANY,
+                'bar==1.2'
+            ],
+            packages=[
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        site_packages = builder.build_site_packages(appdir)
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
+
+        pip.validate()
         for req in reqs:
             assert req in installed_packages
 
     def test_can_build_sdist(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.2.zip'),
-            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2.zip',
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
         # Foo is built from and is pure python so it yields a compatible
         # wheel file.
-        pip.add_side_effect('wheel', [
-            PipSideEffect('foo-1.2-cp36-none-any.whl',
-                          dirarg='--wheel-dir')
-        ])
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY,
+                           PathArgumentEndingWith('foo-1.2.zip')],
+            wheels_to_build=[
+                'foo-1.2-cp36-none-any.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        site_packages = builder.build_site_packages(appdir)
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
 
+        pip.validate()
         for req in reqs:
             assert req in installed_packages
 
@@ -256,30 +330,40 @@ class TestDependencyBuilder(object):
                                                 pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.2.zip'),
-            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2.zip',
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
         # foo is compiled since downloading it failed to get any wheels. And
         # the second download for manylinux1_x86_64 wheels failed as well.
         # building in this case yields a platform specific wheel file that is
         # not compatible. In this case currently there is nothing that chalice
         # can do to install this package.
-        pip.add_side_effect('wheel', [
-            PipSideEffect('foo-1.2-cp36-cp36m-macosx_10_6_intel.whl',
-                          dirarg='--wheel-dir')
-        ])
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY,
+                           PathArgumentEndingWith('foo-1.2.zip')],
+            wheels_to_build=[
+                'foo-1.2-cp36-cp36m-macosx_10_6_intel.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        with consume_stdout_and_stderr() as (out, _):
-            site_packages = builder.build_site_packages(appdir)
+        with pytest.raises(MissingDependencyError) as e:
+            builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
-        assert len(installed_packages) == 1
-        assert 'Could not install dependencies:\nfoo==1.2' in out.getvalue()
+        missing_pacakges = list(e.value.missing)
+        pip.validate()
+        assert len(missing_pacakges) == 1
+        assert missing_pacakges[0].identifier == 'foo==1.2'
+        assert installed_packages == ['bar']
 
     def test_build_into_existing_dir_with_preinstalled_packages(
             self, tmpdir, osutils, pip_runner):
@@ -290,31 +374,46 @@ class TestDependencyBuilder(object):
         # of python.
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
-        pip.add_side_effect('download', [
-            PipSideEffect('foo-1.2.zip'),
-            PipSideEffect('bar-1.2-cp36-cp36m-manylinux1_x86_64.whl')
-        ])
-        pip.add_side_effect('wheel', [
-            PipSideEffect('foo-1.2-cp36-cp36m-macosx_10_6_intel.whl',
-                          dirarg='--wheel-dir')
-        ])
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2.zip',
+                'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
+        pip.packages_to_download(
+            expected_args=[
+                '--only-binary=:all:', '--no-deps', '--platform',
+                'manylinux1_x86_64', '--implementation', 'cp',
+                '--abi', lambda_abi, '--dest', mock.ANY,
+                'foo==1.2'
+            ],
+            packages=[
+                'foo-1.2-cp36-cp36m-macosx_10_6_intel.whl'
+            ]
+        )
 
-        appdir = str(_create_app_structure(tmpdir))
-        # Create preexisting installed pacakges foo and bar.
+        # Add two fake packages foo and bar that have previously been
+        # installed in the site-packages directory.
         site_packages = os.path.join(appdir, '.chalice', 'site-packages')
         foo = os.path.join(site_packages, 'foo')
         os.makedirs(foo)
         bar = os.path.join(site_packages, 'bar')
         os.makedirs(bar)
-        self._write_requirements_txt('\n'.join(reqs), appdir)
-        builder = DependencyBuilder(osutils, runner)
-        with consume_stdout_and_stderr() as (out, _):
-            site_packages = builder.build_site_packages(appdir)
+        with pytest.raises(MissingDependencyError) as e:
+            builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
-        assert len(installed_packages) == 1
-        assert 'Could not install dependencies:\nfoo==1.2' in out.getvalue()
+        missing_pacakges = list(e.value.missing)
+        pip.validate()
+        assert len(missing_pacakges) == 1
+        assert missing_pacakges[0].identifier == 'foo==1.2'
+        assert installed_packages == ['bar']
 
 
 def test_can_create_app_packager_with_no_autogen(tmpdir):

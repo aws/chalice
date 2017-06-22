@@ -660,6 +660,56 @@ class TestDeployer(object):
         assert excinfo.match('Denied')
 
 
+def test_deployer_does_not_reuse_pacakge_on_python_version_change(
+        app_policy, sample_app):
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents',
+                               'packages2.zip': b'rebuilt contents'})
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    packager = mock.Mock(spec=LambdaDeploymentPackager)
+
+    packager.deployment_package_filename.return_value = 'packages.zip'
+    packager.create_deployment_package.return_value = 'packages2.zip'
+    # Given the lambda function already exists:
+    aws_client.lambda_function_exists.return_value = True
+    aws_client.update_function.return_value = {"FunctionArn": "myarn"}
+    # And given we don't want chalice to manage our iam role for the lambda
+    # function:
+    cfg = Config.create(
+        chalice_stage='dev',
+        chalice_app=sample_app,
+        manage_iam_role=False,
+        app_name='appname',
+        iam_role_arn='role-arn',
+        project_dir='./myproject',
+        environment_variables={"FOO": "BAR"},
+        lambda_timeout=120,
+        lambda_memory_size=256,
+        tags={'mykey': 'myvalue'}
+    )
+
+    # Pick a fake python version that will not match our current runtime under
+    # both 2.7 and 3.6.
+    aws_client.get_function_configuration.return_value = {
+        'Runtime': 'python1.0',
+    }
+    prompter = mock.Mock(spec=NoPrompt)
+    prompter.confirm.return_value = True
+
+    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    lambda_function_name = 'lambda_function_name'
+    deployed = DeployedResources(
+        'api', 'api_handler_arn', lambda_function_name,
+        None, 'dev', None, None, {})
+    d.deploy(cfg, deployed, 'dev')
+
+    # Since the python version changed only the create_deployment_package
+    # method should be called. Injecting the lastest app would only get called
+    # if the python dependences could stay the same, so it must not be called
+    # in this case.
+    assert packager.create_deployment_package.called
+    assert packager.inject_latest_app.called is False
+
+
 def test_noprompt_always_returns_default():
     assert not NoPrompt().confirm("You sure you want to do this?",
                                   default=False)
@@ -1008,6 +1058,11 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             {self.package_name: self.package_contents})
         self.aws_client = mock.Mock(spec=TypedAWSClient)
         self.aws_client.create_function.side_effect = [self.lambda_arn]
+        # Return a python Runtime that will never match our local runtime so
+        # the deployment package is not reused.
+        self.aws_client.get_function_configuration.return_value = {
+            'Runtime': 'FakePythonVersion'
+        }
         self.packager = mock.Mock(LambdaDeploymentPackager)
         self.packager.create_deployment_package.return_value =\
             self.package_name
