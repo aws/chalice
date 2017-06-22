@@ -17,3 +17,19 @@ def sample_app():
         return {}
 
     return app
+
+
+@fixture
+def sample_app_with_auth():
+    app = Chalice('sampleauth')
+
+    @app.authorizer('myauth')
+    def myauth(auth_request):
+        pass
+
+
+    @app.route('/', authorizer=myauth)
+    def foo():
+        return {}
+
+    return app

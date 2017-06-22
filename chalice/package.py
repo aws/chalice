@@ -35,6 +35,10 @@ def create_app_packager(config):
     )
 
 
+class UnsupportedFeatureError(Exception):
+    pass
+
+
 class PreconfiguredPolicyGenerator(object):
     def __init__(self, config, policy_gen):
         # type: (Config, ApplicationPolicyHandler) -> None
@@ -81,6 +85,7 @@ class SAMTemplateGenerator(object):
 
     def generate_sam_template(self, config, code_uri='<placeholder>'):
         # type: (Config, str) -> Dict[str, Any]
+        self._check_for_unsupported_features(config)
         template = copy.deepcopy(self._BASE_TEMPLATE)
         resources = {
             'APIHandler': self._generate_serverless_function(config, code_uri),
@@ -90,6 +95,21 @@ class SAMTemplateGenerator(object):
         template['Resources'] = resources
         self._update_endpoint_url_output(template, config)
         return template
+
+    def _check_for_unsupported_features(self, config):
+        # type: (Config) -> None
+        if config.chalice_app.builtin_auth_handlers:
+            # It doesn't look like SAM templates support everything
+            # we need to fully support built in authorizers.
+            # See: awslabs/serverless-application-model#49
+            # and: https://forums.aws.amazon.com/thread.jspa?messageID=787920
+            #
+            # We might need to switch to low level cfn to fix this.
+            raise UnsupportedFeatureError(
+                "SAM templates do not currently support these "
+                "built-in auth handlers: %s" % ', '.join(
+                    [c.name for c in
+                     config.chalice_app.builtin_auth_handlers]))
 
     def _update_endpoint_url_output(self, template, config):
         # type: (Dict[str, Any], Config) -> None

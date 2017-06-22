@@ -92,6 +92,32 @@ Chalice
         you would like more control over how CORS is configured, you can
         provide an instance of :class:`CORSConfig`.
 
+   .. method:: authorizer(name, \*\*options)
+
+      Register a built-in authorizer.
+
+      .. code-block:: python
+
+         from chalice import Chalice, AuthResponse
+
+         app = Chalice(app_name="appname")
+
+         @app.authorizer(ttl_seconds=30)
+         def my_auth(auth_request):
+             # Validate auth_request.token, and then:
+             return AuthResponse(routes=['/'], principal_id='username')
+
+         @app.route('/', authorizer=my_auth)
+         def viewfunction(value):
+             pass
+
+      :param ttl_seconds: The number of seconds to cache this response.
+        Subsequent requests that require this authorizer will use a
+        cached response if available.  The default is 300 seconds.
+
+      :param execution_role: An optional IAM role to specify when invoking
+        the Lambda function associated with the built-in authorizer.
+
 
 Request
 =======
@@ -257,45 +283,115 @@ for an ``@app.route(authorizer=...)`` call:
      The header where the auth token will be specified.
 
 
+Built-in Authorizers
+--------------------
+
+These classes are used when defining built-in authoriers in Chalice.
+
+.. class:: AuthRequest(auth_type, token, method_arn)
+
+   An instance of this class is passed as the first argument
+   to an authorizer defined via ``@app.authorizer()``.  You
+   generally do not instantiate this class directly.
+
+   .. attribute:: auth_type
+
+      The type of authentication
+
+   .. attribute:: token
+
+      The authorization token.  This is usually the value of the
+      ``Authorization`` header.
+
+   .. attribute:: method_arn
+
+      The ARN of the API gateway being authorized.
+
+.. class:: AuthResponse(routes, principal_id, context=None)
+
+   .. attribute:: routes
+
+      A list of authorized routes.  Each element in the list
+      can either by a string route such as `"/foo/bar"` or
+      an instance of ``AuthRoute``.  If you specify the URL as
+      a string, then all supported HTTP methods will be authorized.
+      If you want to specify which HTTP methods are allowed, you
+      can use ``AuthRoute``.
+
+   .. attribute:: principal_id
+
+      The principal id of the user.
+
+   .. attribute:: context
+
+      An optional dictionary of key value pairs.  This dictionary
+      will be accessible in the ``app.current_request.context``
+      in all subsequent authorized requests for this user.
+
+.. class:: AuthRoute(path, methods)
+
+   This class be used in the ``routes`` attribute of a
+   :class:`AuthResponse` instance to get fine grained control
+   over which HTTP methods are allowed for a given route.
+
+   .. attribute:: path
+
+      The allowed route specified as a string
+
+   .. attribute:: methods
+
+      A list of allowed HTTP methods.
+
+
 APIGateway
 ==========
 
-There is a single instance of :class:`APIGateway` attached to each
-:class:`Chalice` object under the ``api`` attribute.
+.. class:: APIGateway()
 
-.. attribute:: default_binary_types
+   This class is used to control
+   how API Gateway interprets ``Content-Type`` headers in both requests and
+   responses.
 
-   The value of ``default_binary_types`` are the ``Content-Types`` that are
-   considered binary by default. This value should not be changed, instead you
-   should modify the ``binary_types`` list to change the behavior of a content
-   type. Its value is: ``application/octet-stream``, ``application/x-tar``, ``application/zip``, ``audio/basic``, ``audio/ogg``, ``audio/mp4``, ``audio/mpeg``, ``audio/wav``, ``audio/webm``, ``image/png``, ``image/jpg``, ``image/gif``, ``video/ogg``, ``video/mpeg``, ``video/webm``.
+   There is a single instance of this class attached to each
+   :class:`Chalice` object under the ``api`` attribute.
+
+   .. attribute:: default_binary_types
+
+      The value of ``default_binary_types`` are the ``Content-Types`` that are
+      considered binary by default. This value should not be changed, instead you
+      should modify the ``binary_types`` list to change the behavior of a content
+      type. Its value is: ``application/octet-stream``, ``application/x-tar``,
+      ``application/zip``, ``audio/basic``, ``audio/ogg``, ``audio/mp4``,
+      ``audio/mpeg``, ``audio/wav``, ``audio/webm``, ``image/png``,
+      ``image/jpg``, ``image/gif``, ``video/ogg``, ``video/mpeg``,
+      ``video/webm``.
 
 
-.. attribute:: binary_types
+   .. attribute:: binary_types
 
-   The value of ``binary_types`` controls how API Gateway interprets requests
-   and responses as detailed below.
+      The value of ``binary_types`` controls how API Gateway interprets requests
+      and responses as detailed below.
 
-   If an incoming request has a ``Content-Type`` header value that is present
-   in the ``binary_types`` list it will be assumed that its body is a sequence
-   of raw bytes. You can access these bytes by accessing the
-   ``app.current_request.raw_body`` property.
+      If an incoming request has a ``Content-Type`` header value that is present
+      in the ``binary_types`` list it will be assumed that its body is a sequence
+      of raw bytes. You can access these bytes by accessing the
+      ``app.current_request.raw_body`` property.
 
-   If an outgoing response from ``Chalice`` has a header ``Content-Type`` that
-   matches one of the ``binary_types`` its body must be a ``bytes`` type object.
-   It is important to note that originating request must have the ``Accept``
-   header for the same type as the ``Content-Type`` on the response. Otherwise
-   a ``400`` error will be returned.
+      If an outgoing response from ``Chalice`` has a header ``Content-Type`` that
+      matches one of the ``binary_types`` its body must be a ``bytes`` type object.
+      It is important to note that originating request must have the ``Accept``
+      header for the same type as the ``Content-Type`` on the response. Otherwise
+      a ``400`` error will be returned.
 
-   Implementation note: API Gateway and Lambda communicate through a JSON event
-   which is encoded using ``UTF-8``. The raw bytes are temporarily encoded
-   using
+      Implementation note: API Gateway and Lambda communicate through a JSON event
+      which is encoded using ``UTF-8``. The raw bytes are temporarily encoded
+      using
 
-   base64 when being passed between API Gateway and Labmda. In the worst case
-   this encoding can cause the binary body to be inflated up to ``4/3`` its
-   original size. Lambda only accepts an event up to ``6mb``, which means even
-   if your binary data was not quite at that limit, with the base64 encoding it
-   may exceed that limit. This will manifest as a ``502`` Bad Gateway error.
+      base64 when being passed between API Gateway and Labmda. In the worst case
+      this encoding can cause the binary body to be inflated up to ``4/3`` its
+      original size. Lambda only accepts an event up to ``6mb``, which means even
+      if your binary data was not quite at that limit, with the base64 encoding it
+      may exceed that limit. This will manifest as a ``502`` Bad Gateway error.
 
 
 CORS

@@ -417,6 +417,7 @@ class Chalice(object):
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
         self._authorizers = {}
+        self.builtin_auth_handlers = []
         if self.configure_logs:
             self._configure_logging()
 
@@ -460,6 +461,27 @@ class Chalice(object):
             'auth_type': auth_type,
             'provider_arns': provider_arns,
         }
+
+    def authorizer(self, name=None, **kwargs):
+        def _register_authorizer(auth_func):
+            auth_name = name
+            if auth_name is None:
+                auth_name = auth_func.__name__
+            ttl_seconds = kwargs.pop('ttl_seconds', None)
+            execution_role = kwargs.pop('execution_role', None)
+            if kwargs:
+                raise TypeError(
+                    'TypeError: authorizer() got unexpected keyword '
+                    'arguments: %s' % ', '.join(list(kwargs)))
+            auth_config = BuiltinAuthConfig(
+                name=auth_name,
+                handler_string='app.%s' % auth_func.__name__,
+                ttl_seconds=ttl_seconds,
+                execution_role=execution_role,
+            )
+            self.builtin_auth_handlers.append(auth_config)
+            return ChaliceAuthorizer(name, auth_func, auth_config)
+        return _register_authorizer
 
     def route(self, path, **kwargs):
         def _register_view(view_func):
@@ -626,3 +648,120 @@ class Chalice(object):
         for name, value in cors.get_access_control_headers().items():
             if name not in response.headers:
                 response.headers[name] = value
+
+
+class BuiltinAuthConfig(object):
+    def __init__(self, name, handler_string, ttl_seconds=None,
+                 execution_role=None):
+        # We'd also support all the misc config options you can set.
+        self.name = name
+        self.handler_string = handler_string
+        self.ttl_seconds = ttl_seconds
+        self.execution_role = execution_role
+
+
+class ChaliceAuthorizer(object):
+    def __init__(self, name, func, config):
+        self.name = name
+        self.func = func
+        self.config = config
+
+    def __call__(self, event, content):
+        auth_request = self._transform_event(event)
+        result = self.func(auth_request)
+        if isinstance(result, AuthResponse):
+            return result.to_dict(auth_request)
+        return result
+
+    def _transform_event(self, event):
+        return AuthRequest(event['type'],
+                           event['authorizationToken'],
+                           event['methodArn'])
+
+
+class AuthRequest(object):
+    def __init__(self, auth_type, token, method_arn):
+        self.auth_type = auth_type
+        self.token = token
+        self.method_arn = method_arn
+
+
+class AuthResponse(object):
+    ALL_HTTP_METHODS = ['DELETE', 'HEAD', 'OPTIONS',
+                        'PATCH', 'POST', 'PUT', 'GET']
+
+    def __init__(self, routes, principal_id, context=None):
+        self.routes = routes
+        self.principal_id = principal_id
+        # The request is used to generate full qualified ARNs
+        # that we need for the resource portion of the returned
+        # policy.
+        if context is None:
+            context = {}
+        self.context = context
+
+    def to_dict(self, request):
+        return {
+            'context': self.context,
+            'principalId': self.principal_id,
+            'policyDocument': self._generate_policy(request),
+        }
+
+    def _generate_policy(self, request):
+        allowed_resources = self._generate_allowed_resources(request)
+        return {
+            'Version': '2012-10-17',
+            'Statement': [
+                {
+                    'Action': 'execute-api:Invoke',
+                    'Effect': 'Allow',
+                    'Resource': allowed_resources,
+                }
+            ]
+        }
+
+    def _generate_allowed_resources(self, request):
+        allowed_resources = []
+        for route in self.routes:
+            if isinstance(route, AuthRoute):
+                methods = route.methods
+                path = route.path
+            else:
+                # If 'route' is just a string, then they've
+                # opted not to use the AuthRoute(), so we'll
+                # generate a policy that allows all HTTP methods.
+                methods = self.ALL_HTTP_METHODS
+                path = route
+            for method in methods:
+                allowed_resources.append(
+                    self._generate_arn(path, request, method))
+        return allowed_resources
+
+    def _generate_arn(self, route, request, method='*'):
+        incoming_arn = request.method_arn
+        parts = incoming_arn.rsplit(':', 1)
+        # "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth"
+        # Then we pull out the rest-api-id and stage, such that:
+        #   base = ['rest-api-id', 'stage']
+        base = parts[-1].split('/')[:2]
+        # Now we add in the path components and rejoin everything
+        # back together to make a full arn.
+        # We're also assuming all HTTP methods (via '*') for now.
+        # To support per HTTP method routes the API will need to be updated.
+        # We also need to strip off the leading ``/`` so it can be
+        # '/'.join(...)'d properly.
+        base.extend([method, route[1:]])
+        last_arn_segment = '/'.join(base)
+        if route == '/':
+            # We have to special case the '/' case.  For whatever
+            # reason, API gateway adds an extra '/' to the method_arn
+            # of the auth request, so we need to do the same thing.
+            last_arn_segment += '/'
+        final_arn = '%s:%s' % (parts[0], last_arn_segment)
+        return final_arn
+
+
+class AuthRoute(object):
+    def __init__(self, path, methods):
+        self.path = path
+        self.methods = methods

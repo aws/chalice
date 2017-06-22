@@ -64,6 +64,7 @@ Topics
    topics/packaging
    topics/pyversion
    topics/cfn
+   topics/authorizers
 
 
 API Reference

@@ -1,4 +1,5 @@
 import sys
+import pytest
 
 from chalice import __version__ as chalice_version
 from chalice.config import Config, DeployedResources
@@ -50,7 +51,10 @@ def test_can_chain_lookup():
         'project_dir': 'default_params',
     }
 
-    c = Config('dev', user_provided_params, config_from_disk, default_params)
+    c = Config(chalice_stage='dev',
+               user_provided_params=user_provided_params,
+               config_from_disk=config_from_disk,
+               default_params=default_params)
     assert c.api_gateway_stage == 'user_provided_params'
     assert c.app_name == 'config_from_disk'
     assert c.project_dir == 'default_params'
@@ -89,6 +93,141 @@ def test_can_chain_chalice_stage_values():
     assert not prod.manage_iam_role
 
 
+def test_can_chain_function_values():
+    disk_config = {
+        'lambda_timeout': 10,
+        'stages': {
+            'dev': {
+                'lambda_timeout': 20,
+                'lambda_functions': {
+                    'api_handler': {
+                        'lambda_timeout': 30,
+                    }
+                }
+            }
+        }
+    }
+    c = Config(chalice_stage='dev',
+               config_from_disk=disk_config)
+    assert c.lambda_timeout == 30
+
+
+def test_can_create_scope_obj_with_new_function():
+    disk_config = {
+        'lambda_timeout': 10,
+        'stages': {
+            'dev': {
+                'manage_iam_role': True,
+                'iam_role_arn': 'role-arn',
+                'autogen_policy': True,
+                'iam_policy_file': 'policy.json',
+                'environment_variables': {'env': 'stage'},
+                'lambda_timeout': 1,
+                'lambda_memory_size': 1,
+                'tags': {'tag': 'stage'},
+                'lambda_functions': {
+                    'api_handler': {
+                        'lambda_timeout': 30,
+                    },
+                    'myauth': {
+                        # We're purposefully using different
+                        # values for everything in the stage
+                        # level config to ensure we can pull
+                        # from function scoped config properly.
+                        'manage_iam_role': True,
+                        'iam_role_arn': 'auth-role-arn',
+                        'autogen_policy': True,
+                        'iam_policy_file': 'function.json',
+                        'environment_variables': {'env': 'function'},
+                        'lambda_timeout': 2,
+                        'lambda_memory_size': 2,
+                        'tags': {'tag': 'function'},
+                    }
+                }
+            }
+        }
+    }
+    c = Config(chalice_stage='dev', config_from_disk=disk_config)
+    new_config = c.scope(chalice_stage='dev',
+                         function_name='myauth')
+    assert new_config.manage_iam_role == True
+    assert new_config.iam_role_arn == 'auth-role-arn'
+    assert new_config.autogen_policy == True
+    assert new_config.iam_policy_file == 'function.json'
+    assert new_config.environment_variables == {'env': 'function'}
+    assert new_config.lambda_timeout == 2
+    assert new_config.lambda_memory_size == 2
+    assert new_config.tags['tag'] == 'function'
+
+
+@pytest.mark.parametrize('stage_name,function_name,expected', [
+    ('dev', 'api_handler', 'dev-api-handler'),
+    ('dev', 'myauth', 'dev-myauth'),
+    ('beta', 'api_handler', 'beta-api-handler'),
+    ('beta', 'myauth', 'beta-myauth'),
+    ('prod', 'api_handler', 'prod-stage'),
+    ('prod', 'myauth', 'prod-stage'),
+    ('foostage', 'api_handler', 'global'),
+    ('foostage', 'myauth', 'global'),
+])
+def test_can_create_scope_new_stage_and_function(stage_name, function_name,
+                                                 expected):
+    disk_config = {
+        'environment_variables': {'from': 'global'},
+        'stages': {
+            'dev': {
+                'environment_variables': {'from': 'dev-stage'},
+                'lambda_functions': {
+                    'api_handler': {
+                        'environment_variables': {
+                            'from': 'dev-api-handler',
+                        }
+                    },
+                    'myauth': {
+                        'environment_variables': {
+                            'from': 'dev-myauth',
+                        }
+                    }
+                }
+            },
+            'beta': {
+                'environment_variables': {'from': 'beta-stage'},
+                'lambda_functions': {
+                    'api_handler': {
+                        'environment_variables': {
+                            'from': 'beta-api-handler',
+                        }
+                    },
+                    'myauth': {
+                        'environment_variables': {
+                            'from': 'beta-myauth',
+                        }
+                    }
+                }
+            },
+            'prod': {
+                'environment_variables': {'from': 'prod-stage'},
+            }
+        }
+    }
+    c = Config(chalice_stage='dev', config_from_disk=disk_config)
+    new_config = c.scope(chalice_stage=stage_name,
+                         function_name=function_name)
+    assert new_config.environment_variables == {'from': expected}
+
+
+def test_new_scope_config_is_separate_copy():
+    original = Config(chalice_stage='dev', function_name='foo')
+    new_config = original.scope(chalice_stage='prod', function_name='bar')
+
+    # The original should not have been mutated.
+    assert original.chalice_stage == 'dev'
+    assert original.function_name == 'foo'
+
+    assert new_config.chalice_stage == 'prod'
+    assert new_config.function_name == 'bar'
+
+
 def test_can_create_deployed_resource_from_dict():
     d = DeployedResources.from_dict({
         'backend': 'api',
@@ -98,6 +237,7 @@ def test_can_create_deployed_resource_from_dict():
         'api_gateway_stage': 'stage',
         'region': 'region',
         'chalice_version': '1.0.0',
+        'lambda_functions': {},
     })
     assert d.backend == 'api'
     assert d.api_handler_arn == 'arn'
@@ -106,6 +246,7 @@ def test_can_create_deployed_resource_from_dict():
     assert d.api_gateway_stage == 'stage'
     assert d.region == 'region'
     assert d.chalice_version == '1.0.0'
+    assert d.lambda_functions == {}
 
 
 def test_environment_from_top_level():
@@ -114,7 +255,7 @@ def test_environment_from_top_level():
     assert c.environment_variables == config_from_disk['environment_variables']
 
 
-def test_environment_from_stage_leve():
+def test_environment_from_stage_level():
     config_from_disk = {
         'stages': {
             'prod': {
@@ -131,13 +272,23 @@ def test_env_vars_chain_merge():
     config_from_disk = {
         'environment_variables': {
             'top_level': 'foo',
-            'shared_key': 'from-top',
+            'shared_stage_key': 'from-top',
+            'shared_stage': 'from-top',
         },
         'stages': {
             'prod': {
                 'environment_variables': {
                     'stage_var': 'bar',
-                    'shared_key': 'from-stage',
+                    'shared_stage_key': 'from-stage',
+                    'shared_stage': 'from-stage',
+                },
+                'lambda_functions': {
+                    'api_handler': {
+                        'environment_variables': {
+                            'function_key': 'from-function',
+                            'shared_stage': 'from-function',
+                        }
+                    }
                 }
             }
         }
@@ -147,7 +298,9 @@ def test_env_vars_chain_merge():
     assert resolved == {
         'top_level': 'foo',
         'stage_var': 'bar',
-        'shared_key': 'from-stage',
+        'shared_stage': 'from-function',
+        'function_key': 'from-function',
+        'shared_stage_key': 'from-stage',
     }
 
 
@@ -270,13 +423,23 @@ class TestConfigureTags(object):
             'app_name': 'myapp',
             'tags': {
                 'onlyglobalkey': 'globalvalue',
-                'sharedkey': 'globalvalue'
+                'sharedkey': 'globalvalue',
+                'sharedstage': 'globalvalue',
             },
             'stages': {
                 'dev': {
                     'tags': {
                         'sharedkey': 'stagevalue',
-                        'onlystagekey': 'stagevalue'
+                        'sharedstage': 'stagevalue',
+                        'onlystagekey': 'stagevalue',
+                    },
+                    'lambda_functions': {
+                        'api_handler': {
+                            'tags': {
+                                'sharedkey': 'functionvalue',
+                                'onlyfunctionkey': 'functionvalue',
+                            }
+                        }
                     }
                 }
             }
@@ -284,8 +447,10 @@ class TestConfigureTags(object):
         c = Config('dev', config_from_disk=config_from_disk)
         assert c.tags == {
             'onlyglobalkey': 'globalvalue',
-            'sharedkey': 'stagevalue',
             'onlystagekey': 'stagevalue',
+            'onlyfunctionkey': 'functionvalue',
+            'sharedstage': 'stagevalue',
+            'sharedkey': 'functionvalue',
             'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version
         }
 

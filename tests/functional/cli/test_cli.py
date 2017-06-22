@@ -251,7 +251,8 @@ def test_can_retrieve_url(runner, mock_cli_factory):
             "backend": "api",
             "api_handler_name": "helloworld-dev",
             "api_handler_arn": "arn:...",
-            "api_gateway_stage": "dev-apig"
+            "api_gateway_stage": "dev-apig",
+            "lambda_functions": {},
         },
         "prod": {
             "rest_api_id": "rest_api_id_prod",
@@ -260,7 +261,8 @@ def test_can_retrieve_url(runner, mock_cli_factory):
             "backend": "api",
             "api_handler_name": "helloworld-dev",
             "api_handler_arn": "arn:...",
-            "api_gateway_stage": "prod-apig"
+            "api_gateway_stage": "prod-apig",
+            "lambda_functions": {},
         },
     }
     with runner.isolated_filesystem():
