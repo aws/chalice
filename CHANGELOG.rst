@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.10.0
+======
 
 * Fix issue where provided ``iam_role_arn`` was not respected on
   redeployments of chalice applications and in the CloudFormation template
