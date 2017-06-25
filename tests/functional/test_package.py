@@ -7,8 +7,11 @@ import pytest
 from chalice.config import Config
 from chalice import Chalice
 from chalice import package
-from chalice.deploy.packager import PipRunner, DependencyBuilder, \
-    MissingDependencyError
+from chalice.deploy.packager import PipRunner
+from chalice.deploy.packager import DependencyBuilder
+from chalice.deploy.packager import Package
+from chalice.deploy.packager import MissingDependencyError
+from chalice.deploy.packager import PipWrapper
 from chalice.compat import lambda_abi
 from chalice.utils import OSUtils
 from tests.conftest import FakeSdistBuilder
@@ -42,7 +45,7 @@ class PathArgumentEndingWith(object):
         return False
 
 
-class FakePip(object):
+class FakePip(PipWrapper):
     def __init__(self):
         self._calls = defaultdict(lambda: [])
         self._call_history = []
@@ -58,10 +61,15 @@ class FakePip(object):
                 side_effect.execute(args)
         except IndexError:
             pass
+        return b'', b''
 
-    def packages_to_download(self, expected_args, packages):
-        side_effects = [PipSideEffect(pkg, '--dest', expected_args) for pkg
-                        in packages]
+    def packages_to_download(self, expected_args, packages,
+                             whl_contents=None):
+        side_effects = [PipSideEffect(pkg,
+                                      '--dest',
+                                      expected_args,
+                                      whl_contents)
+                        for pkg in packages]
         self._side_effects['download'].append(side_effects)
 
     def wheels_to_build(self, expected_args, wheels_to_build):
@@ -80,16 +88,25 @@ class FakePip(object):
 
 
 class PipSideEffect(object):
-    def __init__(self, filename, dirarg, expected_args):
+    def __init__(self, filename, dirarg, expected_args, whl_contents=None):
         self._filename = filename
         self._package_name = filename.split('-')[0]
         self._dirarg = dirarg
         self.expected_args = expected_args
+        if whl_contents is None:
+            whl_contents = ['{package_name}/placeholder']
+        self._whl_contents = whl_contents
 
-    def _build_fake_whl(self, filepath):
+    def _build_fake_whl(self, directory, filename):
+        filepath = os.path.join(directory, filename)
         if not os.path.isfile(filepath):
+            package = Package(directory, filename)
             with zipfile.ZipFile(filepath, 'w') as z:
-                z.writestr('%s/placeholder' % self._package_name, b'')
+                for content_path in self._whl_contents:
+                    z.writestr(content_path.format(
+                        package_name=self._package_name,
+                        data_dir=package.data_dir
+                    ), b'')
 
     def _build_fake_sdist(self, filepath):
         # tar.gz is the same no reason to test it here as it is tested in
@@ -113,7 +130,7 @@ class PipSideEffect(object):
             if target_dir:
                 filepath = os.path.join(target_dir, self._filename)
                 if filepath.endswith('.whl'):
-                    self._build_fake_whl(filepath)
+                    self._build_fake_whl(target_dir, self._filename)
                 else:
                     self._build_fake_sdist(filepath)
 
@@ -154,6 +171,190 @@ class TestDependencyBuilder(object):
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl',
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ]
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
+    def test_can_expand_purelib_whl(self, tmpdir, pip_runner):
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=['{data_dir}/purelib/foo/placeholder']
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
+    def test_can_expand_platlib_whl(self, tmpdir, pip_runner):
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=['{data_dir}/platlib/foo/placeholder']
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
+    def test_can_expand_platlib_and_purelib(self, tmpdir, pip_runner):
+        # This wheel installs two importable libraries foo and bar, one from
+        # the wheels purelib and one from its platlib.
+        reqs = ['foo', 'bar']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=[
+                '{data_dir}/platlib/foo/placeholder',
+                '{data_dir}/purelib/bar/placeholder'
+            ]
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
+    def test_does_ignore_data(self, tmpdir, pip_runner):
+        # Make sure the wheel installer does not copy the data directory
+        # up to the root.
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=[
+                '{package_name}/placeholder',
+                '{data_dir}/data/bar/placeholder'
+            ]
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+        assert 'bar' not in installed_packages
+
+    def test_does_ignore_include(self, tmpdir, pip_runner):
+        # Make sure the wheel installer does not copy the includes directory
+        # up to the root.
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=[
+                '{package_name}/placeholder',
+                '{data_dir}/includes/bar/placeholder'
+            ]
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+        assert 'bar' not in installed_packages
+
+    def test_does_ignore_scripts(self, tmpdir, pip_runner):
+        # Make sure the wheel isntaller does not copy the scripts directory
+        # up to the root.
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=[
+                '{package_name}/placeholder',
+                '{data_dir}/scripts/bar/placeholder'
+            ]
+        )
+
+        builder.build_site_packages(appdir)
+        site_packages = builder.site_package_dir(appdir)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+        assert 'bar' not in installed_packages
+
+    def test_can_expand_platlib_and_platlib_and_root(self, tmpdir, pip_runner):
+        # This wheel installs three import names foo, bar and baz.
+        # they are from the root install directory and the platlib and purelib
+        # subdirectories in the platlib.
+        reqs = ['foo', 'bar', 'baz']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=[
+                '{package_name}/placeholder',
+                '{data_dir}/platlib/bar/placeholder',
+                '{data_dir}/purelib/baz/placeholder'
             ]
         )
 

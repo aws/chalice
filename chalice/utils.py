@@ -132,6 +132,23 @@ class OSUtils(object):
         # type: (str) -> Iterator[Tuple[str, List[str], List[str]]]
         return os.walk(path)
 
+    def copytree(self, source, destination):
+        # type: (str, str) -> None
+        if not os.path.exists(destination):
+            os.makedirs(destination)
+        names = os.listdir(source)
+        for name in names:
+            new_source = os.path.join(source, name)
+            new_destination = os.path.join(destination, name)
+            if os.path.isdir(new_source):
+                self.copytree(new_source, new_destination)
+            else:
+                shutil.copy2(new_source, new_destination)
+
+    def rmtree(self, directory):
+        # type: (str) -> None
+        shutil.rmtree(directory)
+
     @contextlib.contextmanager
     def tempdir(self):
         # type: () -> Any

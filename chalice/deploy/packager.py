@@ -3,17 +3,16 @@ import sys
 import hashlib
 import inspect
 import os
+import re
 import shutil
 import zipfile
 import tarfile
-import contextlib
 import subprocess
 from email.parser import FeedParser
 from email.message import Message  # noqa
 
-import pip
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
-from chalice.compat import StringIO, lambda_abi
+from chalice.compat import lambda_abi
 from chalice.utils import OSUtils
 from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
 
@@ -31,14 +30,20 @@ class MissingDependencyError(Exception):
         self.missing = missing
 
 
+class PipError(Exception):
+    pass
+
+
 class LambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
     _VENDOR_DIR = 'vendor'
 
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, dependency_builder=None):
+        # type: (Optional[DependencyBuilder]) -> None
         self._osutils = OSUtils()
-        self._dependency_builder = DependencyBuilder(self._osutils)
+        if dependency_builder is None:
+            dependency_builder = DependencyBuilder(self._osutils)
+        self._dependency_builder = dependency_builder
 
     def _get_requirements_file(self, project_dir):
         # type: (str) -> str
@@ -231,7 +236,7 @@ class DependencyBuilder(object):
         # type: (OSUtils, Optional[PipRunner]) -> None
         self._osutils = osutils
         if pip_runner is None:
-            pip_runner = PipRunner(pip)
+            pip_runner = PipRunner(SubprocessPip())
         self._pip = pip_runner
 
     def _valid_lambda_whl(self, filename):
@@ -339,6 +344,24 @@ class DependencyBuilder(object):
         missing_whls = deps - valid_whls
         return valid_whls, missing_whls
 
+    def _install_purelib_and_platlib(self, whl, root):
+        # type: (Package, str) -> None
+        # Take a wheel package and the directory it was just unpacked into and
+        # properly unpackage the purelib and platlib subdirectories if they
+        # are present.
+        data_dir = self._osutils.joinpath(root, whl.data_dir)
+        if not self._osutils.directory_exists(data_dir):
+            return
+        unpack_dirs = {'purelib', 'platlib'}
+        data_contents = self._osutils.get_directory_contents(data_dir)
+        for content_name in data_contents:
+            if content_name in unpack_dirs:
+                source = self._osutils.joinpath(data_dir, content_name)
+                self._osutils.copytree(source, root)
+                # No reason to keep the purelib/platlib source directory around
+                # so we delete it to conserve space in the package.
+                self._osutils.rmtree(source)
+
     def _install_whls(self, src_dir, dst_dir, whls):
         # type: (str, str, Set[Package]) -> None
         if os.path.isdir(dst_dir):
@@ -348,6 +371,7 @@ class DependencyBuilder(object):
             zipfile_path = self._osutils.joinpath(src_dir, whl.filename)
             with zipfile.ZipFile(zipfile_path, 'r') as z:
                 z.extractall(dst_dir)
+            self._install_purelib_and_platlib(whl, dst_dir)
 
     def build_site_packages(self, project_dir):
         # type: (str) -> None
@@ -378,7 +402,18 @@ class Package(object):
         self.dist_type = 'whl' if filename.endswith('whl') else 'sdist'
         self.filename = filename
         self._directory = directory
-        self.identifier = self._calculate_identifier()
+        self._name, self._version = self._calculate_name_and_version()
+
+    @property
+    def data_dir(self):
+        # type: () -> str
+        # The directory format is {distribution}-{version}.data
+        return '%s-%s.data' % (self._name, self._version)
+
+    @property
+    def identifier(self):
+        # type: () -> str
+        return '%s==%s' % (self._name, self._version)
 
     def __str__(self):
         # type: () -> str
@@ -396,9 +431,8 @@ class Package(object):
         # type: () -> int
         return hash(self.identifier)
 
-    def _calculate_identifier(self):
-        # type: () -> str
-        # Identiifer that can be fed into pip ie "name==version"
+    def _calculate_name_and_version(self):
+        # type: () -> Tuple[str, str]
         if self.dist_type == 'whl':
             # From the wheel spec (PEP 427)
             # {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-
@@ -408,13 +442,11 @@ class Package(object):
             info_fetcher = SdistMetadataFetcher()
             name, version = info_fetcher.get_package_name_and_version(
                 self._directory, self.filename)
-        return '%s==%s' % (name, version)
+        return name, version
 
 
 class SdistMetadataFetcher(object):
     """This is the "correct" way to get name and version from an sdist."""
-    # https://github.com/pypa/pip/blob/0bc3cc9bd927540915cd99dfe351da56c37d71d2
-    # /pip/utils/setuptools_build.py
     # https://git.io/vQkwV
     _SETUPTOOLS_SHIM = (
         "import setuptools, tokenize;__file__=%r;"
@@ -484,51 +516,59 @@ class SdistMetadataFetcher(object):
         return name, version
 
 
+class PipWrapper(object):
+    def main(self, args):
+        # type: (List[str]) -> Tuple[Optional[bytes], Optional[bytes]]
+        raise NotImplementedError('PipWrapper.main')
+
+
+class SubprocessPip(PipWrapper):
+    """Wrapper around calling pip through a subprocess."""
+    def main(self, args):
+        # type: (List[str]) -> Tuple[Optional[bytes], Optional[bytes]]
+        python_exe = sys.executable
+        invoke_pip = [python_exe, '-m', 'pip']
+        invoke_pip.extend(args)
+        p = subprocess.Popen(invoke_pip,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        return out, err
+
+
 class PipRunner(object):
-    """Wrapper around pip calls."""
+    """Wrapper around pip calls used by chalice."""
 
-    def __init__(self, pip_module):
-        # type: (Any) -> None
-        self._pip = pip_module
-
-    @contextlib.contextmanager
-    def _consume_stdout_and_stderr(self):
-        # type: () -> Any
-        try:
-            out, err = sys.stdout, sys.stderr
-            temp_out, temp_err = StringIO(), StringIO()
-            sys.stdout, sys.stderr = temp_out, temp_err
-            yield temp_out, temp_err
-        finally:
-            sys.stdout, sys.stderr = out, err
+    def __init__(self, pip):
+        # type: (PipWrapper) -> None
+        self._wrapped_pip = pip
 
     def _execute(self, command, args):
-        # type: (str, List[str]) -> int
-        """Execute a pip command with the given arguments.
-
-        As an implementation detail this class assumes that pip was imported
-        and uses ``pip.main``. This gives us the correct version of python that
-        the user is intending to deploy for free, but relies on the pip main
-        function not changing, which is very unlikely.
-        """
-        final_command = [command]
-        final_command.extend(args)
-        # Call pip and hide stdout/stderr
-        with self._consume_stdout_and_stderr():
-            rc = self._pip.main(final_command)
-        return rc
+        # type: (str, List[str]) -> None
+        """Execute a pip command with the given arguments."""
+        main_args = [command] + args
+        _, err = self._wrapped_pip.main(main_args)
+        if err:
+            if b'ReadTimeoutError' in err:
+                raise PipError('Read time out downloading dependencies.')
+            if b'NewConnectionError' in err:
+                raise PipError('Failed to establish a new connection when '
+                               'downloading dependencies.')
+            if b'PermissionError' in err:
+                match = re.search("Permission denied: '(.+?)'", str(err))
+                raise PipError('Do not have permissions to write to %s.'
+                               % match.group(1))
 
     def build_wheel(self, wheel, directory):
-        # type: (str, str) -> int
+        # type: (str, str) -> None
         """Build an sdist into a wheel file."""
         arguments = ['--no-deps', '--wheel-dir', directory, wheel]
-        return self._execute('wheel', arguments)
+        self._execute('wheel', arguments)
 
     def download_all_dependencies(self, requirements_file, directory):
-        # type: (str, str) -> int
+        # type: (str, str) -> None
         """Download all dependencies as sdist or whl."""
         arguments = ['-r', requirements_file, '--dest', directory]
-        return self._execute('download', arguments)
+        self._execute('download', arguments)
 
     def download_manylinux_whls(self, packages, directory):
         # type: (List[str], str) -> None

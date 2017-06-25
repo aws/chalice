@@ -6,16 +6,28 @@ import tarfile
 import io
 
 from chalice.utils import OSUtils
-from chalice.deploy.packager import Package, PipRunner, DependencyBuilder, \
-    SdistMetadataFetcher, InvalidSourceDistributionNameError
+from chalice.deploy.packager import Package
+from chalice.deploy.packager import PipRunner
+from chalice.deploy.packager import DependencyBuilder
+from chalice.deploy.packager import SdistMetadataFetcher
+from chalice.deploy.packager import InvalidSourceDistributionNameError
+from chalice.deploy.packager import SubprocessPip
+from chalice.deploy.packager import PipError
 
 
 class FakePip(object):
     def __init__(self):
         self._calls = []
+        self._returns = []
 
     def main(self, args):
         self._calls.append(args)
+        if self._returns:
+            return self._returns.pop(0)
+        return b'', b''
+
+    def add_return(self, return_pair):
+        self._returns.append(return_pair)
 
     @property
     def calls(self):
@@ -83,6 +95,20 @@ class TestPackage(object):
         pkg = Package('', 'foobar-1.0-py3-none-any.whl')
         assert repr(pkg) == 'foobar==1.0(whl)'
 
+    def test_whl_data_dir(self):
+        pkg = Package('', 'foobar-2.0-py3-none-any.whl')
+        assert pkg.data_dir == 'foobar-2.0.data'
+
+
+class TestSubprocessPip(object):
+    def test_can_invoke_pip(self):
+        pip = SubprocessPip()
+        out, err = pip.main(['--version'])
+        # Simple assertion that we can execute pip and it gives us some output
+        # and nothing on stderr.
+        assert len(out) > 0
+        assert err == b''
+
 
 class TestPipRunner(object):
     def test_build_wheel(self, pip_runner):
@@ -123,6 +149,30 @@ class TestPipRunner(object):
         pip, runner = pip_runner
         runner.download_manylinux_whls([], 'directory')
         assert len(pip.calls) == 0
+
+    def test_raise_timeout_error(self, pip_runner):
+        pip, runner = pip_runner
+        pip.add_return((b'', b'ReadTimeoutError'))
+        with pytest.raises(PipError) as einfo:
+            runner.download_all_dependencies('requirements.txt', 'directory')
+        assert str(einfo.value) == 'Read time out downloading dependencies.'
+
+    def test_raise_new_connection_error(self, pip_runner):
+        pip, runner = pip_runner
+        pip.add_return((b'', b'NewConnectionError'))
+        with pytest.raises(PipError) as einfo:
+            runner.download_all_dependencies('requirements.txt', 'directory')
+        assert str(einfo.value) == ('Failed to establish a new connection '
+                                    'when downloading dependencies.')
+
+    def test_raise_permission_error(self, pip_runner):
+        pip, runner = pip_runner
+        pip.add_return((b'', (b"PermissionError Permission denied: "
+                              b"'/foo/bar/baz.tar.gz'")))
+        with pytest.raises(PipError) as einfo:
+            runner.download_all_dependencies('requirements.txt', 'directory')
+        assert str(einfo.value) == ('Do not have permissions to write to '
+                                    '/foo/bar/baz.tar.gz.')
 
 
 class TestSdistMetadataFetcher(object):
