@@ -596,6 +596,18 @@ class LambdaDeployer(object):
             return DEFAULT_LAMBDA_MEMORY_SIZE
         return config.lambda_memory_size
 
+    def _can_reuse_deployment_package(self, config, lambda_name,
+                                      deployment_package_filename):
+        # type: (Config, str, str) -> bool
+        if not self._osutils.file_exists(deployment_package_filename):
+            return False
+        lambda_config = self._aws_client.get_function_configuration(
+            lambda_name)
+        lambda_python_version = config.lambda_python_version
+        if lambda_config['Runtime'] != lambda_python_version:
+            return False
+        return True
+
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> Dict[str, Any]
         print("Updating lambda function...")
@@ -603,9 +615,10 @@ class LambdaDeployer(object):
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
             project_dir)
-        if self._osutils.file_exists(deployment_package_filename):
-            packager.inject_latest_app(deployment_package_filename,
-                                       project_dir)
+        if self._can_reuse_deployment_package(config, lambda_name,
+                                              deployment_package_filename):
+            packager.inject_latest_app(
+                deployment_package_filename, project_dir)
         else:
             deployment_package_filename = packager.create_deployment_package(
                 project_dir)

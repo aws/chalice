@@ -1,8 +1,11 @@
 import os
 import zipfile
 import json
+import contextlib
+import tempfile
+import shutil
 
-from typing import IO, Dict, Any  # noqa
+from typing import IO, Dict, List, Any, Tuple, Iterator  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -100,6 +103,60 @@ class OSUtils(object):
             mode = 'w'
         with open(filename, mode) as f:
             f.write(contents)
+
+    def directory_exists(self, path):
+        # type: (str) -> bool
+        return os.path.isdir(path)
+
+    def get_directory_contents(self, path):
+        # type: (str) -> List[str]
+        return os.listdir(path)
+
+    def makedirs(self, path):
+        # type: (str) -> None
+        os.makedirs(path)
+
+    def dirname(self, path):
+        # type: (str) -> str
+        return os.path.dirname(path)
+
+    def abspath(self, path):
+        # type: (str) -> str
+        return os.path.abspath(path)
+
+    def joinpath(self, *args):
+        # type: (str) -> str
+        return os.path.join(*args)
+
+    def walk(self, path):
+        # type: (str) -> Iterator[Tuple[str, List[str], List[str]]]
+        return os.walk(path)
+
+    def copytree(self, source, destination):
+        # type: (str, str) -> None
+        if not os.path.exists(destination):
+            os.makedirs(destination)
+        names = os.listdir(source)
+        for name in names:
+            new_source = os.path.join(source, name)
+            new_destination = os.path.join(destination, name)
+            if os.path.isdir(new_source):
+                self.copytree(new_source, new_destination)
+            else:
+                shutil.copy2(new_source, new_destination)
+
+    def rmtree(self, directory):
+        # type: (str) -> None
+        shutil.rmtree(directory)
+
+    @contextlib.contextmanager
+    def tempdir(self):
+        # type: () -> Any
+        tempdir = tempfile.mkdtemp()
+        try:
+            yield tempdir
+        finally:
+            shutil.rmtree(tempdir)
 
 
 def getting_started_prompt(prompter):
