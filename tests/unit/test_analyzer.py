@@ -425,6 +425,39 @@ def test_dict_comp_with_no_client_calls():
     """) == {}
 
 
+def test_can_handle_gen_expr():
+    assert aws_calls("""\
+        import boto3
+        ('a' for y in [1,2,3])
+    """) == {}
+
+
+def test_can_detect_calls_in_gen_expr():
+    assert aws_calls("""\
+        import boto3
+        service_name = 'dynamodb'
+        d = boto3.client('dynamodb')
+        (d.list_tables() for i in [1,2,3])
+    """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_can_detect_calls_in_multiple_gen_exprs():
+    assert aws_calls("""\
+        import boto3
+        d = boto3.client('dynamodb')
+        (d for i in [1,2,3])
+        (d.list_tables() for j in [1,2,3])
+    """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_can_handle_list_expr_with_api_calls():
+    assert aws_calls("""\
+        import boto3
+        d = boto3.client('dynamodb')
+        [d.list_tables() for y in [1,2,3]]
+    """) == {'dynamodb': set(['list_tables'])}
+
+
 #def test_can_handle_dict_comp():
 #    assert aws_calls("""\
 #        import boto3

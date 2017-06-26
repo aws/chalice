@@ -8,6 +8,8 @@ Next Release (TBD)
 * Fix deployment issue for projects deployed with versions
   prior to 0.10.0
   (`#387 <https://github.com/awslabs/chalice/issues/387>`__)
+* Fix crash in analyzer when encountering genexprs and listcomps
+  (`#263 <https://github.com/awslabs/chalice/issues/263>`__)
 
 
 0.10.0
