@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+0.10.1
+======
 
 * Fix deployment issue for projects deployed with versions
   prior to 0.10.0
