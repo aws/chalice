@@ -249,6 +249,22 @@ def test_can_create_deployed_resource_from_dict():
     assert d.lambda_functions == {}
 
 
+def test_lambda_functions_not_required_from_dict():
+    older_version = {
+        # Older versions of chalice did not include the
+        # lambda_functions key.
+        'backend': 'api',
+        'api_handler_arn': 'arn',
+        'api_handler_name': 'name',
+        'rest_api_id': 'id',
+        'api_gateway_stage': 'stage',
+        'region': 'region',
+        'chalice_version': '1.0.0',
+    }
+    d = DeployedResources.from_dict(older_version)
+    assert d.lambda_functions == {}
+
+
 def test_environment_from_top_level():
     config_from_disk = {'environment_variables': {"foo": "bar"}}
     c = Config('dev', config_from_disk=config_from_disk)

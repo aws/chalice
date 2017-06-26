@@ -320,5 +320,8 @@ class DeployedResources(object):
             data['api_gateway_stage'],
             data['region'],
             data['chalice_version'],
-            data['lambda_functions'],
+            # Versions prior to 0.10.0 did not have
+            # the 'lambda_functions' key, so we have
+            # to default this if it's missing.
+            data.get('lambda_functions', {}),
         )

@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Fix deployment issue for projects deployed with versions
+  prior to 0.10.0
+  (`#387 <https://github.com/awslabs/chalice/issues/387>`__)
+
+
 0.10.0
 ======
 
