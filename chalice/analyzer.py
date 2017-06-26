@@ -36,7 +36,7 @@ particular ``FunctionDef`` node.
 import ast
 import symtable
 
-from typing import Dict, Set, Any, Optional, List  # noqa
+from typing import Dict, Set, Any, Optional, List, Union  # noqa
 
 
 APICallT = Dict[str, Set[str]]
@@ -266,6 +266,10 @@ class ChainedSymbolTable(object):
             if child.get_name() == name:
                 return self.__class__(child, self._global_table)
         raise ValueError("Unknown symbol name: %s" % name)
+
+    def get_sub_namespaces(self):
+        # type: () -> List[symtable.SymbolTable]
+        return self._local_table.get_children()
 
     def get_name(self):
         # type: () -> str
@@ -543,6 +547,48 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             inferred_func_type = FunctionType(inferred_type)
             self._set_inferred_type_for_node(self._current_ast_namespace,
                                              inferred_func_type)
+
+    def visit_ListComp(self, node):
+        # type: (ast.ListComp) -> None
+        # 'listcomp' is the string literal used by python
+        # to creating the SymbolTable for the corresponding
+        # list comp function.
+        self._handle_comprehension(node, 'listcomp')
+
+    def visit_GeneratorExp(self, node):
+        # type: (ast.GeneratorExp) -> None
+        # Generator expressions are an interesting case.
+        # They create a new sub scope, but they're not
+        # explicitly named.  Python just creates a table
+        # with the name "genexpr".
+        self._handle_comprehension(node, 'genexpr')
+
+    def _handle_comprehension(self, node, comprehension_type):
+        # type: (Union[ast.ListComp, ast.GeneratorExp], str) -> None
+        child_scope = self._get_matching_sub_namespace(comprehension_type)
+        if child_scope is None:
+            # If there's no child scope (listcomps in py2) then we can
+            # just analyze the node.elt node in the current scope instead
+            # of creating a new child scope.
+            self.visit(node.elt)
+            return
+        child_table = self._symbol_table.new_sub_table(child_scope)
+        child_infer = self._new_inference_scope(
+            ParsedCode(node.elt, child_table), self._binder)
+        child_infer.bind_types()
+
+    def _get_matching_sub_namespace(self, name):
+        # type: (str) -> symtable.SymbolTable
+        namespaces = [
+            t for t in self._symbol_table.get_sub_namespaces()
+            if t.get_name() == name]
+        if not namespaces:
+            return
+        # We're making a simplification and using the genexpr subnamespace.
+        # This has potential to miss a client call but we don't do
+        # inference on node.generators so this doesn't matter for now.
+        child_scope = namespaces[0]
+        return child_scope
 
     def visit(self, node):
         # type: (Any) -> None
