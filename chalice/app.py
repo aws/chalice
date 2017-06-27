@@ -428,6 +428,7 @@ class Chalice(object):
         self.log = logging.getLogger(self.app_name)
         self._authorizers = {}
         self.builtin_auth_handlers = []
+        self.event_sources = []
         if self.configure_logs:
             self._configure_logging()
 
@@ -492,6 +493,19 @@ class Chalice(object):
             self.builtin_auth_handlers.append(auth_config)
             return ChaliceAuthorizer(name, auth_func, auth_config)
         return _register_authorizer
+
+    def schedule(self, expression, name=None):
+        def _register_schedule(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            event_source = EventSource(
+                name=handler_name,
+                schedule_expression=expression,
+                handler_string='app.%s' % event_func.__name__)
+            self.event_sources.append(event_source)
+            return ScheduluedEventHandler(event_func)
+        return _register_schedule
 
     def route(self, path, **kwargs):
         def _register_view(view_func):
@@ -775,3 +789,82 @@ class AuthRoute(object):
     def __init__(self, path, methods):
         self.path = path
         self.methods = methods
+
+
+class EventSource(object):
+    def __init__(self, name, schedule_expression, handler_string):
+        self.name = name
+        self.schedule_expression = schedule_expression
+        self.handler_string = handler_string
+
+
+class ScheduleExpression(object):
+    def to_string(self):
+        raise NotImplementedError("to_string")
+
+
+class Rate(ScheduleExpression):
+    MINUTES = 'MINUTES'
+    HOURS = 'HOURS'
+    DAYS = 'DAYS'
+
+    def __init__(self, value, unit):
+        self.value = value
+        self.unit = unit
+
+    def to_string(self):
+        unit = self.unit.lower()
+        if self.value == 1:
+            # Remove the 's' from the end if it's singular.
+            # This is required by the cloudwatch events API.
+            unit = unit[:-1]
+        return 'rate(%s %s)' % (self.value, unit)
+
+
+class Cron(ScheduleExpression):
+    def __init__(self, minutes, hours, day_of_month, month, day_of_week, year):
+        self.minutes = minutes
+        self.hours = hours
+        self.day_of_month = day_of_month
+        self.month = month
+        self.day_of_week = day_of_week
+        self.year = year
+
+    def to_string(self):
+        return 'cron(%s %s %s %s %s %s)' % (
+            self.minutes,
+            self.hours,
+            self.day_of_month,
+            self.month,
+            self.day_of_week,
+            self.year,
+        )
+
+
+class ScheduluedEventHandler(object):
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, event, context):
+        event_obj = self._convert_to_obj(event)
+        return self.func(event_obj)
+
+    def _convert_to_obj(self, event_dict):
+        return CloudWatchEvent(event_dict)
+
+
+class CloudWatchEvent(object):
+    def __init__(self, event_dict):
+        self.version = event_dict['version']
+        self.account = event_dict['account']
+        self.region = event_dict['region']
+        self.detail = event_dict['detail']
+        self.detail_type = event_dict['detail-type']
+        self.source = event_dict['source']
+        self.time = event_dict['time']
+        self.event_id = event_dict['id']
+        self.resources = event_dict['resources']
+        self._event_dict = event_dict
+
+    def to_dict(self):
+        return self._event_dict
