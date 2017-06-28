@@ -810,6 +810,7 @@ def test_can_handle_builtin_auth():
     assert isinstance(authorizer, app.BuiltinAuthConfig)
     assert authorizer.name == 'my_auth'
     assert authorizer.handler_string == 'app.my_auth'
+    assert my_auth.name == 'my_auth'
 
 
 def test_builtin_auth_can_transform_event():

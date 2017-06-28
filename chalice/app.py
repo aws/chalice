@@ -491,7 +491,7 @@ class Chalice(object):
                 execution_role=execution_role,
             )
             self.builtin_auth_handlers.append(auth_config)
-            return ChaliceAuthorizer(name, auth_func, auth_config)
+            return ChaliceAuthorizer(auth_name, auth_func, auth_config)
         return _register_authorizer
 
     def schedule(self, expression, name=None):
@@ -499,12 +499,12 @@ class Chalice(object):
             handler_name = name
             if handler_name is None:
                 handler_name = event_func.__name__
-            event_source = EventSource(
+            event_source = CloudWatchEventSource(
                 name=handler_name,
                 schedule_expression=expression,
                 handler_string='app.%s' % event_func.__name__)
             self.event_sources.append(event_source)
-            return ScheduluedEventHandler(event_func)
+            return ScheduledEventHandler(event_func)
         return _register_schedule
 
     def route(self, path, **kwargs):
@@ -792,10 +792,15 @@ class AuthRoute(object):
 
 
 class EventSource(object):
-    def __init__(self, name, schedule_expression, handler_string):
+    def __init__(self, name, handler_string):
         self.name = name
-        self.schedule_expression = schedule_expression
         self.handler_string = handler_string
+
+
+class CloudWatchEventSource(EventSource):
+    def __init__(self, name, handler_string, schedule_expression):
+        super(CloudWatchEventSource, self).__init__(name, handler_string)
+        self.schedule_expression = schedule_expression
 
 
 class ScheduleExpression(object):
@@ -841,7 +846,7 @@ class Cron(ScheduleExpression):
         )
 
 
-class ScheduluedEventHandler(object):
+class ScheduledEventHandler(object):
     def __init__(self, func):
         self.func = func
 

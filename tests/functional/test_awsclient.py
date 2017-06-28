@@ -904,49 +904,48 @@ class TestAddPermissionsForAPIGateway(object):
 
     def test_can_add_permission_for_apigateway_not_needed(self, stubbed_session):
         source_arn = 'arn:aws:execute-api:us-west-2:123:rest-api-id/*'
+        wrong_action = {
+            'Action': 'lambda:NotInvoke',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': source_arn,
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 'apigateway.amazonaws.com'},
+            'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+            'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b',
+        }
+        wrong_service_name = {
+            'Action': 'lambda:Invoke',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': source_arn,
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 'NOT-apigateway.amazonaws.com'},
+            'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+            'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b',
+        }
+        correct_statement = {
+            'Action': 'lambda:InvokeFunction',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': source_arn,
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 'apigateway.amazonaws.com'},
+            'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+            'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b',
+        }
         policy = {
             'Id': 'default',
             'Statement': [
-                {'Action': 'lambda:NotInvoke',
-                 'Condition': {
-                     'ArnLike': {
-                         'AWS:SourceArn': source_arn,
-                     }
-                 },
-                 'Effect': 'Allow',
-                 'Principal': {'Service': 'apigateway.amazonaws.com'},
-                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
-                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
-                {'Action': 'lambda:InvokeFunction',
-                 'Condition': {
-                     'ArnLike': {
-                         'AWS:SourceArn': 'not-source-arn',
-                     }
-                 },
-                 'Effect': 'Allow',
-                 'Principal': {'Service': 'apigateway.amazonaws.com'},
-                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
-                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
-                {'Action': 'lambda:InvokeFunction',
-                 'Condition': {
-                     'ArnLike': {
-                         'AWS:SourceArn': source_arn,
-                     }
-                 },
-                 'Effect': 'Allow',
-                 'Principal': {'Service': 'NOT-apigateway.amazonaws.com'},
-                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
-                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
-                {'Action': 'lambda:InvokeFunction',
-                 'Condition': {
-                     'ArnLike': {
-                         'AWS:SourceArn': source_arn,
-                     }
-                 },
-                 'Effect': 'Allow',
-                 'Principal': {'Service': 'apigateway.amazonaws.com'},
-                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
-                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
+                wrong_action,
+                wrong_service_name,
+                correct_statement,
             ],
             'Version': '2012-10-17'
         }

@@ -12,6 +12,7 @@ from botocore.vendored.requests import ConnectionError as \
 from pytest import fixture
 
 from chalice import __version__ as chalice_version
+from chalice import Rate
 from chalice.app import Chalice
 from chalice.app import CORSConfig
 from chalice.awsclient import TypedAWSClient
@@ -144,7 +145,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
     # The rest_api_id does not exist which will trigger
     # the initial import
     deployed = DeployedResources(
-        None, None, None, 'existing-id', 'dev', None, None, None)
+        None, None, None, 'existing-id', 'dev', None, None, {})
     aws_client.rest_api_exists.return_value = True
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
@@ -168,7 +169,7 @@ def test_api_gateway_deployer_delete(config_obj):
 
     rest_api_id = 'abcdef1234'
     deployed = DeployedResources(
-        None, None, None, rest_api_id, 'dev', None, None, None)
+        None, None, None, rest_api_id, 'dev', None, None, {})
     aws_client.rest_api_exists.return_value = True
 
     d = APIGatewayDeployer(aws_client)
@@ -182,7 +183,7 @@ def test_api_gateway_deployer_delete_already_deleted(capsys):
     aws_client.delete_rest_api.side_effect = ResourceDoesNotExistError(
         rest_api_id)
     deployed = DeployedResources(
-        None, None, None, rest_api_id, 'dev', None, None, None)
+        None, None, None, rest_api_id, 'dev', None, None, {})
     aws_client.rest_api_exists.return_value = True
     d = APIGatewayDeployer(aws_client)
     d.delete(deployed)
@@ -731,7 +732,7 @@ def test_lambda_deployer_delete():
     lambda_function_name = 'api-handler'
     deployed = DeployedResources(
         'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None, {'name': 'auth-arn'})
+        None, 'dev', None, None, {'name': {'arn': 'auth-arn'}})
     d = LambdaDeployer(
         aws_client, None, CustomConfirmPrompt(True), None, None)
     d.delete(deployed)
@@ -752,7 +753,7 @@ def test_lambda_deployer_delete_already_deleted(capsys):
         lambda_function_name)
     deployed = DeployedResources(
         'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None, None)
+        None, 'dev', None, None, {})
     d = LambdaDeployer(
         aws_client, None, NoPrompt(), None, None)
     d.delete(deployed)
@@ -790,7 +791,7 @@ def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
         'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None, None)
+        None, 'dev', None, None, {})
     with pytest.raises(RuntimeError):
         d.deploy(cfg, deployed, 'dev')
 
@@ -980,7 +981,8 @@ class TestAuthHandlersAreAuthorized(object):
             ),
             'api_handler_name': 'myapp-dev',
             'lambda_functions': {
-                'myapp-dev-myauth': 'myauth:arn',
+                'myapp-dev-myauth': {'arn': 'myauth:arn',
+                                     'type': 'authorizer'},
             },
         }
         aws_client.import_rest_api.return_value = 'rest-api-id'
@@ -1034,7 +1036,8 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         deployed = deployer.deploy(config, None, stage_name='dev')
         assert 'lambda_functions' in deployed
         assert deployed['lambda_functions'] == {
-            'myapp-dev-myauth': 'arn:auth-function',
+            'myapp-dev-myauth': {'arn': 'arn:auth-function',
+                                 'type': 'authorizer'}
         }
         self.aws_client.create_function.assert_called_with(
             environment_variables={},
@@ -1050,6 +1053,64 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             zip_contents=b'package contents',
         )
 
+    def test_can_create_scheduled_events(self, sample_app):
+        @sample_app.schedule('rate(1 hour)')
+        def foo(event):
+            pass
+
+        config = self.create_config_obj(sample_app)
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.get_or_create_rule_arn.return_value = 'rule-arn'
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:event-function']
+        deployed = deployer.deploy(config, None, stage_name='dev')
+        assert 'lambda_functions' in deployed
+        assert deployed['lambda_functions'] == {
+            'myapp-dev-foo': {'arn': 'arn:event-function',
+                              'type': 'scheduled_event'}
+        }
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-foo',
+            handler='app.foo',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents=b'package contents',
+        )
+        self.aws_client.get_or_create_rule_arn.assert_called_with(
+            'myapp-dev-foo', 'rate(1 hour)')
+        self.aws_client.connect_rule_to_lambda.assert_called_with(
+            'myapp-dev-foo', 'arn:event-function')
+        self.aws_client.add_permission_for_scheduled_event.assert_called_with(
+            'rule-arn', 'arn:event-function')
+
+    def test_can_create_scheduled_events_with_obj(self, sample_app):
+        @sample_app.schedule(Rate(value=1, unit=Rate.HOURS))
+        def foo(event):
+            pass
+        config = self.create_config_obj(sample_app)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.get_or_create_rule_arn.return_value = 'rule-arn'
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:event-function']
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        deployer.deploy(config, None, stage_name='dev')
+
+        # For this test we just want to double check that the
+        # Rate object was properly converted to a string value.
+        self.aws_client.get_or_create_rule_arn.assert_called_with(
+            'myapp-dev-foo', 'rate(1 hour)')
+
     def test_can_update_auth_handlers(self, sample_app_with_auth):
         config = self.create_config_obj(sample_app_with_auth)
         deployer = LambdaDeployer(
@@ -1062,7 +1123,8 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         deployed = deployer.deploy(config, None, stage_name='dev')
         assert 'lambda_functions' in deployed
         assert deployed['lambda_functions'] == {
-            'myapp-dev-myauth': 'arn:auth-function',
+            'myapp-dev-myauth': {'arn': 'arn:auth-function',
+                                 'type': 'authorizer'}
         }
         self.aws_client.update_function.assert_called_with(
             environment_variables={},
@@ -1167,7 +1229,11 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             'arn:not-referenced-anymore')
         # And the old-arn is not in the deployed resources
         assert deployed['lambda_functions'] == {
-            'api-handler-name-myauth': 'arn:new-auth-function'}
+            'api-handler-name-myauth': {
+                'arn': 'arn:new-auth-function',
+                'type': 'authorizer'
+            }
+        }
 
     def test_lambda_deployer_defaults(self, sample_app):
         cfg = self.create_config_obj(sample_app)

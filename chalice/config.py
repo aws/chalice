@@ -308,6 +308,25 @@ class DeployedResources(object):
         self.region = region
         self.chalice_version = chalice_version
         self.lambda_functions = lambda_functions
+        self._fixup_lambda_functions_if_needed()
+
+    def _fixup_lambda_functions_if_needed(self):
+        # type: () -> None
+        # In version 0.10.0 of chalice, 'lambda_functions'
+        # was introduced where the value was just the string ARN.
+        # With the introduction of scheduled events, we need to
+        # be able to distinguish the purpose of the lambda function.
+        # To smooth this over, we'll convert the old format to the
+        # new one.  The deployer.py module will take care of writing out
+        # a new deployed.json in the correct format.
+        if all(isinstance(v, dict) for v in self.lambda_functions.values()):
+            return
+        for k, v in self.lambda_functions.items():
+            # In 0.10.0 the only type of lambda function we supported
+            # was custom authorizers so we can safely assume the type
+            # was authorizer.
+            self.lambda_functions[k] = {'type': 'authorizer',
+                                        'arn': v}
 
     @classmethod
     def from_dict(cls, data):
