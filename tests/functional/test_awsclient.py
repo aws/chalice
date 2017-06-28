@@ -906,17 +906,48 @@ class TestAddPermissionsForAPIGateway(object):
         source_arn = 'arn:aws:execute-api:us-west-2:123:rest-api-id/*'
         policy = {
             'Id': 'default',
-            'Statement': [{
-                'Action': 'lambda:InvokeFunction',
-                'Condition': {
-                    'ArnLike': {
-                        'AWS:SourceArn': source_arn,
-                    }
-                },
-                'Effect': 'Allow',
-                'Principal': {'Service': 'apigateway.amazonaws.com'},
-                'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
-                'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'}],
+            'Statement': [
+                {'Action': 'lambda:NotInvoke',
+                 'Condition': {
+                     'ArnLike': {
+                         'AWS:SourceArn': source_arn,
+                     }
+                 },
+                 'Effect': 'Allow',
+                 'Principal': {'Service': 'apigateway.amazonaws.com'},
+                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
+                {'Action': 'lambda:InvokeFunction',
+                 'Condition': {
+                     'ArnLike': {
+                         'AWS:SourceArn': 'not-source-arn',
+                     }
+                 },
+                 'Effect': 'Allow',
+                 'Principal': {'Service': 'apigateway.amazonaws.com'},
+                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
+                {'Action': 'lambda:InvokeFunction',
+                 'Condition': {
+                     'ArnLike': {
+                         'AWS:SourceArn': source_arn,
+                     }
+                 },
+                 'Effect': 'Allow',
+                 'Principal': {'Service': 'NOT-apigateway.amazonaws.com'},
+                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
+                {'Action': 'lambda:InvokeFunction',
+                 'Condition': {
+                     'ArnLike': {
+                         'AWS:SourceArn': source_arn,
+                     }
+                 },
+                 'Effect': 'Allow',
+                 'Principal': {'Service': 'apigateway.amazonaws.com'},
+                 'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+                 'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b'},
+            ],
             'Version': '2012-10-17'
         }
         stubbed_session.stub('lambda').get_policy(
@@ -1059,4 +1090,80 @@ def test_update_api_from_swagger(stubbed_session):
 
     awsclient.update_api_from_swagger('rest_api_id',
                                         swagger_doc)
+    stubbed_session.verify_stubs()
+
+
+def test_can_get_or_create_rule_arn(stubbed_session):
+    events = stubbed_session.stub('events')
+    events.put_rule(
+        Name='rule-name',
+        ScheduleExpression='rate(1 hour)').returns({
+            'RuleArn': 'rule-arn',
+        })
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    result = awsclient.get_or_create_rule_arn('rule-name', 'rate(1 hour)')
+    stubbed_session.verify_stubs()
+    assert result == 'rule-arn'
+
+
+def test_can_connect_rule_to_lambda(stubbed_session):
+    events = stubbed_session.stub('events')
+    events.put_targets(
+        Rule='rule-name',
+        Targets=[{'Id': '1', 'Arn': 'function-arn'}]).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.connect_rule_to_lambda('rule-name', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_add_permission_for_scheduled_event(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.get_policy(FunctionName='function-arn').returns(
+        {'Policy': '{}'})
+    lambda_client.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='function-arn',
+        StatementId=stub.ANY,
+        Principal='events.amazonaws.com',
+        SourceArn='rule-arn'
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_permission_for_scheduled_event(
+        'rule-arn', 'function-arn')
+
+    stubbed_session.verify_stubs()
+
+
+def test_skip_if_permission_already_granted(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    policy = {
+        'Id': 'default',
+        'Statement': [
+            {'Action': 'lambda:InvokeFunction',
+                'Condition': {
+                    'ArnLike': {
+                        'AWS:SourceArn': 'rule-arn',
+                    }
+                },
+                'Effect': 'Allow',
+                'Principal': {'Service': 'events.amazonaws.com'},
+                'Resource': 'resource-arn',
+                'Sid': 'statement-id'},
+        ],
+        'Version': '2012-10-17'
+    }
+    lambda_client.get_policy(
+        FunctionName='function-arn').returns({'Policy': json.dumps(policy)})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_permission_for_scheduled_event(
+        'rule-arn', 'function-arn')
     stubbed_session.verify_stubs()
