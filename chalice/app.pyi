@@ -111,6 +111,7 @@ class Chalice(object):
     authorizers = ... # type: Dict[str, Dict[str, Any]]
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
     event_sources = ... # type: List[CloudWatchEventSource]
+    pure_lambda_functions = ... # type: List[LambdaFunction]
 
     def __init__(self, app_name: str) -> None: ...
 
@@ -180,3 +181,9 @@ class Cron(ScheduleExpression):
     year = ... # type: Union[str, int]
 
     def to_string(self) -> str: ...
+
+
+class LambdaFunction(object):
+    name = ... # type: str
+    handler_string = ... # type: str
+    func = ... # type: Callable[..., Any]

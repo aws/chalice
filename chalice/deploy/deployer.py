@@ -421,10 +421,24 @@ class LambdaDeployer(object):
                                    deployed_values)
         self._deploy_event_sources(config, existing_resources, stage_name,
                                    deployed_values)
+        self._deploy_pure_lambda_functions(config, existing_resources,
+                                           stage_name, deployed_values)
         if existing_resources is not None:
             self._cleanup_unreferenced_functions(existing_resources,
                                                  deployed_values)
         return deployed_values
+
+    def _deploy_pure_lambda_functions(self, config, existing_resources,
+                                      stage_name, deployed_values):
+        # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
+        for lambda_function in config.chalice_app.pure_lambda_functions:
+            new_config = config.scope(chalice_stage=config.chalice_stage,
+                                      function_name=lambda_function.name)
+            self._deploy_single_lambda_function(
+                new_config, lambda_function.name,
+                lambda_function.handler_string,
+                stage_name, deployed_values, 'pure_lambda'
+            )
 
     def _cleanup_unreferenced_functions(self, existing_resources,
                                         deployed_values):
