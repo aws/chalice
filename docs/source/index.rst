@@ -65,6 +65,7 @@ Topics
    topics/pyversion
    topics/cfn
    topics/authorizers
+   topics/events
 
 
 API Reference

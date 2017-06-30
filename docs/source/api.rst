@@ -118,6 +118,46 @@ Chalice
       :param execution_role: An optional IAM role to specify when invoking
         the Lambda function associated with the built-in authorizer.
 
+   .. method:: schedule(expression, name=None)
+
+      Register a scheduled event that's invoked on a regular schedule.
+      This will create a lambda function associated with the decorated
+      function.  It will also schedule the lambda function to be invoked
+      with a scheduled CloudWatch Event.
+
+      See :doc:`events` for more information.
+
+      .. code-block:: python
+
+          @app.schedule('cron(15 10 ? * 6L 2002-2005)')
+          def cron_handler(event):
+              pass
+
+          @app.schedule('rate(5 minutes)')
+          def rate_handler(event):
+              pass
+
+          @app.schedule(Rate(5, unit=Rate.MINUTES))
+          def rate_obj_handler(event):
+              pass
+
+          @app.schedule(Cron(15, 10, '?', '*', '6L', '2002-2005'))
+          def cron_obj_handler(event):
+              pass
+
+
+      :param expression: The schedule expression to use for the CloudWatch
+        event rule.  This value can either be a string value or an
+        instance of type ``ScheduleExpression``, which is either a
+        :class:`Cron` or :class:`Rate` object.  If a string value is
+        provided, it will be provided directly as the ``ScheduleExpression``
+        value in the `PutRule <http://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax>`__ API
+        call.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
 
 Request
 =======
@@ -448,3 +488,178 @@ CORS
 
      A boolean value that sets the value of
      ``Access-Control-Allow-Credentials``.
+
+
+Scheduled Events
+================
+
+.. versionadded:: 0.11.0
+
+.. class:: Rate(value, unit)
+
+  An instance of this class can be used as the ``expression`` value
+  in the :meth:`Chalice.schedule` method:
+
+  .. code-block:: python
+
+     @app.schedule(Rate(5, unit=Rate.MINUTES))
+     def handler(event):
+         pass
+
+  Examples:
+
+  .. code-block:: python
+
+      # Run every minute.
+      Rate(1, unit=Rate.MINUTES)
+
+      # Run every 2 hours.
+      Rate(2, unit=Rate.HOURS)
+
+  .. attribute:: value
+
+     An integer value that presents the amount of time to wait
+     between invocations of the scheduled event.
+
+  .. attribute:: unit
+
+     The unit of the provided ``value`` attribute.  This can be
+     either ``Rate.MINUTES``, ``Rate.HOURS``, or ``Rate.DAYS``.
+
+  .. attribute:: MINUTES, HOURS, DAYS
+
+     These values should be used for the ``unit`` attribute.
+
+
+.. class:: Cron(minutes, hours, day_of_month, month, day_of_week, year)
+
+  An instance of this class can be used as the ``expression`` value
+  in the :meth:`Chalice.schedule` method.
+
+  .. code-block:: python
+
+     @app.schedule(Cron(15, 10, '?', '*', '6L', '2002-2005'))
+     def handler(event):
+         pass
+
+  It provides more capabilities than the :class:`Rate`
+  class.  There are a few limits:
+
+  * You can't specify ``day_of_month`` and ``day_of_week`` fields in
+    the same Cron expression.  If you specify a value in one of the
+    fields, you must use a ``?`` in the other.
+  * Cron expressions that lead to rates faster than 1 minute are not
+    supported.
+
+  For more information, see the API
+  `docs page <http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions>`__.
+
+  Examples:
+
+  .. code-block:: python
+
+      # Run at 10:00am (UTC) every day.
+      Cron(0, 10, '*', '*', '?', '*')
+
+      # Run at 12:15pm (UTC) every day.
+      Cron(15, 12, '*', '*', '?', '*')
+
+      # Run at 06:00pm (UTC) every Monday through Friday.
+      Cron(0, 18, '?', '*', 'MON-FRI', '*')
+
+      # Run at 08:00am (UTC) every 1st day of the month.
+      Cron(0, 8, 1, '*', '?', '*')
+
+      # Run every 15 minutes.
+      Cron('0/15', '*', '*', '*', '?', '*')
+
+      # Run every 10 minutes Monday through Friday.
+      Cron('0/10', '*', '?', '*', 'MON-FRI', '*')
+
+      # Run every 5 minutes Monday through Friday between
+      # 08:00am and 5:55pm (UTC).
+      Cron('0/5', '8-17', '?', '*', 'MON-FRI', '*')
+
+
+.. class:: CloudWatchEvent()
+
+   This is the input argument for a scheduled event.
+
+   .. code-block:: python
+
+      @app.schedule('rate(1 hour)')
+      def every_hour(event: CloudWatchEvent):
+          pass
+
+   In the code example above, the ``event`` argument is of
+   type ``CloudWatchEvent``, which will have the following
+   attributes.
+
+   .. attribute:: version
+
+      By default, this is set to 0 (zero) in all events.
+
+   .. attribute:: account
+
+      The 12-digit number identifying an AWS account.
+
+   .. attribute:: region
+
+      Identifies the AWS region where the event originated.
+
+   .. attribute:: detail
+
+      For scheduled events, this will be an empty dictionary.
+
+   .. attribute:: detail_type
+
+      For scheduled events, this value will be ``"Scheduled Event"``.
+
+   .. attribute:: source
+
+      Identifies the service that sourced the event. All events sourced from
+      within AWS will begin with "aws." Customer-generated events can have any
+      value here as long as it doesn't begin with "aws." We recommend the use
+      of java package-name style reverse domain-name strings.
+
+      For scheduled events, this will be ``aws.events``.
+
+   .. attribute:: time
+
+      The event timestamp, which can be specified by the service originating
+      the event. If the event spans a time interval, the service might choose
+      to report the start time, so this value can be noticeably before the time
+      the event is actually received.
+
+   .. attribute:: event_id
+
+      A unique value is generated for every event. This can be helpful in
+      tracing events as they move through rules to targets, and are processed.
+
+   .. attribute:: resources
+
+      This JSON array contains ARNs that identify resources that are involved
+      in the event. Inclusion of these ARNs is at the discretion of the
+      service.
+
+      For scheduled events, this will include the ARN of the CloudWatch
+      rule that triggered this event.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``CloudWatchEvent``
+      object.  Example::
+
+          {'account': '123457940291',
+           'detail': {},
+           'detail-type': 'Scheduled Event',
+           'id': '12345678-b9f1-4667-9c5e-39f98e9a6113',
+           'region': 'us-west-2',
+           'resources': ['arn:aws:events:us-west-2:123457940291:rule/testevents-dev-every_minute'],
+           'source': 'aws.events',
+           'time': '2017-06-30T23:28:38Z',
+           'version': '0'}
