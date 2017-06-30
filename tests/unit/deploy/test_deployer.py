@@ -709,13 +709,17 @@ class TestDeployer(object):
 
 def test_deployer_does_not_reuse_pacakge_on_python_version_change(
         app_policy, sample_app):
-    osutils = InMemoryOSUtils({'packages.zip': b'package contents',
-                               'packages2.zip': b'rebuilt contents'})
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
 
-    packager.deployment_package_filename.return_value = 'packages.zip'
-    packager.create_deployment_package.return_value = 'packages2.zip'
+    def write_deployment_file(*args, **kwargs):
+        osutils.set_file_contents('package2.zip', b'changed contents')
+        return 'package2.zip'
+
+    packager.deployment_package_filename.return_value = 'packages2.zip'
+    packager.create_deployment_package.side_effect = write_deployment_file
+
     # Given the lambda function already exists:
     aws_client.lambda_function_exists.return_value = True
     aws_client.update_function.return_value = {"FunctionArn": "myarn"}
@@ -937,6 +941,7 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
         timeout=120, memory_size=256,
     )
 
+
 class TestValidateCORS(object):
     def test_cant_have_options_with_cors(self, sample_app):
         @sample_app.route('/badcors', methods=['GET', 'OPTIONS'], cors=True)
@@ -992,6 +997,7 @@ class TestValidateCORS(object):
             expose_headers=['X-Special-Header'],
             allow_credentials=True
         )
+
         @sample_app.route('/cors', methods=['GET'], cors=custom_cors)
         def cors():
             pass
@@ -1003,6 +1009,7 @@ class TestValidateCORS(object):
             expose_headers=['X-Special-Header'],
             allow_credentials=True
         )
+
         @sample_app.route('/cors', methods=['PUT'], cors=same_custom_cors)
         def same_cors():
             pass

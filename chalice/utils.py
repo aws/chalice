@@ -4,8 +4,9 @@ import json
 import contextlib
 import tempfile
 import shutil
+import tarfile
 
-from typing import IO, Dict, List, Any, Tuple, Iterator  # noqa
+from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -68,6 +69,8 @@ def create_zip_file(source_dir, outfile):
 
 
 class OSUtils(object):
+    ZIP_DEFLATED = zipfile.ZIP_DEFLATED
+
     def open(self, filename, mode):
         # type: (str, str) -> IO
         return open(filename, mode)
@@ -95,6 +98,15 @@ class OSUtils(object):
         with open(filename, mode) as f:
             return f.read()
 
+    @contextlib.contextmanager
+    def get_file_context(self, filename, mode='r'):
+        # type: (str, str) -> Iterator[BinaryIO]
+        try:
+            f = open(filename, mode)
+            yield f
+        finally:
+            f.close()
+
     def set_file_contents(self, filename, contents, binary=True):
         # type: (str, str, bool) -> None
         if binary:
@@ -103,6 +115,26 @@ class OSUtils(object):
             mode = 'w'
         with open(filename, mode) as f:
             f.write(contents)
+
+    def unpack_zipfile(self, zipfile_path, unpack_dir):
+        # type: (str, str) -> None
+        with zipfile.ZipFile(zipfile_path, 'r') as z:
+            z.extractall(unpack_dir)
+
+    @contextlib.contextmanager
+    def zipfile_context(self, filename, mode='r',
+                        compression=zipfile.ZIP_STORED):
+        # type: (str, str, int) -> Iterator[zipfile.ZipFile]
+        try:
+            z = zipfile.ZipFile(filename, mode=mode, compression=compression)
+            yield z
+        finally:
+            z.close()
+
+    def unpack_tarfile(self, tarfile_path, unpack_dir):
+        # type: (str, str) -> None
+        with tarfile.open(tarfile_path, 'r:gz') as tar:
+            tar.extractall(unpack_dir)
 
     def directory_exists(self, path):
         # type: (str) -> bool
@@ -135,8 +167,8 @@ class OSUtils(object):
     def copytree(self, source, destination):
         # type: (str, str) -> None
         if not os.path.exists(destination):
-            os.makedirs(destination)
-        names = os.listdir(source)
+            self.makedirs(destination)
+        names = self.get_directory_contents(source)
         for name in names:
             new_source = os.path.join(source, name)
             new_destination = os.path.join(destination, name)
@@ -148,6 +180,10 @@ class OSUtils(object):
     def rmtree(self, directory):
         # type: (str) -> None
         shutil.rmtree(directory)
+
+    def move(self, source, destination):
+        # type: (str, str) -> None
+        shutil.move(source, destination)
 
     @contextlib.contextmanager
     def tempdir(self):

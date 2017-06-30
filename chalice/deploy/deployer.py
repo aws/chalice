@@ -54,8 +54,8 @@ def create_default_deployer(session, prompter=None):
     aws_client = TypedAWSClient(session)
     api_gateway_deploy = APIGatewayDeployer(aws_client)
 
-    packager = LambdaDeploymentPackager()
     osutils = OSUtils()
+    packager = LambdaDeploymentPackager(osutils=osutils)
     lambda_deploy = LambdaDeployer(
         aws_client, packager, prompter, osutils,
         ApplicationPolicyHandler(
@@ -565,7 +565,8 @@ class LambdaDeployer(object):
         role_arn = self._get_or_create_lambda_role_arn(
             config, api_handler_name)
         zip_contents = self._osutils.get_file_contents(
-            self._packager.deployment_package_filename(config.project_dir),
+            self._packager.deployment_package_filename(
+                config.project_dir, config.lambda_python_version),
             binary=True)
         function_name = api_handler_name + '-' + name
         if self._aws_client.lambda_function_exists(function_name):
@@ -661,7 +662,7 @@ class LambdaDeployer(object):
         print("Initial creation of lambda function.")
         role_arn = self._get_or_create_lambda_role_arn(config, function_name)
         zip_filename = self._packager.create_deployment_package(
-            config.project_dir)
+            config.project_dir, config.lambda_python_version)
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
 
@@ -689,32 +690,19 @@ class LambdaDeployer(object):
             return DEFAULT_LAMBDA_MEMORY_SIZE
         return config.lambda_memory_size
 
-    def _can_reuse_deployment_package(self, config, lambda_name,
-                                      deployment_package_filename):
-        # type: (Config, str, str) -> bool
-        if not self._osutils.file_exists(deployment_package_filename):
-            return False
-        lambda_config = self._aws_client.get_function_configuration(
-            lambda_name)
-        lambda_python_version = config.lambda_python_version
-        if lambda_config['Runtime'] != lambda_python_version:
-            return False
-        return True
-
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> Dict[str, Any]
         print("Updating lambda function...")
         project_dir = config.project_dir
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
-            project_dir)
-        if self._can_reuse_deployment_package(config, lambda_name,
-                                              deployment_package_filename):
+            project_dir, config.lambda_python_version)
+        if self._osutils.file_exists(deployment_package_filename):
             packager.inject_latest_app(
                 deployment_package_filename, project_dir)
         else:
             deployment_package_filename = packager.create_deployment_package(
-                project_dir)
+                project_dir, config.lambda_python_version)
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         role_arn = self._get_or_create_lambda_role_arn(config, lambda_name)

@@ -38,7 +38,8 @@ def test_can_create_deployment_package(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app')
     chalice_dir = appdir.join('.chalice')
-    chalice_deployer.create_deployment_package(str(appdir))
+    chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     # There should now be a zip file created.
     contents = chalice_dir.join('deployments').listdir()
     assert len(contents) == 1
@@ -50,7 +51,8 @@ def test_can_inject_latest_app(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app v1')
     chalice_dir = appdir.join('.chalice')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
 
     # Now suppose we update our app code but not any deps.
     # We can use inject_latest_app.
@@ -69,7 +71,8 @@ def test_can_inject_latest_app(tmpdir, chalice_deployer):
 def test_app_injection_still_compresses_file(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app v1')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python 2.7')
     original_size = os.path.getsize(name)
     appdir.join('app.py').write('# Test app v2')
     chalice_deployer.inject_latest_app(name, str(appdir))
@@ -87,7 +90,8 @@ def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Foo')
     appdir.join('requirements.txt').write('\n')
-    chalice_deployer.create_deployment_package(str(appdir))
+    chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     out, err = capfd.readouterr()
     assert err.strip() == ''
 
@@ -126,7 +130,8 @@ def test_includes_app_and_chalicelib_dir(tmpdir, chalice_deployer):
     subdir = chalicelib.mkdir('subdir')
     subdir.join('submodule.py').write('# Test submodule')
     subdir.join('subconfig.json').write('{"test": "subconfig"}')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     with zipfile.ZipFile(name) as f:
         _assert_in_zip('chalicelib/__init__.py', b'# Test package', f)
         _assert_in_zip('chalicelib/mymodule.py', b'# Test module', f)
@@ -151,7 +156,8 @@ def test_subsequent_deploy_replaces_chalicelib(tmpdir, chalice_deployer):
     subdir = chalicelib.mkdir('subdir')
     subdir.join('submodule.py').write('# Test submodule')
 
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     subdir.join('submodule.py').write('# Test submodule v2')
     appdir.join('chalicelib', '__init__.py').remove()
     chalice_deployer.inject_latest_app(name, str(appdir))
@@ -169,7 +175,8 @@ def test_vendor_dir_included(tmpdir, chalice_deployer):
     vendor = appdir.mkdir('vendor')
     extra_package = vendor.mkdir('mypackage')
     extra_package.join('__init__.py').write('# Test package')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     with zipfile.ZipFile(name) as f:
         _assert_in_zip('mypackage/__init__.py', b'# Test package', f)
 
@@ -180,10 +187,12 @@ def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
     vendor = appdir.mkdir('vendor')
     extra_package = vendor.mkdir('mypackage')
     extra_package.join('__init__.py').write('# v1')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     # Now we update a package in vendor/ with a new version.
     extra_package.join('__init__.py').write('# v2')
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     with zipfile.ZipFile(name) as f:
         _assert_in_zip('mypackage/__init__.py', b'# v2', f)
 
@@ -193,16 +202,19 @@ def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
     vendor = appdir.mkdir('vendor')
     extra_package = vendor.mkdir('mypackage')
     extra_package.join('__init__.py').write('# v1')
-    first = chalice_deployer.deployment_package_filename(str(appdir))
+    first = chalice_deployer.deployment_package_filename(
+        str(appdir), 'python3.6')
     extra_package.join('__init__.py').write('# v2')
-    second = chalice_deployer.deployment_package_filename(str(appdir))
+    second = chalice_deployer.deployment_package_filename(
+        str(appdir), 'python3.6')
     assert first != second
 
 
 @slow
 def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
-    name = chalice_deployer.create_deployment_package(str(appdir))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
     # We're verifying that we always inject the chalice runtime
     # but we can't actually modify the runtime in this repo, so
     # instead we'll modify the deployment package and change the
@@ -225,9 +237,8 @@ def test_does_handle_missing_dependency_error(tmpdir, capsys):
     fake_package.identifier = 'foo==1.2'
     builder.build_site_packages.side_effect = MissingDependencyError(
         set([fake_package]))
-    builder.site_package_dir.return_value = str(appdir.join('site-packages'))
     packager = LambdaDeploymentPackager(dependency_builder=builder)
-    packager.create_deployment_package(str(appdir))
+    packager.create_deployment_package(str(appdir), 'python2.7')
 
     out, _ = capsys.readouterr()
     assert 'Could not install dependencies:\nfoo==1.2' in out

@@ -11,7 +11,6 @@ from chalice.deploy.packager import PipRunner
 from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.packager import Package
 from chalice.deploy.packager import MissingDependencyError
-from chalice.deploy.packager import PipWrapper
 from chalice.compat import lambda_abi
 from chalice.utils import OSUtils
 from tests.conftest import FakeSdistBuilder
@@ -45,7 +44,7 @@ class PathArgumentEndingWith(object):
         return False
 
 
-class FakePip(PipWrapper):
+class FakePip(object):
     def __init__(self):
         self._calls = defaultdict(lambda: [])
         self._call_history = []
@@ -61,7 +60,7 @@ class FakePip(PipWrapper):
                 side_effect.execute(args)
         except IndexError:
             pass
-        return b'', b''
+        return 0, b''
 
     def packages_to_download(self, expected_args, packages,
                              whl_contents=None):
@@ -174,8 +173,8 @@ class TestDependencyBuilder(object):
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -193,11 +192,11 @@ class TestDependencyBuilder(object):
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
-            whl_contents=['{data_dir}/purelib/foo/placeholder']
+            whl_contents=['foo-1.2.data/purelib/foo/']
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -215,11 +214,11 @@ class TestDependencyBuilder(object):
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
-            whl_contents=['{data_dir}/platlib/foo/placeholder']
+            whl_contents=['foo-1.2.data/platlib/foo/']
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -240,13 +239,13 @@ class TestDependencyBuilder(object):
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
             whl_contents=[
-                '{data_dir}/platlib/foo/placeholder',
-                '{data_dir}/purelib/bar/placeholder'
+                'foo-1.2.data/platlib/foo/',
+                'foo-1.2.data/purelib/bar/'
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -267,13 +266,13 @@ class TestDependencyBuilder(object):
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
             whl_contents=[
-                '{package_name}/placeholder',
-                '{data_dir}/data/bar/placeholder'
+                'foo/placeholder',
+                'foo-1.2.data/data/bar/'
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -295,13 +294,13 @@ class TestDependencyBuilder(object):
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
             whl_contents=[
-                '{package_name}/placeholder',
-                '{data_dir}/includes/bar/placeholder'
+                'foo/placeholder',
+                'foo.1.2.data/includes/bar/'
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -328,8 +327,8 @@ class TestDependencyBuilder(object):
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -358,8 +357,8 @@ class TestDependencyBuilder(object):
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -381,8 +380,8 @@ class TestDependencyBuilder(object):
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -404,8 +403,8 @@ class TestDependencyBuilder(object):
             ]
         )
 
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -426,9 +425,9 @@ class TestDependencyBuilder(object):
             ]
         )
 
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+            builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         missing_pacakges = list(e.value.missing)
@@ -450,9 +449,9 @@ class TestDependencyBuilder(object):
             ]
         )
 
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+            builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         missing_pacakges = list(e.value.missing)
@@ -487,9 +486,8 @@ class TestDependencyBuilder(object):
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ]
         )
-
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -518,9 +516,8 @@ class TestDependencyBuilder(object):
                 'foo-1.2-cp36-none-any.whl'
             ]
         )
-
-        builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -553,10 +550,9 @@ class TestDependencyBuilder(object):
                 'foo-1.2-cp36-cp36m-macosx_10_6_intel.whl'
             ]
         )
-
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+            builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
@@ -605,8 +601,7 @@ class TestDependencyBuilder(object):
         bar = os.path.join(site_packages, 'bar')
         os.makedirs(bar)
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(appdir)
-        site_packages = builder.site_package_dir(appdir)
+            builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
