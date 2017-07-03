@@ -17,6 +17,16 @@ from collections import defaultdict, Mapping
 
 _PARAMS = re.compile(r'{\w+}')
 
+try:
+    # In python 2 there is a base class for the string types that
+    # we can check for. It was removed in python 3 so it will cause
+    # a name error.
+    _ANY_STRING = (basestring, bytes)
+except NameError:
+    # In python 3 string and bytes are different so we explicitly check
+    # for both.
+    _ANY_STRING = (str, bytes)
+
 
 def handle_decimals(obj):
     # Lambda will automatically serialize decimals so we need
@@ -299,7 +309,7 @@ class Response(object):
 
     def to_dict(self, binary_types=None):
         body = self.body
-        if not isinstance(body, (str, bytes)):
+        if not isinstance(body, _ANY_STRING):
             body = json.dumps(body, default=handle_decimals)
         response = {
             'headers': self.headers,
