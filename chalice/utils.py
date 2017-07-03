@@ -75,6 +75,10 @@ class OSUtils(object):
         # type: (str, str) -> IO
         return open(filename, mode)
 
+    def open_zip(self, filename, mode, compression=ZIP_DEFLATED):
+        # type: (str, str, int) -> zipfile.ZipFile
+        return zipfile.ZipFile(filename, mode, compression=compression)
+
     def remove_file(self, filename):
         # type: (str) -> None
         """Remove a file, noop if file does not exist."""
@@ -98,15 +102,6 @@ class OSUtils(object):
         with open(filename, mode) as f:
             return f.read()
 
-    @contextlib.contextmanager
-    def get_file_context(self, filename, mode='r'):
-        # type: (str, str) -> Iterator[BinaryIO]
-        try:
-            f = open(filename, mode)
-            yield f
-        finally:
-            f.close()
-
     def set_file_contents(self, filename, contents, binary=True):
         # type: (str, str, bool) -> None
         if binary:
@@ -116,22 +111,12 @@ class OSUtils(object):
         with open(filename, mode) as f:
             f.write(contents)
 
-    def unpack_zipfile(self, zipfile_path, unpack_dir):
+    def extract_zipfile(self, zipfile_path, unpack_dir):
         # type: (str, str) -> None
         with zipfile.ZipFile(zipfile_path, 'r') as z:
             z.extractall(unpack_dir)
 
-    @contextlib.contextmanager
-    def zipfile_context(self, filename, mode='r',
-                        compression=zipfile.ZIP_STORED):
-        # type: (str, str, int) -> Iterator[zipfile.ZipFile]
-        try:
-            z = zipfile.ZipFile(filename, mode=mode, compression=compression)
-            yield z
-        finally:
-            z.close()
-
-    def unpack_tarfile(self, tarfile_path, unpack_dir):
+    def extract_tarfile(self, tarfile_path, unpack_dir):
         # type: (str, str) -> None
         with tarfile.open(tarfile_path, 'r:gz') as tar:
             tar.extractall(unpack_dir)

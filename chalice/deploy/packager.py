@@ -84,8 +84,8 @@ class LambdaDeploymentPackager(object):
             self._osutils.abspath(package_filename))
         if not self._osutils.directory_exists(dirname):
             self._osutils.makedirs(dirname)
-        with self._osutils.zipfile_context(package_filename, 'w',
-                                           self._osutils.ZIP_DEFLATED) as z:
+        with self._osutils.open_zip(package_filename, 'w',
+                                    self._osutils.ZIP_DEFLATED) as z:
             self._add_py_deps(z, site_packages_dir)
             self._add_app_files(z, project_dir)
             self._add_vendor_files(z, self._osutils.joinpath(project_dir,
@@ -168,7 +168,7 @@ class LambdaDeploymentPackager(object):
         for rootdir, _, filenames in self._osutils.walk(vendor_dir):
             for filename in filenames:
                 fullpath = self._osutils.joinpath(rootdir, filename)
-                with self._osutils.get_file_context(fullpath, 'rb') as f:
+                with self._osutils.open(fullpath, 'rb') as f:
                     # Not actually an issue, but pylint will complain
                     # about the f var being used in the lambda function
                     # is being used in a loop.  This is ok because
@@ -206,10 +206,9 @@ class LambdaDeploymentPackager(object):
         print("Regen deployment package...")
         tmpzip = deployment_package_filename + '.tmp.zip'
 
-        with self._osutils.zipfile_context(
-                deployment_package_filename, 'r') as inzip:
-            with self._osutils.zipfile_context(
-                    tmpzip, 'w', self._osutils.ZIP_DEFLATED) as outzip:
+        with self._osutils.open_zip(deployment_package_filename, 'r') as inzip:
+            with self._osutils.open_zip(tmpzip, 'w',
+                                        self._osutils.ZIP_DEFLATED) as outzip:
                 for el in inzip.infolist():
                     if self._needs_latest_version(el.filename):
                         continue
@@ -419,7 +418,7 @@ class DependencyBuilder(object):
         self._osutils.makedirs(dst_dir)
         for wheel in wheels:
             zipfile_path = self._osutils.joinpath(src_dir, wheel.filename)
-            self._osutils.unpack_zipfile(zipfile_path, dst_dir)
+            self._osutils.extract_zipfile(zipfile_path, dst_dir)
             self._install_purelib_and_platlib(wheel, dst_dir)
 
     def build_site_packages(self, requirements_filepath, target_directory):
@@ -529,7 +528,6 @@ class SDistMetadataFetcher(object):
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.communicate()
         info_contents = self._osutils.get_directory_contents(egg_info_dir)
-        assert len(info_contents) == 1
         pkg_info_path = self._osutils.joinpath(
             egg_info_dir, info_contents[0], 'PKG-INFO')
         return pkg_info_path
@@ -537,14 +535,13 @@ class SDistMetadataFetcher(object):
     def _unpack_sdist_into_dir(self, sdist_path, unpack_dir):
         # type: (str, str) -> str
         if sdist_path.endswith('.zip'):
-            self._osutils.unpack_zipfile(sdist_path, unpack_dir)
+            self._osutils.extract_zipfile(sdist_path, unpack_dir)
         elif sdist_path.endswith('.tar.gz'):
-            self._osutils.unpack_tarfile(sdist_path, unpack_dir)
+            self._osutils.extract_tarfile(sdist_path, unpack_dir)
         else:
             raise InvalidSourceDistributionNameError(sdist_path)
         # There should only be one directory unpacked.
         contents = self._osutils.get_directory_contents(unpack_dir)
-        assert len(contents) == 1
         return self._osutils.joinpath(unpack_dir, contents[0])
 
     def get_package_name_and_version(self, sdist_path):
