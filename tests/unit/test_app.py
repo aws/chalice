@@ -111,6 +111,16 @@ def test_can_encode_binary_body_as_base64(sample_app):
     assert encoded_response['body'] == 'Zm9vYmFy'
 
 
+def test_can_return_unicode_body(sample_app):
+    unicode_data = u'\u2713'
+    response = app.Response(
+        status_code=200,
+        body=unicode_data
+    )
+    encoded_response = response.to_dict()
+    assert encoded_response['body'] == unicode_data
+
+
 def test_can_encode_binary_body_with_header_charset(sample_app):
     response = app.Response(
         status_code=200,
