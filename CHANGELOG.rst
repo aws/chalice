@@ -3,10 +3,12 @@ CHANGELOG
 =========
 
 Next Release (TBD)
-============
+==================
 
 * Fix unicode responses being quoted in python 2.7
   (`#262 <https://github.com/awslabs/chalice/issues/262>`__)
+* Add support for scheduled events
+  (`#390 <https://github.com/awslabs/chalice/issues/390>`__)
 
 
 0.10.1
