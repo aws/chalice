@@ -6,6 +6,7 @@ This is intended only for local development purposes.
 from __future__ import print_function
 import base64
 import functools
+import os
 from collections import namedtuple
 
 from six.moves.BaseHTTPServer import HTTPServer
@@ -13,6 +14,7 @@ from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from typing import List, Any, Dict, Tuple, Callable  # noqa
 
 from chalice.app import Chalice, CORSConfig  # noqa
+from chalice.cli.factory import CLIFactory
 from chalice.compat import urlparse, parse_qs
 
 
@@ -217,6 +219,20 @@ class LocalDevServer(object):
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object)
         self.server = server_cls(('', port), self._wrapped_handler)
+        self.set_environment_variables()
+
+    def set_environment_variables(self):
+        # type: () -> None
+        env_vars_key = 'environment_variables'
+        env_vars = [{}]  # type: List[Dict]
+        file_path = os.getcwd()
+        factory = CLIFactory(file_path)
+        config = factory.load_project_config()
+        if env_vars_key in config and config[env_vars_key]:
+            env_vars = [{key: str(value)}
+                        for key, value in config[env_vars_key].items()]
+        for env_var in env_vars:
+            os.environ.update(env_var)
 
     def handle_single_request(self):
         # type: () -> None
