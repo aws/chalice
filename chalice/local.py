@@ -6,6 +6,7 @@ This is intended only for local development purposes.
 from __future__ import print_function
 import base64
 import functools
+import os
 from collections import namedtuple
 
 from six.moves.BaseHTTPServer import HTTPServer
@@ -22,9 +23,10 @@ HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
 
 
-def create_local_server(app_obj, port):
-    # type: (Chalice, int) -> LocalDevServer
-    return LocalDevServer(app_obj, port)
+def create_local_server(app_obj, port, env_variables=None):
+    # type: (Chalice, int, Dict) -> LocalDevServer
+    env_variables = {} if not env_variables else env_variables
+    return LocalDevServer(app_obj, port, env_variables=env_variables)
 
 
 class RouteMatcher(object):
@@ -210,13 +212,20 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
 class LocalDevServer(object):
     def __init__(self, app_object, port, handler_cls=ChaliceRequestHandler,
-                 server_cls=HTTPServer):
-        # type: (Chalice, int, HandlerCls, ServerCls) -> None
+                 server_cls=HTTPServer, env_variables=None):
+        # type: (Chalice, int, HandlerCls, ServerCls, Dict) -> None
         self.app_object = app_object
         self.port = port
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object)
         self.server = server_cls(('', port), self._wrapped_handler)
+        self.env_variables = {} if not env_variables else env_variables
+        self.set_env_variables()
+
+    def set_env_variables(self):
+        # type: () -> None
+        for key, value in self.env_variables.items():
+            os.environ[key] = str(value)
 
     def handle_single_request(self):
         # type: () -> None
