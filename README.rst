@@ -99,9 +99,9 @@ install these, you **must** specify either the ``--pre`` option::
 
     $ pip install --upgrade --pre chalice
 
-or specify the exact RC version you want to use::
+or you can specify::
 
-    $ pip install chalice==1.0.0rc1
+    $ pip install chalice>=1.0.0rc1
 
 
 Credentials
