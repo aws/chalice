@@ -357,8 +357,8 @@ def test_validate_unique_lambda_function_names(sample_app):
 
     # This will cause a validation error because
     # 'foo' is already registered as a lambda function.
-    @sample_app.lambda_function()
-    def foo(event, context):
+    @sample_app.lambda_function(name='foo')
+    def bar(event, context):
         pass
 
     config = Config.create(chalice_app=sample_app, manage_iam_role=False)
@@ -372,7 +372,7 @@ def test_validate_names_across_function_types(sample_app):
         pass
 
     @sample_app.schedule('rate(1 hour)')
-    def foo(event):
+    def bar(event):
         pass
 
     config = Config.create(chalice_app=sample_app, manage_iam_role=False)
@@ -385,8 +385,8 @@ def test_validate_names_using_name_kwarg(sample_app):
     def foo(auth_request):
         pass
 
-    @sample_app.lambda_function()
-    def duplicate(event):
+    @sample_app.lambda_function(name='duplicate')
+    def bar(event):
         pass
 
     config = Config.create(chalice_app=sample_app, manage_iam_role=False)
