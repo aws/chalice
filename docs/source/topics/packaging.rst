@@ -102,17 +102,43 @@ Below shows an example of how to use the
 `cryptography <https://pypi.python.org/pypi/cryptography>`__ package in a
 Chalice app for the ``python3.6`` lambda environment.
 
-We're going to leverage the ``vendor/`` directory in order to use this package
-in our app. We can't use the ``requirements.txt`` file because ``cryptography``
-requires C Extensions and does not have wheel files available on PyPi.
+Suppose you are on a Mac or Windows and want to deploy a Chalice app that
+depends on the ``cryptography`` package. If you simply add it to your
+``requirements.txt`` file and try to deploy it with ``chalice deploy`` you will
+get the following warning during deployment::
 
-You can do this yourself by building ``cryptography`` yourself on an Amazon
-Linux instance running in EC2. All of the following commands were run inside
-a ``python 3.6`` virtual environment.
+  $ cat requirements.txt
+  cryptography
+  $ chalice deploy
+  Updating IAM policy.
+  Updating lambda function...
+  Creating deployment package.
 
-* Download the source first using ``pip download cryptography`` which will
-  download all the requirements into the current working directory. The
-  directory should have the following contents:
+  Could not install dependencies:
+  cryptography==1.9
+  You will have to build these yourself and vendor them in
+  the chalice vendor folder.
+
+  Your deployment will continue but may not work correctly
+  if missing dependencies are not present. For more information:
+  http://chalice.readthedocs.io/en/latest/topics/packaging.html
+
+This happened because the ``cryptography`` package does not yet have wheel
+files availble on PyPi, and has C extensions. Since we are not on the same
+platform as AWS Lambda, the compiled C extensions Chalice built were not
+compatible. To get around this we are going to leverage the ``vendor/``
+directory, and build the ``cryptography`` package on a compatible linux system.
+
+You can do this yourself by building ``cryptography`` on an Amazon Linux
+instance running in EC2. All of the following commands were run inside a
+``python 3.6`` virtual environment.
+
+* Download the source first::
+
+    $ pip download cryptography
+
+  This will download all the requirements into the current working directory.
+  The directory should have the following contents:
 
   * ``asn1crypto-0.22.0-py2.py3-none-any.whl``
   * ``cffi-1.10.0-cp36-cp36m-manylinux1_x86_64.whl``
@@ -127,10 +153,12 @@ a ``python 3.6`` virtual environment.
   downloading them. That leaves ``cryptography`` itself and ``pycparser`` as
   the only two that did not have a wheel file available for download.
 
-* Next build the ``cryptography`` source into a wheel file running the command
-  ``pip wheel cryptography-1.9.tar.gz``. This will take a few seconds and build
-  a wheel file for both ``cryptography`` and ``pycparser``. The directory
-  should now have two additional wheel files:
+* Next build the ``cryptography`` source package into a wheel file::
+
+    $ pip wheel cryptography-1.9.tar.gz
+
+  This will take a few seconds and build a wheel file for both ``cryptography``
+  and ``pycparser``. The directory should now have two additional wheel files:
 
   * ``cryptography-1.9-cp36-cp36m-linux_x86_64.whl``
   * ``pycparser-2.17-py2.py3-none-any.whl``

@@ -110,7 +110,7 @@ class PipSideEffect(object):
     def _build_fake_sdist(self, filepath):
         # tar.gz is the same no reason to test it here as it is tested in
         # unit.deploy.TestSdistMetadataFetcher
-        assert filepath.endswith('zip')
+        assert filepath.endswith('.zip')
         components = os.path.split(filepath)
         prefix, filename = components[:-1], components[-1]
         directory = os.path.join(*prefix)
