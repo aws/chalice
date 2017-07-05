@@ -11,6 +11,8 @@ Next Release (TBD)
   (`#390 <https://github.com/awslabs/chalice/issues/390>`__)
 * Add support for pure lambda functions
   (`#390 <https://github.com/awslabs/chalice/issues/400>`__)
+* Add support for wheel packaging.
+  (`#249 <https://github.com/awslabs/chalice/issues/249>`__)
 
 
 0.10.1
