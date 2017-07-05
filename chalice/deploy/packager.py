@@ -42,6 +42,7 @@ class LambdaDeploymentPackager(object):
             p = subprocess.Popen([pip_exe, 'install', '-r', requirements_file],
                                  stdout=subprocess.PIPE)
             p.communicate()
+            assert p.returncode == os.EX_OK
         deps_dir = compat.site_packages_dir_in_venv(venv_dir)
         assert os.path.isdir(deps_dir)
         # Now we need to create a zip file and add in the site-packages
