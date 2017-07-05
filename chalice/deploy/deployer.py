@@ -16,6 +16,7 @@ import botocore.session  # noqa
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
+from typing import Set, Iterator  # noqa
 
 from chalice import app  # noqa
 from chalice.app import CloudWatchEventSource  # noqa
@@ -187,7 +188,7 @@ def _validate_manage_iam_role(config):
 
 def validate_unique_function_names(config):
     # type: (Config) -> None
-    names = set()
+    names = set()   # type: Set[str]
     for name in _get_all_function_names(config.chalice_app):
         if name in names:
             raise ValueError("Duplicate function name detected: %s\n"

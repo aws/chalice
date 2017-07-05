@@ -371,7 +371,7 @@ def test_validate_names_across_function_types(sample_app):
     def foo(event, context):
         pass
 
-    @sample_app.schedule('rate(1 hour)')
+    @sample_app.schedule('rate(1 hour)', name='foo')
     def bar(event):
         pass
 
