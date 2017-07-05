@@ -1,8 +1,12 @@
 import os
 import zipfile
 import json
+import contextlib
+import tempfile
+import shutil
+import tarfile
 
-from typing import IO, Dict, Any  # noqa
+from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -65,9 +69,15 @@ def create_zip_file(source_dir, outfile):
 
 
 class OSUtils(object):
+    ZIP_DEFLATED = zipfile.ZIP_DEFLATED
+
     def open(self, filename, mode):
         # type: (str, str) -> IO
         return open(filename, mode)
+
+    def open_zip(self, filename, mode, compression=ZIP_DEFLATED):
+        # type: (str, str, int) -> zipfile.ZipFile
+        return zipfile.ZipFile(filename, mode, compression=compression)
 
     def remove_file(self, filename):
         # type: (str) -> None
@@ -100,6 +110,74 @@ class OSUtils(object):
             mode = 'w'
         with open(filename, mode) as f:
             f.write(contents)
+
+    def extract_zipfile(self, zipfile_path, unpack_dir):
+        # type: (str, str) -> None
+        with zipfile.ZipFile(zipfile_path, 'r') as z:
+            z.extractall(unpack_dir)
+
+    def extract_tarfile(self, tarfile_path, unpack_dir):
+        # type: (str, str) -> None
+        with tarfile.open(tarfile_path, 'r:gz') as tar:
+            tar.extractall(unpack_dir)
+
+    def directory_exists(self, path):
+        # type: (str) -> bool
+        return os.path.isdir(path)
+
+    def get_directory_contents(self, path):
+        # type: (str) -> List[str]
+        return os.listdir(path)
+
+    def makedirs(self, path):
+        # type: (str) -> None
+        os.makedirs(path)
+
+    def dirname(self, path):
+        # type: (str) -> str
+        return os.path.dirname(path)
+
+    def abspath(self, path):
+        # type: (str) -> str
+        return os.path.abspath(path)
+
+    def joinpath(self, *args):
+        # type: (str) -> str
+        return os.path.join(*args)
+
+    def walk(self, path):
+        # type: (str) -> Iterator[Tuple[str, List[str], List[str]]]
+        return os.walk(path)
+
+    def copytree(self, source, destination):
+        # type: (str, str) -> None
+        if not os.path.exists(destination):
+            self.makedirs(destination)
+        names = self.get_directory_contents(source)
+        for name in names:
+            new_source = os.path.join(source, name)
+            new_destination = os.path.join(destination, name)
+            if os.path.isdir(new_source):
+                self.copytree(new_source, new_destination)
+            else:
+                shutil.copy2(new_source, new_destination)
+
+    def rmtree(self, directory):
+        # type: (str) -> None
+        shutil.rmtree(directory)
+
+    def move(self, source, destination):
+        # type: (str, str) -> None
+        shutil.move(source, destination)
+
+    @contextlib.contextmanager
+    def tempdir(self):
+        # type: () -> Any
+        tempdir = tempfile.mkdtemp()
+        try:
+            yield tempdir
+        finally:
+            shutil.rmtree(tempdir)
 
 
 def getting_started_prompt(prompter):

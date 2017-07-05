@@ -1,7 +1,7 @@
 App Packaging
 =============
 
-In order to deploy your chalice app, a zip file is created that
+In order to deploy your Chalice app, a zip file is created that
 contains your application and all third party packages your application
 rqeuires.  This file is used by AWS Lambda and is referred
 to as a deployment package.
@@ -34,10 +34,11 @@ write yourself.
 
 There are two options for handling python package dependencies:
 
-* **requirements.txt** - During the packaging process, chalice will
-  run ``pip install -r requirements.txt`` in a virtual environment
-  and automatically install 3rd party python packages into the deployment
-  package.
+* **requirements.txt** - During the packaging process, Chalice will
+  install any packages it finds or can build compatible wheels for.
+  Specifically all pure python packages as well as all packages that upload
+  wheel files for the ``manylinux1_x86_64`` platform will be automatically
+  installable.
 * **vendor/** - The *contents* of this directory are automatically added to
   the top level of the deployment package.
 
@@ -48,7 +49,7 @@ specific examples).  The ``vendor/`` directory is helpful in these scenarios:
 
 * You need to include custom packages or binary content that is not accessible
   via ``pip``.  These may be internal packages that aren't public.
-* You need to use C extensions, and you're not developing on Linux.
+* Wheel files are not available for a package you need from pip.
 
 
 As a general rule of thumb, code that you write goes in either ``app.py`` or
@@ -94,54 +95,110 @@ This directory structure is then zipped up and sent to AWS Lambda during the
 deployment process.
 
 
-Psycopg2 Example
-----------------
+Cryptography Example
+--------------------
 
-Below shows an example of how you can use the
-`psycopg2 <https://pypi.python.org/pypi/psycopg2>`__ package in a chalice app.
+Below shows an example of how to use the
+`cryptography <https://pypi.python.org/pypi/cryptography>`__ package in a
+Chalice app for the ``python3.6`` lambda environment.
 
-We're going to leverage the ``vendor/`` directory in order to use this
-package in our app.  We can't use ``requirements.txt`` file because
-``psycopg2`` has additional requirements:
+Suppose you are on a Mac or Windows and want to deploy a Chalice app that
+depends on the ``cryptography`` package. If you simply add it to your
+``requirements.txt`` file and try to deploy it with ``chalice deploy`` you will
+get the following warning during deployment::
 
-* It contains C extensions and if you're not developing on Amazon Linux,
-  the binaries built on a dev machine will not match what's needed on AWS
-  Lambda.
-* AWS Lambda does not have the ``libpq.so`` library available, so we need
-  to build a custom version of ``psycopg2`` that has ``libpq.so`` statically
-  linked.
+  $ cat requirements.txt
+  cryptography
+  $ chalice deploy
+  Updating IAM policy.
+  Updating lambda function...
+  Creating deployment package.
 
-You can do this yourself by building `psycopg2 <https://pypi.python.org/pypi/psycopg2>`__
-on Amazon Linux with the ``static_libpq=1`` value set in the ``setup.cfg``
-file.  You can then copy/unzip the ``.whl`` file into the ``vendor/``
-directory.
+  Could not install dependencies:
+  cryptography==1.9
+  You will have to build these yourself and vendor them in
+  the chalice vendor folder.
 
-There are also existing packages that have prebuilt this, including the
-3rd party `awslambda-psycopg2 <https://github.com/jkehler/awslambda-psycopg2>`__
-package.  If you wanted to use this 3rd party package you can follow these
-steps::
+  Your deployment will continue but may not work correctly
+  if missing dependencies are not present. For more information:
+  http://chalice.readthedocs.io/en/latest/topics/packaging.html
 
-$ mkdir vendor
-$ git clone git@github.com:jkehler/awslambda-psycopg2.git
-$ cp -r awslambda-psycopg2/psycopg2 vendor/
-$ rm -rf awslambda-psycopg2/
+This happened because the ``cryptography`` package does not yet have wheel
+files availble on PyPi, and has C extensions. Since we are not on the same
+platform as AWS Lambda, the compiled C extensions Chalice built were not
+compatible. To get around this we are going to leverage the ``vendor/``
+directory, and build the ``cryptography`` package on a compatible linux system.
 
+You can do this yourself by building ``cryptography`` on an Amazon Linux
+instance running in EC2. All of the following commands were run inside a
+``python 3.6`` virtual environment.
 
-You should now have a directory that looks like this::
+* Download the source first::
 
-    $ tree
-    .
-    ├── app.py
-    ├── app.pyc
-    ├── requirements.txt
-    └── vendor
-        └── psycopg2
-            ├── __init__.py
-            ├── _json.py
-            ├── _psycopg.so
-            ....
+    $ pip download cryptography
 
+  This will download all the requirements into the current working directory.
+  The directory should have the following contents:
 
-In your ``app.py`` file you can now import ``psycopg2``, and this
-dependency will automatically be included when the ``chalice deploy``
-command is run.
+  * ``asn1crypto-0.22.0-py2.py3-none-any.whl``
+  * ``cffi-1.10.0-cp36-cp36m-manylinux1_x86_64.whl``
+  * ``cryptography-1.9.tar.gz``
+  * ``idna-2.5-py2.py3-none-any.whl``
+  * ``pycparser-2.17.tar.gz``
+  * ``six-1.10.0-py2.py3-none-any.whl``
+
+  This is a complete set of dependencies required for the cryptography package.
+  Most of these packages have wheels that were downloaded, which means they can
+  simply be put in the ``requirements.txt`` and Chalice will take care of
+  downloading them. That leaves ``cryptography`` itself and ``pycparser`` as
+  the only two that did not have a wheel file available for download.
+
+* Next build the ``cryptography`` source package into a wheel file::
+
+    $ pip wheel cryptography-1.9.tar.gz
+
+  This will take a few seconds and build a wheel file for both ``cryptography``
+  and ``pycparser``. The directory should now have two additional wheel files:
+
+  * ``cryptography-1.9-cp36-cp36m-linux_x86_64.whl``
+  * ``pycparser-2.17-py2.py3-none-any.whl``
+
+  The ``cryptography`` wheel file has been built with a compatible
+  archictecture for lambda (``linux_x86_64``) and the ``pycparser`` has been
+  built for ``any`` architecture which means it can also be automatically be
+  packaged by Chalice if it is listed in the ``requirements.txt`` file.
+
+* Download the ``cryptography`` wheel file from the Amazon Linux instance and
+  unzip it into the ``vendor/`` directory in the root directory of Chalice.
+
+  You should now have a project directory that looks like this::
+
+     $ tree
+     .
+     ├── app.py
+     ├── requirements.txt
+     └── vendor
+         ├── cryptography
+         │   ├── ... Lots of files
+         │
+         └── cryptography-1.9.dist-info
+             ├── DESCRIPTION.rst
+             ├── METADATA
+             ├── RECORD
+             ├── WHEEL
+             ├── entry_points.txt
+             ├── metadata.json
+             └── top_level.txt
+
+  The ``requirements.txt`` file should look like this::
+
+    $ cat requirements.txt
+    cffi==1.10.0
+    six==1.10.0
+    asn1crypto==0.22.0
+    idna==2.5
+    pycparser==2.17
+
+  In your ``app.py`` file you can now import ``cryptography``, and these
+  dependencies will all get included when the ``chalice deploy`` command is
+  run.

@@ -200,7 +200,7 @@ class AppPackager(object):
         # Deployment package
         zip_file = os.path.join(outdir, 'deployment.zip')
         self._lambda_packaager.create_deployment_package(
-            config.project_dir, zip_file)
+            config.project_dir, config.lambda_python_version, zip_file)
 
         # SAM template
         sam_template = self._sam_templater.generate_sam_template(

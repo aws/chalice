@@ -1,8 +1,32 @@
+import zipfile
+
 import botocore.session
 from botocore.stub import Stubber
-import mock
-import pytest
 from pytest import fixture
+
+
+class FakeSdistBuilder(object):
+    _SETUP_PY = (
+        'from setuptools import setup\n'
+        'setup(\n'
+        '    name="%s",\n'
+        '    version="%s"\n'
+        ')\n'
+    )
+
+    def write_fake_sdist(self, directory, name, version):
+        filename = '%s-%s.zip' % (name, version)
+        path = '%s/%s' % (directory, filename)
+        with zipfile.ZipFile(path, 'w',
+                             compression=zipfile.ZIP_DEFLATED) as z:
+            z.writestr('sdist/setup.py', self._SETUP_PY % (name, version))
+        return directory, filename
+
+
+@fixture
+def sdist_builder():
+    s = FakeSdistBuilder()
+    return s
 
 
 def pytest_addoption(parser):
