@@ -53,7 +53,7 @@ class SwaggerGenerator(object):
                 current = self._generate_route_method(view)
                 if 'security' in current:
                     self._add_to_security_definition(
-                        current['security'], api, app.authorizers, view)
+                        current['security'], api, view)
                 swagger_for_path[http_method.lower()] = current
                 if view.cors is not None:
                     cors_config = view.cors
@@ -94,8 +94,8 @@ class SwaggerGenerator(object):
             'securityDefinitions', {})[authorizer.name] = config
 
     def _add_to_security_definition(self, security,
-                                    api_config, authorizers, view):
-        # type: (Any, Dict[str, Any], Dict[str, Any], RouteEntry) -> None
+                                    api_config, view):
+        # type: (Any, Dict[str, Any], RouteEntry) -> None
         if view.authorizer is not None:
             self._generate_security_from_auth_obj(api_config, view.authorizer)
             return
@@ -108,40 +108,6 @@ class SwaggerGenerator(object):
                     'name': 'x-api-key',
                     'in': 'header',
                 }  # type: Dict[str, Any]
-            else:
-                # This whole section is deprecated and will
-                # eventually be removed.  This handles the
-                # authorizers that come in via app.define_authorizer(...)
-                # The only supported type in this method is
-                # 'cognito_user_pools'.  Everything else goes through the
-                # preferred ``view.authorizer``.
-                if name not in authorizers:
-                    error_msg = (
-                        "The authorizer '%s' is not defined.  "
-                        "Use app.define_authorizer(...) to define an "
-                        "authorizer." % (name)
-                    )
-                    if authorizers:
-                        error_msg += (
-                            '  Defined authorizers in this app: %s' %
-                            ', '.join(authorizers))
-                    raise ValueError(error_msg)
-                authorizer_config = authorizers[name]
-                auth_type = authorizer_config['auth_type']
-                if auth_type != 'cognito_user_pools':
-                    raise ValueError(
-                        "Unknown auth type: '%s',  must be "
-                        "'cognito_user_pools'" % (auth_type,))
-                swagger_snippet = {
-                    'in': 'header',
-                    'type': 'apiKey',
-                    'name': authorizer_config['header'],
-                    'x-amazon-apigateway-authtype': auth_type,
-                    'x-amazon-apigateway-authorizer': {
-                        'type': auth_type,
-                        'providerARNs': authorizer_config['provider_arns'],
-                    }
-                }
             api_config.setdefault(
                 'securityDefinitions', {})[name] = swagger_snippet
 
@@ -160,8 +126,6 @@ class SwaggerGenerator(object):
             # this because this neeeds to be added to the global config
             # file.
             current['security'] = [{'api_key': []}]
-        if view.authorizer_name:
-            current['security'] = [{view.authorizer_name: []}]
         if view.authorizer:
             current['security'] = [{view.authorizer.name: []}]
         return current

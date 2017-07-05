@@ -7,6 +7,16 @@ interested in the high level changes, see the
 `CHANGELOG.rst <https://github.com/awslabs/chalice/blob/master/CHANGELOG.rst>`__)
 file.
 
+.. _v1-0-0rc1:
+
+1.0.0rc1
+--------
+
+The ``Chalice.define_authorizer`` method has been removed.  This has been
+deprecated since v0.8.1.  See :doc:`topics/authorizers` for updated
+information on configuring authorizers in Chalice as well as the
+original deprecation notice in the :ref:`v0-8-1` upgrade notes.
+
 .. _v0-9-0:
 
 0.9.0

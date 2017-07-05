@@ -5,7 +5,6 @@ import logging
 import json
 import traceback
 import decimal
-import warnings
 import base64
 from collections import defaultdict, Mapping
 
@@ -349,14 +348,12 @@ class Response(object):
 class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, method,
-                 authorizer_name=None,
                  api_key_required=None, content_types=None,
                  cors=False, authorizer=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
         self.method = method
-        self.authorizer_name = authorizer_name
         self.api_key_required = api_key_required
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
@@ -426,7 +423,6 @@ class Chalice(object):
         self.debug = False
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
-        self._authorizers = {}
         self.builtin_auth_handlers = []
         self.event_sources = []
         self.pure_lambda_functions = []
@@ -458,21 +454,6 @@ class Chalice(object):
                 if handler.stream == sys.stdout:
                     return True
         return False
-
-    @property
-    def authorizers(self):
-        return self._authorizers.copy()
-
-    def define_authorizer(self, name, header, auth_type, provider_arns=None):
-        warnings.warn(
-            "define_authorizer() is deprecated and will be removed in future "
-            "versions of chalice.  Please use CognitoUserPoolAuthorizer(...) "
-            "instead", DeprecationWarning)
-        self._authorizers[name] = {
-            'header': header,
-            'auth_type': auth_type,
-            'provider_arns': provider_arns,
-        }
 
     def authorizer(self, name=None, **kwargs):
         def _register_authorizer(auth_func):
@@ -529,7 +510,6 @@ class Chalice(object):
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
         methods = kwargs.pop('methods', ['GET'])
-        authorizer_name = kwargs.pop('authorizer_name', None)
         authorizer = kwargs.pop('authorizer', None)
         api_key_required = kwargs.pop('api_key_required', None)
         content_types = kwargs.pop('content_types', ['application/json'])
@@ -552,8 +532,8 @@ class Chalice(object):
                         name)
                 )
             entry = RouteEntry(view_func, name, path, method,
-                               authorizer_name, api_key_required,
-                               content_types, cors, authorizer)
+                               api_key_required, content_types,
+                               cors, authorizer)
             self.routes[path][method] = entry
 
     def __call__(self, event, context):
