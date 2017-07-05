@@ -18,6 +18,7 @@ from botocore.vendored.requests import ConnectionError as \
 from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
 
 from chalice import app  # noqa
+from chalice.app import CloudWatchEventSource  # noqa
 from chalice import __version__ as chalice_version
 from chalice import policy
 from chalice.compat import is_broken_pipe_error
@@ -397,11 +398,11 @@ class LambdaDeployer(object):
         # type: (DeployedResources) -> None
         if not existing_resources.lambda_functions:
             return
-        for function_arn in existing_resources.lambda_functions.values():
+        for function in existing_resources.lambda_functions.values():
             # We could use the key names, but we're using the
             # Lambda ARNs to ensure we have the right lambda
             # function.
-            self._delete_lambda_function(function_arn)
+            self._delete_lambda_function(function['arn'])
 
     def _delete_lambda_function(self, function_name_or_arn):
         # type: (str) -> None
@@ -418,6 +419,8 @@ class LambdaDeployer(object):
                                  deployed_values)
         self._deploy_auth_handlers(config, existing_resources, stage_name,
                                    deployed_values)
+        self._deploy_event_sources(config, existing_resources, stage_name,
+                                   deployed_values)
         if existing_resources is not None:
             self._cleanup_unreferenced_functions(existing_resources,
                                                  deployed_values)
@@ -426,9 +429,12 @@ class LambdaDeployer(object):
     def _cleanup_unreferenced_functions(self, existing_resources,
                                         deployed_values):
         # type: (DeployedResources, Dict[str, Any]) -> None
-        unreferenced = (
-            set(existing_resources.lambda_functions.values()) -
-            set(deployed_values['lambda_functions'].values()))
+        existing = [
+            v['arn'] for v in existing_resources.lambda_functions.values()]
+        just_deployed = [
+            v['arn'] for v in deployed_values['lambda_functions'].values()
+        ]
+        unreferenced = set(existing) - set(just_deployed)
         for function_arn in unreferenced:
             self._delete_lambda_function(function_arn)
 
@@ -451,6 +457,45 @@ class LambdaDeployer(object):
             deployed_values['api_handler_name'] = function_name
         deployed_values['api_handler_arn'] = function_arn
 
+    def _deploy_event_sources(self, config, existing_resources, stage_name,
+                              deployed_values):
+        # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
+        event_sources = config.chalice_app.event_sources
+        if not event_sources:
+            return
+        for event_source in event_sources:
+            new_config = config.scope(chalice_stage=config.chalice_stage,
+                                      function_name=event_source.name)
+            self._deploy_event_source(new_config, event_source, stage_name,
+                                      deployed_values)
+
+    def _deploy_event_source(self, config, event_source,
+                             stage_name, deployed_values):
+        # type: (Config, CloudWatchEventSource, str, Dict[str, Any]) -> None
+        function_name, function_arn = self._deploy_single_lambda_function(
+            config, event_source.name, event_source.handler_string,
+            stage_name, deployed_values, 'scheduled_event'
+        )
+        # Event handlers have an extra step where they also need
+        # to create the corresponding event rule if it doesn't exist.
+        self._configure_event_source(function_name, function_arn, event_source)
+
+    def _configure_event_source(self, rule_name, function_arn,
+                                event_source):
+        # type: (str, str, CloudWatchEventSource) -> None
+        # This doesn't have any logic about removing event sources
+        # when they're not longer referenced.
+        if isinstance(event_source.schedule_expression,
+                      (app.ScheduleExpression)):
+            expression = event_source.schedule_expression.to_string()
+        else:
+            expression = event_source.schedule_expression
+        rule_arn = self._aws_client.get_or_create_rule_arn(
+            rule_name, expression)
+        self._aws_client.connect_rule_to_lambda(rule_name, function_arn)
+        self._aws_client.add_permission_for_scheduled_event(
+            rule_arn, function_arn)
+
     def _deploy_auth_handlers(self, config, existing_resources, stage_name,
                               deployed_values):
         # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
@@ -470,13 +515,22 @@ class LambdaDeployer(object):
     def _deploy_auth_handler(self, config, auth_config,
                              stage_name, deployed_values):
         # type: (Config, app.BuiltinAuthConfig, str, Dict[str, Any]) -> None
+        self._deploy_single_lambda_function(
+            config, auth_config.name, auth_config.handler_string,
+            stage_name, deployed_values, 'authorizer'
+        )
+
+    def _deploy_single_lambda_function(self, config, name, handler,
+                                       stage_name, deployed_values,
+                                       function_type):
+        # type: (Config, str, str, str, Dict[str, Any], str) -> Tuple[str, str]
         api_handler_name = deployed_values['api_handler_name']
         role_arn = self._get_or_create_lambda_role_arn(
             config, api_handler_name)
         zip_contents = self._osutils.get_file_contents(
             self._packager.deployment_package_filename(config.project_dir),
             binary=True)
-        function_name = api_handler_name + '-' + auth_config.name
+        function_name = api_handler_name + '-' + name
         if self._aws_client.lambda_function_exists(function_name):
             response = self._update_lambda_function(
                 config, function_name, stage_name)
@@ -488,13 +542,15 @@ class LambdaDeployer(object):
                 zip_contents=zip_contents,
                 environment_variables=config.environment_variables,
                 runtime=config.lambda_python_version,
-                handler=auth_config.handler_string,
+                handler=handler,
                 tags=config.tags,
                 timeout=self._get_lambda_timeout(config),
                 memory_size=self._get_lambda_memory_size(config),
             )
-        deployed_values.setdefault(
-            'lambda_functions', {})[function_name] = function_arn
+        deployed_values.setdefault('lambda_functions', {})[function_name] = {
+            'arn': function_arn, 'type': function_type,
+        }
+        return function_name, function_arn
 
     def _confirm_any_runtime_changes(self, config, handler_name):
         # type: (Config, str) -> None
@@ -624,13 +680,6 @@ class LambdaDeployer(object):
             role_arn=role_arn
         )
 
-    def _write_config_to_disk(self, config):
-        # type: (Config) -> None
-        config_filename = os.path.join(config.project_dir,
-                                       '.chalice', 'config.json')
-        with open(config_filename, 'w') as f:
-            f.write(json.dumps(config.config_from_disk, indent=2))
-
     def _create_role_from_source_code(self, config, role_name):
         # type: (Config, str) -> str
         app_policy = self._app_policy.generate_policy_from_app_source(config)
@@ -722,10 +771,10 @@ class APIGatewayDeployer(object):
         )
         lambda_functions = deployed_resources.get('lambda_functions', {})
         if lambda_functions:
-            # Assuming these are just authorizers for now.
-            for function_arn in lambda_functions.values():
-                self._aws_client.add_permission_for_authorizer(
-                    rest_api_id, function_arn, str(uuid.uuid4()))
+            for function in lambda_functions.values():
+                if function['type'] == 'authorizer':
+                    self._aws_client.add_permission_for_authorizer(
+                        rest_api_id, function['arn'], str(uuid.uuid4()))
 
 
 class ApplicationPolicyHandler(object):

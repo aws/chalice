@@ -810,6 +810,7 @@ def test_can_handle_builtin_auth():
     assert isinstance(authorizer, app.BuiltinAuthConfig)
     assert authorizer.name == 'my_auth'
     assert authorizer.handler_string == 'app.my_auth'
+    assert my_auth.name == 'my_auth'
 
 
 def test_builtin_auth_can_transform_event():
@@ -1014,3 +1015,126 @@ def test_special_cased_root_resource(auth_request):
             'Resource': expected,
         }]
     }
+
+
+def test_can_register_scheduled_event_with_str(sample_app):
+    @sample_app.schedule('rate(1 minute)')
+    def foo(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event_source = sample_app.event_sources[0]
+    assert event_source.name == 'foo'
+    assert event_source.schedule_expression == 'rate(1 minute)'
+    assert event_source.handler_string == 'app.foo'
+
+
+def test_can_register_scheduled_event_with_rate(sample_app):
+    @sample_app.schedule(app.Rate(value=2, unit=app.Rate.HOURS))
+    def foo(event):
+        pass
+
+    # We don't convert the rate down to its string form until
+    # we actually deploy.
+    assert len(sample_app.event_sources) == 1
+    expression = sample_app.event_sources[0].schedule_expression
+    # We already check the event source in the test above, so we're
+    # only interested in the schedule expression here.
+    assert expression.value == 2
+    assert expression.unit == app.Rate.HOURS
+
+
+def test_can_register_scheduled_event_with_event(sample_app):
+    @sample_app.schedule(app.Cron(0, 10, '*', '*', '?', '*'))
+    def foo(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    expression = sample_app.event_sources[0].schedule_expression
+    assert expression.minutes == 0
+    assert expression.hours == 10
+    assert expression.day_of_month == '*'
+    assert expression.month == '*'
+    assert expression.day_of_week == '?'
+    assert expression.year == '*'
+
+
+@pytest.mark.parametrize('value,unit,expected', [
+    (1, app.Rate.MINUTES, 'rate(1 minute)'),
+    (2, app.Rate.MINUTES, 'rate(2 minutes)'),
+    (1, app.Rate.HOURS, 'rate(1 hour)'),
+    (2, app.Rate.HOURS, 'rate(2 hours)'),
+    (1, app.Rate.DAYS, 'rate(1 day)'),
+    (2, app.Rate.DAYS, 'rate(2 days)'),
+])
+def test_rule_object_converts_to_str(value, unit, expected):
+    assert app.Rate(value=value, unit=unit).to_string() == expected
+
+
+@pytest.mark.parametrize('minutes,hours,day_of_month,month,day_of_week,year,expected', [
+    # These are taken from the scheduled events docs page.
+    # Invoke a Lambda function at 10:00am (UTC) everyday
+    (0, 10, '*', '*', '?', '*', 'cron(0 10 * * ? *)'),
+    # Invoke a Lambda function 12:15pm (UTC) everyday
+    (15, 12, '*', '*', '?', '*', 'cron(15 12 * * ? *)'),
+    # Invoke a Lambda function at 06:00pm (UTC) every Mon-Fri
+    (0, 18, '?', '*', 'MON-FRI', '*', 'cron(0 18 ? * MON-FRI *)'),
+    # Invoke a Lambda function at 8:00am (UTC) every first day of the month
+    (0, 8, 1, '*', '?', '*', 'cron(0 8 1 * ? *)'),
+    # Invoke a Lambda function every 10 min Mon-Fri
+    ('0/10', '*', '?', '*', 'MON-FRI', '*', 'cron(0/10 * ? * MON-FRI *)'),
+    # Invoke a Lambda function every 5 minutes Mon-Fri between 8:00am and
+    # 5:55pm (UTC)
+    ('0/5', '8-17', '?', '*', 'MON-FRI', '*', 'cron(0/5 8-17 ? * MON-FRI *)'),
+    # Invoke a Lambda function at 9 a.m. (UTC) the first Monday of each month
+    (0, 9, '?', '*', '2#1', '*', 'cron(0 9 ? * 2#1 *)'),
+])
+def test_cron_expression_converts_to_str(minutes, hours, day_of_month, month,
+                                         day_of_week, year, expected):
+    assert app.Cron(
+        minutes=minutes,
+        hours=hours,
+        day_of_month=day_of_month,
+        month=month,
+        day_of_week=day_of_week,
+        year=year,
+    ).to_string() == expected
+
+
+def test_can_map_event_dict_to_object(sample_app):
+
+    @sample_app.schedule('rate(1 hour)')
+    def handler(event):
+        return event
+
+    # This is the event dict that lambda provides
+    # to the lambda handler
+    lambda_event = {
+        "version": "0",
+        "account": "123456789012",
+        "region": "us-west-2",
+        "detail": {},
+        "detail-type": "Scheduled Event",
+        "source": "aws.events",
+        "time": "1970-01-01T00:00:00Z",
+        "id": "event-id",
+        "resources": [
+          "arn:aws:events:us-west-2:123456789012:rule/my-schedule"
+        ]
+    }
+
+    event_object = handler(lambda_event, context=None)
+    assert event_object.version == '0'
+    assert event_object.event_id == 'event-id'
+    assert event_object.source == 'aws.events'
+    assert event_object.account == '123456789012'
+    assert event_object.time == '1970-01-01T00:00:00Z'
+    assert event_object.region == 'us-west-2'
+    assert event_object.resources == [
+        "arn:aws:events:us-west-2:123456789012:rule/my-schedule"
+    ]
+    assert event_object.detail == {}
+    assert event_object.detail_type == "Scheduled Event"
+    # This is meant as a fall back in case you need access to
+    # the raw lambda event dict.
+    assert event_object.to_dict() == lambda_event

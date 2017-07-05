@@ -448,7 +448,10 @@ def test_builtin_auth(sample_app):
             'api_handler_arn': 'lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
-                'api-dev-myauth': 'auth_arn',
+                'api-dev-myauth': {
+                    'arn': 'auth_arn',
+                    'type': 'authorizer',
+                }
             }
         }
     )
@@ -466,6 +469,48 @@ def test_builtin_auth(sample_app):
     doc = swagger_gen.generate_swagger(sample_app)
     assert 'securityDefinitions' in doc
     assert doc['securityDefinitions']['myauth'] == {
+        'in': 'header',
+        'name': 'Authorization',
+        'type': 'apiKey',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'token',
+            'authorizerCredentials': 'arn:role',
+            'authorizerResultTtlInSeconds': 10,
+            'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
+                              '/2015-03-31/functions/auth_arn/invocations'),
+        }
+    }
+
+
+def test_will_default_to_function_name_for_auth(sample_app):
+    swagger_gen = SwaggerGenerator(
+        region='us-west-2',
+        deployed_resources={
+            'api_handler_arn': 'lambda_arn',
+            'api_handler_name': 'api-dev',
+            'lambda_functions': {
+                'api-dev-auth': {
+                    'arn': 'auth_arn',
+                    'type': 'authorizer',
+                }
+            }
+        }
+    )
+
+    # No "name=" kwarg provided should default
+    # to a name of "auth".
+    @sample_app.authorizer(ttl_seconds=10, execution_role='arn:role')
+    def auth(auth_request):
+        pass
+
+    @sample_app.route('/auth', authorizer=auth)
+    def foo():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions']['auth'] == {
         'in': 'header',
         'name': 'Authorization',
         'type': 'apiKey',

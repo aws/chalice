@@ -73,7 +73,8 @@ class SwaggerGenerator(object):
                 self._deployed_resources['api_handler_name'],
                 authorizer.config.name
             )
-            arn = self._deployed_resources['lambda_functions'][function_name]
+            arn = self._deployed_resources[
+                'lambda_functions'][function_name]['arn']
             auth_config = authorizer.config
             config = {
                 'in': 'header',

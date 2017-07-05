@@ -387,57 +387,54 @@ class TypedAWSClient(object):
         ``self.add_permission_for_apigateway(...).
 
         """
-        has_necessary_permissions = False
-        client = self._client('lambda')
-        try:
-            policy = self.get_function_policy(function_name)
-        except client.exceptions.ResourceNotFoundException:
-            pass
-        else:
-            source_arn = self._build_source_arn_str(region_name, account_id,
-                                                    rest_api_id)
-            # Here's what a sample policy looks like after add_permission()
-            # has been previously called:
-            # {
-            #  "Id": "default",
-            #  "Statement": [
-            #   {
-            #    "Action": "lambda:InvokeFunction",
-            #    "Condition": {
-            #     "ArnLike": {
-            #       "AWS:SourceArn": <source_arn>
-            #     }
-            #    },
-            #    "Effect": "Allow",
-            #    "Principal": {
-            #     "Service": "apigateway.amazonaws.com"
-            #    },
-            #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
-            #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
-            #   }
-            #  ],
-            #  "Version": "2012-10-17"
-            # }
-            # So we need to check if there's a policy that looks like this.
-            for statement in policy.get('Statement', []):
-                if self._gives_apigateway_access(statement, function_name,
-                                                 source_arn):
-                    has_necessary_permissions = True
-                    break
-        if not has_necessary_permissions:
-            self.add_permission_for_apigateway(
-                function_name, region_name, account_id, rest_api_id, random_id)
+        policy = self.get_function_policy(function_name)
+        source_arn = self._build_source_arn_str(region_name, account_id,
+                                                rest_api_id)
+        if self._policy_gives_access(policy, source_arn, 'apigateway'):
+            return
+        self.add_permission_for_apigateway(
+            function_name, region_name, account_id, rest_api_id, random_id)
 
-    def _gives_apigateway_access(self, statement, function_name, source_arn):
+    def _policy_gives_access(self, policy, source_arn, service_name):
+        # type: (Dict[str, Any], str, str) -> bool
+        # Here's what a sample policy looks like after add_permission()
+        # has been previously called:
+        # {
+        #  "Id": "default",
+        #  "Statement": [
+        #   {
+        #    "Action": "lambda:InvokeFunction",
+        #    "Condition": {
+        #     "ArnLike": {
+        #       "AWS:SourceArn": <source_arn>
+        #     }
+        #    },
+        #    "Effect": "Allow",
+        #    "Principal": {
+        #     "Service": "apigateway.amazonaws.com"
+        #    },
+        #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
+        #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
+        #   }
+        #  ],
+        #  "Version": "2012-10-17"
+        # }
+        # So we need to check if there's a policy that looks like this.
+        for statement in policy.get('Statement', []):
+            if self._statement_gives_arn_access(statement, source_arn,
+                                                service_name):
+                return True
+        return False
+
+    def _statement_gives_arn_access(self, statement, source_arn, service_name):
         # type: (Dict[str, Any], str, str) -> bool
         if not statement['Action'] == 'lambda:InvokeFunction':
             return False
-        if statement.get('Condition', {}).get('ArnLike',
-                                              {}).get('AWS:SourceArn',
-                                                      '') != source_arn:
+        if statement.get('Condition', {}).get(
+                'ArnLike', {}).get('AWS:SourceArn', '') != source_arn:
             return False
         if statement.get('Principal', {}).get('Service', '') != \
-                'apigateway.amazonaws.com':
+                '%s.amazonaws.com' % service_name:
             return False
         # We're not checking the "Resource" key because we're assuming
         # that lambda.get_policy() is returning the policy for the particular
@@ -453,8 +450,11 @@ class TypedAWSClient(object):
 
         """
         client = self._client('lambda')
-        policy = client.get_policy(FunctionName=function_name)
-        return json.loads(policy['Policy'])
+        try:
+            policy = client.get_policy(FunctionName=function_name)
+            return json.loads(policy['Policy'])
+        except client.exceptions.ResourceNotFoundException:
+            return {'Statement': []}
 
     def download_sdk(self, rest_api_id, output_dir,
                      api_gateway_stage=DEFAULT_STAGE_NAME,
@@ -599,6 +599,39 @@ class TypedAWSClient(object):
             StatementId=random_id,
             Principal='apigateway.amazonaws.com',
             SourceArn=source_arn,
+        )
+
+    def get_or_create_rule_arn(self, rule_name, schedule_expression):
+        # type: (str, str) -> str
+        events = self._client('events')
+        # put_rule is idempotent so we can safely call it even if it already
+        # exists.
+        rule_arn = events.put_rule(Name=rule_name,
+                                   ScheduleExpression=schedule_expression)
+        return rule_arn['RuleArn']
+
+    def connect_rule_to_lambda(self, rule_name, function_arn):
+        # type: (str, str) -> None
+        events = self._client('events')
+        events.put_targets(Rule=rule_name,
+                           Targets=[{'Id': '1', 'Arn': function_arn}])
+
+    def add_permission_for_scheduled_event(self, rule_arn,
+                                           function_arn):
+        # type: (str, str) -> None
+        lambda_client = self._client('lambda')
+        policy = self.get_function_policy(function_arn)
+        if self._policy_gives_access(policy, rule_arn, 'events'):
+            return
+        random_id = self._random_id()
+        # We should be checking if the permission already exists and only
+        # adding it if necessary.
+        lambda_client.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_arn,
+            StatementId=random_id,
+            Principal='events.amazonaws.com',
+            SourceArn=rule_arn,
         )
 
     def _random_id(self):

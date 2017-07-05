@@ -110,6 +110,7 @@ class Chalice(object):
     debug = ... # type: bool
     authorizers = ... # type: Dict[str, Dict[str, Any]]
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
+    event_sources = ... # type: List[CloudWatchEventSource]
 
     def __init__(self, app_name: str) -> None: ...
 
@@ -148,3 +149,34 @@ class AuthResponse(object):
     routes = ... # type: Union[str, AuthRoute]
     principal_id = ... # type: str
     context = ... # type: Optional[Dict[str, str]]
+
+
+class EventSource(object):
+    name = ...  # type: str
+    handler_string = ...  # type: str
+
+
+class CloudWatchEventSource(EventSource):
+    schedule_expression = ...  # type: Union[str, ScheduleExpression]
+
+
+class ScheduleExpression(object):
+    def to_string(self) -> str: ...
+
+
+class Rate(ScheduleExpression):
+    unit = ... # type: int
+    value = ... # type: str
+
+    def to_string(self) -> str: ...
+
+
+class Cron(ScheduleExpression):
+    minutes = ... # type: Union[str, int]
+    hours = ... # type: Union[str, int]
+    day_of_month = ... # type: Union[str, int]
+    month = ... # type: Union[str, int]
+    day_of_week = ... # type: Union[str, int]
+    year = ... # type: Union[str, int]
+
+    def to_string(self) -> str: ...
