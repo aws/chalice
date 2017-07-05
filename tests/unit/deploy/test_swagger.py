@@ -4,7 +4,6 @@ from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
 
 import mock
-import pytest
 from pytest import fixture
 
 
@@ -284,78 +283,6 @@ def test_can_add_api_key(sample_app, swagger_gen):
         'name': 'x-api-key',
         'in': 'header'
     }
-
-
-def test_can_add_cognito_authorizers(sample_app, swagger_gen):
-    @sample_app.route('/api-key-required',
-                      authorizer_name='MyUserPool')
-    def foo():
-        return {}
-
-    # Doesn't matter if you define the authorizer before
-    # it's referenced.
-    sample_app.define_authorizer(
-        name='MyUserPool',
-        header='Authorization',
-        auth_type='cognito_user_pools',
-        provider_arns=['arn:aws:cog:r:1:userpool/name']
-    )
-
-    doc = swagger_gen.generate_swagger(sample_app)
-    single_method = doc['paths']['/api-key-required']['get']
-    assert single_method.get('security') == [{'MyUserPool': []}]
-    assert 'securityDefinitions' in doc
-    assert doc['securityDefinitions'].get('MyUserPool') == {
-        'in': 'header',
-        'type': 'apiKey',
-        'name': 'Authorization',
-        'x-amazon-apigateway-authtype': 'cognito_user_pools',
-        'x-amazon-apigateway-authorizer': {
-            'type': 'cognito_user_pools',
-            'providerARNs': ['arn:aws:cog:r:1:userpool/name']
-        }
-    }
-
-
-def test_unknown_auth_raises_error(sample_app, swagger_gen):
-    @sample_app.route('/unknown', authorizer_name='Unknown')
-    def foo():
-        return {}
-
-    sample_app.define_authorizer(
-        'Unknown', header='Authorization',
-        auth_type='unknown-type')
-
-    with pytest.raises(ValueError):
-        swagger_gen.generate_swagger(sample_app)
-
-
-def test_reference_auth_without_defining(sample_app, swagger_gen):
-    @sample_app.route('/unknown', authorizer_name='NeverDefined')
-    def foo():
-        return {}
-
-    with pytest.raises(ValueError):
-        swagger_gen.generate_swagger(sample_app)
-
-
-def test_reference_auth_with_other_auth_defined(sample_app, swagger_gen):
-    @sample_app.route('/api-key-required',
-                      authorizer_name='Unknown')
-    def foo():
-        return {}
-
-    # Doesn't matter if you define the authorizer before
-    # it's referenced.
-    sample_app.define_authorizer(
-        name='MyUserPool',
-        header='Authorization',
-        auth_type='cognito_user_pools',
-        provider_arns=['arn:aws:cog:r:1:userpool/name']
-    )
-
-    with pytest.raises(ValueError):
-        swagger_gen.generate_swagger(sample_app)
 
 
 def test_can_use_authorizer_object(sample_app, swagger_gen):

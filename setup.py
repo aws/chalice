@@ -16,7 +16,7 @@ install_requires = [
 
 setup(
     name='chalice',
-    version='0.10.1',
+    version='1.0.0b1',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
@@ -35,7 +35,7 @@ setup(
         ]
     },
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
