@@ -190,12 +190,6 @@ The python serverless microframework for AWS allows
 you to quickly create and deploy applications using
 Amazon API Gateway and AWS Lambda.
 
-Right now it's under developer preview and we're looking
-for customer feedback.
-
-If you'd like to proceded, then answer the questions
-below.
-
 Please enter the project name"""
 
 
