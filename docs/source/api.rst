@@ -159,6 +159,18 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
+   .. method:: lambda_function(name=None)
+
+      Create a pure lambda function that's not connected to anything.
+
+      See :doc:`purelambda` for more information.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
+
 Request
 =======
 

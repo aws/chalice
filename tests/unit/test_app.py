@@ -1138,3 +1138,24 @@ def test_can_map_event_dict_to_object(sample_app):
     # This is meant as a fall back in case you need access to
     # the raw lambda event dict.
     assert event_object.to_dict() == lambda_event
+
+
+def test_pure_lambda_function_direct_mapping(sample_app):
+    @sample_app.lambda_function()
+    def handler(event, context):
+        return event, context
+
+    return_value = handler({'fake': 'event'}, {'fake': 'context'})
+    assert return_value[0] == {'fake': 'event'}
+    assert return_value[1] == {'fake': 'context'}
+
+
+def test_pure_lambda_functions_are_registered_in_app(sample_app):
+    @sample_app.lambda_function()
+    def handler(event, context):
+        pass
+
+    assert len(sample_app.pure_lambda_functions) == 1
+    lambda_function = sample_app.pure_lambda_functions[0]
+    assert lambda_function.name == 'handler'
+    assert lambda_function.handler_string == 'app.handler'

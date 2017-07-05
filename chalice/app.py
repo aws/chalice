@@ -429,6 +429,7 @@ class Chalice(object):
         self._authorizers = {}
         self.builtin_auth_handlers = []
         self.event_sources = []
+        self.pure_lambda_functions = []
         if self.configure_logs:
             self._configure_logging()
 
@@ -506,6 +507,18 @@ class Chalice(object):
             self.event_sources.append(event_source)
             return ScheduledEventHandler(event_func)
         return _register_schedule
+
+    def lambda_function(self, name=None):
+        def _register_lambda_function(lambda_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = lambda_func.__name__
+            wrapper = LambdaFunction(
+                lambda_func, name=handler_name,
+                handler_string='app.%s' % lambda_func.__name__)
+            self.pure_lambda_functions.append(wrapper)
+            return wrapper
+        return _register_lambda_function
 
     def route(self, path, **kwargs):
         def _register_view(view_func):
@@ -873,3 +886,13 @@ class CloudWatchEvent(object):
 
     def to_dict(self):
         return self._event_dict
+
+
+class LambdaFunction(object):
+    def __init__(self, func, name, handler_string):
+        self.func = func
+        self.name = name
+        self.handler_string = handler_string
+
+    def __call__(self, event, context):
+        return self.func(event, context)

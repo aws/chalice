@@ -66,6 +66,7 @@ Topics
    topics/cfn
    topics/authorizers
    topics/events
+   topics/purelambda
 
 
 API Reference

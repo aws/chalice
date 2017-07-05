@@ -16,6 +16,7 @@ import botocore.session  # noqa
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from typing import Any, Tuple, Callable, List, Dict, Optional  # noqa
+from typing import Set, Iterator  # noqa
 
 from chalice import app  # noqa
 from chalice.app import CloudWatchEventSource  # noqa
@@ -77,6 +78,7 @@ def validate_configuration(config):
     validate_route_content_types(routes, config.chalice_app.api.binary_types)
     _validate_manage_iam_role(config)
     validate_python_version(config)
+    validate_unique_function_names(config)
 
 
 def validate_routes(routes):
@@ -182,6 +184,27 @@ def _validate_manage_iam_role(config):
                 "When 'manage_iam_role' is set to false, you "
                 "must provide an 'iam_role_arn' in config.json."
             )
+
+
+def validate_unique_function_names(config):
+    # type: (Config) -> None
+    names = set()   # type: Set[str]
+    for name in _get_all_function_names(config.chalice_app):
+        if name in names:
+            raise ValueError("Duplicate function name detected: %s\n"
+                             "Names must be unique across all lambda "
+                             "functions in your Chalice app." % name)
+        names.add(name)
+
+
+def _get_all_function_names(chalice_app):
+    # type: (app.Chalice) -> Iterator[str]
+    for auth_handler in chalice_app.builtin_auth_handlers:
+        yield auth_handler.name
+    for event in chalice_app.event_sources:
+        yield event.name
+    for function in chalice_app.pure_lambda_functions:
+        yield function.name
 
 
 class ChaliceDeploymentError(Exception):
@@ -421,10 +444,24 @@ class LambdaDeployer(object):
                                    deployed_values)
         self._deploy_event_sources(config, existing_resources, stage_name,
                                    deployed_values)
+        self._deploy_pure_lambda_functions(config, existing_resources,
+                                           stage_name, deployed_values)
         if existing_resources is not None:
             self._cleanup_unreferenced_functions(existing_resources,
                                                  deployed_values)
         return deployed_values
+
+    def _deploy_pure_lambda_functions(self, config, existing_resources,
+                                      stage_name, deployed_values):
+        # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
+        for lambda_function in config.chalice_app.pure_lambda_functions:
+            new_config = config.scope(chalice_stage=config.chalice_stage,
+                                      function_name=lambda_function.name)
+            self._deploy_single_lambda_function(
+                new_config, lambda_function.name,
+                lambda_function.handler_string,
+                stage_name, deployed_values, 'pure_lambda'
+            )
 
     def _cleanup_unreferenced_functions(self, existing_resources,
                                         deployed_values):

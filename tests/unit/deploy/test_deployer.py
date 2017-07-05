@@ -33,6 +33,7 @@ from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
 from chalice.deploy.deployer import validate_route_content_types
 from chalice.deploy.deployer import validate_python_version
+from chalice.deploy.deployer import validate_unique_function_names
 from chalice.deploy.packager import LambdaDeploymentPackager
 
 
@@ -347,6 +348,51 @@ def test_validation_error_if_no_role_provided_when_manage_false(sample_app):
     config = Config.create(chalice_app=sample_app, manage_iam_role=False)
     with pytest.raises(ValueError):
         validate_configuration(config)
+
+
+def test_validate_unique_lambda_function_names(sample_app):
+    @sample_app.lambda_function()
+    def foo(event, context):
+        pass
+
+    # This will cause a validation error because
+    # 'foo' is already registered as a lambda function.
+    @sample_app.lambda_function(name='foo')
+    def bar(event, context):
+        pass
+
+    config = Config.create(chalice_app=sample_app, manage_iam_role=False)
+    with pytest.raises(ValueError):
+        validate_unique_function_names(config)
+
+
+def test_validate_names_across_function_types(sample_app):
+    @sample_app.lambda_function()
+    def foo(event, context):
+        pass
+
+    @sample_app.schedule('rate(1 hour)', name='foo')
+    def bar(event):
+        pass
+
+    config = Config.create(chalice_app=sample_app, manage_iam_role=False)
+    with pytest.raises(ValueError):
+        validate_unique_function_names(config)
+
+
+def test_validate_names_using_name_kwarg(sample_app):
+    @sample_app.authorizer(name='duplicate')
+    def foo(auth_request):
+        pass
+
+    @sample_app.lambda_function(name='duplicate')
+    def bar(event):
+        pass
+
+    config = Config.create(chalice_app=sample_app, manage_iam_role=False)
+    with pytest.raises(ValueError):
+        validate_unique_function_names(config)
+
 
 class TestChaliceDeploymentError(object):
     def test_general_exception(self):
@@ -1110,6 +1156,38 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         # Rate object was properly converted to a string value.
         self.aws_client.get_or_create_rule_arn.assert_called_with(
             'myapp-dev-foo', 'rate(1 hour)')
+
+    def test_can_create_pure_lambda_functions(self, sample_app):
+        @sample_app.lambda_function()
+        def foo(event, context):
+            pass
+
+        config = self.create_config_obj(sample_app)
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:foo-function']
+        deployed = deployer.deploy(config, None, stage_name='dev')
+        assert 'lambda_functions' in deployed
+        assert deployed['lambda_functions'] == {
+            'myapp-dev-foo': {'arn': 'arn:foo-function',
+                              'type': 'pure_lambda'}
+        }
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-foo',
+            handler='app.foo',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents=b'package contents',
+        )
 
     def test_can_update_auth_handlers(self, sample_app_with_auth):
         config = self.create_config_obj(sample_app_with_auth)
