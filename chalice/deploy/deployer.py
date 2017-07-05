@@ -77,6 +77,7 @@ def validate_configuration(config):
     validate_route_content_types(routes, config.chalice_app.api.binary_types)
     _validate_manage_iam_role(config)
     validate_python_version(config)
+    validate_unique_function_names(config)
 
 
 def validate_routes(routes):
@@ -182,6 +183,27 @@ def _validate_manage_iam_role(config):
                 "When 'manage_iam_role' is set to false, you "
                 "must provide an 'iam_role_arn' in config.json."
             )
+
+
+def validate_unique_function_names(config):
+    # type: (Config) -> None
+    names = set()
+    for name in _get_all_function_names(config.chalice_app):
+        if name in names:
+            raise ValueError("Duplicate function name detected: %s\n"
+                             "Names must be unique across all lambda "
+                             "functions in your Chalice app." % name)
+        names.add(name)
+
+
+def _get_all_function_names(chalice_app):
+    # type: (app.Chalice) -> Iterator[str]
+    for auth_handler in chalice_app.builtin_auth_handlers:
+        yield auth_handler.name
+    for event in chalice_app.event_sources:
+        yield event.name
+    for function in chalice_app.pure_lambda_functions:
+        yield function.name
 
 
 class ChaliceDeploymentError(Exception):
