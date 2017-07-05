@@ -190,16 +190,6 @@ def test_can_delete(runner, mock_cli_factory, mock_deployer):
             assert data == {}
 
 
-def test_warning_when_using_deprecated_arg(runner, mock_cli_factory):
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        result = _run_cli_command(runner, cli.deploy, ['prod'],
-                                  cli_factory=mock_cli_factory)
-        assert result.exit_code == 0
-        assert 'is deprecated and will be removed' in result.output
-
-
 def test_can_specify_chalice_stage_arg(runner, mock_cli_factory,
                                        mock_deployer):
     with runner.isolated_filesystem():
@@ -211,20 +201,6 @@ def test_can_specify_chalice_stage_arg(runner, mock_cli_factory,
 
     config = mock_cli_factory.create_config_obj.return_value
     mock_deployer.deploy.assert_called_with(config, chalice_stage_name='prod')
-
-
-def test_api_gateway_mutex_with_positional_arg(runner, mock_cli_factory,
-                                               mock_deployer):
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        result = _run_cli_command(runner, cli.deploy,
-                                  ['--api-gateway-stage', 'prod', 'prod'],
-                                  cli_factory=mock_cli_factory)
-        assert result.exit_code == 2
-        assert 'is deprecated' in result.output
-
-    assert not mock_deployer.deploy.called
 
 
 def test_can_specify_api_gateway_stage(runner, mock_cli_factory,

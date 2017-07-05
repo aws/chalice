@@ -100,21 +100,9 @@ def local(ctx, port=8000):
               help=('Name of the Chalice stage to deploy to. '
                     'Specifying a new chalice stage will create '
                     'an entirely new set of AWS resources.'))
-@click.argument('deprecated-api-gateway-stage', nargs=1, required=False)
 @click.pass_context
-def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
-           deprecated_api_gateway_stage):
-    # type: (click.Context, Optional[bool], str, str, str, str) -> None
-    if api_gateway_stage is not None and \
-            deprecated_api_gateway_stage is not None:
-        raise _create_deprecated_stage_error(api_gateway_stage,
-                                             deprecated_api_gateway_stage)
-    if deprecated_api_gateway_stage is not None:
-        # The "chalice deploy <stage>" is deprecated and will be removed
-        # in future versions.  We'll support it for now, but let the
-        # user know to stop using this.
-        _warn_pending_removal(deprecated_api_gateway_stage)
-        api_gateway_stage = deprecated_api_gateway_stage
+def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage):
+    # type: (click.Context, Optional[bool], str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(
@@ -143,38 +131,6 @@ def delete(ctx, profile, stage):
     d.delete(config, chalice_stage_name=stage)
     remove_stage_from_deployed_values(stage, os.path.join(
         config.project_dir, '.chalice', 'deployed.json'))
-
-
-def _create_deprecated_stage_error(option, positional_arg):
-    # type: (str, str) -> click.ClickException
-    message = (
-        "You've specified both an '--api-gateway-stage' value of "
-        "'%s' as well as the positional API Gateway stage argument "
-        "'chalice deploy \"%s\"'.\n\n"
-        "The positional argument for API gateway stage ('chalice deploy "
-        "<api-gateway-stage>') is deprecated and support will be "
-        "removed in a future version of chalice.\nIf you want to "
-        "specify an API Gateway stage, just specify the "
-        "--api-gateway-stage option and remove the positional "
-        "stage argument.\n"
-        "If you want a completely separate set of AWS resources, "
-        "consider using the '--stage' argument."
-    ) % (option, positional_arg)
-    exception = click.ClickException(message)
-    exception.exit_code = 2
-    return exception
-
-
-def _warn_pending_removal(deprecated_stage):
-    # type: (str) -> None
-    click.echo("You've specified a deploy command of the form "
-               "'chalice deploy <stage>'\n"
-               "This form is deprecated and will be removed in a "
-               "future version of chalice.\n"
-               "You can use the --api-gateway-stage to achieve the "
-               "same functionality, or the newer '--stage' argument "
-               "if you want an entirely set of separate resources.",
-               err=True)
 
 
 @cli.command()

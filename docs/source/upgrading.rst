@@ -17,6 +17,18 @@ deprecated since v0.8.1.  See :doc:`topics/authorizers` for updated
 information on configuring authorizers in Chalice as well as the
 original deprecation notice in the :ref:`v0-8-1` upgrade notes.
 
+The optional deprecated positional parameter in the ``chalice deploy`` command
+for specifying the API Gateway stage has been removed.  If you want to
+specify the API Gateway stage, you can use the ``--api-gateway-stage``
+option in the ``chalice deploy`` command::
+
+    # Deprecated and removed in 1.0.0rc1
+    $ chalice deploy prod
+
+    # Equivalent and updated way to specify an API Gateway stage:
+    $ chalice deploy --api-gateway-stage prod
+
+
 .. _v0-9-0:
 
 0.9.0
