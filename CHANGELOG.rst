@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#262 <https://github.com/awslabs/chalice/issues/262>`__)
 * Add support for scheduled events
   (`#390 <https://github.com/awslabs/chalice/issues/390>`__)
+* Add support for pure lambda functions
+  (`#390 <https://github.com/awslabs/chalice/issues/400>`__)
 
 
 0.10.1
