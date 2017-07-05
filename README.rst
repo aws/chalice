@@ -86,13 +86,23 @@ creating a virtualenv with python3.6 by running::
 
 Next, in your virtualenv, install ``chalice``::
 
-    $ pip install chalice
+    $ pip install --pre chalice
 
 You can verify you have chalice installed by running::
 
     $ chalice --help
     Usage: chalice [OPTIONS] COMMAND [ARGS]...
     ...
+
+Chalice now has release candidates for the 1.0 release.  In order to
+install these, you **must** specify either the ``--pre`` option::
+
+    $ pip install --upgrade --pre chalice
+
+or specify the exact RC version you want to use::
+
+    $ pip install chalice==1.0.0rc1
+
 
 Credentials
 -----------

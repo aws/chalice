@@ -6,4 +6,4 @@ from chalice.app import (
     AuthResponse, AuthRoute, Cron, Rate
 )
 
-__version__ = '0.10.1'
+__version__ = '1.0.0rc1'

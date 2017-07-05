@@ -2,8 +2,16 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.0.0rc1
+========
+
+Please read the `upgrade notes for 1.0.0rc1
+<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-0-0rc1>`__
+for more detailed information about upgrading to this release.
+
+Note: to install this RC version of chalice you must specify
+either the exact version ``pip install chalice==1.0.0rc1`` or
+use the ``--pre`` flag for pip: ``pip install --pre chalice``.
 
 * Fix unicode responses being quoted in python 2.7
   (`#262 <https://github.com/awslabs/chalice/issues/262>`__)
