@@ -505,7 +505,7 @@ CORS
 Scheduled Events
 ================
 
-.. versionadded:: 0.11.0
+.. versionadded:: 1.0.0rc1
 
 .. class:: Rate(value, unit)
 
