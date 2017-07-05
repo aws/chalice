@@ -69,27 +69,25 @@ class LambdaDeploymentPackager(object):
             project_dir, python_version)
         if package_filename is None:
             package_filename = deployment_package_filename
-        try:
-            requirements_filepath = self._get_requirements_filename(
-                project_dir)
-            site_packages_dir = self._osutils.joinpath(
-                project_dir, '.chalice', 'site-packages')
-            self._dependency_builder.build_site_packages(requirements_filepath,
-                                                         site_packages_dir)
-        except MissingDependencyError as e:
-            missing_packages = '\n'.join([p.identifier for p
-                                          in e.missing])
-            print(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
-        dirname = self._osutils.dirname(
-            self._osutils.abspath(package_filename))
-        if not self._osutils.directory_exists(dirname):
-            self._osutils.makedirs(dirname)
-        with self._osutils.open_zip(package_filename, 'w',
-                                    self._osutils.ZIP_DEFLATED) as z:
-            self._add_py_deps(z, site_packages_dir)
-            self._add_app_files(z, project_dir)
-            self._add_vendor_files(z, self._osutils.joinpath(project_dir,
-                                                             self._VENDOR_DIR))
+        requirements_filepath = self._get_requirements_filename(project_dir)
+        with self._osutils.tempdir() as site_packages_dir:
+            try:
+                self._dependency_builder.build_site_packages(
+                    requirements_filepath, site_packages_dir)
+            except MissingDependencyError as e:
+                missing_packages = '\n'.join([p.identifier for p
+                                              in e.missing])
+                print(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
+            dirname = self._osutils.dirname(
+                self._osutils.abspath(package_filename))
+            if not self._osutils.directory_exists(dirname):
+                self._osutils.makedirs(dirname)
+            with self._osutils.open_zip(package_filename, 'w',
+                                        self._osutils.ZIP_DEFLATED) as z:
+                self._add_py_deps(z, site_packages_dir)
+                self._add_app_files(z, project_dir)
+                self._add_vendor_files(z, self._osutils.joinpath(
+                    project_dir, self._VENDOR_DIR))
         return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
