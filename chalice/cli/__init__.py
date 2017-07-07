@@ -73,6 +73,16 @@ def cli(ctx, project_dir, debug=False):
     os.chdir(project_dir)
 
 
+def get_env_variables(config):
+    # type: (Dict) -> Dict
+    env_vars_key = 'environment_variables'
+    env_vars = {}  # type: Dict
+    if env_vars_key in config and config[env_vars_key]:
+        env_vars = {key: value
+                    for key, value in config[env_vars_key].items()}
+    return env_vars
+
+
 @cli.command()
 @click.option('--port', default=8000, type=click.INT)
 @click.pass_context
@@ -80,13 +90,15 @@ def local(ctx, port=8000):
     # type: (click.Context, int) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     app_obj = factory.load_chalice_app()
+    config = factory.load_project_config()
+    env_variables = get_env_variables(config)
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
     # running in lambda.  This is configuring the root logger.
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(stream=sys.stdout)
-    run_local_server(app_obj, port)
+    run_local_server(app_obj, port, env_variables)
 
 
 @cli.command()
@@ -334,10 +346,10 @@ def generate_pipeline(ctx, filename):
         f.write(json.dumps(output, indent=2, separators=(',', ': ')))
 
 
-def run_local_server(app_obj, port):
-    # type: (Chalice, int) -> None
+def run_local_server(app_obj, port, env_variables):
+    # type: (Chalice, int, Dict) -> None
     from chalice.local import create_local_server
-    server = create_local_server(app_obj, port)
+    server = create_local_server(app_obj, port, env_variables=env_variables)
     server.serve_forever()
 
 
