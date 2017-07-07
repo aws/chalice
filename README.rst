@@ -642,7 +642,7 @@ types.  Here's an example of this feature:
     @app.route('/', methods=['POST'],
                content_types=['application/x-www-form-urlencoded'])
     def index():
-        parsed = parse_qs(app.current_request.raw_body)
+        parsed = parse_qs(app.current_request.raw_body.decode())
         return {
             'states': parsed.get('states', [])
         }
