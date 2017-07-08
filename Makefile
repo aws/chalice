@@ -40,6 +40,8 @@ pylint:
 	#
 	#
 	pylint --rcfile .pylintrc chalice
+	# Run our custom linter on test code.
+	pylint --load-plugins tests.linter --disable=I,E,W,R,C,F --enable C9999 tests/
 
 test:
 	py.test -v $(TESTS)
