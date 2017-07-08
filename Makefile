@@ -8,9 +8,6 @@ check:
 	# No unused imports, no undefined vars,
 	flake8 --ignore=E731,W503 --exclude chalice/__init__.py,chalice/compat.py --max-complexity 10 chalice/
 	flake8 --ignore=E731,W503,F401 --max-complexity 10 chalice/compat.py
-	#
-	#
-	# Basic error checking in test code
 	flake8 tests/unit/ tests/functional/
 	##### DOC8 ######
 	# Correct rst formatting for documentation
@@ -24,21 +21,9 @@ check:
 	#
 	#
 	pydocstyle --add-ignore=D100,D101,D102,D103,D104,D105,D204,D301 chalice/
-	#
-	#
-	#
-	###### PYLINT ERRORS ONLY ######
-	#
-	#
-	#
-	pylint --rcfile .pylintrc chalice
 
 pylint:
 	###### PYLINT ######
-	# Python linter.  This will generally not have clean output.
-	# So you'll need to manually verify this output.
-	#
-	#
 	pylint --rcfile .pylintrc chalice
 	# Run our custom linter on test code.
 	pylint --load-plugins tests.linter --disable=I,E,W,R,C,F --enable C9999 tests/
@@ -60,4 +45,4 @@ htmlcov:
 	rm -rf /tmp/htmlcov && mv htmlcov /tmp/
 	open /tmp/htmlcov/index.html
 
-prcheck: check typecheck test
+prcheck: check pylint typecheck test
