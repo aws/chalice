@@ -71,7 +71,7 @@ def test_can_create_from_arn():
 
 
 def test_can_display_logs():
-    retriever = mock.Mock(sepc=logs.LogRetriever)
+    retriever = mock.Mock(spec=logs.LogRetriever)
     retriever.retrieve_logs.return_value = [
         {'timestamp': 'NOW', 'logShortId': 'shortId', 'message': 'One'},
         {'timestamp': 'NOW', 'logShortId': 'shortId', 'message': 'Two'},
