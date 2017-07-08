@@ -98,6 +98,7 @@ def test_can_use_same_route_with_diff_http_methods(sample_app, swagger_gen):
     assert 'post' in view_config
     assert view_config['get'] == view_config['post']
 
+
 class TestPreflightCORS(object):
     def get_access_control_methods(self, view_config):
         return view_config['options'][
@@ -264,6 +265,7 @@ class TestPreflightCORS(object):
         # for CORS.
         assert allow_methods == "'GET,OPTIONS'"
 
+
 def test_can_add_api_key(sample_app, swagger_gen):
     @sample_app.route('/api-key-required', api_key_required=True)
     def foo(name):
@@ -288,6 +290,7 @@ def test_can_add_api_key(sample_app, swagger_gen):
 def test_can_use_authorizer_object(sample_app, swagger_gen):
     authorizer = CustomAuthorizer(
         'MyAuth', authorizer_uri='auth-uri', header='Authorization')
+
     @sample_app.route('/auth', authorizer=authorizer)
     def auth():
         return {'foo': 'bar'}
@@ -309,8 +312,10 @@ def test_can_use_authorizer_object(sample_app, swagger_gen):
         }
     }
 
+
 def test_can_use_iam_authorizer_object(sample_app, swagger_gen):
     authorizer = IAMAuthorizer()
+
     @sample_app.route('/auth', authorizer=authorizer)
     def auth():
         return {'foo': 'bar'}
@@ -327,10 +332,12 @@ def test_can_use_iam_authorizer_object(sample_app, swagger_gen):
           "x-amazon-apigateway-authtype": "awsSigv4"
     }
 
+
 def test_can_use_cognito_auth_object(sample_app, swagger_gen):
     authorizer = CognitoUserPoolAuthorizer('MyUserPool',
                                            header='Authorization',
                                            provider_arns=['myarn'])
+
     @sample_app.route('/api-key-required', authorizer=authorizer)
     def foo():
         return {}
@@ -355,6 +362,7 @@ def test_auth_defined_for_multiple_methods(sample_app, swagger_gen):
     authorizer = CognitoUserPoolAuthorizer('MyUserPool',
                                            header='Authorization',
                                            provider_arns=['myarn'])
+
     @sample_app.route('/pool1', authorizer=authorizer)
     def foo():
         return {}

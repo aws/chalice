@@ -9,6 +9,12 @@ from chalice import app
 from chalice import NotFoundError
 
 
+@pytest.fixture
+def view_function():
+    def _func():
+        return {"hello": "world"}
+
+
 def create_request_with_content_type(content_type):
     body = '{"json": "body"}'
     return app.Request(
@@ -515,8 +521,7 @@ def test_can_return_text_even_with_binary_content_type_configured():
     assert response['headers']['Content-Type'] == 'text/plain'
 
 
-def test_route_equality():
-    view_function = lambda: {"hello": "world"}
+def test_route_equality(view_function):
     a = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
@@ -534,8 +539,7 @@ def test_route_equality():
     assert a == b
 
 
-def test_route_inequality():
-    view_function = lambda: {"hello": "world"}
+def test_route_inequality(view_function):
     a = app.RouteEntry(
         view_function,
         view_name='myview', path='/',
@@ -800,7 +804,6 @@ def test_can_handle_builtin_auth():
     def my_auth(auth_request):
         pass
 
-
     @demo.route('/', authorizer=my_auth)
     def index_view():
         return {}
@@ -882,6 +885,7 @@ def test_validation_raised_on_unknown_kwargs():
         @auth_app.authorizer(this_is_an_unknown_kwarg=True)
         def builtin_auth(auth_request):
             pass
+
 
 def test_can_return_auth_response():
     event = {
@@ -993,7 +997,6 @@ def test_can_mix_auth_routes_and_strings(auth_request):
     }
 
 
-
 def test_special_cased_root_resource(auth_request):
     # Not sure why, but API gateway uses `//` for the root
     # resource.  I've confirmed it doesn't do this for non-root
@@ -1071,7 +1074,8 @@ def test_rule_object_converts_to_str(value, unit, expected):
     assert app.Rate(value=value, unit=unit).to_string() == expected
 
 
-@pytest.mark.parametrize('minutes,hours,day_of_month,month,day_of_week,year,expected', [
+@pytest.mark.parametrize(('minutes,hours,day_of_month,month,'
+                          'day_of_week,year,expected'), [
     # These are taken from the scheduled events docs page.
     # Invoke a Lambda function at 10:00am (UTC) everyday
     (0, 10, '*', '*', '?', '*', 'cron(0 10 * * ? *)'),

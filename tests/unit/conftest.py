@@ -27,7 +27,6 @@ def sample_app_with_auth():
     def myauth(auth_request):
         pass
 
-
     @app.route('/', authorizer=myauth)
     def foo():
         return {}

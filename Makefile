@@ -11,7 +11,7 @@ check:
 	#
 	#
 	# Basic error checking in test code
-	pyflakes tests/unit/ tests/functional/
+	flake8 tests/unit/ tests/functional/
 	##### DOC8 ######
 	# Correct rst formatting for documentation
 	#

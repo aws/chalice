@@ -107,7 +107,7 @@ def test_can_iterate_logs(stubbed_session):
          'timestamp': timestamp,
          'message': 'message',
          'ingestionTime': timestamp,
-         'eventId': 'eventId',}
+         'eventId': 'eventId'}
     ]
 
     stubbed_session.verify_stubs()
@@ -158,7 +158,7 @@ class TestDeleteLambdaFunction(object):
                        .delete_function(FunctionName='name').returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.delete_function('name') == None
+        assert awsclient.delete_function('name') is None
         stubbed_session.verify_stubs()
 
     def test_lambda_delete_function_already_deleted(self, stubbed_session):
@@ -179,7 +179,7 @@ class TestDeleteRestAPI(object):
                        .delete_rest_api(restApiId='name').returns({})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.delete_rest_api('name') == None
+        assert awsclient.delete_rest_api('name') is None
         stubbed_session.verify_stubs()
 
     def test_rest_api_delete_already_deleted(self, stubbed_session):
@@ -408,7 +408,8 @@ class TestCreateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
-            'name', 'myarn', b'foo', 'python2.7', 'app.app') == 'arn:12345:name'
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -510,9 +511,9 @@ class TestCreateLambdaFunction(object):
             awsclient.create_function('name', 'myarn', too_large_content,
                                       'python2.7', 'app.app')
         stubbed_session.verify_stubs()
-        assert excinfo.value.context.function_name ==  'name'
+        assert excinfo.value.context.function_name == 'name'
         assert excinfo.value.context.client_method_name == 'create_function'
-        assert excinfo.value.context.deployment_size ==  60 * (1024 ** 2)
+        assert excinfo.value.context.deployment_size == 60 * (1024 ** 2)
 
     def test_no_raise_large_deployment_error_when_small_deployment_size(
             self, stubbed_session):
@@ -575,6 +576,7 @@ class TestCreateLambdaFunction(object):
             awsclient.create_function('name', 'myarn', b'foo', 'python2.7',
                                       'app.app')
         stubbed_session.verify_stubs()
+
 
 class TestUpdateLambdaFunction(object):
     def test_always_update_function_code(self, stubbed_session):
@@ -780,10 +782,10 @@ class TestUpdateLambdaFunction(object):
         with pytest.raises(DeploymentPackageTooLargeError) as excinfo:
             awsclient.update_function('name', too_large_content)
         stubbed_session.verify_stubs()
-        assert excinfo.value.context.function_name ==  'name'
+        assert excinfo.value.context.function_name == 'name'
         assert (
             excinfo.value.context.client_method_name == 'update_function_code')
-        assert excinfo.value.context.deployment_size ==  60 * (1024 ** 2)
+        assert excinfo.value.context.deployment_size == 60 * (1024 ** 2)
 
     def test_no_raise_large_deployment_error_when_small_deployment_size(
             self, stubbed_session):
@@ -898,11 +900,13 @@ class TestAddPermissionsForAPIGateway(object):
         lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
         self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway_if_needed(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
-    def test_can_add_permission_for_apigateway_not_needed(self, stubbed_session):
+    def test_can_add_permission_for_apigateway_not_needed(self,
+                                                          stubbed_session):
         source_arn = 'arn:aws:execute-api:us-west-2:123:rest-api-id/*'
         wrong_action = {
             'Action': 'lambda:NotInvoke',
@@ -955,11 +959,13 @@ class TestAddPermissionsForAPIGateway(object):
         # Because the policy above indicates that API gateway already has the
         # necessary permissions, we should not call add_permission.
         stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway_if_needed(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
-    def test_can_add_permission_when_policy_does_not_exist(self, stubbed_session):
+    def test_can_add_permission_when_policy_does_not_exist(self,
+                                                           stubbed_session):
         # It's also possible to receive a ResourceNotFoundException
         # if you call get_policy() on a lambda function with no policy.
         lambda_stub = stubbed_session.stub('lambda')
@@ -967,13 +973,15 @@ class TestAddPermissionsForAPIGateway(object):
             error_code='ResourceNotFoundException', message='Does not exist.')
         self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway_if_needed(
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway_if_needed(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
 
 class TestAddPermissionsForAuthorizer(object):
-    FUNCTION_ARN =(
+
+    FUNCTION_ARN = (
         'arn:aws:lambda:us-west-2:1:function:app-dev-name'
     )
     GOOD_ARN = (
@@ -1087,8 +1095,7 @@ def test_update_api_from_swagger(stubbed_session):
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
 
-    awsclient.update_api_from_swagger('rest_api_id',
-                                        swagger_doc)
+    awsclient.update_api_from_swagger('rest_api_id', swagger_doc)
     stubbed_session.verify_stubs()
 
 
