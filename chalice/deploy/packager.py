@@ -23,6 +23,7 @@ class InvalidSourceDistributionNameError(Exception):
 
 class MissingDependencyError(Exception):
     """Raised when some dependencies could not be packaged for any reason."""
+
     def __init__(self, missing):
         # type: (Set[Package]) -> None
         self.missing = missing
@@ -30,6 +31,7 @@ class MissingDependencyError(Exception):
 
 class NoSuchPackageError(Exception):
     """Raised when a package name or version could not be found."""
+
     def __init__(self, package_name):
         # type: (str) -> None
         super(NoSuchPackageError, self).__init__(
@@ -96,6 +98,8 @@ class LambdaDeploymentPackager(object):
             return
         prefix_len = len(dirname) + 1
         for root, _, filenames in self._osutils.walk(dirname):
+            if root.endswith('/__pycache__'):
+                continue
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
@@ -124,6 +128,8 @@ class LambdaDeploymentPackager(object):
         # type: (ZipFile, str) -> None
         prefix_len = len(deps_dir) + 1
         for root, dirnames, filenames in self._osutils.walk(deps_dir):
+            if root.endswith('/__pycache__'):
+                continue
             if root == deps_dir and 'chalice' in dirnames:
                 # Don't include any chalice deps.  We cherry pick
                 # what we want to include in _add_app_files.
@@ -432,6 +438,7 @@ class DependencyBuilder(object):
 
 class Package(object):
     """A class to represent a package downloaded but not yet installed."""
+
     def __init__(self, directory, filename, osutils=None):
         # type: (str, str, Optional[OSUtils]) -> None
         self.dist_type = 'wheel' if filename.endswith('.whl') else 'sdist'
@@ -555,6 +562,7 @@ class SDistMetadataFetcher(object):
 
 class SubprocessPip(object):
     """Wrapper around calling pip through a subprocess."""
+
     def main(self, args):
         # type: (List[str]) -> Tuple[int, Optional[bytes]]
         python_exe = sys.executable
@@ -569,6 +577,7 @@ class SubprocessPip(object):
 
 class PipRunner(object):
     """Wrapper around pip calls used by chalice."""
+
     def __init__(self, pip):
         # type: (SubprocessPip) -> None
         self._wrapped_pip = pip
