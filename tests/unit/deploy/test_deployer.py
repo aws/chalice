@@ -906,7 +906,7 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     aws_client.create_function.return_value = 'lambda-arn'
-    packager = mock.Mock(LambdaDeploymentPackager)
+    packager = mock.Mock(spec=LambdaDeploymentPackager)
     packager.create_deployment_package.return_value = 'packages.zip'
     cfg = Config.create(
         chalice_stage='dev',
@@ -1118,7 +1118,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.aws_client.get_function_configuration.return_value = {
             'Runtime': 'FakePythonVersion'
         }
-        self.packager = mock.Mock(LambdaDeploymentPackager)
+        self.packager = mock.Mock(spec=LambdaDeploymentPackager)
         self.packager.create_deployment_package.return_value =\
             self.package_name
         self.packager.deployment_package_filename.return_value =\
@@ -1522,7 +1522,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
         self.prompter = mock.Mock(spec=NoPrompt)
         self.prompter.confirm.return_value = True
 
-        self.packager = mock.Mock(LambdaDeploymentPackager)
+        self.packager = mock.Mock(spec=LambdaDeploymentPackager)
         self.packager.create_deployment_package.return_value =\
             self.package_name
 

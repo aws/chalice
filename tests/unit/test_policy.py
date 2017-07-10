@@ -30,8 +30,7 @@ def test_single_call():
 
 
 def test_multiple_calls_in_same_service():
-    assert_policy_is(iam_policy({'dynamodb': set(['list_tables',
-                                                  'describe_table'])}), [{
+    expected_policy = [{
         'Effect': 'Allow',
         'Action': [
             'dynamodb:DescribeTable',
@@ -40,7 +39,11 @@ def test_multiple_calls_in_same_service():
         'Resource': [
             '*',
         ]
-    }])
+    }]
+    assert_policy_is(
+        iam_policy({'dynamodb': set(['list_tables', 'describe_table'])}),
+        expected_policy
+    )
 
 
 def test_multiple_services_used():

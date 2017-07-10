@@ -191,8 +191,7 @@ def test_multiple_services():
         asdf.get_object(Bucket='foo', Key='bar')
         d.create_table(TableName='foobar')
     """) == {'dynamodb': set(['list_tables', 'create_table']),
-             's3': set(['get_object']),
-    }
+             's3': set(['get_object'])}
 
 
 def test_basic_aliasing():
@@ -458,73 +457,73 @@ def test_can_handle_list_expr_with_api_calls():
     """) == {'dynamodb': set(['list_tables'])}
 
 
-#def test_can_handle_dict_comp():
-#    assert aws_calls("""\
-#        import boto3
-#        ddb = boto3.client('dynamodb')
-#        tables = {t: t for t in ddb.list_tables()}
-#    """) == {'dynamodb': set(['list_tables'])}
-#
-#
-#def test_tuple_assignment():
-#    assert aws_calls("""\
-#        import boto3
-#        import some_other_thing
-#        a, d = (1, boto3.client('dynamodb'))
-#        d.list_tables()
-#        d.create_table()
-#    """) == {'dynamodb': set(['list_tables'])}
-#
-#
-#def test_multiple_client_assignment():
-#    assert aws_calls("""\
-#        import boto3
-#        import some_other_thing
-#        s3, db = (boto3.client('s3'), boto3.client('dynamodb'))
-#        db.list_tables()
-#        s3.get_object(Bucket='a', Key='b')
-#    """) == {'dynamodb': set(['list_tables'])
+# def test_can_handle_dict_comp():
+#     assert aws_calls("""\
+#         import boto3
+#         ddb = boto3.client('dynamodb')
+#         tables = {t: t for t in ddb.list_tables()}
+#     """) == {'dynamodb': set(['list_tables'])}
+
+
+# def test_tuple_assignment():
+#     assert aws_calls("""\
+#         import boto3
+#         import some_other_thing
+#         a, d = (1, boto3.client('dynamodb'))
+#         d.list_tables()
+#         d.create_table()
+#     """) == {'dynamodb': set(['list_tables'])}
+
+
+# def test_multiple_client_assignment():
+#     assert aws_calls("""\
+#         import boto3
+#         import some_other_thing
+#         s3, db = (boto3.client('s3'), boto3.client('dynamodb'))
+#         db.list_tables()
+#         s3.get_object(Bucket='a', Key='b')
+#     """) == {'dynamodb': set(['list_tables'])
 #             's3': set(['get_object'])}
+
+
+# def test_understands_instance_methods():
+#     assert aws_calls("""\
+#         import boto3, mock
+#         class Foo(object):
+#             def make_call(self, client):
+#                 return client.list_tables()
 #
+#         d = boto3.client('dynamodb')
+#         instance = Foo()
+#         instance.make_call(d)
+#     """) == {'dynamodb': set(['list_tables'])}
+
+
+# def test_understands_function_and_methods():
+#     assert aws_calls("""\
+#         import boto3, mock
+#         class Foo(object):
+#             def make_call(self, client):
+#                 return foo_call(1, client)
 #
-#def test_understands_instance_methods():
-#    assert aws_calls("""\
-#        import boto3, mock
-#        class Foo(object):
-#            def make_call(self, client):
-#                return client.list_tables()
+#         def foo_call(a, client):
+#             return client.list_tables()
 #
-#        d = boto3.client('dynamodb')
-#        instance = Foo()
-#        instance.make_call(d)
-#    """) == {'dynamodb': set(['list_tables'])}
-#
-#
-#def test_understands_function_and_methods():
-#    assert aws_calls("""\
-#        import boto3, mock
-#        class Foo(object):
-#            def make_call(self, client):
-#                return foo_call(1, client)
-#
-#        def foo_call(a, client):
-#            return client.list_tables()
-#
-#        d = boto3.client('dynamodb')
-#        instance = Foo()
-#        instance.make_call(d)
-#    """) == {'dynamodb': set(['list_tables'])}
-#
-#
-#def test_can_track_across_classes():
-#    assert aws_calls("""\
-#        import boto3
-#        ddb = boto3.client('dynamodb')
-#        class Helper(object):
-#            def __init__(self, client):
-#                self.client = client
-#            def foo(self):
-#                return self.client.list_tables()
-#        h = Helper(ddb)
-#        h.foo()
-#    """) == {'dynamodb': set(['list_tables'])}
+#         d = boto3.client('dynamodb')
+#         instance = Foo()
+#         instance.make_call(d)
+#     """) == {'dynamodb': set(['list_tables'])}
+
+
+# def test_can_track_across_classes():
+#     assert aws_calls("""\
+#         import boto3
+#         ddb = boto3.client('dynamodb')
+#         class Helper(object):
+#             def __init__(self, client):
+#                 self.client = client
+#             def foo(self):
+#                 return self.client.list_tables()
+#         h = Helper(ddb)
+#         h.foo()
+#     """) == {'dynamodb': set(['list_tables'])}

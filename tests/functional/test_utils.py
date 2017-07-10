@@ -97,4 +97,4 @@ def test_remove_stage_from_deployed_values_no_file(tmpdir):
     utils.remove_stage_from_deployed_values('fake_key', filename)
 
     # Make sure it doesn't create the file if it didn't already exist
-    assert os.path.isfile(filename) == False
+    assert not os.path.isfile(filename)
