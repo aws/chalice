@@ -6,6 +6,8 @@ import tarfile
 import io
 
 from chalice.utils import OSUtils
+from chalice.compat import pip_no_compile_c_env_vars
+from chalice.compat import pip_no_compile_c_shim
 from chalice.deploy.packager import Package
 from chalice.deploy.packager import PipRunner
 from chalice.deploy.packager import SDistMetadataFetcher
@@ -13,6 +15,7 @@ from chalice.deploy.packager import InvalidSourceDistributionNameError
 from chalice.deploy.packager import SubprocessPip
 from chalice.deploy.packager import NoSuchPackageError
 from chalice.deploy.packager import PackageDownloadError
+from tests.conftest import FakePipCall
 
 
 class FakePip(object):
@@ -20,8 +23,8 @@ class FakePip(object):
         self._calls = []
         self._returns = []
 
-    def main(self, args):
-        self._calls.append(args)
+    def main(self, args, env_vars=None, shim=None):
+        self._calls.append(FakePipCall(args, env_vars, shim))
         if self._returns:
             return self._returns.pop(0)
         # Return an rc of 0 and an empty stderr
@@ -123,16 +126,41 @@ class TestPipRunner(object):
         wheel = 'foobar-1.0-py3-none-any.whl'
         directory = 'directory'
         runner.build_wheel(wheel, directory)
-        assert pip.calls[0] == ['wheel', '--no-deps', '--wheel-dir',
-                                directory, wheel]
+
+        assert len(pip.calls) == 1
+        call = pip.calls[0]
+        assert call.args == ['wheel', '--no-deps', '--wheel-dir',
+                             directory, wheel]
+        assert call.env_vars == {}
+        assert call.shim == ''
+
+    def test_build_wheel_without_c_extensions(self, pip_runner):
+        # Test that `pip wheel` is called with the correct params when we
+        # call it with compile_c=False. These will differ by platform.
+        pip, runner = pip_runner
+        wheel = 'foobar-1.0-py3-none-any.whl'
+        directory = 'directory'
+        runner.build_wheel(wheel, directory, compile_c=False)
+
+        assert len(pip.calls) == 1
+        call = pip.calls[0]
+        assert call.args == ['wheel', '--no-deps', '--wheel-dir',
+                             directory, wheel]
+        assert call.env_vars == pip_no_compile_c_env_vars
+        assert call.shim == pip_no_compile_c_shim
 
     def test_download_all_deps(self, pip_runner):
         # Make sure that `pip download` is called with the correct arguments
         # for getting all sdists.
         pip, runner = pip_runner
         runner.download_all_dependencies('requirements.txt', 'directory')
-        assert pip.calls[0] == ['download', '-r',
-                                'requirements.txt', '--dest', 'directory']
+
+        assert len(pip.calls) == 1
+        call = pip.calls[0]
+        assert call.args == ['download', '-r',
+                             'requirements.txt', '--dest', 'directory']
+        assert call.env_vars is None
+        assert call.shim is None
 
     def test_download_wheels(self, pip_runner):
         # Make sure that `pip download` is called with the correct arguments
@@ -149,7 +177,9 @@ class TestPipRunner(object):
                            '--implementation', 'cp', '--abi', abi,
                            '--dest', 'directory']
         for i, package in enumerate(packages):
-            assert pip.calls[i] == expected_prefix + [package]
+            assert pip.calls[i].args == expected_prefix + [package]
+            assert pip.calls[i].env_vars is None
+            assert pip.calls[i].shim is None
 
     def test_download_wheels_no_wheels(self, pip_runner):
         pip, runner = pip_runner

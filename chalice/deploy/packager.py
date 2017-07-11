@@ -9,12 +9,22 @@ from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
 
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
+from typing import Dict  # noqa
 from chalice.compat import lambda_abi
+from chalice.compat import subprocess_python_base_environ
+from chalice.compat import pip_no_compile_c_env_vars
+from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
 from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
 
 import chalice
 from chalice import app
+
+
+StrMap = Dict[str, Any]
+OptStrMap = Optional[StrMap]
+OptStr = Optional[str]
+OptBytes = Optional[bytes]
 
 
 class InvalidSourceDistributionNameError(Exception):
@@ -313,11 +323,11 @@ class DependencyBuilder(object):
         self._pip.download_manylinux_wheels(
             [pkg.identifier for pkg in packages], directory)
 
-    def _build_sdists(self, sdists, directory):
-        # type: (set[Package], str) -> None
+    def _build_sdists(self, sdists, directory, compile_c=True):
+        # type: (set[Package], str, bool) -> None
         for sdist in sdists:
             path_to_sdist = self._osutils.joinpath(directory, sdist.filename)
-            self._pip.build_wheel(path_to_sdist, directory)
+            self._pip.build_wheel(path_to_sdist, directory, compile_c)
 
     def _categorize_wheel_files(self, directory):
         # type: (str) -> Tuple[Set[Package], Set[Package]]
@@ -374,12 +384,25 @@ class DependencyBuilder(object):
 
         # Re-count the wheel files after the second download pass. Anything
         # that has an sdist but not a valid wheel file is still not going to
-        # work on lambda and our last ditch effort is to try and build the
-        # sdists into wheel files.
+        # work on lambda and our we must now try and build the sdist into a
+        # wheel file ourselves.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
         missing_wheels = sdists - compatible_wheels
-        self._build_sdists(missing_wheels, directory)
+        self._build_sdists(missing_wheels, directory, compile_c=True)
+
+        # There is still the case where the package had optional C dependencies
+        # for speedups. In this case the wheel file will have built above with
+        # the C dependencies if it managed to find a C compiler. If we are on
+        # an incompatible architecture this means the wheel file generated will
+        # not be compatible. If we categorize our files once more and find that
+        # there are missing dependencies we can try our last ditch effort of
+        # building the package and trying to sever its ability to find a C
+        # compiler.
+        compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
+            directory)
+        missing_wheels = sdists - compatible_wheels
+        self._build_sdists(missing_wheels, directory, compile_c=False)
 
         # Final pass to find the compatible wheel files and see if there are
         # any unmet dependencies left over. At this point there is nothing we
@@ -555,13 +578,20 @@ class SDistMetadataFetcher(object):
 
 class SubprocessPip(object):
     """Wrapper around calling pip through a subprocess."""
-    def main(self, args):
-        # type: (List[str]) -> Tuple[int, Optional[bytes]]
+    def main(self, args, env_vars=None, shim=None):
+        # type: (List[str], OptStrMap, OptStr) -> Tuple[int, Optional[bytes]]
+        if env_vars is None:
+            env_vars = {}
+        if shim is None:
+            shim = ''
+        env_vars.update(subprocess_python_base_environ)
         python_exe = sys.executable
-        invoke_pip = [python_exe, '-m', 'pip']
-        invoke_pip.extend(args)
+        run_pip = 'import pip; pip.main(%s)' % args
+        exec_string = '%s%s' % (shim, run_pip)
+        invoke_pip = [python_exe, '-c', exec_string]
         p = subprocess.Popen(invoke_pip,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             env=env_vars)
         _, err = p.communicate()
         rc = p.returncode
         return rc, err
@@ -573,21 +603,28 @@ class PipRunner(object):
         # type: (SubprocessPip) -> None
         self._wrapped_pip = pip
 
-    def _execute(self, command, args):
-        # type: (str, List[str]) -> Tuple[int, Optional[bytes]]
+    def _execute(self, command, args, env_vars=None, shim=None):
+        # type: (str, List[str], OptStrMap, OptStr) -> Tuple[int, OptBytes]
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
-        rc, err = self._wrapped_pip.main(main_args)
+        rc, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
+                                         shim=shim)
         return rc, err
 
-    def build_wheel(self, wheel, directory):
-        # type: (str, str) -> None
+    def build_wheel(self, wheel, directory, compile_c=True):
+        # type: (str, str, bool) -> None
         """Build an sdist into a wheel file."""
         arguments = ['--no-deps', '--wheel-dir', directory, wheel]
+        env_vars = {}  # type: StrMap
+        shim = ''
+        if not compile_c:
+            env_vars.update(pip_no_compile_c_env_vars)
+            shim = pip_no_compile_c_shim
         # Ignore rc and stderr from this command since building the wheels
         # may fail and we will find out when we categorize the files that were
         # generated.
-        self._execute('wheel', arguments)
+        self._execute('wheel', arguments,
+                      env_vars=env_vars, shim=shim)
 
     def download_all_dependencies(self, requirements_filename, directory):
         # type: (str, str) -> None

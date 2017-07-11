@@ -12,8 +12,12 @@ from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.packager import Package
 from chalice.deploy.packager import MissingDependencyError
 from chalice.compat import lambda_abi
+from chalice.compat import pip_no_compile_c_env_vars
+from chalice.compat import pip_no_compile_c_shim
+from chalice.compat import subprocess_python_base_environ
 from chalice.utils import OSUtils
 from tests.conftest import FakeSdistBuilder
+from tests.conftest import FakePipCall
 
 
 def _create_app_structure(tmpdir):
@@ -50,20 +54,23 @@ class FakePip(object):
         self._call_history = []
         self._side_effects = defaultdict(lambda: [])
 
-    def main(self, args):
+    def main(self, args, env_vars=None, shim=None):
         cmd, args = args[0], args[1:]
-        self._calls[cmd].append(args)
+        self._calls[cmd].append((args, env_vars, shim))
         try:
             side_effects = self._side_effects[cmd].pop(0)
             for side_effect in side_effects:
-                self._call_history.append((args, side_effect.expected_args))
+                self._call_history.append((
+                    FakePipCall(args, env_vars, shim),
+                    FakePipCall(side_effect.expected_args,
+                                side_effect.expected_env_vars,
+                                side_effect.expected_shim)))
                 side_effect.execute(args)
         except IndexError:
             pass
         return 0, b''
 
-    def packages_to_download(self, expected_args, packages,
-                             whl_contents=None):
+    def packages_to_download(self, expected_args, packages, whl_contents=None):
         side_effects = [PipSideEffect(pkg,
                                       '--dest',
                                       expected_args,
@@ -71,8 +78,18 @@ class FakePip(object):
                         for pkg in packages]
         self._side_effects['download'].append(side_effects)
 
-    def wheels_to_build(self, expected_args, wheels_to_build):
-        side_effects = [PipSideEffect(pkg, '--wheel-dir', expected_args)
+    def wheels_to_build(self, expected_args, wheels_to_build,
+                        expected_env_vars=None, expected_shim=None):
+        # If no explicit env vars or shims are exepcted then this should
+        # behave in the same default manor that the real pip wrapper class
+        # will. Which is to choose reasonable defaults.
+        if expected_env_vars is None:
+            expected_env_vars = subprocess_python_base_environ
+        if expected_shim is None:
+            expected_shim = ''
+        side_effects = [PipSideEffect(pkg, '--wheel-dir', expected_args,
+                                      expected_env_vars=expected_env_vars,
+                                      expected_shim=expected_shim)
                         for pkg in wheels_to_build]
         self._side_effects['wheel'].append(side_effects)
 
@@ -81,17 +98,22 @@ class FakePip(object):
         return self._calls
 
     def validate(self):
-        for call in self._call_history:
-            actual_args, expected_args = call
-            assert expected_args == actual_args
+        for calls in self._call_history:
+            actual_call, expected_call = calls
+            assert actual_call.args == expected_call.args
+            assert actual_call.env_vars == expected_call.env_vars
+            assert actual_call.shim == expected_call.shim
 
 
 class PipSideEffect(object):
-    def __init__(self, filename, dirarg, expected_args, whl_contents=None):
+    def __init__(self, filename, dirarg, expected_args, whl_contents=None,
+                 expected_env_vars=None, expected_shim=None):
         self._filename = filename
         self._package_name = filename.split('-')[0]
         self._dirarg = dirarg
         self.expected_args = expected_args
+        self.expected_env_vars = expected_env_vars
+        self.expected_shim = expected_shim
         if whl_contents is None:
             whl_contents = ['{package_name}/placeholder']
         self._whl_contents = whl_contents
@@ -561,6 +583,55 @@ class TestDependencyBuilder(object):
         assert len(missing_pacakges) == 1
         assert missing_pacakges[0].identifier == 'foo==1.2'
         assert installed_packages == ['bar']
+
+    def test_can_build_package_with_optional_c_speedups_and_no_wheel(
+            self, tmpdir, osutils, pip_runner):
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        # In this scenario we are downloading a package that has no wheel files
+        # at all, and optional c speedups. The initial download will yield an
+        # sdist since there were no wheels.
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=['foo-1.2.zip']
+        )
+
+        # Chalice should now try and build this into a wheel file. Since it has
+        # optional c speedups it will build a platform dependent wheel file
+        # which is not compatible with lambda.
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY,
+                           PathArgumentEndingWith('foo-1.2.zip')],
+            wheels_to_build=[
+                'foo-1.2-cp36-cp36m-macosx_10_6_intel.whl'
+            ]
+        )
+
+        # Now chalice should make a last ditch effort to build the package by
+        # trying once again to build the sdist, but this time it will prevent
+        # c extensions from compiling by force. If the package had optional
+        # c speedups (which in this scenario it did) then it will
+        # successfully fall back to building a pure python wheel file.
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY,
+                           PathArgumentEndingWith('foo-1.2.zip')],
+            expected_env_vars=pip_no_compile_c_env_vars,
+            expected_shim=pip_no_compile_c_shim,
+            wheels_to_build=[
+                'foo-1.2-cp36-none-any.whl'
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        # Now we should have successfully built the foo package.
+        pip.validate()
+        assert installed_packages == ['foo']
 
     def test_build_into_existing_dir_with_preinstalled_packages(
             self, tmpdir, osutils, pip_runner):
