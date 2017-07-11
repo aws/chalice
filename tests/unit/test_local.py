@@ -1,12 +1,13 @@
-from chalice import local, BadRequestError, CORSConfig
-from chalice import Response
 import json
 import decimal
 import pytest
+import os
 from pytest import fixture
 from six import BytesIO
 
 from chalice import app
+from chalice import local, BadRequestError, CORSConfig
+from chalice import Response
 
 
 class ChaliceStubbedHandler(local.ChaliceRequestHandler):
@@ -20,7 +21,6 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
 
     def finish(self):
         pass
-
 
 @fixture
 def sample_app():
@@ -374,3 +374,11 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
 def test_can_provide_port_to_local_server(sample_app):
     dev_server = local.create_local_server(sample_app, port=23456)
     assert dev_server.server.server_port == 23456
+
+
+def test_environment_variables_set(sample_app):
+    env_variables = {'test': True}
+    local.create_local_server(sample_app, port=23456,
+                              env_variables=env_variables)
+    assert os.environ['test'] == 'True'
+

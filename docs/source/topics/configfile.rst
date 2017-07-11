@@ -78,7 +78,7 @@ be checked.
 
 * ``environment_variables`` - A mapping of key value pairs.  These
   key value pairs will be set as environment variables in your
-  deployed application.  All environment variables must be strings.
+  application.  All environment variables must be strings.
   If this key is specified in both a stage specific config option
   as well as a top level key, the stage specific environment
   variables will be merged into the top level keys.  See the
