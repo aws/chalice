@@ -16,6 +16,7 @@ from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.logs import LogRetriever
+from chalice import local
 
 
 def create_botocore_session(profile=None, debug=False):
@@ -176,3 +177,7 @@ class CLIFactory(object):
         config_file = os.path.join(self.project_dir, '.chalice', 'config.json')
         with open(config_file) as f:
             return json.loads(f.read())
+
+    def create_local_server(self, app_obj, port):
+        # type: (Chalice, int) -> local.LocalDevServer
+        return local.create_local_server(app_obj, port)
