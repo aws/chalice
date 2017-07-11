@@ -619,7 +619,10 @@ class Chalice(object):
 
     def _get_view_function_response(self, view_function, function_args):
         try:
-            response = self._invoke_view_function(view_function, function_args)
+            response = view_function(*function_args)
+            if not isinstance(response, Response):
+                response = Response(body=response)
+            self._validate_response(response)
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
@@ -641,22 +644,13 @@ class Chalice(object):
                 body = {'Code': 'InternalServerError',
                         'Message': 'An internal server error occurred.'}
             response = Response(body=body, headers=headers, status_code=500)
-        if not isinstance(response, Response):
-            response = Response(body=response)
-        self._validate_response(response)
-        return response
-
-    def _invoke_view_function(self, view_function, function_args):
-        response = view_function(*function_args)
-        self._validate_response(response)
         return response
 
     def _validate_response(self, response):
-        if isinstance(response, Response):
-            for header, value in response.headers.items():
-                if '\n' in value:
-                    raise ChaliceError("Bad value for header '%s': %r" %
-                                       (header, value))
+        for header, value in response.headers.items():
+            if '\n' in value:
+                raise ChaliceError("Bad value for header '%s': %r" %
+                                   (header, value))
 
     def _cors_enabled_for_route(self, route_entry):
         return route_entry.cors is not None
