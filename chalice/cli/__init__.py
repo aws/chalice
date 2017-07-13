@@ -65,12 +65,14 @@ def create_new_project_skeleton(project_name, profile=None):
 @click.pass_context
 def cli(ctx, project_dir, debug=False):
     # type: (click.Context, str, bool) -> None
-    if project_dir is None:
-        project_dir = os.getcwd()
-    ctx.obj['project_dir'] = project_dir
+    abs_project_dir = os.path.join(
+        os.getenv('PWD'), project_dir
+    ) if project_dir else os.getcwd()
+
+    ctx.obj['project_dir'] = abs_project_dir
     ctx.obj['debug'] = debug
-    ctx.obj['factory'] = CLIFactory(project_dir, debug)
-    os.chdir(project_dir)
+    ctx.obj['factory'] = CLIFactory(abs_project_dir, debug)
+    os.chdir(abs_project_dir)
 
 
 @cli.command()
