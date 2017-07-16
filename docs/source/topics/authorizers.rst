@@ -60,7 +60,7 @@ cognito user pool configured.
 
     @app.route('/user-pools', methods=['GET'], authorizer=authorizer)
     def authenticated():
-        return {"sucecss": True}
+        return {"success": True}
 
 
 For more information about using Cognito user pools with API Gateway,
