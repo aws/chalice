@@ -647,8 +647,11 @@ class LambdaDeployer(object):
                     print(action)
             self._prompter.confirm("\nWould you like to continue? ",
                                    default=True, abort=True)
-        self._aws_client.delete_role_policy(
-            role_name=app_name, policy_name=app_name)
+        try:
+            self._aws_client.delete_role_policy(
+                role_name=app_name, policy_name=app_name)
+        except:
+            pass
         self._aws_client.put_role_policy(role_name=app_name,
                                          policy_name=app_name,
                                          policy_document=app_policy)
