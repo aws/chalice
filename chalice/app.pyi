@@ -1,5 +1,7 @@
 from typing import Dict, List, Any, Callable, Union, Optional
 
+__version__ = ... # type: str
+
 class ChaliceError(Exception): ...
 class ChaliceViewError(ChaliceError):
     __name__ = ... # type: str

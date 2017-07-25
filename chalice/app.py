@@ -9,6 +9,8 @@ import decimal
 import base64
 from collections import defaultdict, Mapping
 
+__version__ = '1.0.0b1'
+
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
@@ -432,14 +434,11 @@ class Chalice(object):
         self._initialize(env)
 
     def _initialize(self, env):
-        # We import the chalice version in _initialize because
-        # of circular imports.
-        from chalice import __version__ as chalice_version
         if self.configure_logs:
             self._configure_logging()
         env['AWS_EXECUTION_ENV'] = '%s aws-chalice/%s' % (
             env.get('AWS_EXECUTION_ENV', 'AWS_Lambda'),
-            chalice_version,
+            __version__,
         )
 
     def _configure_logging(self):
