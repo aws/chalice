@@ -1,5 +1,3 @@
-from chalice import local, BadRequestError, CORSConfig
-from chalice import Response
 import json
 import decimal
 import pytest
@@ -7,6 +5,8 @@ from pytest import fixture
 from six import BytesIO
 
 from chalice import app
+from chalice import local, BadRequestError, CORSConfig
+from chalice import Response
 
 
 class ChaliceStubbedHandler(local.ChaliceRequestHandler):

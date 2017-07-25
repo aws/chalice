@@ -12,7 +12,7 @@ import shutil
 
 import botocore.exceptions
 import click
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, MutableMapping  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
@@ -79,6 +79,18 @@ def cli(ctx, project_dir, debug=False):
 def local(ctx, port=8000):
     # type: (click.Context, int) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
+    run_local_server(factory, port, os.environ)
+
+
+def run_local_server(factory, port, env):
+    # type: (CLIFactory, int, MutableMapping) -> None
+    # We should add a stage argument, env vars can vary
+    # by stage.
+    config = factory.create_config_obj()
+    # We only load the chalice app after loading the config
+    # so we can set any env vars needed before importing the
+    # app.
+    env.update(config.environment_variables)
     app_obj = factory.load_chalice_app()
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
@@ -86,7 +98,8 @@ def local(ctx, port=8000):
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(stream=sys.stdout)
-    run_local_server(app_obj, port)
+    server = factory.create_local_server(app_obj, port)
+    server.serve_forever()
 
 
 @cli.command()
@@ -288,13 +301,6 @@ def generate_pipeline(ctx, filename):
     output = create_pipeline_template(config)
     with open(filename, 'w') as f:
         f.write(json.dumps(output, indent=2, separators=(',', ': ')))
-
-
-def run_local_server(app_obj, port):
-    # type: (Chalice, int) -> None
-    from chalice.local import create_local_server
-    server = create_local_server(app_obj, port)
-    server.serve_forever()
 
 
 def main():
