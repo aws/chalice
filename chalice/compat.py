@@ -2,28 +2,30 @@ import socket
 import six
 import os
 
+from typing import Dict, Any  # noqa
+
 from six import StringIO
 
 if os.name == 'nt':
     # windows
     # On windows running python in a subprocess with no environment variables
-    # will cause sevral issues. In order for our subprocess to run normally we
+    # will cause several issues. In order for our subprocess to run normally we
     # manually copy the relevant environment variables from the parent process.
     subprocess_python_base_environ = {
         # http://bugs.python.org/issue8557
         'PATH': os.environ['PATH']
-    }
+    }  # type: Dict[str, Any]
     # http://bugs.python.org/issue20614
     if 'SYSTEMROOT' in os.environ:
         subprocess_python_base_environ['SYSTEMROOT'] = os.environ['SYSTEMROOT']
 
-    # This is the acutal patch used on windows to prevent distutils from
+    # This is the actual patch used on windows to prevent distutils from
     # compiling C extensions. The msvc compiler base class has its compile
     # method overridden to raise a CompileError. This can be caught by
-    # setup.py code which can then fallback to making a purepython
+    # setup.py code which can then fallback to making a pure python
     # package if possible.
     # We need mypy to ignore these since they are never actually called from
-    # within ourprocess they do not need to be a part of our typechecking
+    # within our process they do not need to be a part of our typechecking
     # pass.
     def prevent_msvc_compiling_patch():  # type: ignore
         import distutils
@@ -45,13 +47,13 @@ if os.name == 'nt':
     # 5 because it is passed through another layer of string parsing before it
     # is executed.
     _SETUPTOOLS_SHIM = (
-        "import setuptools, tokenize;__file__=%r;"
-        "from chalice.compat import prevent_msvc_compiling_patch;"
-        "prevent_msvc_compiling_patch();"
-        "f=getattr(tokenize, 'open', open)(__file__);"
-        "code=f.read().replace('\\\\r\\\\n', '\\\\n');"
-        "f.close();"
-        "exec(compile(code, __file__, 'exec'))"
+        r"import setuptools, tokenize;__file__=%r;"
+        r"from chalice.compat import prevent_msvc_compiling_patch;"
+        r"prevent_msvc_compiling_patch();"
+        r"f=getattr(tokenize, 'open', open)(__file__);"
+        r"code=f.read().replace('\\r\\n', '\\n');"
+        r"f.close();"
+        r"exec(compile(code, __file__, 'exec'))"
     )
 
     # On windows the C compiling story is much more complex than on posix as
@@ -86,10 +88,10 @@ if os.name == 'nt':
     # The actual patches used are decribed in the comment above
     # _SETUPTOOLS_SHIM.
     pip_no_compile_c_shim = (
-        "import pip;"
-        "pip.wheel.SETUPTOOLS_SHIM = \"\"\"%s\"\"\";"
+        'import pip;'
+        'pip.wheel.SETUPTOOLS_SHIM = """%s""";'
     ) % _SETUPTOOLS_SHIM
-    pip_no_compile_c_env_vars = {}  # type: ignore
+    pip_no_compile_c_env_vars = {}  # type: Dict[str, Any]
 else:
     # posix
     # On posix you can start python in a subprocess with no environment

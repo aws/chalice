@@ -384,8 +384,8 @@ class DependencyBuilder(object):
 
         # Re-count the wheel files after the second download pass. Anything
         # that has an sdist but not a valid wheel file is still not going to
-        # work on lambda and our we must now try and build the sdist into a
-        # wheel file ourselves.
+        # work on lambda and we must now try and build the sdist into a wheel
+        # file ourselves.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
         missing_wheels = sdists - compatible_wheels

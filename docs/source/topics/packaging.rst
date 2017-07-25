@@ -50,7 +50,9 @@ specific examples).  The ``vendor/`` directory is helpful in these scenarios:
 * You need to include custom packages or binary content that is not accessible
   via ``pip``.  These may be internal packages that aren't public.
 * Wheel files are not available for a package you need from pip.
-
+* A package is installable with ``requirements.txt`` but has optional c
+  extensions. Chalice can build the dependency without the c extensions, but
+  if you want better performance you can vendor a version that is compiled.
 
 As a general rule of thumb, code that you write goes in either ``app.py`` or
 ``chalicelib/``, and dependencies are either specified in ``requirements.txt``
