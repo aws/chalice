@@ -1,6 +1,7 @@
 """Chalice app and routing code."""
 import re
 import sys
+import os
 import logging
 import json
 import traceback
@@ -415,7 +416,7 @@ class Chalice(object):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
-    def __init__(self, app_name, configure_logs=True):
+    def __init__(self, app_name, configure_logs=True, env=None):
         self.app_name = app_name
         self.api = APIGateway()
         self.routes = defaultdict(dict)
@@ -426,8 +427,20 @@ class Chalice(object):
         self.builtin_auth_handlers = []
         self.event_sources = []
         self.pure_lambda_functions = []
+        if env is None:
+            env = os.environ
+        self._initialize(env)
+
+    def _initialize(self, env):
+        # We import the chalice version in _initialize because
+        # of circular imports.
+        from chalice import __version__ as chalice_version
         if self.configure_logs:
             self._configure_logging()
+        env['AWS_EXECUTION_ENV'] = '%s aws-chalice/%s' % (
+            env.get('AWS_EXECUTION_ENV', 'AWS_Lambda'),
+            chalice_version,
+        )
 
     def _configure_logging(self):
         log = logging.getLogger(self.app_name)
