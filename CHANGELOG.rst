@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+1.0.0b2
+=======
+
+* Set env vars from config in ``chalice local``
+  (`#396 <https://github.com/awslabs/chalice/issues/396>`__)
+* Fix edge case when building packages with optional c extensions
+  (`#421 <https://github.com/awslabs/chalice/pull/421>`__)
+
+
 1.0.0b1
 =======
 
