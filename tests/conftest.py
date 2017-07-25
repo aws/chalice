@@ -1,8 +1,12 @@
 import zipfile
+from collections import namedtuple
 
 import botocore.session
 from botocore.stub import Stubber
 from pytest import fixture
+
+
+FakePipCall = namedtuple('FakePipEntry', ['args', 'env_vars', 'shim'])
 
 
 class FakeSdistBuilder(object):
