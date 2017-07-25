@@ -7,6 +7,7 @@ import pytest
 from pytest import fixture
 from chalice import app
 from chalice import NotFoundError
+from chalice import __version__ as chalice_version
 
 
 @pytest.fixture
@@ -1163,3 +1164,11 @@ def test_pure_lambda_functions_are_registered_in_app(sample_app):
     lambda_function = sample_app.pure_lambda_functions[0]
     assert lambda_function.name == 'handler'
     assert lambda_function.handler_string == 'app.handler'
+
+
+def test_aws_execution_env_set():
+    env = {'AWS_EXECUTION_ENV': 'AWS_Lambda_python2.7'}
+    app.Chalice('app-name', env=env)
+    assert env['AWS_EXECUTION_ENV'] == (
+        'AWS_Lambda_python2.7 aws-chalice/%s' % chalice_version
+    )

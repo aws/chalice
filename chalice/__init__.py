@@ -3,7 +3,7 @@ from chalice.app import (
     ChaliceViewError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, ConflictError, TooManyRequestsError, Response, CORSConfig,
     CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer,
-    AuthResponse, AuthRoute, Cron, Rate
+    AuthResponse, AuthRoute, Cron, Rate, __version__ as chalice_version
 )
-
-__version__ = '1.0.0b1'
+# We're reassigning version here to keep mypy happy.
+__version__ = chalice_version

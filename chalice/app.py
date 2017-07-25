@@ -1,12 +1,15 @@
 """Chalice app and routing code."""
 import re
 import sys
+import os
 import logging
 import json
 import traceback
 import decimal
 import base64
 from collections import defaultdict, Mapping
+
+__version__ = '1.0.0b1'
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -415,7 +418,7 @@ class Chalice(object):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
-    def __init__(self, app_name, configure_logs=True):
+    def __init__(self, app_name, configure_logs=True, env=None):
         self.app_name = app_name
         self.api = APIGateway()
         self.routes = defaultdict(dict)
@@ -426,8 +429,17 @@ class Chalice(object):
         self.builtin_auth_handlers = []
         self.event_sources = []
         self.pure_lambda_functions = []
+        if env is None:
+            env = os.environ
+        self._initialize(env)
+
+    def _initialize(self, env):
         if self.configure_logs:
             self._configure_logging()
+        env['AWS_EXECUTION_ENV'] = '%s aws-chalice/%s' % (
+            env.get('AWS_EXECUTION_ENV', 'AWS_Lambda'),
+            __version__,
+        )
 
     def _configure_logging(self):
         log = logging.getLogger(self.app_name)
