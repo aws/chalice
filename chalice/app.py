@@ -570,6 +570,7 @@ class Chalice(object):
         view_function = route_entry.view_function
         function_args = [event['pathParameters'][name]
                          for name in route_entry.view_args]
+        self.lambda_context = context
         self.current_request = Request(event['queryStringParameters'],
                                        event['headers'],
                                        event['pathParameters'],
