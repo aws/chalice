@@ -5,6 +5,14 @@ CHANGELOG
 1.0.0b2
 =======
 
+Please read the `upgrade notes for 1.0.0b2
+<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-0-0b2>`__
+for more detailed information about upgrading to this release.
+
+Note: to install this beta version of chalice you must specify
+``pip install 'chalice>=1.0.0b2,<2.0.0'`` or
+use the ``--pre`` flag for pip: ``pip install --pre chalice``.
+
 * Set env vars from config in ``chalice local``
   (`#396 <https://github.com/awslabs/chalice/issues/396>`__)
 * Fix edge case when building packages with optional c extensions
@@ -16,6 +24,9 @@ CHANGELOG
   (`#428 <https://github.com/awslabs/chalice/pull/428>`__)
 * Validate route path is not an empty string
   (`#432 <https://github.com/awslabs/chalice/pull/432>`__)
+* Change route code to invoke view function with kwargs instead of
+  positional args
+  (`#429 <https://github.com/awslabs/chalice/issues/429>`__)
 
 
 1.0.0b1

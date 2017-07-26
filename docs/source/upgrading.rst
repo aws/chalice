@@ -7,6 +7,46 @@ interested in the high level changes, see the
 `CHANGELOG.rst <https://github.com/awslabs/chalice/blob/master/CHANGELOG.rst>`__)
 file.
 
+.. _v1-0-0b2:
+
+1.0.0b2
+-------
+
+The url parameter names and the function argument names must match.
+Previously, the routing code would use positional args ``handler(*args)``
+to invoke a view function.  In this version, kwargs are now used instead:
+``handler(**view_args)``.  For example, this code will no longer work:
+
+.. code-block:: python
+
+    @app.route('/{a}/{b}')
+    def myview(first, second)
+        return {}
+
+
+The example above must be updated to:
+
+
+.. code-block:: python
+
+    @app.route('/{a}/{b}')
+    def myview(a, b)
+        return {}
+
+Now that functions are invoked with kwargs, the order doesn't matter.  You may
+also write the above view function as:
+
+
+.. code-block:: python
+
+    @app.route('/{a}/{b}')
+    def myview(b, a)
+        return {}
+
+
+This was done to have consistent behavior with other web frameworks such as
+Flask.
+
 .. _v1-0-0b1:
 
 1.0.0b1

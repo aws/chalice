@@ -1172,3 +1172,16 @@ def test_aws_execution_env_set():
     assert env['AWS_EXECUTION_ENV'] == (
         'AWS_Lambda_python2.7 aws-chalice/%s' % chalice_version
     )
+
+
+def test_can_use_out_of_order_args():
+    demo = app.Chalice('demo-app')
+
+    # Note how the url params and function args are out of order.
+    @demo.route('/{a}/{b}', methods=['GET'])
+    def index(b, a):
+        return {'a': a, 'b': b}
+    event = create_event('/{a}/{b}', 'GET', {'a': 'first', 'b': 'second'})
+    response = demo(event, context=None)
+    response = json_response_body(response)
+    assert response == {'a': 'first', 'b': 'second'}
