@@ -3,7 +3,7 @@ App Packaging
 
 In order to deploy your Chalice app, a zip file is created that
 contains your application and all third party packages your application
-rqeuires.  This file is used by AWS Lambda and is referred
+requires.  This file is used by AWS Lambda and is referred
 to as a deployment package.
 
 Chalice will automatically create this deployment package for you, and offers
