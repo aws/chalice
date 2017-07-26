@@ -9,6 +9,9 @@ CHANGELOG
   (`#396 <https://github.com/awslabs/chalice/issues/396>`__)
 * Fix edge case when building packages with optional c extensions
   (`#421 <https://github.com/awslabs/chalice/pull/421>`__)
+* Remove legacy ``policy.json`` file support. Policy files must
+  use the stage name, e.g. ``policy-dev.json``
+  (`#430 <https://github.com/awslabs/chalice/pull/540>`__)
 
 
 1.0.0b1

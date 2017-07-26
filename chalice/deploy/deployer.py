@@ -899,11 +899,4 @@ class ApplicationPolicyHandler(object):
             # to a fixed name based on the stage.
             basename = 'policy-%s.json' % config.chalice_stage
             filename = os.path.join(config.project_dir, '.chalice', basename)
-            if not self._osutils.file_exists(filename) and \
-                    config.chalice_stage == DEFAULT_STAGE_NAME:
-                # There's a special back-compat case where we'll
-                # try to load .chalice/policy.json if you're using
-                # the default dev stage.
-                filename = os.path.join(config.project_dir,
-                                        '.chalice', 'policy.json')
         return filename
