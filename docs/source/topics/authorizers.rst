@@ -30,6 +30,8 @@ To associate an IAM authorizer with a route in chalice, you use the
 
 .. code-block:: python
 
+    from chalice import IAMAuthorizer
+
     authorizer = IAMAuthorizer()
 
     @app.route('/iam-auth', methods=['GET'], authorizer=authorizer)
@@ -54,6 +56,8 @@ cognito user pool configured.
 
 
 .. code-block:: python
+
+    from chalice import CognitoUserPoolAuthorizer
 
     authorizer = CognitoUserPoolAuthorizer(
         'MyPool', provider_arns=['arn:aws:cognito:...:userpool/name'])
@@ -80,6 +84,8 @@ To connect an existing Lambda function as a custom authorizer in chalice,
 you use the ``CustomAuthorizer`` class:
 
 .. code-block:: python
+
+    from chalice import CustomAuthorizer
 
     authorizer = CustomAuthorizer(
         'MyCustomAuth', header='Authorization',
