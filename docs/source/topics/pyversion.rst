@@ -30,7 +30,7 @@ explicitly configure which version of python you want to use. For example::
     ...
     "Runtime":"python3.6"
     ...
-    https://rest-api-id.execute-api.us-west-2.amazonaws.com/dev/
+    https://rest-api-id.execute-api.us-west-2.amazonaws.com/v1/
 
 
 In the example above, we're using python 3.6.1 so chalice automatically
@@ -71,7 +71,7 @@ For example, suppose you have an existing chalice app that uses python2::
     Python 2.7.12
     $ chalice deploy
     ...
-    https://endpoint/dev
+    https://endpoint/v1
 
 To upgrade the application to use python3, create a python3 virtual environment
 and redeploy.  When this happens, you will be prompted to confirm the python
@@ -87,4 +87,4 @@ runtime version changing::
     The python runtime will change from python2.7 to python3.6,
     would you like to continue?  [Y/n]: y
     ...
-    https://endpoint/dev
+    https://endpoint/v1

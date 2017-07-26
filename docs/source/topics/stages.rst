@@ -34,7 +34,7 @@ Let's say we have a new app::
     $ cd myapp
     $ chalice deploy
     ...
-    https://mmnkdi.execute-api.us-west-2.amazonaws.com/dev/
+    https://mmnkdi.execute-api.us-west-2.amazonaws.com/v1/
 
 We've just created our first stage, ``dev``.  We can iterate on our
 application and continue to run ``chalice deploy`` to deploy our code
@@ -43,15 +43,15 @@ To do this, we can run::
 
     $ chalice deploy --stage prod
     ...
-    https://wk9fhx.execute-api.us-west-2.amazonaws.com/dev/
+    https://wk9fhx.execute-api.us-west-2.amazonaws.com/v1/
 
 We now have two completely separate rest APIs::
 
     $ chalice url --stage dev
-    https://mmnkdi.execute-api.us-west-2.amazonaws.com/dev/
+    https://mmnkdi.execute-api.us-west-2.amazonaws.com/v1/
 
     $ chalice url --stage prod
-    https://wk9fhx.execute-api.us-west-2.amazonaws.com/dev/
+    https://wk9fhx.execute-api.us-west-2.amazonaws.com/v1/
 
 Additionally, we can see all our deployed values by looking
 at the ``.chalice/deployed.json`` file::
