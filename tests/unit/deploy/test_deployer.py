@@ -1639,3 +1639,35 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             timeout=60, memory_size=128,
             role_arn='role-arn'
         )
+
+    def test_update_lambda_updates_role_once(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=True, iam_role_arn='role-arn',
+            project_dir='.', tags={'mykey': 'myvalue'}
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.app_policy)
+
+        self.aws_client.get_role_arn_for_name.return_value = 'role-arn'
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags={
+                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
+                    chalice_version),
+                'mykey': 'myvalue'
+            },
+            environment_variables={},
+            timeout=60, memory_size=128,
+            role_arn='role-arn'
+        )
+        self.aws_client.put_role_policy.assert_called_with(
+            policy_document={'Version': '2012-10-17', 'Statement': []},
+            policy_name='lambda_function_name',
+            role_name='lambda_function_name'
+        )
+        assert self.aws_client.put_role_policy.call_count == 1
