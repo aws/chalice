@@ -57,8 +57,8 @@ will then be passed in as arguments to your view function:
 
 If you then go to ``https://endpoint/users/james``, then the view function
 will be called as: ``users('james')``.  The parameters are passed as
-positional parameters based on the order they appear in the URL. The argument
-names for the view function do not need to match the name of the captured
+keyword parameters based on the name as they appear in the URL. The argument
+names for the view function must match the name of the captured
 argument:
 
 
@@ -70,8 +70,8 @@ argument:
 
 
     @app.route('/a/{first}/b/{second}')
-    def users(first_arg, second_arg):
-        return {'first': first_arg, 'second': second_arg}
+    def users(first, second):
+        return {'first': first, 'second': second}
 
 
 Other Request Metadata

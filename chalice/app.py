@@ -568,8 +568,8 @@ class Chalice(object):
                 http_status_code=405)
         route_entry = self.routes[resource_path][http_method]
         view_function = route_entry.view_function
-        function_args = [event['pathParameters'][name]
-                         for name in route_entry.view_args]
+        function_args = {name: event['pathParameters'][name]
+                         for name in route_entry.view_args}
         self.current_request = Request(event['queryStringParameters'],
                                        event['headers'],
                                        event['pathParameters'],
@@ -631,7 +631,7 @@ class Chalice(object):
 
     def _get_view_function_response(self, view_function, function_args):
         try:
-            response = view_function(*function_args)
+            response = view_function(**function_args)
             if not isinstance(response, Response):
                 response = Response(body=response)
             self._validate_response(response)
