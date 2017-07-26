@@ -12,6 +12,8 @@ CHANGELOG
 * Remove legacy ``policy.json`` file support. Policy files must
   use the stage name, e.g. ``policy-dev.json``
   (`#430 <https://github.com/awslabs/chalice/pull/540>`__)
+* Fix issue where IAM role policies were updated twice on redeploys
+  (`#428 <https://github.com/awslabs/chalice/pull/428>`__)
 
 
 1.0.0b1

@@ -483,7 +483,6 @@ class LambdaDeployer(object):
                     existing_resources.api_handler_name):
             handler_name = existing_resources.api_handler_name
             self._confirm_any_runtime_changes(config, handler_name)
-            self._get_or_create_lambda_role_arn(config, handler_name)
             self._update_lambda_function(config, handler_name, stage_name)
             function_arn = existing_resources.api_handler_arn
             deployed_values['api_handler_name'] = handler_name
