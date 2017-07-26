@@ -89,6 +89,8 @@ def validate_routes(routes):
     #
     # * any routes that end with a trailing slash.
     for route_name, methods in routes.items():
+        if not route_name:
+            raise ValueError("Route cannot be the empty string")
         if route_name != '/' and route_name.endswith('/'):
             raise ValueError("Route cannot end with a trailing slash: %s"
                              % route_name)
