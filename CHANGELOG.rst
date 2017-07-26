@@ -14,6 +14,8 @@ CHANGELOG
   (`#430 <https://github.com/awslabs/chalice/pull/540>`__)
 * Fix issue where IAM role policies were updated twice on redeploys
   (`#428 <https://github.com/awslabs/chalice/pull/428>`__)
+* Validate route path is not an empty string
+  (`#432 <https://github.com/awslabs/chalice/pull/432>`__)
 
 
 1.0.0b1

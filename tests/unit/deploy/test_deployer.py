@@ -302,6 +302,14 @@ def test_trailing_slash_routes_result_in_error():
         validate_configuration(config)
 
 
+def test_empty_route_results_in_error():
+    app = Chalice('appname')
+    app.routes = {'': {}}
+    config = Config.create(chalice_app=app)
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
 def test_validate_python_version_invalid():
     config = mock.Mock(spec=Config)
     config.lambda_python_version = 'python1.0'
