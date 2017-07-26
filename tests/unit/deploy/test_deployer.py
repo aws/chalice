@@ -213,24 +213,11 @@ def test_can_load_non_stage_specific_name(app_policy, in_memory_osutils):
     # existing use cases we'll look for .chalice/policy.json only
     # if you're in dev stage.
     previous_policy = '{"Statement": ["foo"]}'
-    filename = os.path.join('.', '.chalice', 'policy.json')
+    filename = os.path.join('.', '.chalice', 'policy-dev.json')
     in_memory_osutils.filemap[filename] = previous_policy
     config = Config.create(project_dir='.', autogen_policy=False)
     generated = app_policy.generate_policy_from_app_source(config)
     assert generated == json.loads(previous_policy)
-
-
-def test_legacy_file_not_loaded_in_non_dev_stage(app_policy,
-                                                 in_memory_osutils):
-    previous_policy = '{"Statement": ["foo"]}'
-    filename = os.path.join('.', '.chalice', 'policy.json')
-    in_memory_osutils.filemap[filename] = previous_policy
-    config = Config.create(project_dir='.', autogen_policy=False,
-                           chalice_stage='not-dev')
-    generated = app_policy.generate_policy_from_app_source(config)
-    # We should not have loaded the previously policy from policy.json
-    # because that's only supported for the 'dev' stage.
-    assert generated != json.loads(previous_policy)
 
 
 def test_can_provide_stage_specific_policy_file(app_policy, in_memory_osutils):
