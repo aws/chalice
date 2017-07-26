@@ -101,7 +101,7 @@ install these, you **must** specify either the ``--pre`` option::
 
 or you can specify::
 
-    $ pip install 'chalice>=1.0.0b1,<2.0.0'
+    $ pip install 'chalice>=1.0.0b2,<2.0.0'
 
 
 Credentials
