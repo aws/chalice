@@ -165,7 +165,7 @@ necessary Lambda functions for us.
 
 Now when we try to make a request, we'll get an Unauthorized error::
 
-  $ http https://api.us-west-2.amazonaws.com/v1/
+  $ http https://api.us-west-2.amazonaws.com/api/
   HTTP/1.1 401 Unauthorized
 
   {
@@ -174,7 +174,7 @@ Now when we try to make a request, we'll get an Unauthorized error::
 
 If we add the appropriate authorization header, we'll see the call succeed::
 
-  $ http https://api.us-west-2.amazonaws.com/v1/ 'Authorization: allow'
+  $ http https://api.us-west-2.amazonaws.com/api/ 'Authorization: allow'
   HTTP/1.1 200 OK
 
   {
@@ -199,7 +199,7 @@ If we add the appropriate authorization header, we'll see the call succeed::
               "userAgent": "HTTPie/0.9.9",
               "userArn": null
           },
-          "path": "/v1/",
+          "path": "/api/",
           "requestId": "d35d2063-56be-11e7-9ce1-dd61c24a3668",
           "resourceId": "id",
           "resourcePath": "/",
