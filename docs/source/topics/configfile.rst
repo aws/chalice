@@ -67,12 +67,12 @@ be checked.
   try to a local file in ``.chalice/policy-<stage-name>.json``
   instead of auto-generating a policy from source code analysis.
 
-* ``iam_role_file`` - When ``autogen_policy`` is false, chalice
+* ``iam_policy_file`` - When ``autogen_policy`` is false, chalice
   will try to load an IAM policy from disk instead of auto-generating
   one based on source code analysis.  The default location of this
   file is ``.chalice/policy-<stage-name>.json``, e.g
   ``.chalice/policy-dev.json``, ``.chalice/policy-prod.json``, etc.
-  You can change the filename by providing this ``iam_role_file``
+  You can change the filename by providing this ``iam_policy_file``
   config option.  This filename is relative to the ``.chalice``
   directory.
 
@@ -121,7 +121,7 @@ Here's an example for configuring IAM policies across stages::
       },
       "beta": {
         "autogen_policy": false,
-        "iam_role_file": "beta-app-policy.json"
+        "iam_policy_file": "beta-app-policy.json"
       },
       "prod": {
         "manage_iam_role": false,
