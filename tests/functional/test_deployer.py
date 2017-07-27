@@ -254,4 +254,5 @@ def _remove_runtime_from_deployment_package(filename):
                     continue
                 contents = original.read(item.filename)
                 z.writestr(item, contents)
+    os.remove(filename)
     os.rename(new_filename, filename)

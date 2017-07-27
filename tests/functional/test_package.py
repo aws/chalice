@@ -14,7 +14,6 @@ from chalice.deploy.packager import MissingDependencyError
 from chalice.compat import lambda_abi
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
-from chalice.compat import subprocess_python_base_environ
 from chalice.utils import OSUtils
 from tests.conftest import FakeSdistBuilder
 from tests.conftest import FakePipCall
@@ -80,11 +79,12 @@ class FakePip(object):
 
     def wheels_to_build(self, expected_args, wheels_to_build,
                         expected_env_vars=None, expected_shim=None):
-        # If no explicit env vars or shims are exepcted then this should
-        # behave in the same default manor that the real pip wrapper class
-        # will. Which is to choose reasonable defaults.
+        # The SubprocessPip class handles injecting the
+        # subprocess_python_base_environ into the env vars if needed,
+        # so at this level of abstraction the env vars just default
+        # to an empty dict if None is provided.
         if expected_env_vars is None:
-            expected_env_vars = subprocess_python_base_environ
+            expected_env_vars = {}
         if expected_shim is None:
             expected_shim = ''
         side_effects = [PipSideEffect(pkg, '--wheel-dir', expected_args,
