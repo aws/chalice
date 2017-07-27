@@ -14,7 +14,6 @@ from chalice.deploy.packager import MissingDependencyError
 from chalice.compat import lambda_abi
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
-from chalice.compat import subprocess_python_base_environ
 from chalice.utils import OSUtils
 from tests.conftest import FakeSdistBuilder
 from tests.conftest import FakePipCall
