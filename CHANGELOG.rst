@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Change default API Gateway stage name to ``api``
+  (`#431 <https://github.com/awslabs/chalice/pull/431>`__)
+
+
 1.0.0b2
 =======
 
