@@ -9,12 +9,11 @@ import pytest
 import requests
 
 from chalice.cli.factory import CLIFactory
-from chalice.utils import record_deployed_values
+from chalice.utils import record_deployed_values, OSUtils
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
-CHALICE_DIR = os.path.join(PROJECT_DIR, '.chalice')
 APP_FILE = os.path.join(PROJECT_DIR, 'app.py')
 
 
@@ -24,13 +23,16 @@ class SmokeTestApplication(object):
     # tests.
     _REDEPLOY_SLEEP = 20
 
-    def __init__(self, url, deployed_values, stage_name, app_name):
+    def __init__(self, url, deployed_values, stage_name, app_name,
+                 app_dir):
         if url.endswith('/'):
             url = url[:-1]
         self.url = url
         self._deployed_values = deployed_values
         self.stage_name = stage_name
         self.app_name = app_name
+        # The name of the tmpdir where the app is copied.
+        self.app_dir = app_dir
         self._has_redeployed = False
 
     @property
@@ -57,11 +59,12 @@ class SmokeTestApplication(object):
         # has already happened, this function is a noop.
         if self._has_redeployed:
             return
-        new_file = os.path.join(PROJECT_DIR, 'app-redeploy.py')
-        shutil.move(APP_FILE, APP_FILE + '.bak')
-        shutil.copy(new_file, APP_FILE)
+        new_file = os.path.join(self.app_dir, 'app-redeploy.py')
+        original_app_py = os.path.join(self.app_dir, 'app.py')
+        shutil.move(original_app_py, original_app_py + '.bak')
+        shutil.copy(new_file, original_app_py)
         self._clear_app_import()
-        _deploy_app()
+        _deploy_app(self.app_dir)
         self._has_redeployed = True
         # Give it settling time before running more tests.
         time.sleep(self._REDEPLOY_SLEEP)
@@ -74,18 +77,16 @@ class SmokeTestApplication(object):
 
 
 @pytest.fixture(scope='module')
-def smoke_test_app():
-    application = _deploy_app()
+def smoke_test_app(tmpdir_factory):
+    tmpdir = str(tmpdir_factory.mktemp('smoketestapp'))
+    OSUtils().copytree(PROJECT_DIR, tmpdir)
+    application = _deploy_app(tmpdir)
     yield application
     _delete_app(application)
 
 
-def _deploy_app():
-    if not os.path.isdir(CHALICE_DIR):
-        os.makedirs(CHALICE_DIR)
-    with open(os.path.join(CHALICE_DIR, 'config.json'), 'w') as f:
-        f.write('{"app_name": "smoketestapp"}\n')
-    factory = CLIFactory(PROJECT_DIR)
+def _deploy_app(temp_dirname):
+    factory = CLIFactory(temp_dirname)
     config = factory.create_config_obj(
         chalice_stage_name='dev',
         autogen_policy=True
@@ -102,9 +103,12 @@ def _deploy_app():
         deployed_values=deployed,
         stage_name='dev',
         app_name='smoketestapp',
+        app_dir=temp_dirname,
     )
-    record_deployed_values(deployed_stages, os.path.join(
-        PROJECT_DIR, '.chalice', 'deployed.json'))
+    record_deployed_values(
+        deployed_stages,
+        os.path.join(temp_dirname, '.chalice', 'deployed.json')
+    )
     return application
 
 
@@ -124,13 +128,6 @@ def _delete_app(application):
 
     apig = s.create_client('apigateway')
     apig.delete_rest_api(restApiId=application.rest_api_id)
-    chalice_dir = os.path.join(PROJECT_DIR, '.chalice')
-    shutil.rmtree(chalice_dir)
-    os.makedirs(chalice_dir)
-
-    original = APP_FILE + '.bak'
-    if os.path.isfile(original):
-        shutil.move(original, APP_FILE)
 
 
 def test_returns_simple_response(smoke_test_app):
