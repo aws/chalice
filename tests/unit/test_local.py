@@ -173,6 +173,21 @@ def test_will_respond_with_custom_cors_enabled(handler):
     assert b'Access-Control-Allow-Credentials: true' in response
 
 
+def test_will_respond_with_custom_cors_enabled_options(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='GET', path='/custom_cors',
+                        headers=headers)
+    handler.do_OPTIONS()
+    response = handler.wfile.getvalue().splitlines()
+    assert b'Access-Control-Allow-Origin: https://foo.bar' in response
+    assert (b'Access-Control-Allow-Headers: Authorization,Content-Type,'
+            b'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
+            b'X-Api-Key') in response
+    assert b'Access-Control-Expose-Headers: Header-A,Header-B' in response
+    assert b'Access-Control-Max-Age: 600' in response
+    assert b'Access-Control-Allow-Credentials: true' in response
+
+
 def test_can_preflight_request(handler):
     headers = {'content-type': 'application/json', 'origin': 'null'}
     set_current_request(handler, method='OPTIONS', path='/cors',

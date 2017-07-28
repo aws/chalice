@@ -187,24 +187,21 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         else:
             # Otherwise this is a preflight request which we automatically
             # generate.
-            self._send_autogen_options_response()
+            self._send_autogen_options_response(lambda_event)
 
     def _has_user_defined_options_method(self, lambda_event):
         # type: (EventType) -> bool
         route_key = lambda_event['requestContext']['resourcePath']
         return 'OPTIONS' in self.app_object.routes[route_key]
 
-    def _send_autogen_options_response(self):
-        # type:() -> None
+    def _send_autogen_options_response(self, lambda_event):
+        # type:(EventType) -> None
+        route_key = lambda_event['requestContext']['resourcePath']
+        route_dict = self.app_object.routes[route_key]
+        first_m = route_dict[next(iter(route_dict))]
         self.send_response(200)
-        self.send_header(
-            'Access-Control-Allow-Headers',
-            'Content-Type,X-Amz-Date,Authorization,'
-            'X-Api-Key,X-Amz-Security-Token'
-        )
-        self.send_header('Access-Control-Allow-Methods',
-                         'GET,HEAD,PUT,POST,OPTIONS')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        for k, v in first_m.cors.get_access_control_headers().items():
+            self.send_header(k, v)
         self.end_headers()
 
 
