@@ -200,19 +200,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         route_dict = self.app_object.routes[route_key]
         first_m = route_dict[next(iter(route_dict))]
         self.send_response(200)
-        if not first_m.cors:
-            # Doesn't make sense to me, but this is how it used to work.
-            self.send_header(
-                'Access-Control-Allow-Headers',
-                'Content-Type,X-Amz-Date,Authorization,'
-                'X-Api-Key,X-Amz-Security-Token'
-            )
-            self.send_header('Access-Control-Allow-Methods',
-                             'GET,HEAD,PUT,POST,OPTIONS')
-            self.send_header('Access-Control-Allow-Origin', '*')
-        else:
-            for k, v in first_m.cors.get_access_control_headers().items():
-                self.send_header(k, v)
+        for k, v in first_m.cors.get_access_control_headers().items():
+            self.send_header(k, v)
         self.end_headers()
 
 
