@@ -27,16 +27,12 @@ It provides:
 
     $ chalice deploy
     ...
-    Your application is available at: https://endpoint/api
+    https://endpoint/dev
 
     $ curl https://endpoint/api
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
-
-**This project is published as a preview project and is not yet recommended for
-production APIs.**  Give this project a try and share your feedback with us
-on `github <https://github.com/awslabs/chalice>`__.
 
 
 Getting Started
