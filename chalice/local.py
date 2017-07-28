@@ -187,24 +187,32 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         else:
             # Otherwise this is a preflight request which we automatically
             # generate.
-            self._send_autogen_options_response()
+            self._send_autogen_options_response(lambda_event)
 
     def _has_user_defined_options_method(self, lambda_event):
         # type: (EventType) -> bool
         route_key = lambda_event['requestContext']['resourcePath']
         return 'OPTIONS' in self.app_object.routes[route_key]
 
-    def _send_autogen_options_response(self):
+    def _send_autogen_options_response(self, lambda_event):
         # type:() -> None
+        route_key = lambda_event['requestContext']['resourcePath']
+        route_dict = self.app_object.routes[route_key]
+        first_method = route_dict[route_dict.keys()[0]]
         self.send_response(200)
-        self.send_header(
-            'Access-Control-Allow-Headers',
-            'Content-Type,X-Amz-Date,Authorization,'
-            'X-Api-Key,X-Amz-Security-Token'
-        )
-        self.send_header('Access-Control-Allow-Methods',
-                         'GET,HEAD,PUT,POST,OPTIONS')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        if not first_method.cors:
+            # Doesn't make sense to me, but this is how it used to work.
+            self.send_header(
+                'Access-Control-Allow-Headers',
+                'Content-Type,X-Amz-Date,Authorization,'
+                'X-Api-Key,X-Amz-Security-Token'
+            )
+            self.send_header('Access-Control-Allow-Methods',
+                             'GET,HEAD,PUT,POST,OPTIONS')
+            self.send_header('Access-Control-Allow-Origin', '*')
+        else:
+            for key, val in first_method.cors.get_access_control_headers().iteritems():
+                self.send_header(key, val)
         self.end_headers()
 
 
