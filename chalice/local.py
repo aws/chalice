@@ -195,12 +195,12 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         return 'OPTIONS' in self.app_object.routes[route_key]
 
     def _send_autogen_options_response(self, lambda_event):
-        # type:() -> None
+        # type:(EventType) -> None
         route_key = lambda_event['requestContext']['resourcePath']
         route_dict = self.app_object.routes[route_key]
-        first_method = route_dict[route_dict.keys()[0]]
+        first_m = route_dict[next(iter(route_dict))]
         self.send_response(200)
-        if not first_method.cors:
+        if not first_m.cors:
             # Doesn't make sense to me, but this is how it used to work.
             self.send_header(
                 'Access-Control-Allow-Headers',
@@ -211,8 +211,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
                              'GET,HEAD,PUT,POST,OPTIONS')
             self.send_header('Access-Control-Allow-Origin', '*')
         else:
-            for key, val in first_method.cors.get_access_control_headers().iteritems():
-                self.send_header(key, val)
+            for k, v in first_m.cors.get_access_control_headers().items():
+                self.send_header(k, v)
         self.end_headers()
 
 
