@@ -89,9 +89,9 @@ def test_can_iterate_logs(stubbed_session):
         logGroupName='loggroup', interleaved=True).returns({
             "events": [{
                 "logStreamName": "logStreamName",
-                "timestamp": 0,
+                "timestamp": 1501278366000,
                 "message": "message",
-                "ingestionTime": 0,
+                "ingestionTime": 1501278366000,
                 "eventId": "eventId"
             }],
         })
@@ -100,7 +100,7 @@ def test_can_iterate_logs(stubbed_session):
 
     awsclient = TypedAWSClient(stubbed_session)
     logs = list(awsclient.iter_log_events('loggroup'))
-    timestamp = datetime.datetime.fromtimestamp(0)
+    timestamp = datetime.datetime.fromtimestamp(1501278366)
     assert logs == [
         {'logStreamName': 'logStreamName',
          # We should have converted the ints to timestamps.
