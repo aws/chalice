@@ -109,7 +109,7 @@ was instantiated.  For example:
 
 This view function will generate the following HTTP response::
 
-    $ http https://endpoint/dev/badrequest
+    $ http https://endpoint/api/badrequest
     HTTP/1.1 400 Bad Request
 
     {
@@ -152,7 +152,7 @@ supports PUT:
 
 We can test this method using the ``http`` command::
 
-    $ http PUT https://endpoint/dev/resource/foo
+    $ http PUT https://endpoint/api/resource/foo
     HTTP/1.1 200 OK
 
     {

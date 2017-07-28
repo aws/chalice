@@ -27,9 +27,9 @@ It provides:
 
     $ chalice deploy
     ...
-    Your application is available at: https://endpoint/dev
+    Your application is available at: https://endpoint/api
 
-    $ curl https://endpoint/dev
+    $ curl https://endpoint/api
     {"hello": "world"}
 
 Up and running in less than 30 seconds.

@@ -107,9 +107,9 @@ will be available as an output::
 
     $ aws cloudformation describe-stacks --stack-name test-cfn-stack \
       --query "Stacks[].Outputs[?OutputKey=='EndpointURL'][] | [0].OutputValue"
-    "https://abc29hkq0i.execute-api.us-west-2.amazonaws.com/dev/"
+    "https://abc29hkq0i.execute-api.us-west-2.amazonaws.com/api/"
 
-    $ http "https://abc29hkq0i.execute-api.us-west-2.amazonaws.com/dev/"
+    $ http "https://abc29hkq0i.execute-api.us-west-2.amazonaws.com/api/"
     HTTP/1.1 200 OK
     Connection: keep-alive
     Content-Length: 18

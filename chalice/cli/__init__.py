@@ -27,6 +27,7 @@ from chalice.deploy.deployer import validate_python_version
 from chalice.utils import getting_started_prompt
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -39,7 +40,7 @@ def create_new_project_skeleton(project_name, profile=None):
         'app_name': project_name,
         'stages': {
             DEFAULT_STAGE_NAME: {
-                'api_gateway_stage': DEFAULT_STAGE_NAME,
+                'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
             }
         }
     }

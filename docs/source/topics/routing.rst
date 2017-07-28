@@ -102,13 +102,13 @@ Here's an example for accessing query string data in a view function:
 In the function above, if the user provides a ``?include-greeting=true`` in the
 HTTP request, then an additional ``greeting`` key will be returned::
 
-    $ http https://endpoint/dev/users/bob
+    $ http https://endpoint/api/users/bob
 
     {
         "name": "bob"
     }
 
-    $ http https://endpoint/dev/users/bob?include-greeting=true
+    $ http https://endpoint/api/users/bob?include-greeting=true
 
     {
         "greeting": "Hello, bob",

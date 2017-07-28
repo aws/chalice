@@ -40,9 +40,9 @@ It provides:
 
     $ chalice deploy
     ...
-    Your application is available at: https://endpoint/dev
+    Your application is available at: https://endpoint/api
 
-    $ curl https://endpoint/dev
+    $ curl https://endpoint/api
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
@@ -176,11 +176,11 @@ directory and run ``chalice deploy``::
     $ chalice deploy
     ...
     Initiating first time deployment...
-    https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+    https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
 
 You now have an API up and running using API Gateway and Lambda::
 
-    $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+    $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
     {"hello": "world"}
 
 Try making a change to the returned dictionary from the ``index()``
@@ -195,7 +195,7 @@ Here's an example of using ``httpie`` to request the root resource of the API
 we just created.  Note that the command name is ``http``::
 
 
-    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/dev/
+    $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
     HTTP/1.1 200 OK
     Connection: keep-alive
     Content-Length: 18
@@ -209,10 +209,10 @@ we just created.  Note that the command name is ``http``::
 
 
 Additionally, the API Gateway endpoints will be shortened to
-``https://endpoint/dev/`` for brevity.  Be sure to substitute
-``https://endpoint/dev/`` for the actual endpoint that the ``chalice``
+``https://endpoint/api/`` for brevity.  Be sure to substitute
+``https://endpoint/api/`` for the actual endpoint that the ``chalice``
 CLI displays when you deploy your API (it will look something like
-``https://abcdefg.execute-api.us-west-2.amazonaws.com/dev/``.
+``https://abcdefg.execute-api.us-west-2.amazonaws.com/api/``.
 
 Next Steps
 ----------
@@ -278,14 +278,14 @@ the ``helloworld`` directory and it will deploy your application::
 Let's try it out.  Note the examples below use the ``http`` command
 from the ``httpie`` package.  You can install this using ``pip install httpie``::
 
-    $ http https://endpoint/dev/cities/seattle
+    $ http https://endpoint/api/cities/seattle
     HTTP/1.1 200 OK
 
     {
         "state": "WA"
     }
 
-    $ http https://endpoint/dev/cities/portland
+    $ http https://endpoint/api/cities/portland
     HTTP/1.1 200 OK
 
     {
@@ -296,7 +296,7 @@ from the ``httpie`` package.  You can install this using ``pip install httpie``:
 Notice what happens if we try to request a city that's not in our
 ``CITIES_TO_STATE`` map::
 
-    $ http https://endpoint/dev/cities/vancouver
+    $ http https://endpoint/api/cities/vancouver
     HTTP/1.1 500 Internal Server Error
     Content-Type: application/json
     X-Cache: Error from cloudfront
@@ -337,12 +337,12 @@ Save this file and redeploy your changes::
 
     $ chalice deploy
     ...
-    https://endpoint/dev/
+    https://endpoint/api/
 
 Now, when you request the same URL that returned an internal
 server error, you'll get back the original stack trace::
 
-    $ http https://endpoint/dev/cities/vancouver
+    $ http https://endpoint/api/cities/vancouver
     Traceback (most recent call last):
       File "/var/task/chalice/app.py", line 304, in _get_view_function_response
         response = view_function(*function_args)
@@ -374,7 +374,7 @@ to the user.  Here's the updated code:
 Save and deploy these changes::
 
     $ chalice deploy
-    $ http https://endpoint/dev/cities/vancouver
+    $ http https://endpoint/api/cities/vancouver
     HTTP/1.1 400 Bad Request
 
     {
@@ -418,7 +418,7 @@ Here's an example of a view function that supports PUT:
 
 We can test this method using the ``http`` command::
 
-    $ http PUT https://endpoint/dev/resource/foo
+    $ http PUT https://endpoint/api/resource/foo
     HTTP/1.1 200 OK
 
     {
@@ -510,7 +510,7 @@ body, and retrieve the value of that body by making a subsequent
 ``GET`` request to the same resource.  Here's an example of its usage::
 
     # First, trying to retrieve the key will return a 404.
-    $ http GET https://endpoint/dev/objects/mykey
+    $ http GET https://endpoint/api/objects/mykey
     HTTP/1.1 404 Not Found
 
     {
@@ -519,14 +519,14 @@ body, and retrieve the value of that body by making a subsequent
     }
 
     # Next, we'll create that key by sending a PUT request.
-    $ echo '{"foo": "bar"}' | http PUT https://endpoint/dev/objects/mykey
+    $ echo '{"foo": "bar"}' | http PUT https://endpoint/api/objects/mykey
     HTTP/1.1 200 OK
 
     null
 
     # And now we no longer get a 404, we instead get the value we previously
     # put.
-    $ http GET https://endpoint/dev/objects/mykey
+    $ http GET https://endpoint/api/objects/mykey
     HTTP/1.1 200 OK
 
     {
@@ -567,7 +567,7 @@ Here's an example of hitting the ``/introspect`` URL.  Note how we're
 sending a query string as well as a custom ``X-TestHeader`` header::
 
 
-    $ http 'https://endpoint/dev/introspect?query1=value1&query2=value2' 'X-TestHeader: Foo'
+    $ http 'https://endpoint/api/introspect?query1=value1&query2=value2' 'X-TestHeader: Foo'
     HTTP/1.1 200 OK
 
     {
@@ -653,7 +653,7 @@ First, we've specified that we only accept the
 try to send a request with ``application/json``, we'll now
 get a ``415 Unsupported Media Type`` response::
 
-    $ http POST https://endpoint/dev/ states=WA states=CA --debug
+    $ http POST https://endpoint/api/ states=WA states=CA --debug
     ...
     >>> requests.request(**{'allow_redirects': False,
      'headers': {'Accept': 'application/json',
@@ -671,7 +671,7 @@ If we use the ``--form`` argument, we can see the
 expected behavior of this view function because ``httpie`` sets the
 ``Content-Type`` header to ``application/x-www-form-urlencoded``::
 
-    $ http --form POST https://endpoint/dev/formtest states=WA states=CA --debug
+    $ http --form POST https://endpoint/api/formtest states=WA states=CA --debug
     ...
     >>> requests.request(**{'allow_redirects': False,
      'headers': {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
@@ -731,7 +731,7 @@ Here's an example of this:
 
 This will result in a plain text response body::
 
-    $ http https://endpoint/dev/
+    $ http https://endpoint/api/
     HTTP/1.1 200 OK
     Content-Length: 12
     Content-Type: text/plain
