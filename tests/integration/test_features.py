@@ -10,6 +10,7 @@ import requests
 
 from chalice.cli.factory import CLIFactory
 from chalice.utils import record_deployed_values, OSUtils
+from chalice.deploy.deployer import ChaliceDeploymentError
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -93,7 +94,7 @@ def _deploy_app(temp_dirname):
     )
     d = factory.create_default_deployer(
         factory.create_botocore_session(), None)
-    deployed_stages = d.deploy(config)
+    deployed_stages = _deploy_with_retries(d, config)
     deployed = deployed_stages['dev']
     url = (
         "https://{rest_api_id}.execute-api.{region}.amazonaws.com/"
@@ -110,6 +111,22 @@ def _deploy_app(temp_dirname):
         os.path.join(temp_dirname, '.chalice', 'deployed.json')
     )
     return application
+
+
+def _deploy_with_retries(deployer, config, max_attempts=10):
+    for i in range(max_attempts):
+        try:
+            deployed_stages = deployer.deploy(config)
+            return deployed_stages
+        except ChaliceDeploymentError as e:
+            # API Gateway aggressively throttles deployments.
+            # If we run into this case, we just wait and try
+            # again.
+            error_code = e.original_error.response['Error']['Code']
+            if error_code != 'TooManyRequestsException':
+                raise
+            time.sleep(20)
+    raise RuntimeError("Failed to deploy app after %s attempts" % max_attempts)
 
 
 def _delete_app(application):

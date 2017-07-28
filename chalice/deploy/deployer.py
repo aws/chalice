@@ -212,6 +212,7 @@ def _get_all_function_names(chalice_app):
 class ChaliceDeploymentError(Exception):
     def __init__(self, error):
         # type: (Exception) -> None
+        self.original_error = error
         where = self._get_error_location(error)
         msg = self._wrap_text(
             'ERROR - %s, received the following error:' % where
