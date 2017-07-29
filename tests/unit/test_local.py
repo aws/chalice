@@ -175,7 +175,7 @@ def test_will_respond_with_custom_cors_enabled(handler):
 
 def test_will_respond_with_custom_cors_enabled_options(handler):
     headers = {'content-type': 'application/json', 'origin': 'null'}
-    set_current_request(handler, method='GET', path='/custom_cors',
+    set_current_request(handler, method='OPTIONS', path='/custom_cors',
                         headers=headers)
     handler.do_OPTIONS()
     response = handler.wfile.getvalue().splitlines()
@@ -186,6 +186,7 @@ def test_will_respond_with_custom_cors_enabled_options(handler):
     assert b'Access-Control-Expose-Headers: Header-A,Header-B' in response
     assert b'Access-Control-Max-Age: 600' in response
     assert b'Access-Control-Allow-Credentials: true' in response
+    assert b'Access-Control-Allow-Methods: GET,OPTIONS,PUT' in response
 
 
 def test_can_preflight_request(handler):
