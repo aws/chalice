@@ -100,17 +100,29 @@ deployment process.
 Cryptography Example
 --------------------
 
+  Note
+
+  Since the original version of this example was written, cryptography has
+  released version 2.0 which does have manylinux1 wheels available. This
+  means if you want to use cryptography in a Chalice app all you need to
+  do is add ``cryptography`` or ``cryptography>=2.0`` in your
+  requirements.txt file.
+
+  This example will use version 1.9 of Cryptography
+  because it is a good example of a library with C extensions and no wheel
+  files.
+
 Below shows an example of how to use the
-`cryptography <https://pypi.python.org/pypi/cryptography>`__ package in a
-Chalice app for the ``python3.6`` lambda environment.
+`cryptography 1.9 <https://pypi.python.org/pypi/cryptography/1.9>`__ package
+in a Chalice app for the ``python3.6`` lambda environment.
 
 Suppose you are on a Mac or Windows and want to deploy a Chalice app that
-depends on the ``cryptography`` package. If you simply add it to your
+depends on the ``cryptography==1.9`` package. If you simply add it to your
 ``requirements.txt`` file and try to deploy it with ``chalice deploy`` you will
 get the following warning during deployment::
 
   $ cat requirements.txt
-  cryptography
+  cryptography==1.9
   $ chalice deploy
   Updating IAM policy.
   Updating lambda function...
@@ -125,7 +137,7 @@ get the following warning during deployment::
   if missing dependencies are not present. For more information:
   http://chalice.readthedocs.io/en/latest/topics/packaging.html
 
-This happened because the ``cryptography`` package does not yet have wheel
+This happened because the ``cryptography`` version 1.9 does not have wheel
 files availble on PyPi, and has C extensions. Since we are not on the same
 platform as AWS Lambda, the compiled C extensions Chalice built were not
 compatible. To get around this we are going to leverage the ``vendor/``
@@ -137,7 +149,7 @@ instance running in EC2. All of the following commands were run inside a
 
 * Download the source first::
 
-    $ pip download cryptography
+    $ pip download cryptography==1.9
 
   This will download all the requirements into the current working directory.
   The directory should have the following contents:
@@ -166,12 +178,13 @@ instance running in EC2. All of the following commands were run inside a
   * ``pycparser-2.17-py2.py3-none-any.whl``
 
   The ``cryptography`` wheel file has been built with a compatible
-  archictecture for lambda (``linux_x86_64``) and the ``pycparser`` has been
-  built for ``any`` architecture which means it can also be automatically be
+  architecture for Lambda (``linux_x86_64``) and the ``pycparser`` has been
+  built for ``any`` architecture which means it can also be automatically
   packaged by Chalice if it is listed in the ``requirements.txt`` file.
 
 * Download the ``cryptography`` wheel file from the Amazon Linux instance and
-  unzip it into the ``vendor/`` directory in the root directory of Chalice.
+  unzip it into the ``vendor/`` directory in the root directory of your Chalice
+  app.
 
   You should now have a project directory that looks like this::
 
