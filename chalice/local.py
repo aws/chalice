@@ -198,9 +198,30 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         # type:(EventType) -> None
         route_key = lambda_event['requestContext']['resourcePath']
         route_dict = self.app_object.routes[route_key]
-        first_m = route_dict[next(iter(route_dict))]
+        route_methods = list(route_dict.keys())
+
+        # Chalice ensures that routes with multiple views have the same
+        # CORS configuration, so if any view has a CORS Config we can use
+        # that config since they will all be the same.
+        cors_config = route_dict[route_methods[0]].cors
+        cors_headers = cors_config.get_access_control_headers()
+
+        # We need to add OPTIONS since it is not a part of the CORSConfig
+        # object. APIGateway handles this entirely based on the API definition.
+        # So our local version needs to add this manually to our set of allowed
+        # headers.
+        route_methods.append('OPTIONS')
+        route_methods = route_methods
+
+        # The Access-Control-Allow-Methods header is not added by the
+        # CORSConfig object it is added to the API Gateway route during
+        # deployment, so we need to manually add those headers here.
+        cors_headers.update({
+            'Access-Control-Allow-Methods': '%s' % ','.join(route_methods)
+        })
+
         self.send_response(200)
-        for k, v in first_m.cors.get_access_control_headers().items():
+        for k, v in cors_headers.items():
             self.send_header(k, v)
         self.end_headers()
 

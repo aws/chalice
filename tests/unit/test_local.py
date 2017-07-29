@@ -175,17 +175,27 @@ def test_will_respond_with_custom_cors_enabled(handler):
 
 def test_will_respond_with_custom_cors_enabled_options(handler):
     headers = {'content-type': 'application/json', 'origin': 'null'}
-    set_current_request(handler, method='GET', path='/custom_cors',
+    set_current_request(handler, method='OPTIONS', path='/custom_cors',
                         headers=headers)
     handler.do_OPTIONS()
-    response = handler.wfile.getvalue().splitlines()
-    assert b'Access-Control-Allow-Origin: https://foo.bar' in response
-    assert (b'Access-Control-Allow-Headers: Authorization,Content-Type,'
-            b'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
-            b'X-Api-Key') in response
-    assert b'Access-Control-Expose-Headers: Header-A,Header-B' in response
-    assert b'Access-Control-Max-Age: 600' in response
-    assert b'Access-Control-Allow-Credentials: true' in response
+    response = handler.wfile.getvalue().decode().splitlines()
+    assert 'Access-Control-Allow-Origin: https://foo.bar' in response
+    assert ('Access-Control-Allow-Headers: Authorization,Content-Type,'
+            'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
+            'X-Api-Key') in response
+    assert 'Access-Control-Expose-Headers: Header-A,Header-B' in response
+    assert 'Access-Control-Max-Age: 600' in response
+    assert 'Access-Control-Allow-Credentials: true' in response
+
+    # Ensure that the Access-Control-Allow-Methods header is sent
+    # and that it sends all the correct methods over.
+    methods_lines = [line for line in response
+                     if line.startswith('Access-Control-Allow-Methods')]
+    assert len(methods_lines) == 1
+    method_line = methods_lines[0]
+    _, methods_header_value = method_line.split(': ')
+    methods = methods_header_value.strip().split(',')
+    assert ['GET', 'OPTIONS', 'PUT'] == sorted(methods)
 
 
 def test_can_preflight_request(handler):
