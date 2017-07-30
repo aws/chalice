@@ -1185,3 +1185,32 @@ def test_can_use_out_of_order_args():
     response = demo(event, context=None)
     response = json_response_body(response)
     assert response == {'a': 'first', 'b': 'second'}
+
+
+def test_ensure_debug_mode_is_false_by_default():
+    # These logger tests need to each have a unique name because the Chalice
+    # app creates a logger with it's name. If these tests are run in a batch
+    # the logger names will overlap in the logging module and cause test
+    # failures.
+    test_app = app.Chalice('logger-test-1')
+    assert test_app.debug is False
+    assert test_app.log.getEffectiveLevel() == logging.ERROR
+
+
+def test_can_explicitly_set_debug_false_in_initializer():
+    test_app = app.Chalice('logger-test-2', debug=False)
+    assert test_app.debug is False
+    assert test_app.log.getEffectiveLevel() == logging.ERROR
+
+
+def test_can_set_debug_mode_in_initialzier():
+    test_app = app.Chalice('logger-test-3', debug=True)
+    assert test_app.debug is True
+    assert test_app.log.getEffectiveLevel() == logging.DEBUG
+
+
+def test_debug_mode_changes_log_level():
+    test_app = app.Chalice('logger-test-4', debug=False)
+    test_app.debug = True
+    assert test_app.debug is True
+    assert test_app.log.getEffectiveLevel() == logging.DEBUG
