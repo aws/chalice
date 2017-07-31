@@ -67,6 +67,7 @@ Topics
    topics/authorizers
    topics/events
    topics/purelambda
+   topics/cd
 
 
 API Reference
