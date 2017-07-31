@@ -129,6 +129,13 @@ def test_can_convert_request_handler_to_lambda_event(handler):
     assert _get_body_from_response_stream(handler) == {'hello': 'world'}
 
 
+def test_uses_http_11(handler):
+    set_current_request(handler, method='GET', path='/index')
+    handler.do_GET()
+    response_lines = handler.wfile.getvalue().splitlines()
+    assert b'HTTP/1.1 200 OK' in response_lines
+
+
 def test_can_route_url_params(handler):
     set_current_request(handler, method='GET', path='/names/james')
     handler.do_GET()

@@ -122,6 +122,9 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         )
         BaseHTTPRequestHandler.__init__(
             self, request, client_address, server)  # type: ignore
+        # Force BaseHTTPRequestHandler to use HTTP/1.1
+        # Chrome ignores many headers from HTTP/1.0 servers.
+        BaseHTTPRequestHandler.protocol_version = "HTTP/1.1"
 
     def _generic_handle(self):
         # type: () -> None
