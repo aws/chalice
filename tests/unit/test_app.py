@@ -905,8 +905,7 @@ def test_can_return_auth_response():
                 {'Action': 'execute-api:Invoke',
                  'Effect': 'Allow',
                  'Resource': [
-                     'arn:aws:execute-api:us-west-2:1:id/dev/%s/a' %
-                     method for method in app.AuthResponse.ALL_HTTP_METHODS
+                     'arn:aws:execute-api:us-west-2:1:id/dev/*/a'
                  ]}
             ]
         }
@@ -926,10 +925,7 @@ def test_auth_response_serialization():
     request = app.AuthRequest('TOKEN', 'authtoken', method_arn)
     response = app.AuthResponse(routes=['/needs/auth'], principal_id='foo')
     response_dict = response.to_dict(request)
-    expected = [
-        method_arn.replace('GET', method)
-        for method in app.AuthResponse.ALL_HTTP_METHODS
-    ]
+    expected = [method_arn.replace('GET', '*')]
     assert response_dict == {
         'policyDocument': {
             'Version': '2012-10-17',
@@ -973,15 +969,38 @@ def test_can_use_auth_routes_instead_of_strings(auth_request):
     }
 
 
+def test_auth_response_wildcard(auth_request):
+    response = app.AuthResponse(
+        routes=[app.AuthRoute(path='*', methods=['*'])],
+        principal_id='user')
+    serialized = response.to_dict(auth_request)
+    assert serialized['policyDocument'] == {
+        'Statement': [
+            {'Action': 'execute-api:Invoke',
+             'Effect': 'Allow',
+             'Resource': [
+                 'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/*/*']}],
+        'Version': '2012-10-17'
+    }
+
+
+def test_auth_response_wildcard_string(auth_request):
+    response = app.AuthResponse(
+        routes=['*'], principal_id='user')
+    serialized = response.to_dict(auth_request)
+    assert serialized['policyDocument'] == {
+        'Statement': [
+            {'Action': 'execute-api:Invoke',
+             'Effect': 'Allow',
+             'Resource': [
+                 'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/*/*']}],
+        'Version': '2012-10-17'
+    }
+
+
 def test_can_mix_auth_routes_and_strings(auth_request):
     expected = [
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/DELETE/a',
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/HEAD/a',
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/OPTIONS/a',
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/PATCH/a',
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/POST/a',
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/PUT/a',
-        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a',
+        'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/*/a',
         'arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/a/b',
     ]
     response = app.AuthResponse(

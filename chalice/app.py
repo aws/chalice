@@ -760,11 +760,16 @@ class AuthResponse(object):
             if isinstance(route, AuthRoute):
                 methods = route.methods
                 path = route.path
+            elif route == '*':
+                # A string route of '*' means that all paths and
+                # all HTTP methods are now allowed.
+                methods = ['*']
+                path = '*'
             else:
                 # If 'route' is just a string, then they've
                 # opted not to use the AuthRoute(), so we'll
                 # generate a policy that allows all HTTP methods.
-                methods = self.ALL_HTTP_METHODS
+                methods = ['*']
                 path = route
             for method in methods:
                 allowed_resources.append(
@@ -786,11 +791,12 @@ class AuthResponse(object):
         # '/'.join(...)'d properly.
         base.extend([method, route[1:]])
         last_arn_segment = '/'.join(base)
-        if route == '/':
+        if route == '/' or route == '*':
             # We have to special case the '/' case.  For whatever
             # reason, API gateway adds an extra '/' to the method_arn
             # of the auth request, so we need to do the same thing.
-            last_arn_segment += '/'
+            # We also have to handle the '*' case which is for wildcards
+            last_arn_segment += route
         final_arn = '%s:%s' % (parts[0], last_arn_segment)
         return final_arn
 
