@@ -565,7 +565,8 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def _handle_comprehension(self, node, comprehension_type):
         # type: (Union[ast.ListComp, ast.GeneratorExp], str) -> None
-        child_scope = self._get_matching_sub_namespace(comprehension_type)
+        child_scope = self._get_matching_sub_namespace(
+            comprehension_type, node.lineno)
         if child_scope is None:
             # If there's no child scope (listcomps in py2) then we can
             # just analyze the node.elt node in the current scope instead
@@ -577,11 +578,11 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             ParsedCode(node.elt, child_table), self._binder)
         child_infer.bind_types()
 
-    def _get_matching_sub_namespace(self, name):
-        # type: (str) -> symtable.SymbolTable
+    def _get_matching_sub_namespace(self, name, lineno):
+        # type: (str, int) -> symtable.SymbolTable
         namespaces = [
             t for t in self._symbol_table.get_sub_namespaces()
-            if t.get_name() == name]
+            if t.get_name() == name and t.get_lineno() == lineno]
         if not namespaces:
             return
         # We're making a simplification and using the genexpr subnamespace.
