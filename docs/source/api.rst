@@ -368,7 +368,9 @@ These classes are used when defining built-in authoriers in Chalice.
       an instance of ``AuthRoute``.  If you specify the URL as
       a string, then all supported HTTP methods will be authorized.
       If you want to specify which HTTP methods are allowed, you
-      can use ``AuthRoute``.
+      can use ``AuthRoute``.  If you want to specify that all
+      routes and HTTP methods are supported you can use the
+      wildcard value of ``"*"``: ``AuthResponse(routes=['*'], ...)``
 
    .. attribute:: principal_id
 
