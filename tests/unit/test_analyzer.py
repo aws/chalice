@@ -457,6 +457,17 @@ def test_can_handle_list_expr_with_api_calls():
     """) == {'dynamodb': set(['list_tables'])}
 
 
+def test_can_handle_multiple_listcomps():
+    assert aws_calls("""\
+        bar_key = 'bar'
+        baz_key = 'baz'
+        items = [{'foo': 'sun', 'bar': 'moon', 'baz': 'stars'}]
+        foos = [t['foo'] for i in items]
+        bars = [t[bar_key] for t in items]
+        bazs = [t[baz_key] for t in items]
+    """) == {}
+
+
 # def test_can_handle_dict_comp():
 #     assert aws_calls("""\
 #         import boto3
