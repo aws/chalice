@@ -2,11 +2,21 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.0.0
+=====
 
 * Change default API Gateway stage name to ``api``
   (`#431 <https://github.com/awslabs/chalice/pull/431>`__)
+* Add support for ``CORSConfig`` in ``chalice local``
+  (`#436 <https://github.com/awslabs/chalice/issues/436>`__)
+* Propagate ``DEBUG`` log level when setting ``app.debug``
+  (`#386 <https://github.com/awslabs/chalice/issues/386>`__)
+* Add support for wildcard routes and HTTP methods in ``AuthResponse``
+  (`#403 <https://github.com/awslabs/chalice/issues/403>`__)
+* Fix bug when analyzing list comprehensions
+  (`#412 <https://github.com/awslabs/chalice/issues/412>`__)
+* Update ``chalice local`` to use HTTP 1.1
+  (`#448 <https://github.com/awslabs/chalice/pull/448>`__)
 
 
 1.0.0b2
