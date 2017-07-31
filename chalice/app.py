@@ -418,12 +418,12 @@ class Chalice(object):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
-    def __init__(self, app_name, configure_logs=True, env=None):
+    def __init__(self, app_name, debug=False, configure_logs=True, env=None):
         self.app_name = app_name
         self.api = APIGateway()
         self.routes = defaultdict(dict)
         self.current_request = None
-        self.debug = False
+        self._debug = debug
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
         self.builtin_auth_handlers = []
@@ -441,22 +441,26 @@ class Chalice(object):
             __version__,
         )
 
+    @property
+    def debug(self):
+        return self._debug
+
+    @debug.setter
+    def debug(self, value):
+        self._debug = value
+        self._configure_log_level()
+
     def _configure_logging(self):
-        log = logging.getLogger(self.app_name)
-        if self._already_configured(log):
+        if self._already_configured(self.log):
             return
         handler = logging.StreamHandler(sys.stdout)
         # Timestamp is handled by lambda itself so the
         # default FORMAT_STRING doesn't need to include it.
         formatter = logging.Formatter(self.FORMAT_STRING)
         handler.setFormatter(formatter)
-        log.propagate = False
-        if self.debug:
-            level = logging.DEBUG
-        else:
-            level = logging.ERROR
-        log.setLevel(level)
-        log.addHandler(handler)
+        self.log.propagate = False
+        self._configure_log_level()
+        self.log.addHandler(handler)
 
     def _already_configured(self, log):
         if not log.handlers:
@@ -466,6 +470,13 @@ class Chalice(object):
                 if handler.stream == sys.stdout:
                     return True
         return False
+
+    def _configure_log_level(self):
+        if self._debug:
+            level = logging.DEBUG
+        else:
+            level = logging.ERROR
+        self.log.setLevel(level)
 
     def authorizer(self, name=None, **kwargs):
         def _register_authorizer(auth_func):
