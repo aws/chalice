@@ -26,7 +26,7 @@ It provides:
 
 ::
 
-    $ pip install --pre chalice
+    $ pip install chalice
     $ chalice new-project helloworld && cd helloworld
     $ cat app.py
 
@@ -40,18 +40,12 @@ It provides:
 
     $ chalice deploy
     ...
-    Your application is available at: https://endpoint/api
+    https://endpoint/dev
 
     $ curl https://endpoint/api
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
-
-**This project is published as a preview project**. Until the 1.0 GA release, we
-may introduce backwards incompatible changes based on customer feedback we
-receive. As a best practice, we do not recommend launching production APIs
-until 1.0 GA because of potential backward incompatible releases. Please see
-the CHANGELOG.rst file to see the changes for each release.
 
 Give this project a try and share your feedback with us here on Github.
 
@@ -86,22 +80,13 @@ creating a virtualenv with python3.6 by running::
 
 Next, in your virtualenv, install ``chalice``::
 
-    $ pip install --pre chalice
+    $ pip install chalice
 
 You can verify you have chalice installed by running::
 
     $ chalice --help
     Usage: chalice [OPTIONS] COMMAND [ARGS]...
     ...
-
-Chalice now has release candidates for the 1.0 release.  In order to
-install these, you **must** specify either the ``--pre`` option::
-
-    $ pip install --upgrade --pre chalice
-
-or you can specify::
-
-    $ pip install 'chalice>=1.0.0b2,<2.0.0'
 
 
 Credentials
