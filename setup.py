@@ -21,7 +21,7 @@ setup(
     long_description=README,
     author="James Saryerwinnie",
     author_email='js@jamesls.com',
-    url='https://github.com/jamesls/chalice',
+    url='https://github.com/aws/chalice',
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
     license="Apache License 2.0",
