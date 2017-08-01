@@ -241,6 +241,20 @@ def test_no_view_function_found(sample_app):
         sample_app(bad_path, context=None)
 
 
+def test_can_access_context():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        return demo.lambda_context
+
+    event = create_event('/index', 'GET', {})
+    lambda_context = {'foo': 'bar'}
+    result = demo(event, lambda_context)
+    result = json_response_body(result)
+    assert result == {'foo': 'bar'}
+
+
 def test_can_access_raw_body():
     demo = app.Chalice('app-name')
 

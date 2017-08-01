@@ -423,6 +423,7 @@ class Chalice(object):
         self.api = APIGateway()
         self.routes = defaultdict(dict)
         self.current_request = None
+        self.lambda_context = None
         self._debug = debug
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
