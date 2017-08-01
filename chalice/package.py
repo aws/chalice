@@ -150,8 +150,9 @@ class SAMTemplateGenerator(object):
         events = {}
         for methods in app.routes.values():
             for http_method, view in methods.items():
+                mod_view_name = filter(str.isalnum, view.view_name)
                 key_name = ''.join([
-                    view.view_name, http_method.lower(),
+                    mod_view_name, http_method.lower(),
                     hashlib.md5(
                         view.view_name.encode('utf-8')).hexdigest()[:4],
                 ])
