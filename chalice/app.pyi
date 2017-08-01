@@ -109,6 +109,9 @@ class Chalice(object):
     api = ... # type: APIGateway
     routes = ... # type: Dict[str, Dict[str, RouteEntry]]
     current_request = ... # type: Request
+    # TODO: Change lambda_context to a real type once we have one for local
+    # API Gateway
+    lambda_context = ... # type: Any
     debug = ... # type: bool
     authorizers = ... # type: Dict[str, Dict[str, Any]]
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
