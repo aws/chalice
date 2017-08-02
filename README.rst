@@ -5,14 +5,14 @@ Python Serverless Microframework for AWS
 .. image:: https://badges.gitter.im/awslabs/chalice.svg
    :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
    :alt: Gitter
-.. image:: https://travis-ci.org/awslabs/chalice.svg?branch=master
-   :target: https://travis-ci.org/awslabs/chalice
+.. image:: https://travis-ci.org/aws/chalice.svg?branch=master
+   :target: https://travis-ci.org/aws/chalice
    :alt: Travis CI
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
    :target: http://chalice.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
-.. image:: https://codecov.io/github/awslabs/chalice/coverage.svg?branch=master
-   :target: https://codecov.io/github/awslabs/chalice
+.. image:: https://codecov.io/github/aws/chalice/coverage.svg?branch=master
+   :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
 The python serverless microframework for AWS allows you to quickly create and
