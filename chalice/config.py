@@ -266,7 +266,8 @@ class Config(object):
     @property
     def security_group_ids(self):
         # type: () -> List[str]
-        return self._chain_lookup('security_group_ids', varies_per_chalice_stage=True)
+        return self._chain_lookup('security_group_ids',
+                                  varies_per_chalice_stage=True)
 
     def scope(self, chalice_stage, function_name):
         # type: (str, str) -> Config
