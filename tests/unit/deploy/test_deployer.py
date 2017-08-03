@@ -644,7 +644,9 @@ def create_function_resource(name):
         timeout=60,
         memory_size=128,
         deployment_package=models.DeploymentPackage(filename='foo'),
-        role=models.PreCreatedIAMRole(role_arn='role:arn')
+        role=models.PreCreatedIAMRole(role_arn='role:arn'),
+        security_group_ids=[],
+        subnet_ids=[],
     )
 
 
@@ -707,7 +709,8 @@ class TestApplicationGraphBuilder(object):
     def create_config(self, app, app_name='lambda-only',
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
-                      autogen_policy=False):
+                      autogen_policy=False, security_group_ids=None,
+                      subnet_ids=None):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
@@ -728,6 +731,9 @@ class TestApplicationGraphBuilder(object):
             kwargs['iam_policy_file'] = policy_file
         elif autogen_policy:
             kwargs['autogen_policy'] = True
+        if security_group_ids is not None and subnet_ids is not None:
+            kwargs['security_group_ids'] = security_group_ids
+            kwargs['subnet_ids'] = subnet_ids
         config = Config.create(**kwargs)
         return config
 
@@ -751,6 +757,36 @@ class TestApplicationGraphBuilder(object):
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=None,
+            subnet_ids=None,
+        )
+
+    def test_can_build_lambda_function_app_with_vpc_config(self, lambda_app):
+        @lambda_app.lambda_function()
+        def foo(event, context):
+            pass
+
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(lambda_app,
+                                    iam_role_arn='role:arn',
+                                    security_group_ids=['sg1', 'sg2'],
+                                    subnet_ids=['sn1', 'sn2'])
+        application = builder.build(config, stage_name='dev')
+
+        assert application.resources[0] == models.LambdaFunction(
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
+            environment_variables={},
+            runtime=config.lambda_python_version,
+            handler='app.foo',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=['sg1', 'sg2'],
+            subnet_ids=['sn1', 'sn2'],
         )
 
     def test_multiple_lambda_functions_share_role_and_package(self,
@@ -1071,6 +1107,8 @@ class TestDefaultsInjector(object):
             tags={},
             deployment_package=None,
             role=None,
+            security_group_ids=[],
+            subnet_ids=[],
         )
         config = Config.create()
         injector.handle(config, function)
@@ -1096,6 +1134,8 @@ class TestDefaultsInjector(object):
             tags={},
             deployment_package=None,
             role=None,
+            security_group_ids=[],
+            subnet_ids=[],
         )
         config = Config.create()
         injector.handle(config, function)

@@ -250,6 +250,8 @@ class LambdaFunction(ManagedModel):
     timeout = ... # type: int
     memory_size = ... # type: int
     role = ... # type: IAMRole
+    security_group_ids = ... # type: List[str]
+    subnet_ids = ... # type: List[str]
 
     def __init__(self,
                  resource_name,           # type: str
@@ -262,6 +264,8 @@ class LambdaFunction(ManagedModel):
                  timeout,                 # type: int
                  memory_size,             # type: int
                  role,                    # type: IAMRole
+                 security_group_ids,      # type: List[str]
+                 subnet_ids,              # type: List[str]
                  ):
         # type: (...) -> None
         ...

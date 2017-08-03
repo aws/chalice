@@ -11,6 +11,7 @@ CHANGELOG
 * Update ``policies.json`` file
   (`#817 <https://github.com/aws/chalice/issues/817>`__)
 
+
 1.2.2
 =====
 

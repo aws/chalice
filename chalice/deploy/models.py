@@ -140,6 +140,8 @@ class LambdaFunction(ManagedModel):
     timeout = attrib()
     memory_size = attrib()
     role = attrib()
+    security_group_ids = attrib()
+    subnet_ids = attrib()
 
     def dependencies(self):
         return [self.role, self.deployment_package]

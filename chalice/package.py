@@ -102,7 +102,7 @@ class SAMTemplateGenerator(object):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
         resources = template['Resources']
         cfn_name = self._register_cfn_resource_name(resource.resource_name)
-        resources[cfn_name] = {
+        lambdafunction_definition = {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
                 'Runtime': resource.runtime,
@@ -112,11 +112,24 @@ class SAMTemplateGenerator(object):
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
             },
-        }
+        }  # type: Dict[str, Any]
+
         if resource.environment_variables:
-            resources[cfn_name]['Properties']['Environment'] = {
-                'Variables': resource.environment_variables
-            }
+            environment_config = {
+                'Environment': {
+                    'Variables': resource.environment_variables
+                }
+            }  # type: Dict[str, Dict[str, Dict[str, str]]]
+            lambdafunction_definition['Properties'].update(environment_config)
+        if resource.security_group_ids and resource.subnet_ids:
+            vpc_config = {
+                'VpcConfig': {
+                    'SecurityGroupIds': resource.security_group_ids,
+                    'SubnetIds': resource.subnet_ids,
+                }
+            }  # type: Dict[str, Dict[str, List[str]]]
+            lambdafunction_definition['Properties'].update(vpc_config)
+        resources[cfn_name] = lambdafunction_definition
         self._add_iam_role(resource, resources[cfn_name])
 
     def _add_iam_role(self, resource, cfn_resource):
