@@ -101,6 +101,14 @@ class TypedAWSClient(object):
             FunctionName=name)
         return response
 
+    def create_vpc_config(self, security_group_ids, subnet_ids):
+        vpc_config = {}
+        if subnet_ids is not None:
+            vpc_config['SubnetIds'] = subnet_ids
+        if security_group_ids is not None:
+            vpc_config['SecurityGroupIds'] = security_group_ids
+        return vpc_config
+
     def create_function(self,
                         function_name,               # type: str
                         role_arn,                    # type: str
@@ -130,14 +138,11 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        if subnet_ids is not None:
-            if not 'VpcConfig' in kwargs:
-                kwargs['VpcConfig'] = {}
-            kwargs['VpcConfig']['SubnetIds'] = subnet_ids
-        if security_group_ids is not None:
-            if not 'VpcConfig' in kwargs:
-                kwargs['VpcConfig'] = {}
-            kwargs['VpcConfig']['SecurityGroupIds'] = security_group_ids
+        if subnet_ids is not None or security_group_ids is not None:
+            kwargs['VpcConfig'] = self.create_vpc_config(
+                subnet_ids=subnet_ids,
+                security_group_ids=security_group_ids
+            )
         try:
             return self._call_client_method_with_retries(
                 self._client('lambda').create_function, kwargs)['FunctionArn']
@@ -249,14 +254,11 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
-        if subnet_ids is not None:
-            if not 'VpcConfig' in kwargs:
-                kwargs['VpcConfig'] = {}
-            kwargs['VpcConfig']['SubnetIds'] = subnet_ids
-        if security_group_ids is not None:
-            if not 'VpcConfig' in kwargs:
-                kwargs['VpcConfig'] = {}
-            kwargs['VpcConfig']['SecurityGroupIds'] = security_group_ids
+        if subnet_ids is not None or security_group_ids is not None:
+            kwargs['VpcConfig'] = self.create_vpc_config(
+                subnet_ids=subnet_ids,
+                security_group_ids=security_group_ids
+            )
         if kwargs:
             kwargs['FunctionName'] = function_name
             self._call_client_method_with_retries(
