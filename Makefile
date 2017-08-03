@@ -6,7 +6,7 @@ TESTS=tests/unit tests/functional
 check:
 	###### FLAKE8 #####
 	# No unused imports, no undefined vars,
-	flake8 --ignore=E731,W503 --exclude chalice/__init__.py,chalice/compat.py --max-complexity 10 chalice/
+	flake8 --ignore=E731,W503 --exclude chalice/__init__.py,chalice/compat.py --max-complexity 11 chalice/
 	flake8 --ignore=E731,W503,F401 --max-complexity 10 chalice/compat.py
 	flake8 tests/unit/ tests/functional/
 	##### DOC8 ######
