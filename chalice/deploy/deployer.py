@@ -743,7 +743,9 @@ class LambdaDeployer(object):
             tags=config.tags,
             timeout=self._get_lambda_timeout(config),
             memory_size=self._get_lambda_memory_size(config),
-            role_arn=role_arn
+            role_arn=role_arn,
+            security_group_ids=config.security_group_ids,
+            subnet_ids=config.subnet_ids
         )
 
     def _create_role_from_source_code(self, config, role_name):
