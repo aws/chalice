@@ -36,6 +36,7 @@ from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 _OPT_INT = Optional[int]
+_OPT_STR_LIST = Optional[List[str]]
 _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
@@ -109,7 +110,9 @@ class TypedAWSClient(object):
                         environment_variables=None,  # type: _STR_MAP
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
-                        memory_size=None             # type: _OPT_INT
+                        memory_size=None,            # type: _OPT_INT
+                        subnet_ids=None,             # type: _OPT_STR_LIST
+                        security_group_ids=None,     # type: _OPT_STR_LIST
                         ):
         # type: (...) -> str
         kwargs = {
@@ -127,6 +130,14 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        if subnet_ids is not None:
+            if not 'VpcConfig' in kwargs:
+                kwargs['VpcConfig'] = {}
+            kwargs['VpcConfig']['SubnetIds'] = subnet_ids
+        if security_group_ids is not None:
+            if not 'VpcConfig' in kwargs:
+                kwargs['VpcConfig'] = {}
+            kwargs['VpcConfig']['SecurityGroupIds'] = security_group_ids
         try:
             return self._call_client_method_with_retries(
                 self._client('lambda').create_function, kwargs)['FunctionArn']
@@ -204,7 +215,9 @@ class TypedAWSClient(object):
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
                         memory_size=None,            # type: _OPT_INT
-                        role_arn=None                # type: _OPT_STR
+                        role_arn=None,               # type: _OPT_STR
+                        subnet_ids=None,             # type: _OPT_STR_LIST
+                        security_group_ids=None,     # type: _OPT_STR_LIST
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -236,6 +249,14 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
+        if subnet_ids is not None:
+            if not 'VpcConfig' in kwargs:
+                kwargs['VpcConfig'] = {}
+            kwargs['VpcConfig']['SubnetIds'] = subnet_ids
+        if security_group_ids is not None:
+            if not 'VpcConfig' in kwargs:
+                kwargs['VpcConfig'] = {}
+            kwargs['VpcConfig']['SecurityGroupIds'] = security_group_ids
         if kwargs:
             kwargs['FunctionName'] = function_name
             self._call_client_method_with_retries(
