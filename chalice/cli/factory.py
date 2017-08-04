@@ -97,8 +97,8 @@ class CLIFactory(object):
             raise RuntimeError("Unable to load the project config file. "
                                "Are you sure this is a chalice project?")
         except ValueError as err:
-            raise RuntimeError("Unable to load the project config file. "
-                               "Cause: %s. " % repr(err))
+            raise RuntimeError("Unable to load the project config file: %s"
+                               % err)
 
         self._validate_config_from_disk(config_from_disk)
         app_obj = self.load_chalice_app()
