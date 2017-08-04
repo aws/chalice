@@ -32,14 +32,3 @@ def sample_app_with_auth():
         return {}
 
     return app
-
-
-@fixture
-def sample_app_incompatible_with_cf():
-    app = Chalice('sample_invalid_cf')
-
-    @app.route('/')
-    def foo_invalid():
-        return {}
-
-    return app

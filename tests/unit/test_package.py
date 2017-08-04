@@ -1,7 +1,6 @@
 import mock
 
 import pytest
-import re
 from chalice.config import Config
 from chalice import package
 from chalice import __version__ as chalice_version
@@ -276,19 +275,23 @@ def test_fails_with_custom_auth(sample_app_with_auth,
         p.generate_sam_template(config)
 
 
-def test_app_incompatible_with_cf(sample_app_incompatible_with_cf,
+def test_app_incompatible_with_cf(sample_app,
                                   mock_swagger_generator,
                                   mock_policy_generator):
+
+    @sample_app.route('/foo')
+    def foo_invalid():
+        return {}
+
     p = package.SAMTemplateGenerator(
         mock_swagger_generator, mock_policy_generator)
     mock_swagger_generator.generate_swagger.return_value = {
         'swagger': 'document'
     }
-    config = Config.create(chalice_app=sample_app_incompatible_with_cf,
+    config = Config.create(chalice_app=sample_app,
                            api_gateway_stage='dev',
                            app_name='sample_invalid_cf')
     template = p.generate_sam_template(config)
-    check_exp = re.compile(r'[^A-Za-z0-9]+')
     events = template['Resources']['APIHandler']['Properties']['Events']
-    for k in events.keys():
-        assert not check_exp.search(k)
+    # The underscore should be removed from the event name.
+    assert 'fooinvalidget2cda' in events
