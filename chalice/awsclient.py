@@ -104,10 +104,8 @@ class TypedAWSClient(object):
     def create_vpc_config(self, security_group_ids, subnet_ids):
         # type: (List[str], List[str]) -> Dict[str, List[str]]
         vpc_config = {}
-        if subnet_ids is not None:
-            vpc_config['SubnetIds'] = subnet_ids
-        if security_group_ids is not None:
-            vpc_config['SecurityGroupIds'] = security_group_ids
+        vpc_config['SubnetIds'] = subnet_ids
+        vpc_config['SecurityGroupIds'] = security_group_ids
         return vpc_config
 
     def create_function(self,
