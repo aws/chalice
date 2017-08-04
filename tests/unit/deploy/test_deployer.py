@@ -1223,11 +1223,11 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.app_policy = app_policy
         self.ui = ui
 
-    def create_config_obj(self, sample_app):
+    def create_config_obj(self, sample_app, **kwargs):
         cfg = Config.create(
             chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
             manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.'
+            project_dir='.', **kwargs
         )
         return cfg
 
@@ -1347,6 +1347,43 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             tags=mock.ANY,
             timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
             zip_contents=b'package contents',
+        )
+
+    def test_can_create_pure_lambda_functions_with_vpc_config(self,
+                                                              sample_app):
+        @sample_app.lambda_function()
+        def foo(event, context):
+            pass
+
+        config = self.create_config_obj(sample_app,
+                                        subnet_ids=['sn1', 'sn2'],
+                                        security_group_ids=['sg1', 'sg2'])
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, None, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:foo-function']
+        deployed = deployer.deploy(config, None, stage_name='dev')
+        assert 'lambda_functions' in deployed
+        assert deployed['lambda_functions'] == {
+            'myapp-dev-foo': {'arn': 'arn:foo-function',
+                              'type': 'pure_lambda'}
+        }
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-foo',
+            handler='app.foo',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents=b'package contents',
+            subnet_ids=['sn1', 'sn2'],
+            security_group_ids=['sg1', 'sg2'],
         )
 
     def test_can_update_auth_handlers(self, sample_app_with_auth):
