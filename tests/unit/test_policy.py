@@ -37,7 +37,7 @@ def test_app_policy_generator_vpc_policy():
                     'ec2:DetachNetworkInterface',
                     'ec2:DeleteNetworkInterface'],
          'Effect': 'Allow',
-         'Resource': 'arn:aws:ec2:::*'},
+         'Resource': '*'},
     ], 'Version': '2012-10-17'}
 
 
