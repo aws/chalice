@@ -88,7 +88,7 @@ VPC_ATTACH_POLICY = {
         "ec2:DetachNetworkInterface",
         "ec2:DeleteNetworkInterface"
     ],
-    "Resource": "*"
+    "Resource": "arn:aws:ec2:::*"
 }
 
 
