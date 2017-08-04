@@ -102,6 +102,7 @@ class TypedAWSClient(object):
         return response
 
     def create_vpc_config(self, security_group_ids, subnet_ids):
+        # type: (List[str], List[str]) -> Dict[str, List[str]]
         vpc_config = {}
         if subnet_ids is not None:
             vpc_config['SubnetIds'] = subnet_ids
@@ -138,7 +139,7 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        if subnet_ids is not None or security_group_ids is not None:
+        if subnet_ids is not None and security_group_ids is not None:
             kwargs['VpcConfig'] = self.create_vpc_config(
                 subnet_ids=subnet_ids,
                 security_group_ids=security_group_ids
@@ -254,7 +255,7 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
-        if subnet_ids is not None or security_group_ids is not None:
+        if subnet_ids is not None and security_group_ids is not None:
             kwargs['VpcConfig'] = self.create_vpc_config(
                 subnet_ids=subnet_ids,
                 security_group_ids=security_group_ids
