@@ -155,7 +155,5 @@ def test_error_raised_on_invalid_config_json(clifactory):
     with open(filename, 'w') as f:
         f.write("INVALID_JSON")
 
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(RuntimeError):
         clifactory.create_config_obj()
-
-    assert 'ValueError' in str(excinfo.value), "Expecting ValueError in error message"
