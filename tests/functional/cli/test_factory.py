@@ -147,3 +147,15 @@ def test_can_import_vendor_package(clifactory):
     app = clifactory.load_chalice_app()
     assert app.imported_value == 'foo bar'
     assert sys.path[-1] == vendor_lib
+
+
+def test_error_raised_on_invalid_config_json(clifactory):
+    filename = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(filename, 'w') as f:
+        f.write("INVALID_JSON")
+
+    with pytest.raises(RuntimeError) as excinfo:
+        clifactory.create_config_obj()
+
+    assert 'ValueError' in str(excinfo.value), "Expecting ValueError in error message"
