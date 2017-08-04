@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Only use alphanumeric characters for event names in SAM template
+  (`#450 <https://github.com/aws/chalice/issues/450>`__)
+
 1.0.0
 =====
 

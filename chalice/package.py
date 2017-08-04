@@ -2,6 +2,7 @@ import os
 import copy
 import json
 import hashlib
+import re
 
 from typing import Any, Dict  # noqa
 
@@ -150,8 +151,9 @@ class SAMTemplateGenerator(object):
         events = {}
         for methods in app.routes.values():
             for http_method, view in methods.items():
+                mod_view_name = re.sub(r'[^A-Za-z0-9]+', '', view.view_name)
                 key_name = ''.join([
-                    view.view_name, http_method.lower(),
+                    mod_view_name, http_method.lower(),
                     hashlib.md5(
                         view.view_name.encode('utf-8')).hexdigest()[:4],
                 ])
