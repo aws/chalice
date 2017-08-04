@@ -7,6 +7,9 @@ Next Release (TBD)
 
 * Only use alphanumeric characters for event names in SAM template
   (`#450 <https://github.com/aws/chalice/issues/450>`__)
+* Print useful error message when config.json is invalid
+  (`#458 <https://github.com/aws/chalice/pull/458>`__)
+
 
 1.0.0
 =====
