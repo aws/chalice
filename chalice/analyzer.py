@@ -618,6 +618,12 @@ class AppViewTransformer(ast.NodeTransformer):
                 if decorator.func.attr == 'route' and \
                         decorator.args:
                     return True
+
+                # For lambda_function and schedule decorator.args
+                # not present.
+                if decorator.func.attr in ('lambda_function', 'schedule'):
+                    return True
+
         return False
 
     def _auto_invoke_view(self, node):
