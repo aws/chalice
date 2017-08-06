@@ -423,6 +423,7 @@ class Chalice(object):
         self.api = APIGateway()
         self.routes = defaultdict(dict)
         self.current_request = None
+        self.lambda_context = None
         self._debug = debug
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
@@ -581,6 +582,7 @@ class Chalice(object):
         view_function = route_entry.view_function
         function_args = {name: event['pathParameters'][name]
                          for name in route_entry.view_args}
+        self.lambda_context = context
         self.current_request = Request(event['queryStringParameters'],
                                        event['headers'],
                                        event['pathParameters'],

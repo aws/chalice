@@ -10,6 +10,35 @@ from chalice import NotFoundError
 from chalice import __version__ as chalice_version
 
 
+class FakeLambdaContextIdentity(object):
+    def __init__(self, cognito_identity_id, cognito_identity_pool_id):
+        self.cognito_identity_id = cognito_identity_id
+        self.cognito_identity_pool_id = cognito_identity_pool_id
+
+
+class FakeLambdaContext(object):
+    def __init__(self):
+        self.function_name = 'test_name'
+        self.function_version = 'version'
+        self.invoked_function_arn = 'arn'
+        self.memory_limit_in_mb = 256
+        self.aws_request_id = 'id'
+        self.log_group_name = 'log_group_name'
+        self.log_stream_name = 'log_stream_name'
+        self.identity = FakeLambdaContextIdentity('id', 'id_pool')
+        # client_context is set by the mobile SDK and wont be set for chalice
+        self.client_context = None
+
+    def get_remaining_time_in_millis(self):
+        return 500
+
+    def serialize(self):
+        serialized = {}
+        serialized.update(vars(self))
+        serialized['identity'] = vars(self.identity)
+        return serialized
+
+
 @pytest.fixture
 def view_function():
     def _func():
@@ -239,6 +268,22 @@ def test_no_view_function_found(sample_app):
     bad_path = create_event('/noexist', 'GET', {})
     with pytest.raises(app.ChaliceError):
         sample_app(bad_path, context=None)
+
+
+def test_can_access_context():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view():
+        serialized = demo.lambda_context.serialize()
+        return serialized
+
+    event = create_event('/index', 'GET', {})
+    lambda_context = FakeLambdaContext()
+    result = demo(event, lambda_context)
+    result = json_response_body(result)
+    serialized_lambda_context = lambda_context.serialize()
+    assert result == serialized_lambda_context
 
 
 def test_can_access_raw_body():

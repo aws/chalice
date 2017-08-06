@@ -22,6 +22,12 @@ Chalice
       how apigateway interprets ``Content-Type`` headers in both requests and
       responses.
 
+   .. attribute:: lambda_context
+
+      A Lambda context object that is passed to the invoked view by AWS
+      Lambda. You can find out more about this object by reading the
+      `lambda context object documentation <http://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
+
    .. attribute:: debug
 
       A boolean value that enables debugging.  By default, this value is

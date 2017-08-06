@@ -273,3 +273,25 @@ def test_fails_with_custom_auth(sample_app_with_auth,
         app_name='myapp', manage_iam_role=False, iam_role_arn='role-arn')
     with pytest.raises(package.UnsupportedFeatureError):
         p.generate_sam_template(config)
+
+
+def test_app_incompatible_with_cf(sample_app,
+                                  mock_swagger_generator,
+                                  mock_policy_generator):
+
+    @sample_app.route('/foo')
+    def foo_invalid():
+        return {}
+
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app,
+                           api_gateway_stage='dev',
+                           app_name='sample_invalid_cf')
+    template = p.generate_sam_template(config)
+    events = template['Resources']['APIHandler']['Properties']['Events']
+    # The underscore should be removed from the event name.
+    assert 'fooinvalidget2cda' in events
