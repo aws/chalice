@@ -509,10 +509,16 @@ def test_can_analyze_combination():
         def index_sc():
             s3.list_buckets()
             return {}
+
         @app.lambda_function(name='lambda1')
         def index_lm():
             ec.describe_instances()
             return {}
+
+        @random
+        def foo():
+            return {}
+
     """) == {'s3': set(['list_buckets']),
              'ec2': set(['describe_instances'])}
 
