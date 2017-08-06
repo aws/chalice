@@ -468,6 +468,65 @@ def test_can_handle_multiple_listcomps():
     """) == {}
 
 
+def test_can_analyze_lambda_function():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='james1')
+        ec2 = boto3.client('ec2')
+
+
+        @app.lambda_function(name='lambda1')
+        def index():
+            ec2.describe_instances()
+            return {}
+    """) == {'ec2': set(['describe_instances'])}
+
+
+def test_can_analyze_schedule():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='james1')
+        s3cli = boto3.client('s3')
+
+
+        @app.schedule('rate(1 hour)')
+        def index():
+            s3cli.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_analyze_combination():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='james1')
+        s3 = boto3.client('s3')
+        ec = boto3.client('ec2')
+
+        @app.route('/')
+        def index():
+            ec2.describe_instances()
+            return {}
+
+        @app.schedule('rate(1 hour)')
+        def index_sc():
+            s3.list_buckets()
+            return {}
+
+        @app.lambda_function(name='lambda1')
+        def index_lm():
+            ec.describe_instances()
+            return {}
+
+    """) == {'s3': set(['list_buckets']),
+             'ec2': set(['describe_instances'])}
+
 # def test_can_handle_dict_comp():
 #     assert aws_calls("""\
 #         import boto3
