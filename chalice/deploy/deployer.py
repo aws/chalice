@@ -9,6 +9,7 @@ import os
 import textwrap
 import socket
 import uuid
+import logging
 import warnings
 
 import botocore.session  # noqa
@@ -40,6 +41,7 @@ from chalice.policy import AppPolicyGenerator
 NULLARY = Callable[[], str]
 OPT_RESOURCES = Optional[DeployedResources]
 OPT_STR = Optional[str]
+LOGGER = logging.getLogger(__name__)
 
 
 _AWSCLIENT_EXCEPTIONS = (
@@ -345,7 +347,9 @@ class Deployer(object):
             self._ui.write('No existing resources found for stage %s.\n' %
                            chalice_stage_name)
             return
+        LOGGER.debug("Deleting API Gateway resources.")
         self._apigateway_deploy.delete(existing_resources)
+        LOGGER.debug("Deleting Lambda resources.")
         self._lambda_deploy.delete(existing_resources)
 
     def deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
@@ -363,20 +367,28 @@ class Deployer(object):
         try:
             return self._do_deploy(config, chalice_stage_name)
         except _AWSCLIENT_EXCEPTIONS as error:
+            LOGGER.debug("Exception caught when calling Deployer.deploy()",
+                         exc_info=True)
             raise ChaliceDeploymentError(error)
 
     def _do_deploy(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
         # type: (Config, str) -> Dict[str, Any]
+        LOGGER.debug("Validating chalice configuration.")
         validate_configuration(config)
         existing_resources = config.deployed_resources(chalice_stage_name)
+        LOGGER.debug("Existing deployed resources: %s", existing_resources)
+        LOGGER.debug("Deploying Lambda resources.")
         deployed_values = self._lambda_deploy.deploy(
             config, existing_resources, chalice_stage_name)
+        LOGGER.debug("Finished deploying Lambda resources.")
         deployed_values.update({
             'backend': self.BACKEND_NAME,
             'chalice_version': chalice_version,
         })
+        LOGGER.debug("Deploying API Gateway resources.")
         rest_api_id, region_name, apig_stage = self._apigateway_deploy.deploy(
             config, existing_resources, deployed_values)
+        LOGGER.debug("Finished deploying API Gateway resources.")
         self._ui.write(
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/\n"
             .format(api_id=rest_api_id, region=region_name, stage=apig_stage)
@@ -386,6 +398,7 @@ class Deployer(object):
             'api_gateway_stage': apig_stage,
             'region': region_name,
         })
+        LOGGER.debug("Final deployed values: %s", deployed_values)
         return {
             chalice_stage_name: deployed_values
         }
@@ -418,10 +431,12 @@ class LambdaDeployer(object):
                     'Delete the role %s?' % role_name,
                     default=False, abort=False):
                 self._ui.write('Deleting role name %s\n' % role_name)
+                LOGGER.debug("Deleting role: %s", role_name)
                 self._aws_client.delete_role(role_name)
 
     def _delete_api_handler(self, existing_resources):
         # type: (DeployedResources) -> None
+        LOGGER.debug("Deleting rest API handler")
         handler_name = existing_resources.api_handler_name
         self._delete_lambda_function(handler_name)
 
@@ -429,6 +444,7 @@ class LambdaDeployer(object):
         # type: (DeployedResources) -> None
         if not existing_resources.lambda_functions:
             return
+        LOGGER.debug("Deleting auth handlers")
         for function in existing_resources.lambda_functions.values():
             # We could use the key names, but we're using the
             # Lambda ARNs to ensure we have the right lambda
@@ -465,6 +481,7 @@ class LambdaDeployer(object):
                                       stage_name, deployed_values):
         # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
         for lambda_function in config.chalice_app.pure_lambda_functions:
+            LOGGER.debug("Deploying pure lambda functions.")
             new_config = config.scope(chalice_stage=config.chalice_stage,
                                       function_name=lambda_function.name)
             self._deploy_single_lambda_function(
@@ -482,12 +499,14 @@ class LambdaDeployer(object):
             v['arn'] for v in deployed_values['lambda_functions'].values()
         ]
         unreferenced = set(existing) - set(just_deployed)
+        LOGGER.debug("Unreferenced lambda functions: %s", unreferenced)
         for function_arn in unreferenced:
             self._delete_lambda_function(function_arn)
 
     def _deploy_api_handler(self, config, existing_resources, stage_name,
                             deployed_values):
         # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
+        LOGGER.debug("Deploying Lambda API handler.")
         if existing_resources is not None and \
                 self._aws_client.lambda_function_exists(
                     existing_resources.api_handler_name):
@@ -508,7 +527,9 @@ class LambdaDeployer(object):
         # type: (Config, OPT_RESOURCES, str, Dict[str, Any]) -> None
         event_sources = config.chalice_app.event_sources
         if not event_sources:
+            LOGGER.debug("No event sources to deploy.")
             return
+        LOGGER.debug("Deploying Lambda event sources.")
         for event_source in event_sources:
             new_config = config.scope(chalice_stage=config.chalice_stage,
                                       function_name=event_source.name)
@@ -551,8 +572,10 @@ class LambdaDeployer(object):
         # functions configuration:
         auth_handlers = config.chalice_app.builtin_auth_handlers
         if not auth_handlers:
+            LOGGER.debug("No auth handlers to deploy.")
             deployed_values['lambda_functions'] = {}
             return
+        LOGGER.debug("Deploying Lambda auth handlers.")
         for auth_config in auth_handlers:
             new_config = config.scope(chalice_stage=config.chalice_stage,
                                       function_name=auth_config.name)
@@ -657,6 +680,7 @@ class LambdaDeployer(object):
                     self._ui.write(action + '\n')
             self._ui.confirm("\nWould you like to continue? ",
                              default=True, abort=True)
+        LOGGER.debug("Updating role with latest policy.")
         self._ui.write("Updating IAM policy for role: %s\n" % app_name)
         self._aws_client.delete_role_policy(
             role_name=app_name, policy_name=app_name)
@@ -779,6 +803,7 @@ class APIGatewayDeployer(object):
         # type: (Config, Dict[str, Any]) -> Tuple[str, str, str]
         generator = SwaggerGenerator(self._aws_client.region_name,
                                      deployed_resources)
+        LOGGER.debug("Generating swagger document for rest API.")
         swagger_doc = generator.generate_swagger(config.chalice_app)
         # The swagger_doc that's generated will contain the "name" which is
         # used to set the name for the restAPI.  API Gateway allows you
@@ -797,6 +822,7 @@ class APIGatewayDeployer(object):
         # type: (Config, str, Dict[str, Any]) -> Tuple[str, str, str]
         generator = SwaggerGenerator(self._aws_client.region_name,
                                      deployed_resources)
+        LOGGER.debug("Generating swagger document for rest API.")
         swagger_doc = generator.generate_swagger(config.chalice_app)
         self._aws_client.update_api_from_swagger(rest_api_id, swagger_doc)
         api_gateway_stage = config.api_gateway_stage or DEFAULT_STAGE_NAME
@@ -810,6 +836,8 @@ class APIGatewayDeployer(object):
         # type: (str, str, Dict[str, Any]) -> None
         self._ui.write("Deploying to API Gateway stage: %s\n"
                        % api_gateway_stage)
+        LOGGER.debug("Deploying rest API %s to stage %s",
+                     rest_api_id, api_gateway_stage)
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         api_handler_arn_parts = deployed_resources[
             'api_handler_arn'].split(':')
