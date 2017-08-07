@@ -423,7 +423,6 @@ class LambdaDeployer(object):
     def _delete_api_handler(self, existing_resources):
         # type: (DeployedResources) -> None
         handler_name = existing_resources.api_handler_name
-        self._ui.write('Deleting lambda function %s\n' % handler_name)
         self._delete_lambda_function(handler_name)
 
     def _delete_auth_handlers(self, existing_resources):
@@ -440,6 +439,8 @@ class LambdaDeployer(object):
         # type: (str) -> None
         # Deletes a function and prints an error if deletion fails.
         try:
+            self._ui.write("Deleting lambda function: %s\n"
+                           % function_name_or_arn)
             self._aws_client.delete_function(function_name_or_arn)
         except ResourceDoesNotExistError as e:
             self._ui.write('No lambda function named %s found.\n' % e)
@@ -535,6 +536,7 @@ class LambdaDeployer(object):
             expression = event_source.schedule_expression.to_string()
         else:
             expression = event_source.schedule_expression
+        self._ui.write("Creating CloudWatch rule: %s\n" % rule_name)
         rule_arn = self._aws_client.get_or_create_rule_arn(
             rule_name, expression)
         self._aws_client.connect_rule_to_lambda(rule_name, function_arn)
@@ -582,6 +584,7 @@ class LambdaDeployer(object):
                 config, function_name, stage_name)
             function_arn = response['FunctionArn']
         else:
+            self._ui.write("Creating lambda function: %s\n" % function_name)
             function_arn = self._aws_client.create_function(
                 function_name=function_name,
                 role_arn=role_arn,
@@ -632,13 +635,12 @@ class LambdaDeployer(object):
             role_arn = self._aws_client.get_role_arn_for_name(role_name)
             self._update_role_with_latest_policy(role_name, config)
         except ResourceDoesNotExistError:
-            self._ui.write("Creating role\n")
+            self._ui.write("Creating role: %s\n" % role_name)
             role_arn = self._create_role_from_source_code(config, role_name)
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
         # type: (str, Config) -> None
-        self._ui.write("Updating IAM policy.\n")
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         previous = self._app_policy.load_last_policy(config)
         diff = policy.diff_policies(previous, app_policy)
@@ -655,6 +657,7 @@ class LambdaDeployer(object):
                     self._ui.write(action + '\n')
             self._ui.confirm("\nWould you like to continue? ",
                              default=True, abort=True)
+        self._ui.write("Updating IAM policy for role: %s\n" % app_name)
         self._aws_client.delete_role_policy(
             role_name=app_name, policy_name=app_name)
         self._aws_client.put_role_policy(role_name=app_name,
@@ -674,6 +677,7 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
 
+        self._ui.write("Creating lambda function: %s\n" % function_name)
         return self._aws_client.create_function(
             function_name=function_name,
             role_arn=role_arn,
@@ -714,7 +718,7 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         role_arn = self._get_or_create_lambda_role_arn(config, lambda_name)
-        self._ui.write("Sending changes to lambda.\n")
+        self._ui.write("Updating lambda function: %s\n" % lambda_name)
         return self._aws_client.update_function(
             function_name=lambda_name,
             zip_contents=zip_contents,
@@ -763,7 +767,8 @@ class APIGatewayDeployer(object):
         if existing_resources is not None and \
                 self._aws_client.rest_api_exists(
                     existing_resources.rest_api_id):
-            self._ui.write("API Gateway rest API already found.\n")
+            self._ui.write("API Gateway rest API already found: %s\n" %
+                           existing_resources.rest_api_id)
             rest_api_id = existing_resources.rest_api_id
             return self._create_resources_for_api(
                 config, rest_api_id, deployed_resources)
@@ -803,7 +808,8 @@ class APIGatewayDeployer(object):
     def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage,
                              deployed_resources):
         # type: (str, str, Dict[str, Any]) -> None
-        self._ui.write("Deploying to: %s\n" % api_gateway_stage)
+        self._ui.write("Deploying to API Gateway stage: %s\n"
+                       % api_gateway_stage)
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         api_handler_arn_parts = deployed_resources[
             'api_handler_arn'].split(':')
