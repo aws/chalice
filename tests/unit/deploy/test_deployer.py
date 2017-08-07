@@ -28,7 +28,6 @@ from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
 from chalice.deploy.deployer import LambdaDeployer
-from chalice.deploy.deployer import NoPrompt
 from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
 from chalice.deploy.deployer import validate_route_content_types
@@ -700,7 +699,7 @@ class TestDeployer(object):
 
 
 def test_deployer_does_not_reuse_pacakge_on_python_version_change(
-        app_policy, sample_app):
+        app_policy, sample_app, ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
@@ -735,10 +734,9 @@ def test_deployer_does_not_reuse_pacakge_on_python_version_change(
     aws_client.get_function_configuration.return_value = {
         'Runtime': 'python1.0',
     }
-    prompter = mock.Mock(spec=UI)
-    prompter.confirm.return_value = True
+    ui.confirm.return_value = True
 
-    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
         'api', 'api_handler_arn', lambda_function_name,
@@ -753,15 +751,7 @@ def test_deployer_does_not_reuse_pacakge_on_python_version_change(
     assert packager.inject_latest_app.called is False
 
 
-def test_noprompt_always_returns_default():
-    assert not NoPrompt().confirm("You sure you want to do this?",
-                                  default=False)
-    assert NoPrompt().confirm("You sure you want to do this?",
-                              default=True)
-    assert NoPrompt().confirm("You sure?", default='yes') == 'yes'
-
-
-def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
+def test_lambda_deployer_repeated_deploy(app_policy, sample_app, ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
@@ -787,10 +777,8 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     aws_client.get_function_configuration.return_value = {
         'Runtime': cfg.lambda_python_version,
     }
-    prompter = mock.Mock(spec=UI)
-    prompter.confirm.return_value = True
 
-    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     # Doing a lambda deploy:
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
@@ -858,7 +846,8 @@ def test_lambda_deployer_delete_already_deleted(ui):
     aws_client.delete_function.assert_called_with(lambda_function_name)
 
 
-def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
+def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app,
+                                                      ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
@@ -877,10 +866,9 @@ def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
         project_dir='./myproject',
         environment_variables={"FOO": "BAR"},
     )
-    prompter = mock.Mock(spec=NoPrompt)
-    prompter.confirm.side_effect = RuntimeError("Aborted")
+    ui.confirm.side_effect = RuntimeError("Aborted")
 
-    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     # Doing a lambda deploy with a different runtime:
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
@@ -891,8 +879,8 @@ def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
 
     assert not packager.inject_latest_app.called
     assert not aws_client.update_function.called
-    assert prompter.confirm.called
-    message = prompter.confirm.call_args[0][0]
+    assert ui.confirm.called
+    message = ui.confirm.call_args[0][0]
     assert 'runtime will change' in message
 
 

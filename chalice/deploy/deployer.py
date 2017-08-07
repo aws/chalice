@@ -324,12 +324,6 @@ class ChaliceDeploymentError(Exception):
         return '%.1f MB' % (float(value) / (1024 ** 2))
 
 
-class NoPrompt(object):
-    def confirm(self, text, default=False, abort=False):
-        # type: (str, bool, bool) -> bool
-        return default
-
-
 class Deployer(object):
 
     BACKEND_NAME = 'api'
