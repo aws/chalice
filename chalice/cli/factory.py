@@ -17,6 +17,7 @@ from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.logs import LogRetriever
 from chalice import local
+from chalice.utils import UI  # noqa
 
 
 def create_botocore_session(profile=None, debug=False):
@@ -80,10 +81,10 @@ class CLIFactory(object):
         return create_botocore_session(profile=self.profile,
                                        debug=self.debug)
 
-    def create_default_deployer(self, session, prompter):
-        # type: (Session, deployer.NoPrompt) -> deployer.Deployer
+    def create_default_deployer(self, session, ui):
+        # type: (Session, UI) -> deployer.Deployer
         return deployer.create_default_deployer(
-            session=session, prompter=prompter)
+            session=session, ui=ui)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None, api_gateway_stage=None):

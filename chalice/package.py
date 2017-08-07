@@ -8,10 +8,11 @@ from typing import Any, Dict  # noqa
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
-from chalice.utils import OSUtils
+from chalice.utils import OSUtils, UI
 from chalice.config import Config  # noqa
 from chalice.app import Chalice  # noqa
 from chalice.policy import AppPolicyGenerator
@@ -20,6 +21,7 @@ from chalice.policy import AppPolicyGenerator
 def create_app_packager(config):
     # type: (Config) -> AppPackager
     osutils = OSUtils()
+    ui = UI()
     # The config object does not handle a default value
     # for autogen'ing a policy so we need to handle this here.
     return AppPackager(
@@ -31,7 +33,11 @@ def create_app_packager(config):
                 config,
                 ApplicationPolicyHandler(
                     osutils, AppPolicyGenerator(osutils)))),
-        LambdaDeploymentPackager()
+        LambdaDeploymentPackager(
+            osutils=osutils,
+            dependency_builder=DependencyBuilder(osutils),
+            ui=ui,
+        )
     )
 
 

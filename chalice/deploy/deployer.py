@@ -3,12 +3,11 @@
 Handles Lambda and API Gateway deployments.
 
 """
-from __future__ import print_function
 import json
+import sys
 import os
 import textwrap
 import socket
-import sys
 import uuid
 import warnings
 
@@ -28,8 +27,9 @@ from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaClientError
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.swagger import SwaggerGenerator
-from chalice.utils import OSUtils
+from chalice.utils import OSUtils, UI
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
@@ -47,20 +47,25 @@ _AWSCLIENT_EXCEPTIONS = (
 )
 
 
-def create_default_deployer(session, prompter=None):
-    # type: (botocore.session.Session, NoPrompt) -> Deployer
-    if prompter is None:
-        prompter = NoPrompt()
+def create_default_deployer(session, ui=None):
+    # type: (botocore.session.Session, UI) -> Deployer
+    if ui is None:
+        ui = UI()
     aws_client = TypedAWSClient(session)
-    api_gateway_deploy = APIGatewayDeployer(aws_client)
+    api_gateway_deploy = APIGatewayDeployer(aws_client, ui)
 
     osutils = OSUtils()
-    packager = LambdaDeploymentPackager(osutils=osutils)
+    dependency_builder = DependencyBuilder(osutils)
+    packager = LambdaDeploymentPackager(
+        osutils=osutils,
+        dependency_builder=dependency_builder,
+        ui=ui
+    )
     lambda_deploy = LambdaDeployer(
-        aws_client, packager, prompter, osutils,
+        aws_client, packager, ui, osutils,
         ApplicationPolicyHandler(
             osutils, AppPolicyGenerator(osutils)))
-    return Deployer(api_gateway_deploy, lambda_deploy)
+    return Deployer(api_gateway_deploy, lambda_deploy, ui)
 
 
 def validate_configuration(config):
@@ -327,17 +332,18 @@ class Deployer(object):
 
     BACKEND_NAME = 'api'
 
-    def __init__(self, apigateway_deploy, lambda_deploy):
-        # type: (APIGatewayDeployer, LambdaDeployer) -> None
+    def __init__(self, apigateway_deploy, lambda_deploy, ui):
+        # type: (APIGatewayDeployer, LambdaDeployer, UI) -> None
         self._apigateway_deploy = apigateway_deploy
         self._lambda_deploy = lambda_deploy
+        self._ui = ui
 
     def delete(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
         # type: (Config, str) -> None
         existing_resources = config.deployed_resources(chalice_stage_name)
         if existing_resources is None:
-            print('No existing resources found for stage %s.' %
-                  chalice_stage_name)
+            self._ui.write('No existing resources found for stage %s.\n' %
+                           chalice_stage_name)
             return
         self._apigateway_deploy.delete(existing_resources)
         self._lambda_deploy.delete(existing_resources)
@@ -371,8 +377,8 @@ class Deployer(object):
         })
         rest_api_id, region_name, apig_stage = self._apigateway_deploy.deploy(
             config, existing_resources, deployed_values)
-        print(
-            "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
+        self._ui.write(
+            "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/\n"
             .format(api_id=rest_api_id, region=region_name, stage=apig_stage)
         )
         deployed_values.update({
@@ -389,14 +395,14 @@ class LambdaDeployer(object):
     def __init__(self,
                  aws_client,   # type: TypedAWSClient
                  packager,     # type: LambdaDeploymentPackager
-                 prompter,     # type: NoPrompt
+                 ui,           # type: UI
                  osutils,      # type: OSUtils
                  app_policy,   # type: ApplicationPolicyHandler
                  ):
         # type: (...) -> None
         self._aws_client = aws_client
         self._packager = packager
-        self._prompter = prompter
+        self._ui = ui
         self._osutils = osutils
         self._app_policy = app_policy
 
@@ -408,16 +414,16 @@ class LambdaDeployer(object):
             existing_resources.api_handler_name)
         if role_arn is not None:
             role_name = role_arn.split('/')[1]
-            if self._prompter.confirm(
+            if self._ui.confirm(
                     'Delete the role %s?' % role_name,
                     default=False, abort=False):
-                print('Deleting role name %s' % role_name)
+                self._ui.write('Deleting role name %s\n' % role_name)
                 self._aws_client.delete_role(role_name)
 
     def _delete_api_handler(self, existing_resources):
         # type: (DeployedResources) -> None
         handler_name = existing_resources.api_handler_name
-        print('Deleting lambda function %s' % handler_name)
+        self._ui.write('Deleting lambda function %s\n' % handler_name)
         self._delete_lambda_function(handler_name)
 
     def _delete_auth_handlers(self, existing_resources):
@@ -436,7 +442,7 @@ class LambdaDeployer(object):
         try:
             self._aws_client.delete_function(function_name_or_arn)
         except ResourceDoesNotExistError as e:
-            print('No lambda function named %s found.' % e)
+            self._ui.write('No lambda function named %s found.\n' % e)
 
     def deploy(self, config, existing_resources, stage_name):
         # type: (Config, OPT_RESOURCES, str) -> Dict[str, Any]
@@ -599,7 +605,7 @@ class LambdaDeployer(object):
             handler_name)
         lambda_python_version = config.lambda_python_version
         if lambda_config['Runtime'] != lambda_python_version:
-            self._prompter.confirm(
+            self._ui.confirm(
                 "The python runtime will change from %s to %s, would "
                 "you like to continue? " % (lambda_config['Runtime'],
                                             lambda_python_version),
@@ -626,29 +632,29 @@ class LambdaDeployer(object):
             role_arn = self._aws_client.get_role_arn_for_name(role_name)
             self._update_role_with_latest_policy(role_name, config)
         except ResourceDoesNotExistError:
-            print("Creating role")
+            self._ui.write("Creating role\n")
             role_arn = self._create_role_from_source_code(config, role_name)
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
         # type: (str, Config) -> None
-        print("Updating IAM policy.")
+        self._ui.write("Updating IAM policy.\n")
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         previous = self._app_policy.load_last_policy(config)
         diff = policy.diff_policies(previous, app_policy)
         if diff:
             if diff.get('added', set([])):
-                print("\nThe following actions will be added to "
-                      "the execution policy:\n")
+                self._ui.write("\nThe following actions will be added to "
+                               "the execution policy:\n\n")
                 for action in diff['added']:
-                    print(action)
+                    self._ui.write(action + '\n')
             if diff.get('removed', set([])):
-                print("\nThe following action will be removed from "
-                      "the execution policy:\n")
+                self._ui.write("\nThe following action will be removed from "
+                               "the execution policy:\n\n")
                 for action in diff['removed']:
-                    print(action)
-            self._prompter.confirm("\nWould you like to continue? ",
-                                   default=True, abort=True)
+                    self._ui.write(action + '\n')
+            self._ui.confirm("\nWould you like to continue? ",
+                             default=True, abort=True)
         self._aws_client.delete_role_policy(
             role_name=app_name, policy_name=app_name)
         self._aws_client.put_role_policy(role_name=app_name,
@@ -661,7 +667,7 @@ class LambdaDeployer(object):
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
-        print("Initial creation of lambda function.")
+        self._ui.write("Initial creation of lambda function.\n")
         role_arn = self._get_or_create_lambda_role_arn(config, function_name)
         zip_filename = self._packager.create_deployment_package(
             config.project_dir, config.lambda_python_version)
@@ -694,7 +700,7 @@ class LambdaDeployer(object):
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> Dict[str, Any]
-        print("Updating lambda function...")
+        self._ui.write("Updating lambda function...\n")
         project_dir = config.project_dir
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
@@ -708,7 +714,7 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         role_arn = self._get_or_create_lambda_role_arn(config, lambda_name)
-        print("Sending changes to lambda.")
+        self._ui.write("Sending changes to lambda.\n")
         return self._aws_client.update_function(
             function_name=lambda_name,
             zip_contents=zip_contents,
@@ -724,10 +730,10 @@ class LambdaDeployer(object):
         # type: (Config, str) -> str
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
-            print("The following execution policy will be used:")
-            print(json.dumps(app_policy, indent=2))
-            self._prompter.confirm("Would you like to continue? ",
-                                   default=True, abort=True)
+            self._ui.write("The following execution policy will be used:\n")
+            self._ui.write(json.dumps(app_policy, indent=2))
+            self._ui.confirm("Would you like to continue? ",
+                             default=True, abort=True)
         role_arn = self._aws_client.create_role(
             name=role_name,
             trust_policy=LAMBDA_TRUST_POLICY,
@@ -738,29 +744,30 @@ class LambdaDeployer(object):
 
 
 class APIGatewayDeployer(object):
-    def __init__(self, aws_client):
-        # type: (TypedAWSClient) -> None
+    def __init__(self, aws_client, ui):
+        # type: (TypedAWSClient, UI) -> None
         self._aws_client = aws_client
+        self._ui = ui
 
     def delete(self, existing_resources):
         # type: (DeployedResources) -> None
         rest_api_id = existing_resources.rest_api_id
-        print('Deleting rest API %s' % rest_api_id)
+        self._ui.write('Deleting rest API %s\n' % rest_api_id)
         try:
             self._aws_client.delete_rest_api(rest_api_id)
         except ResourceDoesNotExistError as e:
-            print('No rest API with id %s found.' % e)
+            self._ui.write('No rest API with id %s found.\n' % e)
 
     def deploy(self, config, existing_resources, deployed_resources):
         # type: (Config, OPT_RESOURCES, Dict[str, Any]) -> Tuple[str, str, str]
         if existing_resources is not None and \
                 self._aws_client.rest_api_exists(
                     existing_resources.rest_api_id):
-            print("API Gateway rest API already found.")
+            self._ui.write("API Gateway rest API already found.\n")
             rest_api_id = existing_resources.rest_api_id
             return self._create_resources_for_api(
                 config, rest_api_id, deployed_resources)
-        print("Initiating first time deployment...")
+        self._ui.write("Initiating first time deployment...\n")
         return self._first_time_deploy(config, deployed_resources)
 
     def _first_time_deploy(self, config, deployed_resources):
@@ -796,7 +803,7 @@ class APIGatewayDeployer(object):
     def _deploy_api_to_stage(self, rest_api_id, api_gateway_stage,
                              deployed_resources):
         # type: (str, str, Dict[str, Any]) -> None
-        print("Deploying to: %s" % api_gateway_stage)
+        self._ui.write("Deploying to: %s\n" % api_gateway_stage)
         self._aws_client.deploy_rest_api(rest_api_id, api_gateway_stage)
         api_handler_arn_parts = deployed_resources[
             'api_handler_arn'].split(':')

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys
 import hashlib
 import inspect
@@ -15,6 +14,7 @@ from chalice.compat import subprocess_python_base_environ
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
+from chalice.utils import UI  # noqa
 from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
 
 import chalice
@@ -55,14 +55,11 @@ class LambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
     _VENDOR_DIR = 'vendor'
 
-    def __init__(self, osutils=None, dependency_builder=None):
-        # type: (Optional[OSUtils], Optional[DependencyBuilder]) -> None
-        if osutils is None:
-            osutils = OSUtils()
+    def __init__(self, osutils, dependency_builder, ui):
+        # type: (OSUtils, DependencyBuilder, UI) -> None
         self._osutils = osutils
-        if dependency_builder is None:
-            dependency_builder = DependencyBuilder(self._osutils)
         self._dependency_builder = dependency_builder
+        self._ui = ui
 
     def _get_requirements_filename(self, project_dir):
         # type: (str) -> str
@@ -72,7 +69,7 @@ class LambdaDeploymentPackager(object):
     def create_deployment_package(self, project_dir, python_version,
                                   package_filename=None):
         # type: (str, str, Optional[str]) -> str
-        print("Creating deployment package.")
+        self._ui.write("Creating deployment package.\n")
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
         deployment_package_filename = self.deployment_package_filename(
@@ -87,7 +84,8 @@ class LambdaDeploymentPackager(object):
             except MissingDependencyError as e:
                 missing_packages = '\n'.join([p.identifier for p
                                               in e.missing])
-                print(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
+                self._ui.write(
+                    MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
             dirname = self._osutils.dirname(
                 self._osutils.abspath(package_filename))
             if not self._osutils.directory_exists(dirname):
@@ -211,7 +209,7 @@ class LambdaDeploymentPackager(object):
         # a way to do this efficiently so we need to create a new
         # zip file that has all the same stuff except for the new
         # app file.
-        print("Regen deployment package...")
+        self._ui.write("Regen deployment package...\n")
         tmpzip = deployment_package_filename + '.tmp.zip'
 
         with self._osutils.open_zip(deployment_package_filename, 'r') as inzip:
