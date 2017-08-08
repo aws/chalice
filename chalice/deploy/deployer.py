@@ -722,7 +722,6 @@ class LambdaDeployer(object):
 
     def _update_lambda_function(self, config, lambda_name, stage_name):
         # type: (Config, str, str) -> Dict[str, Any]
-        self._ui.write("Updating lambda function...\n")
         project_dir = config.project_dir
         packager = self._packager
         deployment_package_filename = packager.deployment_package_filename(
