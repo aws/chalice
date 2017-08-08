@@ -688,7 +688,6 @@ class LambdaDeployer(object):
         # Creates a lambda function and returns the
         # function arn.
         # First we need to create a deployment package.
-        self._ui.write("Initial creation of lambda function.\n")
         role_arn = self._get_or_create_lambda_role_arn(config, function_name)
         zip_filename = self._packager.create_deployment_package(
             config.project_dir, config.lambda_python_version)
@@ -789,7 +788,7 @@ class APIGatewayDeployer(object):
             rest_api_id = existing_resources.rest_api_id
             return self._create_resources_for_api(
                 config, rest_api_id, deployed_resources)
-        self._ui.write("Initiating first time deployment...\n")
+        self._ui.write("Initiating first time deployment.\n")
         return self._first_time_deploy(config, deployed_resources)
 
     def _first_time_deploy(self, config, deployed_resources):

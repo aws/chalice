@@ -209,7 +209,7 @@ class LambdaDeploymentPackager(object):
         # a way to do this efficiently so we need to create a new
         # zip file that has all the same stuff except for the new
         # app file.
-        self._ui.write("Regen deployment package...\n")
+        self._ui.write("Regen deployment package.\n")
         tmpzip = deployment_package_filename + '.tmp.zip'
 
         with self._osutils.open_zip(deployment_package_filename, 'r') as inzip:
