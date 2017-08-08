@@ -4,11 +4,18 @@ import json
 import contextlib
 import tempfile
 import shutil
+import sys
 import tarfile
 
+import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
+from typing import Optional  # noqa
 
 from chalice.constants import WELCOME_PROMPT
+
+
+class AbortedError(Exception):
+    pass
 
 
 def remove_stage_from_deployed_values(key, filename):
@@ -183,3 +190,36 @@ class OSUtils(object):
 def getting_started_prompt(prompter):
     # type: (Any) -> bool
     return prompter.prompt(WELCOME_PROMPT)
+
+
+class UI(object):
+    def __init__(self, out=None, err=None, confirm=None):
+        # type: (Optional[IO], Optional[IO], Any) -> None
+        # I tried using a more exact type for the 'confirm'
+        # param, but mypy seems to miss the 'if confirm is None'
+        # check and types _confirm as Union[..., None].
+        # So for now, we're using Any for this type.
+        if out is None:
+            out = sys.stdout
+        if err is None:
+            err = sys.stderr
+        if confirm is None:
+            confirm = click.confirm
+        self._out = out
+        self._err = err
+        self._confirm = confirm
+
+    def write(self, msg):
+        # type: (str) -> None
+        self._out.write(msg)
+
+    def error(self, msg):
+        # type: (str) -> None
+        self._err.write(msg)
+
+    def confirm(self, msg, default=None, abort=False):
+        # type: (str, Optional[Any], bool) -> Any
+        try:
+            return self._confirm(msg, default, abort)
+        except click.Abort:
+            raise AbortedError()

@@ -28,13 +28,13 @@ from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
 from chalice.deploy.deployer import LambdaDeployer
-from chalice.deploy.deployer import NoPrompt
 from chalice.deploy.deployer import validate_configuration
 from chalice.deploy.deployer import validate_routes
 from chalice.deploy.deployer import validate_route_content_types
 from chalice.deploy.deployer import validate_python_version
 from chalice.deploy.deployer import validate_unique_function_names
 from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.utils import UI
 
 
 _SESSION = None
@@ -59,17 +59,6 @@ class InMemoryOSUtils(object):
 
     def set_file_contents(self, filename, contents, binary=True):
         self.filemap[filename] = contents
-
-
-class CustomConfirmPrompt():
-    def __init__(self, confirm_response=False):
-        self._confirm_response = confirm_response
-
-    def confirm(self, text, default=False, abort=False):
-        return self._confirm_response
-
-    def Abort(self):
-        return Exception('Aborted!')
 
 
 @fixture
@@ -113,7 +102,12 @@ def config_obj(sample_app):
     return config
 
 
-def test_api_gateway_deployer_initial_deploy(config_obj):
+@fixture
+def ui():
+    return mock.Mock(spec=UI)
+
+
+def test_api_gateway_deployer_initial_deploy(config_obj, ui):
     aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
 
     # The rest_api_id does not exist which will trigger
@@ -122,7 +116,7 @@ def test_api_gateway_deployer_initial_deploy(config_obj):
     aws_client.import_rest_api.return_value = 'rest-api-id'
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
-    d = APIGatewayDeployer(aws_client)
+    d = APIGatewayDeployer(aws_client, ui)
     d.deploy(config_obj, None, {'api_handler_arn': lambda_arn})
 
     # mock.ANY because we don't want to test the contents of the swagger
@@ -140,7 +134,7 @@ def test_api_gateway_deployer_initial_deploy(config_obj):
     )
 
 
-def test_api_gateway_deployer_redeploy_api(config_obj):
+def test_api_gateway_deployer_redeploy_api(config_obj, ui):
     aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
 
     # The rest_api_id does not exist which will trigger
@@ -150,7 +144,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
     aws_client.rest_api_exists.return_value = True
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
-    d = APIGatewayDeployer(aws_client)
+    d = APIGatewayDeployer(aws_client, ui)
     d.deploy(config_obj, deployed, {'api_handler_arn': lambda_arn})
 
     aws_client.update_api_from_swagger.assert_called_with('existing-id',
@@ -165,7 +159,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj):
     )
 
 
-def test_api_gateway_deployer_delete(config_obj):
+def test_api_gateway_deployer_delete(config_obj, ui):
     aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
 
     rest_api_id = 'abcdef1234'
@@ -173,12 +167,12 @@ def test_api_gateway_deployer_delete(config_obj):
         None, None, None, rest_api_id, 'dev', None, None, {})
     aws_client.rest_api_exists.return_value = True
 
-    d = APIGatewayDeployer(aws_client)
+    d = APIGatewayDeployer(aws_client, ui)
     d.delete(deployed)
     aws_client.delete_rest_api.assert_called_with(rest_api_id)
 
 
-def test_api_gateway_deployer_delete_already_deleted(capsys):
+def test_api_gateway_deployer_delete_already_deleted(ui):
     rest_api_id = 'abcdef1234'
     aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
     aws_client.delete_rest_api.side_effect = ResourceDoesNotExistError(
@@ -186,12 +180,11 @@ def test_api_gateway_deployer_delete_already_deleted(capsys):
     deployed = DeployedResources(
         None, None, None, rest_api_id, 'dev', None, None, {})
     aws_client.rest_api_exists.return_value = True
-    d = APIGatewayDeployer(aws_client)
+    d = APIGatewayDeployer(aws_client, ui)
     d.delete(deployed)
 
-    # Check that we printed out that no rest api with that id was found
-    out, _ = capsys.readouterr()
-    assert "No rest API with id %s found." % rest_api_id in out
+    output = [call[0][0] for call in ui.write.call_args_list]
+    assert "No rest API with id %s found.\n" % rest_api_id in output
     aws_client.delete_rest_api.assert_called_with(rest_api_id)
 
 
@@ -534,7 +527,7 @@ class TestChaliceDeploymentError(object):
 
 
 class TestDeployer(object):
-    def test_can_deploy_apig_and_lambda(self, sample_app):
+    def test_can_deploy_apig_and_lambda(self, sample_app, ui):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
 
@@ -544,7 +537,7 @@ class TestDeployer(object):
         }
         apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
 
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         cfg = Config.create(
             chalice_stage='dev',
             chalice_app=sample_app,
@@ -560,7 +553,7 @@ class TestDeployer(object):
             'api_handler_arn': 'my_lambda_arn', 'backend': 'api'
         })
 
-    def test_deployer_returns_deployed_resources(self, sample_app):
+    def test_deployer_returns_deployed_resources(self, sample_app, ui):
         cfg = Config.create(
             chalice_stage='dev',
             chalice_app=sample_app,
@@ -575,7 +568,7 @@ class TestDeployer(object):
             'api_handler_arn': 'my_lambda_arn',
         }
 
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         deployed_values = d.deploy(cfg)
         assert deployed_values == {
             'dev': {
@@ -589,7 +582,7 @@ class TestDeployer(object):
             }
         }
 
-    def test_deployer_delete_calls_deletes(self):
+    def test_deployer_delete_calls_deletes(self, ui):
         # Check that the deployer class calls other deployer classes delete
         # methods.
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
@@ -607,29 +600,30 @@ class TestDeployer(object):
         })
         cfg.deployed_resources.return_value = deployed_resources
 
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         d.delete(cfg)
 
         lambda_deploy.delete.assert_called_with(deployed_resources)
         apig_deploy.delete.assert_called_with(deployed_resources)
 
-    def test_deployer_does_not_call_delete_when_no_resources(self, capsys):
+    def test_deployer_does_not_call_delete_when_no_resources(self, ui):
         # If there is nothing to clean up the deployer should not call delete.
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
         cfg = mock.Mock(spec=Config)
         deployed_resources = None
         cfg.deployed_resources.return_value = deployed_resources
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         d.delete(cfg)
 
-        out, _ = capsys.readouterr()
-        assert 'No existing resources found for stage dev' in out
+        output = [call[0][0] for call in ui.write.call_args_list]
+        assert 'No existing resources found for stage dev.\n' in output
         lambda_deploy.delete.assert_not_called()
         apig_deploy.delete.assert_not_called()
 
     def test_raises_deployment_error_for_botcore_client_error(self,
-                                                              sample_app):
+                                                              sample_app,
+                                                              ui):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
         lambda_deploy.deploy.side_effect = ClientError(
@@ -641,7 +635,7 @@ class TestDeployer(object):
             },
             'CreateFunction'
         )
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         cfg = Config.create(
             chalice_stage='dev',
             chalice_app=sample_app,
@@ -652,7 +646,9 @@ class TestDeployer(object):
         assert excinfo.match('ERROR - While deploying')
         assert excinfo.match('Denied')
 
-    def test_raises_deployment_error_for_lambda_client_error(self, sample_app):
+    def test_raises_deployment_error_for_lambda_client_error(self,
+                                                             sample_app,
+                                                             ui):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
         lambda_deploy.deploy.side_effect = LambdaClientError(
@@ -663,7 +659,7 @@ class TestDeployer(object):
                 deployment_size=1024 ** 2
             )
         )
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         cfg = Config.create(
             chalice_stage='dev',
             chalice_app=sample_app,
@@ -674,7 +670,7 @@ class TestDeployer(object):
         assert excinfo.match('ERROR - While sending')
         assert excinfo.match('my error')
 
-    def test_raises_deployment_error_for_apig_error(self, sample_app):
+    def test_raises_deployment_error_for_apig_error(self, sample_app, ui):
         lambda_deploy = mock.Mock(spec=LambdaDeployer)
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
         lambda_deploy.deploy.return_value = {
@@ -690,7 +686,7 @@ class TestDeployer(object):
             },
             'CreateStage'
         )
-        d = Deployer(apig_deploy, lambda_deploy)
+        d = Deployer(apig_deploy, lambda_deploy, ui)
         cfg = Config.create(
             chalice_stage='dev',
             chalice_app=sample_app,
@@ -703,7 +699,7 @@ class TestDeployer(object):
 
 
 def test_deployer_does_not_reuse_pacakge_on_python_version_change(
-        app_policy, sample_app):
+        app_policy, sample_app, ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
@@ -738,10 +734,9 @@ def test_deployer_does_not_reuse_pacakge_on_python_version_change(
     aws_client.get_function_configuration.return_value = {
         'Runtime': 'python1.0',
     }
-    prompter = mock.Mock(spec=NoPrompt)
-    prompter.confirm.return_value = True
+    ui.confirm.return_value = True
 
-    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
         'api', 'api_handler_arn', lambda_function_name,
@@ -756,15 +751,7 @@ def test_deployer_does_not_reuse_pacakge_on_python_version_change(
     assert packager.inject_latest_app.called is False
 
 
-def test_noprompt_always_returns_default():
-    assert not NoPrompt().confirm("You sure you want to do this?",
-                                  default=False)
-    assert NoPrompt().confirm("You sure you want to do this?",
-                              default=True)
-    assert NoPrompt().confirm("You sure?", default='yes') == 'yes'
-
-
-def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
+def test_lambda_deployer_repeated_deploy(app_policy, sample_app, ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
@@ -790,10 +777,8 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     aws_client.get_function_configuration.return_value = {
         'Runtime': cfg.lambda_python_version,
     }
-    prompter = mock.Mock(spec=NoPrompt)
-    prompter.confirm.return_value = True
 
-    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     # Doing a lambda deploy:
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
@@ -821,15 +806,16 @@ def test_lambda_deployer_repeated_deploy(app_policy, sample_app):
     )
 
 
-def test_lambda_deployer_delete():
+def test_lambda_deployer_delete(ui):
     aws_client = mock.Mock(spec=TypedAWSClient)
     aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
     lambda_function_name = 'api-handler'
     deployed = DeployedResources(
         'api', 'api_handler_arn/lambda_name', lambda_function_name,
         None, 'dev', None, None, {'name': {'arn': 'auth-arn'}})
+    ui.confirm.return_value = True
     d = LambdaDeployer(
-        aws_client, None, CustomConfirmPrompt(True), None, None)
+        aws_client, None, ui, None, None)
     d.delete(deployed)
 
     aws_client.get_role_arn_for_name.assert_called_with(lambda_function_name)
@@ -840,7 +826,7 @@ def test_lambda_deployer_delete():
     aws_client.delete_role.assert_called_with('role_name')
 
 
-def test_lambda_deployer_delete_already_deleted(capsys):
+def test_lambda_deployer_delete_already_deleted(ui):
     lambda_function_name = 'lambda_name'
     aws_client = mock.Mock(spec=TypedAWSClient)
     aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
@@ -850,16 +836,18 @@ def test_lambda_deployer_delete_already_deleted(capsys):
         'api', 'api_handler_arn/lambda_name', lambda_function_name,
         None, 'dev', None, None, {})
     d = LambdaDeployer(
-        aws_client, None, NoPrompt(), None, None)
+        aws_client, None, ui, None, None)
     d.delete(deployed)
 
     # check that we printed that no lambda function with that name was found
-    out, _ = capsys.readouterr()
-    assert "No lambda function named %s found." % lambda_function_name in out
+    output = [call[0][0] for call in ui.write.call_args_list]
+    assert ("No lambda function named %s found.\n" %
+            lambda_function_name in output)
     aws_client.delete_function.assert_called_with(lambda_function_name)
 
 
-def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
+def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app,
+                                                      ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     packager = mock.Mock(spec=LambdaDeploymentPackager)
@@ -878,10 +866,9 @@ def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
         project_dir='./myproject',
         environment_variables={"FOO": "BAR"},
     )
-    prompter = mock.Mock(spec=NoPrompt)
-    prompter.confirm.side_effect = RuntimeError("Aborted")
+    ui.confirm.side_effect = RuntimeError("Aborted")
 
-    d = LambdaDeployer(aws_client, packager, prompter, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     # Doing a lambda deploy with a different runtime:
     lambda_function_name = 'lambda_function_name'
     deployed = DeployedResources(
@@ -892,12 +879,12 @@ def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app):
 
     assert not packager.inject_latest_app.called
     assert not aws_client.update_function.called
-    assert prompter.confirm.called
-    message = prompter.confirm.call_args[0][0]
+    assert ui.confirm.called
+    message = ui.confirm.call_args[0][0]
     assert 'runtime will change' in message
 
 
-def test_lambda_deployer_initial_deploy(app_policy, sample_app):
+def test_lambda_deployer_initial_deploy(app_policy, sample_app, ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     aws_client.create_function.return_value = 'lambda-arn'
@@ -916,7 +903,7 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app):
         tags={'mykey': 'myvalue'}
     )
 
-    d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     deployed = d.deploy(cfg, None, 'dev')
     assert deployed == {
         'api_handler_arn': 'lambda-arn',
@@ -1061,7 +1048,8 @@ def test_can_validate_updated_custom_binary_types(sample_app):
 
 
 class TestAuthHandlersAreAuthorized(object):
-    def tests_apigateway_adds_auth_handler_policy(self, sample_app_with_auth):
+    def tests_apigateway_adds_auth_handler_policy(self, sample_app_with_auth,
+                                                  ui):
         # When we create authorizers in API gateway, we also need to
         # give the authorizers permission to invoke the lambda functions
         # we've created.
@@ -1072,7 +1060,7 @@ class TestAuthHandlersAreAuthorized(object):
             manage_iam_role=False, iam_role_arn='role-arn',
             project_dir='.'
         )
-        d = APIGatewayDeployer(aws_client)
+        d = APIGatewayDeployer(aws_client, ui)
         deployed_resources = {
             'api_handler_arn': (
                 'arn:aws:lambda:us-west-2:1:function:myapp-dev'
@@ -1093,7 +1081,7 @@ class TestAuthHandlersAreAuthorized(object):
 
 class TestLambdaInitialDeploymentWithConfigurations(object):
     @fixture(autouse=True)
-    def setup_deployer_dependencies(self, app_policy):
+    def setup_deployer_dependencies(self, app_policy, ui):
         # This autouse fixture is used instead of ``setup_method`` because it:
         # * Is ran for every test
         # * Allows additional fixtures to be passed in to reduce the number
@@ -1119,6 +1107,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.packager.deployment_package_filename.return_value =\
             self.package_name
         self.app_policy = app_policy
+        self.ui = ui
 
     def create_config_obj(self, sample_app):
         cfg = Config.create(
@@ -1131,7 +1120,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
     def test_can_create_auth_handlers(self, sample_app_with_auth):
         config = self.create_config_obj(sample_app_with_auth)
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         self.aws_client.lambda_function_exists.return_value = False
         self.aws_client.create_function.side_effect = [
@@ -1163,7 +1152,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
 
         config = self.create_config_obj(sample_app)
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         self.aws_client.lambda_function_exists.return_value = False
         self.aws_client.get_or_create_rule_arn.return_value = 'rule-arn'
@@ -1205,7 +1194,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.aws_client.create_function.side_effect = [
             self.lambda_arn, 'arn:event-function']
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         deployer.deploy(config, None, stage_name='dev')
 
@@ -1221,7 +1210,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
 
         config = self.create_config_obj(sample_app)
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         self.aws_client.lambda_function_exists.return_value = False
         self.aws_client.create_function.side_effect = [
@@ -1249,7 +1238,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
     def test_can_update_auth_handlers(self, sample_app_with_auth):
         config = self.create_config_obj(sample_app_with_auth)
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         self.aws_client.lambda_function_exists.return_value = True
         self.aws_client.update_function.return_value = {
@@ -1301,7 +1290,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                                   'project_dir': '.'}
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         self.aws_client.lambda_function_exists.return_value = False
         self.aws_client.create_function.side_effect = [
@@ -1355,7 +1344,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             'Runtime': config.lambda_python_version,
         }
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         deployed = deployer.deploy(config, existing, stage_name='dev')
         # Because the "old-function" was not referenced in the update
@@ -1373,7 +1362,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
     def test_lambda_deployer_defaults(self, sample_app):
         cfg = self.create_config_obj(sample_app)
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, None, 'dev')
@@ -1397,7 +1386,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             project_dir='.', environment_variables={'FOO': 'BAR'}
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, None, 'dev')
@@ -1421,7 +1410,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             project_dir='.', lambda_timeout=120
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, None, 'dev')
@@ -1445,7 +1434,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             project_dir='.', lambda_memory_size=256
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, None, 'dev')
@@ -1469,7 +1458,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             project_dir='.', tags={'mykey': 'myvalue'}
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, None, 'dev')
@@ -1490,7 +1479,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
 
 class TestLambdaUpdateDeploymentWithConfigurations(object):
     @fixture(autouse=True)
-    def setup_deployer_dependencies(self, app_policy):
+    def setup_deployer_dependencies(self, app_policy, ui):
         # This autouse fixture is used instead of ``setup_method`` because it:
         # * Is ran for every test
         # * Allows additional fixtures to be passed in to reduce the number
@@ -1514,8 +1503,8 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             'Runtime': 'python2.7',
         }
 
-        self.prompter = mock.Mock(spec=NoPrompt)
-        self.prompter.confirm.return_value = True
+        self.ui = ui
+        self.ui.confirm.return_value = True
 
         self.packager = mock.Mock(spec=LambdaDeploymentPackager)
         self.packager.create_deployment_package.return_value =\
@@ -1534,7 +1523,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             project_dir='.',
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, self.deployed_resources, 'dev')
@@ -1558,7 +1547,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             project_dir='.', environment_variables={'FOO': 'BAR'}
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, self.deployed_resources, 'dev')
@@ -1582,7 +1571,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             project_dir='.', lambda_timeout=120
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, self.deployed_resources, 'dev')
@@ -1606,7 +1595,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             project_dir='.', lambda_memory_size=256
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, self.deployed_resources, 'dev')
@@ -1630,7 +1619,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             project_dir='.', tags={'mykey': 'myvalue'}
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, self.deployed_resources, 'dev')
@@ -1655,7 +1644,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             project_dir='.', tags={'mykey': 'myvalue'}
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         self.aws_client.get_role_arn_for_name.return_value = 'role-arn'

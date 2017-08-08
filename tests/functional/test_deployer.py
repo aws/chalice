@@ -22,7 +22,13 @@ slow = pytest.mark.skipif(
 
 @fixture
 def chalice_deployer():
-    d = chalice.deploy.packager.LambdaDeploymentPackager()
+    ui = chalice.utils.UI()
+    osutils = chalice.utils.OSUtils()
+    dependency_builder = DependencyBuilder(osutils)
+    d = chalice.deploy.packager.LambdaDeploymentPackager(
+        osutils=osutils, dependency_builder=dependency_builder,
+        ui=ui
+    )
     return d
 
 
@@ -230,18 +236,24 @@ def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
         assert 'chalice/app.py' in z.namelist()
 
 
-def test_does_handle_missing_dependency_error(tmpdir, capsys):
+def test_does_handle_missing_dependency_error(tmpdir):
     appdir = _create_app_structure(tmpdir)
     builder = mock.Mock(spec=DependencyBuilder)
     fake_package = mock.Mock(spec=Package)
     fake_package.identifier = 'foo==1.2'
     builder.build_site_packages.side_effect = MissingDependencyError(
         set([fake_package]))
-    packager = LambdaDeploymentPackager(dependency_builder=builder)
+    ui = mock.Mock(spec=chalice.utils.UI)
+    osutils = chalice.utils.OSUtils()
+    packager = LambdaDeploymentPackager(
+        osutils=osutils,
+        dependency_builder=builder,
+        ui=ui,
+    )
     packager.create_deployment_package(str(appdir), 'python2.7')
 
-    out, _ = capsys.readouterr()
-    assert 'Could not install dependencies:\nfoo==1.2' in out
+    output = ''.join([call[0][0] for call in ui.write.call_args_list])
+    assert 'Could not install dependencies:\nfoo==1.2' in output
 
 
 def _remove_runtime_from_deployment_package(filename):
