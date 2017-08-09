@@ -924,7 +924,7 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app, ui):
     )
 
 
-def test_lambda_deployer_initial_deploy_with_vpc(app_policy, sample_app):
+def test_lambda_deployer_initial_deploy_with_vpc(app_policy, sample_app, ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
     aws_client = mock.Mock(spec=TypedAWSClient)
     aws_client.create_function.return_value = 'lambda-arn'
@@ -945,7 +945,7 @@ def test_lambda_deployer_initial_deploy_with_vpc(app_policy, sample_app):
         security_group_ids=['sg1', 'sg2'],
     )
 
-    d = LambdaDeployer(aws_client, packager, None, osutils, app_policy)
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
     deployed = d.deploy(cfg, None, 'dev')
     assert deployed == {
         'api_handler_arn': 'lambda-arn',
@@ -1289,7 +1289,7 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
                                         subnet_ids=['sn1', 'sn2'],
                                         security_group_ids=['sg1', 'sg2'])
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, None, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
         self.aws_client.lambda_function_exists.return_value = False
         self.aws_client.create_function.side_effect = [
@@ -1758,7 +1758,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             subnet_ids=['sn1', 'sn2'], security_group_ids=['sg1', 'sg2']
         )
         deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.prompter, self.osutils,
+            self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
         deployer.deploy(cfg, self.deployed_resources, 'dev')

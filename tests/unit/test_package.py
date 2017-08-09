@@ -300,6 +300,11 @@ def test_app_incompatible_with_cf(sample_app,
 def test_vpc_config_added_to_function(sample_app,
                                       mock_swagger_generator,
                                       mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
     config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
                            app_name='myapp', subnet_ids=['sn1', 'sn2'],
                            security_group_ids=['sg1', 'sg2'])
