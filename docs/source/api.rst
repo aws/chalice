@@ -344,7 +344,7 @@ for an ``@app.route(authorizer=...)`` call:
 Built-in Authorizers
 --------------------
 
-These classes are used when defining built-in authoriers in Chalice.
+These classes are used when defining built-in authorizers in Chalice.
 
 .. class:: AuthRequest(auth_type, token, method_arn)
 
@@ -447,7 +447,7 @@ APIGateway
       which is encoded using ``UTF-8``. The raw bytes are temporarily encoded
       using
 
-      base64 when being passed between API Gateway and Labmda. In the worst case
+      base64 when being passed between API Gateway and Lambda. In the worst case
       this encoding can cause the binary body to be inflated up to ``4/3`` its
       original size. Lambda only accepts an event up to ``6mb``, which means even
       if your binary data was not quite at that limit, with the base64 encoding it
@@ -487,7 +487,7 @@ CORS
      supply a single origin to the ``CORSConfig`` object. If you need to supply
      multiple origins you will need to define a custom handler for it that
      accepts ``OPTIONS`` requests and matches the ``Origin`` header against a
-     whitelist of origins.  If the match is succssful then return just their
+     whitelist of origins.  If the match is successful then return just their
      ``Origin`` back to them in the ``Access-Control-Allow-Origin`` header.
 
   .. attribute:: allow_headers
