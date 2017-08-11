@@ -98,7 +98,7 @@ class SwaggerGenerator(object):
         # type: (Any, Dict[str, Any], RouteEntry) -> None
         if view.authorizer is not None:
             self._generate_security_from_auth_obj(api_config, view.authorizer)
-            return
+            #do not return, need to handle both authorizer AND api_key security
         for auth in security:
             name = list(auth.keys())[0]
             if name == 'api_key':
@@ -108,8 +108,8 @@ class SwaggerGenerator(object):
                     'name': 'x-api-key',
                     'in': 'header',
                 }  # type: Dict[str, Any]
-            api_config.setdefault(
-                'securityDefinitions', {})[name] = swagger_snippet
+                api_config.setdefault(
+                    'securityDefinitions', {})[name] = swagger_snippet
 
     def _generate_route_method(self, view):
         # type: (RouteEntry) -> Dict[str, Any]
