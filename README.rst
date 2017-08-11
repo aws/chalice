@@ -798,7 +798,7 @@ There's a couple of things to keep in mind when enabling cors for a view:
   origin to the ``CORSConfig`` object. If you need to supply multiple origins
   you will need to define a custom handler for it that accepts ``OPTIONS``
   requests and matches the ``Origin`` header against a whitelist of origins.
-  If the match is succssful then return just their ``Origin`` back to them
+  If the match is successful then return just their ``Origin`` back to them
   in the ``Access-Control-Allow-Origin`` header.
 * Every view function must explicitly enable CORS support.
 
