@@ -98,7 +98,6 @@ class SwaggerGenerator(object):
         # type: (Any, Dict[str, Any], RouteEntry) -> None
         if view.authorizer is not None:
             self._generate_security_from_auth_obj(api_config, view.authorizer)
-            #do not return, need to handle both authorizer AND api_key security
         for auth in security:
             name = list(auth.keys())[0]
             if name == 'api_key':
@@ -120,7 +119,6 @@ class SwaggerGenerator(object):
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
-        # Do the following better but we need to handle when we have both api_key_required and an authorizer
         if view.api_key_required or view.authorizer:
             current['security'] = []
             if view.api_key_required:
