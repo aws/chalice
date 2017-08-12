@@ -98,7 +98,6 @@ class SwaggerGenerator(object):
         # type: (Any, Dict[str, Any], RouteEntry) -> None
         if view.authorizer is not None:
             self._generate_security_from_auth_obj(api_config, view.authorizer)
-            #do not return, need to handle both authorizer AND api_key security
         for auth in security:
             name = list(auth.keys())[0]
             if name == 'api_key':
