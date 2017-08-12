@@ -128,7 +128,7 @@ def test_api_gateway_deployer_initial_deploy(config_obj, ui):
     assert isinstance(first_arg, dict)
     assert 'swagger' in first_arg
 
-    aws_client.deploy_rest_api.assert_called_with('rest-api-id', 'dev')
+    aws_client.deploy_rest_api.assert_called_with('rest-api-id', 'api')
     aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
         'func-name', 'us-west-2', 'account-id', 'rest-api-id', mock.ANY
     )
@@ -153,7 +153,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj, ui):
     assert isinstance(second_arg, dict)
     assert 'swagger' in second_arg
 
-    aws_client.deploy_rest_api.assert_called_with('existing-id', 'dev')
+    aws_client.deploy_rest_api.assert_called_with('existing-id', 'api')
     aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
         'func-name', 'us-west-2', 'account-id', 'existing-id', mock.ANY
     )
