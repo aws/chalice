@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#450 <https://github.com/aws/chalice/issues/450>`__)
 * Print useful error message when config.json is invalid
   (`#458 <https://github.com/aws/chalice/pull/458>`__)
+* Fix api gateway stage being set incorrectly in non-default chalice stage
+ (`#$70 <https://github.com/aws/chalice/issues/470>`__)
 
 
 1.0.0

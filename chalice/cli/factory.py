@@ -15,6 +15,7 @@ from chalice.deploy import deployer
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.logs import LogRetriever
 from chalice import local
 from chalice.utils import UI  # noqa
@@ -87,8 +88,9 @@ class CLIFactory(object):
             session=session, ui=ui)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
-                          autogen_policy=None, api_gateway_stage=None):
-        # type: (str, Optional[bool], Optional[str]) -> Config
+                          autogen_policy=None,
+                          api_gateway_stage=DEFAULT_APIGATEWAY_STAGE_NAME):
+        # type: (str, Optional[bool], str) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'autogen_policy': True}
