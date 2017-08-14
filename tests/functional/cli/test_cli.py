@@ -169,6 +169,21 @@ def test_can_deploy(runner, mock_cli_factory, mock_deployer):
             assert data == deployed_values
 
 
+def test_does_deploy_with_default_api_gateway_stage_name(
+        runner, mock_cli_factory, mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        _run_cli_command(runner, cli.deploy, [], cli_factory=mock_cli_factory)
+        call = mock_cli_factory.create_config_obj.call_args
+        expected_call = mock.call(
+            api_gateway_stage='api',
+            autogen_policy=None,
+            chalice_stage_name='dev'
+        )
+        assert call == expected_call
+
+
 def test_can_delete(runner, mock_cli_factory, mock_deployer):
     deployed_values = {
         'dev': {

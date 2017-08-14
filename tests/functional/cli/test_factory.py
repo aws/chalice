@@ -101,6 +101,11 @@ def test_can_create_config_obj_with_api_gateway_stage(clifactory):
     assert config.api_gateway_stage == 'custom-stage'
 
 
+def test_can_create_config_obj_with_default_api_gateway_stage(clifactory):
+    config = clifactory.create_config_obj()
+    assert config.api_gateway_stage == 'api'
+
+
 def test_cant_load_config_obj_with_bad_project(clifactory):
     clifactory.project_dir = 'nowhere-asdfasdfasdfas'
     with pytest.raises(RuntimeError):
