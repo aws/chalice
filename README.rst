@@ -690,7 +690,7 @@ Tutorial: Customizing the HTTP Response
 
 The return value from a chalice view function is serialized as JSON as the
 response body returned back to the caller.  This makes it easy to create
-rest APIs that return JSON resonse bodies.
+rest APIs that return JSON response bodies.
 
 Chalice allows you to control this behavior by returning an instance of
 a chalice specific ``Response`` class.  This behavior allows you to:
@@ -798,7 +798,7 @@ There's a couple of things to keep in mind when enabling cors for a view:
   origin to the ``CORSConfig`` object. If you need to supply multiple origins
   you will need to define a custom handler for it that accepts ``OPTIONS``
   requests and matches the ``Origin`` header against a whitelist of origins.
-  If the match is succssful then return just their ``Origin`` back to them
+  If the match is successful then return just their ``Origin`` back to them
   in the ``Access-Control-Allow-Origin`` header.
 * Every view function must explicitly enable CORS support.
 
