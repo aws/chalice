@@ -690,7 +690,7 @@ Tutorial: Customizing the HTTP Response
 
 The return value from a chalice view function is serialized as JSON as the
 response body returned back to the caller.  This makes it easy to create
-rest APIs that return JSON resonse bodies.
+rest APIs that return JSON response bodies.
 
 Chalice allows you to control this behavior by returning an instance of
 a chalice specific ``Response`` class.  This behavior allows you to:

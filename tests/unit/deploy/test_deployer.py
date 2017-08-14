@@ -98,6 +98,7 @@ def config_obj(sample_app):
     config = Config.create(
         chalice_app=sample_app,
         stage='dev',
+        api_gateway_stage='api',
     )
     return config
 
@@ -128,7 +129,7 @@ def test_api_gateway_deployer_initial_deploy(config_obj, ui):
     assert isinstance(first_arg, dict)
     assert 'swagger' in first_arg
 
-    aws_client.deploy_rest_api.assert_called_with('rest-api-id', 'dev')
+    aws_client.deploy_rest_api.assert_called_with('rest-api-id', 'api')
     aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
         'func-name', 'us-west-2', 'account-id', 'rest-api-id', mock.ANY
     )
@@ -140,7 +141,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj, ui):
     # The rest_api_id does not exist which will trigger
     # the initial import
     deployed = DeployedResources(
-        None, None, None, 'existing-id', 'dev', None, None, {})
+        None, None, None, 'existing-id', 'api', None, None, {})
     aws_client.rest_api_exists.return_value = True
     lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
 
@@ -153,7 +154,7 @@ def test_api_gateway_deployer_redeploy_api(config_obj, ui):
     assert isinstance(second_arg, dict)
     assert 'swagger' in second_arg
 
-    aws_client.deploy_rest_api.assert_called_with('existing-id', 'dev')
+    aws_client.deploy_rest_api.assert_called_with('existing-id', 'api')
     aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
         'func-name', 'us-west-2', 'account-id', 'existing-id', mock.ANY
     )
@@ -164,7 +165,7 @@ def test_api_gateway_deployer_delete(config_obj, ui):
 
     rest_api_id = 'abcdef1234'
     deployed = DeployedResources(
-        None, None, None, rest_api_id, 'dev', None, None, {})
+        None, None, None, rest_api_id, 'api', None, None, {})
     aws_client.rest_api_exists.return_value = True
 
     d = APIGatewayDeployer(aws_client, ui)
@@ -178,7 +179,7 @@ def test_api_gateway_deployer_delete_already_deleted(ui):
     aws_client.delete_rest_api.side_effect = ResourceDoesNotExistError(
         rest_api_id)
     deployed = DeployedResources(
-        None, None, None, rest_api_id, 'dev', None, None, {})
+        None, None, None, rest_api_id, 'api', None, None, {})
     aws_client.rest_api_exists.return_value = True
     d = APIGatewayDeployer(aws_client, ui)
     d.delete(deployed)

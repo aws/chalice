@@ -108,7 +108,7 @@ def run_local_server(factory, port, env):
               default=None,
               help='Automatically generate IAM policy for app code.')
 @click.option('--profile', help='Override profile at deploy time.')
-@click.option('--api-gateway-stage',
+@click.option('--api-gateway-stage', default=DEFAULT_APIGATEWAY_STAGE_NAME,
               help='Name of the API gateway stage to deploy to.')
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help=('Name of the Chalice stage to deploy to. '
