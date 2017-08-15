@@ -30,6 +30,8 @@ It provides:
     $ chalice new-project helloworld && cd helloworld
     $ cat app.py
 
+.. code-block:: python
+
     from chalice import Chalice
 
     app = Chalice(app_name="helloworld")
@@ -37,6 +39,8 @@ It provides:
     @app.route("/")
     def index():
         return {"hello": "world"}
+
+::
 
     $ chalice deploy
     ...
