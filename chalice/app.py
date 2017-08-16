@@ -8,6 +8,7 @@ import traceback
 import decimal
 import base64
 from collections import defaultdict, Mapping
+from mime import AcceptableType
 
 __version__ = '1.0.0'
 
@@ -634,11 +635,13 @@ class Chalice(object):
             'content-type', 'application/json')
         response_is_binary = _matches_content_type(response_content_type,
                                                    self.api.binary_types)
-        expects_binary_response = False
+        matches_accepted = False
         if request_accept_header is not None:
-            expects_binary_response = _matches_content_type(
-                request_accept_header, self.api.binary_types)
-        if response_is_binary and not expects_binary_response:
+            accept_types = AcceptableType.parse_header(request_accept_header)
+            for accept_type in accept_types:
+                matches_accepted = matches_accepted or\
+                                   accept_type.matches(response_content_type)
+        if response_is_binary and not matches_accepted:
             return False
         return True
 
