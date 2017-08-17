@@ -17,8 +17,4 @@ pygments==2.1.3
 mock==2.0.0
 requests==2.11.1
 
-# Release requirements, not technically needed for dev work,
-# but seems like overkill to have a requirements-release.txt
-twine>=1.9.1,<2.0.0
-
 mypy==0.501; python_version >= '3.6'
