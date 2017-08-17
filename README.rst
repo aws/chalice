@@ -15,7 +15,7 @@ Python Serverless Microframework for AWS
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
-The python serverless microframework for AWS allows you to quickly create and
+This python serverless microframework for AWS allows you to quickly create and
 deploy applications that use Amazon API Gateway and AWS Lambda.
 It provides:
 
