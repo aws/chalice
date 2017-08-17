@@ -1,30 +1,39 @@
 #!/usr/bin/env python
 import os
 import re
-import argparse
 import subprocess
+
+import click
 
 
 ROOT_DIR = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.path.dirname(os.path.abspath(__file__)),
 )
 
 
-def get_files_to_change():
-    # A mapping of all files that require version bumps.
-    # You can either specify:
-    # * Tuple[str, str] - regex to search, replacement string
-    # * Callable[[str, str], str] - function to handle custom logic
-    files_with_version_numbers = {
-        'chalice/app.py': ("__version__ = '.*'", "__version__ = '{version}'"),
-        'CHANGELOG.rst': update_changelog,
-        'docs/source/conf.py': update_doc_conf,
-        'setup.py': ("version='(.*)'", "version='{version}'"),
-    }
-    return files_with_version_numbers
+@click.group()
+def cli():
+    """Command line tool for managing releases.
+
+    To do a chalice release, run these commands::
+
+        \b
+        $ scripts/release bump-version --release-type patch
+        $ NEXT_VERSION=$(scripts/release get-version)
+        $ git commit -am "Bumping version to $NEXT_VERSION"
+        $ scripts/release tag-release
+        $ scripts/release build-release
+        $ git push upstream master --tags
+        $ twine upload dist/chalice-*
+
+    """
+    pass
 
 
-def bump_version_number(release_type):
+@cli.command('bump-version')
+@click.option('--release-type', type=click.Choice(['minor', 'patch']))
+def bump_version(release_type):
+    """Update necessary files with next version number."""
     next_version_number = get_next_version_number(release_type)
     print("%s release, bumping version to: %s" % (release_type.capitalize(),
                                                   next_version_number))
@@ -41,6 +50,53 @@ def bump_version_number(release_type):
                     contents)
             with open(filename, 'w') as f:
                 f.write(new_contents)
+
+
+@cli.command('build-release')
+def build_release():
+    """Build sdist/whl files."""
+    original = os.getcwd()
+    os.chdir(ROOT_DIR)
+    try:
+        subprocess.check_call(
+            ['python', 'setup.py', 'sdist', 'bdist_wheel']
+        )
+    finally:
+        os.chdir(original)
+
+
+@cli.command('tag-release')
+def tag_release():
+    """Create a git tag based on the current version number."""
+    # We're assuming that setup.py has already been updated
+    # manually or using scripts/release/bump-version so the
+    # current version in setup.py is the version number we should tag.
+    version_number = get_current_version_number()
+    click.echo("Tagging %s release" % version_number)
+    subprocess.check_call(
+        ['git', 'tag', '-a', version_number,
+         '-m', 'Tagging %s release' % version_number],
+    )
+
+
+@cli.command('get-version')
+def get_version():
+    """Print the current version number in setup.py."""
+    click.echo(get_current_version_number())
+
+
+def get_files_to_change():
+    # A mapping of all files that require version bumps.
+    # You can either specify:
+    # * Tuple[str, str] - regex to search, replacement string
+    # * Callable[[str, str], str] - function to handle custom logic
+    files_with_version_numbers = {
+        'chalice/app.py': ("__version__ = '.*'", "__version__ = '{version}'"),
+        'CHANGELOG.rst': update_changelog,
+        'docs/source/conf.py': update_doc_conf,
+        'setup.py': ("version='(.*)'", "version='{version}'"),
+    }
+    return files_with_version_numbers
 
 
 def _regex_based_version_bump(next_version_number, replacer, contents):
@@ -95,18 +151,20 @@ def get_next_version_number(release_type):
 
 
 def get_current_version_number():
-    return subprocess.check_output(
-        [os.path.join(ROOT_DIR, 'scripts', 'release', 'get-version')]).strip()
+    # We can avoid executing setup.py because we know
+    # specifically how the version is hardcoded in the setup.py file.
+    # This won't work for the general case.
+    regex = re.compile("version='(.*)',")
+    with open(os.path.join(ROOT_DIR, 'setup.py')) as f:
+        for line in f:
+            match = regex.search(line)
+            if match is not None:
+                return match.groups()[0]
+    raise RuntimeError("Could not find version number from setup.py")
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--release-type', choices=('patch', 'minor'),
-                        required=True,
-                        help=('The type of release to perform.  '
-                              'This controls the version number.'))
-    args = parser.parse_args()
-    bump_version_number(args.release_type)
+    return cli()
 
 
 if __name__ == '__main__':
