@@ -15,8 +15,8 @@ Python Serverless Microframework for AWS
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
-This python serverless microframework for AWS allows you to quickly create and
-deploy applications that use Amazon API Gateway and AWS Lambda.
+Chalice is a python serverless microframework for AWS. It allows you to quickly
+create and deploy applications that use Amazon API Gateway and AWS Lambda.
 It provides:
 
 * A command line tool for creating, deploying, and managing your app
