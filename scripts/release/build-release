@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+import os
+import subprocess
+
+
+ROOT_DIR = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+)
+
+
+def build_sdist():
+    subprocess.check_call(
+        ['python', 'setup.py', 'sdist']
+    )
+
+
+def build_wheel():
+    subprocess.check_call(
+        ['python', 'setup.py', 'bdist_wheel']
+    )
+
+
+def main():
+    original = os.getcwd()
+    os.chdir(ROOT_DIR)
+    try:
+        build_sdist()
+        build_wheel()
+    finally:
+        os.chdir(original)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+import os
+import re
+import argparse
+import subprocess
+
+
+ROOT_DIR = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+)
+
+
+def get_files_to_change():
+    # A mapping of all files that require version bumps.
+    # You can either specify:
+    # * Tuple[str, str] - regex to search, replacement string
+    # * Callable[[str, str], str] - function to handle custom logic
+    files_with_version_numbers = {
+        'chalice/app.py': ("__version__ = '.*'", "__version__ = '{version}'"),
+        'CHANGELOG.rst': update_changelog,
+        'docs/source/conf.py': update_doc_conf,
+        'setup.py': ("version='(.*)'", "version='{version}'"),
+    }
+    return files_with_version_numbers
+
+
+def bump_version_number(release_type):
+    next_version_number = get_next_version_number(release_type)
+    print("%s release, bumping version to: %s" % (release_type.capitalize(),
+                                                  next_version_number))
+    for filename, replacer in get_files_to_change().items():
+        print("Bumping version in %s" % filename)
+        with open(filename, 'r') as f:
+            contents = f.read()
+            if callable(replacer):
+                new_contents = replacer(next_version_number, contents)
+            else:
+                new_contents = _regex_based_version_bump(
+                    next_version_number,
+                    replacer,
+                    contents)
+            with open(filename, 'w') as f:
+                f.write(new_contents)
+
+
+def _regex_based_version_bump(next_version_number, replacer, contents):
+    regex = replacer[0]
+    replacement = replacer[1].format(version=next_version_number)
+    new_contents = re.sub(regex, replacement, contents)
+    return new_contents
+
+
+def update_changelog(next_version_number, contents):
+    underline = '=' * len(next_version_number)
+    lines = contents.splitlines()
+    # Ensure the file ends with a newline.
+    lines.append('')
+    i = lines.index('Next Release (TBD)')
+    lines[i:i+2] = [next_version_number, underline]
+    return '\n'.join(lines)
+
+
+def update_doc_conf(next_version_number, contents):
+    # For the docs the 'version' is only X.Y
+    # and the release is X.Y.Z
+    version = '.'.join(next_version_number.split('.')[:2])
+    release = next_version_number
+    new_contents = []
+    for line in contents.splitlines():
+        if line.startswith('version ='):
+            new_contents.append("version = u'%s'" % version)
+        elif line.startswith('release = '):
+            new_contents.append("release = u'%s'" % release)
+        else:
+            new_contents.append(line)
+    # Ensure the file ends with a newline.
+    new_contents.append('')
+    return '\n'.join(new_contents)
+
+
+def get_next_version_number(release_type):
+    # Returns a string like '1.0.0'.
+    current = get_current_version_number()
+    # Convert to a list of ints: [1, 0, 0].
+    version_parts = list(int(i) for i in current.split('.'))
+    # We've already validated that release_type is from a fixed
+    # list of choices so we know it's going to be one of these.
+    # We only support integer version parts, which shouldn't be
+    # a problem now that we're post 1.0.
+    if release_type == 'patch':
+        version_parts[-1] += 1
+    elif release_type == 'minor':
+        version_parts[1] += 1
+    return '.'.join(str(i) for i in version_parts)
+
+
+def get_current_version_number():
+    return subprocess.check_output(
+        [os.path.join(ROOT_DIR, 'scripts', 'release', 'get-version')]).strip()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-r', '--release-type', choices=('patch', 'minor'),
+                        required=True,
+                        help=('The type of release to perform.  '
+                              'This controls the version number.'))
+    args = parser.parse_args()
+    bump_version_number(args.release_type)
+
+
+if __name__ == '__main__':
+    main()

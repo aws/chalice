@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+import os
+import subprocess
+
+
+ROOT_DIR = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+)
+
+
+def tag_release():
+    # We're assuming that setup.py has already been updated
+    # manually or using scripts/release/bump-version so the
+    # current version in setup.py is the version number we should tag.
+    version_number = get_current_version_number()
+    print("Tagging %s release" % version_number)
+    subprocess.check_call(
+        ['git', 'tag', '-a', version_number,
+         '-m', 'Tagging %s release' % version_number],
+    )
+
+
+def get_current_version_number():
+    return subprocess.check_output(
+        [os.path.join(ROOT_DIR, 'scripts', 'release', 'get-version')]).strip()
+
+
+def main():
+    tag_release()
+
+
+if __name__ == '__main__':
+    main()
