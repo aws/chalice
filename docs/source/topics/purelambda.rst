@@ -28,7 +28,7 @@ Let's look at an example.
 .. code-block:: python
 
     app = chalice.Chalice(app_name='foo')
-    
+
     @app.route('/')
     def index():
         return {'hello': 'world'}
