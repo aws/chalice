@@ -29,6 +29,10 @@ Let's look at an example.
 
     app = chalice.Chalice(app_name='foo')
 
+    @app.route('/')
+    def index():
+        return {'hello': 'world'}
+
     @app.lambda_function()
     def custom_lambda_function(event, context):
         # Anything you want here.
@@ -38,11 +42,6 @@ Let's look at an example.
     def other_lambda_function(event, context):
         # Anything you want here.
         return {}
-
-    @app.route('/')
-    def index():
-        return {'hello': 'world'}
-
 
 In this example, we've updated the starter hello world app with
 two extra Lambda functions.  When you run ``chalice deploy`` Chalice will create
