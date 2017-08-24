@@ -54,7 +54,7 @@ several new AWS resources that make up a bare bones CD pipeline.
 
   * **artifactbucketstore** - This bucket stores artifacts that are built by
     the CodeBuild project. The only artifact by default is the
-    ``transofmred.yaml`` created by the ``aws cloudformation package`` command.
+    ``transformed.yaml`` created by the ``aws cloudformation package`` command.
   * **applicationbucket** - Stores the application bundle after the Chalice
     application has been packaged in the CodeBuild stage.
 * Each resource is created with all the required IAM roles and policies.
