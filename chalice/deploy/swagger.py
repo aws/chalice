@@ -98,7 +98,6 @@ class SwaggerGenerator(object):
         # type: (Any, Dict[str, Any], RouteEntry) -> None
         if view.authorizer is not None:
             self._generate_security_from_auth_obj(api_config, view.authorizer)
-            return
         for auth in security:
             name = list(auth.keys())[0]
             if name == 'api_key':
@@ -108,8 +107,8 @@ class SwaggerGenerator(object):
                     'name': 'x-api-key',
                     'in': 'header',
                 }  # type: Dict[str, Any]
-            api_config.setdefault(
-                'securityDefinitions', {})[name] = swagger_snippet
+                api_config.setdefault(
+                    'securityDefinitions', {})[name] = swagger_snippet
 
     def _generate_route_method(self, view):
         # type: (RouteEntry) -> Dict[str, Any]
@@ -120,14 +119,16 @@ class SwaggerGenerator(object):
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
-        if view.api_key_required:
-            # When this happens we also have to add the relevant portions
-            # to the security definitions.  We have to someone indicate
-            # this because this neeeds to be added to the global config
-            # file.
-            current['security'] = [{'api_key': []}]
-        if view.authorizer:
-            current['security'] = [{view.authorizer.name: []}]
+        if view.api_key_required or view.authorizer:
+            current['security'] = []
+            if view.api_key_required:
+                # When this happens we also have to add the relevant portions
+                # to the security definitions.  We have to someone indicate
+                # this because this neeeds to be added to the global config
+                # file.
+                current['security'] = [{'api_key': []}]
+            if view.authorizer:
+                current['security'] = [{view.authorizer.name: []}]
         return current
 
     def _generate_precanned_responses(self):
