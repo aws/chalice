@@ -47,6 +47,11 @@ def create_new_project_skeleton(project_name, profile=None):
         cfg['profile'] = profile
     with open(config, 'w') as f:
         f.write(serialize_to_json(cfg))
+    chalice_lib = os.path.join(project_name, 'chalicelib')
+    os.makedirs(chalice_lib)
+    chalice_lib_init = os.path.join(project_name, 'chalicelib', '__init__.py')
+    with open(chalice_lib_init, 'w'):
+        pass
     with open(os.path.join(project_name, 'requirements.txt'), 'w'):
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
