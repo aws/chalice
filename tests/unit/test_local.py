@@ -1,3 +1,4 @@
+import re
 import json
 import decimal
 import pytest
@@ -7,6 +8,39 @@ from six import BytesIO
 from chalice import app
 from chalice import local, BadRequestError, CORSConfig
 from chalice import Response
+from chalice import IAMAuthorizer
+from chalice.config import Config
+from chalice.local import LambdaContext
+from chalice.local import LocalARNBuilder
+from chalice.local import LocalGateway
+from chalice.local import LocalGatewayAuthorizer
+from chalice.local import NotAuthorizedError
+from chalice.local import ForbiddenError
+from chalice.local import InvalidAuthorizerError
+
+
+AWS_REQUEST_ID_PATTERN = re.compile(
+    '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$',
+    re.I)
+
+
+class FakeTimeSource(object):
+    def __init__(self, times):
+        """Create a fake source of second-precision time.
+
+        :type time: List
+        :param time: List of times that the time source should return in the
+            order it should return them. These should be in seconds.
+        """
+        self._times = times
+
+    def time(self):
+        """Get the next time.
+
+        This is for mimicing the Clock interface used in local.
+        """
+        time = self._times.pop(0)
+        return time
 
 
 class ChaliceStubbedHandler(local.ChaliceRequestHandler):
@@ -20,6 +54,19 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
 
     def finish(self):
         pass
+
+
+@pytest.fixture
+def arn_builder():
+    return LocalARNBuilder()
+
+
+@pytest.fixture
+def lambda_context_args():
+    # LambdaContext has several positional args before the ones that we
+    # care about for the timing tests, this gives reasonable defaults for
+    # those arguments.
+    return ['lambda_name', 256]
 
 
 @fixture
@@ -94,10 +141,137 @@ def sample_app():
 
 
 @fixture
+def demo_app_auth():
+    demo = app.Chalice('app-name')
+
+    @demo.authorizer()
+    def auth_with_explicit_policy(auth_request):
+        token = auth_request.token
+        if token == 'allow':
+            return {
+                'context': {},
+                'principalId': 'user',
+                'policyDocument': {
+                    'Version': '2012-10-17',
+                    'Statement': [
+                        {
+                            'Action': 'execute-api:Invoke',
+                            'Effect': 'Allow',
+                            'Resource':
+                            ["arn:aws:execute-api:mars-west-1:123456789012:"
+                             "ymy8tbxw7b/api/GET/explicit"]
+                        }
+                    ]
+                }
+            }
+        else:
+            return {
+                'context': {},
+                'principalId': '',
+                'policyDocument': {
+                    'Version': '2012-10-17',
+                    'Statement': [
+                        {
+                            'Action': 'execute-api:Invoke',
+                            'Effect': 'Deny',
+                            'Resource':
+                            ["arn:aws:execute-api:mars-west-1:123456789012:"
+                             "ymy8tbxw7b/api/GET/explicit"]
+                        }
+                    ]
+                }
+            }
+
+    @demo.authorizer()
+    def demo_authorizer_returns_none(auth_request):
+        return None
+
+    @demo.authorizer()
+    def demo_auth(auth_request):
+        token = auth_request.token
+        if token == 'allow':
+            return app.AuthResponse(routes=['/index'], principal_id='user')
+        else:
+            return app.AuthResponse(routes=[], principal_id='user')
+
+    @demo.authorizer()
+    def resource_auth(auth_request):
+        token = auth_request.token
+        if token == 'allow':
+            return app.AuthResponse(routes=['/resource/foobar'],
+                                    principal_id='user')
+        else:
+            return app.AuthResponse(routes=[], principal_id='user')
+
+    @demo.authorizer()
+    def all_auth(auth_request):
+        token = auth_request.token
+        if token == 'allow':
+            return app.AuthResponse(routes=['*'], principal_id='user')
+        else:
+            return app.AuthResponse(routes=[], principal_id='user')
+
+    @demo.authorizer()
+    def landing_page_auth(auth_request):
+        token = auth_request.token
+        if token == 'allow':
+            return app.AuthResponse(routes=['/'], principal_id='user')
+        else:
+            return app.AuthResponse(routes=[], principal_id='user')
+
+    iam_authorizer = IAMAuthorizer()
+
+    @demo.route('/', authorizer=landing_page_auth)
+    def landing_view():
+        return {}
+
+    @demo.route('/index', authorizer=demo_auth)
+    def index_view():
+        return {}
+
+    @demo.route('/secret', authorizer=demo_auth)
+    def secret_view():
+        return {}
+
+    @demo.route('/resource/{name}', authorizer=resource_auth)
+    def single_value(name):
+        return {'resource': name}
+
+    @demo.route('/secret/{value}', authorizer=all_auth)
+    def secret_view_value(value):
+        return {'secret': value}
+
+    @demo.route('/explicit', authorizer=auth_with_explicit_policy)
+    def explicit():
+        return {}
+
+    @demo.route('/iam', authorizer=iam_authorizer)
+    def iam_route():
+        return {}
+
+    @demo.route('/none', authorizer=demo_authorizer_returns_none)
+    def none_auth():
+        return {}
+
+    return demo
+
+
+@fixture
 def handler(sample_app):
-    chalice_handler = ChaliceStubbedHandler(None, ('127.0.0.1', 2000), None,
-                                            app_object=sample_app)
+    config = Config()
+    chalice_handler = ChaliceStubbedHandler(
+        None, ('127.0.0.1', 2000), None, app_object=sample_app, config=config)
     chalice_handler.sample_app = sample_app
+    return chalice_handler
+
+
+@fixture
+def auth_handler(demo_app_auth):
+    config = Config()
+    chalice_handler = ChaliceStubbedHandler(
+        None, ('127.0.0.1', 2000), None, app_object=demo_app_auth,
+        config=config)
+    chalice_handler.sample_app = demo_app_auth
     return chalice_handler
 
 
@@ -292,6 +466,17 @@ def test_content_type_included_once(handler):
     assert len(content_header_lines) == 1
 
 
+def test_can_deny_unauthed_request(auth_handler):
+    set_current_request(auth_handler, method='GET', path='/index')
+    auth_handler.do_GET()
+    value = auth_handler.wfile.getvalue()
+    response_lines = value.splitlines()
+    assert b'HTTP/1.1 401 Unauthorized' in response_lines
+    assert b'x-amzn-ErrorType: UnauthorizedException' in response_lines
+    assert b'Content-Type: application/json' in response_lines
+    assert b'{"message":"Unauthorized"}' in response_lines
+
+
 @pytest.mark.parametrize('actual_url,matched_url', [
     ('/foo', '/foo'),
     ('/foo/bar', '/foo/bar'),
@@ -404,5 +589,378 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
 
 
 def test_can_provide_port_to_local_server(sample_app):
-    dev_server = local.create_local_server(sample_app, port=23456)
+    dev_server = local.create_local_server(sample_app, None, port=23456)
     assert dev_server.server.server_port == 23456
+
+
+class TestLambdaContext(object):
+    def test_can_get_remaining_time_once(self, lambda_context_args):
+        time_source = FakeTimeSource([0, 5])
+        context = LambdaContext(*lambda_context_args, max_runtime_ms=10000,
+                                time_source=time_source)
+        time_remaining = context.get_remaining_time_in_millis()
+        assert time_remaining == 5000
+
+    def test_can_get_remaining_time_multiple(self, lambda_context_args):
+        time_source = FakeTimeSource([0, 3, 7, 9])
+        context = LambdaContext(*lambda_context_args, max_runtime_ms=10000,
+                                time_source=time_source)
+
+        time_remaining = context.get_remaining_time_in_millis()
+        assert time_remaining == 7000
+        time_remaining = context.get_remaining_time_in_millis()
+        assert time_remaining == 3000
+        time_remaining = context.get_remaining_time_in_millis()
+        assert time_remaining == 1000
+
+    def test_does_populate_aws_request_id_with_valid_uuid(self,
+                                                          lambda_context_args):
+        context = LambdaContext(*lambda_context_args)
+        assert AWS_REQUEST_ID_PATTERN.match(context.aws_request_id)
+
+    def test_does_set_version_to_latest(self, lambda_context_args):
+        context = LambdaContext(*lambda_context_args)
+        assert context.function_version == '$LATEST'
+
+
+class TestLocalGateway(object):
+    def test_can_invoke_function(self):
+        demo = app.Chalice('app-name')
+
+        @demo.route('/')
+        def index_view():
+            return {'foo': 'bar'}
+
+        gateway = LocalGateway(demo, Config())
+        response = gateway.handle_request('GET', '/', {}, '')
+        body = json.loads(response['body'])
+        assert body['foo'] == 'bar'
+
+    def test_does_populate_context(self):
+        demo = app.Chalice('app-name')
+
+        @demo.route('/context')
+        def context_view():
+            context = demo.lambda_context
+            return {
+                'name': context.function_name,
+                'memory': context.memory_limit_in_mb,
+                'version': context.function_version,
+                'timeout': context.get_remaining_time_in_millis(),
+                'request_id': context.aws_request_id,
+            }
+
+        disk_config = {
+            'lambda_timeout': 10,
+            'lambda_memory_size': 256,
+        }
+        config = Config(chalice_stage='api', config_from_disk=disk_config)
+        gateway = LocalGateway(demo, config)
+        response = gateway.handle_request('GET', '/context', {}, '')
+        body = json.loads(response['body'])
+        assert body['name'] == 'api_handler'
+        assert body['memory'] == 256
+        assert body['version'] == '$LATEST'
+        assert body['timeout'] <= 10
+        assert AWS_REQUEST_ID_PATTERN.match(body['request_id'])
+
+    def test_can_validate_route_with_variables(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        response = gateway.handle_request(
+            'GET', '/secret/foobar', {'Authorization': 'allow'}, '')
+        json_body = json.loads(response['body'])
+        assert json_body['secret'] == 'foobar'
+
+    def test_can_allow_route_with_variables(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        response = gateway.handle_request(
+            'GET', '/resource/foobar', {'Authorization': 'allow'}, '')
+        json_body = json.loads(response['body'])
+        assert json_body['resource'] == 'foobar'
+
+    def test_does_send_500_when_authorizer_returns_none(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(InvalidAuthorizerError):
+            gateway.handle_request(
+                'GET', '/none', {'Authorization': 'foobarbaz'}, '')
+
+    def test_can_deny_route_with_variables(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(ForbiddenError):
+            gateway.handle_request(
+                'GET', '/resource/foobarbaz', {'Authorization': 'allow'}, '')
+
+    def test_does_deny_unauthed_request(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(ForbiddenError) as ei:
+            gateway.handle_request(
+                'GET', '/index', {'Authorization': 'deny'}, '')
+        exception_body = str(ei.value.body)
+        assert ('{"Message": '
+                '"User is not authorized to '
+                'access this resource"}') in exception_body
+
+    def test_does_throw_unauthorized_when_no_auth_token_present_on_valid_route(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/index', {}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_does_deny_with_forbidden_when_route_not_found(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(ForbiddenError) as ei:
+            gateway.handle_request('GET', '/badindex', {}, '')
+        exception_body = str(ei.value.body)
+        assert 'Missing Authentication Token' in exception_body
+
+    def test_does_deny_with_forbidden_when_auth_token_present(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(ForbiddenError) as ei:
+            gateway.handle_request('GET', '/badindex',
+                                   {'Authorization': 'foobar'}, '')
+        # The message should be a more complicated error message to do with
+        # signing the request. It always ends with the Authorization token
+        # that we passed up, so we can check for that.
+        exception_body = str(ei.value.body)
+        assert 'Authorization=foobar' in exception_body
+
+
+class TestLocalBuiltinAuthorizers(object):
+    def test_can_authorize_empty_path(self, lambda_context_args,
+                                      demo_app_auth, create_event):
+        # Ensures that / routes work since that is a special case in the
+        # API Gateway arn generation where an extra / is appended to the end
+        # of the arn.
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        assert event['requestContext']['authorizer']['principalId'] == 'user'
+
+    def test_can_call_method_without_auth(self, lambda_context_args,
+                                          create_event):
+        demo = app.Chalice('app-name')
+
+        @demo.route('/index')
+        def index_view():
+            return {}
+
+        path = '/index'
+        authorizer = LocalGatewayAuthorizer(demo)
+        original_event = create_event(path, 'GET', {})
+        original_context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(
+            path, original_event, original_context)
+        # Assert that when the authorizer.authorize is called and there is no
+        # authorizer defined for a particular route that it is a noop.
+        assert original_event == event
+        assert original_context == context
+
+    def test_does_raise_not_authorized_error(self, demo_app_auth,
+                                             lambda_context_args,
+                                             create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/index'
+        event = create_event(path, 'GET', {})
+        context = LambdaContext(*lambda_context_args)
+        with pytest.raises(NotAuthorizedError):
+            authorizer.authorize(path, event, context)
+
+    def test_does_authorize_valid_requests(self, demo_app_auth,
+                                           lambda_context_args, create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/index'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        assert event['requestContext']['authorizer']['principalId'] == 'user'
+
+    def test_does_authorize_unsupported_authorizer(self, demo_app_auth,
+                                                   lambda_context_args,
+                                                   create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/iam'
+        event = create_event(path, 'GET', {})
+        context = LambdaContext(*lambda_context_args)
+        with pytest.warns(None) as recorded_warnings:
+            new_event, new_context = authorizer.authorize(path, event, context)
+        assert event == new_event
+        assert context == new_context
+        assert len(recorded_warnings) == 1
+        warning = recorded_warnings[0]
+        assert issubclass(warning.category, UserWarning)
+        assert ('IAMAuthorizer is not a supported in local '
+                'mode. All requests made against a route will be authorized'
+                ' to allow local testing.') in str(warning.message)
+
+    def test_cannot_access_view_without_permission(self, demo_app_auth,
+                                                   lambda_context_args,
+                                                   create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/secret'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        with pytest.raises(ForbiddenError):
+            authorizer.authorize(path, event, context)
+
+    def test_can_understand_explicit_auth_policy(self, demo_app_auth,
+                                                 lambda_context_args,
+                                                 create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/explicit'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        assert event['requestContext']['authorizer']['principalId'] == 'user'
+
+    def test_can_understand_explicit_deny_policy(self, demo_app_auth,
+                                                 lambda_context_args,
+                                                 create_event):
+        # Our auto-generated policies from the AuthResponse object do not
+        # contain any Deny clauses, however we also allow the user to return
+        # a dictionary that is transated into a policy, so we have to
+        # account for the ability for a user to set an explicit deny policy.
+        # It should behave exactly as not getting permission added with an
+        # allow.
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/explicit'
+        event = create_event(path, 'GET', {})
+        context = LambdaContext(*lambda_context_args)
+        with pytest.raises(NotAuthorizedError):
+            authorizer.authorize(path, event, context)
+
+
+class TestArnBuilder(object):
+    def test_can_create_basic_arn(self, arn_builder):
+        arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b'
+               '/api/GET/resource')
+        built_arn = arn_builder.build_arn('GET', '/resource')
+        assert arn == built_arn
+
+    def test_can_create_root_arn(self, arn_builder):
+        arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b'
+               '/api/GET//')
+        built_arn = arn_builder.build_arn('GET', '/')
+        assert arn == built_arn
+
+    def test_can_create_multi_part_arn(self, arn_builder):
+        arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b'
+               '/api/GET/path/to/resource')
+        built_arn = arn_builder.build_arn('GET', '/path/to/resource')
+        assert arn == built_arn
+
+    def test_can_create_glob_method_arn(self, arn_builder):
+        arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b'
+               '/api/*/resource')
+        built_arn = arn_builder.build_arn('*', '/resource')
+        assert arn == built_arn
+
+
+@pytest.mark.parametrize('arn,pattern', [
+    ('mars-west-2:123456789012:ymy8tbxw7b/api/GET/foo',
+     'mars-west-2:123456789012:ymy8tbxw7b/api/GET/foo'
+     ),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-1:123456789012:ymy8tbxw7b/api/GET/*'
+     ),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/PUT/foobar',
+     'mars-west-1:123456789012:ymy8tbxw7b/api/???/foobar'
+     ),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-1:123456789012:ymy8tbxw7b/api/???/*'
+     ),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-1:123456789012:*/api/GET/*'
+     ),
+    ('mars-west-2:123456789012:ymy8tbxw7b/api/GET/foobar',
+     '*'
+     ),
+    ('mars-west-2:123456789012:ymy8tbxw7b/api/GET/foo.bar',
+     'mars-west-2:123456789012:ymy8tbxw7b/*/GET/*')
+])
+def test_can_allow_route_arns(arn, pattern):
+    prefix = 'arn:aws:execute-api:'
+    full_arn = '%s%s' % (prefix, arn)
+    full_pattern = '%s%s' % (prefix, pattern)
+    matcher = local.ARNMatcher(full_arn)
+    does_match = matcher.does_any_resource_match([full_pattern])
+    assert does_match is True
+
+
+@pytest.mark.parametrize('arn,pattern', [
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-1:123456789012:ymy8tbxw7b/api/PUT/*'
+     ),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-1:123456789012:ymy8tbxw7b/api/??/foobar'
+     ),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-2:123456789012:ymy8tbxw7b/api/???/*'
+     ),
+    ('mars-west-2:123456789012:ymy8tbxw7b/api/GET/foobar',
+     'mars-west-2:123456789012:ymy8tbxw7b/*/GET/foo...')
+])
+def test_can_deny_route_arns(arn, pattern):
+    prefix = 'arn:aws:execute-api:'
+    full_arn = '%s%s' % (prefix, arn)
+    full_pattern = '%s%s' % (prefix, pattern)
+    matcher = local.ARNMatcher(full_arn)
+    does_match = matcher.does_any_resource_match([full_pattern])
+    assert does_match is False
+
+
+@pytest.mark.parametrize('arn,patterns', [
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     [
+         'mars-west-1:123456789012:ymy8tbxw7b/api/PUT/*',
+         'mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar'
+     ]),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     [
+         'mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+         'mars-west-1:123456789012:ymy8tbxw7b/api/PUT/*'
+     ]),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     [
+         'mars-west-1:123456789012:ymy8tbxw7b/api/PUT/foobar',
+         '*'
+     ])
+])
+def test_can_allow_multiple_resource_arns(arn, patterns):
+    prefix = 'arn:aws:execute-api:'
+    full_arn = '%s%s' % (prefix, arn)
+    full_patterns = ['%s%s' % (prefix, pattern) for pattern in patterns]
+    matcher = local.ARNMatcher(full_arn)
+    does_match = matcher.does_any_resource_match(full_patterns)
+    assert does_match is True
+
+
+@pytest.mark.parametrize('arn,patterns', [
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     [
+         'mars-west-1:123456789012:ymy8tbxw7b/api/POST/*',
+         'mars-west-1:123456789012:ymy8tbxw7b/api/PUT/foobar'
+     ]),
+    ('mars-west-1:123456789012:ymy8tbxw7b/api/GET/foobar',
+     [
+         'mars-west-2:123456789012:ymy8tbxw7b/api/GET/foobar',
+         'mars-west-2:123456789012:ymy8tbxw7b/api/*/*'
+     ])
+])
+def test_can_deny_multiple_resource_arns(arn, patterns):
+    prefix = 'arn:aws:execute-api:'
+    full_arn = '%s%s' % (prefix, arn)
+    full_patterns = ['%s%s' % (prefix, pattern) for pattern in patterns]
+    matcher = local.ARNMatcher(full_arn)
+    does_match = matcher.does_any_resource_match(full_patterns)
+    assert does_match is False

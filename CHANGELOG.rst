@@ -14,6 +14,10 @@ Next Release (TBD)
 * Fix bug where ``raw_body`` would raise an exception if no HTTP
   body was provided
   (`#503 <https://github.com/aws/chalice/issues/503>`__)
+* Fix bug where exit codes were not properly being propagated during packaging
+  (`#500 <https://github.com/aws/chalice/issues/500>`__)
+* Add support for Builtin Authorizers in local mode
+  (`#404 <https://github.com/aws/chalice/issues/404>`__)
 
 
 1.0.1

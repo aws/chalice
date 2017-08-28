@@ -99,7 +99,7 @@ def run_local_server(factory, port, env):
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(stream=sys.stdout)
-    server = factory.create_local_server(app_obj, port)
+    server = factory.create_local_server(app_obj, config, port)
     server.serve_forever()
 
 
