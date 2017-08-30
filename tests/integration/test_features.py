@@ -406,6 +406,13 @@ def test_can_use_shared_auth(smoke_test_app):
     assert context['authorizer']['foo'] == 'bar'
 
 
+def test_empty_raw_body(smoke_test_app):
+    url = smoke_test_app.url + '/repr-raw-body'
+    response = requests.post(url)
+    response.raise_for_status()
+    assert response.json() == {'repr-raw-body': 'None'}
+
+
 @pytest.mark.on_redeploy
 def test_redeploy_no_change_view(smoke_test_app):
     smoke_test_app.redeploy_once()

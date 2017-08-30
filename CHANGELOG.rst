@@ -11,6 +11,9 @@ Next Release (TBD)
 * Fix issue where ``api_gateway_stage`` was being
   ignored when set in the ``config.json`` file
   (`#495 <https://github.com/aws/chalice/issues/495>`__)
+* Fix bug where ``raw_body`` would raise an exception if no HTTP
+  body was provided
+  (`#503 <https://github.com/aws/chalice/issues/503>`__)
 
 
 1.0.1

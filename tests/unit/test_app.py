@@ -1278,3 +1278,17 @@ def test_debug_mode_changes_log_level():
     test_app.debug = True
     assert test_app.debug is True
     assert test_app.log.getEffectiveLevel() == logging.DEBUG
+
+
+def test_raw_body_is_none_if_body_is_none():
+    misc_kwargs = {
+        'query_params': {},
+        'headers': {},
+        'uri_params': {},
+        'method': 'GET',
+        'context': {},
+        'stage_vars': {},
+        'is_base64_encoded': False,
+    }
+    request = app.Request(body=None, **misc_kwargs)
+    assert request.raw_body is None

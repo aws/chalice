@@ -277,7 +277,7 @@ class Request(object):
 
     @property
     def raw_body(self):
-        if self._raw_body is None:
+        if self._raw_body is None and self._body is not None:
             if self._is_base64_encoded:
                 self._raw_body = self._base64decode(self._body)
             elif not isinstance(self._body, bytes):
