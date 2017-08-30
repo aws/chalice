@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Fix issue where requestParameters were not being mapped
+  correctly resulting in invalid generated javascript SDKs
+  (`#498 <https://github.com/aws/chalice/issues/498>`__)
+
+
 1.0.1
 =====
 
