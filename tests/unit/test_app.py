@@ -1291,4 +1291,4 @@ def test_raw_body_is_none_if_body_is_none():
         'is_base64_encoded': False,
     }
     request = app.Request(body=None, **misc_kwargs)
-    assert request.raw_body is None
+    assert request.raw_body == b''

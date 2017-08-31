@@ -410,7 +410,7 @@ def test_empty_raw_body(smoke_test_app):
     url = smoke_test_app.url + '/repr-raw-body'
     response = requests.post(url)
     response.raise_for_status()
-    assert response.json() == {'repr-raw-body': 'None'}
+    assert response.json() == {'repr-raw-body': ''}
 
 
 @pytest.mark.on_redeploy

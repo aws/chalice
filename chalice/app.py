@@ -265,7 +265,7 @@ class Request(object):
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
         self._json_body = None
-        self._raw_body = None
+        self._raw_body = b''
         self.context = context
         self.stage_vars = stage_vars
 
@@ -277,7 +277,7 @@ class Request(object):
 
     @property
     def raw_body(self):
-        if self._raw_body is None and self._body is not None:
+        if not self._raw_body and self._body is not None:
             if self._is_base64_encoded:
                 self._raw_body = self._base64decode(self._body)
             elif not isinstance(self._body, bytes):

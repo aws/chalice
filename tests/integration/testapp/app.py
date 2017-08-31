@@ -184,4 +184,4 @@ def fake_profile_post():
 
 @app.route('/repr-raw-body', methods=['POST'])
 def repr_raw_body():
-    return {'repr-raw-body': repr(app.current_request.raw_body)}
+    return {'repr-raw-body': app.current_request.raw_body.decode('utf-8')}
