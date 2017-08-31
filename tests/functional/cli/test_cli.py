@@ -174,14 +174,17 @@ def test_does_deploy_with_default_api_gateway_stage_name(
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
-        _run_cli_command(runner, cli.deploy, [], cli_factory=mock_cli_factory)
-        call = mock_cli_factory.create_config_obj.call_args
-        expected_call = mock.call(
-            api_gateway_stage='api',
+        # This isn't perfect as we're assuming we know how to
+        # create the config_obj like the deploy() command does,
+        # it should give us more confidence that the api gateway
+        # stage defaults are still working.
+        cli_factory = factory.CLIFactory('.')
+        config = cli_factory.create_config_obj(
+            chalice_stage_name='dev',
             autogen_policy=None,
-            chalice_stage_name='dev'
+            api_gateway_stage=None
         )
-        assert call == expected_call
+        assert config.api_gateway_stage == DEFAULT_APIGATEWAY_STAGE_NAME
 
 
 def test_can_delete(runner, mock_cli_factory, mock_deployer):
