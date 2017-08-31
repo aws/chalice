@@ -89,10 +89,11 @@ class CLIFactory(object):
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
-                          api_gateway_stage=DEFAULT_APIGATEWAY_STAGE_NAME):
+                          api_gateway_stage=None):
         # type: (str, Optional[bool], str) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
+                          'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
                           'autogen_policy': True}
         try:
             config_from_disk = self.load_project_config()

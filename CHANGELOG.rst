@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Fix issue where ``api_gateway_stage`` was being
+  ignored when set in the ``config.json`` file
+  (`#495 <https://github.com/aws/chalice/issues/495>`__)
+
+
 1.0.1
 =====
 
