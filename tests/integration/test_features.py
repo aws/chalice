@@ -77,6 +77,12 @@ class SmokeTestApplication(object):
         del sys.modules['app']
 
 
+@pytest.fixture
+def apig_client():
+    s = botocore.session.get_session()
+    return s.create_client('apigateway')
+
+
 @pytest.fixture(scope='module')
 def smoke_test_app(tmpdir_factory):
     tmpdir = str(tmpdir_factory.mktemp('smoketestapp'))
@@ -158,6 +164,34 @@ def test_can_have_nested_routes(smoke_test_app):
 def test_supports_path_params(smoke_test_app):
     assert smoke_test_app.get_json('/path/foo') == {'path': 'foo'}
     assert smoke_test_app.get_json('/path/bar') == {'path': 'bar'}
+
+
+def test_path_params_mapped_in_api(smoke_test_app, apig_client):
+    # Use the API Gateway API to ensure that path parameters
+    # are modeled as such.  Otherwise this will break
+    # SDK generation and any future features that depend
+    # on params.  We could try to verify the generated
+    # javascript SDK looks ok.  Instead we're going to
+    # query the resources we've created in API gateway
+    # and make sure requestParameters are present.
+    rest_api_id = smoke_test_app.rest_api_id
+    # This is the resource id for the '/path/{name}'
+    # route.  As far as I know this is the best way to get
+    # this id.
+    resource_id = [
+        resource for resource in
+        apig_client.get_resources(restApiId=rest_api_id)['items']
+        if resource['path'] == '/path/{name}'
+    ][0]['id']
+    method_config = apig_client.get_method(
+        restApiId=rest_api_id,
+        resourceId=resource_id,
+        httpMethod='GET'
+    )
+    assert 'requestParameters' in method_config
+    assert method_config['requestParameters'] == {
+        'method.request.path.name': True
+    }
 
 
 def test_supports_post(smoke_test_app):

@@ -64,9 +64,8 @@ def test_can_add_url_captures_to_params(sample_app, swagger_gen):
 
     doc = swagger_gen.generate_swagger(sample_app)
     single_method = doc['paths']['/path/{capture}']['get']
-    apig_integ = single_method['x-amazon-apigateway-integration']
-    assert 'parameters' in apig_integ
-    assert apig_integ['parameters'] == [
+    assert 'parameters' in single_method
+    assert single_method['parameters'] == [
         {'name': "capture", "in": "path", "required": True, "type": "string"}
     ]
 

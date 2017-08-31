@@ -128,6 +128,8 @@ class SwaggerGenerator(object):
             current['security'] = [{'api_key': []}]
         if view.authorizer:
             current['security'] = [{view.authorizer.name: []}]
+        if view.view_args:
+            self._add_view_args(current, view.view_args)
         return current
 
     def _generate_precanned_responses(self):
@@ -164,13 +166,11 @@ class SwaggerGenerator(object):
             'contentHandling': 'CONVERT_TO_TEXT',
             'type': 'aws_proxy',
         }
-        if view.view_args:
-            self._add_view_args(apig_integ, view.view_args)
         return apig_integ
 
-    def _add_view_args(self, apig_integ, view_args):
+    def _add_view_args(self, single_method, view_args):
         # type: (Dict[str, Any], List[str]) -> None
-        apig_integ['parameters'] = [
+        single_method['parameters'] = [
             {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
             for name in view_args
         ]
