@@ -294,7 +294,9 @@ class Request(object):
             return self._json_body
 
     def to_dict(self):
-        copied = self.__dict__.copy()
+        # Don't copy internal attributes.
+        copied = {k: v for k, v in self.__dict__.items()
+                  if not k.startswith('_')}
         # We want the output of `to_dict()` to be
         # JSON serializable, so we need to remove the CaseInsensitive dict.
         copied['headers'] = dict(copied['headers'])

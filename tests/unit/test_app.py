@@ -64,7 +64,7 @@ def create_event(uri, method, path, content_type='application/json'):
         },
         'pathParameters': path,
         'queryStringParameters': {},
-        'body': "",
+        'body': None,
         'stageVariables': {},
     }
 
@@ -241,6 +241,16 @@ def test_can_call_to_dict_on_current_request(sample_app):
     # JSON serializable so we check we can roundtrip
     # the data to/from JSON.
     assert isinstance(json.loads(json.dumps(response)), dict)
+
+
+def test_request_to_dict_does_not_contain_internal_attrs(sample_app):
+    @sample_app.route('/todict')
+    def todict():
+        return sample_app.current_request.to_dict()
+    event = create_event('/todict', 'GET', {})
+    response = json_response_body(sample_app(event, context=None))
+    internal_attrs = [key for key in response if key.startswith('_')]
+    assert not internal_attrs
 
 
 def test_will_pass_captured_params_to_view(sample_app):
