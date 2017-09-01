@@ -64,7 +64,7 @@ def create_event(uri, method, path, content_type='application/json'):
         },
         'pathParameters': path,
         'queryStringParameters': {},
-        'body': "",
+        'body': None,
         'stageVariables': {},
     }
 
@@ -241,6 +241,16 @@ def test_can_call_to_dict_on_current_request(sample_app):
     # JSON serializable so we check we can roundtrip
     # the data to/from JSON.
     assert isinstance(json.loads(json.dumps(response)), dict)
+
+
+def test_request_to_dict_does_not_contain_internal_attrs(sample_app):
+    @sample_app.route('/todict')
+    def todict():
+        return sample_app.current_request.to_dict()
+    event = create_event('/todict', 'GET', {})
+    response = json_response_body(sample_app(event, context=None))
+    internal_attrs = [key for key in response if key.startswith('_')]
+    assert not internal_attrs
 
 
 def test_will_pass_captured_params_to_view(sample_app):
@@ -1278,3 +1288,17 @@ def test_debug_mode_changes_log_level():
     test_app.debug = True
     assert test_app.debug is True
     assert test_app.log.getEffectiveLevel() == logging.DEBUG
+
+
+def test_raw_body_is_none_if_body_is_none():
+    misc_kwargs = {
+        'query_params': {},
+        'headers': {},
+        'uri_params': {},
+        'method': 'GET',
+        'context': {},
+        'stage_vars': {},
+        'is_base64_encoded': False,
+    }
+    request = app.Request(body=None, **misc_kwargs)
+    assert request.raw_body == b''

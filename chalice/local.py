@@ -99,9 +99,7 @@ class LambdaEventConverter(object):
             'pathParameters': view_route.captured,
             'stageVariables': {},
         }
-        if body is None:
-            event['body'] = '{}'
-        elif self._is_binary(headers):
+        if self._is_binary(headers) and body is not None:
             event['body'] = base64.b64encode(body).decode('ascii')
             event['isBase64Encoded'] = True
         else:

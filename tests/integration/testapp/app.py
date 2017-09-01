@@ -180,3 +180,8 @@ def fake_profile_read_only():
            methods=['POST'])
 def fake_profile_post():
     return {'success': True, 'context': app.current_request.context}
+
+
+@app.route('/repr-raw-body', methods=['POST'])
+def repr_raw_body():
+    return {'repr-raw-body': app.current_request.raw_body.decode('utf-8')}

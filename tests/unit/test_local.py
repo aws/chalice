@@ -347,7 +347,7 @@ def test_can_create_lambda_event():
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
         'queryStringParameters': {},
-        'body': '{}',
+        'body': None,
         'stageVariables': {},
     }
 
