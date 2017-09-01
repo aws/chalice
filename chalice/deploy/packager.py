@@ -584,7 +584,7 @@ class SubprocessPip(object):
             shim = ''
         env_vars.update(subprocess_python_base_environ)
         python_exe = sys.executable
-        run_pip = 'import pip; pip.main(%s)' % args
+        run_pip = 'import pip, sys; sys.exit(pip.main(%s))' % args
         exec_string = '%s%s' % (shim, run_pip)
         invoke_pip = [python_exe, '-c', exec_string]
         p = subprocess.Popen(invoke_pip,

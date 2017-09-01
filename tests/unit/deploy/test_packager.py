@@ -118,6 +118,15 @@ class TestSubprocessPip(object):
         assert rc == 0
         assert err == b''
 
+    def test_does_error_code_propagate(self):
+        pip = SubprocessPip()
+        rc, err = pip.main(['badcommand'])
+        assert rc != 0
+        # Don't want to depend on a particular error message from pip since it
+        # may change if we pin a differnet version to Chalice at some point.
+        # But there should be a non-empty error message of some kind.
+        assert err != b''
+
 
 class TestPipRunner(object):
     def test_build_wheel(self, pip_runner):
