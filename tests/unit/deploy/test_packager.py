@@ -56,15 +56,6 @@ class CustomEnv(OSUtils):
 
 
 @pytest.fixture
-def pip_runner_custom_env(custom_env_osutils):
-    def create_pip_runner(env):
-        pip = FakePip()
-        pip_runner = PipRunner(pip, osutils=custom_env_osutils(env))
-        return pip, pip_runner
-    return create_pip_runner
-
-
-@pytest.fixture
 def osutils():
     return OSUtils()
 
