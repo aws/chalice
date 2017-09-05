@@ -7,3 +7,4 @@ docs/build/
 __pycache__/
 .coverage
 chalice.egg-info/
+.hypothesis/
