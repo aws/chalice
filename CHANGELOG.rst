@@ -20,6 +20,8 @@ Next Release (TBD)
   (`#404 <https://github.com/aws/chalice/issues/404>`__)
 * Fix environment variables being passed to subprocess while packaging
   (`#501 <https://github.com/aws/chalice/issues/501>`__)
+* Allow view to require API keys as well as authorization
+  (`#473 <https://github.com/aws/chalice/pull/473/>`__)
 
 
 1.0.1
