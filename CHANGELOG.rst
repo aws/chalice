@@ -11,6 +11,8 @@ Next Release (TBD)
 * Fix issue where ``api_gateway_stage`` was being
   ignored when set in the ``config.json`` file
   (`#495 <https://github.com/aws/chalice/issues/495>`__)
+* Fix environment variables being passed to subprocess while packaging
+  (`#501 <https://github.com/aws/chalice/issues/501>`__)
 
 
 1.0.1
