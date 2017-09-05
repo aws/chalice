@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.0.2
+=====
 
 * Fix issue where requestParameters were not being mapped
   correctly resulting in invalid generated javascript SDKs
