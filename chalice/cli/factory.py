@@ -186,6 +186,6 @@ class CLIFactory(object):
         with open(config_file) as f:
             return json.loads(f.read())
 
-    def create_local_server(self, app_obj, port):
-        # type: (Chalice, int) -> local.LocalDevServer
-        return local.create_local_server(app_obj, port)
+    def create_local_server(self, app_obj, config, port):
+        # type: (Chalice, Config, int) -> local.LocalDevServer
+        return local.create_local_server(app_obj, config, port)

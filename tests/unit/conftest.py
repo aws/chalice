@@ -1,3 +1,4 @@
+import json
 from pytest import fixture
 
 from chalice.app import Chalice
@@ -32,3 +33,52 @@ def sample_app_with_auth():
         return {}
 
     return app
+
+
+@fixture
+def create_event():
+    def create_event_inner(uri, method, path, content_type='application/json'):
+        return {
+            'requestContext': {
+                'httpMethod': method,
+                'resourcePath': uri,
+            },
+            'headers': {
+                'Content-Type': content_type,
+            },
+            'pathParameters': path,
+            'queryStringParameters': {},
+            'body': "",
+            'stageVariables': {},
+        }
+    return create_event_inner
+
+
+@fixture
+def create_empty_header_event():
+    def create_empty_header_event_inner(uri, method, path,
+                                        content_type='application/json'):
+        return {
+            'requestContext': {
+                'httpMethod': method,
+                'resourcePath': uri,
+            },
+            'headers': None,
+            'pathParameters': path,
+            'queryStringParameters': {},
+            'body': "",
+            'stageVariables': {},
+        }
+    return create_empty_header_event_inner
+
+
+@fixture
+def create_event_with_body():
+    def create_event_with_body_inner(body, uri='/', method='POST',
+                                     content_type='application/json'):
+        event = create_event()(uri, method, {}, content_type)
+        if content_type == 'application/json':
+            body = json.dumps(body)
+        event['body'] = body
+        return event
+    return create_event_with_body_inner
