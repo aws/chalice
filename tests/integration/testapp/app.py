@@ -1,16 +1,19 @@
-from chalice import Chalice, BadRequestError, NotFoundError, Response,\
-    CORSConfig, UnauthorizedError, AuthResponse, AuthRoute
-
+import os
 try:
     from urllib.parse import parse_qs
 except:
     from urlparse import parse_qs
 
+
+from chalice import Chalice, BadRequestError, NotFoundError, Response,\
+    CORSConfig, UnauthorizedError, AuthResponse, AuthRoute
+
+
 # This is a test app that is used by integration tests.
 # This app exercises all the major features of chalice
 # and helps prevent regressions.
 
-app = Chalice(app_name='smoketestapp')
+app = Chalice(app_name=os.environ['APP_NAME'])
 app.api.binary_types.append('application/binary')
 
 

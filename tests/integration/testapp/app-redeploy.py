@@ -4,10 +4,12 @@ This file is copied over to app.py during the integration
 tests to test behavior on redeploys.
 
 """
+import os
+
 from chalice import Chalice
 
 
-app = Chalice(app_name='smoketestapp')
+app = Chalice(app_name=os.environ['APP_NAME'])
 
 
 # Test an unchanged view, this is the exact
