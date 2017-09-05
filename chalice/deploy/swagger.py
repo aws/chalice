@@ -124,9 +124,10 @@ class SwaggerGenerator(object):
             # to the security definitions.  We have to someone indicate
             # this because this neeeds to be added to the global config
             # file.
-            current['security'] = [{'api_key': []}]
+            current.setdefault('security', []).append({'api_key': []})
         if view.authorizer:
-            current['security'] = [{view.authorizer.name: []}]
+            current.setdefault('security', []).append(
+                {view.authorizer.name: []})
         if view.view_args:
             self._add_view_args(current, view.view_args)
         return current

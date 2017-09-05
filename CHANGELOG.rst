@@ -18,6 +18,8 @@ Next Release (TBD)
   (`#500 <https://github.com/aws/chalice/issues/500>`__)
 * Add support for Builtin Authorizers in local mode
   (`#404 <https://github.com/aws/chalice/issues/404>`__)
+* Allow view to require API keys as well as authorization
+  (`#473 <https://github.com/aws/chalice/pull/473/>`__)
 
 
 1.0.1

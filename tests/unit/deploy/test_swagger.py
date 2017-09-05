@@ -312,6 +312,22 @@ def test_can_use_authorizer_object(sample_app, swagger_gen):
     }
 
 
+def test_can_use_api_key_and_authorizers(sample_app, swagger_gen):
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization')
+
+    @sample_app.route('/auth', authorizer=authorizer, api_key_required=True)
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [
+        {'api_key': []},
+        {'MyAuth': []},
+    ]
+
+
 def test_can_use_iam_authorizer_object(sample_app, swagger_gen):
     authorizer = IAMAuthorizer()
 
