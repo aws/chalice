@@ -8,17 +8,6 @@ from six import StringIO
 
 if os.name == 'nt':
     # windows
-    # On windows running python in a subprocess with no environment variables
-    # will cause several issues. In order for our subprocess to run normally we
-    # manually copy the relevant environment variables from the parent process.
-    subprocess_python_base_environ = {
-        # http://bugs.python.org/issue8557
-        'PATH': os.environ['PATH']
-    }  # type: Dict[str, Any]
-    # http://bugs.python.org/issue20614
-    if 'SYSTEMROOT' in os.environ:
-        subprocess_python_base_environ['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-
     # This is the actual patch used on windows to prevent distutils from
     # compiling C extensions. The msvc compiler base class has its compile
     # method overridden to raise a CompileError. This can be caught by
@@ -94,10 +83,6 @@ if os.name == 'nt':
     pip_no_compile_c_env_vars = {}  # type: Dict[str, Any]
 else:
     # posix
-    # On posix you can start python in a subprocess with no environment
-    # variables and it will run normally.
-    subprocess_python_base_environ = {}
-
     # On posix systems setuptools/distutils uses the CC env variable to
     # locate a C compiler for building C extensions. All we need to do is set
     # it to /var/false, and the module building process will fail to build.

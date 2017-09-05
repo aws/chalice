@@ -10,6 +10,7 @@ import tarfile
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
 from typing import Optional  # noqa
+from typing import MutableMapping  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -77,6 +78,10 @@ def create_zip_file(source_dir, outfile):
 
 class OSUtils(object):
     ZIP_DEFLATED = zipfile.ZIP_DEFLATED
+
+    def environ(self):
+        # type: () -> MutableMapping
+        return os.environ
 
     def open(self, filename, mode):
         # type: (str, str) -> IO

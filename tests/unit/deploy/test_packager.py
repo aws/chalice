@@ -39,10 +39,20 @@ class FakePip(object):
 
 
 @pytest.fixture
-def pip_runner():
-    pip = FakePip()
-    pip_runner = PipRunner(pip)
-    return pip, pip_runner
+def pip_factory():
+    def create_pip_runner(osutils=None):
+        pip = FakePip()
+        pip_runner = PipRunner(pip, osutils=osutils)
+        return pip, pip_runner
+    return create_pip_runner
+
+
+class CustomEnv(OSUtils):
+    def __init__(self, env):
+        self._env = env
+
+    def environ(self):
+        return self._env
 
 
 @pytest.fixture
@@ -129,9 +139,20 @@ class TestSubprocessPip(object):
 
 
 class TestPipRunner(object):
-    def test_build_wheel(self, pip_runner):
+    def test_does_propagate_env_vars(self, pip_factory):
+        osutils = CustomEnv({'foo': 'bar'})
+        pip, runner = pip_factory(osutils)
+        wheel = 'foobar-1.2-py3-none-any.whl'
+        directory = 'directory'
+        runner.build_wheel(wheel, directory)
+        call = pip.calls[0]
+
+        assert 'foo' in call.env_vars
+        assert call.env_vars['foo'] == 'bar'
+
+    def test_build_wheel(self, pip_factory):
         # Test that `pip wheel` is called with the correct params
-        pip, runner = pip_runner
+        pip, runner = pip_factory()
         wheel = 'foobar-1.0-py3-none-any.whl'
         directory = 'directory'
         runner.build_wheel(wheel, directory)
@@ -140,13 +161,14 @@ class TestPipRunner(object):
         call = pip.calls[0]
         assert call.args == ['wheel', '--no-deps', '--wheel-dir',
                              directory, wheel]
-        assert call.env_vars == {}
+        for compile_env_var in pip_no_compile_c_env_vars:
+            assert compile_env_var not in call.env_vars
         assert call.shim == ''
 
-    def test_build_wheel_without_c_extensions(self, pip_runner):
+    def test_build_wheel_without_c_extensions(self, pip_factory):
         # Test that `pip wheel` is called with the correct params when we
         # call it with compile_c=False. These will differ by platform.
-        pip, runner = pip_runner
+        pip, runner = pip_factory()
         wheel = 'foobar-1.0-py3-none-any.whl'
         directory = 'directory'
         runner.build_wheel(wheel, directory, compile_c=False)
@@ -155,13 +177,14 @@ class TestPipRunner(object):
         call = pip.calls[0]
         assert call.args == ['wheel', '--no-deps', '--wheel-dir',
                              directory, wheel]
-        assert call.env_vars == pip_no_compile_c_env_vars
+        for compile_env_var in pip_no_compile_c_env_vars:
+            assert compile_env_var in call.env_vars
         assert call.shim == pip_no_compile_c_shim
 
-    def test_download_all_deps(self, pip_runner):
+    def test_download_all_deps(self, pip_factory):
         # Make sure that `pip download` is called with the correct arguments
         # for getting all sdists.
-        pip, runner = pip_runner
+        pip, runner = pip_factory()
         runner.download_all_dependencies('requirements.txt', 'directory')
 
         assert len(pip.calls) == 1
@@ -171,10 +194,10 @@ class TestPipRunner(object):
         assert call.env_vars is None
         assert call.shim is None
 
-    def test_download_wheels(self, pip_runner):
+    def test_download_wheels(self, pip_factory):
         # Make sure that `pip download` is called with the correct arguments
         # for getting lambda compatible wheels.
-        pip, runner = pip_runner
+        pip, runner = pip_factory()
         packages = ['foo', 'bar', 'baz']
         runner.download_manylinux_wheels(packages, 'directory')
         if sys.version_info[0] == 2:
@@ -190,13 +213,13 @@ class TestPipRunner(object):
             assert pip.calls[i].env_vars is None
             assert pip.calls[i].shim is None
 
-    def test_download_wheels_no_wheels(self, pip_runner):
-        pip, runner = pip_runner
+    def test_download_wheels_no_wheels(self, pip_factory):
+        pip, runner = pip_factory()
         runner.download_manylinux_wheels([], 'directory')
         assert len(pip.calls) == 0
 
-    def test_raise_no_such_package_error(self, pip_runner):
-        pip, runner = pip_runner
+    def test_raise_no_such_package_error(self, pip_factory):
+        pip, runner = pip_factory()
         pip.add_return((1, (b'Could not find a version that satisfies the '
                             b'requirement BadPackageName ')))
         with pytest.raises(NoSuchPackageError) as einfo:
@@ -204,15 +227,15 @@ class TestPipRunner(object):
         assert str(einfo.value) == ('Could not satisfy the requirement: '
                                     'BadPackageName')
 
-    def test_raise_other_unknown_error_during_downloads(self, pip_runner):
-        pip, runner = pip_runner
+    def test_raise_other_unknown_error_during_downloads(self, pip_factory):
+        pip, runner = pip_factory()
         pip.add_return((1, b'SomeNetworkingError: Details here.'))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'SomeNetworkingError: Details here.'
 
-    def test_inject_unknown_error_if_no_stderr(self, pip_runner):
-        pip, runner = pip_runner
+    def test_inject_unknown_error_if_no_stderr(self, pip_factory):
+        pip, runner = pip_factory()
         pip.add_return((1, None))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')

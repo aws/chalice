@@ -8,9 +8,8 @@ from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
 
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
-from typing import Dict  # noqa
+from typing import Dict, MutableMapping  # noqa
 from chalice.compat import lambda_abi
-from chalice.compat import subprocess_python_base_environ
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
@@ -23,6 +22,7 @@ from chalice import app
 
 StrMap = Dict[str, Any]
 OptStrMap = Optional[StrMap]
+EnvVars = MutableMapping
 OptStr = Optional[str]
 OptBytes = Optional[bytes]
 
@@ -263,7 +263,7 @@ class DependencyBuilder(object):
         # type: (OSUtils, Optional[PipRunner]) -> None
         self._osutils = osutils
         if pip_runner is None:
-            pip_runner = PipRunner(SubprocessPip())
+            pip_runner = PipRunner(SubprocessPip(osutils))
         self._pip = pip_runner
 
     def _is_compatible_wheel_filename(self, filename):
@@ -576,13 +576,18 @@ class SDistMetadataFetcher(object):
 
 class SubprocessPip(object):
     """Wrapper around calling pip through a subprocess."""
+    def __init__(self, osutils=None):
+        # type: (Optional[OSUtils]) -> None
+        if osutils is None:
+            osutils = OSUtils()
+        self._osutils = osutils
+
     def main(self, args, env_vars=None, shim=None):
-        # type: (List[str], OptStrMap, OptStr) -> Tuple[int, Optional[bytes]]
+        # type: (List[str], EnvVars, OptStr) -> Tuple[int, Optional[bytes]]
         if env_vars is None:
-            env_vars = {}
+            env_vars = self._osutils.environ()
         if shim is None:
             shim = ''
-        env_vars.update(subprocess_python_base_environ)
         python_exe = sys.executable
         run_pip = 'import pip, sys; sys.exit(pip.main(%s))' % args
         exec_string = '%s%s' % (shim, run_pip)
@@ -597,12 +602,15 @@ class SubprocessPip(object):
 
 class PipRunner(object):
     """Wrapper around pip calls used by chalice."""
-    def __init__(self, pip):
-        # type: (SubprocessPip) -> None
+    def __init__(self, pip, osutils=None):
+        # type: (SubprocessPip, Optional[OSUtils]) -> None
+        if osutils is None:
+            osutils = OSUtils()
         self._wrapped_pip = pip
+        self._osutils = osutils
 
     def _execute(self, command, args, env_vars=None, shim=None):
-        # type: (str, List[str], OptStrMap, OptStr) -> Tuple[int, OptBytes]
+        # type: (str, List[str], EnvVars, OptStr) -> Tuple[int, OptBytes]
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
         rc, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
@@ -613,7 +621,7 @@ class PipRunner(object):
         # type: (str, str, bool) -> None
         """Build an sdist into a wheel file."""
         arguments = ['--no-deps', '--wheel-dir', directory, wheel]
-        env_vars = {}  # type: StrMap
+        env_vars = self._osutils.environ()
         shim = ''
         if not compile_c:
             env_vars.update(pip_no_compile_c_env_vars)

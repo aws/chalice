@@ -18,6 +18,8 @@ Next Release (TBD)
   (`#500 <https://github.com/aws/chalice/issues/500>`__)
 * Add support for Builtin Authorizers in local mode
   (`#404 <https://github.com/aws/chalice/issues/404>`__)
+* Fix environment variables being passed to subprocess while packaging
+  (`#501 <https://github.com/aws/chalice/issues/501>`__)
 
 
 1.0.1

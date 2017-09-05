@@ -54,6 +54,7 @@ class FakePip(object):
         self._side_effects = defaultdict(lambda: [])
 
     def main(self, args, env_vars=None, shim=None):
+
         cmd, args = args[0], args[1:]
         self._calls[cmd].append((args, env_vars, shim))
         try:
@@ -162,9 +163,17 @@ def osutils():
 
 
 @pytest.fixture
-def pip_runner():
+def empty_env_osutils():
+    class EmptyEnv(object):
+        def environ(self):
+            return {}
+    return EmptyEnv()
+
+
+@pytest.fixture
+def pip_runner(empty_env_osutils):
     pip = FakePip()
-    pip_runner = PipRunner(pip)
+    pip_runner = PipRunner(pip, osutils=empty_env_osutils)
     return pip, pip_runner
 
 
