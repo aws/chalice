@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import shutil
+import uuid
 
 import botocore.session
 import pytest
@@ -16,6 +17,7 @@ from chalice.deploy.deployer import ChaliceDeploymentError
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
 APP_FILE = os.path.join(PROJECT_DIR, 'app.py')
+RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())
 
 
 class SmokeTestApplication(object):
@@ -85,11 +87,27 @@ def apig_client():
 
 @pytest.fixture(scope='module')
 def smoke_test_app(tmpdir_factory):
-    tmpdir = str(tmpdir_factory.mktemp('smoketestapp'))
+    # We can't use the monkeypatch fixture here because this is a module scope
+    # fixture and monkeypatch is a function scoped fixture.
+    os.environ['APP_NAME'] = RANDOM_APP_NAME
+    tmpdir = str(tmpdir_factory.mktemp(RANDOM_APP_NAME))
     OSUtils().copytree(PROJECT_DIR, tmpdir)
+    _inject_app_name(tmpdir)
     application = _deploy_app(tmpdir)
     yield application
     _delete_app(application)
+    os.environ.pop('APP_NAME')
+
+
+def _inject_app_name(dirname):
+    config_filename = os.path.join(dirname, '.chalice', 'config.json')
+    with open(config_filename) as f:
+        data = json.load(f)
+    data['app_name'] = RANDOM_APP_NAME
+    data['stages']['dev']['environment_variables']['APP_NAME'] = \
+            RANDOM_APP_NAME
+    with open(config_filename, 'w') as f:
+        f.write(json.dumps(data, indent=2))
 
 
 def _deploy_app(temp_dirname):
@@ -109,7 +127,7 @@ def _deploy_app(temp_dirname):
         url=url,
         deployed_values=deployed,
         stage_name='dev',
-        app_name='smoketestapp',
+        app_name=RANDOM_APP_NAME,
         app_dir=temp_dirname,
     )
     record_deployed_values(
