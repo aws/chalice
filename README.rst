@@ -804,7 +804,7 @@ There's a couple of things to keep in mind when enabling cors for a view:
 
 The last point will change in the future.  See
 `this issue
-<https://github.com/awslabs/chalice/issues/70#issuecomment-248787037>`_
+<https://github.com/aws/chalice/issues/70#issuecomment-248787037>`_
 for more information.
 
 
@@ -1103,7 +1103,7 @@ Feedback
 
 We'also love to hear from you.  Please create any Github issues for
 additional features you'd like to see over at
-https://github.com/awslabs/chalice/issues.  You can also chat with us
+https://github.com/aws/chalice/issues.  You can also chat with us
 on gitter: https://gitter.im/awslabs/chalice
 
 
