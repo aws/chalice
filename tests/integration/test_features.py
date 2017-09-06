@@ -22,9 +22,11 @@ RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())
 
 class SmokeTestApplication(object):
 
-    # Number of seconds to wait after redeploy before running
-    # tests.
+    # Number of seconds to wait after redeploy before starting
+    # to poll for successful 200.
     _REDEPLOY_SLEEP = 20
+    # Seconds to wait between poll attempts after redeploy.
+    _POLLING_DELAY = 5
 
     def __init__(self, url, deployed_values, stage_name, app_name,
                  app_dir):
@@ -71,6 +73,19 @@ class SmokeTestApplication(object):
         self._has_redeployed = True
         # Give it settling time before running more tests.
         time.sleep(self._REDEPLOY_SLEEP)
+        self._wait_for_stablize(num_attempts=10)
+
+    def _wait_for_stablize(self, num_attempts):
+        # After a deployment we sometimes need to wait for
+        # API Gateway to propagate all of its changes.
+        # We're going to give it num_attempts to give us a
+        # 200 response before failing.
+        for _ in range(num_attempts):
+            try:
+                self.get_json('/')
+                return
+            except requests.exceptions.HTTPError:
+                time.sleep(self._POLLING_DELAY)
 
     def _clear_app_import(self):
         # Now that we're using `import` instead of `exec` we need
