@@ -29,9 +29,9 @@ def runner():
 @pytest.fixture
 def app_skeleton(tmpdir, runner):
     project_name = 'deployment-integ-test'
-    with cd(tmpdir):
+    with cd(str(tmpdir)):
         create_new_project_skeleton(project_name, None)
-    return str(os.path.join(tmpdir, project_name))
+    return str(tmpdir.join(project_name))
 
 
 def _get_random_package_name():
