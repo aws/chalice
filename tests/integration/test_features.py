@@ -215,14 +215,7 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     # query the resources we've created in API gateway
     # and make sure requestParameters are present.
     rest_api_id = smoke_test_app.rest_api_id
-    # This is the resource id for the '/path/{name}'
-    # route.  As far as I know this is the best way to get
-    # this id.
-    resource_id = [
-        resource for resource in
-        apig_client.get_resources(restApiId=rest_api_id)['items']
-        if resource['path'] == '/path/{name}'
-    ][0]['id']
+    resource_id = _poll_for_resource_id(apig_client, rest_api_id)
     method_config = apig_client.get_method(
         restApiId=rest_api_id,
         resourceId=resource_id,
@@ -232,6 +225,23 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     assert method_config['requestParameters'] == {
         'method.request.path.name': True
     }
+
+
+def _poll_for_resource_id(apig_client, rest_api_id,
+                          max_attempts=10, delay=5):
+    # This is the resource id for the '/path/{name}'
+    # route.  As far as I know this is the best way to get
+    # this id.
+    for _ in range(max_attempts):
+        matches = [
+            resource for resource in
+            apig_client.get_resources(restApiId=rest_api_id)['items']
+            if resource['path'] == '/path/{name}'
+        ]
+        if matches:
+            return matches[0]['id']
+        time.sleep(delay)
+    raise RuntimeError("Could not find resource id for path: /path/{name}")
 
 
 def test_supports_post(smoke_test_app):
