@@ -20,6 +20,20 @@ APP_FILE = os.path.join(PROJECT_DIR, 'app.py')
 RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())
 
 
+def retry(max_attempts, delay):
+    def _create_wrapped_retry_function(function):
+        def _wrapped_with_retry(*args, **kwargs):
+            for _ in range(max_attempts):
+                result = function(*args, **kwargs)
+                if result is not None:
+                    return result
+                time.sleep(delay)
+            raise RuntimeError("Exhausted max retries of %s for function: %s"
+                               % (max_attempts, function))
+        return _wrapped_with_retry
+    return _create_wrapped_retry_function
+
+
 class SmokeTestApplication(object):
 
     # Number of seconds to wait after redeploy before starting
@@ -73,19 +87,18 @@ class SmokeTestApplication(object):
         self._has_redeployed = True
         # Give it settling time before running more tests.
         time.sleep(self._REDEPLOY_SLEEP)
-        self._wait_for_stablize(num_attempts=10)
+        self._wait_for_stablize()
 
-    def _wait_for_stablize(self, num_attempts):
+    @retry(max_attempts=10, delay=5)
+    def _wait_for_stablize(self):
         # After a deployment we sometimes need to wait for
         # API Gateway to propagate all of its changes.
         # We're going to give it num_attempts to give us a
         # 200 response before failing.
-        for _ in range(num_attempts):
-            try:
-                self.get_json('/')
-                return
-            except requests.exceptions.HTTPError:
-                time.sleep(self._POLLING_DELAY)
+        try:
+            return self.get_json('/')
+        except requests.exceptions.HTTPError:
+            pass
 
     def _clear_app_import(self):
         # Now that we're using `import` instead of `exec` we need
@@ -120,7 +133,7 @@ def _inject_app_name(dirname):
         data = json.load(f)
     data['app_name'] = RANDOM_APP_NAME
     data['stages']['dev']['environment_variables']['APP_NAME'] = \
-            RANDOM_APP_NAME
+        RANDOM_APP_NAME
     with open(config_filename, 'w') as f:
         f.write(json.dumps(data, indent=2))
 
@@ -152,20 +165,18 @@ def _deploy_app(temp_dirname):
     return application
 
 
-def _deploy_with_retries(deployer, config, max_attempts=10):
-    for i in range(max_attempts):
-        try:
-            deployed_stages = deployer.deploy(config)
-            return deployed_stages
-        except ChaliceDeploymentError as e:
-            # API Gateway aggressively throttles deployments.
-            # If we run into this case, we just wait and try
-            # again.
-            error_code = _get_error_code_from_exception(e)
-            if error_code != 'TooManyRequestsException':
-                raise
-            time.sleep(20)
-    raise RuntimeError("Failed to deploy app after %s attempts" % max_attempts)
+@retry(max_attempts=10, delay=20)
+def _deploy_with_retries(deployer, config):
+    try:
+        deployed_stages = deployer.deploy(config)
+        return deployed_stages
+    except ChaliceDeploymentError as e:
+        # API Gateway aggressively throttles deployments.
+        # If we run into this case, we just wait and try
+        # again.
+        error_code = _get_error_code_from_exception(e)
+        if error_code != 'TooManyRequestsException':
+            raise
 
 
 def _get_error_code_from_exception(exception):
@@ -215,7 +226,7 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     # query the resources we've created in API gateway
     # and make sure requestParameters are present.
     rest_api_id = smoke_test_app.rest_api_id
-    resource_id = _poll_for_resource_id(apig_client, rest_api_id)
+    resource_id = _get_resource_id(apig_client, rest_api_id)
     method_config = apig_client.get_method(
         restApiId=rest_api_id,
         resourceId=resource_id,
@@ -227,21 +238,18 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     }
 
 
-def _poll_for_resource_id(apig_client, rest_api_id,
-                          max_attempts=10, delay=5):
+@retry(max_attempts=10, delay=6)
+def _get_resource_id(apig_client, rest_api_id):
     # This is the resource id for the '/path/{name}'
     # route.  As far as I know this is the best way to get
     # this id.
-    for _ in range(max_attempts):
-        matches = [
-            resource for resource in
-            apig_client.get_resources(restApiId=rest_api_id)['items']
-            if resource['path'] == '/path/{name}'
-        ]
-        if matches:
-            return matches[0]['id']
-        time.sleep(delay)
-    raise RuntimeError("Could not find resource id for path: /path/{name}")
+    matches = [
+        resource for resource in
+        apig_client.get_resources(restApiId=rest_api_id)['items']
+        if resource['path'] == '/path/{name}'
+    ]
+    if matches:
+        return matches[0]['id']
 
 
 def test_supports_post(smoke_test_app):
