@@ -330,6 +330,7 @@ def test_can_round_trip_binary(smoke_test_app):
                                  'Accept': 'application/octet-stream',
                              },
                              data=bin_data)
+    response.raise_for_status()
     assert response.content == bin_data
 
 
