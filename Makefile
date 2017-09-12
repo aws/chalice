@@ -1,7 +1,7 @@
 # Eventually I'll add:
 # py.test --cov chalice --cov-report term-missing --cov-fail-under 95 tests/
 # which will fail if tests are under 95%
-TESTS=tests/unit tests/functional tests/property
+TESTS=tests/unit tests/functional
 
 check:
 	###### FLAKE8 #####
