@@ -1,5 +1,6 @@
 language: python
 sudo: false
+env: HYPOTHESIS_PROFILE=ci
 matrix:
   include:
   - python: "3.6"

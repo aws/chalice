@@ -1,7 +1,20 @@
 import json
+import os
+
 from pytest import fixture
+from hypothesis import settings
 
 from chalice.app import Chalice
+
+# From:
+# http://hypothesis.readthedocs.io/en/latest/settings.html#settings-profiles
+# On travis we'll have it run through more iterations.
+settings.register_profile('ci', settings(max_examples=2000))
+# When you're developing locally, we'll only run a few examples
+# to keep unit tests fast.  If you want to run more iterations
+# locally just set HYPOTHESIS_PROFILE=ci.
+settings.register_profile('dev', settings(max_examples=10))
+settings.load_profile(os.getenv('HYPOTHESIS_PROFILE', 'dev'))
 
 
 @fixture(autouse=True)
