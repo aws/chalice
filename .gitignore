@@ -3,7 +3,6 @@ sample/
 venv
 docs/build/
 .idea
-*.py?
 __pycache__/
 .coverage
 chalice.egg-info/
