@@ -61,6 +61,50 @@ def test_inferred_module_type():
     """) == {'boto3': Boto3ModuleType()}
 
 
+def test_recursive_function_none():
+    assert aws_calls("""\
+        def recursive_function():
+            recursive_function()
+        recursive_function()
+    """) == {}
+
+
+def test_recursive_comprehension_none():
+    assert aws_calls("""\
+        xs = []
+        def recursive_function():
+            [recursive_function() for x in xs]
+        recursive_function()
+    """) == {}
+
+
+def test_recursive_function_client_calls():
+    assert aws_calls("""\
+        import boto3
+        def recursive_function():
+            recursive_function()
+            boto3.client('ec2').describe_instances()
+        recursive_function()
+    """) == {'ec2': set(['describe_instances'])}
+
+
+def test_mutual_recursion():
+    assert aws_calls("""\
+        import boto3
+        ec2 = boto3.client('ec2')
+
+        def a():
+            b()
+            ec2.run_instances()
+
+
+        def b():
+            ec2.describe_instances()
+            a()
+        a()
+    """) == {'ec2': set(['describe_instances', 'run_instances'])}
+
+
 def test_inferred_module_type_tracks_assignment():
     assert known_types_for_module("""\
         import boto3

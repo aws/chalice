@@ -323,14 +323,17 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
     _SDK_PACKAGE = 'boto3'
     _CREATE_CLIENT = 'client'
 
-    def __init__(self, parsed_code, binder=None):
+    def __init__(self, parsed_code, binder=None, visited=None):
         # type: (ParsedCode, Optional[TypeBinder]) -> None
         self._symbol_table = parsed_code.symbol_table
         self._current_ast_namespace = parsed_code.parsed_ast
         self._node_inference = {}  # type: Dict[ast.AST, Any]
         if binder is None:
             binder = TypeBinder()
+        if visited is None:
+            visited = set()
         self._binder = binder
+        self._visited = visited
 
     def bind_types(self):
         # type: () -> TypeBinder
@@ -364,9 +367,9 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # type: (Any) -> Any
         return self._binder.get_type_for_node(node)
 
-    def _new_inference_scope(self, parsed_code, binder):
+    def _new_inference_scope(self, parsed_code, binder, visited):
         # type: (ParsedCode, TypeBinder) -> SymbolTableTypeInfer
-        instance = self.__class__(parsed_code, binder)
+        instance = self.__class__(parsed_code, binder, visited)
         return instance
 
     def visit_Import(self, node):
@@ -457,7 +460,9 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
                 node, inferred_func_type.return_type)
         elif isinstance(node.func, ast.Name) and \
                 self._symbol_table.has_ast_node_for_symbol(node.func.id):
-            self._infer_function_call(node)
+            if node not in self._visited:
+                self._visited.add(node)
+                self._infer_function_call(node)
 
     def visit_Lambda(self, node):
         # type: (ast.Lambda) -> None
@@ -485,7 +490,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         self._map_function_params(sub_table, node, ast_node)
 
         child_infer = self._new_inference_scope(
-            ParsedCode(ast_node, sub_table), self._binder)
+            ParsedCode(ast_node, sub_table), self._binder, self._visited)
         child_infer.bind_types()
         inferred_func_type = self._get_inferred_type_for_node(ast_node)
         self._symbol_table.set_inferred_type(function_name, inferred_func_type)
@@ -575,7 +580,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             return
         child_table = self._symbol_table.new_sub_table(child_scope)
         child_infer = self._new_inference_scope(
-            ParsedCode(node.elt, child_table), self._binder)
+            ParsedCode(node.elt, child_table), self._binder, self._visited)
         child_infer.bind_types()
 
     def _get_matching_sub_namespace(self, name, lineno):
