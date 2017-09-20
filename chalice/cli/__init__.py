@@ -76,18 +76,22 @@ def cli(ctx, project_dir, debug=False):
 
 @cli.command()
 @click.option('--port', default=8000, type=click.INT)
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help=('Name of the Chalice stage to deploy to. '
+                    'Specifying a new chalice stage will create '
+                    'an entirely new set of AWS resources.'))
 @click.pass_context
-def local(ctx, port=8000):
-    # type: (click.Context, int) -> None
+def local(ctx, port=8000, stage=DEFAULT_STAGE_NAME):
+    # type: (click.Context, int, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    run_local_server(factory, port, os.environ)
+    run_local_server(factory, port, stage, os.environ)
 
 
-def run_local_server(factory, port, env):
-    # type: (CLIFactory, int, MutableMapping) -> None
-    # We should add a stage argument, env vars can vary
-    # by stage.
-    config = factory.create_config_obj()
+def run_local_server(factory, port, stage, env):
+    # type: (CLIFactory, int, str, MutableMapping) -> None
+    config = factory.create_config_obj(
+        chalice_stage_name=stage
+    )
     # We only load the chalice app after loading the config
     # so we can set any env vars needed before importing the
     # app.
