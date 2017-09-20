@@ -613,6 +613,8 @@ class TypedAWSClient(object):
     def delete_rule(self, rule_name):
         # type: (str) -> None
         events = self._client('events')
+
+        # In put_targets call, we have used Id='1'
         events.remove_targets(Rule=rule_name, Ids=['1'])
         events.delete_rule(Name=rule_name)
 
