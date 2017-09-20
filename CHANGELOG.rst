@@ -8,6 +8,8 @@ Next Release (TBD)
 * Fix issue with chalice local mode causing http clients to hang on responses
   with no body
   (`#525 <https://github.com/aws/chalice/issues/525>`__)
+* Add ``--stage`` parameter to ``chalice local``
+  (`#545 <https://github.com/aws/chalice/issues/545>`__)
 
 
 1.0.2
