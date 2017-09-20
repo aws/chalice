@@ -77,7 +77,7 @@ def cli(ctx, project_dir, debug=False):
 @cli.command()
 @click.option('--port', default=8000, type=click.INT)
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
-              help=('Name of the Chalice stage to deploy to. '
+              help=('Name of the Chalice stage for the local server to use. '
                     'Specifying a new chalice stage will create '
                     'an entirely new set of AWS resources.'))
 @click.pass_context
