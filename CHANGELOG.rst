@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Fix issue with chalice local mode causing http clients to hang on responses
+  with no body
+  (`#525 <https://github.com/aws/chalice/issues/525>`__)
+
+
 1.0.2
 =====
 

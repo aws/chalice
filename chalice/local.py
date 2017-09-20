@@ -574,6 +574,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     def _send_http_response_no_body(self, code, headers):
         # type: (int, HeaderType) -> None
+        headers['Content-Length'] = '0'
         self.send_response(code)
         for k, v in headers.items():
             self.send_header(k, v)

@@ -367,6 +367,7 @@ def test_will_respond_with_custom_cors_enabled_options(handler):
     assert 'Access-Control-Expose-Headers: Header-A,Header-B' in response
     assert 'Access-Control-Max-Age: 600' in response
     assert 'Access-Control-Allow-Credentials: true' in response
+    assert 'Content-Length: 0' in response
 
     # Ensure that the Access-Control-Allow-Methods header is sent
     # and that it sends all the correct methods over.
