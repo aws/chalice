@@ -1173,3 +1173,16 @@ def test_skip_if_permission_already_granted(stubbed_session):
     awsclient.add_permission_for_scheduled_event(
         'rule-arn', 'function-arn')
     stubbed_session.verify_stubs()
+
+
+def test_can_delete_rule(stubbed_session):
+    events = stubbed_session.stub('events')
+    events.remove_targets(
+        Rule='rule-name',
+        Ids=['1']).returns({})
+    events.delete_rule(Name='rule-name').returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.delete_rule('rule-name')
+    stubbed_session.verify_stubs()
