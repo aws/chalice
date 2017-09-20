@@ -40,6 +40,7 @@ from typing import Dict, Set, Any, Optional, List, Union  # noqa
 
 
 APICallT = Dict[str, Set[str]]
+OptASTSet = Optional[Set[ast.AST]]
 
 
 def get_client_calls(source_code):
@@ -324,7 +325,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
     _CREATE_CLIENT = 'client'
 
     def __init__(self, parsed_code, binder=None, visited=None):
-        # type: (ParsedCode, Optional[TypeBinder]) -> None
+        # type: (ParsedCode, Optional[TypeBinder], OptASTSet) -> None
         self._symbol_table = parsed_code.symbol_table
         self._current_ast_namespace = parsed_code.parsed_ast
         self._node_inference = {}  # type: Dict[ast.AST, Any]
@@ -368,7 +369,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         return self._binder.get_type_for_node(node)
 
     def _new_inference_scope(self, parsed_code, binder, visited):
-        # type: (ParsedCode, TypeBinder) -> SymbolTableTypeInfer
+        # type: (ParsedCode, TypeBinder, Set[ast.AST]) -> SymbolTableTypeInfer
         instance = self.__class__(parsed_code, binder, visited)
         return instance
 
