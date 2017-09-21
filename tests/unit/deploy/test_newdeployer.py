@@ -499,7 +499,7 @@ class TestPlanStage(object):
         assert api_call.params == {'name': 'myrole',
                                    'trust_policy': {'trust': 'policy'},
                                    'policy': {'iam': 'policy'}}
-        assert api_call.output == 'myrole_role_arn'
+        assert api_call.target_variable == 'myrole_role_arn'
         assert api_call.resource == resource
 
     def test_no_action_if_role_exists(self, mock_client, mock_osutils):
@@ -525,7 +525,7 @@ class TestPlanStage(object):
         assert len(plan) == 1
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.output == 'function_name_lambda_arn'
+        assert call.target_variable == 'function_name_lambda_arn'
         assert call.params == {
             'function_name': 'appname-dev-function_name',
             'role_arn': 'role:arn',
@@ -562,7 +562,7 @@ class TestPlanStage(object):
         assert len(plan) == 1
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.output == 'function_name_lambda_arn'
+        assert call.target_variable == 'function_name_lambda_arn'
         assert call.resource == function
         # The params are verified in test_can_create_function,
         # we just care about how the role_arn Variable is constructed.
@@ -575,7 +575,7 @@ class TestInvoker(object):
     def test_can_invoke_api_call_with_no_output(self, mock_client):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
-        call = APICall('create_role', params, output=None)
+        call = APICall('create_role', params, target_variable=None)
 
         executor = Executor(mock_client)
         executor.execute([call])
@@ -585,7 +585,8 @@ class TestInvoker(object):
     def test_can_store_api_result(self, mock_client):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
-        call = APICall('create_role', params, output='my_variable_name')
+        call = APICall('create_role', params,
+                       target_variable='my_variable_name')
         mock_client.create_role.return_value = 'myrole:arn'
 
         executor = Executor(mock_client)
@@ -599,7 +600,8 @@ class TestInvoker(object):
             'trust_policy': {'trust': 'policy'},
             'policy': {'iam': 'policy'}
         }
-        call = APICall('create_role', params, output='my_variable_name')
+        call = APICall('create_role', params,
+                       target_variable='my_variable_name')
         mock_client.create_role.return_value = 'myrole:arn'
 
         executor = Executor(mock_client)
@@ -615,7 +617,8 @@ class TestInvoker(object):
     def test_can_return_created_resources(self, mock_client):
         function = create_function_resource('myfunction')
         params = {}
-        call = APICall('create_function', params, output='myfunction_arn',
+        call = APICall('create_function', params,
+                       target_variable='myfunction_arn',
                        resource=function)
         mock_client.create_function.return_value = 'function:arn'
         executor = Executor(mock_client)
