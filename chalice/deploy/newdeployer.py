@@ -352,19 +352,19 @@ class PlanStage(object):
                 isinstance(resource.role.role_arn, models.DeployPhase):
             role_arn = Variable('%s_role_arn' % resource.role.role_name)
         return APICall(
-            'create_function',
-            {'function_name': resource.function_name,
-             'role_arn': role_arn,
-             'zip_contents': self._osutils.get_file_contents(
-                 resource.deployment_package.filename, binary=True),
-             'runtime': resource.runtime,
-             'handler': resource.handler,
-             'environment_variables': resource.environment_variables,
-             'tags': resource.tags,
-             'timeout': resource.timeout,
-             'memory_size': resource.memory_size},
-            '%s_lambda_arn' % resource.resource_name,
-            resource,
+            method_name='create_function',
+            params={'function_name': resource.function_name,
+                    'role_arn': role_arn,
+                    'zip_contents': self._osutils.get_file_contents(
+                        resource.deployment_package.filename, binary=True),
+                    'runtime': resource.runtime,
+                    'handler': resource.handler,
+                    'environment_variables': resource.environment_variables,
+                    'tags': resource.tags,
+                    'timeout': resource.timeout,
+                    'memory_size': resource.memory_size},
+            target_variable='%s_lambda_arn' % resource.resource_name,
+            resource=resource,
         )
 
     def plan_managediamrole(self, config, resource):
@@ -378,12 +378,13 @@ class PlanStage(object):
                 document = None
                 if isinstance(resource.policy, models.AutoGenIAMPolicy):
                     document = resource.policy.document
-                return APICall('create_role',
-                               {'name': resource.role_name,
-                                'trust_policy': resource.trust_policy,
-                                'policy': document},
-                               '%s_role_arn' % resource.role_name,
-                               resource)
+                return APICall(
+                    method_name='create_role',
+                    params={'name': resource.role_name,
+                            'trust_policy': resource.trust_policy,
+                            'policy': document},
+                    target_variable='%s_role_arn' % resource.role_name,
+                    resource=resource)
         # This is to make mypy happy, otherwise it complains
         # about a missing return statement.
         return None
@@ -391,15 +392,15 @@ class PlanStage(object):
 
 class APICall(object):
     def __init__(self,
-                 method_name,    # type: str
-                 params,         # type: Dict[str, Any]
-                 output=None,    # type: Optional[str]
-                 resource=None,  # type: Optional[models.ManagedModel]
+                 method_name,           # type: str
+                 params,                # type: Dict[str, Any]
+                 target_variable=None,  # type: Optional[str]
+                 resource=None,         # type: Optional[models.ManagedModel]
                  ):
         # type: (...) -> None
         self.method_name = method_name
         self.params = params
-        self.output = output
+        self.target_variable = target_variable
         self.resource = resource
 
     def __repr__(self):
@@ -429,8 +430,8 @@ class Executor(object):
             final_kwargs = self._resolve_variables(api_call.params)
             method = getattr(self._client, api_call.method_name)
             result = method(**final_kwargs)
-            if api_call.output is not None:
-                varname = api_call.output
+            if api_call.target_variable is not None:
+                varname = api_call.target_variable
                 self.variables[varname] = result
                 if api_call.resource is not None:
                     name = api_call.resource.resource_name
