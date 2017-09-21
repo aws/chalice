@@ -18,7 +18,7 @@ from chalice.deploy.newdeployer import Deployer
 from chalice.deploy.newdeployer import BaseDeployStep
 from chalice.deploy.newdeployer import BuildStage
 from chalice.deploy.newdeployer import DependencyBuilder
-from chalice.deploy.newdeployer import ResourceGraphBuilder
+from chalice.deploy.newdeployer import ApplicationGraphBuilder
 from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator
 from chalice.deploy.newdeployer import PlanStage, APICall
@@ -98,7 +98,7 @@ def test_can_build_resource_with_dag_deps():
     assert deps == [shared_leaf, first_parent, second_parent]
 
 
-class TestResourceGraphBuilder(object):
+class TestApplicationGraphBuilder(object):
 
     def create_config(self, app, iam_role_arn=None, policy_file=None,
                       autogen_policy=False):
@@ -126,7 +126,7 @@ class TestResourceGraphBuilder(object):
 
     def test_can_build_single_lambda_function_app(self, lambda_app):
         # This is the simplest configuration we can get.
-        builder = ResourceGraphBuilder()
+        builder = ApplicationGraphBuilder()
         config = self.create_config(lambda_app, iam_role_arn='role:arn')
         application = builder.build(config, stage_name='dev')
         # The top level resource is always an Application.
@@ -153,7 +153,7 @@ class TestResourceGraphBuilder(object):
         def bar(event, context):
             return {}
 
-        builder = ResourceGraphBuilder()
+        builder = ApplicationGraphBuilder()
         config = self.create_config(lambda_app, iam_role_arn='role:arn')
         application = builder.build(config, stage_name='dev')
         assert len(application.resources) == 2
@@ -168,7 +168,7 @@ class TestResourceGraphBuilder(object):
         # for an ManagedIAMRole.  The various combinations for role
         # configuration is all tested via RoleTestCase.
         config = self.create_config(lambda_app, autogen_policy=True)
-        builder = ResourceGraphBuilder()
+        builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
         function = application.resources[0]
         role = function.role
@@ -371,7 +371,7 @@ ROLE_TEST_CASES = [
 @pytest.mark.parametrize('case', ROLE_TEST_CASES)
 def test_role_creation(case):
     _, config = case.build()
-    builder = ResourceGraphBuilder()
+    builder = ApplicationGraphBuilder()
     application = builder.build(config, stage_name='dev')
     case.assert_required_roles_created(application)
 
@@ -648,7 +648,7 @@ def test_build_stage():
 
 class TestDeployer(unittest.TestCase):
     def setUp(self):
-        self.resource_builder = mock.Mock(spec=ResourceGraphBuilder)
+        self.resource_builder = mock.Mock(spec=ApplicationGraphBuilder)
         self.deps_builder = mock.Mock(spec=DependencyBuilder)
         self.build_stage = mock.Mock(spec=BuildStage)
         self.plan_stage = mock.Mock(spec=PlanStage)

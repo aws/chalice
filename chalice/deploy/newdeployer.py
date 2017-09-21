@@ -1,6 +1,6 @@
 """Chalice deployer module.
 
-The deployment system in chalice is broken down into  a pipeline of multiple
+The deployment system in chalice is broken down into a pipeline of multiple
 stages.  Each stage takes the input and transforms it to some other form.  The
 reason for this is so that each stage can stay simple and focused on only a
 single part of the deployment process.  This makes the code easier to follow
@@ -11,8 +11,8 @@ extract out into higher levels of abstraction.
 
 These are the stages of the deployment process.
 
-Resource Builder
-================
+Application Graph Builder
+=========================
 
 The first stage is the resource graph builder.  This takes the objects in the
 ``Chalice`` app and structures them into an ``Application`` object which
@@ -110,7 +110,7 @@ def create_default_deployer(session):
         pip_runner=pip_runner
     )
     return Deployer(
-        resource_builder=ResourceGraphBuilder(),
+        resource_builder=ApplicationGraphBuilder(),
         deps_builder=DependencyBuilder(),
         build_stage=BuildStage(
             steps=[
@@ -138,7 +138,7 @@ def create_default_deployer(session):
 
 class Deployer(object):
     def __init__(self,
-                 resource_builder,  # type: ResourceGraphBuilder
+                 resource_builder,  # type: ApplicationGraphBuilder
                  deps_builder,      # type: DependencyBuilder
                  build_stage,       # type: BuildStage
                  plan_stage,        # type: PlanStage
@@ -161,7 +161,7 @@ class Deployer(object):
         return {'resources': self._executor.resources}
 
 
-class ResourceGraphBuilder(object):
+class ApplicationGraphBuilder(object):
     def __init__(self):
         # type: () -> None
         pass
