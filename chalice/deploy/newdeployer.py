@@ -429,6 +429,7 @@ class Executor(object):
         for api_call in api_calls:
             final_kwargs = self._resolve_variables(api_call.params)
             method = getattr(self._client, api_call.method_name)
+            # TODO: we need proper error handling here.
             result = method(**final_kwargs)
             if api_call.target_variable is not None:
                 varname = api_call.target_variable
