@@ -2,9 +2,9 @@ import enum
 from attr import attrs, attrib
 
 
-class DeployPhase(enum.Enum):
-    BUILD = 'build'
-    DEPLOY = 'deploy'
+class Placeholder(enum.Enum):
+    BUILD_STAGE = 'build_stage'
+    DEPLOY_STAGE = 'deploy_stage'
 
 
 class Model(object):

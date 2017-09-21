@@ -143,7 +143,7 @@ class TestApplicationGraphBuilder(object):
             timeout=None,
             memory_size=None,
             deployment_package=models.DeploymentPackage(
-                models.DeployPhase.BUILD),
+                models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
         )
 
@@ -177,10 +177,10 @@ class TestApplicationGraphBuilder(object):
         assert isinstance(role, models.ManagedIAMRole)
         assert role == models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.DeployPhase.DEPLOY,
+            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='lambda-only-dev',
             trust_policy=LAMBDA_TRUST_POLICY,
-            policy=models.AutoGenIAMPolicy(models.DeployPhase.BUILD),
+            policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
         )
 
 
@@ -433,7 +433,7 @@ class TestPolicyGeneratorStage(object):
     def test_invokes_policy_generator(self):
         generator = mock.Mock(spec=AppPolicyGenerator)
         generator.generate_policy.return_value = {'policy': 'doc'}
-        policy = models.AutoGenIAMPolicy(models.DeployPhase.BUILD)
+        policy = models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE)
         config = Config.create()
 
         p = PolicyGenerator(generator)
@@ -459,7 +459,7 @@ class TestDeploymentPackager(object):
         generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
         generator.create_deployment_package.return_value = 'package.zip'
 
-        package = models.DeploymentPackage(models.DeployPhase.BUILD)
+        package = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
         config = Config.create()
 
         p = DeploymentPackager(generator)
@@ -488,7 +488,7 @@ class TestPlanStage(object):
         planner = PlanStage(mock_client, mock_osutils)
         resource = models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.DeployPhase.DEPLOY,
+            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='myrole',
             trust_policy={'trust': 'policy'},
             policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
@@ -510,7 +510,7 @@ class TestPlanStage(object):
         planner = PlanStage(mock_client, mock_osutils)
         resource = models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.DeployPhase.DEPLOY,
+            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='myrole',
             trust_policy={'trust': 'policy'},
             policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
@@ -553,7 +553,7 @@ class TestPlanStage(object):
         function = create_function_resource('function_name')
         function.role = models.ManagedIAMRole(
             resource_name='myrole',
-            role_arn=models.DeployPhase.DEPLOY,
+            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='myrole-dev',
             trust_policy={'trust': 'policy'},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
@@ -631,14 +631,14 @@ class TestInvoker(object):
 
     def test_validates_no_unresolved_deploy_vars(self, mock_client):
         function = create_function_resource('myfunction')
-        params = {'zip_contents': models.DeployPhase.BUILD}
+        params = {'zip_contents': models.Placeholder.BUILD_STAGE}
         call = APICall('create_function', params,
                        target_variable='myfunction_arn',
                        resource=function)
         mock_client.create_function.return_value = 'function:arn'
         executor = Executor(mock_client)
         # We should raise an exception because a param has
-        # a models.DeployPhase.BUILD value which should have
+        # a models.Placeholder.BUILD_STAGE value which should have
         # been handled in an earlier stage.
         with pytest.raises(UnresolvedValueError):
             executor.execute([call])
