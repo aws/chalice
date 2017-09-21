@@ -1,13 +1,13 @@
 from typing import List, Dict, Any, TypeVar, Union
 import enum
 
-class DeployPhase(enum.Enum):
-    BUILD = 'build'
-    DEPLOY = 'deploy'
+class Placeholder(enum.Enum):
+    BUILD_STAGE = 'build_stage'
+    DEPLOY_STAGE = 'deploy_stage'
 
 
 T = TypeVar('T')
-DV = Union[DeployPhase, T]
+DV = Union[Placeholder, T]
 STR_MAP = Dict[str, str]
 
 
