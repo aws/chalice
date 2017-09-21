@@ -136,6 +136,20 @@ def create_default_deployer(session):
     )
 
 
+class UnresolvedValueError(Exception):
+    MSG = (
+        "The API parameter '%s' has an unresolved value "
+        "of %s in the method call: %s"
+    )
+
+    def __init__(self, key, value, method_name):
+        msg = self.MSG % (key, value, method_name)
+        super(UnresolvedValueError, self).__init__(msg)
+        self.key = key
+        self.value = value
+        self.method_name = method_name
+
+
 class Deployer(object):
     def __init__(self,
                  resource_builder,  # type: ApplicationGraphBuilder
@@ -427,7 +441,7 @@ class Executor(object):
     def execute(self, api_calls):
         # type: (List[APICall]) -> None
         for api_call in api_calls:
-            final_kwargs = self._resolve_variables(api_call.params)
+            final_kwargs = self._resolve_variables(api_call)
             method = getattr(self._client, api_call.method_name)
             # TODO: we need proper error handling here.
             result = method(**final_kwargs)
@@ -442,12 +456,14 @@ class Executor(object):
                     )
                     mapping[varname] = result
 
-    def _resolve_variables(self, params):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+    def _resolve_variables(self, api_call):
+        # type: (APICall) -> Dict[str, Any]
         final = {}
-        for key, value in params.items():
+        for key, value in api_call.params.items():
             if isinstance(value, Variable):
                 final[key] = self.variables[value.name]
+            elif isinstance(value, models.DeployPhase):
+                raise UnresolvedValueError(key, value, api_call.method_name)
             else:
                 final[key] = value
         return final

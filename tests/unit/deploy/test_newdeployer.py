@@ -23,6 +23,7 @@ from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator
 from chalice.deploy.newdeployer import PlanStage, APICall
 from chalice.deploy.newdeployer import Executor, Variable
+from chalice.deploy.newdeployer import UnresolvedValueError
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 
@@ -627,6 +628,20 @@ class TestInvoker(object):
             'myfunction_arn': 'function:arn',
             'resource_type': 'lambda_function',
         }
+
+    def test_validates_no_unresolved_deploy_vars(self, mock_client):
+        function = create_function_resource('myfunction')
+        params = {'zip_contents': models.DeployPhase.BUILD}
+        call = APICall('create_function', params,
+                       target_variable='myfunction_arn',
+                       resource=function)
+        mock_client.create_function.return_value = 'function:arn'
+        executor = Executor(mock_client)
+        # We should raise an exception because a param has
+        # a models.DeployPhase.BUILD value which should have
+        # been handled in an earlier stage.
+        with pytest.raises(UnresolvedValueError):
+            executor.execute([call])
 
 
 def test_build_stage():
