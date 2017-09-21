@@ -525,7 +525,7 @@ class TestPlanStage(object):
         assert len(plan) == 1
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.output == 'function_name_arn'
+        assert call.output == 'function_name_lambda_arn'
         assert call.params == {
             'function_name': 'appname-dev-function_name',
             'role_arn': 'role:arn',
@@ -562,7 +562,7 @@ class TestPlanStage(object):
         assert len(plan) == 1
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.output == 'function_name_arn'
+        assert call.output == 'function_name_lambda_arn'
         assert call.resource == function
         # The params are verified in test_can_create_function,
         # we just care about how the role_arn Variable is constructed.
