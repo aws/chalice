@@ -363,7 +363,7 @@ class PlanStage(object):
              'tags': resource.tags,
              'timeout': resource.timeout,
              'memory_size': resource.memory_size},
-            '%s_arn' % resource.resource_name,
+            '%s_lambda_arn' % resource.resource_name,
             resource,
         )
 
