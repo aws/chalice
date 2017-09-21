@@ -36,18 +36,19 @@ This takes the ordered list of resources and allows any local build processes
 to occur.  The rule of thumb here is no remote AWS calls.  This stage includes
 auto policy generation, pip packaging, injecting default values, etc.  To
 clarify which attributes are affected by the build stage, they'll usually have
-a value of ``models.DeployPhase.BUILD``.  Processors in the build stage will
-replaced those ``models.DeployPhase.BUILD`` values with whatever the "built"
-value is (e.g the filename of the zipped deployment package).
+a value of ``models.Placeholder.BUILD_STAGE``.  Processors in the build stage
+will replaced those ``models.Placeholder.BUILD_STAGE`` values with whatever the
+"built" value is (e.g the filename of the zipped deployment package).
 
-For example, we know when we create a lambda function that we need to create
-a deployment package, but we don't know the name nor contents of the
-deployment package until the ``LambdaDeploymentPackager`` runs.  Therefore,
-the Resource Builder stage can record the fact that it knows that a
-``models.DeploymentPackage`` is needed, but use ``models.DeployPhase.BUILD``
-for the value of the filename.  The enum values aren't strictly necessary,
-they just add clarity about when this value is expected to be filled in.
-These could also just be set to ``None`` and be of type ``Optional[T]``.
+For example, we know when we create a lambda function that we need to create a
+deployment package, but we don't know the name nor contents of the deployment
+package until the ``LambdaDeploymentPackager`` runs.  Therefore, the Resource
+Builder stage can record the fact that it knows that a
+``models.DeploymentPackage`` is needed, but use
+``models.Placeholder.BUILD_STAGE`` for the value of the filename.  The enum
+values aren't strictly necessary, they just add clarity about when this value
+is expected to be filled in.  These could also just be set to ``None`` and be
+of type ``Optional[T]``.
 
 
 Execution Plan Stage
@@ -183,7 +184,7 @@ class ApplicationGraphBuilder(object):
     def build(self, config, stage_name):
         # type: (Config, str) -> models.Application
         resources = []  # type: List[models.Model]
-        deployment = models.DeploymentPackage(models.DeployPhase.BUILD)
+        deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
         for function in config.chalice_app.pure_lambda_functions:
             new_config = config.scope(chalice_stage=config.chalice_stage,
                                       function_name=function.name)
@@ -220,10 +221,11 @@ class ApplicationGraphBuilder(object):
         else:
             resource_name = 'default-role'
             role_name = '%s-%s' % (config.app_name, stage_name)
-            policy = models.AutoGenIAMPolicy(document=models.DeployPhase.BUILD)
+            policy = models.AutoGenIAMPolicy(
+                document=models.Placeholder.BUILD_STAGE)
         return models.ManagedIAMRole(
             resource_name=resource_name,
-            role_arn=models.DeployPhase.DEPLOY,
+            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name=role_name,
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=policy,
@@ -307,7 +309,7 @@ class DeploymentPackager(BaseDeployStep):
 
     def handle_deploymentpackage(self, config, resource):
         # type: (Config, models.DeploymentPackage) -> None
-        if isinstance(resource.filename, models.DeployPhase):
+        if isinstance(resource.filename, models.Placeholder):
             zip_filename = self._packager.create_deployment_package(
                 config.project_dir, config.lambda_python_version
             )
@@ -321,7 +323,7 @@ class PolicyGenerator(BaseDeployStep):
 
     def handle_autogeniampolicy(self, config, resource):
         # type: (Config, models.AutoGenIAMPolicy) -> None
-        if isinstance(resource.document, models.DeployPhase):
+        if isinstance(resource.document, models.Placeholder):
             resource.document = self._policy_gen.generate_policy(config)
 
 
@@ -363,7 +365,7 @@ class PlanStage(object):
         if isinstance(resource.role, models.PreCreatedIAMRole):
             role_arn = resource.role.role_arn
         elif isinstance(resource.role, models.ManagedIAMRole) and \
-                isinstance(resource.role.role_arn, models.DeployPhase):
+                isinstance(resource.role.role_arn, models.Placeholder):
             role_arn = Variable('%s_role_arn' % resource.role.role_name)
         return APICall(
             method_name='create_function',
@@ -383,7 +385,7 @@ class PlanStage(object):
 
     def plan_managediamrole(self, config, resource):
         # type: (Config, models.ManagedIAMRole) -> Optional[APICall]
-        if isinstance(resource.role_arn, models.DeployPhase):
+        if isinstance(resource.role_arn, models.Placeholder):
             try:
                 role_arn = self._client.get_role_arn_for_name(
                     resource.role_name)
@@ -462,7 +464,7 @@ class Executor(object):
         for key, value in api_call.params.items():
             if isinstance(value, Variable):
                 final[key] = self.variables[value.name]
-            elif isinstance(value, models.DeployPhase):
+            elif isinstance(value, models.Placeholder):
                 raise UnresolvedValueError(key, value, api_call.method_name)
             else:
                 final[key] = value
