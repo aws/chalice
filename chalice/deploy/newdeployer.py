@@ -144,6 +144,7 @@ class UnresolvedValueError(Exception):
     )
 
     def __init__(self, key, value, method_name):
+        # type: (str, models.Placeholder, str) -> None
         msg = self.MSG % (key, value, method_name)
         super(UnresolvedValueError, self).__init__(msg)
         self.key = key
