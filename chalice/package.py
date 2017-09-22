@@ -15,7 +15,7 @@ from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.utils import OSUtils, UI
 from chalice.config import Config  # noqa
-from chalice.app import Chalice  # noqa
+from chalice.app import Chalice, Rate  # noqa
 from chalice.policy import AppPolicyGenerator
 
 
@@ -94,14 +94,44 @@ class SAMTemplateGenerator(object):
         # type: (Config, str) -> Dict[str, Any]
         self._check_for_unsupported_features(config)
         template = copy.deepcopy(self._BASE_TEMPLATE)
+        chalice_app = config.chalice_app
         resources = {
             'APIHandler': self._generate_serverless_function(config, code_uri),
             'RestAPI': self._generate_rest_api(
-                config.chalice_app, config.api_gateway_stage),
+                chalice_app, config.api_gateway_stage),
         }
+
+        # Generate resources for pure_lambda functions
+        self._generate_additional_functions(code_uri,
+                                            config,
+                                            chalice_app.pure_lambda_functions,
+                                            resources,
+                                            'pure_lambda')
+
+        # Generate resources for schedule events functions
+        self._generate_additional_functions(code_uri,
+                                            config,
+                                            chalice_app.event_sources,
+                                            resources,
+                                            'event')
+
         template['Resources'] = resources
         self._update_endpoint_url_output(template, config)
         return template
+
+    def _generate_additional_functions(self, code_uri, config,
+                                       funcs, resources, event_type):
+        for func in funcs:
+            gen_func = self._generate_serverless_function(
+                config=config,
+                code_uri=code_uri,
+                handler=func.handler_string,
+                event_type=event_type)
+
+            # CFN doesn't allow special characters.
+            # If function name has '_', remove it
+            resource_key = re.sub(r'[^A-Za-z0-9]+', '', func.name)
+            resources[resource_key] = gen_func
 
     def _check_for_unsupported_features(self, config):
         # type: (Config) -> None
@@ -124,17 +154,28 @@ class SAMTemplateGenerator(object):
         template['Outputs']['EndpointURL']['Value']['Fn::Sub'] = (
             url % config.api_gateway_stage)
 
-    def _generate_serverless_function(self, config, code_uri):
+    def _generate_serverless_function(self, config,
+                                      code_uri,
+                                      handler='app.app',
+                                      event_type='api'):
+
         # type: (Config, str) -> Dict[str, Any]
         properties = {
             'Runtime': config.lambda_python_version,
-            'Handler': 'app.app',
+            'Handler': handler,
             'CodeUri': code_uri,
-            'Events': self._generate_function_events(config.chalice_app),
             'Tags': config.tags,
             'Timeout': DEFAULT_LAMBDA_TIMEOUT,
             'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }
+
+        func_events = self._generate_function_events(config.chalice_app,
+                                                     event_type=event_type)
+
+        # For pure_lambda functions there will be no events
+        if func_events:
+            properties['Events'] = func_events
+
         if config.environment_variables:
             properties['Environment'] = {
                 'Variables': config.environment_variables
@@ -152,26 +193,50 @@ class SAMTemplateGenerator(object):
             'Properties': properties,
         }
 
-    def _generate_function_events(self, app):
+    def _generate_function_events(self, app, event_type='api'):
         # type: (Chalice) -> Dict[str, Any]
         events = {}
-        for methods in app.routes.values():
-            for http_method, view in methods.items():
-                mod_view_name = re.sub(r'[^A-Za-z0-9]+', '', view.view_name)
-                key_name = ''.join([
-                    mod_view_name, http_method.lower(),
-                    hashlib.md5(
-                        view.view_name.encode('utf-8')).hexdigest()[:4],
-                ])
-                events[key_name] = {
-                    'Type': 'Api',
+
+        if event_type == 'pure_lambda':
+            return events
+
+        if event_type == 'api':
+            for methods in app.routes.values():
+                for http_method, view in methods.items():
+                    mod_vname = re.sub(r'[^A-Za-z0-9]+', '', view.view_name)
+                    key_name = ''.join([
+                        mod_vname, http_method.lower(),
+                        hashlib.md5(
+                            view.view_name.encode('utf-8')).hexdigest()[:4],
+                    ])
+                    events[key_name] = {
+                        'Type': 'Api',
+                        'Properties': {
+                            'Path': view.uri_pattern,
+                            'RestApiId': {'Ref': 'RestAPI'},
+                            'Method': http_method.lower(),
+                        }
+                    }
+        else:
+            for es in app.event_sources:
+                key_name = 'schduleEvent%s' % es.name
+                # Remove underscores and other special characters
+                mod_key_name = re.sub(r'[^A-Za-z0-9]+', '', key_name)
+                events[mod_key_name] = {
+                    'Type': 'Schedule',
                     'Properties': {
-                        'Path': view.uri_pattern,
-                        'RestApiId': {'Ref': 'RestAPI'},
-                        'Method': http_method.lower(),
+                        'Schedule': self._convert_schedule_expression(
+                            es.schedule_expression)
                     }
                 }
+
         return events
+
+    def _convert_schedule_expression(self, schedule_expression):
+        if isinstance(schedule_expression, Rate):
+            return schedule_expression.to_string()
+
+        return schedule_expression
 
     def _generate_rest_api(self, app, api_gateway_stage):
         # type: (Chalice, str) -> Dict[str, Any]
