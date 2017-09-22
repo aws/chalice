@@ -610,6 +610,14 @@ class TypedAWSClient(object):
                                    ScheduleExpression=schedule_expression)
         return rule_arn['RuleArn']
 
+    def delete_rule(self, rule_name):
+        # type: (str) -> None
+        events = self._client('events')
+
+        # In put_targets call, we have used Id='1'
+        events.remove_targets(Rule=rule_name, Ids=['1'])
+        events.delete_rule(Name=rule_name)
+
     def connect_rule_to_lambda(self, rule_name, function_arn):
         # type: (str, str) -> None
         events = self._client('events')

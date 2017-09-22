@@ -827,6 +827,26 @@ def test_lambda_deployer_delete(ui):
     aws_client.delete_role.assert_called_with('role_name')
 
 
+def test_lambda_deployer_delete_rule(ui):
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
+    lambda_function_name = 'api-handler'
+    deployed = DeployedResources(
+        'api', 'api_handler_arn/lambda_name', lambda_function_name,
+        None, 'dev', None, None, {'name': {'arn': 'schedule-arn',
+                                           'type': 'scheduled_event'}})
+    ui.confirm.return_value = True
+    d = LambdaDeployer(
+        aws_client, None, ui, None, None)
+    d.delete(deployed)
+
+    assert aws_client.delete_function.call_args_list == [
+        mock.call('api-handler'),
+        mock.call('schedule-arn'),
+    ]
+    aws_client.delete_rule.assert_called_with(rule_name='name')
+
+
 def test_lambda_deployer_delete_already_deleted(ui):
     lambda_function_name = 'lambda_name'
     aws_client = mock.Mock(spec=TypedAWSClient)

@@ -417,6 +417,7 @@ class LambdaDeployer(object):
         # type: (DeployedResources) -> None
         self._delete_api_handler(existing_resources)
         self._delete_auth_handlers(existing_resources)
+        self._delete_cloudwatch_events(existing_resources)
         role_arn = self._get_lambda_role_arn(
             existing_resources.api_handler_name)
         if role_arn is not None:
@@ -427,6 +428,18 @@ class LambdaDeployer(object):
                 self._ui.write('Deleting role name %s\n' % role_name)
                 LOGGER.debug("Deleting role: %s", role_name)
                 self._aws_client.delete_role(role_name)
+
+    def _delete_cloudwatch_events(self, existing_resources):
+        # type: (DeployedResources) -> None
+        self._ui.write('Deleting cloud watch events\n')
+        funcs = existing_resources.lambda_functions
+        if not funcs:
+            return
+        for event_key in funcs.keys():
+            if 'type' in funcs[event_key] \
+                    and funcs[event_key]['type'] == 'scheduled_event':
+                self._ui.write('Deleting cloud watch event %s\n' % event_key)
+                self._aws_client.delete_rule(rule_name=event_key)
 
     def _delete_api_handler(self, existing_resources):
         # type: (DeployedResources) -> None
