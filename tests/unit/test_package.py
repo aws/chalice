@@ -324,7 +324,7 @@ def test_can_generate_sam_for_events(sample_app,
 
     @sample_app.schedule('rate(1 hour)')
     def every_hour(event):
-        print event.to_dict()
+        return {}
 
     p = package.SAMTemplateGenerator(
         mock_swagger_generator, mock_policy_generator)
@@ -333,7 +333,7 @@ def test_can_generate_sam_for_events(sample_app,
     }
     config = Config.create(chalice_app=sample_app,
                            api_gateway_stage='dev',
-                           app_name='pure_lambda_func')
+                           app_name='scheduled_event')
     template = p.generate_sam_template(config)
     assert 'everyhour' in template['Resources']
     handler = template['Resources']['everyhour']['Properties']['Handler']
