@@ -10,6 +10,8 @@ Next Release (TBD)
   (`#525 <https://github.com/aws/chalice/issues/525>`__)
 * Add ``--stage`` parameter to ``chalice local``
   (`#545 <https://github.com/aws/chalice/issues/545>`__)
+* Fix issue with analyzer that followed recursive functions infinitely
+  (`#531 <https://github.com/aws/chalice/issues/531>`__)
 
 
 1.0.2
