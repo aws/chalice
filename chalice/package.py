@@ -4,7 +4,7 @@ import json
 import hashlib
 import re
 
-from typing import Any, Dict  # noqa
+from typing import Any, Dict, List, Union  # noqa
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
@@ -15,7 +15,8 @@ from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.utils import OSUtils, UI
 from chalice.config import Config  # noqa
-from chalice.app import Chalice, Rate  # noqa
+from chalice.app import Chalice, Rate   # noqa
+from chalice.app import ScheduleExpression as Se # noqa
 from chalice.policy import AppPolicyGenerator
 
 
@@ -121,6 +122,7 @@ class SAMTemplateGenerator(object):
 
     def _generate_additional_functions(self, code_uri, config,
                                        funcs, resources, event_type):
+        # type: (str, Config, List[Any], Dict[str, Any], str) -> None
         for func in funcs:
             gen_func = self._generate_serverless_function(
                 config=config,
@@ -159,7 +161,7 @@ class SAMTemplateGenerator(object):
                                       handler='app.app',
                                       event_type='api'):
 
-        # type: (Config, str) -> Dict[str, Any]
+        # type: (Config, str, str, str) -> Dict[str, Any]
         properties = {
             'Runtime': config.lambda_python_version,
             'Handler': handler,
@@ -194,9 +196,9 @@ class SAMTemplateGenerator(object):
         }
 
     def _generate_function_events(self, app, event_type='api'):
-        # type: (Chalice) -> Dict[str, Any]
-        events = {}
+        # type: (Chalice, str) -> Dict[str, Any]
 
+        events = {}  # type: Dict[str, Any]
         if event_type == 'pure_lambda':
             return events
 
@@ -233,6 +235,7 @@ class SAMTemplateGenerator(object):
         return events
 
     def _convert_schedule_expression(self, schedule_expression):
+        # type: (Union[str, Se]) -> (Union[str, Se])
         if isinstance(schedule_expression, Rate):
             return schedule_expression.to_string()
 
