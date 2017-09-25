@@ -111,7 +111,7 @@ def create_default_deployer(session):
         pip_runner=pip_runner
     )
     return Deployer(
-        resource_builder=ApplicationGraphBuilder(),
+        application_builder=ApplicationGraphBuilder(),
         deps_builder=DependencyBuilder(),
         build_stage=BuildStage(
             steps=[
@@ -154,14 +154,14 @@ class UnresolvedValueError(Exception):
 
 class Deployer(object):
     def __init__(self,
-                 resource_builder,  # type: ApplicationGraphBuilder
-                 deps_builder,      # type: DependencyBuilder
-                 build_stage,       # type: BuildStage
-                 plan_stage,        # type: PlanStage
-                 executor,          # type: Executor
+                 application_builder,  # type: ApplicationGraphBuilder
+                 deps_builder,         # type: DependencyBuilder
+                 build_stage,          # type: BuildStage
+                 plan_stage,           # type: PlanStage
+                 executor,             # type: Executor
                  ):
         # type: (...) -> None
-        self._resource_builder = resource_builder
+        self._application_builder = application_builder
         self._deps_builder = deps_builder
         self._build_stage = build_stage
         self._plan_stage = plan_stage
@@ -169,7 +169,8 @@ class Deployer(object):
 
     def deploy(self, config, chalice_stage_name):
         # type: (Config, str) -> Dict[str, Any]
-        application = self._resource_builder.build(config, chalice_stage_name)
+        application = self._application_builder.build(
+            config, chalice_stage_name)
         resources = self._deps_builder.build_dependencies(application)
         self._build_stage.execute(config, resources)
         plan = self._plan_stage.execute(config, resources)
