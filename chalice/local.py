@@ -458,7 +458,11 @@ class LocalGateway(object):
             # No options route was defined for this path. API Gateway should
             # automatically generate our CORS headers.
             options_headers = self._autogen_options_headers(lambda_event)
-            raise NoOptionsRouteDefined(options_headers)
+            return {
+                'statusCode': 200,
+                'headers': options_headers,
+                'body': None
+            }
         # The authorizer call will be a noop if there is no authorizer method
         # defined for route. Otherwise it will raise a ForbiddenError
         # which will be caught by the handler that called this and a 403 or
