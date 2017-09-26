@@ -931,11 +931,12 @@ class ApplicationPolicyHandler(object):
     def record_policy(self, config, policy_document):
         # type: (Config, Dict[str, Any]) -> None
         policy_file = self._app_policy_file(config)
-        self._osutils.set_file_contents(
-            policy_file,
-            json.dumps(policy_document, indent=2, separators=(',', ': ')),
-            binary=False
-        )
+        policy_json = json.dumps(
+            policy_document,
+            indent=2,
+            separators=(',', ': ')
+        ) + '\n'
+        self._osutils.set_file_contents(policy_file, policy_json, binary=False)
 
     def _app_policy_file(self, config):
         # type: (Config) -> str

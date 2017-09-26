@@ -53,7 +53,11 @@ def record_deployed_values(deployed_values, filename):
             final_values = json.load(f)
     final_values.update(deployed_values)
     with open(filename, 'wb') as f:
-        data = json.dumps(final_values, indent=2, separators=(',', ': '))
+        data = json.dumps(
+            final_values,
+            indent=2,
+            separators=(',', ': ')
+        ) + '\n'
         f.write(data.encode('utf-8'))
 
 
