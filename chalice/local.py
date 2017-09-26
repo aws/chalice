@@ -200,10 +200,6 @@ class NotAuthorizedError(LocalGatewayException):
     CODE = 401
 
 
-class NoOptionsRouteDefined(LocalGatewayException):
-    CODE = 403
-
-
 class LambdaContext(object):
     def __init__(self, function_name, memory_size,
                  max_runtime_ms=3000, time_source=None):
