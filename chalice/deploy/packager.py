@@ -469,6 +469,11 @@ class Package(object):
         # The directory format is {distribution}-{version}.data
         return '%s-%s.data' % (self._name, self._version)
 
+    def _normalize_name(self, name):
+        # type: (str) -> str
+        # Taken directly from PEP 503
+        return re.sub(r"[-_.]+", "-", name).lower()
+
     @property
     def identifier(self):
         # type: () -> str
@@ -499,7 +504,7 @@ class Package(object):
             # {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-
             # {platform tag}.whl
             name, version = self.filename.split('-')[:2]
-            name = name.replace('_', '-')
+            name = self._normalize_name(name)
         else:
             info_fetcher = SDistMetadataFetcher(osutils=self._osutils)
             sdist_path = self._osutils.joinpath(self._directory, self.filename)

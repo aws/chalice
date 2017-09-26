@@ -39,6 +39,22 @@ def _get_random_package_name():
 
 
 class TestPackage(object):
+    def test_can_package_with_dashes_in_name(self, runner, app_skeleton):
+        req = os.path.join(app_skeleton, 'requirements.txt')
+        package = 'googleapis-common-protos==1.5.2'
+        with open(req, 'w') as f:
+            f.write('%s\n' % package)
+        cli_factory = factory.CLIFactory(app_skeleton)
+        package_output_location = os.path.join(app_skeleton, 'pkg')
+        print(package_output_location)
+        result = runner.invoke(
+            cli.package, [package_output_location],
+            obj={'project_dir': app_skeleton,
+                 'debug': False,
+                 'factory': cli_factory})
+        assert result.exit_code == 0
+        assert result.output.strip() == 'Creating deployment package.'
+
     def test_does_not_package_bad_requirements_file(
             self, runner, app_skeleton):
         req = os.path.join(app_skeleton, 'requirements.txt')
