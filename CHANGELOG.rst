@@ -5,6 +5,8 @@ CHANGELOG
 Next Release (TBD)
 ==================
 
+* Fix issue where chalice local returned a 403 for successful OPTIONS requests
+  (`#554 <https://github.com/aws/chalice/pull/554>`__)
 * Fix issue with chalice local mode causing http clients to hang on responses
   with no body
   (`#525 <https://github.com/aws/chalice/issues/525>`__)
