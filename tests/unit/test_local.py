@@ -345,6 +345,7 @@ def test_will_respond_with_custom_cors_enabled(handler):
                         headers=headers)
     handler.do_GET()
     response = handler.wfile.getvalue().splitlines()
+    assert b'HTTP/1.1 200 OK' in response
     assert b'Access-Control-Allow-Origin: https://foo.bar' in response
     assert (b'Access-Control-Allow-Headers: Authorization,Content-Type,'
             b'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
@@ -360,6 +361,7 @@ def test_will_respond_with_custom_cors_enabled_options(handler):
                         headers=headers)
     handler.do_OPTIONS()
     response = handler.wfile.getvalue().decode().splitlines()
+    assert 'HTTP/1.1 200 OK' in response
     assert 'Access-Control-Allow-Origin: https://foo.bar' in response
     assert ('Access-Control-Allow-Headers: Authorization,Content-Type,'
             'Header-A,Header-B,X-Amz-Date,X-Amz-Security-Token,'
