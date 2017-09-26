@@ -118,6 +118,10 @@ class TestPackage(object):
         pkg = Package('', 'foobar-2.0-py3-none-any.whl')
         assert pkg.data_dir == 'foobar-2.0.data'
 
+    def test_can_read_packages_with_underscore_in_name(slef):
+        pkg = Package('', 'foo_bar-2.0-py3-none-any.whl')
+        assert pkg.identifier == 'foo-bar==2.0'
+
 
 class TestSubprocessPip(object):
     def test_can_invoke_pip(self):

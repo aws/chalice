@@ -499,6 +499,7 @@ class Package(object):
             # {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-
             # {platform tag}.whl
             name, version = self.filename.split('-')[:2]
+            name = name.replace('_', '-')
         else:
             info_fetcher = SDistMetadataFetcher(osutils=self._osutils)
             sdist_path = self._osutils.joinpath(self._directory, self.filename)
