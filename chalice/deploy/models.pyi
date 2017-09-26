@@ -67,7 +67,7 @@ class AutoGenIAMPolicy(IAMPolicy):
 
 
 class IAMRole(Model):
-    pass
+    role_arn = ... # type: DV[str]
 
 
 class PreCreatedIAMRole(IAMRole):
