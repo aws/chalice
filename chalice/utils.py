@@ -33,7 +33,7 @@ def remove_stage_from_deployed_values(key, filename):
     try:
         del final_values[key]
         with open(filename, 'wb') as f:
-            data = json.dumps(final_values, indent=2, separators=(',', ': '))
+            data = serialize_to_json(final_values)
             f.write(data.encode('utf-8'))
     except KeyError:
         # If they key didn't exist then there is nothing to remove.
@@ -53,8 +53,20 @@ def record_deployed_values(deployed_values, filename):
             final_values = json.load(f)
     final_values.update(deployed_values)
     with open(filename, 'wb') as f:
-        data = json.dumps(final_values, indent=2, separators=(',', ': '))
+        data = serialize_to_json(final_values)
         f.write(data.encode('utf-8'))
+
+
+def serialize_to_json(data):
+    # type: (Any) -> str
+    """Serialize to pretty printed JSON.
+
+    This includes using 2 space indentation, no trailing whitespace, and
+    including a newline at the end of the JSON document.  Useful when you want
+    to serialize JSON to disk.
+
+    """
+    return json.dumps(data, indent=2, separators=(',', ': ')) + '\n'
 
 
 def create_zip_file(source_dir, outfile):

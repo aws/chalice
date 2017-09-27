@@ -867,6 +867,44 @@ def test_lambda_deployer_delete_already_deleted(ui):
     aws_client.delete_function.assert_called_with(lambda_function_name)
 
 
+def test_can_reject_policy_change(sample_app, ui):
+    app_policy = mock.Mock(spec=ApplicationPolicyHandler)
+    app_policy.generate_policy_from_app_source.return_value = {
+        'Statement': [{'policy': 1}, {'policy': 2}],
+    }
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    packager = mock.Mock(spec=LambdaDeploymentPackager)
+    aws_client.get_role_arn_for_name.side_effect = ResourceDoesNotExistError(
+        'function-name')
+
+    cfg = Config.create(
+        chalice_stage='dev',
+        chalice_app=sample_app,
+        manage_iam_role=True,
+        app_name='appname',
+        project_dir='.',
+    )
+    ui.confirm.side_effect = RuntimeError("Aborted")
+
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
+    with pytest.raises(RuntimeError):
+        d.deploy(cfg, existing_resources=None, stage_name='dev')
+    # Assert the policy was written to stdout
+    ui.write.assert_called_with(
+        '{\n'
+        '  "Statement": [\n'
+        '    {\n'
+        '      "policy": 1\n'
+        '    },\n'
+        '    {\n'
+        '      "policy": 2\n'
+        '    }\n'
+        '  ]\n'
+        '}\n'
+    )
+
+
 def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app,
                                                       ui):
     osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
