@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.0.3
+=====
 
 * Fix issue with some packages with `-` or `.` in their distribution name
   (`#555 <https://github.com/aws/chalice/pull/555>`__)
