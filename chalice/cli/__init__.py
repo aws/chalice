@@ -3,7 +3,6 @@
 Contains commands for deploying chalice.
 
 """
-import json
 import logging
 import os
 import sys
@@ -24,7 +23,7 @@ from chalice.utils import create_zip_file
 from chalice.utils import record_deployed_values
 from chalice.utils import remove_stage_from_deployed_values
 from chalice.deploy.deployer import validate_python_version
-from chalice.utils import getting_started_prompt, UI
+from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
@@ -47,7 +46,7 @@ def create_new_project_skeleton(project_name, profile=None):
     if profile is not None:
         cfg['profile'] = profile
     with open(config, 'w') as f:
-        f.write(json.dumps(cfg, indent=2))
+        f.write(serialize_to_json(cfg))
     with open(os.path.join(project_name, 'requirements.txt'), 'w'):
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
@@ -185,7 +184,7 @@ def gen_policy(ctx, filename):
     with open(filename) as f:
         contents = f.read()
         generated = policy.policy_from_source_code(contents)
-        click.echo(json.dumps(generated, indent=2))
+        click.echo(serialize_to_json(generated))
 
 
 @cli.command('new-project')
@@ -303,7 +302,7 @@ def generate_pipeline(ctx, filename):
     config = factory.create_config_obj()
     output = create_pipeline_template(config)
     with open(filename, 'w') as f:
-        f.write(json.dumps(output, indent=2, separators=(',', ': ')))
+        f.write(serialize_to_json(output))
 
 
 def main():

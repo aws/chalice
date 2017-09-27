@@ -35,3 +35,11 @@ class TestUI(object):
         ui = utils.UI(self.out, self.err, confirm)
         return_value = ui.confirm("Confirm?")
         assert return_value == 'foo'
+
+
+def test_serialize_json():
+    assert utils.serialize_to_json({'foo': 'bar'}) == (
+        '{\n'
+        '  "foo": "bar"\n'
+        '}\n'
+    )

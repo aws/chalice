@@ -1,6 +1,5 @@
 import os
 import copy
-import json
 import hashlib
 import re
 
@@ -13,7 +12,7 @@ from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
-from chalice.utils import OSUtils, UI
+from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.config import Config  # noqa
 from chalice.app import Chalice  # noqa
 from chalice.policy import AppPolicyGenerator
@@ -201,7 +200,7 @@ class AppPackager(object):
 
     def _to_json(self, doc):
         # type: (Any) -> str
-        return json.dumps(doc, indent=2, separators=(',', ': '))
+        return serialize_to_json(doc)
 
     def package_app(self, config, outdir):
         # type: (Config, str) -> None

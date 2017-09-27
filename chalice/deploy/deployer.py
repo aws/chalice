@@ -30,7 +30,7 @@ from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.swagger import SwaggerGenerator
-from chalice.utils import OSUtils, UI
+from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.constants import DEFAULT_STAGE_NAME, LAMBDA_TRUST_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
@@ -764,7 +764,7 @@ class LambdaDeployer(object):
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
             self._ui.write("The following execution policy will be used:\n")
-            self._ui.write(json.dumps(app_policy, indent=2))
+            self._ui.write(serialize_to_json(app_policy))
             self._ui.confirm("Would you like to continue? ",
                              default=True, abort=True)
         role_arn = self._aws_client.create_role(
@@ -931,11 +931,7 @@ class ApplicationPolicyHandler(object):
     def record_policy(self, config, policy_document):
         # type: (Config, Dict[str, Any]) -> None
         policy_file = self._app_policy_file(config)
-        policy_json = json.dumps(
-            policy_document,
-            indent=2,
-            separators=(',', ': ')
-        ) + '\n'
+        policy_json = serialize_to_json(policy_document)
         self._osutils.set_file_contents(policy_file, policy_json, binary=False)
 
     def _app_policy_file(self, config):
