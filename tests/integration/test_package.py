@@ -1,5 +1,6 @@
 import os
 import uuid
+from zipfile import ZipFile
 from contextlib import contextmanager
 
 from click.testing import CliRunner
@@ -46,7 +47,6 @@ class TestPackage(object):
             f.write('%s\n' % package)
         cli_factory = factory.CLIFactory(app_skeleton)
         package_output_location = os.path.join(app_skeleton, 'pkg')
-        print(package_output_location)
         result = runner.invoke(
             cli.package, [package_output_location],
             obj={'project_dir': app_skeleton,
@@ -54,6 +54,10 @@ class TestPackage(object):
                  'factory': cli_factory})
         assert result.exit_code == 0
         assert result.output.strip() == 'Creating deployment package.'
+        package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
+        package_file = ZipFile(package_path)
+        package_content = package_file.namelist()
+        assert 'google/api/__init__.py' in package_content
 
     def test_does_not_package_bad_requirements_file(
             self, runner, app_skeleton):
