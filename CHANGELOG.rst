@@ -5,6 +5,8 @@ CHANGELOG
 Next Release (TBD)
 ==================
 
+* Fix issue with some packages with `-` or `.` in their distribution name
+  (`#555 <https://github.com/aws/chalice/pull/555>`__)
 * Fix issue where chalice local returned a 403 for successful OPTIONS requests
   (`#554 <https://github.com/aws/chalice/pull/554>`__)
 * Fix issue with chalice local mode causing http clients to hang on responses
