@@ -7,6 +7,14 @@ class Placeholder(enum.Enum):
     DEPLOY_STAGE = 'deploy_stage'
 
 
+@attrs(frozen=True)
+class APICall(object):
+    method_name = attrib()
+    params = attrib()
+    target_variable = attrib(default=None)
+    resource = attrib(default=None)
+
+
 class Model(object):
     def dependencies(self):
         return []

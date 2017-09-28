@@ -350,8 +350,8 @@ class PlanStage(object):
         self._osutils = osutils
 
     def execute(self, config, resources):
-        # type: (Config, List[models.Model]) -> List[APICall]
-        plan = []  # type: List[APICall]
+        # type: (Config, List[models.Model]) -> List[models.APICall]
+        plan = []  # type: List[models.APICall]
         for resource in resources:
             name = 'plan_%s' % resource.__class__.__name__.lower()
             handler = getattr(self, name, None)
@@ -362,7 +362,7 @@ class PlanStage(object):
         return plan
 
     def plan_lambdafunction(self, config, resource):
-        # type: (Config, models.LambdaFunction) -> List[APICall]
+        # type: (Config, models.LambdaFunction) -> List[models.APICall]
         role_arn = ''  # type: Optional[Union[str, Variable]]
         if isinstance(resource.role, models.PreCreatedIAMRole):
             role_arn = resource.role.role_arn
@@ -385,13 +385,13 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
             }
             return [
-                APICall(
+                models.APICall(
                     method_name='update_function',
                     params=params,
                     resource=resource,
                 )
             ]
-        return [APICall(
+        return [models.APICall(
             method_name='create_function',
             params={'function_name': resource.function_name,
                     'role_arn': role_arn,
@@ -408,14 +408,14 @@ class PlanStage(object):
         )]
 
     def plan_managediamrole(self, config, resource):
-        # type: (Config, models.ManagedIAMRole) -> List[APICall]
+        # type: (Config, models.ManagedIAMRole) -> List[models.APICall]
         document = self._get_policy_document(resource.policy)
         role_arn = self._get_role_arn(resource)
         if role_arn is not None:
             resource.role_arn = role_arn
         if isinstance(resource.role_arn, models.Placeholder):
             return [
-                APICall(
+                models.APICall(
                     method_name='create_role',
                     params={'name': resource.role_name,
                             'trust_policy': resource.trust_policy,
@@ -424,23 +424,21 @@ class PlanStage(object):
                     resource=resource
                 )
             ]
-        else:
-            return [
-                APICall(
-                    method_name='delete_role_policy',
-                    params={'role_name': resource.role_name,
-                            'policy_name': resource.role_name},
-                    resource=resource
-                ),
-                APICall(
-                    method_name='put_role_policy',
-                    params={'role_name': resource.role_name,
-                            'policy_name': resource.role_name,
-                            'policy_document': document},
-                    resource=resource
-                )
-            ]
-        return []
+        return [
+            models.APICall(
+                method_name='delete_role_policy',
+                params={'role_name': resource.role_name,
+                        'policy_name': resource.role_name},
+                resource=resource
+            ),
+            models.APICall(
+                method_name='put_role_policy',
+                params={'role_name': resource.role_name,
+                        'policy_name': resource.role_name,
+                        'policy_document': document},
+                resource=resource
+            )
+        ]
 
     def _get_role_arn(self, resource):
         # type: (models.ManagedIAMRole) -> Optional[str]
@@ -463,25 +461,6 @@ class PlanStage(object):
         return document
 
 
-class APICall(object):
-    def __init__(self,
-                 method_name,           # type: str
-                 params,                # type: Dict[str, Any]
-                 target_variable=None,  # type: Optional[str]
-                 resource=None,         # type: Optional[models.ManagedModel]
-                 ):
-        # type: (...) -> None
-        self.method_name = method_name
-        self.params = params
-        self.target_variable = target_variable
-        self.resource = resource
-
-    def __repr__(self):
-        # type: () -> str
-        return '%s(%s, %s)' % (self.__class__.__name__,
-                               self.method_name, self.params)
-
-
 class Variable(object):
     def __init__(self, name):
         # type: (str) -> None
@@ -498,7 +477,7 @@ class Executor(object):
         self.resources = {}  # type: Dict[str, Dict[str, Any]]
 
     def execute(self, api_calls):
-        # type: (List[APICall]) -> None
+        # type: (List[models.APICall]) -> None
         for api_call in api_calls:
             final_kwargs = self._resolve_variables(api_call)
             method = getattr(self._client, api_call.method_name)
@@ -516,7 +495,7 @@ class Executor(object):
                     mapping[varname] = result
 
     def _resolve_variables(self, api_call):
-        # type: (APICall) -> Dict[str, Any]
+        # type: (models.APICall) -> Dict[str, Any]
         final = {}
         for key, value in api_call.params.items():
             if isinstance(value, Variable):
