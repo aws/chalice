@@ -83,7 +83,7 @@ is used as the key in the ``deployed.json`` dictionary.
 """
 import os
 
-from typing import List, Set, Dict, Any, Optional, Union  # noqa
+from typing import List, Set, Dict, Any, Optional, Union, cast  # noqa
 from botocore.session import Session  # noqa
 
 from chalice.utils import OSUtils, UI
@@ -93,7 +93,7 @@ from chalice import app  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import PipRunner, SubprocessPip
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
-from chalice.deploy.planner import PlanStage, Variable
+from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
@@ -132,7 +132,7 @@ def create_default_deployer(session):
             ],
         ),
         plan_stage=PlanStage(
-            client=client, osutils=osutils,
+            osutils=osutils, remote_state=RemoteState(client),
         ),
         executor=Executor(client),
     )
@@ -182,7 +182,7 @@ class Deployer(object):
 class ApplicationGraphBuilder(object):
     def __init__(self):
         # type: () -> None
-        pass
+        self._known_roles = {}  # type: Dict[str, models.IAMRole]
 
     def build(self, config, stage_name):
         # type: (Config, str) -> models.Application
@@ -198,6 +198,27 @@ class ApplicationGraphBuilder(object):
         return models.Application(stage_name, resources)
 
     def _get_role_reference(self, config, stage_name, function):
+        # type: (Config, str, app.LambdaFunction) -> models.IAMRole
+        role = self._create_role_reference(config, stage_name, function)
+        role_identifier = self._get_role_identifier(role)
+        if role_identifier in self._known_roles:
+            # If we've already create a models.IAMRole with the same
+            # identifier, we'll use the existing object instead of
+            # creating a new one.
+            return self._known_roles[role_identifier]
+        self._known_roles[role_identifier] = role
+        return role
+
+    def _get_role_identifier(self, role):
+        # type: (models.IAMRole) -> str
+        if isinstance(role, models.PreCreatedIAMRole):
+            return role.role_arn
+        # We know that if it's not a PreCreatedIAMRole, it's
+        # a managed role, so we're using cast() to make mypy happy.
+        role = cast(models.ManagedIAMRole, role)
+        return role.resource_name
+
+    def _create_role_reference(self, config, stage_name, function):
         # type: (Config, str, app.LambdaFunction) -> models.IAMRole
         # First option, the user doesn't want us to manage
         # the role at all.
@@ -276,8 +297,7 @@ class DependencyBuilder(object):
             if id(dep) not in seen:
                 seen.add(id(dep))
                 self._traverse(dep, ordered, seen)
-        if resource not in ordered:
-            ordered.append(resource)
+        ordered.append(resource)
 
 
 class BaseDeployStep(object):
