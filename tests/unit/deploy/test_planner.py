@@ -191,18 +191,9 @@ class TestPlanStageUpdate(BasePlannerTests):
         )
         planner = PlanStage(self.client, self.osutils)
         plan = planner.execute([role])
-        assert len(plan) == 2
+        assert len(plan) == 1
         self.assert_apicall_equals(
             plan[0],
-            models.APICall(
-                method_name='delete_role_policy',
-                params={'role_name': 'myrole',
-                        'policy_name': 'myrole'},
-                resource=role
-            )
-        )
-        self.assert_apicall_equals(
-            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
@@ -224,18 +215,9 @@ class TestPlanStageUpdate(BasePlannerTests):
         self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         planner = PlanStage(self.client, self.osutils)
         plan = planner.execute([role])
-        assert len(plan) == 2
+        assert len(plan) == 1
         self.assert_apicall_equals(
             plan[0],
-            models.APICall(
-                method_name='delete_role_policy',
-                params={'role_name': 'myrole',
-                        'policy_name': 'myrole'},
-                resource=role
-            )
-        )
-        self.assert_apicall_equals(
-            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
@@ -262,20 +244,11 @@ class TestPlanStageUpdate(BasePlannerTests):
         )
         planner = PlanStage(self.client, self.osutils)
         plan = planner.execute([role])
-        assert len(plan) == 2
+        assert len(plan) == 1
         # We've filled in the role arn.
         assert role.role_arn == 'myrole:arn'
         self.assert_apicall_equals(
             plan[0],
-            models.APICall(
-                method_name='delete_role_policy',
-                params={'role_name': 'myrole',
-                        'policy_name': 'myrole'},
-                resource=role
-            )
-        )
-        self.assert_apicall_equals(
-            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
@@ -284,7 +257,3 @@ class TestPlanStageUpdate(BasePlannerTests):
                 resource=role,
             )
         )
-
-
-class TestRemoteState(object):
-    pass
