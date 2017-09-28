@@ -91,12 +91,6 @@ class PlanStage(object):
             ]
         return [
             models.APICall(
-                method_name='delete_role_policy',
-                params={'role_name': resource.role_name,
-                        'policy_name': resource.role_name},
-                resource=resource
-            ),
-            models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': resource.role_name,
                         'policy_name': resource.role_name,
