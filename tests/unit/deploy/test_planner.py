@@ -1,43 +1,62 @@
-from pytest import fixture
 import mock
 
 from chalice.deploy import models
-from chalice.config import Config
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable
 
 
-@fixture
-def mock_client():
-    return mock.Mock(spec=TypedAWSClient)
+class BasePlannerTests(object):
+    def setup_method(self):
+        self.client = mock.Mock(spec=TypedAWSClient)
+        self.osutils = mock.Mock(spec=OSUtils)
+
+    def create_function_resource(self, name, function_name=None,
+                                 environment_variables=None,
+                                 runtime='python2.7', handler='app.app',
+                                 tags=None, timeout=60,
+                                 memory_size=128, deployment_package=None,
+                                 role=None):
+        if function_name is None:
+            function_name = 'appname-dev-%s' % name
+        if environment_variables is None:
+            environment_variables = {}
+        if tags is None:
+            tags = {}
+        if deployment_package is None:
+            deployment_package = models.DeploymentPackage(filename='foo')
+        if role is None:
+            role = models.PreCreatedIAMRole(role_arn='role:arn')
+        return models.LambdaFunction(
+            resource_name=name,
+            function_name=function_name,
+            environment_variables=environment_variables,
+            runtime=runtime,
+            handler=handler,
+            tags=tags,
+            timeout=timeout,
+            memory_size=memory_size,
+            deployment_package=deployment_package,
+            role=role,
+        )
+
+    def assert_apicall_equals(self, expected, actual_api_call):
+        # models.APICall has its own __eq__ method from attrs,
+        # but in practice the assertion errors are unreadable and
+        # it's not always clear which part of the API call object is
+        # wrong.  To get better error messages each field is individually
+        # compared.
+        assert expected.method_name == actual_api_call.method_name
+        assert expected.params == actual_api_call.params
+        assert expected.target_variable == actual_api_call.target_variable
+        assert expected.resource == actual_api_call.resource
 
 
-@fixture
-def mock_osutils():
-    return mock.Mock(spec=OSUtils)
-
-
-def create_function_resource(name):
-    return models.LambdaFunction(
-        resource_name=name,
-        function_name='appname-dev-%s' % name,
-        environment_variables={},
-        runtime='python2.7',
-        handler='app.app',
-        tags={},
-        timeout=60,
-        memory_size=128,
-        deployment_package=models.DeploymentPackage(filename='foo'),
-        role=models.PreCreatedIAMRole(role_arn='role:arn')
-    )
-
-
-class TestPlanStageCreate(object):
-    def test_can_plan_for_iam_role_creation(self, mock_client, mock_osutils):
-        mock_client.get_role_arn_for_name.side_effect = \
+class TestPlanStageCreate(BasePlannerTests):
+    def test_can_plan_for_iam_role_creation(self):
+        self.client.get_role_arn_for_name.side_effect = \
             ResourceDoesNotExistError()
-        planner = PlanStage(mock_client, mock_osutils)
+        planner = PlanStage(self.client, self.osutils)
         resource = models.ManagedIAMRole(
             resource_name='default-role',
             role_arn=models.Placeholder.DEPLOY_STAGE,
@@ -45,19 +64,20 @@ class TestPlanStageCreate(object):
             trust_policy={'trust': 'policy'},
             policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
         )
-        plan = planner.execute(Config.create(), [resource])
+        plan = planner.execute([resource])
         assert len(plan) == 1
-        api_call = plan[0]
-        assert api_call.method_name == 'create_role'
-        assert api_call.params == {'name': 'myrole',
-                                   'trust_policy': {'trust': 'policy'},
-                                   'policy': {'iam': 'policy'}}
-        assert api_call.target_variable == 'myrole_role_arn'
-        assert api_call.resource == resource
+        expected = models.APICall(
+            method_name='create_role',
+            params={'name': 'myrole',
+                    'trust_policy': {'trust': 'policy'},
+                    'policy': {'iam': 'policy'}},
+            target_variable='myrole_role_arn',
+            resource=resource
+        )
+        self.assert_apicall_equals(plan[0], expected)
 
-    def test_can_create_plan_for_filebased_role(self, mock_client,
-                                                mock_osutils):
-        mock_client.get_role_arn_for_name.side_effect = \
+    def test_can_create_plan_for_filebased_role(self):
+        self.client.get_role_arn_for_name.side_effect = \
                 ResourceDoesNotExistError
         resource = models.ManagedIAMRole(
             resource_name='default-role',
@@ -66,45 +86,49 @@ class TestPlanStageCreate(object):
             trust_policy={'trust': 'policy'},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
         )
-        mock_osutils.get_file_contents.return_value = '{"iam": "policy"}'
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(project_dir='.'), [resource])
+        self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([resource])
         assert len(plan) == 1
-        api_call = plan[0]
-        assert api_call.method_name == 'create_role'
-        assert api_call.params == {'name': 'myrole',
-                                   'trust_policy': {'trust': 'policy'},
-                                   'policy': {'iam': 'policy'}}
-        assert api_call.target_variable == 'myrole_role_arn'
-        assert api_call.resource == resource
+        expected = models.APICall(
+            method_name='create_role',
+            params={'name': 'myrole',
+                    'trust_policy': {'trust': 'policy'},
+                    'policy': {'iam': 'policy'}},
+            target_variable='myrole_role_arn',
+            resource=resource,
+        )
+        self.assert_apicall_equals(plan[0], expected)
 
-    def test_can_create_function(self, mock_client, mock_osutils):
-        mock_client.lambda_function_exists.return_value = False
-        function = create_function_resource('function_name')
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [function])
+    def test_can_create_function(self):
+        self.client.lambda_function_exists.return_value = False
+        function = self.create_function_resource('function_name')
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([function])
         assert len(plan) == 1
-        call = plan[0]
-        assert call.method_name == 'create_function'
-        assert call.target_variable == 'function_name_lambda_arn'
-        assert call.params == {
-            'function_name': 'appname-dev-function_name',
-            'role_arn': 'role:arn',
-            'zip_contents': mock.ANY,
-            'runtime': 'python2.7',
-            'handler': 'app.app',
-            'environment_variables': {},
-            'tags': {},
-            'timeout': 60,
-            'memory_size': 128,
-        }
-        assert call.resource == function
+        expected = models.APICall(
+            method_name='create_function',
+            target_variable='function_name_lambda_arn',
+            params={
+                'function_name': 'appname-dev-function_name',
+                'role_arn': 'role:arn',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7',
+                'handler': 'app.app',
+                'environment_variables': {},
+                'tags': {},
+                'timeout': 60,
+                'memory_size': 128,
+            },
+            resource=function,
+        )
+        self.assert_apicall_equals(plan[0], expected)
 
-    def test_can_create_plan_for_managed_role(self, mock_client, mock_osutils):
-        mock_client.lambda_function_exists.return_value = False
-        mock_client.get_role_arn_for_name.side_effect = \
+    def test_can_create_plan_for_managed_role(self):
+        self.client.lambda_function_exists.return_value = False
+        self.client.get_role_arn_for_name.side_effect = \
             ResourceDoesNotExistError
-        function = create_function_resource('function_name')
+        function = self.create_function_resource('function_name')
         function.role = models.ManagedIAMRole(
             resource_name='myrole',
             role_arn=models.Placeholder.DEPLOY_STAGE,
@@ -112,8 +136,8 @@ class TestPlanStageCreate(object):
             trust_policy={'trust': 'policy'},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
         )
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [function])
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([function])
         assert len(plan) == 1
         call = plan[0]
         assert call.method_name == 'create_function'
@@ -126,22 +150,16 @@ class TestPlanStageCreate(object):
         assert role_arn.name == 'myrole-dev_role_arn'
 
 
-class TestPlanStageUpdate(object):
-    def test_can_update_lambda_function_code(self, mock_client, mock_osutils):
-        mock_client.lambda_function_exists.return_value = True
-        function = create_function_resource('function_name')
+class TestPlanStageUpdate(BasePlannerTests):
+    def test_can_update_lambda_function_code(self):
+        self.client.lambda_function_exists.return_value = True
+        function = self.create_function_resource('function_name')
         # Now let's change the memory size and ensure we
         # get an update.
         function.memory_size = 256
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [function])
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([function])
         assert len(plan) == 1
-        call = plan[0]
-        assert call.method_name == 'update_function'
-        assert call.resource == function
-        # We don't need to set a target variable because the
-        # function already exists and we know the arn.
-        assert call.target_variable is None
         existing_params = {
             'function_name': 'appname-dev-function_name',
             'role_arn': 'role:arn',
@@ -151,11 +169,19 @@ class TestPlanStageUpdate(object):
             'tags': {},
             'timeout': 60,
         }
-        expected = dict(memory_size=256, **existing_params)
-        assert call.params == expected
+        expected_params = dict(memory_size=256, **existing_params)
+        expected = models.APICall(
+            method_name='update_function',
+            # We don't need to set a target variable because the
+            # function already exists and we know the arn.
+            target_variable=None,
+            resource=function,
+            params=expected_params,
+        )
+        self.assert_apicall_equals(plan[0], expected)
 
-    def test_can_update_managed_role(self, mock_client, mock_osutils):
-        mock_client.get_role_arn_for_name.return_value = 'myrole:arn'
+    def test_can_update_managed_role(self):
+        self.client.get_role_arn_for_name.return_value = 'myrole:arn'
         role = models.ManagedIAMRole(
             resource_name='resource_name',
             role_arn='myrole:arn',
@@ -163,24 +189,31 @@ class TestPlanStageUpdate(object):
             trust_policy={},
             policy=models.AutoGenIAMPolicy(document={'role': 'policy'}),
         )
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [role])
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([role])
         assert len(plan) == 2
-        delete_call = plan[0]
-        assert delete_call.method_name == 'delete_role_policy'
-        assert delete_call.params == {'role_name': 'myrole',
-                                      'policy_name': 'myrole'}
-        assert delete_call.resource == role
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='delete_role_policy',
+                params={'role_name': 'myrole',
+                        'policy_name': 'myrole'},
+                resource=role
+            )
+        )
+        self.assert_apicall_equals(
+            plan[1],
+            models.APICall(
+                method_name='put_role_policy',
+                params={'role_name': 'myrole',
+                        'policy_name': 'myrole',
+                        'policy_document': {'role': 'policy'}},
+                resource=role,
+            )
+        )
 
-        update_call = plan[1]
-        assert update_call.method_name == 'put_role_policy'
-        assert update_call.params == {'role_name': 'myrole',
-                                      'policy_name': 'myrole',
-                                      'policy_document': {'role': 'policy'}}
-        assert update_call.resource == role
-
-    def test_can_update_file_based_policy(self, mock_client, mock_osutils):
-        mock_client.get_role_arn_for_name.return_value = 'myrole:arn'
+    def test_can_update_file_based_policy(self):
+        self.client.get_role_arn_for_name.return_value = 'myrole:arn'
         role = models.ManagedIAMRole(
             resource_name='resource_name',
             role_arn='myrole:arn',
@@ -188,32 +221,38 @@ class TestPlanStageUpdate(object):
             trust_policy={},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
         )
-        mock_osutils.get_file_contents.return_value = '{"iam": "policy"}'
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [role])
+        self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([role])
         assert len(plan) == 2
-        delete_call = plan[0]
-        assert delete_call.method_name == 'delete_role_policy'
-        assert delete_call.params == {'role_name': 'myrole',
-                                      'policy_name': 'myrole'}
-        assert delete_call.resource == role
-
-        update_call = plan[1]
-        assert update_call.method_name == 'put_role_policy'
-        assert update_call.params == {'role_name': 'myrole',
-                                      'policy_name': 'myrole',
-                                      'policy_document': {'iam': 'policy'}}
-        assert update_call.resource == role
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='delete_role_policy',
+                params={'role_name': 'myrole',
+                        'policy_name': 'myrole'},
+                resource=role
+            )
+        )
+        self.assert_apicall_equals(
+            plan[1],
+            models.APICall(
+                method_name='put_role_policy',
+                params={'role_name': 'myrole',
+                        'policy_name': 'myrole',
+                        'policy_document': {'iam': 'policy'}},
+                resource=role,
+            )
+        )
 
     def test_no_update_for_non_managed_role(self):
         role = models.PreCreatedIAMRole(role_arn='role:arn')
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [role])
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([role])
         assert plan == []
 
-    def test_can_update_with_placeholder_but_exists(self, mock_client,
-                                                    mock_osutils):
-        mock_client.get_role_arn_for_name.return_value = 'myrole:arn'
+    def test_can_update_with_placeholder_but_exists(self):
+        self.client.get_role_arn_for_name.return_value = 'myrole:arn'
         role = models.ManagedIAMRole(
             resource_name='resource_name',
             role_arn=models.Placeholder.DEPLOY_STAGE,
@@ -221,20 +260,31 @@ class TestPlanStageUpdate(object):
             trust_policy={},
             policy=models.AutoGenIAMPolicy(document={'role': 'policy'}),
         )
-        planner = PlanStage(mock_client, mock_osutils)
-        plan = planner.execute(Config.create(), [role])
+        planner = PlanStage(self.client, self.osutils)
+        plan = planner.execute([role])
         assert len(plan) == 2
-        delete_call = plan[0]
-        assert delete_call.method_name == 'delete_role_policy'
-        assert delete_call.params == {'role_name': 'myrole',
-                                      'policy_name': 'myrole'}
-        assert delete_call.resource == role
-
-        update_call = plan[1]
-        assert update_call.method_name == 'put_role_policy'
-        assert update_call.params == {'role_name': 'myrole',
-                                      'policy_name': 'myrole',
-                                      'policy_document': {'role': 'policy'}}
-        assert update_call.resource == role
-
+        # We've filled in the role arn.
         assert role.role_arn == 'myrole:arn'
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='delete_role_policy',
+                params={'role_name': 'myrole',
+                        'policy_name': 'myrole'},
+                resource=role
+            )
+        )
+        self.assert_apicall_equals(
+            plan[1],
+            models.APICall(
+                method_name='put_role_policy',
+                params={'role_name': 'myrole',
+                        'policy_name': 'myrole',
+                        'policy_document': {'role': 'policy'}},
+                resource=role,
+            )
+        )
+
+
+class TestRemoteState(object):
+    pass
