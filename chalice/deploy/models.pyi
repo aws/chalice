@@ -1,9 +1,25 @@
-from typing import List, Dict, Any, TypeVar, Union
+from typing import List, Dict, Any, TypeVar, Union, Optional
 import enum
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
     DEPLOY_STAGE = 'deploy_stage'
+
+
+class APICall:
+    method_name = ...  # type: str
+    params = ...  # type: Dict[str, Any]
+    target_variable = ...  # type: Optional[str]
+    resource = ...  # type: Optional[ManagedModel]
+
+    def __init__(self,
+                 method_name,           # type: str
+                 params,                # type: Dict[str, Any]
+                 target_variable=None,  # type: Optional[str]
+                 resource=None,         # type: Optional[ManagedModel]
+                 ):
+        # type: (...) -> None
+        ...
 
 
 T = TypeVar('T')

@@ -21,9 +21,10 @@ from chalice.deploy.newdeployer import DependencyBuilder
 from chalice.deploy.newdeployer import ApplicationGraphBuilder
 from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator
-from chalice.deploy.newdeployer import PlanStage, APICall
+from chalice.deploy.newdeployer import PlanStage
 from chalice.deploy.newdeployer import Executor, Variable
 from chalice.deploy.newdeployer import UnresolvedValueError
+from chalice.deploy.models import APICall
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 
