@@ -6,7 +6,6 @@ from chalice.utils import OSUtils  # noqa
 from chalice.deploy import models
 from chalice.awsclient import ResourceDoesNotExistError
 from chalice.awsclient import TypedAWSClient  # noqa
-from chalice.config import Config  # noqa
 
 
 class PlanStage(object):
@@ -15,20 +14,20 @@ class PlanStage(object):
         self._client = client
         self._osutils = osutils
 
-    def execute(self, config, resources):
-        # type: (Config, List[models.Model]) -> List[models.APICall]
+    def execute(self, resources):
+        # type: (List[models.Model]) -> List[models.APICall]
         plan = []  # type: List[models.APICall]
         for resource in resources:
             name = 'plan_%s' % resource.__class__.__name__.lower()
             handler = getattr(self, name, None)
             if handler is not None:
-                result = handler(config, resource)
+                result = handler(resource)
                 if result:
                     plan.extend(result)
         return plan
 
-    def plan_lambdafunction(self, config, resource):
-        # type: (Config, models.LambdaFunction) -> List[models.APICall]
+    def plan_lambdafunction(self, resource):
+        # type: (models.LambdaFunction) -> List[models.APICall]
         role_arn = ''  # type: Optional[Union[str, Variable]]
         if isinstance(resource.role, models.PreCreatedIAMRole):
             role_arn = resource.role.role_arn
@@ -73,8 +72,8 @@ class PlanStage(object):
             resource=resource,
         )]
 
-    def plan_managediamrole(self, config, resource):
-        # type: (Config, models.ManagedIAMRole) -> List[models.APICall]
+    def plan_managediamrole(self, resource):
+        # type: (models.ManagedIAMRole) -> List[models.APICall]
         document = self._get_policy_document(resource.policy)
         role_arn = self._get_role_arn(resource)
         if role_arn is not None:

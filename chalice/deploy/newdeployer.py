@@ -174,7 +174,7 @@ class Deployer(object):
             config, chalice_stage_name)
         resources = self._deps_builder.build_dependencies(application)
         self._build_stage.execute(config, resources)
-        plan = self._plan_stage.execute(config, resources)
+        plan = self._plan_stage.execute(resources)
         self._executor.execute(plan)
         return {'resources': self._executor.resources}
 
