@@ -608,7 +608,7 @@ class TestDeployer(unittest.TestCase):
         self.resource_builder.build.assert_called_with(config, 'dev')
         self.deps_builder.build_dependencies.assert_called_with(app)
         self.build_stage.execute.assert_called_with(config, resources)
-        self.plan_stage.execute.assert_called_with(config, resources)
+        self.plan_stage.execute.assert_called_with(resources)
         self.executor.execute.assert_called_with(api_calls)
 
         assert result == {'resources': {'foo': {'name': 'bar'}}}
