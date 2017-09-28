@@ -264,6 +264,36 @@ class TestGetRoleArn(object):
         stubbed_session.verify_stubs()
 
 
+class TestGetRole(object):
+    def test_get_role_success(self, stubbed_session):
+        today = datetime.datetime.today()
+        response = {
+            'Role': {
+                'Path': '/',
+                'RoleName': 'Yes',
+                'RoleId': 'abcd' * 4,
+                'CreateDate': today,
+                'Arn': 'good_arn' * 3,
+            }
+        }
+        stubbed_session.stub('iam').get_role(RoleName='Yes').returns(response)
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        actual = awsclient.get_role(name='Yes')
+        assert actual == response['Role']
+        stubbed_session.verify_stubs()
+
+    def test_get_role_raises_exception_when_no_exists(self, stubbed_session):
+        stubbed_session.stub('iam').get_role(RoleName='Yes').raises_error(
+            error_code='NoSuchEntity',
+            message='Foo')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            awsclient.get_role(name='Yes')
+        stubbed_session.verify_stubs()
+
+
 class TestCreateRole(object):
     def test_create_role(self, stubbed_session):
         arn = 'good_arn' * 3

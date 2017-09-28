@@ -35,7 +35,9 @@ class FooResource(models.Model):
     leaf = attrib()
 
     def dependencies(self):
-        return [self.leaf]
+        if not isinstance(self.leaf, list):
+            return [self.leaf]
+        return self.leaf
 
 
 @attrs
@@ -79,25 +81,48 @@ def create_function_resource(name):
     )
 
 
-def test_can_build_resource_with_single_dep():
-    role = models.PreCreatedIAMRole(role_arn='foo')
-    app = models.Application(stage='dev', resources=[role])
+class TestDependencyBuilder(object):
+    def test_can_build_resource_with_single_dep(self):
+        role = models.PreCreatedIAMRole(role_arn='foo')
+        app = models.Application(stage='dev', resources=[role])
 
-    dep_builder = DependencyBuilder()
-    deps = dep_builder.build_dependencies(app)
-    assert deps == [role]
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [role]
 
+    def test_can_build_resource_with_dag_deps(self):
+        shared_leaf = LeafResource(name='leaf-resource')
+        first_parent = FooResource(name='first', leaf=shared_leaf)
+        second_parent = FooResource(name='second', leaf=shared_leaf)
+        app = models.Application(
+            stage='dev', resources=[first_parent, second_parent])
 
-def test_can_build_resource_with_dag_deps():
-    shared_leaf = LeafResource(name='leaf-resource')
-    first_parent = FooResource(name='first', leaf=shared_leaf)
-    second_parent = FooResource(name='second', leaf=shared_leaf)
-    app = models.Application(
-        stage='dev', resources=[first_parent, second_parent])
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [shared_leaf, first_parent, second_parent]
 
-    dep_builder = DependencyBuilder()
-    deps = dep_builder.build_dependencies(app)
-    assert deps == [shared_leaf, first_parent, second_parent]
+    def test_can_compares_with_identity_not_equality(self):
+        first_leaf = LeafResource(name='same-name')
+        second_leaf = LeafResource(name='same-name')
+        first_parent = FooResource(name='first', leaf=first_leaf)
+        second_parent = FooResource(name='second', leaf=second_leaf)
+        app = models.Application(
+            stage='dev', resources=[first_parent, second_parent])
+
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [first_leaf, first_parent, second_leaf, second_parent]
+
+    def test_no_duplicate_depedencies(self):
+        leaf = LeafResource(name='leaf')
+        second_parent = FooResource(name='second', leaf=leaf)
+        first_parent = FooResource(name='first', leaf=[leaf, second_parent])
+        app = models.Application(
+            stage='dev', resources=[first_parent])
+
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [leaf, second_parent, first_parent]
 
 
 class TestApplicationGraphBuilder(object):
@@ -161,6 +186,8 @@ class TestApplicationGraphBuilder(object):
         assert len(application.resources) == 2
         # The lambda functions by default share the same role
         assert application.resources[0].role == application.resources[1].role
+        # Not just in equality but the exact same role objects.
+        assert application.resources[0].role is application.resources[1].role
         # And all lambda functions share the same deployment package.
         assert (application.resources[0].deployment_package ==
                 application.resources[1].deployment_package)
@@ -224,17 +251,28 @@ class RoleTestCase(object):
         resources = application.resources
         assert len(resources) == len(self.given)
         functions_by_name = {f.function_name: f for f in resources}
+        # Roles that have the same name/arn should be the same
+        # object.  If we encounter a role that's already in
+        # roles_by_identifier, we'll verify that it's the exact same object.
+        roles_by_identifier = {}
         for function_name, expected in self.roles.items():
             full_name = 'appname-dev-%s' % function_name
             assert full_name in functions_by_name
             actual_role = functions_by_name[full_name].role
             expectations = self.roles[function_name]
             if not expectations.get('managed_role', True):
+                actual_role_arn = actual_role.role_arn
                 assert isinstance(actual_role, models.PreCreatedIAMRole)
-                assert expectations['iam_role_arn'] == actual_role.role_arn
+                assert expectations['iam_role_arn'] == actual_role_arn
+                if actual_role_arn in roles_by_identifier:
+                    assert roles_by_identifier[actual_role_arn] is actual_role
+                roles_by_identifier[actual_role_arn] = actual_role
                 continue
-            assert expectations['name'] == actual_role.role_name
-
+            actual_name = actual_role.role_name
+            assert expectations['name'] == actual_name
+            if actual_name in roles_by_identifier:
+                assert roles_by_identifier[actual_name] is actual_role
+            roles_by_identifier[actual_name] = actual_role
             is_autogenerated = expectations.get('autogenerated', False)
             policy_file = expectations.get('policy_file')
             if is_autogenerated:
@@ -324,6 +362,13 @@ ROLE_TEST_CASES = [
         # 'managed_role' will verify the associated role is a
         # models.PreCreatedIAMRoleType with the provided iam_role_arn.
         roles={'a': {'managed_role': False, 'iam_role_arn': 'role:arn'}}),
+    # Verify that we can use the same non-managed role for multiple
+    # lambda functions.
+    RoleTestCase(
+        given={'a': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'},
+               'b': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'}},
+        roles={'a': {'managed_role': False, 'iam_role_arn': 'role:arn'},
+               'b': {'managed_role': False, 'iam_role_arn': 'role:arn'}}),
     RoleTestCase(
         given={'a': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'},
                'b': {'autogen_policy': True}},
