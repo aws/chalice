@@ -114,5 +114,6 @@ class TestOSUtils(object):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(checkmark)
 
-        content = osutils.get_file_contents(filename, binary=False)
+        content = osutils.get_file_contents(filename, binary=False,
+                                            encoding='utf-8')
         assert content == checkmark
