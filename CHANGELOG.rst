@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBA)
+==================
+
+* Fix issue deploying some packages in Windows with utf-8 characters
+   (`#560 <https://github.com/aws/chalice/pull/560>`__)
+
+
 1.0.3
 =====
 

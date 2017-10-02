@@ -1,3 +1,4 @@
+import io
 import os
 import zipfile
 import json
@@ -9,7 +10,7 @@ import tarfile
 
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
-from typing import Optional  # noqa
+from typing import Optional, Union  # noqa
 from typing import MutableMapping  # noqa
 
 from chalice.constants import WELCOME_PROMPT
@@ -117,13 +118,18 @@ class OSUtils(object):
         # type: (str) -> bool
         return os.path.isfile(filename)
 
-    def get_file_contents(self, filename, binary=True):
-        # type: (str, bool) -> str
+    def get_file_contents(self, filename, binary=True, encoding='utf-8'):
+        # type: (str, bool, Any) -> str
+        # It looks like the type definition for io.open is wrong.
+        # the encoding arg is unicode, but the actual type is
+        # Optional[Text].  For now we have to use Any to keep mypy happy.
         if binary:
             mode = 'rb'
+            # In binary mode the encoding is not used and most be None.
+            encoding = None
         else:
             mode = 'r'
-        with open(filename, mode) as f:
+        with io.open(filename, mode, encoding=encoding) as f:
             return f.read()
 
     def set_file_contents(self, filename, contents, binary=True):
