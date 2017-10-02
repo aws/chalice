@@ -123,7 +123,7 @@ class OSUtils(object):
         if binary:
             mode = 'rb'
             # In binary mode the encoding is not used and most be None.
-            encoding  = None
+            encoding = None
         else:
             mode = 'r'
         with io.open(filename, mode, encoding=encoding) as f:
