@@ -117,13 +117,15 @@ class OSUtils(object):
         # type: (str) -> bool
         return os.path.isfile(filename)
 
-    def get_file_contents(self, filename, binary=True):
+    def get_file_contents(self, filename, binary=True, encoding='utf-8'):
         # type: (str, bool) -> str
         if binary:
             mode = 'rb'
+            # In binary mode the encoding is not used and most be None.
+            encoding  = None
         else:
             mode = 'r'
-        with open(filename, mode) as f:
+        with open(filename, mode, encoding=encoding) as f:
             return f.read()
 
     def set_file_contents(self, filename, contents, binary=True):

@@ -2,7 +2,14 @@ import zipfile
 import json
 import os
 
+import pytest
+
 from chalice import utils
+
+
+@pytest.fixture
+def osutils():
+    return utils.OSUtils()
 
 
 def test_can_zip_single_file(tmpdir):
@@ -98,3 +105,14 @@ def test_remove_stage_from_deployed_values_no_file(tmpdir):
 
     # Make sure it doesn't create the file if it didn't already exist
     assert not os.path.isfile(filename)
+
+
+class TestOSUtils(object):
+    def test_can_read_unicode(self, tmpdir, osutils):
+        filename = tmpdir.join('file.txt')
+        checkmark = u'\2713'
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(checkmark)
+
+        content = osutils.get_file_contents(filename, binary=False)
+        assert content == checkmark
