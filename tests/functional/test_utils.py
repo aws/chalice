@@ -1,6 +1,7 @@
 import zipfile
 import json
 import os
+import io
 
 import pytest
 
@@ -109,9 +110,9 @@ def test_remove_stage_from_deployed_values_no_file(tmpdir):
 
 class TestOSUtils(object):
     def test_can_read_unicode(self, tmpdir, osutils):
-        filename = tmpdir.join('file.txt')
+        filename = str(tmpdir.join('file.txt'))
         checkmark = u'\2713'
-        with open(filename, 'w', encoding='utf-8') as f:
+        with io.open(filename, 'w', encoding='utf-8') as f:
             f.write(checkmark)
 
         content = osutils.get_file_contents(filename, binary=False,
