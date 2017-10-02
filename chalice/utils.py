@@ -119,7 +119,10 @@ class OSUtils(object):
         return os.path.isfile(filename)
 
     def get_file_contents(self, filename, binary=True, encoding='utf-8'):
-        # type: (str, bool, Optional[str]) -> str
+        # type: (str, bool, Any) -> str
+        # It looks like the type definition for io.open is wrong.
+        # the encoding arg is unicode, but the actual type is
+        # Optional[Text].  For now we have to use Any to keep mypy happy.
         if binary:
             mode = 'rb'
             # In binary mode the encoding is not used and most be None.
