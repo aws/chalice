@@ -604,7 +604,7 @@ set for you.  This value is the parsed JSON body.
 
 You can also configure a view function to support other
 content types.  You can do this by specifying the
-``content_types`` paramter value to your ``app.route``
+``content_types`` parameter value to your ``app.route``
 function.  This parameter is a list of acceptable content
 types.  Here's an example of this feature:
 
