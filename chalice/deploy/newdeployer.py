@@ -297,7 +297,11 @@ class DependencyBuilder(object):
             if id(dep) not in seen:
                 seen.add(id(dep))
                 self._traverse(dep, ordered, seen)
-        ordered.append(resource)
+        # If recreating this list is a perf issue later on,
+        # we can create yet-another set of ids that gets updated
+        # when we add a resource to the ordered list.
+        if id(resource) not in [id(r) for r in ordered]:
+            ordered.append(resource)
 
 
 class BaseDeployStep(object):
