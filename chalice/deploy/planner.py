@@ -23,6 +23,9 @@ class RemoteState(object):
         key = self._cache_key(resource)
         if key in self._cache:
             return self._cache[key]
+        # TODO: This code will likely be refactored and pulled into
+        # per-resource classes so the RemoteState object doesn't need
+        # to know about every type of resource.
         if isinstance(resource, models.ManagedIAMRole):
             result = self._resource_exists_iam_role(resource)
         elif isinstance(resource, models.LambdaFunction):
@@ -46,6 +49,8 @@ class RemoteState(object):
         # type: (models.ManagedIAMRole) -> Optional[models.ManagedModel]
         # We only need ManagedIAMRole support for now, but this will
         # need to grow as needed.
+        # TODO: revisit adding caching.  We don't need to make 2 API calls
+        # here.
         if not self.resource_exists(resource):
             return None
         role = self._client.get_role(resource.role_name)
@@ -71,6 +76,10 @@ class PlanStage(object):
                 if result:
                     plan.extend(result)
         return plan
+
+    # TODO: This code will likely be refactored and pulled into
+    # per-resource classes so the PlanStage object doesn't need
+    # to know about every type of resource.
 
     def plan_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> List[models.APICall]
@@ -98,6 +107,8 @@ class PlanStage(object):
                     resource=resource,
                 )
             ]
+        # TODO: Consider a smarter diff where we check if we even need
+        # to do an update() API call.
         params = {
             'function_name': resource.function_name,
             'role_arn': resource.role.role_arn,
