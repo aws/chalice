@@ -567,21 +567,26 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # with the name "genexpr".
         self._handle_comprehension(node, 'genexpr')
 
-    def _handle_comprehension(self, node, comprehension_type):
-        # type: (ComprehensionNode, str) -> None
+    def _visit_first_comprehension_generator(self, node):
+        # type: (ComprehensionNode) -> None
+        if node.generators:
+            # first generator's iterator is visited in the current scope
+            first_generator = node.generators[0]
+            self.visit(first_generator.iter)
 
+    def _collect_comprehension_children(self, node):
+        # type: (ComprehensionNode) -> List[ast.expr]
         if isinstance(node, ast.DictComp):
             # dict comprehensions have two values to be checked
             child_nodes = [node.key, node.value]
         else:
             child_nodes = [node.elt]
 
-        # first generator's iterator is visited in the current scope
-        first_generator = node.generators[0]
-        self.visit(first_generator.iter)
-        child_nodes.append(first_generator.target)
-        for if_expr in first_generator.ifs:
-            child_nodes.append(if_expr)
+        if node.generators:
+            first_generator = node.generators[0]
+            child_nodes.append(first_generator.target)
+            for if_expr in first_generator.ifs:
+                child_nodes.append(if_expr)
 
         for generator in node.generators[1:]:
             # rest need to be visited in the child scope
@@ -589,7 +594,11 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             child_nodes.append(generator.target)
             for if_expr in generator.ifs:
                 child_nodes.append(if_expr)
+        return child_nodes
 
+    def _visit_comprehension_children(self, node, comprehension_type):
+        # type: (ComprehensionNode, str) -> None
+        child_nodes = self._collect_comprehension_children(node)
         child_scope = self._get_matching_sub_namespace(comprehension_type,
                                                        node.lineno)
         if child_scope is None:
@@ -611,6 +620,11 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
                 ParsedCode(child_node, child_table),
                 self._binder, self._visited)
             child_infer.bind_types()
+
+    def _handle_comprehension(self, node, comprehension_type):
+        # type: (ComprehensionNode, str) -> None
+        self._visit_first_comprehension_generator(node)
+        self._visit_comprehension_children(node, comprehension_type)
 
     def _get_matching_sub_namespace(self, name, lineno):
         # type: (str, int) -> symtable.SymbolTable
