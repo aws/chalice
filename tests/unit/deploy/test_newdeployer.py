@@ -101,6 +101,16 @@ class TestDependencyBuilder(object):
         deps = dep_builder.build_dependencies(app)
         assert deps == [shared_leaf, first_parent, second_parent]
 
+    def test_is_first_element_in_list(self):
+        shared_leaf = LeafResource(name='leaf-resource')
+        first_parent = FooResource(name='first', leaf=shared_leaf)
+        app = models.Application(
+            stage='dev', resources=[first_parent, shared_leaf],
+        )
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [shared_leaf, first_parent]
+
     def test_can_compares_with_identity_not_equality(self):
         first_leaf = LeafResource(name='same-name')
         second_leaf = LeafResource(name='same-name')
