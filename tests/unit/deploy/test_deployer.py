@@ -983,6 +983,50 @@ def test_lambda_deployer_initial_deploy(app_policy, sample_app, ui):
     )
 
 
+def test_lambda_deployer_initial_deploy_with_vpc(app_policy, sample_app, ui):
+    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
+    aws_client = mock.Mock(spec=TypedAWSClient)
+    aws_client.create_function.return_value = 'lambda-arn'
+    packager = mock.Mock(spec=LambdaDeploymentPackager)
+    packager.create_deployment_package.return_value = 'packages.zip'
+    cfg = Config.create(
+        chalice_stage='dev',
+        app_name='myapp',
+        chalice_app=sample_app,
+        manage_iam_role=False,
+        iam_role_arn='role-arn',
+        project_dir='.',
+        environment_variables={"FOO": "BAR"},
+        lambda_timeout=120,
+        lambda_memory_size=256,
+        tags={'mykey': 'myvalue'},
+        subnet_ids=['sn1', 'sn2'],
+        security_group_ids=['sg1', 'sg2'],
+    )
+
+    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
+    deployed = d.deploy(cfg, None, 'dev')
+    assert deployed == {
+        'api_handler_arn': 'lambda-arn',
+        'api_handler_name': 'myapp-dev',
+        'lambda_functions': {},
+    }
+    aws_client.create_function.assert_called_with(
+        function_name='myapp-dev', role_arn='role-arn',
+        zip_contents=b'package contents',
+        environment_variables={"FOO": "BAR"},
+        runtime=cfg.lambda_python_version,
+        tags={
+            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
+            'mykey': 'myvalue'
+        },
+        handler='app.app',
+        timeout=120, memory_size=256,
+        subnet_ids=['sn1', 'sn2'],
+        security_group_ids=['sg1', 'sg2'],
+    )
+
+
 class TestValidateCORS(object):
     def test_cant_have_options_with_cors(self, sample_app):
         @sample_app.route('/badcors', methods=['GET', 'OPTIONS'], cors=True)
@@ -1168,11 +1212,11 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
         self.app_policy = app_policy
         self.ui = ui
 
-    def create_config_obj(self, sample_app):
+    def create_config_obj(self, sample_app, **kwargs):
         cfg = Config.create(
             chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
             manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.'
+            project_dir='.', **kwargs
         )
         return cfg
 
@@ -1292,6 +1336,43 @@ class TestLambdaInitialDeploymentWithConfigurations(object):
             tags=mock.ANY,
             timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
             zip_contents=b'package contents',
+        )
+
+    def test_can_create_pure_lambda_functions_with_vpc_config(self,
+                                                              sample_app):
+        @sample_app.lambda_function()
+        def foo(event, context):
+            pass
+
+        config = self.create_config_obj(sample_app,
+                                        subnet_ids=['sn1', 'sn2'],
+                                        security_group_ids=['sg1', 'sg2'])
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.ui, self.osutils,
+            self.app_policy)
+        self.aws_client.lambda_function_exists.return_value = False
+        self.aws_client.create_function.side_effect = [
+            self.lambda_arn, 'arn:foo-function']
+        deployed = deployer.deploy(config, None, stage_name='dev')
+        assert 'lambda_functions' in deployed
+        assert deployed['lambda_functions'] == {
+            'myapp-dev-foo': {'arn': 'arn:foo-function',
+                              'type': 'pure_lambda'}
+        }
+        self.aws_client.create_function.assert_called_with(
+            environment_variables={},
+            function_name='myapp-dev-foo',
+            handler='app.foo',
+            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
+            role_arn='role-arn',
+            # The python runtime versions are tested elsewhere.
+            runtime=mock.ANY,
+            # The tag format is tested elsewhere.
+            tags=mock.ANY,
+            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
+            zip_contents=b'package contents',
+            subnet_ids=['sn1', 'sn2'],
+            security_group_ids=['sg1', 'sg2'],
         )
 
     def test_can_update_auth_handlers(self, sample_app_with_auth):
@@ -1727,3 +1808,26 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             role_name='lambda_function_name'
         )
         assert self.aws_client.put_role_policy.call_count == 1
+
+    def test_lambda_deployer_with_vpc_config(self, sample_app):
+        cfg = Config.create(
+            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
+            manage_iam_role=False, iam_role_arn='role-arn',
+            project_dir='.', tags={},
+            subnet_ids=['sn1', 'sn2'], security_group_ids=['sg1', 'sg2']
+        )
+        deployer = LambdaDeployer(
+            self.aws_client, self.packager, self.ui, self.osutils,
+            self.app_policy)
+
+        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        self.aws_client.update_function.assert_called_with(
+            function_name=self.lambda_function_name,
+            zip_contents=self.package_contents,
+            runtime=cfg.lambda_python_version,
+            tags=mock.ANY,
+            environment_variables={},
+            timeout=60, memory_size=128,
+            role_arn='role-arn',
+            subnet_ids=['sn1', 'sn2'], security_group_ids=['sg1', 'sg2']
+        )

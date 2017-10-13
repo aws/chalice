@@ -295,3 +295,20 @@ def test_app_incompatible_with_cf(sample_app,
     events = template['Resources']['APIHandler']['Properties']['Events']
     # The underscore should be removed from the event name.
     assert 'fooinvalidget2cda' in events
+
+
+def test_vpc_config_added_to_function(sample_app,
+                                      mock_swagger_generator,
+                                      mock_policy_generator):
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
+                           app_name='myapp', subnet_ids=['sn1', 'sn2'],
+                           security_group_ids=['sg1', 'sg2'])
+    template = p.generate_sam_template(config)
+    properties = template['Resources']['APIHandler']['Properties']
+    assert properties['VpcConfig']['SubnetIds'] == ['sn1', 'sn2']
+    assert properties['VpcConfig']['SecurityGroupIds'] == ['sg1', 'sg2']

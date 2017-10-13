@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, List  # noqa
 from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -257,6 +257,17 @@ class Config(object):
         tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
             current_chalice_version, self.chalice_stage, self.app_name)
         return tags
+
+    @property
+    def subnet_ids(self):
+        # type: () -> List[str]
+        return self._chain_lookup('subnet_ids', varies_per_chalice_stage=True)
+
+    @property
+    def security_group_ids(self):
+        # type: () -> List[str]
+        return self._chain_lookup('security_group_ids',
+                                  varies_per_chalice_stage=True)
 
     def scope(self, chalice_stage, function_name):
         # type: (str, str) -> Config

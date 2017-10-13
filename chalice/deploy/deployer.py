@@ -615,17 +615,22 @@ class LambdaDeployer(object):
             function_arn = response['FunctionArn']
         else:
             self._ui.write("Creating lambda function: %s\n" % function_name)
-            function_arn = self._aws_client.create_function(
-                function_name=function_name,
-                role_arn=role_arn,
-                zip_contents=zip_contents,
-                environment_variables=config.environment_variables,
-                runtime=config.lambda_python_version,
-                handler=handler,
-                tags=config.tags,
-                timeout=self._get_lambda_timeout(config),
-                memory_size=self._get_lambda_memory_size(config),
-            )
+            kwargs = {
+                'function_name': function_name,
+                'role_arn': role_arn,
+                'zip_contents': zip_contents,
+                'environment_variables': config.environment_variables,
+                'runtime': config.lambda_python_version,
+                'handler': handler,
+                'tags': config.tags,
+                'timeout': self._get_lambda_timeout(config),
+                'memory_size': self._get_lambda_memory_size(config),
+            }  # type: Dict[str, Any]
+            if config.security_group_ids is not None:
+                kwargs['security_group_ids'] = config.security_group_ids
+            if config.security_group_ids is not None:
+                kwargs['subnet_ids'] = config.subnet_ids
+            function_arn = self._aws_client.create_function(**kwargs)
         deployed_values.setdefault('lambda_functions', {})[function_name] = {
             'arn': function_arn, 'type': function_type,
         }
@@ -706,19 +711,23 @@ class LambdaDeployer(object):
             config.project_dir, config.lambda_python_version)
         zip_contents = self._osutils.get_file_contents(
             zip_filename, binary=True)
-
         self._ui.write("Creating lambda function: %s\n" % function_name)
-        return self._aws_client.create_function(
-            function_name=function_name,
-            role_arn=role_arn,
-            zip_contents=zip_contents,
-            environment_variables=config.environment_variables,
-            runtime=config.lambda_python_version,
-            tags=config.tags,
-            handler='app.app',
-            timeout=self._get_lambda_timeout(config),
-            memory_size=self._get_lambda_memory_size(config)
-        )
+        kwargs = {
+            'function_name': function_name,
+            'role_arn': role_arn,
+            'zip_contents': zip_contents,
+            'environment_variables': config.environment_variables,
+            'runtime': config.lambda_python_version,
+            'tags': config.tags,
+            'handler': 'app.app',
+            'timeout': self._get_lambda_timeout(config),
+            'memory_size': self._get_lambda_memory_size(config)
+        }  # type: Dict[str, Any]
+        if config.security_group_ids is not None:
+            kwargs['security_group_ids'] = config.security_group_ids
+        if config.security_group_ids is not None:
+            kwargs['subnet_ids'] = config.subnet_ids
+        return self._aws_client.create_function(**kwargs)
 
     def _get_lambda_timeout(self, config):
         # type: (Config) -> int
@@ -748,16 +757,21 @@ class LambdaDeployer(object):
             deployment_package_filename, binary=True)
         role_arn = self._get_or_create_lambda_role_arn(config, lambda_name)
         self._ui.write("Updating lambda function: %s\n" % lambda_name)
-        return self._aws_client.update_function(
-            function_name=lambda_name,
-            zip_contents=zip_contents,
-            runtime=config.lambda_python_version,
-            environment_variables=config.environment_variables,
-            tags=config.tags,
-            timeout=self._get_lambda_timeout(config),
-            memory_size=self._get_lambda_memory_size(config),
-            role_arn=role_arn
-        )
+        kwargs = {
+            'function_name': lambda_name,
+            'zip_contents': zip_contents,
+            'runtime': config.lambda_python_version,
+            'environment_variables': config.environment_variables,
+            'tags': config.tags,
+            'timeout': self._get_lambda_timeout(config),
+            'memory_size': self._get_lambda_memory_size(config),
+            'role_arn': role_arn,
+        }  # type: Dict[str, Any]
+        if config.security_group_ids is not None:
+            kwargs['security_group_ids'] = config.security_group_ids
+        if config.security_group_ids is not None:
+            kwargs['subnet_ids'] = config.subnet_ids
+        return self._aws_client.update_function(**kwargs)
 
     def _create_role_from_source_code(self, config, role_name):
         # type: (Config, str) -> str

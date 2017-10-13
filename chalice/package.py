@@ -146,6 +146,11 @@ class SAMTemplateGenerator(object):
             properties['Role'] = config.iam_role_arn
         else:
             properties['Policies'] = [self._generate_iam_policy()]
+        if config.security_group_ids and config.subnet_ids:
+            properties['VpcConfig'] = {
+                'SubnetIds': config.subnet_ids,
+                'SecurityGroupIds': config.security_group_ids
+            }
         return {
             'Type': 'AWS::Serverless::Function',
             'Properties': properties,
