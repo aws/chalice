@@ -484,6 +484,15 @@ def test_can_detect_calls_in_gen_expr():
     """) == {'dynamodb': set(['list_tables'])}
 
 
+def test_can_handle_gen_from_call():
+    assert aws_calls("""\
+        import boto3
+        service_name = 'dynamodb'
+        d = boto3.client('dynamodb')
+        (i for i in d.list_tables())
+    """) == {'dynamodb': set(['list_tables'])}
+
+
 def test_can_detect_calls_in_multiple_gen_exprs():
     assert aws_calls("""\
         import boto3
@@ -491,6 +500,13 @@ def test_can_detect_calls_in_multiple_gen_exprs():
         (d for i in [1,2,3])
         (d.list_tables() for j in [1,2,3])
     """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_multiple_gen_exprs():
+    assert aws_calls("""\
+        (i for i in [1,2,3])
+        (j for j in [1,2,3])
+    """) == {}
 
 
 def test_can_handle_list_expr_with_api_calls():
@@ -506,9 +522,9 @@ def test_can_handle_multiple_listcomps():
         bar_key = 'bar'
         baz_key = 'baz'
         items = [{'foo': 'sun', 'bar': 'moon', 'baz': 'stars'}]
-        foos = [t['foo'] for i in items]
-        bars = [t[bar_key] for t in items]
-        bazs = [t[baz_key] for t in items]
+        foos = [i['foo'] for i in items]
+        bars = [j[bar_key] for j in items]
+        bazs = [k[baz_key] for k in items]
     """) == {}
 
 
@@ -566,12 +582,40 @@ def test_can_analyze_combination():
     """) == {'s3': set(['list_buckets']),
              'ec2': set(['describe_instances'])}
 
-# def test_can_handle_dict_comp():
-#     assert aws_calls("""\
-#         import boto3
-#         ddb = boto3.client('dynamodb')
-#         tables = {t: t for t in ddb.list_tables()}
-#     """) == {'dynamodb': set(['list_tables'])}
+
+def test_can_handle_dict_comp():
+    assert aws_calls("""\
+        import boto3
+        ddb = boto3.client('dynamodb')
+        tables = {t: t for t in ddb.list_tables()}
+    """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_can_handle_dict_comp_if():
+    assert aws_calls("""\
+        import boto3
+        ddb = boto3.client('dynamodb')
+        tables = {t: t for t in [1] if ddb.list_tables()}
+    """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_can_handle_comp_ifs():
+    assert aws_calls("""\
+        [(x,y) for x in [1,2,3,4] for y in [1,2,3,4] if x % 2 == 0]
+    """) == {}
+
+
+def test_can_handle_dict_comp_ifs():
+    assert aws_calls("""\
+        import boto3
+        d = boto3.client('dynamodb')
+        {x: y for x in d.create_table()\
+         for y in d.update_table()\
+         if d.list_tables()}
+        {x: y for x in d.create_table()\
+         for y in d.update_table()\
+         if d.list_tables()}
+    """) == {'dynamodb': set(['list_tables', 'create_table', 'update_table'])}
 
 
 # def test_tuple_assignment():

@@ -41,6 +41,7 @@ from typing import Dict, Set, Any, Optional, List, Union  # noqa
 
 APICallT = Dict[str, Set[str]]
 OptASTSet = Optional[Set[ast.AST]]
+ComprehensionNode = Union[ast.DictComp, ast.GeneratorExp, ast.ListComp]
 
 
 def get_client_calls(source_code):
@@ -537,10 +538,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
     def visit_DictComp(self, node):
         # type: (ast.DictComp) -> None
-        # Not implemented yet.  This creates a new scope,
-        # so we'd need to treat this similar to how we treat
-        # functions.
-        pass
+        self._handle_comprehension(node, 'dictcomp')
 
     def visit_Return(self, node):
         # type: (Any) -> None
@@ -569,33 +567,77 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # with the name "genexpr".
         self._handle_comprehension(node, 'genexpr')
 
-    def _handle_comprehension(self, node, comprehension_type):
-        # type: (Union[ast.ListComp, ast.GeneratorExp], str) -> None
-        child_scope = self._get_matching_sub_namespace(
-            comprehension_type, node.lineno)
+    def _visit_first_comprehension_generator(self, node):
+        # type: (ComprehensionNode) -> None
+        if node.generators:
+            # first generator's iterator is visited in the current scope
+            first_generator = node.generators[0]
+            self.visit(first_generator.iter)
+
+    def _collect_comprehension_children(self, node):
+        # type: (ComprehensionNode) -> List[ast.expr]
+        if isinstance(node, ast.DictComp):
+            # dict comprehensions have two values to be checked
+            child_nodes = [node.key, node.value]
+        else:
+            child_nodes = [node.elt]
+
+        if node.generators:
+            first_generator = node.generators[0]
+            child_nodes.append(first_generator.target)
+            for if_expr in first_generator.ifs:
+                child_nodes.append(if_expr)
+
+        for generator in node.generators[1:]:
+            # rest need to be visited in the child scope
+            child_nodes.append(generator.iter)
+            child_nodes.append(generator.target)
+            for if_expr in generator.ifs:
+                child_nodes.append(if_expr)
+        return child_nodes
+
+    def _visit_comprehension_children(self, node, comprehension_type):
+        # type: (ComprehensionNode, str) -> None
+        child_nodes = self._collect_comprehension_children(node)
+        child_scope = self._get_matching_sub_namespace(comprehension_type,
+                                                       node.lineno)
         if child_scope is None:
-            # If there's no child scope (listcomps in py2) then we can
-            # just analyze the node.elt node in the current scope instead
-            # of creating a new child scope.
-            self.visit(node.elt)
+            # In Python 2 there's no child scope for list comp
+            # Or we failed to locate the child scope, this happens in Python 2
+            # when there are multiple comprehensions of the same type in the
+            # same scope. The line number trick doesn't work as Python 2 always
+            # passes line number 0, make a best effort
+            for child_node in child_nodes:
+                try:
+                    self.visit(child_node)
+                except KeyError:
+                    pass
             return
-        child_table = self._symbol_table.new_sub_table(child_scope)
-        child_infer = self._new_inference_scope(
-            ParsedCode(node.elt, child_table), self._binder, self._visited)
-        child_infer.bind_types()
+        for child_node in child_nodes:
+            # visit sub expressions in the child scope
+            child_table = self._symbol_table.new_sub_table(child_scope)
+            child_infer = self._new_inference_scope(
+                ParsedCode(child_node, child_table),
+                self._binder, self._visited)
+            child_infer.bind_types()
+
+    def _handle_comprehension(self, node, comprehension_type):
+        # type: (ComprehensionNode, str) -> None
+        self._visit_first_comprehension_generator(node)
+        self._visit_comprehension_children(node, comprehension_type)
 
     def _get_matching_sub_namespace(self, name, lineno):
         # type: (str, int) -> symtable.SymbolTable
-        namespaces = [
-            t for t in self._symbol_table.get_sub_namespaces()
-            if t.get_name() == name and t.get_lineno() == lineno]
-        if not namespaces:
-            return
-        # We're making a simplification and using the genexpr subnamespace.
-        # This has potential to miss a client call but we don't do
-        # inference on node.generators so this doesn't matter for now.
-        child_scope = namespaces[0]
-        return child_scope
+        namespaces = [t for t in self._symbol_table.get_sub_namespaces()
+                      if t.get_name() == name]
+        if len(namespaces) == 1:
+            # if there's only one match for the name, return it
+            return namespaces[0]
+        for namespace in namespaces:
+            # otherwise disambiguate by using the line number
+            if namespace.get_lineno() == lineno:
+                return namespace
+        return None
 
     def visit(self, node):
         # type: (Any) -> None
