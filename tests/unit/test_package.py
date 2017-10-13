@@ -6,6 +6,7 @@ from chalice import package
 from chalice import __version__ as chalice_version
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.deploy.swagger import SwaggerGenerator
+from chalice.app import Rate
 
 
 @pytest.fixture
@@ -295,3 +296,56 @@ def test_app_incompatible_with_cf(sample_app,
     events = template['Resources']['APIHandler']['Properties']['Events']
     # The underscore should be removed from the event name.
     assert 'fooinvalidget2cda' in events
+
+
+def test_can_generate_sam_for_pure_lambda(sample_app,
+                                          mock_swagger_generator,
+                                          mock_policy_generator):
+    @sample_app.lambda_function()
+    def custom_lambda_function(event, context):
+        return {}
+
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app,
+                           api_gateway_stage='dev',
+                           app_name='pure_lambda_func')
+    template = p.generate_sam_template(config)
+    assert 'customlambdafunction' in template['Resources']
+    props = template['Resources']['customlambdafunction']['Properties']
+    assert 'custom_lambda_function' in props['Handler']
+
+
+def test_can_generate_sam_for_events(sample_app,
+                                     mock_swagger_generator,
+                                     mock_policy_generator):
+
+    @sample_app.schedule('rate(1 hour)')
+    def every_hour(event):
+        return {}
+
+    @sample_app.schedule(Rate(1, unit=Rate.HOURS))
+    def every_min(event):
+        return {}
+
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(chalice_app=sample_app,
+                           api_gateway_stage='dev',
+                           app_name='scheduled_event')
+    template = p.generate_sam_template(config)
+    assert 'everyhour' in template['Resources']
+    assert 'everymin' in template['Resources']
+    handler = template['Resources']['everyhour']['Properties']['Handler']
+    assert 'every_hour' in handler
+    events = template['Resources']['everyhour']['Properties']['Events']
+    assert events['schduleEventeveryhour']['Type'] == 'Schedule'
+
+    props = events['schduleEventeveryhour']['Properties']
+    assert props['Schedule'] == "rate(1 hour)"
