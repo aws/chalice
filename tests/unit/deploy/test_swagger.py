@@ -1,4 +1,4 @@
-from chalice.deploy.swagger import SwaggerGenerator
+from chalice.deploy.swagger import SwaggerGenerator, CFNSwaggerGenerator
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
@@ -471,5 +471,42 @@ def test_will_default_to_function_name_for_auth(sample_app):
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
                               '/2015-03-31/functions/auth_arn/invocations'),
+        }
+    }
+
+
+def test_will_custom_auth_with_cfn(sample_app):
+    swagger_gen = CFNSwaggerGenerator(
+        region='us-west-2',
+        deployed_resources={}
+    )
+
+    # No "name=" kwarg provided should default
+    # to a name of "auth".
+    @sample_app.authorizer(ttl_seconds=10, execution_role='arn:role')
+    def auth(auth_request):
+        pass
+
+    @sample_app.route('/auth', authorizer=auth)
+    def foo():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions']['auth'] == {
+        'in': 'header',
+        'name': 'Authorization',
+        'type': 'apiKey',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'token',
+            'authorizerCredentials': 'arn:role',
+            'authorizerResultTtlInSeconds': 10,
+            'authorizerUri': {
+                'Fn::Sub': (
+                    'arn:aws:apigateway:${AWS::Region}:lambda:path'
+                    '/2015-03-31/functions/${authfa53.Arn}/invocations'
+                )
+            }
         }
     }
