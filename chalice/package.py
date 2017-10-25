@@ -27,10 +27,8 @@ def create_app_packager(config):
         # lambda function is deployed.
         SAMTemplateGenerator(
             CFNSwaggerGenerator('{region}', {}),
-            PreconfiguredPolicyGenerator(
-                config,
-                ApplicationPolicyHandler(
-                    osutils, AppPolicyGenerator(osutils)))),
+            ApplicationPolicyHandler(
+                osutils, AppPolicyGenerator(osutils))),
         LambdaDeploymentPackager(
             osutils=osutils,
             dependency_builder=DependencyBuilder(osutils),
@@ -41,18 +39,6 @@ def create_app_packager(config):
 
 class UnsupportedFeatureError(Exception):
     pass
-
-
-class PreconfiguredPolicyGenerator(object):
-    def __init__(self, config, policy_gen):
-        # type: (Config, ApplicationPolicyHandler) -> None
-        self._config = config
-        self._policy_gen = policy_gen
-
-    def generate_policy_from_app_source(self):
-        # type: () -> Dict[str, Any]
-        return self._policy_gen.generate_policy_from_app_source(
-            self._config)
 
 
 class SAMTemplateGenerator(object):
@@ -153,7 +139,7 @@ class SAMTemplateGenerator(object):
         if not config.manage_iam_role:
             properties['Role'] = config.iam_role_arn
         else:
-            properties['Policies'] = [self._generate_iam_policy()]
+            properties['Policies'] = [self._generate_iam_policy(config)]
         return {
             'Type': 'AWS::Serverless::Function',
             'Properties': properties,
@@ -197,9 +183,9 @@ class SAMTemplateGenerator(object):
             'Properties': properties,
         }
 
-    def _generate_iam_policy(self):
-        # type: () -> Dict[str, Any]
-        return self._policy_generator.generate_policy_from_app_source()
+    def _generate_iam_policy(self, config):
+        # type: (Config) -> Dict[str, Any]
+        return self._policy_generator.generate_policy_from_app_source(config)
 
 
 class AppPackager(object):

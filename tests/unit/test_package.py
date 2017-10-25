@@ -15,7 +15,7 @@ def mock_swagger_generator():
 
 @pytest.fixture
 def mock_policy_generator():
-    return mock.Mock(spec=package.PreconfiguredPolicyGenerator)
+    return mock.Mock(ApplicationPolicyHandler)
 
 
 def test_can_create_app_packager():
@@ -36,12 +36,9 @@ def test_can_create_app_packager_with_no_autogen():
 def test_preconfigured_policy_proxies():
     policy_gen = mock.Mock(spec=ApplicationPolicyHandler)
     config = Config.create(project_dir='project_dir', autogen_policy=False)
-    generator = package.PreconfiguredPolicyGenerator(
-        config, policy_gen=policy_gen)
     policy_gen.generate_policy_from_app_source.return_value = {
         'policy': True}
-    policy = generator.generate_policy_from_app_source()
-    policy_gen.generate_policy_from_app_source.assert_called_with(config)
+    policy = policy_gen.generate_policy_from_app_source(config)
     assert policy == {'policy': True}
 
 
