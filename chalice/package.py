@@ -69,7 +69,7 @@ class SAMTemplateGenerator(object):
     }  # type: Dict[str, Any]
 
     def __init__(self, swagger_generator, policy_generator):
-        # type: (SwaggerGenerator, PreconfiguredPolicyGenerator) -> None
+        # type: (SwaggerGenerator, ApplicationPolicyHandler) -> None
         self._swagger_generator = swagger_generator
         self._policy_generator = policy_generator
 
