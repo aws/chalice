@@ -15,7 +15,7 @@ def mock_swagger_generator():
 
 @pytest.fixture
 def mock_policy_generator():
-    return mock.Mock(ApplicationPolicyHandler)
+    return mock.Mock(spec=ApplicationPolicyHandler)
 
 
 def test_can_create_app_packager():
