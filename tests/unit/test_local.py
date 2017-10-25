@@ -664,7 +664,8 @@ class TestLocalGateway(object):
         assert body['name'] == 'api_handler'
         assert body['memory'] == 256
         assert body['version'] == '$LATEST'
-        assert body['timeout'] <= 10
+        assert body['timeout'] > 10
+        assert body['timeout'] <= 10000
         assert AWS_REQUEST_ID_PATTERN.match(body['request_id'])
 
     def test_can_validate_route_with_variables(self, demo_app_auth):

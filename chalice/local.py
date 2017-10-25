@@ -392,10 +392,14 @@ class LocalGateway(object):
 
     def _generate_lambda_context(self):
         # type: () -> LambdaContext
+        if self._config.lambda_timeout is None:
+            timeout = None
+        else:
+            timeout = self._config.lambda_timeout * 1000
         return LambdaContext(
             function_name=self._config.function_name,
             memory_size=self._config.lambda_memory_size,
-            max_runtime_ms=self._config.lambda_timeout
+            max_runtime_ms=timeout
         )
 
     def _generate_lambda_event(self, method, path, headers, body):
