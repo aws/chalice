@@ -2,7 +2,7 @@
 CHANGELOG
 =========
 
-Next Release (TBA)
+Next Release (TBD)
 ==================
 
 * Fix issue deploying some packages in Windows with utf-8 characters
