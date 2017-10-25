@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.0.4
+=====
 
 * Fix issue deploying some packages in Windows with utf-8 characters
    (`#560 <https://github.com/aws/chalice/pull/560>`__)
