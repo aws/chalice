@@ -3,7 +3,9 @@ import os
 import zipfile
 import json
 import contextlib
+import hashlib
 import tempfile
+import re
 import shutil
 import sys
 import tarfile
@@ -18,6 +20,19 @@ from chalice.constants import WELCOME_PROMPT
 
 class AbortedError(Exception):
     pass
+
+
+def to_cfn_resource_name(name):
+    # type: (str) -> str
+    """Transform a name to a valid cfn name.
+
+    This transform ensures that only alphanumeric characters are used
+    and prevent collisions by appending the hash of the original name.
+    """
+    alphanumeric_only_name = re.sub(r'[^A-Za-z0-9]+', '', name)
+    return ''.join([
+        alphanumeric_only_name, hashlib.md5(
+            name.encode('utf-8')).hexdigest()[:4]])
 
 
 def remove_stage_from_deployed_values(key, filename):

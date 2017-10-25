@@ -4,6 +4,7 @@ from typing import Any, List, Dict, Optional  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
+from chalice.utils import to_cfn_resource_name
 
 
 class SwaggerGenerator(object):
@@ -69,29 +70,37 @@ class SwaggerGenerator(object):
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
         if isinstance(authorizer, ChaliceAuthorizer):
-            function_name = '%s-%s' % (
-                self._deployed_resources['api_handler_name'],
-                authorizer.config.name
-            )
-            arn = self._deployed_resources[
-                'lambda_functions'][function_name]['arn']
             auth_config = authorizer.config
             config = {
                 'in': 'header',
                 'type': 'apiKey',
                 'name': 'Authorization',
-                'x-amazon-apigateway-authtype': 'custom',
-                'x-amazon-apigateway-authorizer': {
-                    'type': 'token',
-                    'authorizerCredentials': auth_config.execution_role,
-                    'authorizerUri': self._uri(arn),
-                    'authorizerResultTtlInSeconds': auth_config.ttl_seconds,
-                }
+                'x-amazon-apigateway-authtype': 'custom'
             }
+            api_gateway_authorizer = {
+                'type': 'token',
+                'authorizerUri': self._auth_uri(authorizer)
+            }
+            if auth_config.execution_role is not None:
+                api_gateway_authorizer['authorizerCredentials'] = \
+                    auth_config.execution_role
+            if auth_config.ttl_seconds is not None:
+                api_gateway_authorizer['authorizerResultTtlInSeconds'] = \
+                    auth_config.ttl_seconds
+            config['x-amazon-apigateway-authorizer'] = api_gateway_authorizer
         else:
             config = authorizer.to_swagger()
         api_config.setdefault(
             'securityDefinitions', {})[authorizer.name] = config
+
+    def _auth_uri(self, authorizer):
+        # type: (ChaliceAuthorizer) -> str
+        function_name = '%s-%s' % (
+            self._deployed_resources['api_handler_name'],
+            authorizer.config.name
+        )
+        return self._uri(
+            self._deployed_resources['lambda_functions'][function_name]['arn'])
 
     def _add_to_security_definition(self, security,
                                     api_config, view):
@@ -224,5 +233,15 @@ class CFNSwaggerGenerator(SwaggerGenerator):
             'Fn::Sub': (
                 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31'
                 '/functions/${APIHandler.Arn}/invocations'
+            )
+        }
+
+    def _auth_uri(self, authorizer):
+        # type: (ChaliceAuthorizer) -> Any
+        return {
+            'Fn::Sub': (
+                'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31'
+                '/functions/${%s.Arn}/invocations' % to_cfn_resource_name(
+                    authorizer.name)
             )
         }

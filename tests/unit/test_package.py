@@ -15,7 +15,7 @@ def mock_swagger_generator():
 
 @pytest.fixture
 def mock_policy_generator():
-    return mock.Mock(spec=package.PreconfiguredPolicyGenerator)
+    return mock.Mock(ApplicationPolicyHandler)
 
 
 def test_can_create_app_packager():
@@ -36,12 +36,9 @@ def test_can_create_app_packager_with_no_autogen():
 def test_preconfigured_policy_proxies():
     policy_gen = mock.Mock(spec=ApplicationPolicyHandler)
     config = Config.create(project_dir='project_dir', autogen_policy=False)
-    generator = package.PreconfiguredPolicyGenerator(
-        config, policy_gen=policy_gen)
     policy_gen.generate_policy_from_app_source.return_value = {
         'policy': True}
-    policy = generator.generate_policy_from_app_source()
-    policy_gen.generate_policy_from_app_source.assert_called_with(config)
+    policy = policy_gen.generate_policy_from_app_source(config)
     assert policy == {'policy': True}
 
 
@@ -260,21 +257,6 @@ def test_role_arn_added_to_function(sample_app,
     assert 'Policies' not in properties
 
 
-def test_fails_with_custom_auth(sample_app_with_auth,
-                                mock_swagger_generator,
-                                mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app_with_auth, api_gateway_stage='dev',
-        app_name='myapp', manage_iam_role=False, iam_role_arn='role-arn')
-    with pytest.raises(package.UnsupportedFeatureError):
-        p.generate_sam_template(config)
-
-
 def test_app_incompatible_with_cf(sample_app,
                                   mock_swagger_generator,
                                   mock_policy_generator):
@@ -294,4 +276,99 @@ def test_app_incompatible_with_cf(sample_app,
     template = p.generate_sam_template(config)
     events = template['Resources']['APIHandler']['Properties']['Events']
     # The underscore should be removed from the event name.
-    assert 'fooinvalidget2cda' in events
+    assert 'fooinvalidget4cee' in events
+
+
+def test_app_with_auth(sample_app,
+                       mock_swagger_generator,
+                       mock_policy_generator):
+
+    @sample_app.authorizer('myauth')
+    def myauth(auth_request):
+        pass
+
+    @sample_app.route('/authorized', authorizer=myauth)
+    def foo():
+        return {}
+    # The last four digits come from the hash of the auth name
+    cfn_auth_name = 'myauthdb6d'
+
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='dev',
+    )
+    template = p.generate_sam_template(config)
+    assert cfn_auth_name in template['Resources']
+    auth_function = template['Resources'][cfn_auth_name]
+    assert auth_function['Type'] == 'AWS::Serverless::Function'
+    assert auth_function['Properties']['Handler'] == 'app.myauth'
+
+    # Assert that the invoke permsissions were added as well.
+    assert cfn_auth_name + 'InvokePermission' in template['Resources']
+    assert template['Resources'][cfn_auth_name + 'InvokePermission'] == {
+        'Type': 'AWS::Lambda::Permission',
+        'Properties': {
+            'Action': 'lambda:InvokeFunction',
+            'FunctionName': {
+                'Fn::GetAtt': [
+                    cfn_auth_name,
+                    'Arn'
+                ]
+            },
+            'Principal': 'apigateway.amazonaws.com'
+        }
+    }
+
+
+def test_app_with_auth_but_invalid_cfn_name(sample_app,
+                                            mock_swagger_generator,
+                                            mock_policy_generator):
+
+    # Underscores are not allowed for CFN resource names
+    # This instead should be referred to as customauth in CFN templates
+    # where the underscore is removed.
+    @sample_app.authorizer('custom_auth')
+    def custom_auth(auth_request):
+        pass
+
+    @sample_app.route('/authorized', authorizer=custom_auth)
+    def foo():
+        return {}
+
+    # The last four digits come from the hash of the auth name
+    cfn_auth_name = 'customauth8767'
+    p = package.SAMTemplateGenerator(
+        mock_swagger_generator, mock_policy_generator)
+    mock_swagger_generator.generate_swagger.return_value = {
+        'swagger': 'document'
+    }
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='dev',
+    )
+    template = p.generate_sam_template(config)
+    assert cfn_auth_name in template['Resources']
+    auth_function = template['Resources'][cfn_auth_name]
+    assert auth_function['Type'] == 'AWS::Serverless::Function'
+    assert auth_function['Properties']['Handler'] == 'app.custom_auth'
+
+    # Assert that the invoke permsissions were added as well.
+    assert cfn_auth_name + 'InvokePermission' in template['Resources']
+    assert template['Resources'][cfn_auth_name + 'InvokePermission'] == {
+        'Type': 'AWS::Lambda::Permission',
+        'Properties': {
+            'Action': 'lambda:InvokeFunction',
+            'FunctionName': {
+                'Fn::GetAtt': [
+                    cfn_auth_name,
+                    'Arn'
+                ]
+            },
+            'Principal': 'apigateway.amazonaws.com'
+        }
+    }
