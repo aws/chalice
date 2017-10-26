@@ -103,7 +103,8 @@ class LambdaDeploymentPackager(object):
         if not self._osutils.directory_exists(dirname):
             return
         prefix_len = len(dirname) + 1
-        for root, _, filenames in self._osutils.walk(dirname, followlinks=True):
+        for root, _, filenames in self._osutils.walk(dirname,
+                                                     followlinks=True):
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
