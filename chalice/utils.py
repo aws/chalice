@@ -256,9 +256,9 @@ class OSUtils(object):
         # type: (str) -> str
         return os.path.join(*args)
 
-    def walk(self, path):
-        # type: (str) -> Iterator[Tuple[str, List[str], List[str]]]
-        return os.walk(path)
+    def walk(self, path, followlinks=False):
+        # type: (str, bool) -> Iterator[Tuple[str, List[str], List[str]]]
+        return os.walk(path, followlinks=followlinks)
 
     def copytree(self, source, destination):
         # type: (str, str) -> None
