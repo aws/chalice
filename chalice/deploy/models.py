@@ -7,12 +7,43 @@ class Placeholder(enum.Enum):
     DEPLOY_STAGE = 'deploy_stage'
 
 
+class Instruction(object):
+    pass
+
+
 @attrs(frozen=True)
-class APICall(object):
+class APICall(Instruction):
     method_name = attrib()
     params = attrib()
-    target_variable = attrib(default=None)
     resource = attrib(default=None)
+
+
+@attrs(frozen=True)
+class StoreValue(Instruction):
+    name = attrib()
+
+
+@attrs(frozen=True)
+class RecordResourceValue(Instruction):
+    resource_type = attrib()
+    resource_name = attrib()
+    name = attrib()
+    variable_name = attrib(default=None)
+
+
+@attrs(frozen=True)
+class Push(Instruction):
+    value = attrib()
+
+
+@attrs(frozen=True)
+class Pop(Instruction):
+    pass
+
+
+@attrs(frozen=True)
+class JPSearch(Instruction):
+    expression = attrib()
 
 
 class Model(object):

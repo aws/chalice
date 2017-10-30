@@ -1,11 +1,14 @@
 import mock
 
 import attr
+import pytest
 
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.deploy import models
+from chalice.config import DeployedResources2
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
+from chalice.deploy.planner import Sweeper
 
 
 def create_function_resource(name, function_name=None,
@@ -36,6 +39,15 @@ def create_function_resource(name, function_name=None,
         deployment_package=deployment_package,
         role=role,
     )
+
+
+class FakeConfig(object):
+    def __init__(self, deployed_values):
+        self._deployed_values = deployed_values
+        self.chalice_stage = 'dev'
+
+    def deployed_resources(self, chalice_stage_name):
+        return DeployedResources2(self._deployed_values)
 
 
 class InMemoryRemoteState(object):
@@ -74,7 +86,6 @@ class BasePlannerTests(object):
         # compared.
         assert expected.method_name == actual_api_call.method_name
         assert expected.params == actual_api_call.params
-        assert expected.target_variable == actual_api_call.target_variable
         assert expected.resource == actual_api_call.resource
 
     def determine_plan(self, resource):
@@ -94,13 +105,11 @@ class TestPlanManagedRole(BasePlannerTests):
             policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
         )
         plan = self.determine_plan(resource)
-        assert len(plan) == 1
         expected = models.APICall(
             method_name='create_role',
             params={'name': 'myrole',
                     'trust_policy': {'trust': 'policy'},
                     'policy': {'iam': 'policy'}},
-            target_variable='myrole_role_arn',
             resource=resource
         )
         self.assert_apicall_equals(plan[0], expected)
@@ -116,13 +125,11 @@ class TestPlanManagedRole(BasePlannerTests):
         )
         self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         plan = self.determine_plan(resource)
-        assert len(plan) == 1
         expected = models.APICall(
             method_name='create_role',
             params={'name': 'myrole',
                     'trust_policy': {'trust': 'policy'},
                     'policy': {'iam': 'policy'}},
-            target_variable='myrole_role_arn',
             resource=resource,
         )
         self.assert_apicall_equals(plan[0], expected)
@@ -137,7 +144,6 @@ class TestPlanManagedRole(BasePlannerTests):
         )
         self.remote_state.declare_resource_exists(role)
         plan = self.determine_plan(role)
-        assert len(plan) == 1
         self.assert_apicall_equals(
             plan[0],
             models.APICall(
@@ -160,7 +166,6 @@ class TestPlanManagedRole(BasePlannerTests):
         self.remote_state.declare_resource_exists(role)
         self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         plan = self.determine_plan(role)
-        assert len(plan) == 1
         self.assert_apicall_equals(
             plan[0],
             models.APICall(
@@ -188,7 +193,6 @@ class TestPlanManagedRole(BasePlannerTests):
         remote_role = attr.evolve(role, role_arn='myrole:arn')
         self.remote_state.declare_resource_exists(remote_role)
         plan = self.determine_plan(role)
-        assert len(plan) == 1
         # We've filled in the role arn.
         assert role.role_arn == 'myrole:arn'
         self.assert_apicall_equals(
@@ -208,10 +212,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
         function = create_function_resource('function_name')
         self.remote_state.declare_no_resources_exists()
         plan = self.determine_plan(function)
-        assert len(plan) == 1
         expected = models.APICall(
             method_name='create_function',
-            target_variable='function_name_lambda_arn',
             params={
                 'function_name': 'appname-dev-function_name',
                 'role_arn': 'role:arn',
@@ -235,7 +237,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         # get an update.
         function.memory_size = 256
         plan = self.determine_plan(function)
-        assert len(plan) == 1
         existing_params = {
             'function_name': 'appname-dev-function_name',
             'role_arn': 'role:arn',
@@ -248,9 +249,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         expected_params = dict(memory_size=256, **existing_params)
         expected = models.APICall(
             method_name='update_function',
-            # We don't need to set a target variable because the
-            # function already exists and we know the arn.
-            target_variable=None,
             resource=function,
             params=expected_params,
         )
@@ -267,10 +265,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
         )
         plan = self.determine_plan(function)
-        assert len(plan) == 1
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.target_variable == 'function_name_lambda_arn'
         assert call.resource == function
         # The params are verified in test_can_create_function,
         # we just care about how the role_arn Variable is constructed.
@@ -354,3 +350,86 @@ class TestRemoteState(object):
         assert self.remote_state.resource_exists(function)
 
         assert self.client.lambda_function_exists.call_count == 1
+
+
+class TestSweeper(object):
+    def setup_method(self):
+        pass
+
+    @pytest.fixture
+    def sweeper(self):
+        return Sweeper()
+
+    @pytest.fixture
+    def function_resource(self):
+        return create_function_resource('myfunction')
+
+    def test_noop_when_all_resources_accounted_for(self, sweeper,
+                                                   function_resource):
+        plan = [
+            models.RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='foo',
+            )
+        ]
+        original_plan = plan[:]
+        deployed = {
+            'resources': {
+                'myfunction': {
+                    'resource_type': 'lambda_function',
+                    'myfunction_lambda_arn': 'arn'
+                }
+            }
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        # We shouldn't add anything to the list.
+        assert plan == original_plan
+
+    def test_will_delete_unreferenced_resource(self, sweeper):
+        plan = []
+        deployed = {
+            'resources': {
+                'myfunction': {
+                    'resource_type': 'lambda_function',
+                    'lambda_arn': 'arn'
+                }
+            }
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        assert len(plan) == 1
+        assert plan[0].method_name == 'delete_function'
+        assert plan[0].params == {'function_name': 'arn'}
+
+    def test_supports_multiple_unreferenced_and_unchanged(self, sweeper):
+        first = create_function_resource('first')
+        second = create_function_resource('second')
+        third = create_function_resource('third')
+        plan = [
+            models.RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name=first.resource_name,
+                name='foo',
+            ),
+            models.RecordResourceValue(
+                resource_type='asdf',
+                resource_name=second.resource_name,
+                name='foo',
+            )
+        ]
+        deployed = {
+            'resources': {
+                second.resource_name: {'resource_type': 'lambda_function'},
+                third.resource_name: {
+                    'resource_type': 'lambda_function',
+                    'lambda_arn': 'third_arn',
+                },
+            }
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        assert len(plan) == 3
+        assert plan[2].method_name == 'delete_function'
+        assert plan[2].params == {'function_name': 'third_arn'}

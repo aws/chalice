@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, List  # noqa
 from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -275,6 +275,29 @@ class Config(object):
         return clone
 
     def deployed_resources(self, chalice_stage_name):
+        # type: (str) -> Optional[DeployedResources2]
+        """Return resources associated with a given stage.
+
+        If a deployment to a given stage has never happened,
+        this method will return a value of None.
+
+        """
+        # This is arguably the wrong level of abstraction.
+        # We might be able to move this elsewhere.
+        deployed_file = os.path.join(self.project_dir, '.chalice',
+                                     'deployed.json')
+        if not os.path.isfile(deployed_file):
+            return None
+        with open(deployed_file, 'r') as f:
+            data = json.load(f)
+        schema_version = data.get('schema_version', '1.0')
+        if schema_version == '2.0':
+            if chalice_stage_name not in data['stages']:
+                return None
+            return DeployedResources2(data['stages'][chalice_stage_name])
+        raise ValueError("")
+
+    def old_deployed_resources(self, chalice_stage_name):
         # type: (str) -> Optional[DeployedResources]
         """Return resources associated with a given stage.
 
@@ -293,6 +316,20 @@ class Config(object):
         if chalice_stage_name not in data:
             return None
         return DeployedResources.from_dict(data[chalice_stage_name])
+
+
+class DeployedResources2(object):
+    def __init__(self, deployed_values):
+        # type: (Dict[str, Any]) -> None
+        self._deployed_values = deployed_values
+
+    def resource_values(self, name):
+        # type: (str) -> Dict[str, str]
+        return self._deployed_values['resources'][name]
+
+    def resource_names(self):
+        # type: () -> List[str]
+        return list(self._deployed_values['resources'])
 
 
 class DeployedResources(object):
