@@ -599,7 +599,7 @@ class TestDeployer(object):
             'chalice_version': '0',
             'lambda_functions': {},
         })
-        cfg.deployed_resources.return_value = deployed_resources
+        cfg.old_deployed_resources.return_value = deployed_resources
 
         d = Deployer(apig_deploy, lambda_deploy, ui)
         d.delete(cfg)
@@ -613,7 +613,7 @@ class TestDeployer(object):
         apig_deploy = mock.Mock(spec=APIGatewayDeployer)
         cfg = mock.Mock(spec=Config)
         deployed_resources = None
-        cfg.deployed_resources.return_value = deployed_resources
+        cfg.old_deployed_resources.return_value = deployed_resources
         d = Deployer(apig_deploy, lambda_deploy, ui)
         d.delete(cfg)
 
@@ -1571,7 +1571,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
 
         self.app_policy = app_policy
 
-        self.deployed_resources = DeployedResources(
+        self.old_deployed_resources = DeployedResources(
             'api', 'api_handler_arn', self.lambda_function_name,
             None, 'dev', None, None, {})
 
@@ -1585,7 +1585,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        deployer.deploy(cfg, self.old_deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(
             function_name=self.lambda_function_name,
             zip_contents=self.package_contents,
@@ -1609,7 +1609,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        deployer.deploy(cfg, self.old_deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(
             function_name=self.lambda_function_name,
             zip_contents=self.package_contents,
@@ -1633,7 +1633,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        deployer.deploy(cfg, self.old_deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(
             function_name=self.lambda_function_name,
             zip_contents=self.package_contents,
@@ -1657,7 +1657,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        deployer.deploy(cfg, self.old_deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(
             function_name=self.lambda_function_name,
             zip_contents=self.package_contents,
@@ -1681,7 +1681,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             self.aws_client, self.packager, self.ui, self.osutils,
             self.app_policy)
 
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        deployer.deploy(cfg, self.old_deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(
             function_name=self.lambda_function_name,
             zip_contents=self.package_contents,
@@ -1707,7 +1707,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
             self.app_policy)
 
         self.aws_client.get_role_arn_for_name.return_value = 'role-arn'
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
+        deployer.deploy(cfg, self.old_deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(
             function_name=self.lambda_function_name,
             zip_contents=self.package_contents,

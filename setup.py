@@ -14,6 +14,7 @@ install_requires = [
     'pip>=9,<10',
     'attrs==17.2.0',
     'enum34==1.1.6',
+    'jmespath>=0.9.3,<1.0.0',
 ]
 
 setup(

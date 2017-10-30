@@ -21,10 +21,11 @@ from chalice.deploy.newdeployer import DependencyBuilder
 from chalice.deploy.newdeployer import ApplicationGraphBuilder
 from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator
-from chalice.deploy.planner import PlanStage, Variable
+from chalice.deploy.planner import PlanStage, Variable, Sweeper
 from chalice.deploy.newdeployer import Executor
 from chalice.deploy.newdeployer import UnresolvedValueError
-from chalice.deploy.models import APICall
+from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
+from chalice.deploy.models import Push, Pop, JPSearch
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 
@@ -537,76 +538,117 @@ class TestDeploymentPackager(object):
         assert not generator.create_deployment_package.called
 
 
-class TestInvoker(object):
-    def test_can_invoke_api_call_with_no_output(self, mock_client):
+class TestExecutor(object):
+    def setup_method(self):
+        self.mock_client = mock.Mock(spec=TypedAWSClient)
+        self.executor = Executor(self.mock_client)
+
+    def test_can_invoke_api_call_with_no_output(self):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
-        call = APICall('create_role', params, target_variable=None)
+        call = APICall('create_role', params)
 
-        executor = Executor(mock_client)
-        executor.execute([call])
+        self.executor.execute([call])
 
-        mock_client.create_role.assert_called_with(**params)
+        self.mock_client.create_role.assert_called_with(**params)
 
-    def test_can_store_api_result(self, mock_client):
+    def test_can_store_api_result(self):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
-        call = APICall('create_role', params,
-                       target_variable='my_variable_name')
-        mock_client.create_role.return_value = 'myrole:arn'
+        apicall = APICall('create_role', params)
+        self.mock_client.create_role.return_value = 'myrole:arn'
+        store_instruction = StoreValue('my_variable_name')
 
-        executor = Executor(mock_client)
-        executor.execute([call])
+        self.executor.execute([apicall, store_instruction])
 
-        assert executor.variables['my_variable_name'] == 'myrole:arn'
+        assert self.executor.variables['my_variable_name'] == 'myrole:arn'
 
-    def test_can_reference_stored_results_in_api_calls(self, mock_client):
+    def test_can_reference_stored_results_in_api_calls(self):
         params = {
             'name': Variable('role_name'),
             'trust_policy': {'trust': 'policy'},
             'policy': {'iam': 'policy'}
         }
-        call = APICall('create_role', params,
-                       target_variable='my_variable_name')
-        mock_client.create_role.return_value = 'myrole:arn'
+        call = APICall('create_role', params)
+        self.mock_client.create_role.return_value = 'myrole:arn'
 
-        executor = Executor(mock_client)
-        executor.variables['role_name'] = 'myrole-name'
-        executor.execute([call])
+        self.executor.variables['role_name'] = 'myrole-name'
+        self.executor.execute([call])
 
-        mock_client.create_role.assert_called_with(
+        self.mock_client.create_role.assert_called_with(
             name='myrole-name',
             trust_policy={'trust': 'policy'},
             policy={'iam': 'policy'},
         )
 
-    def test_can_return_created_resources(self, mock_client):
+    def test_can_return_created_resources(self):
         function = create_function_resource('myfunction')
         params = {}
-        call = APICall('create_function', params,
-                       target_variable='myfunction_arn',
-                       resource=function)
-        mock_client.create_function.return_value = 'function:arn'
-        executor = Executor(mock_client)
-        executor.execute([call])
-        assert executor.resources['myfunction'] == {
+        call = APICall('create_function', params, resource=function)
+        self.mock_client.create_function.return_value = 'function:arn'
+        record_instruction = RecordResourceValue(
+            resource_type='lambda_function',
+            resource_name='myfunction',
+            name='myfunction_arn',
+        )
+        self.executor.execute([call, record_instruction])
+        assert self.executor.resource_values['myfunction'] == {
             'myfunction_arn': 'function:arn',
             'resource_type': 'lambda_function',
         }
 
-    def test_validates_no_unresolved_deploy_vars(self, mock_client):
+    def test_can_reference_varname(self):
+        self.mock_client.create_function.return_value = 'function:arn'
+        self.executor.execute([
+            APICall('create_function', {}),
+            StoreValue('myvarname'),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='myfunction_arn',
+                variable_name='myvarname',
+            ),
+        ])
+        assert self.executor.resource_values == {
+            'myfunction': {
+                'resource_type': 'lambda_function',
+                'myfunction_arn': 'function:arn',
+            }
+        }
+
+    def test_validates_no_unresolved_deploy_vars(self):
         function = create_function_resource('myfunction')
         params = {'zip_contents': models.Placeholder.BUILD_STAGE}
         call = APICall('create_function', params,
-                       target_variable='myfunction_arn',
                        resource=function)
-        mock_client.create_function.return_value = 'function:arn'
-        executor = Executor(mock_client)
+        self.mock_client.create_function.return_value = 'function:arn'
         # We should raise an exception because a param has
         # a models.Placeholder.BUILD_STAGE value which should have
         # been handled in an earlier stage.
         with pytest.raises(UnresolvedValueError):
-            executor.execute([call])
+            self.executor.execute([call])
+
+    def test_can_push_values(self):
+        self.executor.execute([
+            Push('foo')
+        ])
+        assert self.executor.stack == ['foo']
+
+    def test_can_push_pop_values(self):
+        self.executor.execute([
+            Push('foo'),
+            Pop(),
+            Push('bar'),
+            Push('baz'),
+        ])
+        assert self.executor.stack == ['bar', 'baz']
+
+    def test_can_jp_search(self):
+        self.executor.execute([
+            Push({'foo': {'bar': 'baz'}}),
+            JPSearch('foo.bar'),
+        ])
+        assert self.executor.stack == ['baz']
 
 
 def test_build_stage():
@@ -635,6 +677,7 @@ class TestDeployer(unittest.TestCase):
         self.deps_builder = mock.Mock(spec=DependencyBuilder)
         self.build_stage = mock.Mock(spec=BuildStage)
         self.plan_stage = mock.Mock(spec=PlanStage)
+        self.sweeper = mock.Mock(spec=Sweeper)
         self.executor = mock.Mock(spec=Executor)
 
     def create_deployer(self):
@@ -643,6 +686,7 @@ class TestDeployer(unittest.TestCase):
             self.deps_builder,
             self.build_stage,
             self.plan_stage,
+            self.sweeper,
             self.executor
         )
 
@@ -654,7 +698,7 @@ class TestDeployer(unittest.TestCase):
         self.resource_builder.build.return_value = app
         self.deps_builder.build_dependencies.return_value = resources
         self.plan_stage.execute.return_value = api_calls
-        self.executor.resources = {'foo': {'name': 'bar'}}
+        self.executor.resource_values = {'foo': {'name': 'bar'}}
 
         deployer = self.create_deployer()
         config = Config.create()
@@ -664,9 +708,17 @@ class TestDeployer(unittest.TestCase):
         self.deps_builder.build_dependencies.assert_called_with(app)
         self.build_stage.execute.assert_called_with(config, resources)
         self.plan_stage.execute.assert_called_with(resources)
+        self.sweeper.execute.assert_called_with(api_calls, config)
         self.executor.execute.assert_called_with(api_calls)
 
-        assert result == {'resources': {'foo': {'name': 'bar'}}}
+        assert result == {
+            'stages': {
+                'dev': {
+                    'resources': {'foo': {'name': 'bar'}}
+                }
+            },
+            'schema_version': '2.0',
+        }
 
 
 def test_can_create_default_deployer():

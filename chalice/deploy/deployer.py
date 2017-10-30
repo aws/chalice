@@ -336,7 +336,7 @@ class Deployer(object):
 
     def delete(self, config, chalice_stage_name=DEFAULT_STAGE_NAME):
         # type: (Config, str) -> None
-        existing_resources = config.deployed_resources(chalice_stage_name)
+        existing_resources = config.old_deployed_resources(chalice_stage_name)
         if existing_resources is None:
             self._ui.write('No existing resources found for stage %s.\n' %
                            chalice_stage_name)
@@ -369,7 +369,7 @@ class Deployer(object):
         # type: (Config, str) -> Dict[str, Any]
         LOGGER.debug("Validating chalice configuration.")
         validate_configuration(config)
-        existing_resources = config.deployed_resources(chalice_stage_name)
+        existing_resources = config.old_deployed_resources(chalice_stage_name)
         LOGGER.debug("Existing deployed resources: %s", existing_resources)
         LOGGER.debug("Deploying Lambda resources.")
         deployed_values = self._lambda_deploy.deploy(

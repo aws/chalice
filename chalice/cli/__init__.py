@@ -163,7 +163,7 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
     session = factory.create_botocore_session()
     d = factory.create_new_default_deployer(session=session)
     deployed_values = d.deploy(config, chalice_stage_name=stage)
-    if deployed_values.get('resources'):
+    if deployed_values['stages'][stage].get('resources'):
         record_deployed_values(deployed_values, os.path.join(
             config.project_dir, '.chalice', 'deployed.json'))
 
@@ -199,7 +199,7 @@ def logs(ctx, num_entries, include_lambda_messages, stage, profile):
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
-    deployed = config.deployed_resources(stage)
+    deployed = config.old_deployed_resources(stage)
     if deployed is not None:
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
@@ -247,7 +247,7 @@ def url(ctx, stage):
     # type: (click.Context, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
-    deployed = config.deployed_resources(stage)
+    deployed = config.old_deployed_resources(stage)
     if deployed is not None:
         click.echo(
             "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
@@ -275,7 +275,7 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
     config = factory.create_config_obj(stage)
     session = factory.create_botocore_session()
     client = TypedAWSClient(session)
-    deployed = config.deployed_resources(stage)
+    deployed = config.old_deployed_resources(stage)
     if deployed is None:
         click.echo("Could not find API ID, has this application "
                    "been deployed?", err=True)
