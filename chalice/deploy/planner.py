@@ -1,8 +1,9 @@
 import json
 
 import attr
-from typing import List, Dict, Any, Optional, Union, Tuple, cast  # noqa
+from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 
+from chalice.config import Config, DeployedResources2  # noqa
 from chalice.utils import OSUtils  # noqa
 from chalice.deploy import models
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
@@ -59,6 +60,42 @@ class RemoteState(object):
                            role_arn=role['Arn'])
 
 
+class Sweeper(object):
+
+    def execute(self, plan, config):
+        # type: (List[models.Instruction], Config) -> None
+        marked = self._mark_resources(plan)
+        deployed = config.deployed_resources(config.chalice_stage)
+        if deployed is not None:
+            deployed_resource_names = deployed.resource_names()
+            remaining = list(set(deployed_resource_names) - set(marked))
+            self._plan_deletion(plan, remaining, deployed)
+
+    def _mark_resources(self, plan):
+        # type: (List[models.Instruction]) -> List[str]
+        marked = []  # type: List[str]
+        for instruction in plan:
+            if not isinstance(instruction, models.RecordResourceValue):
+                continue
+            marked.append(instruction.resource_name)
+        return marked
+
+    def _plan_deletion(self,
+                       plan,       # type: List[models.Instruction]
+                       remaining,  # type: List[str]
+                       deployed,   # type: DeployedResources2
+                       ):
+        # type: (...) -> None
+        for name in remaining:
+            resource_values = deployed.resource_values(name)
+            if resource_values['resource_type'] == 'lambda_function':
+                apicall = models.APICall(
+                    method_name='delete_function',
+                    params={'function_name': resource_values['lambda_arn']},
+                )
+                plan.append(apicall)
+
+
 class PlanStage(object):
     def __init__(self, remote_state, osutils):
         # type: (RemoteState, OSUtils) -> None
@@ -66,8 +103,8 @@ class PlanStage(object):
         self._osutils = osutils
 
     def execute(self, resources):
-        # type: (List[models.Model]) -> List[models.APICall]
-        plan = []  # type: List[models.APICall]
+        # type: (List[models.Model]) -> List[models.Instruction]
+        plan = []  # type: List[models.Instruction]
         for resource in resources:
             name = 'plan_%s' % resource.__class__.__name__.lower()
             handler = getattr(self, name, None)
@@ -82,10 +119,11 @@ class PlanStage(object):
     # to know about every type of resource.
 
     def plan_lambdafunction(self, resource):
-        # type: (models.LambdaFunction) -> List[models.APICall]
+        # type: (models.LambdaFunction) -> List[models.Instruction]
         role_arn = self._get_role_arn(resource.role)
         # Make mypy happy, it complains if we don't "declare" this upfront.
         params = {}  # type: Dict[str, Any]
+        varname = '%s_lambda_arn' % resource.resource_name
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,
@@ -102,9 +140,15 @@ class PlanStage(object):
             return [
                 models.APICall(
                     method_name='create_function',
-                    target_variable='%s_lambda_arn' % resource.resource_name,
                     params=params,
                     resource=resource,
+                ),
+                models.StoreValue(name=varname),
+                models.RecordResourceValue(
+                    resource_type='lambda_function',
+                    resource_name=resource.resource_name,
+                    name='lambda_arn',
+                    variable_name=varname,
                 )
             ]
         # TODO: Consider a smarter diff where we check if we even need
@@ -125,22 +169,39 @@ class PlanStage(object):
                 method_name='update_function',
                 params=params,
                 resource=resource,
+            ),
+            # TODO: Technically wrong, we need to pull out the
+            # FunctionArn key.  JMESPath??
+            models.JPSearch('FunctionArn'),
+            models.StoreValue(name=varname),
+            models.RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name=resource.resource_name,
+                name='lambda_arn',
+                variable_name=varname,
             )
         ]
 
     def plan_managediamrole(self, resource):
-        # type: (models.ManagedIAMRole) -> List[models.APICall]
+        # type: (models.ManagedIAMRole) -> List[models.Instruction]
         document = self._get_policy_document(resource.policy)
         role_exists = self._remote_state.resource_exists(resource)
         if not role_exists:
+            varname = '%s_role_arn' % resource.role_name
             return [
                 models.APICall(
                     method_name='create_role',
                     params={'name': resource.role_name,
                             'trust_policy': resource.trust_policy,
                             'policy': document},
-                    target_variable='%s_role_arn' % resource.role_name,
                     resource=resource
+                ),
+                models.StoreValue(varname),
+                models.RecordResourceValue(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='role_arn',
+                    variable_name=varname,
                 )
             ]
         remote_model = cast(
@@ -155,6 +216,13 @@ class PlanStage(object):
                         'policy_name': resource.role_name,
                         'policy_document': document},
                 resource=resource
+            ),
+            models.Pop(),
+            models.Push(resource.role_arn),
+            models.RecordResourceValue(
+                resource_type='iam_role',
+                resource_name=resource.resource_name,
+                name='role_arn',
             )
         ]
 
