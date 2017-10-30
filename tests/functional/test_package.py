@@ -2,7 +2,7 @@ import os
 import zipfile
 import tarfile
 import io
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import pytest
 import mock
@@ -21,8 +21,9 @@ from chalice.compat import lambda_abi
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
-from tests.conftest import FakeSdistBuilder
-from tests.conftest import FakePipCall
+
+
+FakePipCall = namedtuple('FakePipEntry', ['args', 'env_vars', 'shim'])
 
 
 def _create_app_structure(tmpdir):
@@ -45,6 +46,30 @@ def sample_app():
 @pytest.fixture
 def sdist_reader():
     return SDistMetadataFetcher()
+
+
+@pytest.fixture
+def sdist_builder():
+    s = FakeSdistBuilder()
+    return s
+
+
+class FakeSdistBuilder(object):
+    _SETUP_PY = (
+        'from setuptools import setup\n'
+        'setup(\n'
+        '    name="%s",\n'
+        '    version="%s"\n'
+        ')\n'
+    )
+
+    def write_fake_sdist(self, directory, name, version):
+        filename = '%s-%s.zip' % (name, version)
+        path = '%s/%s' % (directory, filename)
+        with zipfile.ZipFile(path, 'w',
+                             compression=zipfile.ZIP_DEFLATED) as z:
+            z.writestr('sdist/setup.py', self._SETUP_PY % (name, version))
+        return directory, filename
 
 
 class PathArgumentEndingWith(object):

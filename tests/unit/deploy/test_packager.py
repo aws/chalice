@@ -1,5 +1,6 @@
 import sys
 import pytest
+from collections import namedtuple
 
 from chalice.utils import OSUtils
 from chalice.compat import pip_no_compile_c_env_vars
@@ -9,7 +10,9 @@ from chalice.deploy.packager import PipRunner
 from chalice.deploy.packager import InvalidSourceDistributionNameError
 from chalice.deploy.packager import NoSuchPackageError
 from chalice.deploy.packager import PackageDownloadError
-from tests.conftest import FakePipCall
+
+
+FakePipCall = namedtuple('FakePipEntry', ['args', 'env_vars', 'shim'])
 
 
 class FakePip(object):
