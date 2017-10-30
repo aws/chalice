@@ -6,20 +6,62 @@ class Placeholder(enum.Enum):
     DEPLOY_STAGE = 'deploy_stage'
 
 
-class APICall:
+class Instruction:
+    pass
+
+
+class APICall(Instruction):
     method_name = ...  # type: str
     params = ...  # type: Dict[str, Any]
-    target_variable = ...  # type: Optional[str]
     resource = ...  # type: Optional[ManagedModel]
 
     def __init__(self,
                  method_name,           # type: str
                  params,                # type: Dict[str, Any]
-                 target_variable=None,  # type: Optional[str]
                  resource=None,         # type: Optional[ManagedModel]
                  ):
         # type: (...) -> None
         ...
+
+class StoreValue(Instruction):
+    name = ...  # type: str
+
+    def __init__(self,
+                 name,  # type: str
+                 ):
+        # type: (...) -> None
+        ...
+
+class RecordResourceValue(Instruction):
+    resource_type = ...  # type: str
+    resource_name = ...  # type: str
+    name = ...  # type: str
+    variable_name = ...  # type: Any
+
+    def __init__(self,
+                 resource_type,       # type: str
+                 resource_name,       # type: str
+                 name,                # type: str
+                 variable_name=None,  # type: Any
+                 ):
+        # type: (...) -> None
+        ...
+
+
+class Push(Instruction):
+    value = ...  # type: Any
+
+    def __init__(self, value: Any) -> None: ...
+
+
+class Pop(Instruction):
+    pass
+
+
+class JPSearch(Instruction):
+    expression = ...  # type: str
+
+    def __init__(self, expression: str) -> None: ...
 
 
 T = TypeVar('T')

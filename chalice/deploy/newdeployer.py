@@ -85,15 +85,16 @@ import os
 
 from typing import List, Set, Dict, Any, Optional, Union, cast  # noqa
 from botocore.session import Session  # noqa
+import jmespath
 
 from chalice.utils import OSUtils, UI
-from chalice.deploy import models
+from chalice.deploy import models  # noqa
 from chalice.config import Config  # noqa
 from chalice import app  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import PipRunner, SubprocessPip
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
-from chalice.deploy.planner import PlanStage, Variable, RemoteState
+from chalice.deploy.planner import PlanStage, Variable, RemoteState, Sweeper
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
@@ -134,6 +135,7 @@ def create_default_deployer(session):
         plan_stage=PlanStage(
             osutils=osutils, remote_state=RemoteState(client),
         ),
+        sweeper=Sweeper(),
         executor=Executor(client),
     )
 
@@ -159,6 +161,7 @@ class Deployer(object):
                  deps_builder,         # type: DependencyBuilder
                  build_stage,          # type: BuildStage
                  plan_stage,           # type: PlanStage
+                 sweeper,              # type: Sweeper
                  executor,             # type: Executor
                  ):
         # type: (...) -> None
@@ -166,6 +169,7 @@ class Deployer(object):
         self._deps_builder = deps_builder
         self._build_stage = build_stage
         self._plan_stage = plan_stage
+        self._sweeper = sweeper
         self._executor = executor
 
     def deploy(self, config, chalice_stage_name):
@@ -175,8 +179,16 @@ class Deployer(object):
         resources = self._deps_builder.build_dependencies(application)
         self._build_stage.execute(config, resources)
         plan = self._plan_stage.execute(resources)
+        self._sweeper.execute(plan, config)
         self._executor.execute(plan)
-        return {'resources': self._executor.resources}
+        return {
+            'stages': {
+                chalice_stage_name: {
+                    'resources': self._executor.resource_values,
+                },
+            },
+            'schema_version': '2.0',
+        }
 
 
 class ApplicationGraphBuilder(object):
@@ -373,25 +385,38 @@ class Executor(object):
         # A mapping of variables that's populated as API calls
         # are made.  These can be used in subsequent API calls.
         self.variables = {}  # type: Dict[str, Any]
-        self.resources = {}  # type: Dict[str, Dict[str, Any]]
+        self.stack = []  # type: List[Any]
+        self.resource_values = {}  # type: Dict[str, Any]
 
     def execute(self, api_calls):
-        # type: (List[models.APICall]) -> None
-        for api_call in api_calls:
-            final_kwargs = self._resolve_variables(api_call)
-            method = getattr(self._client, api_call.method_name)
-            # TODO: we need proper error handling here.
-            result = method(**final_kwargs)
-            if api_call.target_variable is not None:
-                varname = api_call.target_variable
-                self.variables[varname] = result
-                if api_call.resource is not None:
-                    name = api_call.resource.resource_name
-                    mapping = self.resources.setdefault(
-                        name,
-                        {'resource_type': api_call.resource.resource_type}
-                    )
-                    mapping[varname] = result
+        # type: (List[models.Instruction]) -> None
+        for instruction in api_calls:
+            if isinstance(instruction, models.APICall):
+                final_kwargs = self._resolve_variables(instruction)
+                method = getattr(self._client, instruction.method_name)
+                # TODO: we need proper error handling here.
+                result = method(**final_kwargs)
+                self.stack.append(result)
+            elif isinstance(instruction, models.StoreValue):
+                self.variables[instruction.name] = self.stack[-1]
+            elif isinstance(instruction, models.RecordResourceValue):
+                d = self.resource_values.setdefault(
+                    instruction.resource_name, {})
+                d['resource_type'] = instruction.resource_type
+                variable_name = instruction.variable_name
+                if variable_name is not None:
+                    value = self.variables[variable_name]
+                else:
+                    value = self.stack[-1]
+                d[instruction.name] = value
+            elif isinstance(instruction, models.Push):
+                self.stack.append(instruction.value)
+            elif isinstance(instruction, models.Pop):
+                self.stack.pop()
+            elif isinstance(instruction, models.JPSearch):
+                v = self.stack.pop()
+                result = jmespath.search(instruction.expression, v)
+                self.stack.append(result)
 
     def _resolve_variables(self, api_call):
         # type: (models.APICall) -> Dict[str, Any]
