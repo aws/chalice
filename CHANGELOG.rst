@@ -2,11 +2,19 @@
 CHANGELOG
 =========
 
+
+Next Release (TBD)
+==================
+
+* Fix local mode handling of routes with trailing slashes
+  (`#582 <https://github.com/aws/chalice/issues/582>`__)
+
+
 1.0.4
 =====
 
 * Fix issue deploying some packages in Windows with utf-8 characters
-   (`#560 <https://github.com/aws/chalice/pull/560>`__)
+  (`#560 <https://github.com/aws/chalice/pull/560>`__)
 * Add support for custom authorizers with ``chalice package``
   (`#580 <https://github.com/aws/chalice/pull/580>`__)
 
