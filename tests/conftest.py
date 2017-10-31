@@ -6,33 +6,6 @@ from botocore.stub import Stubber
 from pytest import fixture
 
 
-FakePipCall = namedtuple('FakePipEntry', ['args', 'env_vars', 'shim'])
-
-
-class FakeSdistBuilder(object):
-    _SETUP_PY = (
-        'from setuptools import setup\n'
-        'setup(\n'
-        '    name="%s",\n'
-        '    version="%s"\n'
-        ')\n'
-    )
-
-    def write_fake_sdist(self, directory, name, version):
-        filename = '%s-%s.zip' % (name, version)
-        path = '%s/%s' % (directory, filename)
-        with zipfile.ZipFile(path, 'w',
-                             compression=zipfile.ZIP_DEFLATED) as z:
-            z.writestr('sdist/setup.py', self._SETUP_PY % (name, version))
-        return directory, filename
-
-
-@fixture
-def sdist_builder():
-    s = FakeSdistBuilder()
-    return s
-
-
 def pytest_addoption(parser):
     parser.addoption('--skip-slow', action='store_true',
                      help='Skip slow tests')
