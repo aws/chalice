@@ -489,6 +489,8 @@ def test_can_deny_unauthed_request(auth_handler):
     ('/foo/other', '/foo/{capture}'),
     ('/names/foo', '/names/{capture}'),
     ('/names/bar', '/names/{capture}'),
+    ('/names/bar/', '/names/{capture}'),
+    ('/names/', None),
     ('/nomatch', None),
     ('/names/bar/wrong', None),
     ('/a/z/c', '/a/{capture}/c'),
