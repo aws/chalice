@@ -167,7 +167,8 @@ class LambdaEventConverter(object):
                 },
             },
             'headers': {k.lower(): v for k, v in headers.items()},
-            'queryStringParameters': view_route.query_params,
+            'queryStringParameters': view_route.query_params if
+            view_route.query_params else None,
             'pathParameters': view_route.captured,
             'stageVariables': {},
         }
