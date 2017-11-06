@@ -325,3 +325,15 @@ def test_env_vars_set_in_local(runner, mock_cli_factory,
         _run_cli_command(runner, cli.local, [],
                          cli_factory=mock_cli_factory)
         assert actual_env['foo'] == 'bar'
+
+
+def test_can_specify_profile_for_logs(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.logs, ['--profile', 'my-profile'],
+            cli_factory=mock_cli_factory
+        )
+        assert result.exit_code == 0
+        assert mock_cli_factory.profile == 'my-profile'
