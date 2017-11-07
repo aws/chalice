@@ -391,32 +391,46 @@ class Executor(object):
     def execute(self, api_calls):
         # type: (List[models.Instruction]) -> None
         for instruction in api_calls:
-            if isinstance(instruction, models.APICall):
-                final_kwargs = self._resolve_variables(instruction)
-                method = getattr(self._client, instruction.method_name)
-                # TODO: we need proper error handling here.
-                result = method(**final_kwargs)
-                self.stack.append(result)
-            elif isinstance(instruction, models.StoreValue):
-                self.variables[instruction.name] = self.stack[-1]
-            elif isinstance(instruction, models.RecordResourceValue):
-                d = self.resource_values.setdefault(
-                    instruction.resource_name, {})
-                d['resource_type'] = instruction.resource_type
-                variable_name = instruction.variable_name
-                if variable_name is not None:
-                    value = self.variables[variable_name]
-                else:
-                    value = self.stack[-1]
-                d[instruction.name] = value
-            elif isinstance(instruction, models.Push):
-                self.stack.append(instruction.value)
-            elif isinstance(instruction, models.Pop):
-                self.stack.pop()
-            elif isinstance(instruction, models.JPSearch):
-                v = self.stack.pop()
-                result = jmespath.search(instruction.expression, v)
-                self.stack.append(result)
+            getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
+                    lambda x: None)(instruction)
+
+    def _do_apicall(self, instruction):
+        # type: (models.APICall) -> None
+        final_kwargs = self._resolve_variables(instruction)
+        method = getattr(self._client, instruction.method_name)
+        # TODO: we need proper error handling here.
+        result = method(**final_kwargs)
+        self.stack.append(result)
+
+    def _do_storevalue(self, instruction):
+        # type: (models.StoreValue) -> None
+        self.variables[instruction.name] = self.stack[-1]
+
+    def _do_recordresourcevalue(self, instruction):
+        # type: (models.RecordResourceValue) -> None
+        d = self.resource_values.setdefault(
+            instruction.resource_name, {})
+        d['resource_type'] = instruction.resource_type
+        variable_name = instruction.variable_name
+        if variable_name is not None:
+            value = self.variables[variable_name]
+        else:
+            value = self.stack[-1]
+        d[instruction.name] = value
+
+    def _do_push(self, instruction):
+        # type: (models.Push) -> None
+        self.stack.append(instruction.value)
+
+    def _do_pop(self, instruction):
+        # type: (models.Pop) -> None
+        self.stack.pop()
+
+    def _do_jpsearch(self, instruction):
+        # type: (models.JPSearch) -> None
+        v = self.stack.pop()
+        result = jmespath.search(instruction.expression, v)
+        self.stack.append(result)
 
     def _resolve_variables(self, api_call):
         # type: (models.APICall) -> Dict[str, Any]
