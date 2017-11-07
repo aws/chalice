@@ -154,10 +154,13 @@ def delete(ctx, profile, stage):
 @click.option('--include-lambda-messages/--no-include-lambda-messages',
               default=False,
               help='Controls whether or not lambda log messages are included.')
+@click.option('--start-time', default=None, type=str,
+              help='Display logs beginning with the given start time,'
+                   ' format: %Y-%m-%d %H:%M:%S')
 @click.option('--stage', default=DEFAULT_STAGE_NAME)
 @click.pass_context
-def logs(ctx, num_entries, include_lambda_messages, stage):
-    # type: (click.Context, int, bool, str) -> None
+def logs(ctx, num_entries, include_lambda_messages, start_time, stage):
+    # type: (click.Context, int, bool, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage, False)
     deployed = config.deployed_resources(stage)
@@ -165,8 +168,8 @@ def logs(ctx, num_entries, include_lambda_messages, stage):
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
             session, deployed.api_handler_arn)
-        display_logs(retriever, num_entries, include_lambda_messages,
-                     sys.stdout)
+        display_logs(retriever, num_entries, start_time,
+                     include_lambda_messages, sys.stdout)
 
 
 @cli.command('gen-policy')

@@ -86,7 +86,8 @@ def test_can_get_function_configuration(stubbed_session):
 
 def test_can_iterate_logs(stubbed_session):
     stubbed_session.stub('logs').filter_log_events(
-        logGroupName='loggroup', interleaved=True).returns({
+        logGroupName='loggroup', interleaved=True,
+        startTime=0).returns({
             "events": [{
                 "logStreamName": "logStreamName",
                 "timestamp": 1501278366000,
