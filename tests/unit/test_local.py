@@ -592,7 +592,8 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
 
 
 def test_can_provide_port_to_local_server(sample_app):
-    dev_server = local.create_local_server(sample_app, None, port=23456)
+    dev_server = local.create_local_server(sample_app, None, '127.0.0.1',
+                                           port=23456)
     assert dev_server.server.server_port == 23456
 
 

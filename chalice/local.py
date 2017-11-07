@@ -43,9 +43,9 @@ class Clock(object):
         return time.time()
 
 
-def create_local_server(app_obj, config, port):
-    # type: (Chalice, Config, int) -> LocalDevServer
-    return LocalDevServer(app_obj, config, port)
+def create_local_server(app_obj, config, host, port):
+    # type: (Chalice, Config, str, int) -> LocalDevServer
+    return LocalDevServer(app_obj, config, host, port)
 
 
 class LocalARNBuilder(object):
@@ -582,14 +582,15 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
 
 class LocalDevServer(object):
-    def __init__(self, app_object, config, port,
+    def __init__(self, app_object, config, host, port,
                  handler_cls=ChaliceRequestHandler, server_cls=HTTPServer):
-        # type: (Chalice, Config, int, HandlerCls, ServerCls) -> None
+        # type: (Chalice, Config, str, int, HandlerCls, ServerCls) -> None
         self.app_object = app_object
+        self.host = host
         self.port = port
         self._wrapped_handler = functools.partial(
             handler_cls, app_object=app_object, config=config)
-        self.server = server_cls(('', port), self._wrapped_handler)
+        self.server = server_cls((host, port), self._wrapped_handler)
 
     def handle_single_request(self):
         # type: () -> None
@@ -597,5 +598,5 @@ class LocalDevServer(object):
 
     def serve_forever(self):
         # type: () -> None
-        print("Serving on localhost:%s" % self.port)
+        print("Serving on %s:%s" % (self.host, self.port))
         self.server.serve_forever()
