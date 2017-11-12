@@ -597,6 +597,12 @@ def test_can_provide_port_to_local_server(sample_app):
     assert dev_server.server.server_port == 23456
 
 
+def test_can_provide_host_to_local_server(sample_app):
+    dev_server = local.create_local_server(sample_app, None, host='0.0.0.0',
+                                           port=23456)
+    assert dev_server.host == '0.0.0.0'
+
+
 class TestLambdaContext(object):
     def test_can_get_remaining_time_once(self, lambda_context_args):
         time_source = FakeTimeSource([0, 5])
