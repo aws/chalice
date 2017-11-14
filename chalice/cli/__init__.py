@@ -155,10 +155,12 @@ def delete(ctx, profile, stage):
               default=False,
               help='Controls whether or not lambda log messages are included.')
 @click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('--profile', help='The profile to use for fetching logs.')
 @click.pass_context
-def logs(ctx, num_entries, include_lambda_messages, stage):
-    # type: (click.Context, int, bool, str) -> None
+def logs(ctx, num_entries, include_lambda_messages, stage, profile):
+    # type: (click.Context, int, bool, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
+    factory.profile = profile
     config = factory.create_config_obj(stage, False)
     deployed = config.deployed_resources(stage)
     if deployed is not None:
