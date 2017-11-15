@@ -23,6 +23,7 @@ from chalice.utils import create_zip_file
 from chalice.utils import record_deployed_values
 from chalice.utils import remove_stage_from_deployed_values
 from chalice.deploy.deployer import validate_python_version
+from chalice.deploy.deployer import validate_routes
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -94,6 +95,10 @@ def run_local_server(factory, port, stage, env):
     # app.
     env.update(config.environment_variables)
     app_obj = factory.load_chalice_app()
+    # Check that `chalice deploy` would let us deploy these routes, otherwise
+    # there is no point in testing locally.
+    routes = config.chalice_app.routes
+    validate_routes(routes)
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
     # running in lambda.  This is configuring the root logger.
