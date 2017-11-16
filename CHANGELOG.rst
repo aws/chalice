@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Default to ``None`` in local mode when no query parameters
+  are provided
+  (`#593 <https://github.com/aws/chalice/issues/593>`__)
+
+
 1.0.4
 =====
 
