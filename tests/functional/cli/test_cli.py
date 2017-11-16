@@ -134,6 +134,27 @@ def test_can_package_command(runner):
         assert 'deployment.zip' in dir_contents
 
 
+def test_can_package_with_env_var_params(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        filename = os.path.join('.chalice', 'config.json')
+        with open(filename, 'r') as f:
+            data = json.load(f)
+            data['stages']['dev']['environment_variables'] = {
+                'FOO_BAR': 'baz',
+            }
+        with open(filename, 'w') as f:
+            f.write(json.dumps(data, indent=2))
+        result = _run_cli_command(runner, cli.package,
+                                  ['--map-env-to-params', 'outdir'])
+        assert result.exit_code == 0
+        with open(os.path.join('outdir', 'sam.json')) as f:
+            data = json.load(f)
+            assert 'Parameters' in data
+            assert 'ApiHandlerFooBar' in data['Parameters']
+
+
 def test_can_package_with_single_file(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')

@@ -105,6 +105,76 @@ def test_can_inject_environment_vars(sample_app, cfn_gen):
     assert properties['Environment']['Variables'] == {'FOO': 'BAR'}
 
 
+def test_can_extract_env_vars_as_cfn_params(sample_app, cfn_gen):
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='dev',
+        environment_variables={
+            'MY_ENV_VAR': 'BAR'
+        }
+    )
+    template = cfn_gen.generate_sam_template(config, map_env_to_params=True)
+    props = template['Resources']['APIHandler']['Properties']
+    env = props['Environment']['Variables']
+    assert env == {'MY_ENV_VAR': {'Ref': 'ApiHandlerMyEnvVar'}}
+
+    params = template['Parameters']
+    assert params == {
+        'ApiHandlerMyEnvVar': {'Default': 'BAR', 'Type': 'String'}
+    }
+
+
+def test_error_when_dupe_env_var_found(sample_app, cfn_gen):
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_stage='dev',
+        # Both of these will transform to MyEnvVar
+        environment_variables={
+            'MY_ENV_VAR': 'BAR',
+            'MY___ENV___VAR': 'BAR2',
+        }
+    )
+    with pytest.raises(package.DuplicateEnvVarParameter):
+        cfn_gen.generate_sam_template(config, map_env_to_params=True)
+
+
+def test_extract_env_vars_for_other_lambda_functions(sample_app, cfn_gen):
+    @sample_app.authorizer()
+    def custom_auth(auth_request):
+        pass
+
+    @sample_app.route('/authorized', authorizer=custom_auth)
+    def foo():
+        return {}
+
+    config = Config(
+        user_provided_params={'chalice_app': sample_app},
+        config_from_disk={
+            'stages': {
+                'dev': {
+                    'lambda_functions': {
+                        'custom_auth': {
+                            'environment_variables': {
+                                'MY_VAR': 'BAR',
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+    template = cfn_gen.generate_sam_template(config, map_env_to_params=True)
+
+    props = template['Resources']['customauth8767']['Properties']
+    env = props['Environment']['Variables']
+    assert env == {'MY_VAR': {'Ref': 'CustomAuthMyVar'}}
+
+    params = template['Parameters']
+    assert params == {
+        'CustomAuthMyVar': {'Default': 'BAR', 'Type': 'String'}
+    }
+
+
 def test_chalice_tag_added_to_function(sample_app, cfn_gen):
     config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
                            app_name='myapp')

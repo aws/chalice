@@ -1,7 +1,7 @@
 import os
 import copy
 
-from typing import Any, Dict  # noqa
+from typing import Any, Dict, Iterator  # noqa
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
@@ -10,7 +10,8 @@ from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
-from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
+from chalice.utils import OSUtils, UI, serialize_to_json
+from chalice.utils import to_cfn_case, to_cfn_resource_name
 from chalice.config import Config  # noqa
 from chalice.app import Chalice  # noqa
 from chalice.policy import AppPolicyGenerator
@@ -39,6 +40,17 @@ def create_app_packager(config):
 
 class UnsupportedFeatureError(Exception):
     pass
+
+
+class DuplicateEnvVarParameter(Exception):
+    def __init__(self, value):
+        # type: (str) -> None
+        msg = (
+            'When mapping environment variables to cfn '
+            'template parameters, multiple environment '
+            'variables mapped to the same name: %s' % value
+        )
+        super(DuplicateEnvVarParameter, self).__init__(msg)
 
 
 class SAMTemplateGenerator(object):
@@ -73,28 +85,72 @@ class SAMTemplateGenerator(object):
         self._swagger_generator = swagger_generator
         self._policy_generator = policy_generator
 
-    def generate_sam_template(self, config, code_uri='<placeholder>'):
-        # type: (Config, str) -> Dict[str, Any]
+    def generate_sam_template(self, config, code_uri='<placeholder>',
+                              map_env_to_params=False):
+        # type: (Config, str, bool) -> Dict[str, Any]
         template = copy.deepcopy(self._BASE_TEMPLATE)
         resources = {
             'APIHandler': self._generate_serverless_function(
-                config, code_uri, 'app.app', 'api'),
+                config, code_uri, 'app.app', 'api', map_env_to_params),
             'RestAPI': self._generate_rest_api(
                 config.chalice_app, config.api_gateway_stage),
         }
-        self._add_auth_handlers(resources, config, code_uri)
+        self._add_auth_handlers(resources, config, code_uri,
+                                map_env_to_params)
         template['Resources'] = resources
         self._update_endpoint_url_output(template, config)
+        if map_env_to_params:
+            params = self._generate_params_from_lambda_env_vars(config)
+            if params:
+                template['Parameters'] = params
         return template
 
-    def _add_auth_handlers(self, resources, config, code_uri):
-        # type: (Dict[str, Any], Config, str) -> None
+    def _get_all_function_configs(self, config):
+        # type: (Config) -> Iterator[Config]
+        yield config
+        chalice_app = config.chalice_app
+        # Once we support event sources and lambda_functions
+        # we need to iterate over chalice_app.event_sources
+        # and chalice_app.pure_lambda_functions.
+        for auth_handler in chalice_app.builtin_auth_handlers:
+            new_config = config.scope(chalice_stage=config.chalice_stage,
+                                      function_name=auth_handler.name)
+            yield new_config
+
+    def _generate_params_from_lambda_env_vars(self, config):
+        # type: (Config) -> Dict[str, Any]
+        params = {}  # type: Dict[str, Any]
+        for new_config in self._get_all_function_configs(config):
+            if not new_config.environment_variables:
+                continue
+            # We're not using to_cfn_resource_name() here because
+            # this is a user facing value (a cfn template parameter)
+            # and we want a more direct mapping of env vars to
+            # param names.  to_cfn_resource_name() appends part of
+            # a hash to ensure no name collisions.  In our case
+            # if there's a name collision we just raise an
+            # exception letting them know.
+            prefix = to_cfn_case(new_config.function_name)
+            for key, value in new_config.environment_variables.items():
+                param_key = prefix + to_cfn_case(key)
+                if param_key in params:
+                    raise DuplicateEnvVarParameter(param_key)
+                params[param_key] = {
+                    'Default': value,
+                    'Type': 'String',
+                }
+        return params
+
+    def _add_auth_handlers(self, resources, config, code_uri,
+                           map_env_to_params):
+        # type: (Dict[str, Any], Config, str, bool) -> None
         for auth_config in config.chalice_app.builtin_auth_handlers:
             auth_resource_name = to_cfn_resource_name(auth_config.name)
             new_config = config.scope(chalice_stage=config.chalice_stage,
                                       function_name=auth_config.name)
             resources[auth_resource_name] = self._generate_serverless_function(
-                new_config, code_uri, auth_config.handler_string, 'authorizer')
+                new_config, code_uri, auth_config.handler_string, 'authorizer',
+                map_env_to_params)
             resources[auth_resource_name + 'InvokePermission'] = \
                 self._generate_lambda_permission(auth_resource_name)
 
@@ -116,8 +172,8 @@ class SAMTemplateGenerator(object):
             url % config.api_gateway_stage)
 
     def _generate_serverless_function(self, config, code_uri, handler_string,
-                                      function_type):
-        # type: (Config, str, str, str) -> Dict[str, Any]
+                                      function_type, map_env_to_params):
+        # type: (Config, str, str, str, bool) -> Dict[str, Any]
         properties = {
             'Runtime': config.lambda_python_version,
             'Handler': handler_string,
@@ -129,9 +185,19 @@ class SAMTemplateGenerator(object):
             'MemorySize': DEFAULT_LAMBDA_MEMORY_SIZE
         }
         if config.environment_variables:
-            properties['Environment'] = {
-                'Variables': config.environment_variables
-            }
+            # Make mypy happy.  config.environment_variables
+            # is a Dict[str, str], but the cfn param version
+            # is Dict[str, Dict[str, str]]
+            env = {}  # type: Dict[str, Any]
+            if map_env_to_params:
+                prefix = to_cfn_case(config.function_name)
+                env = {
+                    k: {'Ref': prefix + to_cfn_case(k)}
+                    for k in config.environment_variables
+                }
+            else:
+                env = config.environment_variables
+            properties['Environment'] = {'Variables': env}
         if config.lambda_timeout is not None:
             properties['Timeout'] = config.lambda_timeout
         if config.lambda_memory_size is not None:
@@ -201,8 +267,8 @@ class AppPackager(object):
         # type: (Any) -> str
         return serialize_to_json(doc)
 
-    def package_app(self, config, outdir):
-        # type: (Config, str) -> None
+    def package_app(self, config, outdir, map_env_to_params=False):
+        # type: (Config, str, bool) -> None
         # Deployment package
         zip_file = os.path.join(outdir, 'deployment.zip')
         self._lambda_packaager.create_deployment_package(
@@ -210,7 +276,7 @@ class AppPackager(object):
 
         # SAM template
         sam_template = self._sam_templater.generate_sam_template(
-            config, './deployment.zip')
+            config, './deployment.zip', map_env_to_params=map_env_to_params)
         if not os.path.isdir(outdir):
             os.makedirs(outdir)
         with open(os.path.join(outdir, 'sam.json'), 'w') as f:
