@@ -2,8 +2,10 @@ import re
 import json
 import decimal
 import pytest
+import mock
 from pytest import fixture
 from six import BytesIO
+from six.moves.BaseHTTPServer import HTTPServer
 
 from chalice import app
 from chalice import local, BadRequestError, CORSConfig
@@ -17,6 +19,7 @@ from chalice.local import LocalGatewayAuthorizer
 from chalice.local import NotAuthorizedError
 from chalice.local import ForbiddenError
 from chalice.local import InvalidAuthorizerError
+from chalice.local import LocalDevServer
 
 
 AWS_REQUEST_ID_PATTERN = re.compile(
@@ -974,3 +977,31 @@ def test_can_deny_multiple_resource_arns(arn, patterns):
     matcher = local.ARNMatcher(full_arn)
     does_match = matcher.does_any_resource_match(full_patterns)
     assert does_match is False
+
+
+class TestLocalDevServer(object):
+    def test_can_delegate_to_server(self, sample_app):
+        http_server = mock.Mock(spec=HTTPServer)
+        dev_server = LocalDevServer(
+            sample_app, Config(), '0.0.0.0', 8000,
+            server_cls=lambda *args: http_server,
+        )
+
+        dev_server.handle_single_request()
+        http_server.handle_request.assert_called_with()
+
+        dev_server.serve_forever()
+        http_server.serve_forever.assert_called_with()
+
+    def test_host_and_port_forwarded_to_server_creation(self):
+        provided_args = []
+
+        def args_recorder(*args):
+            provided_args[:] = list(args)
+
+        LocalDevServer(
+            sample_app, Config(), '0.0.0.0', 8000,
+            server_cls=args_recorder,
+        )
+
+        assert provided_args[0] == ('0.0.0.0', 8000)
