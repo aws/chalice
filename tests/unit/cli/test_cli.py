@@ -14,7 +14,7 @@ def test_run_local_server():
     }
     local_server = mock.Mock(spec=LocalDevServer)
     factory.create_local_server.return_value = local_server
-    cli.run_local_server(factory, 8000, local_stage_test, env)
+    cli.run_local_server(factory, '127.0.0.1', 8000, local_stage_test, env)
     assert env['foo'] == 'bar'
     local_server.serve_forever.assert_called_with()
     factory.create_config_obj.assert_called_with(

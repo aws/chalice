@@ -74,18 +74,19 @@ def cli(ctx, project_dir, debug=False):
 
 
 @cli.command()
+@click.option('--host', default='127.0.0.1')
 @click.option('--port', default=8000, type=click.INT)
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help='Name of the Chalice stage for the local server to use.')
 @click.pass_context
-def local(ctx, port=8000, stage=DEFAULT_STAGE_NAME):
-    # type: (click.Context, int, str) -> None
+def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME):
+    # type: (click.Context, str, int, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    run_local_server(factory, port, stage, os.environ)
+    run_local_server(factory, host, port, stage, os.environ)
 
 
-def run_local_server(factory, port, stage, env):
-    # type: (CLIFactory, int, str, MutableMapping) -> None
+def run_local_server(factory, host, port, stage, env):
+    # type: (CLIFactory, str, int, str, MutableMapping) -> None
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
@@ -100,7 +101,7 @@ def run_local_server(factory, port, stage, env):
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(stream=sys.stdout)
-    server = factory.create_local_server(app_obj, config, port)
+    server = factory.create_local_server(app_obj, config, host, port)
     server.serve_forever()
 
 

@@ -9,6 +9,7 @@ from pytest import fixture
 from chalice.cli import factory
 from chalice.deploy.deployer import Deployer
 from chalice.config import Config
+from chalice import local
 
 
 @fixture
@@ -162,3 +163,12 @@ def test_error_raised_on_invalid_config_json(clifactory):
 
     with pytest.raises(RuntimeError):
         clifactory.create_config_obj()
+
+
+def test_can_create_local_server(clifactory):
+    app = clifactory.load_chalice_app()
+    config = clifactory.create_config_obj()
+    server = clifactory.create_local_server(app, config, '0.0.0.0', 8000)
+    assert isinstance(server, local.LocalDevServer)
+    assert server.host == '0.0.0.0'
+    assert server.port == 8000
