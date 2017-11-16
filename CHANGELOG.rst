@@ -8,6 +8,8 @@ Next Release (TBD)
 * Default to ``None`` in local mode when no query parameters
   are provided
   (`#593 <https://github.com/aws/chalice/issues/593>`__)
+* Add support for binding a custom address for local dev server
+  (`#596 <https://github.com/aws/chalice/issues/596>`__)
 
 
 1.0.4
