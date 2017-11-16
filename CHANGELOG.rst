@@ -12,6 +12,8 @@ Next Release (TBD)
   (`#596 <https://github.com/aws/chalice/issues/596>`__)
 * Fix local mode handling of routes with trailing slashes
   (`#582 <https://github.com/aws/chalice/issues/582>`__)
+* Scale ``lambda_timeout`` parameter correctly in local mode
+  (`#579 <https://github.com/aws/chalice/pull/579`>__)
 
 
 1.0.4
