@@ -485,6 +485,7 @@ def test_can_deny_unauthed_request(auth_handler):
 
 @pytest.mark.parametrize('actual_url,matched_url', [
     ('/foo', '/foo'),
+    ('/foo/', '/foo'),
     ('/foo/bar', '/foo/bar'),
     ('/foo/other', '/foo/{capture}'),
     ('/names/foo', '/names/{capture}'),
