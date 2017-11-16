@@ -391,6 +391,7 @@ class RouteEntry(object):
 class APIGateway(object):
 
     _DEFAULT_BINARY_TYPES = [
+        'multipart/form-data',
         'application/octet-stream',
         'application/x-tar',
         'application/zip',
