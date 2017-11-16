@@ -6,13 +6,6 @@ from chalice.config import Config  # noqa
 from chalice import constants
 
 
-def create_pipeline_template(config):
-    # type: (Config) -> Dict[str, Any]
-    pipeline = CreatePipelineTemplate()
-    return pipeline.create_template(config.app_name,
-                                    config.lambda_python_version)
-
-
 class InvalidCodeBuildPythonVersion(Exception):
     def __init__(self, version):
         # type: (str) -> None
@@ -45,12 +38,14 @@ class CreatePipelineTemplate(object):
         "Outputs": {},
     }
 
-    def __init__(self):
-        # type: () -> None
-        pass
+    def __init__(self, codebuild_image=None):
+        # type: (Optional[str]) -> None
+        self._codebuild_image = codebuild_image
 
-    def _codebuild_image(self, lambda_python_version):
+    def _get_codebuild_image(self, lambda_python_version):
         # type: (str) -> str
+        if self._codebuild_image is not None:
+            return self._codebuild_image
         try:
             image_suffix = self._CODEBUILD_IMAGE[lambda_python_version]
             return 'aws/codebuild/%s' % image_suffix
@@ -60,8 +55,9 @@ class CreatePipelineTemplate(object):
     def create_template(self, app_name, python_lambda_version):
         # type: (str, str) -> Dict[str, Any]
         t = copy.deepcopy(self._BASE_TEMPLATE)  # type: Dict[str, Any]
-        t['Parameters']['ApplicationName']['Default'] = app_name
-        t['Parameters']['CodeBuildImage']['Default'] = self._codebuild_image(
+        params = t['Parameters']
+        params['ApplicationName']['Default'] = app_name
+        params['CodeBuildImage']['Default'] = self._get_codebuild_image(
             python_lambda_version)
 
         resources = [SourceRepository, CodeBuild, CodePipeline]
