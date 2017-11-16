@@ -82,6 +82,10 @@ class MethodNotAllowedError(ChaliceViewError):
     STATUS_CODE = 405
 
 
+class RequestTimeoutError(ChaliceViewError):
+    STATUS_CODE = 408
+
+
 class ConflictError(ChaliceViewError):
     STATUS_CODE = 409
 
@@ -96,6 +100,7 @@ ALL_ERRORS = [
     NotFoundError,
     UnauthorizedError,
     ForbiddenError,
+    RequestTimeoutError,
     ConflictError,
     TooManyRequestsError]
 
