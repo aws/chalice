@@ -1147,3 +1147,6 @@ Related Projects
   on AWS Lambda and API Gateway.
 * `claudia <https://github.com/claudiajs/claudia>`__ - Deploy node.js projects
   to AWS Lambda and API Gateway.
+* `Domovoi <https://github.com/kislyuk/domovoi>`_ - An extension to Chalice that
+  handles a variety of AWS Lambda event sources such as SNS push notifications,
+  S3 events, and Step Functions state machines.
