@@ -167,10 +167,15 @@ class LambdaEventConverter(object):
                 },
             },
             'headers': {k.lower(): v for k, v in headers.items()},
-            'queryStringParameters': view_route.query_params,
             'pathParameters': view_route.captured,
             'stageVariables': {},
         }
+        if view_route.query_params:
+            event['queryStringParameters'] = view_route.query_params
+        else:
+            # If no query parameters are provided, API gateway maps
+            # this to None so we're doing this for parity.
+            event['queryStringParameters'] = None
         if self._is_binary(headers) and body is not None:
             event['body'] = base64.b64encode(body).decode('ascii')
             event['isBase64Encoded'] = True

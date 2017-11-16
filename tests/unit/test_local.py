@@ -534,7 +534,7 @@ def test_can_create_lambda_event():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': {},
+        'queryStringParameters': None,
         'body': None,
         'stageVariables': {},
     }
@@ -559,7 +559,7 @@ def test_can_create_lambda_event_for_put_request():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': {},
+        'queryStringParameters': None,
         'body': '{"foo": "bar"}',
         'stageVariables': {},
     }
@@ -585,7 +585,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         },
         'headers': {'content-type': 'application/x-www-form-urlencoded'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': {},
+        'queryStringParameters': None,
         'body': form_body,
         'stageVariables': {},
     }
