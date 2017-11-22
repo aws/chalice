@@ -77,6 +77,20 @@ def test_can_create_config_obj(clifactory):
     assert isinstance(obj, Config)
 
 
+def test_can_create_config_obj_with_default_env_vars(setup_app_dir):
+    config = {
+        "version": "2.0",
+        "app_name": "replaceme",
+        "environment_variables": {
+            "GLOBAL_FOO": "global_bar"
+        }
+    }
+    env = {}
+    setup_chalice_dir(setup_app_dir, config=json.dumps(config))
+    factori = factory.CLIFactory(str(setup_app_dir))
+    obj = factori.create_config_obj(env=env)
+    assert env['GLOBAL_FOO'] == 'global_bar'
+    assert isinstance(obj, Config)
 def test_can_create_config_obj_default_autogen_policy_true(clifactory):
     config = clifactory.create_config_obj()
     assert config.autogen_policy is True
