@@ -13,16 +13,24 @@ from chalice import local
 
 
 @fixture
-def clifactory(tmpdir):
+def clifactory(setup_app_dir):
+    setup_chalice_dir(setup_app_dir)
+    return factory.CLIFactory(str(setup_app_dir))
+
+
+def setup_chalice_dir(app_dir, config={}):
+    chalice_dir = app_dir.mkdir('.chalice')
+    chalice_dir.join('config.json').write(config)
+
+@fixture
+def setup_app_dir(tmpdir):
     appdir = tmpdir.mkdir('app')
     appdir.join('app.py').write(
         '# Test app\n'
         'import chalice\n'
         'app = chalice.Chalice(app_name="test")\n'
     )
-    chalice_dir = appdir.mkdir('.chalice')
-    chalice_dir.join('config.json').write('{}')
-    return factory.CLIFactory(str(appdir))
+    return appdir
 
 
 def assert_has_no_request_body_filter(log_name):
