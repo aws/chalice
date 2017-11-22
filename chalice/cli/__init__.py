@@ -89,7 +89,8 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME):
 def run_local_server(factory, host, port, stage, env):
     # type: (CLIFactory, str, int, str, MutableMapping) -> None
     config = factory.create_config_obj(
-        chalice_stage_name=stage
+        chalice_stage_name=stage,
+        env=env
     )
 
     app_obj = factory.load_chalice_app()
