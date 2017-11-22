@@ -5,7 +5,7 @@ import importlib
 import logging
 
 from botocore.session import Session
-from typing import Any, Optional, Dict  # noqa
+from typing import Any, Optional, Dict, MutableMapping   # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.awsclient import TypedAWSClient
@@ -91,7 +91,7 @@ class CLIFactory(object):
                           autogen_policy=None,
                           api_gateway_stage=None,
                           env=None):
-        # type: (str, Optional[bool], str) -> Config
+        # type: (str, Optional[bool], str, MutableMapping) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
@@ -133,6 +133,7 @@ class CLIFactory(object):
                                       stage,
                                       config,
                                       env):
+        # type: (str, MutableMapping, MutableMapping) -> None
         # Import Global Variables First.
         if 'environment_variables' in config:
             env.update(config['environment_variables'])
