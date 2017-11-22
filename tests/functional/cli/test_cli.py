@@ -311,22 +311,6 @@ def test_can_generate_pipeline_for_all(runner):
             assert "Outputs" in template
 
 
-def test_env_vars_set_in_local(runner, mock_cli_factory,
-                               monkeypatch):
-    local_server = mock.Mock(spec=local.LocalDevServer)
-    mock_cli_factory.create_local_server.return_value = local_server
-    mock_cli_factory.create_config_obj.return_value = Config.create(
-        project_dir='.', environment_variables={'foo': 'bar'})
-    actual_env = {}
-    monkeypatch.setattr(os, 'environ', actual_env)
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        _run_cli_command(runner, cli.local, [],
-                         cli_factory=mock_cli_factory)
-        assert actual_env['foo'] == 'bar'
-
-
 def test_can_specify_profile_for_logs(runner, mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
