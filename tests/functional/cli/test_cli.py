@@ -328,6 +328,27 @@ def test_no_errors_if_override_codebuild_image(runner):
             assert image == 'python:3.6.1'
 
 
+def test_can_configure_github(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        # The -i option is provided so we don't have to skip this
+        # test on python3.6
+        result = _run_cli_command(
+            runner, cli.generate_pipeline,
+            ['--source', 'github', '-i' 'python:3.6.1', 'pipeline.json'])
+        assert result.exit_code == 0, result.output
+        assert os.path.isfile('pipeline.json')
+        with open('pipeline.json', 'r') as f:
+            template = json.load(f)
+            # The template is already tested in the unit tests
+            # for template generation.  We just want a basic
+            # sanity check to make sure things are mapped
+            # properly.
+            assert 'GithubOwner' in template['Parameters']
+            assert 'GithubRepoName' in template['Parameters']
+
+
 def test_env_vars_set_in_local(runner, mock_cli_factory,
                                monkeypatch):
     local_server = mock.Mock(spec=local.LocalDevServer)
