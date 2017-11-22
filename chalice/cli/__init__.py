@@ -91,10 +91,7 @@ def run_local_server(factory, host, port, stage, env):
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
-    # We only load the chalice app after loading the config
-    # so we can set any env vars needed before importing the
-    # app.
-    env.update(config.environment_variables)
+
     app_obj = factory.load_chalice_app()
     # Check that `chalice deploy` would let us deploy these routes, otherwise
     # there is no point in testing locally.
