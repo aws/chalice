@@ -111,15 +111,9 @@ class CLIFactory(object):
         # so we can set any env vars needed here, before importing
         # the app.
         if env is not None:
-            # Import Global Variables First.
-            if 'environment_variables' in config_from_disk:
-                env.update(config_from_disk['environment_variables'])
-
-            # Overwrite with stage variables next.
-            if 'stages' in config_from_disk:
-                if chalice_stage_name in config_from_disk['stages']:
-                    if 'environment_variables' in config_from_disk['stages'][chalice_stage_name]:
-                        env.update(config_from_disk['stages'][chalice_stage_name]['environment_variables'])
+            self._handle_environment_variables(
+                chalice_stage_name, config_from_disk, env
+            )
 
         app_obj = self.load_chalice_app()
         user_provided_params['chalice_app'] = app_obj
@@ -134,6 +128,20 @@ class CLIFactory(object):
                         config_from_disk=config_from_disk,
                         default_params=default_params)
         return config
+
+    def _handle_environment_variables(stage,
+                                      config,
+                                      env):
+        # Import Global Variables First.
+        if 'environment_variables' in config:
+            env.update(config['environment_variables'])
+
+        # Overwrite with stage variables next.
+        if 'stages' in config:
+            if stage in config['stages']:
+                if 'environment_variables' in config['stages'][stage]:
+                    env.update(
+                        config['stages'][stage]['environment_variables'])
 
     def _validate_config_from_disk(self, config):
         # type: (Dict[str, Any]) -> None

@@ -22,6 +22,7 @@ def setup_chalice_dir(app_dir, config={}):
     chalice_dir = app_dir.mkdir('.chalice')
     chalice_dir.join('config.json').write(config)
 
+
 @fixture
 def setup_app_dir(tmpdir):
     appdir = tmpdir.mkdir('app')
@@ -139,7 +140,7 @@ def test_can_create_config_obj_with_global_and_stage_env_vars(setup_app_dir):
     assert isinstance(obj, Config)
 
 
-def test_can_create_config_obj_with_and_stage_overrides_global_env_vars(setup_app_dir):
+def test_create_config_with_stage_overriding_global_env_vars(setup_app_dir):
     config = {
         "version": "2.0",
         "app_name": "replaceme",

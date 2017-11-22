@@ -12,7 +12,6 @@ from chalice.cli import factory
 from chalice.deploy.deployer import Deployer
 from chalice.config import Config
 from chalice.utils import record_deployed_values
-from chalice import local
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 
 
