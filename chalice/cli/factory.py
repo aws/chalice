@@ -129,7 +129,8 @@ class CLIFactory(object):
                         default_params=default_params)
         return config
 
-    def _handle_environment_variables(stage,
+    def _handle_environment_variables(self,
+                                      stage,
                                       config,
                                       env):
         # Import Global Variables First.
