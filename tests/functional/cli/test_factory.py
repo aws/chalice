@@ -139,6 +139,34 @@ def test_can_create_config_obj_with_global_and_stage_env_vars(setup_app_dir):
     assert isinstance(obj, Config)
 
 
+def test_can_create_config_obj_with_and_stage_overrides_global_env_vars(setup_app_dir):
+    config = {
+        "version": "2.0",
+        "app_name": "replaceme",
+        "environment_variables": {
+            "GLOBAL_FOO": "global_bar",
+            "FOO_BAR": "foo_bar"
+        },
+        "stages": {
+            "dev": {
+                "api_gateway_stage": "api",
+                "environment_variables": {
+                    "DEV_FOO": "dev_bar",
+                    "FOO_BAR": "baz"
+                }
+            }
+        }
+    }
+    env = {}
+    setup_chalice_dir(setup_app_dir, config=json.dumps(config))
+    factori = factory.CLIFactory(str(setup_app_dir))
+    obj = factori.create_config_obj(env=env)
+    assert env['DEV_FOO'] == 'dev_bar'
+    assert env['GLOBAL_FOO'] == 'global_bar'
+    assert env['FOO_BAR'] == 'baz'
+    assert isinstance(obj, Config)
+
+
 def test_can_create_config_obj_default_autogen_policy_true(clifactory):
     config = clifactory.create_config_obj()
     assert config.autogen_policy is True
