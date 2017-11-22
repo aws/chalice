@@ -96,7 +96,7 @@ def test_install_requirements_in_buildspec(pipeline_gen):
 
 
 def test_can_provide_codebuild_image(pipeline_gen):
-    p = pipeline.CreatePipelineTemplate(codebuild_image='python:3.6.1')
-    template = p.create_template('appname', 'python2.7')
+    template = pipeline_gen.create_template('appname', 'python2.7',
+                                            codebuild_image='python:3.6.1')
     default_image = template['Parameters']['CodeBuildImage']['Default']
     assert default_image == 'python:3.6.1'

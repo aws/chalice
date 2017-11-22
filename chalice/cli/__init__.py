@@ -312,8 +312,10 @@ def generate_pipeline(ctx, codebuild_image, filename):
     from chalice import pipeline
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
-    p = pipeline.CreatePipelineTemplate(codebuild_image)
-    output = p.create_template(config.app_name, config.lambda_python_version)
+    p = pipeline.CreatePipelineTemplate()
+    output = p.create_template(config.app_name,
+                               config.lambda_python_version,
+                               codebuild_image)
     with open(filename, 'w') as f:
         f.write(serialize_to_json(output))
 
