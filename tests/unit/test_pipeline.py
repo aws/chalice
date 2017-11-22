@@ -9,29 +9,44 @@ def pipeline_gen():
     return pipeline.CreatePipelineTemplate()
 
 
-def test_app_name_in_param_default(pipeline_gen):
-    template = pipeline_gen.create_template('appname', 'python2.7')
-    assert template['Parameters']['ApplicationName']['Default'] == 'appname'
+class TestPipelineGen(object):
+
+    def setup_method(self):
+        self.pipeline_gen = pipeline.CreatePipelineTemplate()
+
+    def generate_template(self, app_name='appname',
+                          lambda_python_version='python2.7',
+                          codebuild_image=None):
+        template = self.pipeline_gen.create_template(
+            app_name, lambda_python_version, codebuild_image)
+        return template
+
+    def test_app_name_in_param_default(self):
+        template = self.generate_template(app_name='appname')
+        assert template['Parameters']['ApplicationName']['Default'] == 'appname'
+
+    def test_python_version_in_param_default(self):
+        template = self.generate_template(lambda_python_version='python2.7')
+        assert template['Parameters']['CodeBuildImage']['Default'] == \
+            'aws/codebuild/python:2.7.12'
+
+    def test_py3_throws_error(self):
+        # This test can be removed when there is a 3.6 codebuild image available
+        with pytest.raises(InvalidCodeBuildPythonVersion):
+            self.generate_template('app', 'python3.6')
+
+    def test_nonsense_py_version_throws_error(self):
+        with pytest.raises(InvalidCodeBuildPythonVersion):
+            self.generate_template('app', 'foobar')
+
+    def test_can_provide_codebuild_image(self):
+        template = self.generate_template('appname', 'python2.7',
+                                          codebuild_image='python:3.6.1')
+        default_image = template['Parameters']['CodeBuildImage']['Default']
+        assert default_image == 'python:3.6.1'
 
 
-def test_python_version_in_param_default(pipeline_gen):
-    template = pipeline_gen.create_template('app', 'python2.7')
-    assert template['Parameters']['CodeBuildImage']['Default'] == \
-        'aws/codebuild/python:2.7.12'
-
-
-def test_py3_throws_error(pipeline_gen):
-    # This test can be removed when there is a 3.6 codebuild image available
-    with pytest.raises(InvalidCodeBuildPythonVersion):
-        pipeline_gen.create_template('app', 'python3.6')
-
-
-def test_nonsense_py_version_throws_error(pipeline_gen):
-    with pytest.raises(InvalidCodeBuildPythonVersion):
-        pipeline_gen.create_template('app', 'foobar')
-
-
-def test_source_repo_resource(pipeline_gen):
+def test_source_repo_resource():
     template = {}
     pipeline.SourceRepository().add_to_template(template)
     assert template == {
@@ -58,7 +73,7 @@ def test_source_repo_resource(pipeline_gen):
     }
 
 
-def test_codebuild_resource(pipeline_gen):
+def test_codebuild_resource():
     template = {}
     pipeline.CodeBuild().add_to_template(template)
     resources = template['Resources']
@@ -72,7 +87,7 @@ def test_codebuild_resource(pipeline_gen):
     }
 
 
-def test_codepipeline_resource(pipeline_gen):
+def test_codepipeline_resource():
     template = {}
     pipeline.CodePipeline().add_to_template(template)
     resources = template['Resources']
@@ -87,16 +102,9 @@ def test_codepipeline_resource(pipeline_gen):
     resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
 
 
-def test_install_requirements_in_buildspec(pipeline_gen):
+def test_install_requirements_in_buildspec():
     template = {}
     pipeline.CodeBuild().add_to_template(template)
     build = template['Resources']['AppPackageBuild']
     build_spec = build['Properties']['Source']['BuildSpec']
     assert 'pip install -r requirements.txt' in build_spec
-
-
-def test_can_provide_codebuild_image(pipeline_gen):
-    template = pipeline_gen.create_template('appname', 'python2.7',
-                                            codebuild_image='python:3.6.1')
-    default_image = template['Parameters']['CodeBuildImage']['Default']
-    assert default_image == 'python:3.6.1'
