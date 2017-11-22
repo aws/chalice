@@ -13,16 +13,24 @@ from chalice import local
 
 
 @fixture
-def clifactory(tmpdir):
+def clifactory(setup_app_dir):
+    setup_chalice_dir(setup_app_dir)
+    return factory.CLIFactory(str(setup_app_dir))
+
+
+def setup_chalice_dir(app_dir, config={}):
+    chalice_dir = app_dir.mkdir('.chalice')
+    chalice_dir.join('config.json').write(config)
+
+@fixture
+def setup_app_dir(tmpdir):
     appdir = tmpdir.mkdir('app')
     appdir.join('app.py').write(
         '# Test app\n'
         'import chalice\n'
         'app = chalice.Chalice(app_name="test")\n'
     )
-    chalice_dir = appdir.mkdir('.chalice')
-    chalice_dir.join('config.json').write('{}')
-    return factory.CLIFactory(str(appdir))
+    return appdir
 
 
 def assert_has_no_request_body_filter(log_name):
@@ -66,6 +74,96 @@ def test_can_create_default_deployer(clifactory):
 
 def test_can_create_config_obj(clifactory):
     obj = clifactory.create_config_obj()
+    assert isinstance(obj, Config)
+
+
+def test_can_create_config_obj_with_default_env_vars(setup_app_dir):
+    config = {
+        "version": "2.0",
+        "app_name": "replaceme",
+        "environment_variables": {
+            "GLOBAL_FOO": "global_bar"
+        }
+    }
+    env = {}
+    setup_chalice_dir(setup_app_dir, config=json.dumps(config))
+    factori = factory.CLIFactory(str(setup_app_dir))
+    obj = factori.create_config_obj(env=env)
+    assert env['GLOBAL_FOO'] == 'global_bar'
+    assert isinstance(obj, Config)
+
+
+def test_can_create_config_obj_with_stage_env_vars(setup_app_dir):
+    config = {
+        "version": "2.0",
+        "app_name": "replaceme",
+        "stages": {
+            "dev": {
+                "api_gateway_stage": "api",
+                "environment_variables": {
+                    "DEV_FOO": "dev_bar"
+                }
+            }
+        }
+    }
+    env = {}
+    setup_chalice_dir(setup_app_dir, config=json.dumps(config))
+    factori = factory.CLIFactory(str(setup_app_dir))
+    obj = factori.create_config_obj(env=env)
+    assert env['DEV_FOO'] == 'dev_bar'
+    assert isinstance(obj, Config)
+
+
+def test_can_create_config_obj_with_global_and_stage_env_vars(setup_app_dir):
+    config = {
+        "version": "2.0",
+        "app_name": "replaceme",
+        "environment_variables": {
+            "GLOBAL_FOO": "global_bar"
+        },
+        "stages": {
+            "dev": {
+                "api_gateway_stage": "api",
+                "environment_variables": {
+                    "DEV_FOO": "dev_bar"
+                }
+            }
+        }
+    }
+    env = {}
+    setup_chalice_dir(setup_app_dir, config=json.dumps(config))
+    factori = factory.CLIFactory(str(setup_app_dir))
+    obj = factori.create_config_obj(env=env)
+    assert env['DEV_FOO'] == 'dev_bar'
+    assert env['GLOBAL_FOO'] == 'global_bar'
+    assert isinstance(obj, Config)
+
+
+def test_can_create_config_obj_with_and_stage_overrides_global_env_vars(setup_app_dir):
+    config = {
+        "version": "2.0",
+        "app_name": "replaceme",
+        "environment_variables": {
+            "GLOBAL_FOO": "global_bar",
+            "FOO_BAR": "foo_bar"
+        },
+        "stages": {
+            "dev": {
+                "api_gateway_stage": "api",
+                "environment_variables": {
+                    "DEV_FOO": "dev_bar",
+                    "FOO_BAR": "baz"
+                }
+            }
+        }
+    }
+    env = {}
+    setup_chalice_dir(setup_app_dir, config=json.dumps(config))
+    factori = factory.CLIFactory(str(setup_app_dir))
+    obj = factori.create_config_obj(env=env)
+    assert env['DEV_FOO'] == 'dev_bar'
+    assert env['GLOBAL_FOO'] == 'global_bar'
+    assert env['FOO_BAR'] == 'baz'
     assert isinstance(obj, Config)
 
 
