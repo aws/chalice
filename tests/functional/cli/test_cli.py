@@ -311,7 +311,7 @@ def test_can_generate_pipeline_for_all(runner):
             assert "Outputs" in template
 
 
-def test_no_errors_if_override_codebuil_image(runner):
+def test_no_errors_if_override_codebuild_image(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
