@@ -1,7 +1,7 @@
 import pytest
 
 from chalice import pipeline
-from chalice.pipeline import InvalidCodeBuildPythonVersion
+from chalice.pipeline import InvalidCodeBuildPythonVersion, PipelineParameters
 
 
 @pytest.fixture
@@ -17,13 +17,17 @@ class TestPipelineGen(object):
     def generate_template(self, app_name='appname',
                           lambda_python_version='python2.7',
                           codebuild_image=None):
-        template = self.pipeline_gen.create_template(
-            app_name, lambda_python_version, codebuild_image)
+        params = PipelineParameters(
+            app_name=app_name,
+            lambda_python_version=lambda_python_version,
+            codebuild_image=codebuild_image
+        )
+        template = self.pipeline_gen.create_template(params)
         return template
 
     def test_app_name_in_param_default(self):
-        template = self.generate_template(app_name='appname')
-        assert template['Parameters']['ApplicationName']['Default'] == 'appname'
+        template = self.generate_template(app_name='app')
+        assert template['Parameters']['ApplicationName']['Default'] == 'app'
 
     def test_python_version_in_param_default(self):
         template = self.generate_template(lambda_python_version='python2.7')
@@ -31,7 +35,8 @@ class TestPipelineGen(object):
             'aws/codebuild/python:2.7.12'
 
     def test_py3_throws_error(self):
-        # This test can be removed when there is a 3.6 codebuild image available
+        # This test can be removed when there is a 3.6 codebuild image
+        # available.
         with pytest.raises(InvalidCodeBuildPythonVersion):
             self.generate_template('app', 'python3.6')
 
