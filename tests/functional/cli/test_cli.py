@@ -349,6 +349,24 @@ def test_can_configure_github(runner):
             assert 'GithubRepoName' in template['Parameters']
 
 
+def test_can_extract_buildspec_yaml(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.generate_pipeline,
+            ['--buildspec-file', 'buildspec.yml',
+             '-i', 'python:3.6.1',
+             'pipeline.json'])
+        assert result.exit_code == 0, result.output
+        assert os.path.isfile('buildspec.yml')
+        with open('buildspec.yml') as f:
+            data = f.read()
+            # The contents of this file are tested elsewhere,
+            # we just want a basic sanity check here.
+            assert 'chalice package' in data
+
+
 def test_env_vars_set_in_local(runner, mock_cli_factory,
                                monkeypatch):
     local_server = mock.Mock(spec=local.LocalDevServer)

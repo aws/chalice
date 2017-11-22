@@ -158,3 +158,22 @@ def test_can_generate_github_source(pipeline_params):
     cfn_params = template['Parameters']
     assert set(cfn_params) == set(['GithubOwner', 'GithubRepoName',
                                    'GithubPersonalToken'])
+
+
+def test_build_extractor():
+    template = {
+        'Resources': {
+            'AppPackageBuild': {
+                'Properties': {
+                    'Source': {
+                        'BuildSpec': 'foobar'
+                    }
+                }
+            }
+        }
+    }
+    extract = pipeline.BuildSpecExtractor()
+    extracted = extract.extract_buildspec(template)
+    assert extracted == 'foobar'
+    assert 'BuildSpec' not in template[
+        'Resources']['AppPackageBuild']['Properties']['Source']

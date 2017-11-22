@@ -531,3 +531,12 @@ class CodePipeline(BaseResource):
                 }
             }
         }
+
+
+class BuildSpecExtractor(object):
+    def extract_buildspec(self, template):
+        # type: (Dict[str, Any]) -> str
+        source = template['Resources']['AppPackageBuild'][
+            'Properties']['Source']
+        buildspec = source.pop('BuildSpec')
+        return buildspec

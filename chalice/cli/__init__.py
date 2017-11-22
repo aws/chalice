@@ -296,10 +296,18 @@ def package(ctx, single_file, stage, out):
                     "'codecommit' will create a CodeCommit repository "
                     "for you.  The 'github' value allows you to "
                     "reference an existing GitHub repository."))
+@click.option('-b', '--buildspec-file',
+              help=("Specify path for buildspec.yml file. "
+                    "By default, the build steps are included in the "
+                    "generated cloudformation template.  If this option "
+                    "is provided, a buildspec.yml will be generated "
+                    "as a separate file and not included in the cfn "
+                    "template.  This file should be named 'buildspec.yml'"
+                    "and placed in the root directory of your app."))
 @click.argument('filename')
 @click.pass_context
-def generate_pipeline(ctx, codebuild_image, source, filename):
-    # type: (click.Context, str, str, str) -> None
+def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
+    # type: (click.Context, str, str, str, str) -> None
     """Generate a cloudformation template for a starter CD pipeline.
 
     This command will write a starter cloudformation template to
@@ -326,6 +334,11 @@ def generate_pipeline(ctx, codebuild_image, source, filename):
         code_source=source,
     )
     output = p.create_template(params)
+    if buildspec_file:
+        extractor = pipeline.BuildSpecExtractor()
+        buildspec_contents = extractor.extract_buildspec(output)
+        with open(buildspec_file, 'w') as f:
+            f.write(buildspec_contents)
     with open(filename, 'w') as f:
         f.write(serialize_to_json(output))
 
