@@ -286,10 +286,14 @@ def package(ctx, single_file, stage, out):
 
 
 @cli.command('generate-pipeline')
+@click.option('-i', '--codebuild-image',
+              help=("Specify default codebuild image to use.  "
+                    "This option must be provided when using a python "
+                    "version besides 2.7."))
 @click.argument('filename')
 @click.pass_context
-def generate_pipeline(ctx, filename):
-    # type: (click.Context, str) -> None
+def generate_pipeline(ctx, codebuild_image, filename):
+    # type: (click.Context, str, str) -> None
     """Generate a cloudformation template for a starter CD pipeline.
 
     This command will write a starter cloudformation template to
@@ -305,10 +309,16 @@ def generate_pipeline(ctx, filename):
         $ aws cloudformation deploy --stack-name mystack \b
             --template-file pipeline.json --capabilities CAPABILITY_IAM
     """
-    from chalice.pipeline import create_pipeline_template
+    from chalice import pipeline
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
-    output = create_pipeline_template(config)
+    p = pipeline.CreatePipelineTemplate()
+    params = pipeline.PipelineParameters(
+        app_name=config.app_name,
+        lambda_python_version=config.lambda_python_version,
+        codebuild_image=codebuild_image,
+    )
+    output = p.create_template(params)
     with open(filename, 'w') as f:
         f.write(serialize_to_json(output))
 

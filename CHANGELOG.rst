@@ -13,7 +13,9 @@ Next Release (TBD)
 * Fix local mode handling of routes with trailing slashes
   (`#582 <https://github.com/aws/chalice/issues/582>`__)
 * Scale ``lambda_timeout`` parameter correctly in local mode
-  (`#579 <https://github.com/aws/chalice/pull/579`>__)
+  (`#579 <https://github.com/aws/chalice/pull/579>`__)
+* Add ``--codebuild-image`` to the ``generate-pipeline`` command
+  (`#609 <https://github.com/aws/chalice/issues/609>`__)
 
 
 1.0.4
