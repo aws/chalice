@@ -15,11 +15,13 @@ class InvalidCodeBuildPythonVersion(Exception):
 
 
 class PipelineParameters(object):
-    def __init__(self, app_name, lambda_python_version, codebuild_image=None):
-        # type: (str, str, Optional[str]) -> None
+    def __init__(self, app_name, lambda_python_version,
+                 codebuild_image=None, code_source='codecommit'):
+        # type: (str, str, Optional[str], str) -> None
         self.app_name = app_name
         self.lambda_python_version = lambda_python_version
         self.codebuild_image = codebuild_image
+        self.code_source = code_source
 
 
 class CreatePipelineTemplate(object):
@@ -54,9 +56,14 @@ class CreatePipelineTemplate(object):
         params['CodeBuildImage']['Default'] = self._get_codebuild_image(
             pipeline_params)
 
-        resources = [SourceRepository, CodeBuild, CodePipeline]
-        for resource_cls in resources:
-            resource_cls().add_to_template(t)
+        resources = []  # type: List[BaseResource]
+        if pipeline_params.code_source == 'github':
+            resources.append(GithubSource())
+        else:
+            resources.append(CodeCommitSourceRepository())
+        resources.extend([CodeBuild(), CodePipeline()])
+        for resource in resources:
+            resource.add_to_template(t, pipeline_params)
         return t
 
     def _get_codebuild_image(self, params):
@@ -71,14 +78,14 @@ class CreatePipelineTemplate(object):
 
 
 class BaseResource(object):
-    def add_to_template(self, template):
-        # type: (Dict[str, Any]) -> None
+    def add_to_template(self, template, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         raise NotImplementedError("add_to_template")
 
 
-class SourceRepository(BaseResource):
-    def add_to_template(self, template):
-        # type: (Dict[str, Any]) -> None
+class CodeCommitSourceRepository(BaseResource):
+    def add_to_template(self, template, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         resources = template.setdefault('Resources', {})
         resources['SourceRepository'] = {
             "Type": "AWS::CodeCommit::Repository",
@@ -98,9 +105,32 @@ class SourceRepository(BaseResource):
         }
 
 
+class GithubSource(BaseResource):
+    def add_to_template(self, template, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
+        # For the github source, we don't create a github repo,
+        # we just wire it up in the code pipeline.  The
+        # only thing we add to the template are parameters
+        # we reference in other resources later.
+        p = template.setdefault('Parameters', {})
+        p['GithubOwner'] = {
+            'Type': 'String',
+            'Description': 'The github owner or org name of the repository.',
+        }
+        p['GithubRepoName'] = {
+            'Type': 'String',
+            'Description': 'The name of the github repository.',
+        }
+        p['GithubPersonalToken'] = {
+            'Type': 'String',
+            'Description': 'Personal access token for the github repo.',
+            'NoEcho': True,
+        }
+
+
 class CodeBuild(BaseResource):
-    def add_to_template(self, template):
-        # type: (Dict[str, Any]) -> None
+    def add_to_template(self, template, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         resources = template.setdefault('Resources', {})
         outputs = template.setdefault('Outputs', {})
         # Used to store the application source when the SAM
@@ -217,11 +247,11 @@ class CodeBuild(BaseResource):
 
 
 class CodePipeline(BaseResource):
-    def add_to_template(self, template):
-        # type: (Dict[str, Any]) -> None
+    def add_to_template(self, template, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         resources = template.setdefault('Resources', {})
         outputs = template.setdefault('Outputs', {})
-        self._add_pipeline(resources)
+        self._add_pipeline(resources, pipeline_params)
         self._add_bucket_store(resources, outputs)
         self._add_codepipeline_role(resources, outputs)
         self._add_cfn_deploy_role(resources, outputs)
@@ -268,8 +298,8 @@ class CodePipeline(BaseResource):
             }
         }
 
-    def _add_pipeline(self, resources):
-        # type: (Dict[str, Any]) -> None
+    def _add_pipeline(self, resources, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         properties = {
             'Name': {
                 'Fn::Sub': '${ApplicationName}Pipeline'
@@ -281,26 +311,26 @@ class CodePipeline(BaseResource):
             'RoleArn': {
                 'Fn::GetAtt': 'CodePipelineRole.Arn',
             },
-            'Stages': self._create_pipeline_stages(),
+            'Stages': self._create_pipeline_stages(pipeline_params),
         }
         resources['AppPipeline'] = {
             'Type': 'AWS::CodePipeline::Pipeline',
             'Properties': properties
         }
 
-    def _create_pipeline_stages(self):
-        # type: () -> List[Dict[str, Any]]
+    def _create_pipeline_stages(self, pipeline_params):
+        # type: (PipelineParameters) -> List[Dict[str, Any]]
         # The goal is to eventually allow a user to configure
         # the various stages they want created. For now, there's
         # a fixed list.
-        stages = [
-            self._create_source_stage(),
-            self._create_build_stage(),
-            self._create_beta_stage(),
-        ]
+        stages = []
+        source = self._create_source_stage(pipeline_params)
+        if source:
+            stages.append(source)
+        stages.extend([self._create_build_stage(), self._create_beta_stage()])
         return stages
 
-    def _create_source_stage(self):
+    def _code_commit_source(self):
         # type: () -> Dict[str, Any]
         return {
             "Name": "Source",
@@ -327,6 +357,37 @@ class CodePipeline(BaseResource):
                     "Name": "Source"
                 }
             ]
+        }
+
+    def _create_source_stage(self, pipeline_params):
+        # type: (PipelineParameters) -> Dict[str, Any]
+        if pipeline_params.code_source == 'codecommit':
+            return self._code_commit_source()
+        return self._github_source()
+
+    def _github_source(self):
+        # type: () -> Dict[str, Any]
+        return {
+            'Name': 'Source',
+            'Actions': [{
+                "ActionTypeId": {
+                    "Category": "Source",
+                    "Owner": "ThirdParty",
+                    "Version": 1,
+                    "Provider": "GitHub"
+                },
+                'RunOrder': 1,
+                'OutputArtifacts': {
+                    'Name': 'SourceRepo',
+                },
+                'Configuration': {
+                    'Owner': {'Ref': 'GithubOwner'},
+                    'Repo': {'Ref': 'GithubRepoName'},
+                    'OAuthToken': {'Ref': 'GithubPersonalToken'},
+                    'Branch': 'master',
+                    'PollForSourceChanges': True,
+                }
+            }],
         }
 
     def _create_build_stage(self):
@@ -470,3 +531,12 @@ class CodePipeline(BaseResource):
                 }
             }
         }
+
+
+class BuildSpecExtractor(object):
+    def extract_buildspec(self, template):
+        # type: (Dict[str, Any]) -> str
+        source = template['Resources']['AppPackageBuild'][
+            'Properties']['Source']
+        buildspec = source.pop('BuildSpec')
+        return buildspec

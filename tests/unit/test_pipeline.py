@@ -9,6 +9,11 @@ def pipeline_gen():
     return pipeline.CreatePipelineTemplate()
 
 
+@pytest.fixture
+def pipeline_params():
+    return pipeline.PipelineParameters('appname', 'python2.7')
+
+
 class TestPipelineGen(object):
 
     def setup_method(self):
@@ -16,11 +21,12 @@ class TestPipelineGen(object):
 
     def generate_template(self, app_name='appname',
                           lambda_python_version='python2.7',
-                          codebuild_image=None):
+                          codebuild_image=None, code_source='codecommit'):
         params = PipelineParameters(
             app_name=app_name,
             lambda_python_version=lambda_python_version,
-            codebuild_image=codebuild_image
+            codebuild_image=codebuild_image,
+            code_source=code_source,
         )
         template = self.pipeline_gen.create_template(params)
         return template
@@ -50,10 +56,40 @@ class TestPipelineGen(object):
         default_image = template['Parameters']['CodeBuildImage']['Default']
         assert default_image == 'python:3.6.1'
 
+    def test_no_source_resource_when_using_github(self):
+        template = self.generate_template(code_source='github')
+        resources = template['Resources']
+        assert 'SourceRepository' not in set(resources)
 
-def test_source_repo_resource():
+    def test_can_add_github_as_source_stage(self):
+        template = self.generate_template(code_source='github')
+        resources = template['Resources']
+        source_stage = resources['AppPipeline']['Properties']['Stages'][0]
+        assert source_stage['Name'] == 'Source'
+        actions = source_stage['Actions']
+        assert len(actions) == 1
+        action = actions[0]
+        assert action['ActionTypeId'] == {
+            'Category': 'Source',
+            'Provider': 'GitHub',
+            'Owner': 'ThirdParty',
+            'Version': 1,
+        }
+        assert action['RunOrder'] == 1
+        assert action['OutputArtifacts'] == {'Name': 'SourceRepo'}
+        assert action['Configuration'] == {
+            'Owner': {'Ref': 'GithubOwner'},
+            'Repo': {'Ref': 'GithubRepoName'},
+            'OAuthToken': {'Ref': 'GithubPersonalToken'},
+            'Branch': 'master',
+            'PollForSourceChanges': True,
+        }
+
+
+def test_source_repo_resource(pipeline_params):
     template = {}
-    pipeline.SourceRepository().add_to_template(template)
+    pipeline.CodeCommitSourceRepository().add_to_template(
+        template, pipeline_params)
     assert template == {
         "Resources": {
             "SourceRepository": {
@@ -78,9 +114,9 @@ def test_source_repo_resource():
     }
 
 
-def test_codebuild_resource():
+def test_codebuild_resource(pipeline_params):
     template = {}
-    pipeline.CodeBuild().add_to_template(template)
+    pipeline.CodeBuild().add_to_template(template, pipeline_params)
     resources = template['Resources']
     assert 'ApplicationBucket' in resources
     assert 'CodeBuildRole' in resources
@@ -92,9 +128,9 @@ def test_codebuild_resource():
     }
 
 
-def test_codepipeline_resource():
+def test_codepipeline_resource(pipeline_params):
     template = {}
-    pipeline.CodePipeline().add_to_template(template)
+    pipeline.CodePipeline().add_to_template(template, pipeline_params)
     resources = template['Resources']
     assert 'AppPipeline' in resources
     assert 'ArtifactBucketStore' in resources
@@ -107,9 +143,37 @@ def test_codepipeline_resource():
     resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
 
 
-def test_install_requirements_in_buildspec():
+def test_install_requirements_in_buildspec(pipeline_params):
     template = {}
-    pipeline.CodeBuild().add_to_template(template)
+    pipeline.CodeBuild().add_to_template(template, pipeline_params)
     build = template['Resources']['AppPackageBuild']
     build_spec = build['Properties']['Source']['BuildSpec']
     assert 'pip install -r requirements.txt' in build_spec
+
+
+def test_can_generate_github_source(pipeline_params):
+    template = {}
+    pipeline_params.code_source = 'github'
+    pipeline.GithubSource().add_to_template(template, pipeline_params)
+    cfn_params = template['Parameters']
+    assert set(cfn_params) == set(['GithubOwner', 'GithubRepoName',
+                                   'GithubPersonalToken'])
+
+
+def test_build_extractor():
+    template = {
+        'Resources': {
+            'AppPackageBuild': {
+                'Properties': {
+                    'Source': {
+                        'BuildSpec': 'foobar'
+                    }
+                }
+            }
+        }
+    }
+    extract = pipeline.BuildSpecExtractor()
+    extracted = extract.extract_buildspec(template)
+    assert extracted == 'foobar'
+    assert 'BuildSpec' not in template[
+        'Resources']['AppPackageBuild']['Properties']['Source']
