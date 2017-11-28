@@ -12,10 +12,11 @@ from chalice.config import Config
 
 
 class ThreadedLocalServer(Thread):
-    def __init__(self, port):
+    def __init__(self, port, host='localhost'):
         super(ThreadedLocalServer, self).__init__()
         self._app_object = None
         self._config = None
+        self._host = host
         self._port = port
         self._server = None
         self._server_ready = Event()
@@ -26,14 +27,14 @@ class ThreadedLocalServer(Thread):
 
     def run(self):
         self._server = LocalDevServer(
-            self._app_object, self._config, self._port)
+            self._app_object, self._config, self._host, self._port)
         self._server_ready.set()
         self._server.serve_forever()
 
     def make_call(self, method, path, port, timeout=0.5):
         self._server_ready.wait()
-        return method('http://localhost:{port}{path}'.format(
-            path=path, port=port), timeout=timeout)
+        return method('http://{host}:{port}{path}'.format(
+            path=path, host=self._host, port=port), timeout=timeout)
 
     def shutdown(self):
         if self._server is not None:
