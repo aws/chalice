@@ -16,6 +16,9 @@ Next Release (TBD)
   (`#579 <https://github.com/aws/chalice/pull/579>`__)
 * Add ``--codebuild-image`` to the ``generate-pipeline`` command
   (`#609 <https://github.com/aws/chalice/issues/609>`__)
+* Add ``--source`` and ``-buildspec-file`` to the
+  ``generate-pipeline`` command
+  (`#609 <https://github.com/aws/chalice/issues/619>`__)
 
 
 1.0.4
