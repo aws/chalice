@@ -302,8 +302,11 @@ def package(ctx, single_file, stage, out):
                     "generated cloudformation template.  If this option "
                     "is provided, a buildspec.yml will be generated "
                     "as a separate file and not included in the cfn "
-                    "template.  This file should be named 'buildspec.yml'"
-                    "and placed in the root directory of your app."))
+                    "template.  This allows you to make changes to how "
+                    "the project is built without having to redeploy "
+                    "a CloudFormation template. This file should be "
+                    "named 'buildspec.yml' and placed in the root "
+                    "directory of your app."))
 @click.argument('filename')
 @click.pass_context
 def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
