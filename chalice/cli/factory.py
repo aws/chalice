@@ -110,7 +110,7 @@ class CLIFactory(object):
         # We will load the chalice app after loading the config
         # so we can set any env vars needed here, before importing
         # the app.
-        if env is not None:
+        if env is None:
             env=os.environ
         self._handle_environment_variables(
             chalice_stage_name, config_from_disk, env
