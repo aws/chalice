@@ -111,9 +111,10 @@ class CLIFactory(object):
         # so we can set any env vars needed here, before importing
         # the app.
         if env is not None:
-            self._handle_environment_variables(
-                chalice_stage_name, config_from_disk, env
-            )
+            env=os.environ
+        self._handle_environment_variables(
+            chalice_stage_name, config_from_disk, env
+        )
 
         app_obj = self.load_chalice_app()
         user_provided_params['chalice_app'] = app_obj
