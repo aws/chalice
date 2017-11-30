@@ -90,6 +90,10 @@ class ConflictError(ChaliceViewError):
     STATUS_CODE = 409
 
 
+class UnprocessableEntityError(ChaliceViewError):
+    STATUS_CODE = 422
+
+
 class TooManyRequestsError(ChaliceViewError):
     STATUS_CODE = 429
 
@@ -102,6 +106,7 @@ ALL_ERRORS = [
     ForbiddenError,
     RequestTimeoutError,
     ConflictError,
+    UnprocessableEntityError,
     TooManyRequestsError]
 
 
