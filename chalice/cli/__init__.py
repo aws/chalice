@@ -109,7 +109,6 @@ def run_local_server(factory, host, port, stage, env):
     server = factory.create_local_server(app_obj, config, host, port)
     server.serve_forever()
 
-
 @cli.command()
 @click.option('--autogen-policy/--no-autogen-policy',
               default=None,
@@ -121,14 +120,18 @@ def run_local_server(factory, host, port, stage, env):
               help=('Name of the Chalice stage to deploy to. '
                     'Specifying a new chalice stage will create '
                     'an entirely new set of AWS resources.'))
+@click.option('--botocore-timeout',
+              help=('Override the default boto core timeout '
+                    'at deployment time. '))
 @click.pass_context
-def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage):
-    # type: (click.Context, Optional[bool], str, str, str) -> None
+def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage, botocore_timeout):
+    # type: (click.Context, Optional[bool], str, str, str, int) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(
         chalice_stage_name=stage, autogen_policy=autogen_policy,
         api_gateway_stage=api_gateway_stage,
+        botocore_timeout=botocore_timeout
     )
     session = factory.create_botocore_session()
     d = factory.create_default_deployer(session=session, ui=UI())
