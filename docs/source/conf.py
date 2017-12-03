@@ -15,8 +15,6 @@
 import sys
 import os
 
-import guzzle_sphinx_theme
-
 _ROOT_SOURCE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _ROOT_SOURCE)
 
@@ -117,20 +115,30 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-extensions.append("guzzle_sphinx_theme")
-html_translator_class = 'guzzle_sphinx_theme.HTMLTranslator'
-html_theme_path = guzzle_sphinx_theme.html_theme_path()
-html_theme = 'guzzle_sphinx_theme'
+html_theme = 'alabaster'
 # Guzzle theme options (see theme.conf for more information)
 
-html_theme_options = {}
+html_theme_options = {
+    'github_user': 'aws',
+    'github_repo': 'chalice',
+    'sidebar_width': '270px',
+    'page_width': '1020px',
+    'note_bg': '#f1f7f4',
+    'note_border': '#ccb7b7',
+    'pre_bg': '#fbfbfb',
+    'code_bg': '#fbfafa',
+    'show_powered_by': False,
+    'font_size': '16px',
+    'font_family': '"Open Sans", Helvetica, Arial, sans-serif',
+
+}
 
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-html_short_title = 'User Documentation'
+html_short_title = 'Chalice'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
