@@ -121,6 +121,7 @@ def run_local_server(factory, host, port, stage, env):
                     'Specifying a new chalice stage will create '
                     'an entirely new set of AWS resources.'))
 @click.option('--botocore-timeout',
+              type=int,
               help=('Override the default boto core timeout '
                     'at deployment time. '))
 @click.pass_context
@@ -131,10 +132,14 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage, botocore_time
     config = factory.create_config_obj(
         chalice_stage_name=stage, autogen_policy=autogen_policy,
         api_gateway_stage=api_gateway_stage,
-        botocore_timeout=botocore_timeout
     )
     session = factory.create_botocore_session()
-    d = factory.create_default_deployer(session=session, ui=UI())
+    botocore_config = factory.create_botocore_config(
+        connect_timeout=botocore_timeout
+    )
+    d = factory.create_default_deployer(session=session,
+                                        botocore_config=botocore_config,
+                                        ui=UI())
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     record_deployed_values(deployed_values, os.path.join(
         config.project_dir, '.chalice', 'deployed.json'))

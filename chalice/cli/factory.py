@@ -4,6 +4,7 @@ import json
 import importlib
 import logging
 
+from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
 from typing import Any, Optional, Dict  # noqa
 
@@ -29,6 +30,16 @@ def create_botocore_session(profile=None, debug=False):
         s.set_debug_logger('')
         _inject_large_request_body_filter()
     return s
+
+
+def create_botocore_config(connect_timeout=None):
+    # type: (int) -> BotocoreConfig
+    config = {}
+
+    if connect_timeout is not None:
+        config['connect_timeout'] = connect_timeout
+
+    return BotocoreConfig(**config)
 
 
 def _add_chalice_user_agent(session):
@@ -82,10 +93,14 @@ class CLIFactory(object):
         return create_botocore_session(profile=self.profile,
                                        debug=self.debug)
 
-    def create_default_deployer(self, session, ui):
-        # type: (Session, UI) -> deployer.Deployer
+    def create_botocore_config(self, connect_timeout):
+        # type: (int) -> BotocoreConfig
+        return create_botocore_config(connect_timeout=connect_timeout)
+
+    def create_default_deployer(self, session, botocore_config, ui):
+        # type: (Session, BotocoreConfig, UI) -> deployer.Deployer
         return deployer.create_default_deployer(
-            session=session, ui=ui)
+            session=session, botocore_config=botocore_config, ui=ui)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
@@ -114,8 +129,7 @@ class CLIFactory(object):
             user_provided_params['profile'] = self.profile
         if api_gateway_stage is not None:
             user_provided_params['api_gateway_stage'] = api_gateway_stage
-        if botocore_timeout is not None:
-            user_provided_params['botocore_timeout'] = botocore_timeout
+
         config = Config(chalice_stage=chalice_stage_name,
                         user_provided_params=user_provided_params,
                         config_from_disk=config_from_disk,
