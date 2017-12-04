@@ -49,8 +49,8 @@ _AWSCLIENT_EXCEPTIONS = (
 )
 
 
-def create_default_deployer(session, botocore_config=None, ui=None):
-    # type: (botocore.session.Session, botocore.config.Config, UI) -> Deployer
+def create_default_deployer(session, ui=None, botocore_config=None):
+    # type: (botocore.session.Session, UI, botocore.config.Config) -> Deployer
     if ui is None:
         ui = UI()
     aws_client = TypedAWSClient(session, botocore_config=botocore_config)

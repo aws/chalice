@@ -109,6 +109,7 @@ def run_local_server(factory, host, port, stage, env):
     server = factory.create_local_server(app_obj, config, host, port)
     server.serve_forever()
 
+
 @cli.command()
 @click.option('--autogen-policy/--no-autogen-policy',
               default=None,
@@ -125,7 +126,8 @@ def run_local_server(factory, host, port, stage, env):
               help=('Override the default boto core timeout '
                     'at deployment time. '))
 @click.pass_context
-def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage, botocore_timeout):
+def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
+           botocore_timeout):
     # type: (click.Context, Optional[bool], str, str, str, int) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
@@ -138,8 +140,8 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage, botocore_time
         connect_timeout=botocore_timeout
     )
     d = factory.create_default_deployer(session=session,
-                                        botocore_config=botocore_config,
-                                        ui=UI())
+                                        ui=UI(),
+                                        botocore_config=botocore_config)
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     record_deployed_values(deployed_values, os.path.join(
         config.project_dir, '.chalice', 'deployed.json'))

@@ -97,10 +97,10 @@ class CLIFactory(object):
         # type: (int) -> BotocoreConfig
         return create_botocore_config(connect_timeout=connect_timeout)
 
-    def create_default_deployer(self, session, botocore_config, ui):
-        # type: (Session, BotocoreConfig, UI) -> deployer.Deployer
+    def create_default_deployer(self, session, ui, botocore_config=None):
+        # type: (Session, UI, BotocoreConfig) -> deployer.Deployer
         return deployer.create_default_deployer(
-            session=session, botocore_config=botocore_config, ui=ui)
+            session=session, ui=ui, botocore_config=botocore_config)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,

@@ -23,7 +23,7 @@ import json
 import re
 import uuid
 
-import botocore.session  # noqa
+from botocore.session import Session  # noqa
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from botocore.vendored.requests import ConnectionError as \
@@ -41,7 +41,7 @@ _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
 _REMOTE_CALL_ERRORS = (
-    botocore.exceptions.ClientError, RequestsConnectionError
+    ClientError, RequestsConnectionError
 )
 
 
@@ -81,7 +81,7 @@ class TypedAWSClient(object):
     DELAY_TIME = 5
 
     def __init__(self, session, botocore_config=Config(), sleep=time.sleep):
-        # type: (botocore.session.Session, Config, Callable[[int], None]) -> None
+        # type: (Session, Config, Callable[[int], None]) -> None
         self._session = session
         self._sleep = sleep
         self._client_cache = {}  # type: Dict[str, Any]
