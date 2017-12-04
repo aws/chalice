@@ -93,7 +93,7 @@ class CLIFactory(object):
         return create_botocore_session(profile=self.profile,
                                        debug=self.debug)
 
-    def create_botocore_config(self, connect_timeout):
+    def create_botocore_config(self, connect_timeout=None):
         # type: (int) -> BotocoreConfig
         return create_botocore_config(connect_timeout=connect_timeout)
 
@@ -104,9 +104,8 @@ class CLIFactory(object):
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
-                          api_gateway_stage=None,
-                          botocore_timeout=None):
-        # type: (str, Optional[bool], str, int) -> Config
+                          api_gateway_stage=None):
+        # type: (str, Optional[bool], str) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,

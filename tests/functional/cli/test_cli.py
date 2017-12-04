@@ -238,6 +238,20 @@ def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
         )
 
 
+def test_can_deploy_specify_botocore_timeout(runner, mock_cli_factory,
+                                             mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy,
+                                  ['--botocore-timeout', 100],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+        mock_cli_factory.create_botocore_config.assert_called_with(
+            connect_timeout=100
+        )
+
+
 def test_can_retrieve_url(runner, mock_cli_factory):
     deployed_values = {
         "dev": {
