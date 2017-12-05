@@ -9,13 +9,6 @@ check:
 	flake8 --ignore=E731,W503 --exclude chalice/__init__.py,chalice/compat.py --max-complexity 10 chalice/
 	flake8 --ignore=E731,W503,F401 --max-complexity 10 chalice/compat.py
 	flake8 tests/unit/ tests/functional/ tests/integration
-	##### DOC8 ######
-	# Correct rst formatting for documentation
-	#
-	##
-	doc8 docs/source --ignore-path docs/source/topics/multifile.rst
-	#
-	#
 	#
 	# Proper docstring conventions according to pep257
 	#
@@ -45,4 +38,23 @@ htmlcov:
 	rm -rf /tmp/htmlcov && mv htmlcov /tmp/
 	open /tmp/htmlcov/index.html
 
-prcheck: check pylint typecheck test
+doccheck:
+	##### DOC8 ######
+	# Correct rst formatting for documentation
+	#
+	##
+	doc8 docs/source --ignore-path docs/source/topics/multifile.rst
+	#
+	#
+	# Verify we have no broken external links
+	# as well as no undefined internal references.
+	$(MAKE) -C docs linkcheck
+	# Verify we can build the docs.  The
+	# treat warnings as errors flag is enabled
+	# so any sphinx-build warnings will fail the build.
+	$(MAKE) -C docs html
+
+prcheck-py2: check pylint coverage doccheck
+
+
+prcheck: prcheck-py2 typecheck

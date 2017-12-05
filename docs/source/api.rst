@@ -131,7 +131,7 @@ Chalice
       function.  It will also schedule the lambda function to be invoked
       with a scheduled CloudWatch Event.
 
-      See :doc:`events` for more information.
+      See :doc:`topics/events` for more information.
 
       .. code-block:: python
 
@@ -169,7 +169,7 @@ Chalice
 
       Create a pure lambda function that's not connected to anything.
 
-      See :doc:`purelambda` for more information.
+      See :doc:`topics/purelambda` for more information.
 
       :param name: The name of the function to use.  This name is combined
         with the chalice app name as well as the stage name to create the

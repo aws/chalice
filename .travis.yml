@@ -4,17 +4,11 @@ env: HYPOTHESIS_PROFILE=ci
 matrix:
   include:
   - python: "3.6"
-    env: TEST_TYPE=check
-  - python: "3.6"
-    env: TEST_TYPE=typecheck
-  - python: "3.6"
-    env: TEST_TYPE=coverage
+    env: TEST_TYPE=prcheck
   - python: "2.7"
-    env: TEST_TYPE=coverage
-  - python: "2.7"
-    env: TEST_TYPE=check
+    env: TEST_TYPE=prcheck-py2
 install:
-  - pip install -r requirements-dev.txt
+  - pip install -r requirements-dev.txt -r requirements-docs.txt
   - pip install -e .
 script:
   - make $TEST_TYPE

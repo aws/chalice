@@ -17,7 +17,7 @@ function for something that's not supported by chalice or if you just want to
 create Lambda functions but don't want to manage handling dependencies and
 deployments yourself.
 
-In order to do this, you can use the :ref:`Chalice.lambda_function` decorator
+In order to do this, you can use the :meth:`Chalice.lambda_function` decorator
 to denote that this python function is a pure lambda function that should
 be invoked as is, without any input or output mapping.  When you use
 this function, you must provide a function that maps to the same function
