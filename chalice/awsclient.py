@@ -161,7 +161,7 @@ class TypedAWSClient(object):
             return response
 
     def _is_iam_role_related_error(self, error):
-        # type: (botocore.exceptions.ClientError) -> bool
+        # type: (ClientError) -> bool
         message = error.response['Error'].get('Message', '')
         if re.search('role.*cannot be assumed', message):
             return True
