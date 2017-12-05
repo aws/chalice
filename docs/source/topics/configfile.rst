@@ -212,3 +212,22 @@ The ``prod`` stage will have these environment variables set::
     "TABLE_NAME": "prod-table",
     "OTHER_CONFIG": "prod-value",
   }
+
+It is also possible to add specific configurations for specific Lambda
+functions in a stage. Here is an example of a configuration for a function
+called  ``foo`` in a ``dev`` stage::
+
+  {
+    "stages": {
+      "dev": {
+        "api_gateway_stage": "api",
+        "lambda_functions": {
+          "foo": {
+            "lambda_timeout": 120
+          }
+        }
+      }
+    },
+    "version": "2.0",
+    "app_name": "demo"
+  }
