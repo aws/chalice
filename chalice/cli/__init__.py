@@ -123,8 +123,8 @@ def run_local_server(factory, host, port, stage, env):
                     'an entirely new set of AWS resources.'))
 @click.option('--botocore-timeout',
               type=int,
-              help=('Override the default boto core timeout '
-                    'at deployment time. '))
+              help=('Overrides the default botocore connection '
+                    'timeout.'))
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
            botocore_timeout):
