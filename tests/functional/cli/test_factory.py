@@ -69,6 +69,11 @@ def test_can_create_botocore_config_set_connect_timeout():
     assert vars(config)['connect_timeout'] == 100
 
 
+def test_can_create_botocore_config_cli_factory(clifactory):
+    config = clifactory.create_botocore_config()
+    assert isinstance(config, BotocoreConfig)
+
+
 def test_can_create_default_deployer(clifactory):
     session = clifactory.create_botocore_session()
     deployer = clifactory.create_default_deployer(session, None)
