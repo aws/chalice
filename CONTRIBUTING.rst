@@ -5,8 +5,8 @@ Contributing
 We work hard to provide a high-quality and useful framework, and we greatly value
 feedback and contributions from our community. Whether it's a new feature,
 correction, or additional documentation, we welcome your pull requests. Please
-submit any `issues <https://github.com/awslabs/chalice/issues>`__
-or `pull requests <https://github.com/awslabs/chalice/pulls>`__ through GitHub.
+submit any `issues <https://github.com/aws/chalice/issues>`__
+or `pull requests <https://github.com/aws/chalice/pulls>`__ through GitHub.
 
 This document contains guidelines for contributing code and filing issues.
 
@@ -24,7 +24,7 @@ contributions as well:
 * We maintain a high percentage of code coverage in our tests.  As
   a general rule of thumb, code changes should not lower the overall
   code coverage percentage for the project.  To help with this,
-  we use `codecov <https://codecov.io/gh/awslabs/chalice>`__, which will
+  we use `codecov <https://codecov.io/gh/aws/chalice>`__, which will
   comment on changes in code coverage for every pull request.
   In practice, this means that every bug fix and feature addition should
   include unit tests, and optionally functional and integration tests.
@@ -51,11 +51,11 @@ This applies to:
 * Any new CLI commands
 
 If you'd like to implement a significant feature for chalice,
-please file an `issue <https://github.com/awslabs/chalice/issues>`__
+please file an `issue <https://github.com/aws/chalice/issues>`__
 to start the design discussion.
 
 All of the existing proposals are tagged with `proposals
-<https://github.com/awslabs/chalice/issues?q=is%3Aopen+is%3Aissue+label%3Aproposals>`__.
+<https://github.com/aws/chalice/issues?q=is%3Aopen+is%3Aissue+label%3Aproposals>`__.
 
 
 Development Environment Setup

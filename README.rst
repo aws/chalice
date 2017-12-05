@@ -173,11 +173,11 @@ function.  You can then redeploy your changes by running ``chalice deploy``.
 
 
 For the rest of these tutorials, we'll be using ``httpie`` instead of ``curl``
-(https://github.com/jkbrzt/httpie) to test our API.  You can install ``httpie``
-using ``pip install httpie``, or if you're on Mac, you can run ``brew install
-httpie``.  The Github link has more information on installation instructions.
-Here's an example of using ``httpie`` to request the root resource of the API
-we just created.  Note that the command name is ``http``::
+(https://github.com/jakubroztocil/httpie) to test our API.  You can install
+``httpie`` using ``pip install httpie``, or if you're on Mac, you can run
+``brew install httpie``.  The Github link has more information on installation
+instructions.  Here's an example of using ``httpie`` to request the root
+resource of the API we just created.  Note that the command name is ``http``::
 
 
     $ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/

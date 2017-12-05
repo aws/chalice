@@ -4,7 +4,7 @@ Upgrade Notes
 This document provides additional documentation
 on upgrading your version of chalice.  If you're just
 interested in the high level changes, see the
-`CHANGELOG.rst <https://github.com/awslabs/chalice/blob/master/CHANGELOG.rst>`__)
+`CHANGELOG.rst <https://github.com/aws/chalice/blob/master/CHANGELOG.rst>`__)
 file.
 
 .. _v1-0-0b2:
@@ -78,7 +78,7 @@ The 0.9.0 release changed the type of ``app.current_request.raw_body`` to
 always be of type ``bytes()``.  This only affects users that were using
 python3.  Previously you would get a type ``str()``, but with the introduction
 of `binary content type support
-<https://github.com/awslabs/chalice/issues/348>`__, the ``raw_body`` attribute
+<https://github.com/aws/chalice/issues/348>`__, the ``raw_body`` attribute
 was made to consistently be of type ``bytes()``.
 
 

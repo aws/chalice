@@ -221,6 +221,6 @@ For more information on custom authorizers, see the
 page in the API Gateway user guide.
 
 
-.. _IAM permissions: http://docs.aws.amazon.com/IAM/latest/UserGuide/access_permissions.html
+.. _IAM permissions: http://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html
 .. _Cognito User Pools: http://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
 .. _API Gateway documentation: http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html#api-gateway-custom-authorizer-lambda-function-create
