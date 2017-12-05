@@ -89,7 +89,7 @@ class CLIFactory(object):
                                        connection_timeout=connection_timeout)
 
     def create_default_deployer(self, session, ui):
-        # type: (Session, UI, BotocoreConfig) -> deployer.Deployer
+        # type: (Session, UI) -> deployer.Deployer
         return deployer.create_default_deployer(
             session=session, ui=ui)
 
@@ -119,7 +119,6 @@ class CLIFactory(object):
             user_provided_params['profile'] = self.profile
         if api_gateway_stage is not None:
             user_provided_params['api_gateway_stage'] = api_gateway_stage
-
         config = Config(chalice_stage=chalice_stage_name,
                         user_provided_params=user_provided_params,
                         config_from_disk=config_from_disk,
