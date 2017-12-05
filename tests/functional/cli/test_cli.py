@@ -244,11 +244,11 @@ def test_can_deploy_specify_botocore_timeout(runner, mock_cli_factory,
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.deploy,
-                                  ['--botocore-timeout', 100],
+                                  ['--connection-timeout', 100],
                                   cli_factory=mock_cli_factory)
         assert result.exit_code == 0
-        mock_cli_factory.create_botocore_config.assert_called_with(
-            connect_timeout=100
+        mock_cli_factory.create_botocore_session.assert_called_with(
+            connection_timeout=100
         )
 
 

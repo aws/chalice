@@ -49,11 +49,11 @@ _AWSCLIENT_EXCEPTIONS = (
 )
 
 
-def create_default_deployer(session, ui=None, botocore_config=None):
-    # type: (botocore.session.Session, UI, botocore.config.Config) -> Deployer
+def create_default_deployer(session, ui=None):
+    # type: (botocore.session.Session, UI) -> Deployer
     if ui is None:
         ui = UI()
-    aws_client = TypedAWSClient(session, botocore_config=botocore_config)
+    aws_client = TypedAWSClient(session)
     api_gateway_deploy = APIGatewayDeployer(aws_client, ui)
 
     osutils = OSUtils()

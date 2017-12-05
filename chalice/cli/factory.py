@@ -22,7 +22,8 @@ from chalice import local
 from chalice.utils import UI  # noqa
 
 
-def create_botocore_session(profile=None, debug=False, connection_timeout=None):
+def create_botocore_session(profile=None, debug=False,
+                            connection_timeout=None):
     # type: (str, bool, int) -> Session
     s = Session(profile=profile)
     _add_chalice_user_agent(s)
@@ -87,10 +88,10 @@ class CLIFactory(object):
                                        debug=self.debug,
                                        connection_timeout=connection_timeout)
 
-    def create_default_deployer(self, session, ui, botocore_config=None):
+    def create_default_deployer(self, session, ui):
         # type: (Session, UI, BotocoreConfig) -> deployer.Deployer
         return deployer.create_default_deployer(
-            session=session, ui=ui, botocore_config=botocore_config)
+            session=session, ui=ui)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,

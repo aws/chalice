@@ -138,8 +138,7 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     session = factory.create_botocore_session(
         connection_timeout=connection_timeout)
     d = factory.create_default_deployer(session=session,
-                                        ui=UI(),
-                                        botocore_config=botocore_config)
+                                        ui=UI())
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     record_deployed_values(deployed_values, os.path.join(
         config.project_dir, '.chalice', 'deployed.json'))

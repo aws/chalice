@@ -6,7 +6,6 @@ import logging
 import pytest
 from pytest import fixture
 
-from botocore.config import Config as BotocoreConfig
 from chalice.cli import factory
 from chalice.deploy.deployer import Deployer
 from chalice.config import Config
@@ -41,6 +40,7 @@ def assert_request_body_filter_in_log(log_name):
 def test_can_create_botocore_session():
     session = factory.create_botocore_session()
     assert session.user_agent().startswith('aws-chalice/')
+    assert session.get_default_client_config() is None
 
 
 def test_can_create_botocore_session_debug():
@@ -53,25 +53,15 @@ def test_can_create_botocore_session_debug():
     assert logging.getLogger('').level == logging.DEBUG
 
 
+def test_can_create_botocore_session_connection_timeout():
+    session = factory.create_botocore_session(connection_timeout=100)
+    assert vars(session.get_default_client_config())['connect_timeout'] == 100
+
+
 def test_can_create_botocore_session_cli_factory(clifactory):
     clifactory.profile = 'myprofile'
     session = clifactory.create_botocore_session()
     assert session.profile == 'myprofile'
-
-
-def test_can_create_botocore_config():
-    config = factory.create_botocore_config()
-    assert isinstance(config, BotocoreConfig)
-
-
-def test_can_create_botocore_config_set_connect_timeout():
-    config = factory.create_botocore_config(connect_timeout=100)
-    assert vars(config)['connect_timeout'] == 100
-
-
-def test_can_create_botocore_config_cli_factory(clifactory):
-    config = clifactory.create_botocore_config()
-    assert isinstance(config, BotocoreConfig)
 
 
 def test_can_create_default_deployer(clifactory):
