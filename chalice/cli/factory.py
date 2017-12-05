@@ -22,24 +22,17 @@ from chalice import local
 from chalice.utils import UI  # noqa
 
 
-def create_botocore_session(profile=None, debug=False):
-    # type: (str, bool) -> Session
+def create_botocore_session(profile=None, debug=False, connection_timeout=None):
+    # type: (str, bool, int) -> Session
     s = Session(profile=profile)
     _add_chalice_user_agent(s)
     if debug:
         s.set_debug_logger('')
         _inject_large_request_body_filter()
+    if connection_timeout is not None:
+        config = BotocoreConfig(connect_timeout=connection_timeout)
+        s.set_default_client_config(config)
     return s
-
-
-def create_botocore_config(connect_timeout=None):
-    # type: (int) -> BotocoreConfig
-    config = {}
-
-    if connect_timeout is not None:
-        config['connect_timeout'] = connect_timeout
-
-    return BotocoreConfig(**config)
 
 
 def _add_chalice_user_agent(session):
@@ -88,14 +81,11 @@ class CLIFactory(object):
         self.debug = debug
         self.profile = profile
 
-    def create_botocore_session(self):
+    def create_botocore_session(self, connection_timeout=None):
         # type: () -> Session
         return create_botocore_session(profile=self.profile,
-                                       debug=self.debug)
-
-    def create_botocore_config(self, connect_timeout=None):
-        # type: (int) -> BotocoreConfig
-        return create_botocore_config(connect_timeout=connect_timeout)
+                                       debug=self.debug,
+                                       connection_timeout=connection_timeout)
 
     def create_default_deployer(self, session, ui, botocore_config=None):
         # type: (Session, UI, BotocoreConfig) -> deployer.Deployer

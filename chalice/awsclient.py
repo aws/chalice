@@ -23,8 +23,7 @@ import json
 import re
 import uuid
 
-from botocore.session import Session  # noqa
-from botocore.config import Config
+import botocore.session  # noqa
 from botocore.exceptions import ClientError
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
@@ -41,7 +40,7 @@ _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
 
 _REMOTE_CALL_ERRORS = (
-    ClientError, RequestsConnectionError
+    botocore.exceptions.ClientError, RequestsConnectionError
 )
 
 
@@ -80,12 +79,11 @@ class TypedAWSClient(object):
     LAMBDA_CREATE_ATTEMPTS = 30
     DELAY_TIME = 5
 
-    def __init__(self, session, botocore_config=Config(), sleep=time.sleep):
-        # type: (Session, Config, Callable[[int], None]) -> None
+    def __init__(self, session, sleep=time.sleep):
+        # type: (botocore.session.Session, Callable[[int], None]) -> None
         self._session = session
         self._sleep = sleep
         self._client_cache = {}  # type: Dict[str, Any]
-        self._config = botocore_config
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool
@@ -161,7 +159,7 @@ class TypedAWSClient(object):
             return response
 
     def _is_iam_role_related_error(self, error):
-        # type: (ClientError) -> bool
+        # type: (botocore.exceptions.ClientError) -> bool
         message = error.response['Error'].get('Message', '')
         if re.search('role.*cannot be assumed', message):
             return True
@@ -567,7 +565,7 @@ class TypedAWSClient(object):
         # type: (str) -> Any
         if service_name not in self._client_cache:
             self._client_cache[service_name] = self._session.create_client(
-                service_name, config=self._config)
+                service_name)
         return self._client_cache[service_name]
 
     def add_permission_for_authorizer(self, rest_api_id, function_arn,
