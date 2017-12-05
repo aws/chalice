@@ -667,7 +667,6 @@ class LambdaDeployer(object):
         except ResourceDoesNotExistError:
             self._ui.write("Creating role: %s\n" % role_name)
             role_arn = self._create_role_from_source_code(config, role_name)
-        import pdb; pdb.set_trace()
         return role_arn
 
     def _update_role_with_latest_policy(self, app_name, config):
