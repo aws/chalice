@@ -60,7 +60,7 @@ class RemoteState(object):
                            role_arn=role['Arn'])
 
 
-class Sweeper(object):
+class UnreferencedResourcePlanner(object):
 
     def execute(self, plan, config):
         # type: (List[models.Instruction], Config) -> None
