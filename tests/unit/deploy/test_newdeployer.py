@@ -26,6 +26,7 @@ from chalice.deploy.planner import UnreferencedResourcePlanner
 from chalice.deploy.newdeployer import Executor
 from chalice.deploy.newdeployer import UnresolvedValueError
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
+from chalice.deploy.models import RecordResource, RecordResourceVariable
 from chalice.deploy.models import Push, Pop, JPSearch
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
@@ -587,7 +588,7 @@ class TestExecutor(object):
         params = {}
         call = APICall('create_function', params, resource=function)
         self.mock_client.create_function.return_value = 'function:arn'
-        record_instruction = RecordResourceValue(
+        record_instruction = RecordResource(
             resource_type='lambda_function',
             resource_name='myfunction',
             name='myfunction_arn',
@@ -603,7 +604,7 @@ class TestExecutor(object):
         self.executor.execute([
             APICall('create_function', {}),
             StoreValue('myvarname'),
-            RecordResourceValue(
+            RecordResourceVariable(
                 resource_type='lambda_function',
                 resource_name='myfunction',
                 name='myfunction_arn',
@@ -614,6 +615,22 @@ class TestExecutor(object):
             'myfunction': {
                 'resource_type': 'lambda_function',
                 'myfunction_arn': 'function:arn',
+            }
+        }
+
+    def test_can_record_value_directly(self):
+        self.executor.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='myfunction_arn',
+                value='arn:foo',
+            )
+        ])
+        assert self.executor.resource_values == {
+            'myfunction': {
+                'resource_type': 'lambda_function',
+                'myfunction_arn': 'arn:foo',
             }
         }
 
