@@ -923,9 +923,8 @@ class ApplicationPolicyHandler(object):
         """Load the last recorded policy file for the app."""
         filename = self._app_policy_file(config)
         try:
-            return json.loads(
-                self._osutils.get_file_contents(filename, binary=False)
-            )
+            with open(filename) as f:
+                return json.loads(f.read())
         except (OSError, IOError):
             raise RuntimeError("Unable to load the policy file. Are you sure "
                                "it exists?")

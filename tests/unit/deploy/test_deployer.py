@@ -264,11 +264,8 @@ def test_no_policy_generated_when_disabled_in_config(app_policy,
 
 
 def test_load_last_policy_when_file_does_not_exist(app_policy):
-    loaded = app_policy.load_last_policy(Config.create(project_dir='.'))
-    assert loaded == {
-        "Statement": [],
-        "Version": "2012-10-17",
-    }
+    with pytest.raises(OSError):
+        app_policy.load_last_policy(Config.create(project_dir='.'))
 
 
 def test_load_policy_from_disk_when_file_exists(app_policy,
