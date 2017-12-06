@@ -83,7 +83,7 @@ class CLIFactory(object):
         self.profile = profile
 
     def create_botocore_session(self, connection_timeout=None):
-        # type: () -> Session
+        # type: (int) -> Session
         return create_botocore_session(profile=self.profile,
                                        debug=self.debug,
                                        connection_timeout=connection_timeout)
