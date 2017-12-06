@@ -407,17 +407,28 @@ class Executor(object):
         # type: (models.StoreValue) -> None
         self.variables[instruction.name] = self.stack[-1]
 
+    def _do_recordresource(self, instruction):
+        # type: (models.RecordResource) -> None
+        d = self.resource_values.setdefault(
+            instruction.resource_name, {})
+        d['resource_type'] = instruction.resource_type
+        value = self.stack[-1]
+        d[instruction.name] = value
+
+    def _do_recordresourcevariable(self, instruction):
+        # type: (models.RecordResourceVariable) -> None
+        d = self.resource_values.setdefault(
+            instruction.resource_name, {})
+        d['resource_type'] = instruction.resource_type
+        value = self.variables[instruction.variable_name]
+        d[instruction.name] = value
+
     def _do_recordresourcevalue(self, instruction):
         # type: (models.RecordResourceValue) -> None
         d = self.resource_values.setdefault(
             instruction.resource_name, {})
         d['resource_type'] = instruction.resource_type
-        variable_name = instruction.variable_name
-        if variable_name is not None:
-            value = self.variables[variable_name]
-        else:
-            value = self.stack[-1]
-        d[instruction.name] = value
+        d[instruction.name] = instruction.value
 
     def _do_push(self, instruction):
         # type: (models.Push) -> None
