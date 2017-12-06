@@ -75,9 +75,8 @@ class Sweeper(object):
         # type: (List[models.Instruction]) -> List[str]
         marked = []  # type: List[str]
         for instruction in plan:
-            if not isinstance(instruction, models.RecordResourceValue):
-                continue
-            marked.append(instruction.resource_name)
+            if isinstance(instruction, models.RecordResourceValue):
+                marked.append(instruction.resource_name)
         return marked
 
     def _plan_deletion(self,
