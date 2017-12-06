@@ -147,6 +147,7 @@ def get_next_version_number(release_type):
         version_parts[-1] += 1
     elif release_type == 'minor':
         version_parts[1] += 1
+        version_parts[-1] = 0
     return '.'.join(str(i) for i in version_parts)
 
 
