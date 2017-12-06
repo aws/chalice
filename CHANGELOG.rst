@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.1.0
+=====
 
 * Default to ``None`` in local mode when no query parameters
   are provided
