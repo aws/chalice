@@ -263,7 +263,14 @@ def test_no_policy_generated_when_disabled_in_config(app_policy,
     assert generated == json.loads(previous_policy)
 
 
-def test_load_last_policy_when_file_does_not_exist(app_policy):
+def test_load_last_policy_raises_error_when_file_does_not_exist(app_policy):
+    with pytest.raises(RuntimeError):
+        app_policy.load_last_policy(Config.create(project_dir='.'))
+
+
+def test_load_policy_raises_error_invalid_json(app_policy, in_memory_osutils):
+    filename = os.path.join('.', '.chalice', 'policy-dev.json')
+    in_memory_osutils.filemap[filename] = '{invalid json}'
     with pytest.raises(RuntimeError):
         app_policy.load_last_policy(Config.create(project_dir='.'))
 
@@ -1694,6 +1701,13 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
         )
 
     def test_update_lambda_updates_role_once(self, sample_app):
+        app_policy = mock.Mock(spec=ApplicationPolicyHandler)
+        app_policy.generate_policy_from_app_source.return_value = {
+            'Version': '2012-10-17', 'Statement': []
+        }
+        app_policy.load_last_policy.return_value = {
+            'Version': '2012-10-17', 'Statement': []
+        }
         cfg = Config.create(
             chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
             manage_iam_role=True, iam_role_arn='role-arn',
@@ -1701,8 +1715,7 @@ class TestLambdaUpdateDeploymentWithConfigurations(object):
         )
         deployer = LambdaDeployer(
             self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
+            app_policy)
         self.aws_client.get_role_arn_for_name.return_value = 'role-arn'
         deployer.deploy(cfg, self.deployed_resources, 'dev')
         self.aws_client.update_function.assert_called_with(

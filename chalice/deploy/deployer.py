@@ -889,11 +889,6 @@ class ApplicationPolicyHandler(object):
 
     """
 
-    _EMPTY_POLICY = {
-        'Version': '2012-10-17',
-        'Statement': [],
-    }
-
     def __init__(self, osutils, policy_generator):
         # type: (OSUtils, AppPolicyGenerator) -> None
         self._osutils = osutils
