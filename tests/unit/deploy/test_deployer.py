@@ -264,7 +264,7 @@ def test_no_policy_generated_when_disabled_in_config(app_policy,
 
 
 def test_load_last_policy_when_file_does_not_exist(app_policy):
-    with pytest.raises(OSError):
+    with pytest.raises(RuntimeError):
         app_policy.load_last_policy(Config.create(project_dir='.'))
 
 
