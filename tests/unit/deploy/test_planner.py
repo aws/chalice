@@ -8,7 +8,7 @@ from chalice.deploy import models
 from chalice.config import DeployedResources2
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
-from chalice.deploy.planner import Sweeper
+from chalice.deploy.planner import UnreferencedResourcePlanner
 
 
 def create_function_resource(name, function_name=None,
@@ -352,13 +352,13 @@ class TestRemoteState(object):
         assert self.client.lambda_function_exists.call_count == 1
 
 
-class TestSweeper(object):
+class TestUnreferencedResourcePlanner(object):
     def setup_method(self):
         pass
 
     @pytest.fixture
     def sweeper(self):
-        return Sweeper()
+        return UnreferencedResourcePlanner()
 
     @pytest.fixture
     def function_resource(self):
