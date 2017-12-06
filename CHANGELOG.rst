@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add ``--connection-timeout`` to the ``deploy`` command
+  (`#344 <https://github.com/aws/chalice/issues/344>`__)
+
+
 1.1.0
 =====
 
