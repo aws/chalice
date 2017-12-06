@@ -14,6 +14,7 @@ from collections import namedtuple
 
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
+from six.moves.socketserver import ThreadingMixIn
 from typing import List, Any, Dict, Tuple, Callable, Optional, Union  # noqa
 
 from chalice.app import Chalice  # noqa
@@ -595,9 +596,21 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Threading mixin to better support browsers.
+
+    When a browser sends a GET request to Chalice it keeps the connection open
+    for reuse. In the single threaded model this causes Chalice local to become
+    unresponsive to all clients other than that browser socket. Even sending a
+    header requesting that the client close the connection is not good enough,
+    the browswer will simply open another one and sit on it.
+    """
+
+
 class LocalDevServer(object):
     def __init__(self, app_object, config, host, port,
-                 handler_cls=ChaliceRequestHandler, server_cls=HTTPServer):
+                 handler_cls=ChaliceRequestHandler,
+                 server_cls=ThreadedHTTPServer):
         # type: (Chalice, Config, str, int, HandlerCls, ServerCls) -> None
         self.app_object = app_object
         self.host = host
