@@ -21,7 +21,8 @@ from chalice.deploy.newdeployer import DependencyBuilder
 from chalice.deploy.newdeployer import ApplicationGraphBuilder
 from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator
-from chalice.deploy.planner import PlanStage, Variable, Sweeper
+from chalice.deploy.planner import PlanStage, Variable
+from chalice.deploy.planner import UnreferencedResourcePlanner
 from chalice.deploy.newdeployer import Executor
 from chalice.deploy.newdeployer import UnresolvedValueError
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
@@ -677,7 +678,7 @@ class TestDeployer(unittest.TestCase):
         self.deps_builder = mock.Mock(spec=DependencyBuilder)
         self.build_stage = mock.Mock(spec=BuildStage)
         self.plan_stage = mock.Mock(spec=PlanStage)
-        self.sweeper = mock.Mock(spec=Sweeper)
+        self.sweeper = mock.Mock(spec=UnreferencedResourcePlanner)
         self.executor = mock.Mock(spec=Executor)
 
     def create_deployer(self):
