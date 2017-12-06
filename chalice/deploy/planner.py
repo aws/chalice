@@ -75,7 +75,7 @@ class UnreferencedResourcePlanner(object):
         # type: (List[models.Instruction]) -> List[str]
         marked = []  # type: List[str]
         for instruction in plan:
-            if isinstance(instruction, models.RecordResourceValue):
+            if isinstance(instruction, models.RecordResource):
                 marked.append(instruction.resource_name)
         return marked
 
@@ -143,7 +143,7 @@ class PlanStage(object):
                     resource=resource,
                 ),
                 models.StoreValue(name=varname),
-                models.RecordResourceValue(
+                models.RecordResourceVariable(
                     resource_type='lambda_function',
                     resource_name=resource.resource_name,
                     name='lambda_arn',
@@ -169,11 +169,9 @@ class PlanStage(object):
                 params=params,
                 resource=resource,
             ),
-            # TODO: Technically wrong, we need to pull out the
-            # FunctionArn key.  JMESPath??
             models.JPSearch('FunctionArn'),
             models.StoreValue(name=varname),
-            models.RecordResourceValue(
+            models.RecordResourceVariable(
                 resource_type='lambda_function',
                 resource_name=resource.resource_name,
                 name='lambda_arn',
@@ -196,7 +194,7 @@ class PlanStage(object):
                     resource=resource
                 ),
                 models.StoreValue(varname),
-                models.RecordResourceValue(
+                models.RecordResourceVariable(
                     resource_type='iam_role',
                     resource_name=resource.resource_name,
                     name='role_arn',
@@ -216,12 +214,11 @@ class PlanStage(object):
                         'policy_document': document},
                 resource=resource
             ),
-            models.Pop(),
-            models.Push(resource.role_arn),
             models.RecordResourceValue(
                 resource_type='iam_role',
                 resource_name=resource.resource_name,
                 name='role_arn',
+                value=resource.role_arn,
             )
         ]
 

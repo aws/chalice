@@ -32,7 +32,21 @@ class StoreValue(Instruction):
         # type: (...) -> None
         ...
 
-class RecordResourceValue(Instruction):
+class RecordResource(Instruction):
+    resource_type = ...  # type: str
+    resource_name = ...  # type: str
+    name = ...  # type: str
+
+    def __init__(self,
+                 resource_type,       # type: str
+                 resource_name,       # type: str
+                 name,                # type: str
+                 ):
+        # type: (...) -> None
+        ...
+
+
+class RecordResourceVariable(Instruction):
     resource_type = ...  # type: str
     resource_name = ...  # type: str
     name = ...  # type: str
@@ -42,7 +56,23 @@ class RecordResourceValue(Instruction):
                  resource_type,       # type: str
                  resource_name,       # type: str
                  name,                # type: str
-                 variable_name=None,  # type: Any
+                 variable_name,       # type: Any
+                 ):
+        # type: (...) -> None
+        ...
+
+
+class RecordResourceValue(Instruction):
+    resource_type = ...  # type: str
+    resource_name = ...  # type: str
+    name = ...  # type: str
+    value = ...  # type: Any
+
+    def __init__(self,
+                 resource_type,       # type: str
+                 resource_name,       # type: str
+                 name,                # type: str
+                 value,               # type: Any
                  ):
         # type: (...) -> None
         ...
