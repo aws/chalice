@@ -239,7 +239,7 @@ def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
 
 
 def test_can_deploy_specify_connection_timeout(runner, mock_cli_factory,
-                                             mock_deployer):
+                                               mock_deployer):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
