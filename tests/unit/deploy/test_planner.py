@@ -154,6 +154,7 @@ class TestPlanManagedRole(BasePlannerTests):
                 resource=role,
             )
         )
+        assert plan[-1].value == 'myrole:arn'
 
     def test_can_update_file_based_policy(self):
         role = models.ManagedIAMRole(
@@ -367,7 +368,7 @@ class TestUnreferencedResourcePlanner(object):
     def test_noop_when_all_resources_accounted_for(self, sweeper,
                                                    function_resource):
         plan = [
-            models.RecordResourceValue(
+            models.RecordResource(
                 resource_type='lambda_function',
                 resource_name='myfunction',
                 name='foo',
@@ -408,12 +409,12 @@ class TestUnreferencedResourcePlanner(object):
         second = create_function_resource('second')
         third = create_function_resource('third')
         plan = [
-            models.RecordResourceValue(
+            models.RecordResource(
                 resource_type='lambda_function',
                 resource_name=first.resource_name,
                 name='foo',
             ),
-            models.RecordResourceValue(
+            models.RecordResource(
                 resource_type='asdf',
                 resource_name=second.resource_name,
                 name='foo',

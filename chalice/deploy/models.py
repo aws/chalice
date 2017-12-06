@@ -24,11 +24,26 @@ class StoreValue(Instruction):
 
 
 @attrs(frozen=True)
+class RecordResource(Instruction):
+    resource_type = attrib()
+    resource_name = attrib()
+    name = attrib()
+
+
+@attrs(frozen=True)
+class RecordResourceVariable(Instruction):
+    resource_type = attrib()
+    resource_name = attrib()
+    name = attrib()
+    variable_name = attrib()
+
+
+@attrs(frozen=True)
 class RecordResourceValue(Instruction):
     resource_type = attrib()
     resource_name = attrib()
     name = attrib()
-    variable_name = attrib(default=None)
+    value = attrib()
 
 
 @attrs(frozen=True)
