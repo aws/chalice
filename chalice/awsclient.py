@@ -300,8 +300,12 @@ class TypedAWSClient(object):
             AssumeRolePolicyDocument=json.dumps(trust_policy)
         )
         role_arn = response['Role']['Arn']
-        self.put_role_policy(role_name=name, policy_name=name,
-                             policy_document=policy)
+        try:
+            self.put_role_policy(role_name=name, policy_name=name,
+                                 policy_document=policy)
+        except client.exceptions.MalformedPolicyDocumentException as e:
+            self.delete_role(name=name)
+            raise e
         return role_arn
 
     def delete_role(self, name):
