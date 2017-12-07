@@ -288,7 +288,7 @@ class TestCreateRole(object):
         assert actual == arn
         stubbed_session.verify_stubs()
 
-    def test_create_role_deletes_on_failure(self, stubbed_session):
+    def test_create_role_raises_error_on_failure(self, stubbed_session):
         arn = 'good_arn' * 3
         role_id = 'abcd' * 4
         today = datetime.datetime.today()
