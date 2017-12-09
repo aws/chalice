@@ -288,6 +288,32 @@ class TestCreateRole(object):
         assert actual == arn
         stubbed_session.verify_stubs()
 
+    def test_create_role_raises_error_on_failure(self, stubbed_session):
+        arn = 'good_arn' * 3
+        role_id = 'abcd' * 4
+        today = datetime.datetime.today()
+        stubbed_session.stub('iam').create_role(
+            RoleName='role_name',
+            AssumeRolePolicyDocument=json.dumps({'trust': 'policy'})
+        ).returns({'Role': {
+            'RoleName': 'No', 'Arn': arn, 'Path': '/',
+            'RoleId': role_id, 'CreateDate': today}}
+        )
+        stubbed_session.stub('iam').put_role_policy(
+            RoleName='role_name',
+            PolicyName='role_name',
+            PolicyDocument={'policy': 'document'}
+        ).raises_error(
+            error_code='MalformedPolicyDocumentException',
+            message='MalformedPolicyDocument'
+        )
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.create_role(
+                'role_name', {'trust': 'policy'}, {'policy': 'document'})
+        stubbed_session.verify_stubs()
+
 
 class TestCreateLambdaFunction(object):
     def test_create_function_succeeds_first_try(self, stubbed_session):
