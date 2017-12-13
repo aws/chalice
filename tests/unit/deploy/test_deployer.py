@@ -263,7 +263,7 @@ def test_no_policy_generated_when_disabled_in_config(app_policy,
     assert generated == json.loads(previous_policy)
 
 
-def test_load_last_policy_returns_empty_policy_autogen_true_file_doesnt_exist(app_policy):
+def test_load_last_policy_returns_policy_autogen_true_no_file(app_policy):
     expected_policy = {'Version': '2012-10-17', 'Statement': []}
     config = Config.create(project_dir='.', autogen_policy=True)
     loaded = app_policy.load_last_policy(config)
