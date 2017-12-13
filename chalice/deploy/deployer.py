@@ -889,6 +889,11 @@ class ApplicationPolicyHandler(object):
 
     """
 
+    _EMPTY_POLICY = {
+        'Version': '2012-10-17',
+        'Statement': [],
+    }
+
     def __init__(self, osutils, policy_generator):
         # type: (OSUtils, AppPolicyGenerator) -> None
         self._osutils = osutils
@@ -917,7 +922,9 @@ class ApplicationPolicyHandler(object):
         # type: (Config) -> Dict[str, Any]
         """Load the last recorded policy file for the app."""
         filename = self._app_policy_file(config)
-        if not self._osutils.file_exists(filename):
+        if config.autogen_policy and not self._osutils.file_exists(filename):
+            return self._EMPTY_POLICY
+        elif not self._osutils.file_exists(filename):
             raise RuntimeError("Unable to load the policy file. Are you sure "
                                "it exists?")
         try:
