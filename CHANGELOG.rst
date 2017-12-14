@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Add ``--connection-timeout`` to the ``deploy`` command
   (`#344 <https://github.com/aws/chalice/issues/344>`__)
+* Fix IAM role creation issue
+  (`#565 <https://github.com/aws/chalice/issues/565>`__)
 
 
 1.1.0
