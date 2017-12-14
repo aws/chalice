@@ -922,11 +922,18 @@ class ApplicationPolicyHandler(object):
         # type: (Config) -> Dict[str, Any]
         """Load the last recorded policy file for the app."""
         filename = self._app_policy_file(config)
-        if not self._osutils.file_exists(filename):
+        if config.autogen_policy and not self._osutils.file_exists(filename):
             return self._EMPTY_POLICY
-        return json.loads(
-            self._osutils.get_file_contents(filename, binary=False)
-        )
+        elif not self._osutils.file_exists(filename):
+            raise RuntimeError("Unable to load the policy file. Are you sure "
+                               "it exists?")
+        try:
+            return json.loads(
+                self._osutils.get_file_contents(filename, binary=False)
+            )
+        except ValueError as err:
+            raise RuntimeError("Unable to load the project policy file: %s"
+                               % err)
 
     def record_policy(self, config, policy_document):
         # type: (Config, Dict[str, Any]) -> None
