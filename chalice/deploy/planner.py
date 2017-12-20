@@ -62,8 +62,6 @@ class RemoteState(object):
 
 class UnreferencedResourcePlanner(object):
 
-    # Add support for IAM roles
-    # get deps order correct.
     def execute(self, plan, config):
         # type: (List[models.Instruction], Config) -> None
         marked = set(self._mark_resources(plan))
@@ -258,6 +256,16 @@ class PlanStage(object):
             document = json.loads(
                 self._osutils.get_file_contents(resource.filename))
         return document
+
+
+class NoopPlanner(PlanStage):
+    def __init__(self):
+        # type: () -> None
+        pass
+
+    def execute(self, resources):
+        # type: (List[models.Model]) -> List[models.Instruction]
+        return []
 
 
 class Variable(object):

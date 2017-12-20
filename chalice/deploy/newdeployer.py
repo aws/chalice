@@ -95,7 +95,7 @@ from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import PipRunner, SubprocessPip
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
-from chalice.deploy.planner import UnreferencedResourcePlanner
+from chalice.deploy.planner import UnreferencedResourcePlanner, NoopPlanner
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
@@ -141,18 +141,13 @@ def create_default_deployer(session):
     )
 
 
-# TODO: come back to this.
-def create_deletion_deployer(session):
-    # type: (Session) -> Deployer
-    client = TypedAWSClient(session)
-    osutils = OSUtils()
+def create_deletion_deployer(client):
+    # type: (TypedAWSClient) -> Deployer
     return Deployer(
         application_builder=ApplicationGraphBuilder(),
         deps_builder=DependencyBuilder(),
         build_stage=BuildStage(steps=[]),
-        plan_stage=PlanStage(
-            osutils=osutils, remote_state=RemoteState(client),
-        ),
+        plan_stage=NoopPlanner(),
         sweeper=UnreferencedResourcePlanner(),
         executor=Executor(client),
     )
