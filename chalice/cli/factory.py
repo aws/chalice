@@ -98,6 +98,10 @@ class CLIFactory(object):
         # type: (Session) -> newdeployer.Deployer
         return newdeployer.create_default_deployer(session)
 
+    def create_deletion_deployer(self, session):
+        # type: (Session) -> newdeployer.Deployer
+        return newdeployer.create_deletion_deployer(TypedAWSClient(session))
+
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
                           api_gateway_stage=None):
