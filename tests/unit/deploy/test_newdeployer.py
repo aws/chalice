@@ -14,6 +14,7 @@ from chalice.deploy import packager
 from chalice.config import Config
 from chalice.app import Chalice
 from chalice.deploy.newdeployer import create_default_deployer
+from chalice.deploy.newdeployer import create_deletion_deployer
 from chalice.deploy.newdeployer import Deployer
 from chalice.deploy.newdeployer import BaseDeployStep
 from chalice.deploy.newdeployer import BuildStage
@@ -741,4 +742,10 @@ class TestDeployer(unittest.TestCase):
 def test_can_create_default_deployer():
     session = botocore.session.get_session()
     deployer = create_default_deployer(session)
+    assert isinstance(deployer, Deployer)
+
+
+def test_can_create_deletion_deployer():
+    session = botocore.session.get_session()
+    deployer = create_deletion_deployer(TypedAWSClient(session))
     assert isinstance(deployer, Deployer)

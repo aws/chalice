@@ -176,6 +176,23 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
             config.project_dir, '.chalice', 'deployed.json'))
 
 
+@cli.command('delete-new')
+@click.option('--profile', help='Override profile at deploy time.')
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help='Name of the Chalice stage to delete.')
+@click.pass_context
+def delete_new(ctx, profile, stage):
+    # type: (click.Context, str, str) -> None
+    factory = ctx.obj['factory']  # type: CLIFactory
+    factory.profile = profile
+    config = factory.create_config_obj(chalice_stage_name=stage)
+    session = factory.create_botocore_session()
+    d = factory.create_deletion_deployer(session=session)
+    deployed_values = d.deploy(config, chalice_stage_name=stage)
+    record_deployed_values(deployed_values, os.path.join(
+        config.project_dir, '.chalice', 'deployed.json'))
+
+
 @cli.command('delete')
 @click.option('--profile', help='Override profile at deploy time.')
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
