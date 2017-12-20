@@ -31,18 +31,12 @@ class RecordResource(Instruction):
 
 
 @attrs(frozen=True)
-class RecordResourceVariable(Instruction):
-    resource_type = attrib()
-    resource_name = attrib()
-    name = attrib()
+class RecordResourceVariable(RecordResource):
     variable_name = attrib()
 
 
 @attrs(frozen=True)
-class RecordResourceValue(Instruction):
-    resource_type = attrib()
-    resource_name = attrib()
-    name = attrib()
+class RecordResourceValue(RecordResource):
     value = attrib()
 
 
