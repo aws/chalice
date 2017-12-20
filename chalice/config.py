@@ -321,15 +321,19 @@ class Config(object):
 class DeployedResources2(object):
     def __init__(self, deployed_values):
         # type: (Dict[str, Any]) -> None
-        self._deployed_values = deployed_values
+        self._deployed_values = deployed_values['resources']
+        self._deployed_values_by_name = {
+            resource['name']: resource
+            for resource in deployed_values['resources']
+        }
 
     def resource_values(self, name):
         # type: (str) -> Dict[str, str]
-        return self._deployed_values['resources'][name]
+        return self._deployed_values_by_name[name]
 
     def resource_names(self):
         # type: () -> List[str]
-        return list(self._deployed_values['resources'])
+        return [r['name'] for r in self._deployed_values]
 
 
 class DeployedResources(object):

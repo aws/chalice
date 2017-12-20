@@ -62,13 +62,17 @@ class RemoteState(object):
 
 class UnreferencedResourcePlanner(object):
 
+    # Add support for IAM roles
+    # get deps order correct.
     def execute(self, plan, config):
         # type: (List[models.Instruction], Config) -> None
-        marked = self._mark_resources(plan)
+        marked = set(self._mark_resources(plan))
         deployed = config.deployed_resources(config.chalice_stage)
         if deployed is not None:
-            deployed_resource_names = deployed.resource_names()
-            remaining = list(set(deployed_resource_names) - set(marked))
+            deployed_resource_names = reversed(deployed.resource_names())
+            remaining = [
+                name for name in deployed_resource_names if name not in marked
+            ]
             self._plan_deletion(plan, remaining, deployed)
 
     def _mark_resources(self, plan):
@@ -91,6 +95,15 @@ class UnreferencedResourcePlanner(object):
                 apicall = models.APICall(
                     method_name='delete_function',
                     params={'function_name': resource_values['lambda_arn']},
+                )
+                plan.append(apicall)
+            elif resource_values['resource_type'] == 'iam_role':
+                # TODO: add the role_name to the deployed.json?
+                # This is a separate value than the 'name' of the resource.
+                v = resource_values['role_arn'].rsplit('/')[1]
+                apicall = models.APICall(
+                    method_name='delete_role',
+                    params={'name': v},
                 )
                 plan.append(apicall)
 

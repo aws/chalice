@@ -594,10 +594,11 @@ class TestExecutor(object):
             name='myfunction_arn',
         )
         self.executor.execute([call, record_instruction])
-        assert self.executor.resource_values['myfunction'] == {
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
             'myfunction_arn': 'function:arn',
             'resource_type': 'lambda_function',
-        }
+        }]
 
     def test_can_reference_varname(self):
         self.mock_client.create_function.return_value = 'function:arn'
@@ -611,12 +612,11 @@ class TestExecutor(object):
                 variable_name='myvarname',
             ),
         ])
-        assert self.executor.resource_values == {
-            'myfunction': {
-                'resource_type': 'lambda_function',
-                'myfunction_arn': 'function:arn',
-            }
-        }
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'myfunction_arn': 'function:arn',
+        }]
 
     def test_can_record_value_directly(self):
         self.executor.execute([
@@ -627,12 +627,11 @@ class TestExecutor(object):
                 value='arn:foo',
             )
         ])
-        assert self.executor.resource_values == {
-            'myfunction': {
-                'resource_type': 'lambda_function',
-                'myfunction_arn': 'arn:foo',
-            }
-        }
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'myfunction_arn': 'arn:foo',
+        }]
 
     def test_validates_no_unresolved_deploy_vars(self):
         function = create_function_resource('myfunction')

@@ -46,7 +46,7 @@ class RecordResource(Instruction):
         ...
 
 
-class RecordResourceVariable(Instruction):
+class RecordResourceVariable(RecordResource):
     resource_type = ...  # type: str
     resource_name = ...  # type: str
     name = ...  # type: str
@@ -62,7 +62,7 @@ class RecordResourceVariable(Instruction):
         ...
 
 
-class RecordResourceValue(Instruction):
+class RecordResourceValue(RecordResource):
     resource_type = ...  # type: str
     resource_name = ...  # type: str
     name = ...  # type: str

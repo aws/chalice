@@ -365,6 +365,15 @@ class TestUnreferencedResourcePlanner(object):
     def function_resource(self):
         return create_function_resource('myfunction')
 
+    def one_deployed_lambda_function(name='myfunction', arn='arn'):
+        return {
+            'resources': [{
+                'name': 'myfunction',
+                'resource_type': 'lambda_function',
+                'lambda_arn': 'arn',
+            }]
+        }
+
     def test_noop_when_all_resources_accounted_for(self, sweeper,
                                                    function_resource):
         plan = [
@@ -375,14 +384,7 @@ class TestUnreferencedResourcePlanner(object):
             )
         ]
         original_plan = plan[:]
-        deployed = {
-            'resources': {
-                'myfunction': {
-                    'resource_type': 'lambda_function',
-                    'myfunction_lambda_arn': 'arn'
-                }
-            }
-        }
+        deployed = self.one_deployed_lambda_function()
         config = FakeConfig(deployed)
         sweeper.execute(plan, config)
         # We shouldn't add anything to the list.
@@ -390,14 +392,7 @@ class TestUnreferencedResourcePlanner(object):
 
     def test_will_delete_unreferenced_resource(self, sweeper):
         plan = []
-        deployed = {
-            'resources': {
-                'myfunction': {
-                    'resource_type': 'lambda_function',
-                    'lambda_arn': 'arn'
-                }
-            }
-        }
+        deployed = self.one_deployed_lambda_function()
         config = FakeConfig(deployed)
         sweeper.execute(plan, config)
         assert len(plan) == 1
@@ -421,16 +416,73 @@ class TestUnreferencedResourcePlanner(object):
             )
         ]
         deployed = {
-            'resources': {
-                second.resource_name: {'resource_type': 'lambda_function'},
-                third.resource_name: {
-                    'resource_type': 'lambda_function',
-                    'lambda_arn': 'third_arn',
-                },
-            }
+            'resources': [{
+                'name': second.resource_name,
+                'resource_type': 'lambda_function',
+                'lambda_arn': 'second_arn',
+            }, {
+                'name': third.resource_name,
+                'resource_type': 'lambda_function',
+                'lambda_arn': 'third_arn',
+            }]
         }
         config = FakeConfig(deployed)
         sweeper.execute(plan, config)
         assert len(plan) == 3
         assert plan[2].method_name == 'delete_function'
         assert plan[2].params == {'function_name': 'third_arn'}
+
+    def test_can_delete_iam_role(self, sweeper):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'myrole',
+                'resource_type': 'iam_role',
+                'role_arn': 'arn:role/myrole',
+            }]
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        assert len(plan) == 1
+        assert plan[0].method_name == 'delete_role'
+        assert plan[0].params == {'name': 'myrole'}
+
+    def test_correct_deletion_order_for_dependencies(self, sweeper):
+        plan = []
+        deployed = {
+            # This is the order they were deployed.  While not
+            # strictly required for IAM Roles, we typically
+            # want to delete resources in the reverse order they
+            # were created.
+            'resources': [
+                {
+                    'name': 'myrole',
+                    'resource_type': 'iam_role',
+                    'role_arn': 'arn:role/myrole',
+                },
+                {
+                    'name': 'myrole2',
+                    'resource_type': 'iam_role',
+                    'role_arn': 'arn:role/myrole2',
+                },
+                {
+                    'name': 'myfunction',
+                    'resource_type': 'lambda_function',
+                    'lambda_arn': 'my:arn',
+                }
+            ]
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        assert len(plan) == 3
+        expected_api_calls = [p.method_name for p in plan]
+        assert expected_api_calls == ['delete_function',
+                                      'delete_role',
+                                      'delete_role']
+
+        expected_api_args = [p.params for p in plan]
+        assert expected_api_args == [
+            {'function_name': 'my:arn'},
+            {'name': 'myrole2'},
+            {'name': 'myrole'},
+        ]
