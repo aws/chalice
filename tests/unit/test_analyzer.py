@@ -1,3 +1,6 @@
+import sys
+import pytest
+
 from textwrap import dedent
 
 from chalice import analyzer
@@ -616,6 +619,21 @@ def test_can_handle_dict_comp_ifs():
          for y in d.update_table()\
          if d.list_tables()}
     """) == {'dynamodb': set(['list_tables', 'create_table', 'update_table'])}
+
+
+@pytest.mark.skipif(sys.version[0] == '2', reason=(
+    'Async await syntax is not in Python 2'
+))
+def test_can_handle_async_await():
+    assert aws_calls("""\
+        import boto3
+        import asyncio
+        async def test():
+            d = boto3.client('dynamodb')
+            d.list_tables()
+            await asyncio.sleep(1)
+        test()
+    """) == {'dynamodb': set(['list_tables'])}
 
 
 # def test_tuple_assignment():

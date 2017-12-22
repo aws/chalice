@@ -11,6 +11,8 @@ Next Release (TBD)
   (`#565 <https://github.com/aws/chalice/issues/565>`__)
 * Fix `chalice local` handling of browser requests
   (`#565 <https://github.com/aws/chalice/issues/628>`__)
+* Support async/await syntax in automatic policy generation
+  (`#565 <https://github.com/aws/chalice/issues/646>`__)
 
 
 1.1.0
