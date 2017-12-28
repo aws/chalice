@@ -96,8 +96,11 @@ class UnreferencedResourcePlanner(object):
                 )
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'iam_role':
-                # TODO: add the role_name to the deployed.json?
+                # TODO: Consider adding the role_name to the deployed.json.
                 # This is a separate value than the 'name' of the resource.
+                # For now we have to parse out the role name from the role_arn
+                # and it would be better if we could get the role name
+                # directly.
                 v = resource_values['role_arn'].rsplit('/')[1]
                 apicall = models.APICall(
                     method_name='delete_role',
