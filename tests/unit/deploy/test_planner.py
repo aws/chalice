@@ -365,12 +365,12 @@ class TestUnreferencedResourcePlanner(object):
     def function_resource(self):
         return create_function_resource('myfunction')
 
-    def one_deployed_lambda_function(name='myfunction', arn='arn'):
+    def one_deployed_lambda_function(self, name='myfunction', arn='arn'):
         return {
             'resources': [{
-                'name': 'myfunction',
+                'name': name,
                 'resource_type': 'lambda_function',
-                'lambda_arn': 'arn',
+                'lambda_arn': arn,
             }]
         }
 
@@ -384,7 +384,7 @@ class TestUnreferencedResourcePlanner(object):
             )
         ]
         original_plan = plan[:]
-        deployed = self.one_deployed_lambda_function()
+        deployed = self.one_deployed_lambda_function(name='myfunction')
         config = FakeConfig(deployed)
         sweeper.execute(plan, config)
         # We shouldn't add anything to the list.
