@@ -182,6 +182,9 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
 @click.pass_context
 def delete_new(ctx, profile, stage):
     # type: (click.Context, str, str) -> None
+    # TODO: We should consolidate the logic here with
+    # deploy_new, there's similar logic in both functions
+    # that can be shared.
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(chalice_stage_name=stage)

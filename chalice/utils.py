@@ -57,7 +57,7 @@ def remove_stage_from_deployed_values(key, filename):
 
 
 def record_deployed_values(deployed_values, filename):
-    # type: (Dict[str, str], str) -> None
+    # type: (Dict[str, Any], str) -> None
     """Record deployed values to a JSON file.
 
     This allows subsequent deploys to lookup previously deployed values.
