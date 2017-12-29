@@ -70,6 +70,21 @@ def test_can_add_url_captures_to_params(sample_app, swagger_gen):
     ]
 
 
+def test_can_add_openapi_parameters_to_params(sample_app, swagger_gen):
+    param = {
+        'in': 'query', 'name': 'param', 'type': 'string', 'required': False
+    }
+
+    @sample_app.route('/path', parameters=[param])
+    def foo():
+        return {}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/path']['get']
+    assert 'parameters' in single_method
+    assert single_method['parameters'] == [param]
+
+
 def test_can_add_multiple_http_methods(sample_app, swagger_gen):
     @sample_app.route('/multimethod', methods=['GET', 'POST'])
     def multiple_methods():

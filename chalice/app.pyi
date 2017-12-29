@@ -88,13 +88,15 @@ class RouteEntry(object):
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]
     cors = ... # type: CORSConfig
+    parameters = ... # type: List[Dict[str, Any]]
 
     def __init__(self, view_function: Callable[..., Any],
                  view_name: str, path: str, methods: List[str],
                  authorizer_name: str=None,
                  api_key_required: bool=None,
                  content_types: List[str]=None,
-                 cors: Union[bool, CORSConfig]=False) -> None: ...
+                 cors: Union[bool, CORSConfig]=False,
+                 parameters: List[Dict[str, Any]]=None) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
 

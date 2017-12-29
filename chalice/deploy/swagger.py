@@ -139,6 +139,8 @@ class SwaggerGenerator(object):
                 {view.authorizer.name: []})
         if view.view_args:
             self._add_view_args(current, view.view_args)
+        if view.parameters:
+            self._add_parameters(current, view.parameters)
         return current
 
     def _generate_precanned_responses(self):
@@ -183,6 +185,12 @@ class SwaggerGenerator(object):
             {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
             for name in view_args
         ]
+
+    def _add_parameters(self, single_method, parameters):
+        # type: (Dict[str, Any], List[Dict[str, Any]]) -> None
+        tmp = single_method.get('parameters') or []
+        tmp.extend(parameters)
+        single_method['parameters'] = tmp
 
     def _add_preflight_request(self, cors, methods, swagger_for_path):
         # type: (CORSConfig, List[str], Dict[str, Any]) -> None
