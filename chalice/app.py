@@ -50,6 +50,10 @@ def _matches_content_type(content_type, valid_content_types):
     return content_type in valid_content_types
 
 
+def naive_urljoin(*args):
+    return "/".join(map(lambda x: str(x).rstrip('/'), args))
+
+
 class ChaliceError(Exception):
     pass
 
@@ -544,23 +548,28 @@ class Chalice(object):
         return _register_view
 
     def register_blueprint(self, blueprint, url_prefix=None):
-        def urljoin(*args):
-            return "/".join(map(lambda x: str(x).rstrip('/'), args))
 
         for blueprint_route in blueprint.routes:
+            path, view_func, kwargs = blueprint_route
+
             if url_prefix is None:
-                blueprint_route_path = blueprint_route[0]
+                constructed_path = path
             else:
-                blueprint_route_path = urljoin(
+                constructed_path = naive_urljoin(
                     url_prefix,
-                    blueprint_route[0].lstrip('/')
+                    path.lstrip('/')
                 )
 
+            view_name = kwargs.pop('name', view_func.__name__)
+
             self._add_route(
-                blueprint_route_path,  # Calculated path
-                blueprint_route[1],  # view_func
-                **blueprint_route[2],  # kwargs
+                constructed_path,
+                view_func,
+                **kwargs,
+                name='.'.join([blueprint.name, view_name]),
             )
+
+        blueprint.REGISTERED_APP = self
 
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
