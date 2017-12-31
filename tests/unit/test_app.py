@@ -6,7 +6,7 @@ import json
 import pytest
 from pytest import fixture
 import hypothesis.strategies as st
-from hypothesis import given, assume
+from hypothesis import given, assume, settings
 import six
 
 
@@ -1295,6 +1295,7 @@ def test_raw_body_is_none_if_body_is_none():
 
 
 @given(http_request_kwargs=HTTP_REQUEST)
+@settings(suppress_health_check=(3))
 def test_http_request_to_dict_is_json_serializable(http_request_kwargs):
     # We have to do some slight pre-preocessing here
     # to maintain preconditions.  If the
