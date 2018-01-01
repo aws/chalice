@@ -25,8 +25,8 @@ class FakePip(object):
         self._calls.append(FakePipCall(args, env_vars, shim))
         if self._returns:
             return self._returns.pop(0)
-        # Return an rc of 0 and an empty stderr
-        return 0, b''
+        # Return an rc of 0 and an empty stderr and stdout
+        return 0, b'', b''
 
     def add_return(self, return_pair):
         self._returns.append(return_pair)
@@ -215,7 +215,7 @@ class TestPipRunner(object):
     def test_raise_no_such_package_error(self, pip_factory):
         pip, runner = pip_factory()
         pip.add_return((1, (b'Could not find a version that satisfies the '
-                            b'requirement BadPackageName ')))
+                            b'requirement BadPackageName '), b''))
         with pytest.raises(NoSuchPackageError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == ('Could not satisfy the requirement: '
@@ -223,14 +223,14 @@ class TestPipRunner(object):
 
     def test_raise_other_unknown_error_during_downloads(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, b'SomeNetworkingError: Details here.'))
+        pip.add_return((1, b'SomeNetworkingError: Details here.', b''))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'SomeNetworkingError: Details here.'
 
     def test_inject_unknown_error_if_no_stderr(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, None))
+        pip.add_return((1, None, None))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'Unknown error'

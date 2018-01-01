@@ -626,8 +626,12 @@ class SubprocessPip(object):
             import_string = pip_import_string()
         self._import_string = import_string
 
-    def main(self, args, env_vars=None, shim=None):
-        # type: (List[str], EnvVars, OptStr) -> Tuple[int, Optional[bytes]]
+    def main(self,
+             args,           # List[str]
+             env_vars=None,  # EnvVars
+             shim=None       # OptStr
+             ):
+        # type: (...) -> Tuple[int, OptBytes, OptBytes]
         if env_vars is None:
             env_vars = self._osutils.environ()
         if shim is None:
@@ -642,9 +646,9 @@ class SubprocessPip(object):
                                 stdout=self._osutils.pipe,
                                 stderr=self._osutils.pipe,
                                 env=env_vars)
-        _, err = p.communicate()
+        out, err = p.communicate()
         rc = p.returncode
-        return rc, err
+        return rc, err, out
 
 
 class PipRunner(object):
@@ -656,13 +660,18 @@ class PipRunner(object):
         self._wrapped_pip = pip
         self._osutils = osutils
 
-    def _execute(self, command, args, env_vars=None, shim=None):
-        # type: (str, List[str], EnvVars, OptStr) -> Tuple[int, OptBytes]
+    def _execute(self,
+                 command,        # type: str
+                 args,           # type: List[str]
+                 env_vars=None,  # type: EnvVars
+                 shim=None       # type: OptStr
+                 ):
+        # type: (...) -> Tuple[int, OptBytes, OptBytes]
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
-        rc, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
-                                         shim=shim)
-        return rc, err
+        rc, err, out = self._wrapped_pip.main(main_args, env_vars=env_vars,
+                                              shim=shim)
+        return rc, err, out
 
     def build_wheel(self, wheel, directory, compile_c=True):
         # type: (str, str, bool) -> None
@@ -683,7 +692,7 @@ class PipRunner(object):
         # type: (str, str) -> None
         """Download all dependencies as sdist or wheel."""
         arguments = ['-r', requirements_filename, '--dest', directory]
-        rc, err = self._execute('download', arguments)
+        rc, err, out = self._execute('download', arguments)
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
         # what to download. If a package is not found it is likely because it
@@ -700,6 +709,15 @@ class PipRunner(object):
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
             raise PackageDownloadError(error)
+        if out is None:
+            out = b'Unknown output'
+        stdout = out.decode()
+        match = re.search(("Processing (.+?)\n"
+                           "  Link is a directory, "
+                           "ignoring download_dir"), stdout)
+        if match:
+            download_dir = match.group(1).decode()
+            self.build_wheel(download_dir.encode(), directory)
 
     def download_manylinux_wheels(self, packages, directory):
         # type: (List[str], str) -> None

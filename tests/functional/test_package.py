@@ -104,7 +104,7 @@ class FakePip(object):
                 side_effect.execute(args)
         except IndexError:
             pass
-        return 0, b''
+        return 0, b'', b''
 
     def packages_to_download(self, expected_args, packages, whl_contents=None):
         side_effects = [PipSideEffect(pkg,
@@ -817,7 +817,7 @@ def test_will_create_outdir_if_needed(tmpdir):
 class TestSubprocessPip(object):
     def test_can_invoke_pip(self):
         pip = SubprocessPip()
-        rc, err = pip.main(['--version'])
+        rc, err, _ = pip.main(['--version'])
         # Simple assertion that we can execute pip and it gives us some output
         # and nothing on stderr.
         assert rc == 0
@@ -825,7 +825,7 @@ class TestSubprocessPip(object):
 
     def test_does_error_code_propagate(self):
         pip = SubprocessPip()
-        rc, err = pip.main(['badcommand'])
+        rc, err, _ = pip.main(['badcommand'])
         assert rc != 0
         # Don't want to depend on a particular error message from pip since it
         # may change if we pin a differnet version to Chalice at some point.
