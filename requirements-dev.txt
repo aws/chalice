@@ -2,6 +2,7 @@
 coverage==4.3.4
 flake8==3.3.0
 tox==2.2.1
+werkzeug==0.14.1
 wheel==0.26.0
 doc8==0.7.0
 # Pylint will fail on py3.  Locking to a commit on master
