@@ -83,7 +83,9 @@ def cli(ctx, project_dir, debug=False):
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME):
     # type: (click.Context, str, int, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    run_local_server(factory, host, port, stage, os.environ)
+    from werkzeug._reloader import run_with_reloader
+    server = lambda: run_local_server(factory, host, port, stage, os.environ)
+    run_with_reloader(server)
 
 
 def run_local_server(factory, host, port, stage, env):
