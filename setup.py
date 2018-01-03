@@ -11,6 +11,7 @@ install_requires = [
     'botocore>=1.5.40,<2.0.0',
     'typing==3.5.3.0',
     'six>=1.10.0,<2.0.0',
+    'werkzeug==0.14.1',
     'pip>=9,<10'
 ]
 
