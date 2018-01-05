@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#344 <https://github.com/aws/chalice/issues/344>`__)
 * Fix IAM role creation issue
   (`#565 <https://github.com/aws/chalice/issues/565>`__)
+* Fix `chalice local` handling of browser requests
+  (`#565 <https://github.com/aws/chalice/issues/628>`__)
 
 
 1.1.0
