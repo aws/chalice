@@ -21,6 +21,9 @@ class ThreadedLocalServer(Thread):
         self._server = None
         self._server_ready = Event()
 
+    def wait_for_server_ready(self):
+        self._server_ready.wait()
+
     def configure(self, app_object, config):
         self._app_object = app_object
         self._config = config
@@ -128,6 +131,7 @@ def test_can_accept_multiple_connections(config, sample_app,
     # any other source is made it will be blocked until the browser sends
     # another request through, giving us a chance to read from another socket.
     local_server, port = local_server_factory(sample_app, config)
+    local_server.wait_for_server_ready()
     # We create a socket here to emulate a browser's open connection and then
     # make a request. The request should succeed.
     socket.create_connection(('localhost', port), timeout=1)
