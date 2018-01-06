@@ -238,7 +238,7 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     }
 
 
-@retry(max_attempts=12, delay=6)
+@retry(max_attempts=18, delay=10)
 def _get_resource_id(apig_client, rest_api_id):
     # This is the resource id for the '/path/{name}'
     # route.  As far as I know this is the best way to get
