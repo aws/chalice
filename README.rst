@@ -954,7 +954,6 @@ auto policy generator detects actions that it would like to add or remove::
 
     Would you like to continue?  [Y/n]:
 
-.. quick-start-end
 
 Tutorial: Using Custom Authentication
 =====================================
@@ -1097,6 +1096,7 @@ chalice stage to delete.  By default it will delete the ``dev`` stage::
     Delete the role helloworld-dev? [y/N]: y
     Deleting role name helloworld-dev
 
+.. quick-start-end
 
 Feedback
 ========
