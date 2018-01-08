@@ -182,6 +182,22 @@ class TestPreflightCORS(object):
         assert 'POST' in allow_methods
         assert 'OPTIONS' in allow_methods
 
+    def test_can_add_cors_headers_in_response(self, sample_app, swagger_gen):
+        @sample_app.route('/cors', methods=['GET', 'POST'], cors=True)
+        def cors_request():
+            pass
+
+        doc = swagger_gen.generate_swagger(sample_app)
+        view_config = doc['paths']['/cors']
+        for method in view_config.keys():
+            response = view_config[method]['responses']['200']
+            assert 'headers' in response, (
+                'Headers is not added in response for CORS enabled API')
+            assert 'Access-Control-Allow-Origin' in response['headers'], (
+                'Headers missing expected Access-Control-Allow-Origin')
+            assert response['headers']['Access-Control-Allow-Origin'] == \
+                {'type': 'string'}
+
     def test_can_add_preflight_custom_cors(self, sample_app, swagger_gen):
         @sample_app.route('/cors', methods=['GET', 'POST'], cors=True)
         def cors_request():

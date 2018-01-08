@@ -128,6 +128,9 @@ class SwaggerGenerator(object):
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
+        if view.cors:
+            current['responses']['200'].setdefault('headers', {}).update(
+                {'Access-Control-Allow-Origin': {'type': 'string'}})
         if view.api_key_required:
             # When this happens we also have to add the relevant portions
             # to the security definitions.  We have to someone indicate
