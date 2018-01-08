@@ -289,7 +289,7 @@ def _get_raw_body_from_response_stream(handler):
 
 def _get_body_from_response_stream(handler):
     body = _get_raw_body_from_response_stream(handler)
-    return json.loads(body)
+    return json.loads(body.decode('utf-8'))
 
 
 def set_current_request(handler, method, path, headers=None):
