@@ -105,6 +105,10 @@ be checked.
   Currently only the following chalice deployed resources are tagged:
   Lambda functions.
 
+* ``subnet_ids`` - A list of subnet ids for VPC configuration
+
+* ``security_group_ids`` - A list of security groups for VPC configuration
+
 
 Examples
 --------
