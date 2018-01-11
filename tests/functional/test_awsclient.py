@@ -1350,6 +1350,23 @@ def test_update_api_from_swagger(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_update_rest_api(stubbed_session):
+    apig = stubbed_session.stub('apigateway')
+    patch_operations = [{'op': 'replace',
+                         'path': '/minimumCompressionSize',
+                         'value': '2'}]
+    apig.update_rest_api(
+        restApiId='rest_api_id',
+        patchOperations=patch_operations).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+
+    awsclient.update_rest_api('rest_api_id',
+                              patch_operations)
+    stubbed_session.verify_stubs()
+
+
 def test_can_get_or_create_rule_arn(stubbed_session):
     events = stubbed_session.stub('events')
     events.put_rule(

@@ -45,6 +45,12 @@ be checked.
   will also be the URL prefix for your API
   (``https://endpoint/prefix/your-api``).
 
+* ``minimum_compression_size`` - An integer value that indicates
+  the minimum compression size to apply to the API gateway. If
+  this key is specified in both a stage specific config option
+  as well as a top level key, the stage specific key will
+  override the top level key for the given stage.
+
 * ``manage_iam_role`` - ``true``/``false``.  Indicates if you
   want chalice to create and update the IAM role
   used for your application.  By default, this value is ``true``.
