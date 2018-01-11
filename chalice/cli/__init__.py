@@ -137,6 +137,7 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     )
     session = factory.create_botocore_session(
         connection_timeout=connection_timeout)
+    kms_decrypt(TypedAWSClient(session), config.config_from_disk)
     d = factory.create_default_deployer(session=session,
                                         ui=UI())
     deployed_values = d.deploy(config, chalice_stage_name=stage)
@@ -351,6 +352,77 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
             f.write(buildspec_contents)
     with open(filename, 'w') as f:
         f.write(serialize_to_json(output))
+
+
+@cli.command('encrypt-config')
+@click.option('--profile', help='Override profile.')
+@click.argument('kms_key', required=True)
+@click.pass_context
+def encrypt_config(ctx, kms_key, profile):
+    # type: (click.Context, str, str) -> None
+    """Encrypts the environment variables.
+
+    Encrypts the environment variables (global and each stage)
+    by using the provided KMS key.
+
+    You will need to create the key using AWS UI or CLI beforehand.
+
+    Example:
+
+        \b
+        $ chalice encrypt-config alias/my-key
+
+    """
+    factory = ctx.obj['factory']  # type: CLIFactory
+    factory.profile = profile
+    config = factory.create_config_obj()
+    session = factory.create_botocore_session()
+    client = TypedAWSClient(session)
+    stages = config.config_from_disk.get('stages') or {}
+    encrypted = False
+    for v in stages.values():
+        encrypted = encrypt_vars(client, kms_key, v) or encrypted
+    encrypted = encrypt_vars(client, kms_key,
+                             config.config_from_disk) or encrypted
+    if not encrypted:
+        print("No 'environment_variables' found or already encrypted, "
+              "nothing to do.")
+        return
+    config_file_tmp = os.path.join(config.project_dir, '.chalice',
+                                   'config.json.tmp')
+    with open(config_file_tmp, 'w') as cfile:
+        cfile.write(serialize_to_json(config.config_from_disk))
+    config_file = os.path.join(config.project_dir, '.chalice', 'config.json')
+    os.rename(config_file, config_file + '.orig')
+    os.rename(config_file_tmp, config_file)
+
+
+def encrypt_vars(client, kms_key, val):
+    # type: (TypedAWSClient, str, dict) -> bool
+    env_vars = val.get('environment_variables')
+    if env_vars and isinstance(env_vars, dict):
+        click.echo(serialize_to_json(env_vars))
+        val['environment_variables'] = client.encrypt_data(kms_key, env_vars)
+        return True
+    return False
+
+
+def kms_decrypt(client, config):
+    # type: (TypedAWSClient, dict) -> None
+    stages = config.get('stages') or {}
+    for v in stages.values():
+        decrypt_vars(client, v)
+    decrypt_vars(client, config)
+
+
+def decrypt_vars(client, val):
+    # type: (TypedAWSClient, dict) -> bool
+    env_vars = val.get('environment_variables')
+    if env_vars and isinstance(env_vars, str):
+        val['environment_variables'] = client.decrypt_data(env_vars)
+        click.echo(serialize_to_json(val['environment_variables']))
+        return True
+    return False
 
 
 def main():
