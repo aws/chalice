@@ -378,6 +378,7 @@ There are a few additional exceptions you can raise from your python code::
 * ForbiddenError - return a status code of 403
 * NotFoundError - return a status code of 404
 * ConflictError - return a status code of 409
+* UnprocessableEntityError - return a status code of 422
 * TooManyRequestsError - return a status code of 429
 * ChaliceViewError - return a status code of 500
 
