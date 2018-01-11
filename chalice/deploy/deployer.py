@@ -628,7 +628,7 @@ class LambdaDeployer(object):
             }  # type: Dict[str, Any]
             if config.security_group_ids is not None:
                 kwargs['security_group_ids'] = config.security_group_ids
-            if config.security_group_ids is not None:
+            if config.subnet_ids is not None:
                 kwargs['subnet_ids'] = config.subnet_ids
             function_arn = self._aws_client.create_function(**kwargs)
         deployed_values.setdefault('lambda_functions', {})[function_name] = {
@@ -725,7 +725,7 @@ class LambdaDeployer(object):
         }  # type: Dict[str, Any]
         if config.security_group_ids is not None:
             kwargs['security_group_ids'] = config.security_group_ids
-        if config.security_group_ids is not None:
+        if config.subnet_ids is not None:
             kwargs['subnet_ids'] = config.subnet_ids
         return self._aws_client.create_function(**kwargs)
 
@@ -769,7 +769,7 @@ class LambdaDeployer(object):
         }  # type: Dict[str, Any]
         if config.security_group_ids is not None:
             kwargs['security_group_ids'] = config.security_group_ids
-        if config.security_group_ids is not None:
+        if config.subnet_ids is not None:
             kwargs['subnet_ids'] = config.subnet_ids
         return self._aws_client.update_function(**kwargs)
 
