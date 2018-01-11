@@ -9,6 +9,7 @@ import time
 import uuid
 import base64
 import functools
+import threading
 import warnings
 from collections import namedtuple
 
@@ -525,8 +526,18 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server, app_object, config):
         # type: (bytes, Tuple[str, int], HTTPServer, Chalice, Config) -> None
         self.local_gateway = LocalGateway(app_object, config)
-        BaseHTTPRequestHandler.__init__(
-            self, request, client_address, server)  # type: ignore
+
+        try:
+            BaseHTTPRequestHandler.__init__(
+                self, request, client_address, server)  # type: ignore
+        except KeyboardInterrupt:
+            # The BaseHTTPRequestHandler constructor blocks on socket.recv
+            # until there's a request to handle. Server shutdown must be done
+            # in a separate thread to avoid deadlock.
+
+            shutdown_thread = threading.Thread(target=server.shutdown)
+            shutdown_thread.setDaemon(True)
+            shutdown_thread.start()
 
     def _parse_payload(self):
         # type: () -> Tuple[HeaderType, str]
