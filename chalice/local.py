@@ -606,6 +606,8 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     the browswer will simply open another one and sit on it.
     """
 
+    daemon_threads = True
+
 
 class LocalDevServer(object):
     def __init__(self, app_object, config, host, port,
