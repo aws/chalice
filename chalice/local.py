@@ -230,8 +230,10 @@ class ForbiddenError(LocalGatewayException):
 class NotAuthorizedError(LocalGatewayException):
     CODE = 401
 
+
 class InvaldLocalConextHeader(LocalGatewayException):
     CODE = 400
+
 
 class LambdaContext(object):
     def __init__(self, function_name, memory_size,
