@@ -546,6 +546,7 @@ def test_can_create_lambda_event():
         'stageVariables': {},
     }
 
+
 def test_lambda_event_contains_local_request_context():
     converter = local.LambdaEventConverter(
         local.RouteMatcher(['/foo/bar']))
@@ -554,11 +555,13 @@ def test_lambda_event_contains_local_request_context():
         path='/foo/bar',
         headers={
             'content-type': 'application/json',
-            'local-request-context':'{"identity":{"cognitoIdentityId":"test"}}'
+            'local-request-context':
+                '{"identity":{"cognitoIdentityId":"test"}}'
         }
     )
 
-    cognito_identity_id = event.get('requestContext').get('identity',{}).get('cognitoIdentityId')
+    cognito_identity_id = event.get('requestContext').\
+        get('identity', {}).get('cognitoIdentityId')
     assert cognito_identity_id == 'test'
 
 
@@ -566,12 +569,13 @@ def test_lambda_event_deny_error_local_request_context():
     converter = local.LambdaEventConverter(
         local.RouteMatcher(['/foo/bar']))
     with pytest.raises(InvaldLocalConextHeader):
-        event = converter.create_lambda_event(
+        converter.create_lambda_event(
             method='GET',
             path='/foo/bar',
             headers={
                 'content-type': 'application/json',
-                'local-request-context':'{"identity":{"cognitoIdentityId":**wrongformat**"test"}}'
+                'local-request-context':
+                    '{"identity":{"cognitoIdentityId":**wrongformat**"test"}}'
             }
         )
 
