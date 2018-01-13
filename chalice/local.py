@@ -166,7 +166,7 @@ class LambdaEventConverter(object):
         # type: (Dict[str,Any]) -> bool
         local_context = headers.pop('local-request-context', "")
         if not local_context:
-            return {}
+            return None
         try:
             local_context = json.loads(local_context)
             local_context.pop('httpMethod', None)
