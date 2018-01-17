@@ -203,6 +203,36 @@ def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
         _assert_in_zip('mypackage/__init__.py', b'# v2', f)
 
 
+@slow
+def test_vendor_symlink_included(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    extra_package = tmpdir.mkdir('mypackage')
+    extra_package.join('__init__.py').write('# Test package')
+    vendor = appdir.mkdir('vendor')
+    os.symlink(str(extra_package), str(vendor.join('otherpackage')))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
+    with zipfile.ZipFile(name) as f:
+        _assert_in_zip('otherpackage/__init__.py', b'# Test package', f)
+
+
+@slow
+def test_subsequent_deploy_replaces_vendor_symlink(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    extra_package = tmpdir.mkdir('mypackage')
+    extra_package.join('__init__.py').write('# v1')
+    vendor = appdir.mkdir('vendor')
+    os.symlink(str(extra_package), str(vendor.join('otherpackage')))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
+    # Now we update a package in vendor/ with a new version.
+    extra_package.join('__init__.py').write('# v2')
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
+    with zipfile.ZipFile(name) as f:
+        _assert_in_zip('otherpackage/__init__.py', b'# v2', f)
+
+
 def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     vendor = appdir.mkdir('vendor')
