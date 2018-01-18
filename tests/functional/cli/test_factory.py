@@ -63,6 +63,34 @@ def test_can_create_botocore_session_cli_factory(clifactory):
     assert session.profile == 'myprofile'
 
 
+def test_can_create_config_obj_default_profile_none(clifactory):
+    config = clifactory.create_config_obj()
+    assert config.profile is None
+
+
+def test_can_create_config_obj_with_override_profile(clifactory):
+    config = clifactory.create_config_obj(profile='myprofile')
+    assert config.profile == 'myprofile'
+
+
+def test_can_create_config_obj_with_override_config_file(clifactory):
+    config_file = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(config_file, 'w') as f:
+        f.write('{"profile": "myprofile"}')
+    config = clifactory.create_config_obj()
+    assert config.profile == 'myprofile'
+
+
+def test_provided_profile_overrides_config_file(clifactory):
+    config_file = os.path.join(
+        clifactory.project_dir, '.chalice', 'config.json')
+    with open(config_file, 'w') as f:
+        f.write('{"profile": "myprofile"}')
+    config = clifactory.create_config_obj(profile='otherprofile')
+    assert config.profile == 'otherprofile'
+
+
 def test_can_create_default_deployer(clifactory):
     session = clifactory.create_botocore_session()
     deployer = clifactory.create_default_deployer(session, None)
