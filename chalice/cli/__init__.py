@@ -130,12 +130,12 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
            connection_timeout):
     # type: (click.Context, Optional[bool], str, str, str, int) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    factory.profile = profile
     config = factory.create_config_obj(
         chalice_stage_name=stage, autogen_policy=autogen_policy,
-        api_gateway_stage=api_gateway_stage,
+        api_gateway_stage=api_gateway_stage, profile=profile
     )
     session = factory.create_botocore_session(
+        profile=config.profile,
         connection_timeout=connection_timeout)
     d = factory.create_default_deployer(session=session,
                                         ui=UI())
@@ -152,9 +152,9 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
 def delete(ctx, profile, stage):
     # type: (click.Context, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    factory.profile = profile
-    config = factory.create_config_obj(chalice_stage_name=stage)
-    session = factory.create_botocore_session()
+    config = factory.create_config_obj(chalice_stage_name=stage,
+                                       profile=profile)
+    session = factory.create_botocore_session(profile=config.profile)
     d = factory.create_default_deployer(session=session, ui=UI())
     d.delete(config, chalice_stage_name=stage)
     remove_stage_from_deployed_values(stage, os.path.join(
@@ -173,11 +173,12 @@ def delete(ctx, profile, stage):
 def logs(ctx, num_entries, include_lambda_messages, stage, profile):
     # type: (click.Context, int, bool, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    factory.profile = profile
-    config = factory.create_config_obj(stage, False)
+    config = factory.create_config_obj(
+        chalice_stage_name=stage, autogen_policy=False,
+        profile=profile)
     deployed = config.deployed_resources(stage)
     if deployed is not None:
-        session = factory.create_botocore_session()
+        session = factory.create_botocore_session(profile=config.profile)
         retriever = factory.create_log_retriever(
             session, deployed.api_handler_arn)
         display_logs(retriever, num_entries, include_lambda_messages,
@@ -249,7 +250,7 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
     # type: (click.Context, str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
-    session = factory.create_botocore_session()
+    session = factory.create_botocore_session(profile=config.profile)
     client = TypedAWSClient(session)
     deployed = config.deployed_resources(stage)
     if deployed is None:

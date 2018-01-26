@@ -234,7 +234,7 @@ def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
         assert result.exit_code == 0
         mock_cli_factory.create_config_obj.assert_called_with(
             autogen_policy=None, chalice_stage_name='dev',
-            api_gateway_stage='notdev'
+            api_gateway_stage='notdev', profile=None
         )
 
 
@@ -248,7 +248,7 @@ def test_can_deploy_specify_connection_timeout(runner, mock_cli_factory,
                                   cli_factory=mock_cli_factory)
         assert result.exit_code == 0
         mock_cli_factory.create_botocore_session.assert_called_with(
-            connection_timeout=100
+            connection_timeout=100, profile=None
         )
 
 
@@ -406,4 +406,7 @@ def test_can_specify_profile_for_logs(runner, mock_cli_factory):
             cli_factory=mock_cli_factory
         )
         assert result.exit_code == 0
-        assert mock_cli_factory.profile == 'my-profile'
+        mock_cli_factory.create_config_obj.assert_called_with(
+            autogen_policy=False, chalice_stage_name='dev',
+            profile='my-profile'
+        )

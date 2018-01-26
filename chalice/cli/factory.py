@@ -76,15 +76,14 @@ class LargeRequestBodyFilter(logging.Filter):
 
 
 class CLIFactory(object):
-    def __init__(self, project_dir, debug=False, profile=None):
-        # type: (str, bool, Optional[str]) -> None
+    def __init__(self, project_dir, debug=False):
+        # type: (str, bool) -> None
         self.project_dir = project_dir
         self.debug = debug
-        self.profile = profile
 
-    def create_botocore_session(self, connection_timeout=None):
-        # type: (int) -> Session
-        return create_botocore_session(profile=self.profile,
+    def create_botocore_session(self, connection_timeout=None, profile=None):
+        # type: (Optional[int], Optional[str]) -> Session
+        return create_botocore_session(profile=profile,
                                        debug=self.debug,
                                        connection_timeout=connection_timeout)
 
@@ -95,8 +94,9 @@ class CLIFactory(object):
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
-                          api_gateway_stage=None):
-        # type: (str, Optional[bool], str) -> Config
+                          api_gateway_stage=None,
+                          profile=None):
+        # type: (str, Optional[bool], Optional[str], Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
@@ -115,8 +115,8 @@ class CLIFactory(object):
         user_provided_params['chalice_app'] = app_obj
         if autogen_policy is not None:
             user_provided_params['autogen_policy'] = autogen_policy
-        if self.profile is not None:
-            user_provided_params['profile'] = self.profile
+        if profile is not None:
+            user_provided_params['profile'] = profile
         if api_gateway_stage is not None:
             user_provided_params['api_gateway_stage'] = api_gateway_stage
         config = Config(chalice_stage=chalice_stage_name,
