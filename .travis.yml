@@ -2,15 +2,11 @@ language: python
 sudo: false
 env: HYPOTHESIS_PROFILE=ci
 matrix:
-  include:
-  - python: "3.6"
-    env: TEST_TYPE=prcheck
-  - python: "2.7"
-    env: TEST_TYPE=prcheck-py2
+  - TOXENV=py27
+  - TOXENV=py36
 install:
-  - pip install -r requirements-dev.txt -r requirements-docs.txt
-  - pip install -e .
+  - pip install tox
 script:
-  - make $TEST_TYPE
+  - tox
 after_success:
-  - if [[ $TEST_TYPE == 'coverage' ]]; then pip install codecov==2.0.5 && codecov; fi
+  - if [[ $TEST_TYPE == 'coverage' ]]; tox -e coverage; fi
