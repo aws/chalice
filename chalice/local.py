@@ -306,7 +306,7 @@ class LocalGatewayAuthorizer(object):
         # APIGateway validated request
         if isinstance(authorizer, CognitoUserPoolAuthorizer):
             if ("headers" in lambda_event and
-                "authorization" in lambda_event["headers"]):
+                    "authorization" in lambda_event["headers"]):
                 token = lambda_event["headers"]["authorization"]
                 token = token.replace("bearer=", "")
                 token = token.replace("Bearer ", "")
