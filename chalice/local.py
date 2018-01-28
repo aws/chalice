@@ -10,6 +10,7 @@ import uuid
 import base64
 import functools
 import warnings
+import jwt
 from collections import namedtuple
 
 from six.moves.BaseHTTPServer import HTTPServer
@@ -20,6 +21,7 @@ from typing import List, Any, Dict, Tuple, Callable, Optional, Union  # noqa
 from chalice.app import Chalice  # noqa
 from chalice.app import CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer  # noqa
+from chalice.app import CognitoUserPoolAuthorizer
 from chalice.app import RouteEntry  # noqa
 from chalice.app import Request  # noqa
 from chalice.app import AuthResponse  # noqa
@@ -300,6 +302,15 @@ class LocalGatewayAuthorizer(object):
         authorizer = route_entry.authorizer
         if not authorizer:
             return lambda_event, lambda_context
+        #If authorizer is Cognito then try to parse the JWT and simulate an APIGateway validated request
+        if isinstance(authorizer, CognitoUserPoolAuthorizer):
+            if ("headers" in lambda_event and "authorization" in lambda_event["headers"]):
+                token = lambda_event["headers"]["authorization"]
+                token = token.replace("bearer=", "")
+                token = token.replace("Bearer ", "")
+                claims = jwt.decode(token, verify=False)
+                auth_result = {"context": {"claims":claims}, "principalId": claims["cognito:username"]}
+                lambda_event = self._update_lambda_event(lambda_event, auth_result)
         if not isinstance(authorizer, ChaliceAuthorizer):
             # Currently the only supported local authorizer is the
             # BuiltinAuthConfig type. Anything else we will err on the side of
