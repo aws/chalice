@@ -1151,3 +1151,5 @@ Related Projects
 * `Domovoi <https://github.com/kislyuk/domovoi>`_ - An extension to Chalice that
   handles a variety of AWS Lambda event sources such as SNS push notifications,
   S3 events, and Step Functions state machines.
+* `IOpipe <https://github.com/iopipe/iopipe-python#chalice>`_ An analytics,
+  monitoring and distributed tracing agent that supports Chalice.
