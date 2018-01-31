@@ -300,7 +300,10 @@ class Request(object):
     def json_body(self):
         if self.headers.get('content-type', '').startswith('application/json'):
             if self._json_body is None:
-                self._json_body = json.loads(self.raw_body)
+                try:
+                    self._json_body = json.loads(self.raw_body)
+                except ValueError:
+                    return None
             return self._json_body
 
     def to_dict(self):
