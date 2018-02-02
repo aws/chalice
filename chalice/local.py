@@ -10,8 +10,8 @@ import uuid
 import base64
 import functools
 import warnings
-import jwt
 from collections import namedtuple
+import jwt
 
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
