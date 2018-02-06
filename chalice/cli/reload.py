@@ -5,7 +5,7 @@ import threading
 import time
 import types
 
-from six.moves import _thread
+import six
 
 from chalice.constants import AUTORELOAD_INTERVAL
 
@@ -29,10 +29,10 @@ class Reloader(threading.Thread):
     def run(self):
         while True:
             time.sleep(AUTORELOAD_INTERVAL)
-            if self.is_changes():
+            if self.find_changes():
                 self.reload()
 
-    def is_changes(self):
+    def find_changes(self):
         for module in list(sys.modules.values()):
             if not isinstance(module, types.ModuleType):
                 continue
@@ -53,6 +53,6 @@ class Reloader(threading.Thread):
         self.triggered = True
         if sys.platform == 'win32':
             subprocess.Popen(sys.argv, close_fds=True)
-            _thread.interrupt_main()
+            six.moves._thread.interrupt_main()
         else:
             os.execv(sys.executable, [sys.executable] + sys.argv)
