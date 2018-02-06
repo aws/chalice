@@ -8,20 +8,16 @@ import os
 import sys
 import tempfile
 import shutil
-import time
-import subprocess
-import threading
-import types
 
 import botocore.exceptions
 import click
 from typing import Dict, Any, Optional, MutableMapping  # noqa
-from six.moves import _thread
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.cli.factory import CLIFactory
+from chalice.cli.reload import Reloader
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
@@ -92,54 +88,6 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
     factory = ctx.obj['factory']  # type: CLIFactory
     with Reloader(autoreload):
         run_local_server(factory, host, port, stage, os.environ)
-
-
-class Reloader(threading.Thread):
-    def __init__(self, autoreload=True):
-        super(Reloader, self).__init__()
-        self.autoreload = autoreload
-        self.triggered = False
-        self.mtimes = {}
-
-    def __enter__(self):
-        if self.autoreload:
-            self.setDaemon(True)
-            self.start()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is KeyboardInterrupt and self.triggered:
-            sys.exit(1)
-
-    def run(self):
-        while True:
-            time.sleep(1)
-            if self.is_changes():
-                self.reload()
-
-    def is_changes(self):
-        for module in list(sys.modules.values()):
-            if not isinstance(module, types.ModuleType):
-                continue
-            path = getattr(module, '__file__', None)
-            if not path:
-                continue
-            if path.endswith('.pyc') or path.endswith('.pyo'):
-                path = path[:-1]
-            try:
-                mtime = os.path.getmtime(path)
-            except OSError:
-                continue
-            old_time = self.mtimes.setdefault(path, mtime)
-            if mtime > old_time:
-                return True
-
-    def reload(self):
-        self.triggered = True
-        if sys.platform == 'win32':
-            subprocess.Popen(sys.argv, close_fds=True)
-            _thread.interrupt_main()
-        else:
-            os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 def run_local_server(factory, host, port, stage, env):
