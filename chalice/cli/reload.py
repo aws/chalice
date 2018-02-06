@@ -7,6 +7,8 @@ import types
 
 from six.moves import _thread
 
+from chalice.constants import AUTORELOAD_INTERVAL
+
 
 class Reloader(threading.Thread):
     def __init__(self, autoreload=True):
@@ -26,7 +28,7 @@ class Reloader(threading.Thread):
 
     def run(self):
         while True:
-            time.sleep(1)
+            time.sleep(AUTORELOAD_INTERVAL)
             if self.is_changes():
                 self.reload()
 
