@@ -24,13 +24,14 @@ class Reloader(threading.Thread):
         if self.autoreload:
             self.setDaemon(True)
             self.start()
+        return self
 
     def __exit__(self,
                  exc_type,  # type: Optional[Type[BaseException]]
                  exc_value,  # type: Optional[BaseException]
                  traceback  # type: Optional[types.TracebackType]
                  ):
-        # type: (...) -> Optional[bool]
+        # type: (...) -> None
         if exc_type is KeyboardInterrupt and self.triggered:
             sys.exit(1)
 
