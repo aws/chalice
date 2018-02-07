@@ -6,7 +6,7 @@ import time
 import types
 
 import six
-from typing import Optional, Dict, Type
+from typing import Optional, Dict, Type  # noqa
 
 from chalice.constants import AUTORELOAD_INTERVAL
 
