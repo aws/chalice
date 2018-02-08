@@ -412,6 +412,7 @@ class APIGateway(object):
         'audio/webm',
         'image/png',
         'image/jpg',
+        'image/jpeg',
         'image/gif',
         'video/ogg',
         'video/mpeg',
