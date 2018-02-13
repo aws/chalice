@@ -718,7 +718,7 @@ class TestLocalGateway(object):
         with pytest.raises(ForbiddenError) as ei:
             gateway.handle_request('GET', '/badindex', {}, '')
         exception_body = str(ei.value.body)
-        assert 'Missing Authentication Token' in exception_body
+        assert 'No matching route found for' in exception_body
 
     def test_does_deny_with_forbidden_when_auth_token_present(
             self, demo_app_auth):

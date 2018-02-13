@@ -417,7 +417,7 @@ class LocalGateway(object):
         try:
             lambda_event = self._generate_lambda_event(
                 method, path, headers, body)
-        except ValueError:
+        except ValueError as e:
             # API Gateway will return a different error on route not found
             # depending on whether or not we have an authorization token in our
             # request. Since we do not do that check until we actually find
@@ -444,7 +444,7 @@ class LocalGateway(object):
                      % auth_header.encode('ascii')))
             raise ForbiddenError(
                 error_headers,
-                b'{"message": "Missing Authentication Token"}')
+                b'{"message": "%s"}' % e.message)
 
         # This can either be because the user's provided an OPTIONS method
         # *or* this is a preflight request, which chalice automatically
