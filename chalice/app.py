@@ -31,12 +31,12 @@ except NameError:
 
 
 class DefaultJSONEncoder(json.JSONEncoder):
-    def default(self, obj):  # pylint: disable=E0202
+    def default(self, o):  # pylint: disable=E0202
         # Lambda will automatically serialize decimals so we need
         # to support that as well.
-        if isinstance(obj, decimal.Decimal):
-            return float(obj)
-        return super().default(obj)
+        if isinstance(o, decimal.Decimal):
+            return float(o)
+        return super().default(o)
 
 
 def error_response(message, error_code, http_status_code):
