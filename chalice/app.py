@@ -36,7 +36,7 @@ class DefaultJSONEncoder(json.JSONEncoder):
         # to support that as well.
         if isinstance(o, decimal.Decimal):
             return float(o)
-        return super().default(o)
+        return super(DefaultJSONEncoder, self).default(o)
 
 
 def error_response(message, error_code, http_status_code):
