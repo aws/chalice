@@ -315,7 +315,8 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200, json_encoder=DefaultJSONEncoder):
+    def __init__(self, body, headers=None, status_code=200,
+                 json_encoder=DefaultJSONEncoder):
         self.body = body
         if headers is None:
             headers = {}
@@ -432,7 +433,8 @@ class Chalice(object):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
-    def __init__(self, app_name, debug=False, configure_logs=True, env=None, json_encoder=DefaultJSONEncoder):
+    def __init__(self, app_name, debug=False, configure_logs=True, env=None,
+                 json_encoder=DefaultJSONEncoder):
         self.app_name = app_name
         self.api = APIGateway()
         self.routes = defaultdict(dict)
