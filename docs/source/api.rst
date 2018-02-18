@@ -42,6 +42,23 @@ Chalice
          app = Chalice(app_name="appname")
          app.debug = True
 
+    .. attribute:: json_encoder
+
+      A subclass of DefaultJSONEncoder that controls how JSON will be encoded.  By default, this value is
+      ``DefaultJSONEncoder``. Example usage:
+
+      .. code-block:: python
+
+          from chalice import Chalice, DefaultJSONEncoder
+
+          class BetterJsonEncoder(DefaultJSONEncoder):
+            def default(self, o):
+              if isinstance(o, Model): # Complex object that has a to_dict method
+                return o.to_dict()
+              return super().default(o)
+
+         app = Chalice(app_name="appname", json_encoder=BetterJsonEncoder)
+
    .. method:: route(path, \*\*options)
 
       Register a view function for a particular URI path.  This method

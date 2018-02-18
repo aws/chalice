@@ -30,12 +30,13 @@ except NameError:
     _ANY_STRING = (str, bytes)
 
 
-def handle_decimals(obj):
-    # Lambda will automatically serialize decimals so we need
-    # to support that as well.
-    if isinstance(obj, decimal.Decimal):
-        return float(obj)
-    return obj
+class DefaultJSONEncoder(json.JSONEncoder):
+    def default(self, obj):  # pylint: disable=E0202
+        # Lambda will automatically serialize decimals so we need
+        # to support that as well.
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        return super().default(obj)
 
 
 def error_response(message, error_code, http_status_code):
@@ -314,17 +315,18 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200):
+    def __init__(self, body, headers=None, status_code=200, json_encoder=DefaultJSONEncoder):
         self.body = body
         if headers is None:
             headers = {}
         self.headers = headers
         self.status_code = status_code
+        self.json_encoder = json_encoder
 
     def to_dict(self, binary_types=None):
         body = self.body
         if not isinstance(body, _ANY_STRING):
-            body = json.dumps(body, default=handle_decimals)
+            body = json.dumps(body, cls=self.json_encoder)
         response = {
             'headers': self.headers,
             'statusCode': self.status_code,
@@ -430,7 +432,7 @@ class Chalice(object):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
-    def __init__(self, app_name, debug=False, configure_logs=True, env=None):
+    def __init__(self, app_name, debug=False, configure_logs=True, env=None, json_encoder=DefaultJSONEncoder):
         self.app_name = app_name
         self.api = APIGateway()
         self.routes = defaultdict(dict)
@@ -442,6 +444,7 @@ class Chalice(object):
         self.builtin_auth_handlers = []
         self.event_sources = []
         self.pure_lambda_functions = []
+        self.json_encoder = json_encoder
         if env is None:
             env = os.environ
         self._initialize(env)
@@ -658,7 +661,10 @@ class Chalice(object):
         try:
             response = view_function(**function_args)
             if not isinstance(response, Response):
-                response = Response(body=response)
+                response = Response(
+                    body=response,
+                    json_encoder=self.json_encoder
+                )
             self._validate_response(response)
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
