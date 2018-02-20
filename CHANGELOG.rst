@@ -13,6 +13,8 @@ Next Release (TBD)
   (`#565 <https://github.com/aws/chalice/issues/628>`__)
 * Support async/await syntax in automatic policy generation
   (`#565 <https://github.com/aws/chalice/issues/646>`__)
+* Support additional PyPi package formats (.tar.bz2)
+  (`#720 <https://github.com/aws/chalice/issues/720>`__)
 
 
 1.1.0
