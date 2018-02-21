@@ -131,7 +131,7 @@ for errors.  For example:
 
     @app.route('/badrequest')
     def badrequest():
-        return Response(message='Plain text error message',
+        return Response(body='Plain text error message',
                         headers={'Content-Type': 'text/plain'},
                         status_code=400)
 
