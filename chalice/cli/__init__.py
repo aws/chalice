@@ -132,7 +132,7 @@ def run_local_server(factory, host, port, stage, env):
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
            connection_timeout, verbose):
-    # type: (click.Context, Optional[bool], str, str, str, int) -> None
+    # type: (click.Context, Optional[bool], str, str, str, int, bool) -> None
     ctx.obj['verbose'] = verbose
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
@@ -365,7 +365,7 @@ def main():
     # these error messages from pylint because we know it's ok.
     # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
     try:
-        obj = {}
+        obj = {}  # type: Dict
         return cli(obj=obj)
     except botocore.exceptions.NoRegionError:
         click.echo("No region configured. "
@@ -376,7 +376,9 @@ def main():
     except Exception as e:
         if 'verbose' in obj and obj['verbose']:
             exc_type, value, tb = sys.exc_info()
-            msg = ''.join(traceback.format_exception(exc_type, value, tb))
+            msg = ''.join(
+                traceback.format_exception(exc_type, value, tb)  # type: ignore
+            )
         else:
             msg = str(e)
         click.echo(msg, err=True)
