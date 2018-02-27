@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+* Print out full stack trace when an error occurs
+  (`#711 <https://github.com/aws/chalice/issues/711>`__)
+
+
 1.1.1
 =====
 

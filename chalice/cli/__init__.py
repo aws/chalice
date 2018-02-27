@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import shutil
+import traceback
 
 import botocore.exceptions
 import click
@@ -367,6 +368,6 @@ def main():
                    "environment variable or set the "
                    "region value in our ~/.aws/config file.", err=True)
         return 2
-    except Exception as e:
-        click.echo(str(e), err=True)
+    except Exception:
+        click.echo(traceback.format_exc(), err=True)
         return 2
