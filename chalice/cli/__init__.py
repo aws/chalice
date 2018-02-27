@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import shutil
+import traceback
 
 import botocore.exceptions
 import click
@@ -125,10 +126,14 @@ def run_local_server(factory, host, port, stage, env):
               type=int,
               help=('Overrides the default botocore connection '
                     'timeout.'))
+@click.option('--verbose', is_flag=True,
+              default=False,
+              help='Increase verbosity')
 @click.pass_context
 def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
-           connection_timeout):
-    # type: (click.Context, Optional[bool], str, str, str, int) -> None
+           connection_timeout, verbose):
+    # type: (click.Context, Optional[bool], str, str, str, int, bool) -> None
+    ctx.obj['verbose'] = verbose
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(
@@ -360,7 +365,8 @@ def main():
     # these error messages from pylint because we know it's ok.
     # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
     try:
-        return cli(obj={})
+        obj = {}  # type: Dict
+        return cli(obj=obj)
     except botocore.exceptions.NoRegionError:
         click.echo("No region configured. "
                    "Either export the AWS_DEFAULT_REGION "
@@ -368,5 +374,12 @@ def main():
                    "region value in our ~/.aws/config file.", err=True)
         return 2
     except Exception as e:
-        click.echo(str(e), err=True)
+        if 'verbose' in obj and obj['verbose']:
+            exc_type, value, tb = sys.exc_info()
+            msg = ''.join(
+                traceback.format_exception(exc_type, value, tb)  # type: ignore
+            )
+        else:
+            msg = str(e)
+        click.echo(msg, err=True)
         return 2

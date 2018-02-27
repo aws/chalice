@@ -252,6 +252,17 @@ def test_can_deploy_specify_connection_timeout(runner, mock_cli_factory,
         )
 
 
+def test_can_deploy_specify_verbose(runner, mock_cli_factory,
+                                    mock_deployer):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.deploy,
+                                  ['--verbose'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+
+
 def test_can_retrieve_url(runner, mock_cli_factory):
     deployed_values = {
         "dev": {
