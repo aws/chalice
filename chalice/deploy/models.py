@@ -133,3 +133,14 @@ class LambdaFunction(ManagedModel):
 
     def dependencies(self):
         return [self.role, self.deployment_package]
+
+
+@attrs
+class ScheduledEvent(ManagedModel):
+    resource_type = 'scheduled_event'
+    rule_name = attrib()
+    schedule_expression = attrib()
+    lambda_function = attrib()
+
+    def dependencies(self):
+        return [self.lambda_function]
