@@ -61,6 +61,17 @@ def lambda_app():
 
 
 @fixture
+def scheduled_event_app():
+    app = Chalice('scheduled-event')
+
+    @app.schedule('rate(5 minutes)')
+    def foo(event):
+        return {}
+
+    return app
+
+
+@fixture
 def mock_client():
     return mock.Mock(spec=TypedAWSClient)
 
@@ -141,11 +152,12 @@ class TestDependencyBuilder(object):
 
 class TestApplicationGraphBuilder(object):
 
-    def create_config(self, app, iam_role_arn=None, policy_file=None,
+    def create_config(self, app, app_name='lambda-only',
+                      iam_role_arn=None, policy_file=None,
                       autogen_policy=False):
         kwargs = {
             'chalice_app': app,
-            'app_name': 'lambda-only',
+            'app_name': app_name,
             'project_dir': '.',
         }
         if iam_role_arn is not None:
@@ -224,6 +236,20 @@ class TestApplicationGraphBuilder(object):
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
         )
+
+    def test_scheduled_event_models(self, scheduled_event_app):
+        config = self.create_config(scheduled_event_app,
+                                    app_name='scheduled-event',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        event = application.resources[0]
+        assert isinstance(event, models.ScheduledEvent)
+        assert event.resource_name == 'foo-event'
+        assert event.rule_name == 'scheduled-event-dev-foo-event'
+        assert isinstance(event.lambda_function, models.LambdaFunction)
+        assert event.lambda_function.resource_name == 'foo'
 
 
 class RoleTestCase(object):

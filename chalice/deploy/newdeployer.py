@@ -214,17 +214,76 @@ class ApplicationGraphBuilder(object):
         resources = []  # type: List[models.Model]
         deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
         for function in config.chalice_app.pure_lambda_functions:
-            new_config = config.scope(chalice_stage=config.chalice_stage,
-                                      function_name=function.name)
-            role = self._get_role_reference(new_config, stage_name, function)
-            resource = self._build_lambda_function(
-                new_config, function, deployment, role)
+            resource = self._create_lambda_model(config, deployment,
+                                                 function.name,
+                                                 function.handler_string,
+                                                 stage_name)
             resources.append(resource)
+        for event_source in config.chalice_app.event_sources:
+            scheduled_event = self._create_event_model(
+                config, deployment, event_source, stage_name)
+            resources.append(scheduled_event)
         return models.Application(stage_name, resources)
 
-    def _get_role_reference(self, config, stage_name, function):
-        # type: (Config, str, app.LambdaFunction) -> models.IAMRole
-        role = self._create_role_reference(config, stage_name, function)
+    def _create_event_model(self,
+                            config,        # type: Config
+                            deployment,    # type: models.DeploymentPackage
+                            event_source,  # type: app.CloudWatchEventSource
+                            stage_name,    # type: str
+                            ):
+        # type: (...) -> models.ScheduledEvent
+        lambda_function = self._create_lambda_model(
+            config, deployment, event_source.name,
+            event_source.handler_string, stage_name
+        )
+        # Resource names must be unique across a chalice app.
+        # However, in the original deployer code, the cloudwatch
+        # event + lambda function was considered a single resource.
+        # Now that they're treated as two separate resources we need
+        # a unique name for the event_source that's not the lambda
+        # function resource name.  We handle this by just appending
+        # '-event' to the name.  Ideally this is handled in app.py
+        # but we won't be able to do that until the old deployer
+        # is gone.
+        resource_name = event_source.name + '-event'
+        if isinstance(event_source.schedule_expression,
+                      app.ScheduleExpression):
+            expression = event_source.schedule_expression.to_string()
+        else:
+            expression = event_source.schedule_expression
+        rule_name = '%s-%s-%s' % (config.app_name, config.chalice_stage,
+                                  resource_name)
+        scheduled_event = models.ScheduledEvent(
+            resource_name=resource_name,
+            rule_name=rule_name,
+            schedule_expression=expression,
+            lambda_function=lambda_function,
+        )
+        return scheduled_event
+
+    def _create_lambda_model(self,
+                             config,        # type: Config
+                             deployment,    # type: models.DeploymentPackage
+                             name,          # type: str
+                             handler_name,  # type: str
+                             stage_name,    # type: str
+                             ):
+        # type: (...) -> models.LambdaFunction
+        new_config = config.scope(
+            chalice_stage=config.chalice_stage,
+            function_name=name
+        )
+        role = self._get_role_reference(
+            new_config, stage_name, name)
+        resource = self._build_lambda_function(
+            new_config, name, handler_name,
+            deployment, role
+        )
+        return resource
+
+    def _get_role_reference(self, config, stage_name, function_name):
+        # type: (Config, str, str) -> models.IAMRole
+        role = self._create_role_reference(config, stage_name, function_name)
         role_identifier = self._get_role_identifier(role)
         if role_identifier in self._known_roles:
             # If we've already create a models.IAMRole with the same
@@ -243,8 +302,8 @@ class ApplicationGraphBuilder(object):
         role = cast(models.ManagedIAMRole, role)
         return role.resource_name
 
-    def _create_role_reference(self, config, stage_name, function):
-        # type: (Config, str, app.LambdaFunction) -> models.IAMRole
+    def _create_role_reference(self, config, stage_name, function_name):
+        # type: (Config, str, str) -> models.IAMRole
         # First option, the user doesn't want us to manage
         # the role at all.
         if not config.manage_iam_role:
@@ -255,9 +314,9 @@ class ApplicationGraphBuilder(object):
             )
         policy = models.IAMPolicy()
         if not config.autogen_policy:
-            resource_name = 'role-%s' % function.name
+            resource_name = 'role-%s' % function_name
             role_name = '%s-%s-%s' % (config.app_name, stage_name,
-                                      function.name)
+                                      function_name)
             if config.iam_policy_file is not None:
                 filename = os.path.join(config.project_dir,
                                         '.chalice',
@@ -281,20 +340,21 @@ class ApplicationGraphBuilder(object):
         )
 
     def _build_lambda_function(self,
-                               config,      # type: Config
-                               function,    # type: app.LambdaFunction
-                               deployment,  # type: models.DeploymentPackage
-                               role,        # type: models.IAMRole
+                               config,        # type: Config
+                               name,          # type: str
+                               handler_name,  # type: str
+                               deployment,    # type: models.DeploymentPackage
+                               role,          # type: models.IAMRole
                                ):
         # type: (...) -> models.LambdaFunction
         function_name = '%s-%s-%s' % (
-            config.app_name, config.chalice_stage, function.name)
+            config.app_name, config.chalice_stage, name)
         return models.LambdaFunction(
-            resource_name=function.name,
+            resource_name=name,
             function_name=function_name,
             environment_variables=config.environment_variables,
             runtime=config.lambda_python_version,
-            handler=function.handler_string,
+            handler=handler_name,
             tags=config.tags,
             timeout=config.lambda_timeout,
             memory_size=config.lambda_memory_size,
