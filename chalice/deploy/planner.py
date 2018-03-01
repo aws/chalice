@@ -10,10 +10,11 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 
 class RemoteState(object):
-    def __init__(self, client):
-        # type: (TypedAWSClient) -> None
+    def __init__(self, client, deployed_resources):
+        # type: (TypedAWSClient, Optional[DeployedResources2]) -> None
         self._client = client
         self._cache = {}  # type: Dict[Tuple[str, str], bool]
+        self._deployed_resources = deployed_resources
 
     def _cache_key(self, resource):
         # type: (models.ManagedModel) -> Tuple[str, str]
@@ -31,6 +32,8 @@ class RemoteState(object):
             result = self._resource_exists_iam_role(resource)
         elif isinstance(resource, models.LambdaFunction):
             result = self._resource_exists_lambda_function(resource)
+        elif isinstance(resource, models.RestAPI):
+            result = self._resource_exists_rest_api(resource)
         self._cache[key] = result
         return result
 
@@ -45,6 +48,22 @@ class RemoteState(object):
             return True
         except ResourceDoesNotExistError:
             return False
+
+    def _resource_exists_rest_api(self, resource):
+        # type: (models.RestAPI) -> bool
+        if self._deployed_resources is None:
+            return False
+        deployed_values = self._deployed_resources.resource_values(
+            resource.resource_name)
+        rest_api_id = deployed_values['rest_api_id']
+        return self._client.rest_api_exists(rest_api_id)
+
+    def resource_deployed_values(self, resource):
+        # type: (models.ManagedModel) -> Dict[str, str]
+        if self._deployed_resources is None:
+            raise ValueError("Resource is not deployed: %s" % resource)
+        return self._deployed_resources.resource_values(
+            resource.resource_name)
 
     def get_remote_model(self, resource):
         # type: (models.ManagedIAMRole) -> Optional[models.ManagedModel]
@@ -110,6 +129,13 @@ class UnreferencedResourcePlanner(object):
                 apicall = models.APICall(
                     method_name='delete_rule',
                     params={'rule_name': resource_values['rule_name']},
+                )
+                plan.append(apicall)
+            elif resource_values['resource_type'] == 'rest_api':
+                rest_api_id = resource_values['rest_api_id']
+                apicall = models.APICall(
+                    method_name='delete_rest_api',
+                    params={'rest_api_id': rest_api_id}
                 )
                 plan.append(apicall)
 
@@ -279,6 +305,94 @@ class PlanStage(object):
         ]
         return plan
 
+    def plan_restapi(self, resource):
+        # type: (models.RestAPI) -> List[models.Instruction]
+        function = resource.lambda_function
+        function_name = function.function_name
+        varname = '%s_lambda_arn' % function.resource_name
+        lambda_arn_var = Variable(varname)
+        shared_plan = [
+            # The various API gateway API calls need
+            # to know the region name and account id so
+            # we'll take care of that up front and store
+            # them in variables.
+            models.BuiltinFunction(
+                'parse_arn',
+                [lambda_arn_var],
+            ),
+            models.StoreValue('parsed_lambda_arn'),
+            models.JPSearch('account_id'),
+            models.StoreValue('account_id'),
+            models.LoadValue('parsed_lambda_arn'),
+            models.JPSearch('region'),
+            models.StoreValue('region_name'),
+            # The swagger doc uses the 'api_handler_lambda_arn'
+            # var name so we need to make sure we populate this variable
+            # before importing the rest API.
+            models.LoadValue(varname),
+            models.StoreValue('api_handler_lambda_arn'),
+        ]
+        if not self._remote_state.resource_exists(resource):
+            plan = shared_plan + [
+                models.APICall(
+                    method_name='import_rest_api',
+                    params={'swagger_document': resource.swagger_doc},
+                ),
+                # We get rest_api_id as the return value, and need this value
+                # in subsequent API calls.
+                models.StoreValue(name='rest_api_id'),
+                models.RecordResourceVariable(
+                    resource_type='rest_api',
+                    resource_name=resource.resource_name,
+                    name='rest_api_id',
+                    variable_name='rest_api_id',
+                ),
+                models.APICall(
+                    method_name='deploy_rest_api',
+                    params={'rest_api_id': Variable('rest_api_id'),
+                            'api_gateway_stage': resource.api_gateway_stage},
+                ),
+                models.APICall(
+                    method_name='add_permission_for_apigateway_if_needed',
+                    params={'function_name': function_name,
+                            'region_name': Variable('region_name'),
+                            'account_id': Variable('account_id'),
+                            'rest_api_id': Variable('rest_api_id')},
+                ),
+            ]
+        else:
+            deployed = self._remote_state.resource_deployed_values(resource)
+            plan = shared_plan + [
+                models.Push(deployed['rest_api_id']),
+                models.StoreValue(name='rest_api_id'),
+                models.RecordResourceVariable(
+                    resource_type='rest_api',
+                    resource_name=resource.resource_name,
+                    name='rest_api_id',
+                    variable_name='rest_api_id',
+                ),
+                models.APICall(
+                    method_name='update_api_from_swagger',
+                    params={
+                        'rest_api_id': Variable('rest_api_id'),
+                        'swagger_document': resource.swagger_doc,
+                    },
+                ),
+                models.APICall(
+                    method_name='deploy_rest_api',
+                    params={'rest_api_id': Variable('rest_api_id'),
+                            'api_gateway_stage': resource.api_gateway_stage},
+                ),
+                models.APICall(
+                    method_name='add_permission_for_apigateway_if_needed',
+                    params={'function_name': function_name,
+                            'region_name': Variable('region_name'),
+                            'account_id': Variable('account_id'),
+                            'rest_api_id': Variable('rest_api_id')},
+                ),
+            ]
+        return plan
+
     def _get_role_arn(self, resource):
         # type: (models.IAMRole) -> Union[str, Variable]
         if isinstance(resource, models.PreCreatedIAMRole):
@@ -326,3 +440,10 @@ class Variable(object):
     def __eq__(self, other):
         # type: (Any) -> bool
         return isinstance(other, self.__class__) and self.name == other.name
+
+
+class StringFormat(object):
+    def __init__(self, template, variables):
+        # type: (str, List[str]) -> None
+        self.template = template
+        self.variables = variables

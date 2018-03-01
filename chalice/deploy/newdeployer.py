@@ -94,7 +94,9 @@ from chalice import app  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import PipRunner, SubprocessPip
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
+from chalice.deploy.swagger import SwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
+from chalice.deploy.planner import StringFormat
 from chalice.deploy.planner import UnreferencedResourcePlanner, NoopPlanner
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
@@ -103,8 +105,8 @@ from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.awsclient import TypedAWSClient
 
 
-def create_default_deployer(session):
-    # type: (Session) -> Deployer
+def create_default_deployer(session, config):
+    # type: (Session, Config) -> Deployer
     client = TypedAWSClient(session)
     osutils = OSUtils()
     pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
@@ -131,10 +133,14 @@ def create_default_deployer(session):
                         osutils=osutils
                     ),
                 ),
+                SwaggerBuilder(
+                    swagger_generator=TemplatedSwaggerGenerator(),
+                )
             ],
         ),
         plan_stage=PlanStage(
-            osutils=osutils, remote_state=RemoteState(client),
+            osutils=osutils, remote_state=RemoteState(
+                client, config.deployed_resources(config.chalice_stage)),
         ),
         sweeper=UnreferencedResourcePlanner(),
         executor=Executor(client),
@@ -161,11 +167,14 @@ class UnresolvedValueError(Exception):
 
     def __init__(self, key, value, method_name):
         # type: (str, models.Placeholder, str) -> None
-        msg = self.MSG % (key, value, method_name)
-        super(UnresolvedValueError, self).__init__(msg)
+        super(UnresolvedValueError, self).__init__()
         self.key = key
         self.value = value
         self.method_name = method_name
+
+    def __str__(self):
+        # type: () -> str
+        return self.MSG % (self.key, self.value, self.method_name)
 
 
 class Deployer(object):
@@ -223,7 +232,30 @@ class ApplicationGraphBuilder(object):
             scheduled_event = self._create_event_model(
                 config, deployment, event_source, stage_name)
             resources.append(scheduled_event)
+        if config.chalice_app.routes:
+            rest_api = self._create_rest_api_model(
+                config, deployment, config.chalice_app, stage_name)
+            resources.append(rest_api)
         return models.Application(stage_name, resources)
+
+    def _create_rest_api_model(self,
+                               config,        # type: Config
+                               deployment,    # type: models.DeploymentPackage
+                               chalice_app,   # type: app.Chalice
+                               stage_name,    # type: str
+                               ):
+        # type: (...) -> models.RestAPI
+        resource_name = config.app_name
+        lambda_function = self._create_lambda_model(
+            config, deployment, resource_name,
+            'app.app', stage_name
+        )
+        return models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc=models.Placeholder.BUILD_STAGE,
+            api_gateway_stage=config.api_gateway_stage,
+            lambda_function=lambda_function,
+        )
 
     def _create_event_model(self,
                             config,        # type: Config
@@ -428,6 +460,18 @@ class DeploymentPackager(BaseDeployStep):
             resource.filename = zip_filename
 
 
+class SwaggerBuilder(BaseDeployStep):
+    def __init__(self, swagger_generator):
+        # type: (SwaggerGenerator) -> None
+        self._swagger_generator = swagger_generator
+
+    def handle_restapi(self, config, resource):
+        # type: (Config, models.RestAPI) -> None
+        swagger_doc = self._swagger_generator.generate_swagger(
+            config.chalice_app)
+        resource.swagger_doc = swagger_doc
+
+
 class PolicyGenerator(BaseDeployStep):
     def __init__(self, policy_gen):
         # type: (AppPolicyGenerator) -> None
@@ -460,6 +504,7 @@ class Executor(object):
         self.variables = {}  # type: Dict[str, Any]
         self.stack = []  # type: List[Any]
         self.resource_values = []  # type: List[Dict[str, Any]]
+        self._variable_resolver = VariableResolver()
 
     def execute(self, api_calls):
         # type: (List[models.Instruction]) -> None
@@ -478,6 +523,10 @@ class Executor(object):
     def _do_storevalue(self, instruction):
         # type: (models.StoreValue) -> None
         self.variables[instruction.name] = self.stack[-1]
+
+    def _do_loadvalue(self, instruction):
+        # type: (models.LoadValue) -> None
+        self.stack.append(self.variables[instruction.varname])
 
     def _do_recordresource(self, instruction):
         # type: (models.RecordResource) -> None
@@ -517,14 +566,82 @@ class Executor(object):
         result = jmespath.search(instruction.expression, v)
         self.stack.append(result)
 
+    def _do_builtinfunction(self, instruction):
+        # type: (models.BuiltinFunction) -> None
+        # Split this out to a separate class of built in functions
+        # once we add more functions.
+        if instruction.function_name == 'parse_arn':
+            arg = instruction.args[0]
+            value = self.variables[arg.name]
+            parts = value.split(':')
+            result = {
+                'service': parts[2],
+                'region': parts[3],
+                'account_id': parts[4],
+            }
+            self.stack.append(result)
+
     def _resolve_variables(self, api_call):
         # type: (models.APICall) -> Dict[str, Any]
+        try:
+            return self._variable_resolver.resolve_variables(
+                api_call.params, self.variables)
+        except UnresolvedValueError as e:
+            e.method_name = api_call.method_name
+            raise
+
+
+class VariableResolver(object):
+    def resolve_variables(self, params, variables):
+        # type: (Dict[str, Any], Dict[str, str]) -> Dict[str, Any]
         final = {}
-        for key, value in api_call.params.items():
-            if isinstance(value, Variable):
-                final[key] = self.variables[value.name]
-            elif isinstance(value, models.Placeholder):
-                raise UnresolvedValueError(key, value, api_call.method_name)
-            else:
-                final[key] = value
+        for key, value in params.items():
+            try:
+                final[key] = self._resolve_variables(value, variables)
+            except UnresolvedValueError as e:
+                e.key = key
+                raise
         return final
+
+    def _resolve_variables(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        if isinstance(value, Variable):
+            return variables[value.name]
+        elif isinstance(value, StringFormat):
+            v = {k: variables[k] for k in value.variables}
+            return value.template.format(**v)
+        elif isinstance(value, models.Placeholder):
+            # The key and method_name values are added
+            # as the exception propagates up the stack.
+            raise UnresolvedValueError('', value, '')
+        elif isinstance(value, dict):
+            final = {}
+            for k, v in value.items():
+                final[k] = self._resolve_variables(v, variables)
+            return final
+        elif isinstance(value, list):
+            final_list = []
+            for v in value:
+                final_list.append(self._resolve_variables(v, variables))
+            return final_list
+        else:
+            return value
+
+
+class TemplatedSwaggerGenerator(SwaggerGenerator):
+    def __init__(self):
+        # type: () -> None
+        pass
+
+    def _uri(self, lambda_arn=None):
+        # type: (Optional[str]) -> Any
+        return StringFormat(
+            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
+            '/functions/{api_handler_lambda_arn}/invocations',
+            ['region_name', 'api_handler_lambda_arn'],
+        )
+
+    def _auth_uri(self, authorizer=None):
+        # type: (app.ChaliceAuthorizer) -> Any
+        # This will be handled in a subsequent PR.
+        raise NotImplementedError("_auth_uri")

@@ -94,9 +94,9 @@ class CLIFactory(object):
         return deployer.create_default_deployer(
             session=session, ui=ui)
 
-    def create_new_default_deployer(self, session):
-        # type: (Session) -> newdeployer.Deployer
-        return newdeployer.create_default_deployer(session)
+    def create_new_default_deployer(self, session, config):
+        # type: (Session, Config) -> newdeployer.Deployer
+        return newdeployer.create_default_deployer(session, config)
 
     def create_deletion_deployer(self, session):
         # type: (Session) -> newdeployer.Deployer

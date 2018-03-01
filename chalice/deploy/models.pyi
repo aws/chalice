@@ -32,6 +32,17 @@ class StoreValue(Instruction):
         # type: (...) -> None
         ...
 
+
+class LoadValue(Instruction):
+    varname = ...  # type: str
+
+    def __init__(self,
+                 varname,  # type: str
+                 ):
+        # type: (...) -> None
+        ...
+
+
 class RecordResource(Instruction):
     resource_type = ...  # type: str
     resource_name = ...  # type: str
@@ -92,6 +103,13 @@ class JPSearch(Instruction):
     expression = ...  # type: str
 
     def __init__(self, expression: str) -> None: ...
+
+
+class BuiltinFunction(Instruction):
+    function_name = ... # type: str
+    args = ... # type: List[Any]
+
+    def __init__(self, function_name: str, args: List[Any]) -> None: ...
 
 
 T = TypeVar('T')
@@ -221,6 +239,21 @@ class ScheduledEvent(ManagedModel):
                  resource_name,          # type: str
                  rule_name,              # type: str
                  schedule_expression,    # type: str
+                 lambda_function,        # type: LambdaFunction
+                 ):
+        # type: (...) -> None
+        ...
+
+
+class RestAPI(ManagedModel):
+    swagger_doc = ... # type: Dict[str, Any]
+    api_gateway_stage = ... # type: str
+    lambda_function = ... # type: LambdaFunction
+
+    def __init__(self,
+                 resource_name,          # type: str
+                 swagger_doc,            # type: DV[Dict[str, Any]]
+                 api_gateway_stage,      # type: str
                  lambda_function,        # type: LambdaFunction
                  ):
         # type: (...) -> None
