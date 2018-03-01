@@ -210,3 +210,18 @@ class LambdaFunction(ManagedModel):
                  ):
         # type: (...) -> None
         ...
+
+
+class ScheduledEvent(ManagedModel):
+    rule_name = ... # type: str
+    schedule_expression = ... # type: str
+    lambda_function = ... # type: LambdaFunction
+
+    def __init__(self,
+                 resource_name,          # type: str
+                 rule_name,              # type: str
+                 schedule_expression,    # type: str
+                 lambda_function,        # type: LambdaFunction
+                 ):
+        # type: (...) -> None
+        ...

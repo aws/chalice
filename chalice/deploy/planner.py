@@ -92,8 +92,7 @@ class UnreferencedResourcePlanner(object):
             if resource_values['resource_type'] == 'lambda_function':
                 apicall = models.APICall(
                     method_name='delete_function',
-                    params={'function_name': resource_values['lambda_arn']},
-                )
+                    params={'function_name': resource_values['lambda_arn']},)
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'iam_role':
                 # TODO: Consider adding the role_name to the deployed.json.
@@ -105,6 +104,12 @@ class UnreferencedResourcePlanner(object):
                 apicall = models.APICall(
                     method_name='delete_role',
                     params={'name': v},
+                )
+                plan.append(apicall)
+            elif resource_values['resource_type'] == 'cloudwatch_event':
+                apicall = models.APICall(
+                    method_name='delete_rule',
+                    params={'rule_name': resource_values['rule_name']},
                 )
                 plan.append(apicall)
 
@@ -236,6 +241,44 @@ class PlanStage(object):
             )
         ]
 
+    def plan_scheduledevent(self, resource):
+        # type: (models.ScheduledEvent) -> List[models.Instruction]
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        # Because the underlying API calls have PUT semantics,
+        # we don't have to check if the resource exists and have
+        # a separate code path for updates.  We could however
+        # check if the resource exists to avoid unnecessary API
+        # calls, but that's a later optimization.
+        plan = [
+            models.APICall(
+                method_name='get_or_create_rule_arn',
+                params={'rule_name': resource.rule_name,
+                        'schedule_expression': resource.schedule_expression},
+            ),
+            models.StoreValue('rule-arn'),
+            models.APICall(
+                method_name='connect_rule_to_lambda',
+                params={'rule_name': resource.rule_name,
+                        'function_arn': function_arn}
+            ),
+            models.APICall(
+                method_name='add_permission_for_scheduled_event',
+                params={'rule_arn': Variable('rule-arn'),
+                        'function_arn': function_arn},
+            ),
+            # You need to remote targets (which have IDs)
+            # before you can delete a rule.
+            models.RecordResourceValue(
+                resource_type='cloudwatch_event',
+                resource_name=resource.resource_name,
+                name='rule_name',
+                value=resource.rule_name,
+            )
+        ]
+        return plan
+
     def _get_role_arn(self, resource):
         # type: (models.IAMRole) -> Union[str, Variable]
         if isinstance(resource, models.PreCreatedIAMRole):
@@ -275,3 +318,11 @@ class Variable(object):
     def __init__(self, name):
         # type: (str) -> None
         self.name = name
+
+    def __repr__(self):
+        # type: () -> str
+        return 'Variable("%s")' % self.name
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return isinstance(other, self.__class__) and self.name == other.name
