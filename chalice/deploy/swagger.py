@@ -226,6 +226,10 @@ class SwaggerGenerator(object):
 
 
 class CFNSwaggerGenerator(SwaggerGenerator):
+    def __init__(self):
+        # type: () -> None
+        pass
+
     def _uri(self, lambda_arn=None):
         # type: (Optional[str]) -> Any
         # TODO: Does this have to be return type Any?

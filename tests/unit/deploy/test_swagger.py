@@ -476,10 +476,7 @@ def test_will_default_to_function_name_for_auth(sample_app):
 
 
 def test_will_custom_auth_with_cfn(sample_app):
-    swagger_gen = CFNSwaggerGenerator(
-        region='us-west-2',
-        deployed_resources={}
-    )
+    swagger_gen = CFNSwaggerGenerator()
 
     # No "name=" kwarg provided should default
     # to a name of "auth".
