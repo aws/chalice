@@ -24,6 +24,11 @@ class StoreValue(Instruction):
 
 
 @attrs(frozen=True)
+class LoadValue(Instruction):
+    varname = attrib()
+
+
+@attrs(frozen=True)
 class RecordResource(Instruction):
     resource_type = attrib()
     resource_name = attrib()
@@ -53,6 +58,12 @@ class Pop(Instruction):
 @attrs(frozen=True)
 class JPSearch(Instruction):
     expression = attrib()
+
+
+@attrs(frozen=True)
+class BuiltinFunction(Instruction):
+    function_name = attrib()
+    args = attrib()
 
 
 class Model(object):
@@ -140,6 +151,17 @@ class ScheduledEvent(ManagedModel):
     resource_type = 'scheduled_event'
     rule_name = attrib()
     schedule_expression = attrib()
+    lambda_function = attrib()
+
+    def dependencies(self):
+        return [self.lambda_function]
+
+
+@attrs
+class RestAPI(ManagedModel):
+    resource_type = 'rest_api'
+    swagger_doc = attrib()
+    api_gateway_stage = attrib()
     lambda_function = attrib()
 
     def dependencies(self):

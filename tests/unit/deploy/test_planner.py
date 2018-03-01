@@ -55,6 +55,7 @@ class InMemoryRemoteState(object):
         if known_resources is None:
             known_resources = {}
         self.known_resources = known_resources
+        self.deployed_values = {}
 
     def resource_exists(self, resource):
         return (
@@ -71,6 +72,9 @@ class InMemoryRemoteState(object):
 
     def declare_no_resources_exists(self):
         self.known_resources = {}
+
+    def resource_deployed_values(self, resource):
+        return self.deployed_values[resource.resource_name]
 
 
 class BasePlannerTests(object):
@@ -324,10 +328,122 @@ class TestPlanScheduledEvent(BasePlannerTests):
         )
 
 
+class TestPlanRestAPI(BasePlannerTests):
+    def assert_loads_needed_variables(self, plan):
+        # Parse arn and store region/account id for future
+        # API calls.
+        assert plan[0:9] == [
+            models.BuiltinFunction(
+                'parse_arn', [Variable('function_name_lambda_arn')]),
+            models.StoreValue('parsed_lambda_arn'),
+            models.JPSearch('account_id'),
+            models.StoreValue('account_id'),
+            models.LoadValue('parsed_lambda_arn'),
+            models.JPSearch('region'),
+            models.StoreValue('region_name'),
+
+            # Verify we copy the function arn as needed.
+            models.LoadValue('function_name_lambda_arn'),
+            models.StoreValue('api_handler_lambda_arn'),
+        ]
+
+    def test_can_plan_rest_api(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            api_gateway_stage='api',
+            lambda_function=function,
+        )
+        plan = self.determine_plan(rest_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[9:] == [
+            models.APICall(
+                method_name='import_rest_api',
+                params={'swagger_document': {'swagger': '2.0'}},
+            ),
+            models.StoreValue(name='rest_api_id'),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='rest_api_id',
+                variable_name='rest_api_id',
+            ),
+            models.APICall(method_name='deploy_rest_api',
+                           params={'rest_api_id': Variable('rest_api_id'),
+                                   'api_gateway_stage': 'api'}),
+            models.APICall(
+                method_name='add_permission_for_apigateway_if_needed',
+                params={
+                    'function_name': 'appname-dev-function_name',
+                    'region_name': Variable('region_name'),
+                    'account_id': Variable('account_id'),
+                    'rest_api_id': Variable('rest_api_id'),
+                }
+            )
+        ]
+
+    def test_can_update_rest_api(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            api_gateway_stage='api',
+            lambda_function=function,
+        )
+        self.remote_state.declare_resource_exists(rest_api)
+        self.remote_state.deployed_values['rest_api'] = {
+            'rest_api_id': 'my_rest_api_id',
+        }
+        plan = self.determine_plan(rest_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[9:] == [
+            models.Push('my_rest_api_id'),
+            models.StoreValue(name='rest_api_id'),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='rest_api_id',
+                variable_name='rest_api_id',
+            ),
+            models.APICall(
+                method_name='update_api_from_swagger',
+                params={
+                    'rest_api_id': Variable('rest_api_id'),
+                    'swagger_document': {'swagger': '2.0'},
+                },
+            ),
+            models.APICall(
+                method_name='deploy_rest_api',
+                params={'rest_api_id': Variable('rest_api_id'),
+                        'api_gateway_stage': 'api'},
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_if_needed',
+                params={'function_name': 'appname-dev-function_name',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'rest_api_id': Variable('rest_api_id')},
+            ),
+        ]
+
+
 class TestRemoteState(object):
     def setup_method(self):
         self.client = mock.Mock(spec=TypedAWSClient)
-        self.remote_state = RemoteState(self.client)
+        self.config = FakeConfig({'resources': []})
+        self.remote_state = RemoteState(
+            self.client, self.config.deployed_resources('dev'),
+        )
+
+    def create_rest_api_model(self):
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            api_gateway_stage='api',
+            lambda_function=None,
+        )
+        return rest_api
 
     def test_role_exists(self):
         self.client.get_role_arn_for_name.return_value = 'role:arn'
@@ -399,6 +515,58 @@ class TestRemoteState(object):
         assert self.remote_state.resource_exists(function)
 
         assert self.client.lambda_function_exists.call_count == 1
+
+    def test_rest_api_exists_no_deploy(self):
+        rest_api = self.create_rest_api_model()
+        remote_state = RemoteState(
+            self.client, None)
+        assert not remote_state.resource_exists(rest_api)
+        assert not self.client.rest_api_exists.called
+
+    def test_api_exists_with_existing_deploy(self):
+        rest_api = self.create_rest_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'rest_api',
+                'resource_type': 'rest_api',
+                'rest_api_id': 'my_rest_api_id',
+            }]
+        }
+        self.client.rest_api_exists.return_value = True
+        remote_state = RemoteState(
+            self.client, DeployedResources2(deployed_resources))
+        assert remote_state.resource_exists(rest_api)
+        self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+
+    def test_rest_api_not_exists_with_preexisting_deploy(self):
+        rest_api = self.create_rest_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'rest_api',
+                'resource_type': 'rest_api',
+                'rest_api_id': 'my_rest_api_id',
+            }]
+        }
+        self.client.rest_api_exists.return_value = False
+        remote_state = RemoteState(
+            self.client, DeployedResources2(deployed_resources))
+        assert not remote_state.resource_exists(rest_api)
+        self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+
+    def test_can_get_deployed_values(self):
+        remote_state = RemoteState(
+            self.client, DeployedResources2({'resources': [
+                {'name': 'rest_api', 'rest_api_id': 'foo'}]})
+        )
+        rest_api = self.create_rest_api_model()
+        values = remote_state.resource_deployed_values(rest_api)
+        assert values == {'name': 'rest_api', 'rest_api_id': 'foo'}
+
+    def test_value_error_raised_on_no_deployed_values(self):
+        remote_state = RemoteState(self.client, deployed_resources=None)
+        rest_api = self.create_rest_api_model()
+        with pytest.raises(ValueError):
+            remote_state.resource_deployed_values(rest_api)
 
 
 class TestUnreferencedResourcePlanner(object):
@@ -550,6 +718,25 @@ class TestUnreferencedResourcePlanner(object):
             models.APICall(
                 method_name='delete_rule',
                 params={'rule_name': 'app-dev-index-event'},
+                resource=None,
+            )
+        ]
+
+    def test_can_delete_rest_api(self, sweeper):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'rest_api',
+                'rest_api_id': 'my_rest_api_id',
+                'resource_type': 'rest_api',
+            }]
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='delete_rest_api',
+                params={'rest_api_id': 'my_rest_api_id'},
                 resource=None,
             )
         ]

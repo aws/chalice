@@ -387,8 +387,8 @@ class TypedAWSClient(object):
 
     def add_permission_for_apigateway_if_needed(self, function_name,
                                                 region_name, account_id,
-                                                rest_api_id, random_id):
-        # type: (str, str, str, str, str) -> None
+                                                rest_api_id, random_id=None):
+        # type: (str, str, str, str, Optional[str]) -> None
         """Authorize API gateway to invoke a lambda function is needed.
 
         This method will first check if API gateway has permission to call
@@ -396,6 +396,8 @@ class TypedAWSClient(object):
         ``self.add_permission_for_apigateway(...).
 
         """
+        if random_id is None:
+            random_id = self._random_id()
         policy = self.get_function_policy(function_name)
         source_arn = self._build_source_arn_str(region_name, account_id,
                                                 rest_api_id)
