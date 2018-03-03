@@ -6,6 +6,8 @@ Next Release (TBD)
 ==================
 * Print out full stack trace when an error occurs
   (`#711 <https://github.com/aws/chalice/issues/711>`__)
+* Add ``image/jpeg`` as a default binary content type
+  (`#707 <https://github.com/aws/chalice/pull/707>`__)
 
 
 1.1.1
