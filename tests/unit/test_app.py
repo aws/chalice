@@ -11,7 +11,7 @@ import six
 
 
 from chalice import app
-from chalice import NotFoundError, BadRequestError
+from chalice import NotFoundError
 from chalice.app import APIGateway, Request, Response, handle_decimals
 from chalice import __version__ as chalice_version
 
