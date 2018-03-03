@@ -11,7 +11,7 @@ import six
 
 
 from chalice import app
-from chalice import NotFoundError
+from chalice import NotFoundError, BadRequestError
 from chalice.app import APIGateway, Request, Response, handle_decimals
 from chalice import __version__ as chalice_version
 
@@ -378,8 +378,8 @@ def test_json_body_none_with_malformed_json(create_event):
     event['body'] = '{"foo": "bar"'
 
     result = demo(event, context=None)
-    result = json_response_body(result)
-    assert result is None
+    assert result['statusCode'] == 400
+    assert json_response_body(result)['Code'] == 'BadRequestError'
 
 
 def test_cant_access_json_body_with_wrong_content_type(create_event):

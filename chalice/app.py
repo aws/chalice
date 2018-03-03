@@ -303,7 +303,7 @@ class Request(object):
                 try:
                     self._json_body = json.loads(self.raw_body)
                 except ValueError:
-                    return None
+                    raise BadRequestError('Error Parsing JSON')
             return self._json_body
 
     def to_dict(self):
