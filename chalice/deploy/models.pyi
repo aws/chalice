@@ -13,15 +13,14 @@ class Instruction:
 class APICall(Instruction):
     method_name = ...  # type: str
     params = ...  # type: Dict[str, Any]
-    resource = ...  # type: Optional[ManagedModel]
 
     def __init__(self,
                  method_name,           # type: str
                  params,                # type: Dict[str, Any]
-                 resource=None,         # type: Optional[ManagedModel]
                  ):
         # type: (...) -> None
         ...
+
 
 class StoreValue(Instruction):
     name = ...  # type: str

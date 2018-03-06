@@ -185,7 +185,6 @@ class PlanStage(object):
                 models.APICall(
                     method_name='create_function',
                     params=params,
-                    resource=resource,
                 ),
                 models.StoreValue(name=varname),
                 models.RecordResourceVariable(
@@ -212,7 +211,6 @@ class PlanStage(object):
             models.APICall(
                 method_name='update_function',
                 params=params,
-                resource=resource,
             ),
             models.JPSearch('FunctionArn'),
             models.StoreValue(name=varname),
@@ -236,7 +234,6 @@ class PlanStage(object):
                     params={'name': resource.role_name,
                             'trust_policy': resource.trust_policy,
                             'policy': document},
-                    resource=resource
                 ),
                 models.StoreValue(varname),
                 models.RecordResourceVariable(
@@ -257,7 +254,6 @@ class PlanStage(object):
                 params={'role_name': resource.role_name,
                         'policy_name': resource.role_name,
                         'policy_document': document},
-                resource=resource
             ),
             models.RecordResourceValue(
                 resource_type='iam_role',

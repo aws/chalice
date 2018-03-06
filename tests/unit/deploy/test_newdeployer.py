@@ -665,7 +665,7 @@ class TestExecutor(object):
     def test_can_return_created_resources(self):
         function = create_function_resource('myfunction')
         params = {}
-        call = APICall('create_function', params, resource=function)
+        call = APICall('create_function', params)
         self.mock_client.create_function.return_value = 'function:arn'
         record_instruction = RecordResource(
             resource_type='lambda_function',
@@ -715,8 +715,7 @@ class TestExecutor(object):
     def test_validates_no_unresolved_deploy_vars(self):
         function = create_function_resource('myfunction')
         params = {'zip_contents': models.Placeholder.BUILD_STAGE}
-        call = APICall('create_function', params,
-                       resource=function)
+        call = APICall('create_function', params)
         self.mock_client.create_function.return_value = 'function:arn'
         # We should raise an exception because a param has
         # a models.Placeholder.BUILD_STAGE value which should have

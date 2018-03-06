@@ -15,7 +15,6 @@ class Instruction(object):
 class APICall(Instruction):
     method_name = attrib()
     params = attrib()
-    resource = attrib(default=None)
 
 
 @attrs(frozen=True)
