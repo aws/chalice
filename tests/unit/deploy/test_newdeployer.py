@@ -247,7 +247,6 @@ class TestApplicationGraphBuilder(object):
         assert isinstance(role, models.ManagedIAMRole)
         assert role == models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='lambda-only-dev',
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
@@ -663,7 +662,6 @@ class TestExecutor(object):
         )
 
     def test_can_return_created_resources(self):
-        function = create_function_resource('myfunction')
         params = {}
         call = APICall('create_function', params)
         self.mock_client.create_function.return_value = 'function:arn'
@@ -713,7 +711,6 @@ class TestExecutor(object):
         }]
 
     def test_validates_no_unresolved_deploy_vars(self):
-        function = create_function_resource('myfunction')
         params = {'zip_contents': models.Placeholder.BUILD_STAGE}
         call = APICall('create_function', params)
         self.mock_client.create_function.return_value = 'function:arn'
