@@ -90,7 +90,6 @@ class BasePlannerTests(object):
         # compared.
         assert expected.method_name == actual_api_call.method_name
         assert expected.params == actual_api_call.params
-        assert expected.resource == actual_api_call.resource
 
     def determine_plan(self, resource):
         planner = PlanStage(self.remote_state, self.osutils)
@@ -114,7 +113,6 @@ class TestPlanManagedRole(BasePlannerTests):
             params={'name': 'myrole',
                     'trust_policy': {'trust': 'policy'},
                     'policy': {'iam': 'policy'}},
-            resource=resource
         )
         self.assert_apicall_equals(plan[0], expected)
 
@@ -134,7 +132,6 @@ class TestPlanManagedRole(BasePlannerTests):
             params={'name': 'myrole',
                     'trust_policy': {'trust': 'policy'},
                     'policy': {'iam': 'policy'}},
-            resource=resource,
         )
         self.assert_apicall_equals(plan[0], expected)
 
@@ -155,7 +152,6 @@ class TestPlanManagedRole(BasePlannerTests):
                 params={'role_name': 'myrole',
                         'policy_name': 'myrole',
                         'policy_document': {'role': 'policy'}},
-                resource=role,
             )
         )
         assert plan[-1].value == 'myrole:arn'
@@ -178,7 +174,6 @@ class TestPlanManagedRole(BasePlannerTests):
                 params={'role_name': 'myrole',
                         'policy_name': 'myrole',
                         'policy_document': {'iam': 'policy'}},
-                resource=role,
             )
         )
 
@@ -207,7 +202,6 @@ class TestPlanManagedRole(BasePlannerTests):
                 params={'role_name': 'myrole',
                         'policy_name': 'myrole',
                         'policy_document': {'role': 'policy'}},
-                resource=role,
             )
         )
 
@@ -230,7 +224,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'timeout': 60,
                 'memory_size': 128,
             },
-            resource=function,
         )
         self.assert_apicall_equals(plan[0], expected)
 
@@ -254,7 +247,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         expected_params = dict(memory_size=256, **existing_params)
         expected = models.APICall(
             method_name='update_function',
-            resource=function,
             params=expected_params,
         )
         self.assert_apicall_equals(plan[0], expected)
@@ -272,7 +264,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         plan = self.determine_plan(function)
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.resource == function
         # The params are verified in test_can_create_function,
         # we just care about how the role_arn Variable is constructed.
         role_arn = call.params['role_arn']
@@ -718,7 +709,6 @@ class TestUnreferencedResourcePlanner(object):
             models.APICall(
                 method_name='delete_rule',
                 params={'rule_name': 'app-dev-index-event'},
-                resource=None,
             )
         ]
 
@@ -737,6 +727,5 @@ class TestUnreferencedResourcePlanner(object):
             models.APICall(
                 method_name='delete_rest_api',
                 params={'rest_api_id': 'my_rest_api_id'},
-                resource=None,
             )
         ]
