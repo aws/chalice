@@ -365,7 +365,6 @@ class ApplicationGraphBuilder(object):
                 document=models.Placeholder.BUILD_STAGE)
         return models.ManagedIAMRole(
             resource_name=resource_name,
-            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name=role_name,
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=policy,

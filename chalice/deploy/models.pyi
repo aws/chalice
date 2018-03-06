@@ -3,7 +3,6 @@ import enum
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
-    DEPLOY_STAGE = 'deploy_stage'
 
 
 class Instruction:
@@ -186,14 +185,12 @@ class PreCreatedIAMRole(IAMRole):
 
 
 class ManagedIAMRole(IAMRole, ManagedModel):
-    role_arn = ... # type: DV[str]
     role_name = ... # type: str
     trust_policy = ... # type: Dict[str, Any]
     policy = ... # type: IAMPolicy
 
     def __init__(self,
                  resource_name,  # type: str
-                 role_arn,       # type: DV[str]
                  role_name,      # type: str
                  trust_policy,   # type: Dict[str, Any]
                  policy,         # type: IAMPolicy

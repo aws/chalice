@@ -1,6 +1,5 @@
 import json
 
-import attr
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 
 from chalice.config import Config, DeployedResources2  # noqa
@@ -64,19 +63,6 @@ class RemoteState(object):
             raise ValueError("Resource is not deployed: %s" % resource)
         return self._deployed_resources.resource_values(
             resource.resource_name)
-
-    def get_remote_model(self, resource):
-        # type: (models.ManagedIAMRole) -> Optional[models.ManagedModel]
-        # We only need ManagedIAMRole support for now, but this will
-        # need to grow as needed.
-        # TODO: revisit adding caching.  We don't need to make 2 API calls
-        # here.
-        if not self.resource_exists(resource):
-            return None
-        role = self._client.get_role(resource.role_name)
-        return attr.evolve(resource,
-                           trust_policy=role['AssumeRolePolicyDocument'],
-                           role_arn=role['Arn'])
 
 
 class UnreferencedResourcePlanner(object):
@@ -198,7 +184,7 @@ class PlanStage(object):
         # to do an update() API call.
         params = {
             'function_name': resource.function_name,
-            'role_arn': resource.role.role_arn,
+            'role_arn': role_arn,
             'zip_contents': self._osutils.get_file_contents(
                 resource.deployment_package.filename, binary=True),
             'runtime': resource.runtime,
@@ -226,8 +212,8 @@ class PlanStage(object):
         # type: (models.ManagedIAMRole) -> List[models.Instruction]
         document = self._get_policy_document(resource.policy)
         role_exists = self._remote_state.resource_exists(resource)
+        varname = '%s_role_arn' % resource.role_name
         if not role_exists:
-            varname = '%s_role_arn' % resource.role_name
             return [
                 models.APICall(
                     method_name='create_role',
@@ -243,23 +229,22 @@ class PlanStage(object):
                     variable_name=varname,
                 )
             ]
-        remote_model = cast(
-            models.ManagedIAMRole,
-            self._remote_state.get_remote_model(resource),
-        )
-        resource.role_arn = remote_model.role_arn
+        role_arn = self._remote_state.resource_deployed_values(
+            resource)['role_arn']
         return [
+            models.Push(role_arn),
+            models.StoreValue(varname),
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': resource.role_name,
                         'policy_name': resource.role_name,
                         'policy_document': document},
             ),
-            models.RecordResourceValue(
+            models.RecordResourceVariable(
                 resource_type='iam_role',
                 resource_name=resource.resource_name,
                 name='role_arn',
-                value=resource.role_arn,
+                variable_name=varname,
             )
         ]
 
@@ -394,9 +379,7 @@ class PlanStage(object):
         if isinstance(resource, models.PreCreatedIAMRole):
             return resource.role_arn
         elif isinstance(resource, models.ManagedIAMRole):
-            if isinstance(resource.role_arn, models.Placeholder):
-                return Variable('%s_role_arn' % resource.role_name)
-            return resource.role_arn
+            return Variable('%s_role_arn' % resource.role_name)
         # Make mypy happy.
         raise RuntimeError("Unknown resource type: %s" % resource)
 

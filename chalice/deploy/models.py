@@ -4,7 +4,6 @@ from attr import attrs, attrib
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
-    DEPLOY_STAGE = 'deploy_stage'
 
 
 class Instruction(object):
@@ -119,7 +118,6 @@ class PreCreatedIAMRole(IAMRole):
 @attrs
 class ManagedIAMRole(IAMRole, ManagedModel):
     resource_type = 'iam_role'
-    role_arn = attrib()
     role_name = attrib()
     trust_policy = attrib()
     policy = attrib()
