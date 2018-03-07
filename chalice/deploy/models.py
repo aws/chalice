@@ -1,5 +1,5 @@
 import enum
-from attr import attrs, attrib
+from attr import attrs, attrib, Factory
 
 
 class Placeholder(enum.Enum):
@@ -156,6 +156,7 @@ class RestAPI(ManagedModel):
     swagger_doc = attrib()
     api_gateway_stage = attrib()
     lambda_function = attrib()
+    authorizers = attrib(default=Factory(list))
 
     def dependencies(self):
-        return [self.lambda_function]
+        return [self.lambda_function] + self.authorizers

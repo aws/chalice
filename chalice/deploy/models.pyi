@@ -266,12 +266,14 @@ class RestAPI(ManagedModel):
     swagger_doc = ... # type: Dict[str, Any]
     api_gateway_stage = ... # type: str
     lambda_function = ... # type: LambdaFunction
+    authorizers = ... # type: List[LambdaFunction]
 
     def __init__(self,
                  resource_name,          # type: str
                  swagger_doc,            # type: DV[Dict[str, Any]]
                  api_gateway_stage,      # type: str
                  lambda_function,        # type: LambdaFunction
+                 authorizers,            # type: Optional[List[LambdaFunction]]
                  ):
         # type: (...) -> None
         ...
