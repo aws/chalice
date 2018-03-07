@@ -801,6 +801,15 @@ class TestExecutor(object):
              'service': 'lambda'}
         ]
 
+    def test_errors_out_on_unknown_function(self):
+        with pytest.raises(ValueError):
+            self.executor.execute([
+                BuiltinFunction(
+                    function_name='unknown_foo',
+                    args=[]
+                )
+            ])
+
 
 def test_build_stage():
     first = mock.Mock(spec=BaseDeployStep)

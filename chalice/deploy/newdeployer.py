@@ -594,6 +594,9 @@ class Executor(object):
                 'account_id': parts[4],
             }
             self.stack.append(result)
+        else:
+            raise ValueError("Unknown builtin function: %s"
+                             % instruction.function_name)
 
     def _resolve_variables(self, api_call):
         # type: (models.APICall) -> Dict[str, Any]
