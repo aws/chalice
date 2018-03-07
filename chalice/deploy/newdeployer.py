@@ -223,10 +223,10 @@ class ApplicationGraphBuilder(object):
         resources = []  # type: List[models.Model]
         deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
         for function in config.chalice_app.pure_lambda_functions:
-            resource = self._create_lambda_model(config, deployment,
-                                                 function.name,
-                                                 function.handler_string,
-                                                 stage_name)
+            resource = self._create_lambda_model(
+                config=config, deployment=deployment,
+                name=function.name, handler_name=function.handler_string,
+                stage_name=stage_name)
             resources.append(resource)
         for event_source in config.chalice_app.event_sources:
             scheduled_event = self._create_event_model(
@@ -247,8 +247,8 @@ class ApplicationGraphBuilder(object):
         # type: (...) -> models.RestAPI
         resource_name = config.app_name
         lambda_function = self._create_lambda_model(
-            config, deployment, resource_name,
-            'app.app', stage_name
+            config=config, deployment=deployment, name=resource_name,
+            handler_name='app.app', stage_name=stage_name
         )
         return models.RestAPI(
             resource_name='rest_api',
@@ -265,8 +265,8 @@ class ApplicationGraphBuilder(object):
                             ):
         # type: (...) -> models.ScheduledEvent
         lambda_function = self._create_lambda_model(
-            config, deployment, event_source.name,
-            event_source.handler_string, stage_name
+            config=config, deployment=deployment, name=event_source.name,
+            handler_name=event_source.handler_string, stage_name=stage_name
         )
         # Resource names must be unique across a chalice app.
         # However, in the original deployer code, the cloudwatch
