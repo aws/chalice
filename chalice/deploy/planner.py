@@ -98,15 +98,9 @@ class UnreferencedResourcePlanner(object):
                     params={'function_name': resource_values['lambda_arn']},)
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'iam_role':
-                # TODO: Consider adding the role_name to the deployed.json.
-                # This is a separate value than the 'name' of the resource.
-                # For now we have to parse out the role name from the role_arn
-                # and it would be better if we could get the role name
-                # directly.
-                v = resource_values['role_arn'].rsplit('/')[1]
                 apicall = models.APICall(
                     method_name='delete_role',
-                    params={'name': v},
+                    params={'name': resource_values['role_name']},
                 )
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'cloudwatch_event':
@@ -225,6 +219,12 @@ class PlanStage(object):
                     resource_name=resource.resource_name,
                     name='role_arn',
                     variable_name=varname,
+                ),
+                models.RecordResourceValue(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='role_name',
+                    value=resource.role_name,
                 )
             ]
         role_arn = self._remote_state.resource_deployed_values(
@@ -243,6 +243,12 @@ class PlanStage(object):
                 resource_name=resource.resource_name,
                 name='role_arn',
                 variable_name=varname,
+            ),
+            models.RecordResourceValue(
+                resource_type='iam_role',
+                resource_name=resource.resource_name,
+                name='role_name',
+                value=resource.role_name,
             )
         ]
 

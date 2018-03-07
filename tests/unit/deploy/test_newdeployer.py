@@ -710,6 +710,49 @@ class TestExecutor(object):
             'myfunction_arn': 'arn:foo',
         }]
 
+    def test_can_aggregate_multiple_resource_values(self):
+        self.executor.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='value1',
+            ),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key2',
+                value='value2',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'key1': 'value1',
+            'key2': 'value2',
+        }]
+
+    def test_new_keys_override_old_keys(self):
+        self.executor.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='OLD',
+            ),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='NEW',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'key1': 'NEW',
+        }]
+
     def test_validates_no_unresolved_deploy_vars(self):
         params = {'zip_contents': models.Placeholder.BUILD_STAGE}
         call = APICall('create_function', params)

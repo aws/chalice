@@ -503,6 +503,7 @@ class Executor(object):
         self.variables = {}  # type: Dict[str, Any]
         self.stack = []  # type: List[Any]
         self.resource_values = []  # type: List[Dict[str, Any]]
+        self._resource_value_index = {}  # type: Dict[str, Any]
         self._variable_resolver = VariableResolver()
 
     def execute(self, api_calls):
@@ -529,27 +530,41 @@ class Executor(object):
 
     def _do_recordresource(self, instruction):
         # type: (models.RecordResource) -> None
-        self.resource_values.append({
+        payload = {
             'name': instruction.resource_name,
             'resource_type': instruction.resource_type,
             instruction.name: self.stack[-1],
-        })
+        }
+        self._add_to_deployed_values(payload)
 
     def _do_recordresourcevariable(self, instruction):
         # type: (models.RecordResourceVariable) -> None
-        self.resource_values.append({
+        payload = {
             'name': instruction.resource_name,
             'resource_type': instruction.resource_type,
             instruction.name: self.variables[instruction.variable_name],
-        })
+        }
+        self._add_to_deployed_values(payload)
 
     def _do_recordresourcevalue(self, instruction):
         # type: (models.RecordResourceValue) -> None
-        self.resource_values.append({
+        payload = {
             'name': instruction.resource_name,
             'resource_type': instruction.resource_type,
             instruction.name: instruction.value,
-        })
+        }
+        self._add_to_deployed_values(payload)
+
+    def _add_to_deployed_values(self, payload):
+        # type: (Dict[str, str]) -> None
+        key = payload['name']
+        if key not in self._resource_value_index:
+            self._resource_value_index[key] = payload
+            self.resource_values.append(payload)
+        else:
+            # If the key already exists, we merge the new payload
+            # with the existing payload.
+            self._resource_value_index[key].update(payload)
 
     def _do_push(self, instruction):
         # type: (models.Push) -> None
