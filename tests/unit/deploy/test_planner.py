@@ -161,7 +161,8 @@ class TestPlanManagedRole(BasePlannerTests):
                         'policy_document': {'role': 'policy'}},
             )
         )
-        assert plan[-1].variable_name == 'myrole_role_arn'
+        assert plan[-2].variable_name == 'myrole_role_arn'
+        assert plan[-1].value == 'myrole'
 
     def test_can_update_file_based_policy(self):
         role = models.ManagedIAMRole(
@@ -612,6 +613,7 @@ class TestUnreferencedResourcePlanner(object):
             'resources': [{
                 'name': 'myrole',
                 'resource_type': 'iam_role',
+                'role_name': 'myrole',
                 'role_arn': 'arn:role/myrole',
             }]
         }
@@ -632,11 +634,13 @@ class TestUnreferencedResourcePlanner(object):
                 {
                     'name': 'myrole',
                     'resource_type': 'iam_role',
+                    'role_name': 'myrole',
                     'role_arn': 'arn:role/myrole',
                 },
                 {
                     'name': 'myrole2',
                     'resource_type': 'iam_role',
+                    'role_name': 'myrole2',
                     'role_arn': 'arn:role/myrole2',
                 },
                 {
