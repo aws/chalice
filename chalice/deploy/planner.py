@@ -19,28 +19,33 @@ class RemoteState(object):
         # type: (models.ManagedModel) -> Tuple[str, str]
         return (resource.resource_type, resource.resource_name)
 
+    def resource_deployed_values(self, resource):
+        # type: (models.ManagedModel) -> Dict[str, str]
+        if self._deployed_resources is None:
+            raise ValueError("Resource is not deployed: %s" % resource)
+        return self._deployed_resources.resource_values(
+            resource.resource_name)
+
     def resource_exists(self, resource):
         # type: (models.ManagedModel) -> bool
         key = self._cache_key(resource)
         if key in self._cache:
             return self._cache[key]
-        # TODO: This code will likely be refactored and pulled into
-        # per-resource classes so the RemoteState object doesn't need
-        # to know about every type of resource.
-        if isinstance(resource, models.ManagedIAMRole):
-            result = self._resource_exists_iam_role(resource)
-        elif isinstance(resource, models.LambdaFunction):
-            result = self._resource_exists_lambda_function(resource)
-        elif isinstance(resource, models.RestAPI):
-            result = self._resource_exists_rest_api(resource)
+        try:
+            handler = getattr(self, '_resource_exists_%s'
+                              % resource.__class__.__name__.lower())
+        except AttributeError:
+            raise ValueError("RemoteState received an unsupported resource: %s"
+                             % resource.resource_type)
+        result = handler(resource)
         self._cache[key] = result
         return result
 
-    def _resource_exists_lambda_function(self, resource):
+    def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
 
-    def _resource_exists_iam_role(self, resource):
+    def _resource_exists_managediamrole(self, resource):
         # type: (models.ManagedIAMRole) -> bool
         try:
             self._client.get_role_arn_for_name(resource.role_name)
@@ -48,7 +53,7 @@ class RemoteState(object):
         except ResourceDoesNotExistError:
             return False
 
-    def _resource_exists_rest_api(self, resource):
+    def _resource_exists_restapi(self, resource):
         # type: (models.RestAPI) -> bool
         if self._deployed_resources is None:
             return False
@@ -56,13 +61,6 @@ class RemoteState(object):
             resource.resource_name)
         rest_api_id = deployed_values['rest_api_id']
         return self._client.rest_api_exists(rest_api_id)
-
-    def resource_deployed_values(self, resource):
-        # type: (models.ManagedModel) -> Dict[str, str]
-        if self._deployed_resources is None:
-            raise ValueError("Resource is not deployed: %s" % resource)
-        return self._deployed_resources.resource_values(
-            resource.resource_name)
 
 
 class UnreferencedResourcePlanner(object):

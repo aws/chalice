@@ -516,6 +516,16 @@ class TestRemoteState(object):
         with pytest.raises(ValueError):
             remote_state.resource_deployed_values(rest_api)
 
+    def test_unknown_model_type_raises_error(self):
+
+        @attr.attrs
+        class Foo(models.ManagedModel):
+            resource_type = 'foo'
+
+        foo = Foo(resource_name='myfoo')
+        with pytest.raises(ValueError):
+            self.remote_state.resource_exists(foo)
+
 
 class TestUnreferencedResourcePlanner(object):
     def setup_method(self):
