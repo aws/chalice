@@ -282,6 +282,24 @@ class TestApplicationGraphBuilder(object):
         # make sure it looks right.
         assert rest_api.swagger_doc == models.Placeholder.BUILD_STAGE
 
+    def test_can_build_rest_api_with_authorizer(self, rest_api_app):
+        @rest_api_app.authorizer()
+        def my_auth(auth_request):
+            pass
+
+        @rest_api_app.route('/auth', authorizer=my_auth)
+        def needs_auth():
+            return {'foo': 'bar'}
+
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        assert len(rest_api.authorizers) == 1
+        assert isinstance(rest_api.authorizers[0], models.LambdaFunction)
+
 
 class RoleTestCase(object):
     def __init__(self, given, roles, app_name='appname'):
@@ -979,3 +997,23 @@ def test_templated_swagger_generator(rest_api_app):
         '/2015-03-31/functions/{api_handler_lambda_arn}/invocations'
     )
     assert uri.variables == ['region_name', 'api_handler_lambda_arn']
+
+
+def test_templated_swagger_with_auth_uri(rest_api_app):
+    @rest_api_app.authorizer()
+    def myauth(auth_request):
+        pass
+
+    @rest_api_app.route('/auth', authorizer=myauth)
+    def needsauth():
+        return {}
+
+    doc = TemplatedSwaggerGenerator().generate_swagger(rest_api_app)
+    uri = doc['securityDefinitions']['myauth'][
+        'x-amazon-apigateway-authorizer']['authorizerUri']
+    assert isinstance(uri, StringFormat)
+    assert uri.template == (
+        'arn:aws:apigateway:{region_name}:lambda:path'
+        '/2015-03-31/functions/{myauth_lambda_arn}/invocations'
+    )
+    assert uri.variables == ['region_name', 'myauth_lambda_arn']

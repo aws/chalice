@@ -250,11 +250,19 @@ class ApplicationGraphBuilder(object):
             config=config, deployment=deployment, name=resource_name,
             handler_name='app.app', stage_name=stage_name
         )
+        authorizers = []
+        for auth in config.chalice_app.builtin_auth_handlers:
+            auth_lambda = self._create_lambda_model(
+                config=config, deployment=deployment, name=auth.name,
+                handler_name=auth.handler_string, stage_name=stage_name,
+            )
+            authorizers.append(auth_lambda)
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
+            authorizers=authorizers,
         )
 
     def _create_event_model(self,
@@ -644,7 +652,12 @@ class TemplatedSwaggerGenerator(SwaggerGenerator):
             ['region_name', 'api_handler_lambda_arn'],
         )
 
-    def _auth_uri(self, authorizer=None):
+    def _auth_uri(self, authorizer):
         # type: (app.ChaliceAuthorizer) -> Any
         # This will be handled in a subsequent PR.
-        raise NotImplementedError("_auth_uri")
+        varname = '%s_lambda_arn' % authorizer.name
+        return StringFormat(
+            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
+            '/functions/{%s}/invocations' % varname,
+            ['region_name', varname],
+        )
