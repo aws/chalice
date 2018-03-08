@@ -148,12 +148,10 @@ class TestPlanManagedRole(BasePlannerTests):
         self.remote_state.declare_resource_exists(
             role, role_arn='myrole:arn')
         plan = self.determine_plan(role)
-        assert plan[:2] == [
-            models.Push(value='myrole:arn'),
-            models.StoreValue(name='myrole_role_arn'),
-        ]
+        assert plan[0] == models.StoreValue(
+            name='myrole_role_arn', value='myrole:arn')
         self.assert_apicall_equals(
-            plan[2],
+            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
@@ -174,12 +172,10 @@ class TestPlanManagedRole(BasePlannerTests):
         self.remote_state.declare_resource_exists(role, role_arn='myrole:arn')
         self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         plan = self.determine_plan(role)
-        assert plan[:2] == [
-            models.Push(value='myrole:arn'),
-            models.StoreValue(name='myrole_role_arn'),
-        ]
+        assert plan[0] == models.StoreValue(
+            name='myrole_role_arn', value='myrole:arn')
         self.assert_apicall_equals(
-            plan[2],
+            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
@@ -268,7 +264,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
             lambda_function=function,
         )
         plan = self.determine_plan(event)
-        assert len(plan) == 5
+        assert len(plan) == 4
         self.assert_apicall_equals(
             plan[0],
             models.APICall(
@@ -276,12 +272,12 @@ class TestPlanScheduledEvent(BasePlannerTests):
                 params={
                     'rule_name': 'myrulename',
                     'schedule_expression': 'rate(5 minutes)',
-                }
+                },
+                output_var='rule-arn',
             )
         )
-        assert plan[1] == models.StoreValue('rule-arn')
         self.assert_apicall_equals(
-            plan[2],
+            plan[1],
             models.APICall(
                 method_name='connect_rule_to_lambda',
                 params={'rule_name': 'myrulename',
@@ -289,7 +285,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
             )
         )
         self.assert_apicall_equals(
-            plan[3],
+            plan[2],
             models.APICall(
                 method_name='add_permission_for_scheduled_event',
                 params={
@@ -298,7 +294,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
                 },
             )
         )
-        assert plan[4] == models.RecordResourceValue(
+        assert plan[3] == models.RecordResourceValue(
             resource_type='cloudwatch_event',
             resource_name='bar',
             name='rule_name',
@@ -310,19 +306,21 @@ class TestPlanRestAPI(BasePlannerTests):
     def assert_loads_needed_variables(self, plan):
         # Parse arn and store region/account id for future
         # API calls.
-        assert plan[0:9] == [
+        assert plan[0:4] == [
             models.BuiltinFunction(
-                'parse_arn', [Variable('function_name_lambda_arn')]),
-            models.StoreValue('parsed_lambda_arn'),
-            models.JPSearch('account_id'),
-            models.StoreValue('account_id'),
-            models.LoadValue('parsed_lambda_arn'),
-            models.JPSearch('region'),
-            models.StoreValue('region_name'),
-
+                'parse_arn', [Variable('function_name_lambda_arn')],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
             # Verify we copy the function arn as needed.
-            models.LoadValue('function_name_lambda_arn'),
-            models.StoreValue('api_handler_lambda_arn'),
+            models.CopyVariable(
+                from_var='function_name_lambda_arn',
+                to_var='api_handler_lambda_arn'),
         ]
 
     def test_can_plan_rest_api(self):
@@ -335,12 +333,12 @@ class TestPlanRestAPI(BasePlannerTests):
         )
         plan = self.determine_plan(rest_api)
         self.assert_loads_needed_variables(plan)
-        assert plan[9:] == [
+        assert plan[4:] == [
             models.APICall(
                 method_name='import_rest_api',
                 params={'swagger_document': {'swagger': '2.0'}},
+                output_var='rest_api_id',
             ),
-            models.StoreValue(name='rest_api_id'),
             models.RecordResourceVariable(
                 resource_type='rest_api',
                 resource_name='rest_api',
@@ -375,9 +373,8 @@ class TestPlanRestAPI(BasePlannerTests):
         }
         plan = self.determine_plan(rest_api)
         self.assert_loads_needed_variables(plan)
-        assert plan[9:] == [
-            models.Push('my_rest_api_id'),
-            models.StoreValue(name='rest_api_id'),
+        assert plan[4:] == [
+            models.StoreValue(name='rest_api_id', value='my_rest_api_id'),
             models.RecordResourceVariable(
                 resource_type='rest_api',
                 resource_name='rest_api',

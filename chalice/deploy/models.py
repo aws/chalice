@@ -14,16 +14,19 @@ class Instruction(object):
 class APICall(Instruction):
     method_name = attrib()
     params = attrib()
+    output_var = attrib(default=None)
 
 
 @attrs(frozen=True)
 class StoreValue(Instruction):
     name = attrib()
+    value = attrib()
 
 
 @attrs(frozen=True)
-class LoadValue(Instruction):
-    varname = attrib()
+class CopyVariable(Instruction):
+    from_var = attrib()
+    to_var = attrib()
 
 
 @attrs(frozen=True)
@@ -44,24 +47,17 @@ class RecordResourceValue(RecordResource):
 
 
 @attrs(frozen=True)
-class Push(Instruction):
-    value = attrib()
-
-
-@attrs(frozen=True)
-class Pop(Instruction):
-    pass
-
-
-@attrs(frozen=True)
 class JPSearch(Instruction):
     expression = attrib()
+    input_var = attrib()
+    output_var = attrib()
 
 
 @attrs(frozen=True)
 class BuiltinFunction(Instruction):
     function_name = attrib()
     args = attrib()
+    output_var = attrib()
 
 
 class Model(object):

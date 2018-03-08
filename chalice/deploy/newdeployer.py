@@ -501,7 +501,6 @@ class Executor(object):
         # A mapping of variables that's populated as API calls
         # are made.  These can be used in subsequent API calls.
         self.variables = {}  # type: Dict[str, Any]
-        self.stack = []  # type: List[Any]
         self.resource_values = []  # type: List[Dict[str, Any]]
         self._resource_value_index = {}  # type: Dict[str, Any]
         self._variable_resolver = VariableResolver()
@@ -509,6 +508,7 @@ class Executor(object):
     def execute(self, api_calls):
         # type: (List[models.Instruction]) -> None
         for instruction in api_calls:
+            # TODO: Don't error out on unknown instruction
             getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
                     lambda x: None)(instruction)
 
@@ -518,24 +518,18 @@ class Executor(object):
         method = getattr(self._client, instruction.method_name)
         # TODO: we need proper error handling here.
         result = method(**final_kwargs)
-        self.stack.append(result)
+        if instruction.output_var is not None:
+            self.variables[instruction.output_var] = result
+
+    def _do_copyvariable(self, instruction):
+        # type: (models.CopyVariable) -> None
+        to_var = instruction.to_var
+        from_var = instruction.from_var
+        self.variables[to_var] = self.variables[from_var]
 
     def _do_storevalue(self, instruction):
         # type: (models.StoreValue) -> None
-        self.variables[instruction.name] = self.stack[-1]
-
-    def _do_loadvalue(self, instruction):
-        # type: (models.LoadValue) -> None
-        self.stack.append(self.variables[instruction.varname])
-
-    def _do_recordresource(self, instruction):
-        # type: (models.RecordResource) -> None
-        payload = {
-            'name': instruction.resource_name,
-            'resource_type': instruction.resource_type,
-            instruction.name: self.stack[-1],
-        }
-        self._add_to_deployed_values(payload)
+        self.variables[instruction.name] = instruction.value
 
     def _do_recordresourcevariable(self, instruction):
         # type: (models.RecordResourceVariable) -> None
@@ -566,19 +560,11 @@ class Executor(object):
             # with the existing payload.
             self._resource_value_index[key].update(payload)
 
-    def _do_push(self, instruction):
-        # type: (models.Push) -> None
-        self.stack.append(instruction.value)
-
-    def _do_pop(self, instruction):
-        # type: (models.Pop) -> None
-        self.stack.pop()
-
     def _do_jpsearch(self, instruction):
         # type: (models.JPSearch) -> None
-        v = self.stack.pop()
+        v = self.variables[instruction.input_var]
         result = jmespath.search(instruction.expression, v)
-        self.stack.append(result)
+        self.variables[instruction.output_var] = result
 
     def _do_builtinfunction(self, instruction):
         # type: (models.BuiltinFunction) -> None
@@ -593,7 +579,7 @@ class Executor(object):
                 'region': parts[3],
                 'account_id': parts[4],
             }
-            self.stack.append(result)
+            self.variables[instruction.output_var] = result
         else:
             raise ValueError("Unknown builtin function: %s"
                              % instruction.function_name)

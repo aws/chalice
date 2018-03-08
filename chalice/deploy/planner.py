@@ -163,8 +163,8 @@ class PlanStage(object):
                 models.APICall(
                     method_name='create_function',
                     params=params,
+                    output_var=varname,
                 ),
-                models.StoreValue(name=varname),
                 models.RecordResourceVariable(
                     resource_type='lambda_function',
                     resource_name=resource.resource_name,
@@ -189,9 +189,13 @@ class PlanStage(object):
             models.APICall(
                 method_name='update_function',
                 params=params,
+                output_var='update_function_result',
             ),
-            models.JPSearch('FunctionArn'),
-            models.StoreValue(name=varname),
+            models.JPSearch(
+                'FunctionArn',
+                input_var='update_function_result',
+                output_var=varname,
+            ),
             models.RecordResourceVariable(
                 resource_type='lambda_function',
                 resource_name=resource.resource_name,
@@ -212,8 +216,8 @@ class PlanStage(object):
                     params={'name': resource.role_name,
                             'trust_policy': resource.trust_policy,
                             'policy': document},
+                    output_var=varname,
                 ),
-                models.StoreValue(varname),
                 models.RecordResourceVariable(
                     resource_type='iam_role',
                     resource_name=resource.resource_name,
@@ -230,8 +234,7 @@ class PlanStage(object):
         role_arn = self._remote_state.resource_deployed_values(
             resource)['role_arn']
         return [
-            models.Push(role_arn),
-            models.StoreValue(varname),
+            models.StoreValue(name=varname, value=role_arn),
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': resource.role_name,
@@ -267,8 +270,8 @@ class PlanStage(object):
                 method_name='get_or_create_rule_arn',
                 params={'rule_name': resource.rule_name,
                         'schedule_expression': resource.schedule_expression},
+                output_var='rule-arn',
             ),
-            models.StoreValue('rule-arn'),
             models.APICall(
                 method_name='connect_rule_to_lambda',
                 params={'rule_name': resource.rule_name,
@@ -304,28 +307,27 @@ class PlanStage(object):
             models.BuiltinFunction(
                 'parse_arn',
                 [lambda_arn_var],
+                output_var='parsed_lambda_arn',
             ),
-            models.StoreValue('parsed_lambda_arn'),
-            models.JPSearch('account_id'),
-            models.StoreValue('account_id'),
-            models.LoadValue('parsed_lambda_arn'),
-            models.JPSearch('region'),
-            models.StoreValue('region_name'),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
             # The swagger doc uses the 'api_handler_lambda_arn'
             # var name so we need to make sure we populate this variable
             # before importing the rest API.
-            models.LoadValue(varname),
-            models.StoreValue('api_handler_lambda_arn'),
+            models.CopyVariable(from_var=varname,
+                                to_var='api_handler_lambda_arn'),
         ]
         if not self._remote_state.resource_exists(resource):
             plan = shared_plan + [
                 models.APICall(
                     method_name='import_rest_api',
                     params={'swagger_document': resource.swagger_doc},
+                    output_var='rest_api_id',
                 ),
-                # We get rest_api_id as the return value, and need this value
-                # in subsequent API calls.
-                models.StoreValue(name='rest_api_id'),
                 models.RecordResourceVariable(
                     resource_type='rest_api',
                     resource_name=resource.resource_name,
@@ -348,8 +350,9 @@ class PlanStage(object):
         else:
             deployed = self._remote_state.resource_deployed_values(resource)
             plan = shared_plan + [
-                models.Push(deployed['rest_api_id']),
-                models.StoreValue(name='rest_api_id'),
+                models.StoreValue(
+                    name='rest_api_id',
+                    value=deployed['rest_api_id']),
                 models.RecordResourceVariable(
                     resource_type='rest_api',
                     resource_name=resource.resource_name,
