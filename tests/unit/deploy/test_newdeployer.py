@@ -30,8 +30,8 @@ from chalice.deploy.planner import UnreferencedResourcePlanner, StringFormat
 from chalice.deploy.newdeployer import Executor
 from chalice.deploy.newdeployer import UnresolvedValueError
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
-from chalice.deploy.models import RecordResource, RecordResourceVariable
-from chalice.deploy.models import Push, Pop, JPSearch, BuiltinFunction
+from chalice.deploy.models import RecordResourceVariable
+from chalice.deploy.models import JPSearch, BuiltinFunction
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 
@@ -635,11 +635,10 @@ class TestExecutor(object):
     def test_can_store_api_result(self):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
-        apicall = APICall('create_role', params)
+        apicall = APICall('create_role', params, output_var='my_variable_name')
         self.mock_client.create_role.return_value = 'myrole:arn'
-        store_instruction = StoreValue('my_variable_name')
 
-        self.executor.execute([apicall, store_instruction])
+        self.executor.execute([apicall])
 
         assert self.executor.variables['my_variable_name'] == 'myrole:arn'
 
@@ -663,12 +662,14 @@ class TestExecutor(object):
 
     def test_can_return_created_resources(self):
         params = {}
-        call = APICall('create_function', params)
+        call = APICall('create_function', params,
+                       output_var='myfunction_arn')
         self.mock_client.create_function.return_value = 'function:arn'
-        record_instruction = RecordResource(
+        record_instruction = RecordResourceVariable(
             resource_type='lambda_function',
             resource_name='myfunction',
             name='myfunction_arn',
+            variable_name='myfunction_arn',
         )
         self.executor.execute([call, record_instruction])
         assert self.executor.resource_values == [{
@@ -680,8 +681,7 @@ class TestExecutor(object):
     def test_can_reference_varname(self):
         self.mock_client.create_function.return_value = 'function:arn'
         self.executor.execute([
-            APICall('create_function', {}),
-            StoreValue('myvarname'),
+            APICall('create_function', {}, output_var='myvarname'),
             RecordResourceVariable(
                 resource_type='lambda_function',
                 resource_name='myfunction',
@@ -763,50 +763,37 @@ class TestExecutor(object):
         with pytest.raises(UnresolvedValueError):
             self.executor.execute([call])
 
-    def test_can_push_values(self):
-        self.executor.execute([
-            Push('foo')
-        ])
-        assert self.executor.stack == ['foo']
-
-    def test_can_push_pop_values(self):
-        self.executor.execute([
-            Push('foo'),
-            Pop(),
-            Push('bar'),
-            Push('baz'),
-        ])
-        assert self.executor.stack == ['bar', 'baz']
-
     def test_can_jp_search(self):
         self.executor.execute([
-            Push({'foo': {'bar': 'baz'}}),
-            JPSearch('foo.bar'),
+            StoreValue(name='searchval', value={'foo': {'bar': 'baz'}}),
+            JPSearch('foo.bar', input_var='searchval', output_var='result'),
         ])
-        assert self.executor.stack == ['baz']
+        assert self.executor.variables['result'] == 'baz'
 
     def test_can_call_builtin_function(self):
         self.executor.execute([
-            Push('arn:aws:lambda:us-west-2:123:function:name'),
-            StoreValue('my_arn'),
-            Pop(),
+            StoreValue(
+                name='my_arn',
+                value='arn:aws:lambda:us-west-2:123:function:name'),
             BuiltinFunction(
                 function_name='parse_arn',
                 args=[Variable('my_arn')],
+                output_var='result',
             )
         ])
-        assert self.executor.stack == [
-            {'account_id': '123',
-             'region': 'us-west-2',
-             'service': 'lambda'}
-        ]
+        assert self.executor.variables['result'] == {
+            'account_id': '123',
+            'region': 'us-west-2',
+            'service': 'lambda'
+        }
 
     def test_errors_out_on_unknown_function(self):
         with pytest.raises(ValueError):
             self.executor.execute([
                 BuiltinFunction(
                     function_name='unknown_foo',
-                    args=[]
+                    args=[],
+                    output_var=None,
                 )
             ])
 
