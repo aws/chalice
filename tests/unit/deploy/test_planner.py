@@ -55,6 +55,7 @@ class InMemoryRemoteState(object):
         if known_resources is None:
             known_resources = {}
         self.known_resources = known_resources
+        self.deployed_values = {}
 
     def resource_exists(self, resource):
         return (
@@ -65,12 +66,18 @@ class InMemoryRemoteState(object):
         key = (resource.resource_type, resource.resource_name)
         return self.known_resources.get(key)
 
-    def declare_resource_exists(self, resource):
+    def declare_resource_exists(self, resource, **deployed_values):
         key = (resource.resource_type, resource.resource_name)
         self.known_resources[key] = resource
+        if deployed_values:
+            deployed_values['name'] = resource.resource_name
+            self.deployed_values[resource.resource_name] = deployed_values
 
     def declare_no_resources_exists(self):
         self.known_resources = {}
+
+    def resource_deployed_values(self, resource):
+        return self.deployed_values[resource.resource_name]
 
 
 class BasePlannerTests(object):
@@ -84,9 +91,10 @@ class BasePlannerTests(object):
         # it's not always clear which part of the API call object is
         # wrong.  To get better error messages each field is individually
         # compared.
+        assert isinstance(expected, models.APICall)
+        assert isinstance(actual_api_call, models.APICall)
         assert expected.method_name == actual_api_call.method_name
         assert expected.params == actual_api_call.params
-        assert expected.resource == actual_api_call.resource
 
     def determine_plan(self, resource):
         planner = PlanStage(self.remote_state, self.osutils)
@@ -99,7 +107,6 @@ class TestPlanManagedRole(BasePlannerTests):
         self.remote_state.declare_no_resources_exists()
         resource = models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='myrole',
             trust_policy={'trust': 'policy'},
             policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
@@ -110,7 +117,6 @@ class TestPlanManagedRole(BasePlannerTests):
             params={'name': 'myrole',
                     'trust_policy': {'trust': 'policy'},
                     'policy': {'iam': 'policy'}},
-            resource=resource
         )
         self.assert_apicall_equals(plan[0], expected)
 
@@ -118,7 +124,6 @@ class TestPlanManagedRole(BasePlannerTests):
         self.remote_state.declare_no_resources_exists()
         resource = models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='myrole',
             trust_policy={'trust': 'policy'},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
@@ -130,51 +135,52 @@ class TestPlanManagedRole(BasePlannerTests):
             params={'name': 'myrole',
                     'trust_policy': {'trust': 'policy'},
                     'policy': {'iam': 'policy'}},
-            resource=resource,
         )
         self.assert_apicall_equals(plan[0], expected)
 
     def test_can_update_managed_role(self):
         role = models.ManagedIAMRole(
             resource_name='resource_name',
-            role_arn='myrole:arn',
             role_name='myrole',
             trust_policy={},
             policy=models.AutoGenIAMPolicy(document={'role': 'policy'}),
         )
-        self.remote_state.declare_resource_exists(role)
+        self.remote_state.declare_resource_exists(
+            role, role_arn='myrole:arn')
         plan = self.determine_plan(role)
+        assert plan[0] == models.StoreValue(
+            name='myrole_role_arn', value='myrole:arn')
         self.assert_apicall_equals(
-            plan[0],
+            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
                         'policy_name': 'myrole',
                         'policy_document': {'role': 'policy'}},
-                resource=role,
             )
         )
-        assert plan[-1].value == 'myrole:arn'
+        assert plan[-2].variable_name == 'myrole_role_arn'
+        assert plan[-1].value == 'myrole'
 
     def test_can_update_file_based_policy(self):
         role = models.ManagedIAMRole(
             resource_name='resource_name',
-            role_arn='myrole:arn',
             role_name='myrole',
             trust_policy={},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
         )
-        self.remote_state.declare_resource_exists(role)
+        self.remote_state.declare_resource_exists(role, role_arn='myrole:arn')
         self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         plan = self.determine_plan(role)
+        assert plan[0] == models.StoreValue(
+            name='myrole_role_arn', value='myrole:arn')
         self.assert_apicall_equals(
-            plan[0],
+            plan[1],
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': 'myrole',
                         'policy_name': 'myrole',
                         'policy_document': {'iam': 'policy'}},
-                resource=role,
             )
         )
 
@@ -182,30 +188,6 @@ class TestPlanManagedRole(BasePlannerTests):
         role = models.PreCreatedIAMRole(role_arn='role:arn')
         plan = self.determine_plan(role)
         assert plan == []
-
-    def test_can_update_with_placeholder_but_exists(self):
-        role = models.ManagedIAMRole(
-            resource_name='resource_name',
-            role_arn=models.Placeholder.DEPLOY_STAGE,
-            role_name='myrole',
-            trust_policy={},
-            policy=models.AutoGenIAMPolicy(document={'role': 'policy'}),
-        )
-        remote_role = attr.evolve(role, role_arn='myrole:arn')
-        self.remote_state.declare_resource_exists(remote_role)
-        plan = self.determine_plan(role)
-        # We've filled in the role arn.
-        assert role.role_arn == 'myrole:arn'
-        self.assert_apicall_equals(
-            plan[0],
-            models.APICall(
-                method_name='put_role_policy',
-                params={'role_name': 'myrole',
-                        'policy_name': 'myrole',
-                        'policy_document': {'role': 'policy'}},
-                resource=role,
-            )
-        )
 
 
 class TestPlanLambdaFunction(BasePlannerTests):
@@ -226,7 +208,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'timeout': 60,
                 'memory_size': 128,
             },
-            resource=function,
         )
         self.assert_apicall_equals(plan[0], expected)
 
@@ -250,7 +231,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         expected_params = dict(memory_size=256, **existing_params)
         expected = models.APICall(
             method_name='update_function',
-            resource=function,
             params=expected_params,
         )
         self.assert_apicall_equals(plan[0], expected)
@@ -260,7 +240,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         self.remote_state.declare_no_resources_exists()
         function.role = models.ManagedIAMRole(
             resource_name='myrole',
-            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='myrole-dev',
             trust_policy={'trust': 'policy'},
             policy=models.FileBasedIAMPolicy(filename='foo.json'),
@@ -268,7 +247,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
         plan = self.determine_plan(function)
         call = plan[0]
         assert call.method_name == 'create_function'
-        assert call.resource == function
         # The params are verified in test_can_create_function,
         # we just care about how the role_arn Variable is constructed.
         role_arn = call.params['role_arn']
@@ -286,7 +264,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
             lambda_function=function,
         )
         plan = self.determine_plan(event)
-        assert len(plan) == 5
+        assert len(plan) == 4
         self.assert_apicall_equals(
             plan[0],
             models.APICall(
@@ -294,12 +272,12 @@ class TestPlanScheduledEvent(BasePlannerTests):
                 params={
                     'rule_name': 'myrulename',
                     'schedule_expression': 'rate(5 minutes)',
-                }
+                },
+                output_var='rule-arn',
             )
         )
-        assert plan[1] == models.StoreValue('rule-arn')
         self.assert_apicall_equals(
-            plan[2],
+            plan[1],
             models.APICall(
                 method_name='connect_rule_to_lambda',
                 params={'rule_name': 'myrulename',
@@ -307,7 +285,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
             )
         )
         self.assert_apicall_equals(
-            plan[3],
+            plan[2],
             models.APICall(
                 method_name='add_permission_for_scheduled_event',
                 params={
@@ -316,7 +294,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
                 },
             )
         )
-        assert plan[4] == models.RecordResourceValue(
+        assert plan[3] == models.RecordResourceValue(
             resource_type='cloudwatch_event',
             resource_name='bar',
             name='rule_name',
@@ -324,14 +302,127 @@ class TestPlanScheduledEvent(BasePlannerTests):
         )
 
 
+class TestPlanRestAPI(BasePlannerTests):
+    def assert_loads_needed_variables(self, plan):
+        # Parse arn and store region/account id for future
+        # API calls.
+        assert plan[0:4] == [
+            models.BuiltinFunction(
+                'parse_arn', [Variable('function_name_lambda_arn')],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            # Verify we copy the function arn as needed.
+            models.CopyVariable(
+                from_var='function_name_lambda_arn',
+                to_var='api_handler_lambda_arn'),
+        ]
+
+    def test_can_plan_rest_api(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            api_gateway_stage='api',
+            lambda_function=function,
+        )
+        plan = self.determine_plan(rest_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[4:] == [
+            models.APICall(
+                method_name='import_rest_api',
+                params={'swagger_document': {'swagger': '2.0'}},
+                output_var='rest_api_id',
+            ),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='rest_api_id',
+                variable_name='rest_api_id',
+            ),
+            models.APICall(method_name='deploy_rest_api',
+                           params={'rest_api_id': Variable('rest_api_id'),
+                                   'api_gateway_stage': 'api'}),
+            models.APICall(
+                method_name='add_permission_for_apigateway_if_needed',
+                params={
+                    'function_name': 'appname-dev-function_name',
+                    'region_name': Variable('region_name'),
+                    'account_id': Variable('account_id'),
+                    'rest_api_id': Variable('rest_api_id'),
+                }
+            )
+        ]
+
+    def test_can_update_rest_api(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            api_gateway_stage='api',
+            lambda_function=function,
+        )
+        self.remote_state.declare_resource_exists(rest_api)
+        self.remote_state.deployed_values['rest_api'] = {
+            'rest_api_id': 'my_rest_api_id',
+        }
+        plan = self.determine_plan(rest_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[4:] == [
+            models.StoreValue(name='rest_api_id', value='my_rest_api_id'),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='rest_api_id',
+                variable_name='rest_api_id',
+            ),
+            models.APICall(
+                method_name='update_api_from_swagger',
+                params={
+                    'rest_api_id': Variable('rest_api_id'),
+                    'swagger_document': {'swagger': '2.0'},
+                },
+            ),
+            models.APICall(
+                method_name='deploy_rest_api',
+                params={'rest_api_id': Variable('rest_api_id'),
+                        'api_gateway_stage': 'api'},
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_if_needed',
+                params={'function_name': 'appname-dev-function_name',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'rest_api_id': Variable('rest_api_id')},
+            ),
+        ]
+
+
 class TestRemoteState(object):
     def setup_method(self):
         self.client = mock.Mock(spec=TypedAWSClient)
-        self.remote_state = RemoteState(self.client)
+        self.config = FakeConfig({'resources': []})
+        self.remote_state = RemoteState(
+            self.client, self.config.deployed_resources('dev'),
+        )
+
+    def create_rest_api_model(self):
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            api_gateway_stage='api',
+            lambda_function=None,
+        )
+        return rest_api
 
     def test_role_exists(self):
         self.client.get_role_arn_for_name.return_value = 'role:arn'
-        role = models.ManagedIAMRole('my_role', role_arn=None,
+        role = models.ManagedIAMRole('my_role',
                                      role_name='app-dev', trust_policy={},
                                      policy=None)
         assert self.remote_state.resource_exists(role)
@@ -340,7 +431,7 @@ class TestRemoteState(object):
     def test_role_does_not_exist(self):
         client = self.client
         client.get_role_arn_for_name.side_effect = ResourceDoesNotExistError()
-        role = models.ManagedIAMRole('my_role', role_arn=None,
+        role = models.ManagedIAMRole('my_role',
                                      role_name='app-dev', trust_policy={},
                                      policy=None)
         assert not self.remote_state.resource_exists(role)
@@ -360,35 +451,6 @@ class TestRemoteState(object):
         self.client.lambda_function_exists.assert_called_with(
             function.function_name)
 
-    def test_remote_model_exists(self):
-        role = models.ManagedIAMRole(
-            resource_name='my_role',
-            role_arn=None,
-            role_name='app-dev',
-            trust_policy={},
-            policy=None
-        )
-        self.client.get_role.return_value = {
-            'AssumeRolePolicyDocument': {'trust': 'policy'},
-            'RoleId': 'roleid',
-            'RoleName': 'app-dev',
-            'Arn': 'my_role_arn'
-        }
-        # We don't fill in the policy document because that's an extra
-        # API call and we don't do any smart diffing with it.
-        remote_model = self.remote_state.get_remote_model(role)
-        remote_model.role_arn = 'my_role_arn'
-        remote_model.trust_policy = {'trust': 'policy'}
-        self.client.get_role.assert_called_with('app-dev')
-
-    def test_remote_model_does_not_exist(self):
-        client = self.client
-        client.get_role_arn_for_name.side_effect = ResourceDoesNotExistError()
-        role = models.ManagedIAMRole(resource_name='my_role', role_arn=None,
-                                     role_name='app-dev', trust_policy={},
-                                     policy=None)
-        assert self.remote_state.get_remote_model(role) is None
-
     def test_exists_check_is_cached(self):
         function = create_function_resource('function-name')
         self.client.lambda_function_exists.return_value = True
@@ -399,6 +461,68 @@ class TestRemoteState(object):
         assert self.remote_state.resource_exists(function)
 
         assert self.client.lambda_function_exists.call_count == 1
+
+    def test_rest_api_exists_no_deploy(self):
+        rest_api = self.create_rest_api_model()
+        remote_state = RemoteState(
+            self.client, None)
+        assert not remote_state.resource_exists(rest_api)
+        assert not self.client.rest_api_exists.called
+
+    def test_api_exists_with_existing_deploy(self):
+        rest_api = self.create_rest_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'rest_api',
+                'resource_type': 'rest_api',
+                'rest_api_id': 'my_rest_api_id',
+            }]
+        }
+        self.client.rest_api_exists.return_value = True
+        remote_state = RemoteState(
+            self.client, DeployedResources2(deployed_resources))
+        assert remote_state.resource_exists(rest_api)
+        self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+
+    def test_rest_api_not_exists_with_preexisting_deploy(self):
+        rest_api = self.create_rest_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'rest_api',
+                'resource_type': 'rest_api',
+                'rest_api_id': 'my_rest_api_id',
+            }]
+        }
+        self.client.rest_api_exists.return_value = False
+        remote_state = RemoteState(
+            self.client, DeployedResources2(deployed_resources))
+        assert not remote_state.resource_exists(rest_api)
+        self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+
+    def test_can_get_deployed_values(self):
+        remote_state = RemoteState(
+            self.client, DeployedResources2({'resources': [
+                {'name': 'rest_api', 'rest_api_id': 'foo'}]})
+        )
+        rest_api = self.create_rest_api_model()
+        values = remote_state.resource_deployed_values(rest_api)
+        assert values == {'name': 'rest_api', 'rest_api_id': 'foo'}
+
+    def test_value_error_raised_on_no_deployed_values(self):
+        remote_state = RemoteState(self.client, deployed_resources=None)
+        rest_api = self.create_rest_api_model()
+        with pytest.raises(ValueError):
+            remote_state.resource_deployed_values(rest_api)
+
+    def test_unknown_model_type_raises_error(self):
+
+        @attr.attrs
+        class Foo(models.ManagedModel):
+            resource_type = 'foo'
+
+        foo = Foo(resource_name='myfoo')
+        with pytest.raises(ValueError):
+            self.remote_state.resource_exists(foo)
 
 
 class TestUnreferencedResourcePlanner(object):
@@ -486,6 +610,7 @@ class TestUnreferencedResourcePlanner(object):
             'resources': [{
                 'name': 'myrole',
                 'resource_type': 'iam_role',
+                'role_name': 'myrole',
                 'role_arn': 'arn:role/myrole',
             }]
         }
@@ -506,11 +631,13 @@ class TestUnreferencedResourcePlanner(object):
                 {
                     'name': 'myrole',
                     'resource_type': 'iam_role',
+                    'role_name': 'myrole',
                     'role_arn': 'arn:role/myrole',
                 },
                 {
                     'name': 'myrole2',
                     'resource_type': 'iam_role',
+                    'role_name': 'myrole2',
                     'role_arn': 'arn:role/myrole2',
                 },
                 {
@@ -550,6 +677,23 @@ class TestUnreferencedResourcePlanner(object):
             models.APICall(
                 method_name='delete_rule',
                 params={'rule_name': 'app-dev-index-event'},
-                resource=None,
+            )
+        ]
+
+    def test_can_delete_rest_api(self, sweeper):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'rest_api',
+                'rest_api_id': 'my_rest_api_id',
+                'resource_type': 'rest_api',
+            }]
+        }
+        config = FakeConfig(deployed)
+        sweeper.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='delete_rest_api',
+                params={'rest_api_id': 'my_rest_api_id'},
             )
         ]

@@ -3,7 +3,6 @@ import enum
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
-    DEPLOY_STAGE = 'deploy_stage'
 
 
 class Instruction:
@@ -13,24 +12,40 @@ class Instruction:
 class APICall(Instruction):
     method_name = ...  # type: str
     params = ...  # type: Dict[str, Any]
-    resource = ...  # type: Optional[ManagedModel]
+    output_var = ...  # type: Optional[str]
 
     def __init__(self,
                  method_name,           # type: str
                  params,                # type: Dict[str, Any]
-                 resource=None,         # type: Optional[ManagedModel]
+                 output_var=None,       # type: Optional[str]
                  ):
         # type: (...) -> None
         ...
+
 
 class StoreValue(Instruction):
     name = ...  # type: str
+    value = ...  # type: Any
 
     def __init__(self,
-                 name,  # type: str
+                 name,   # type: str
+                 value,  # type: Any
                  ):
         # type: (...) -> None
         ...
+
+
+class CopyVariable(Instruction):
+    from_var = ...  # type: str
+    to_var = ...  # type: str
+
+    def __init__(self,
+                 from_var,  # type: str
+                 to_var,    # type: str
+                 ):
+        # type: (...) -> None
+        ...
+
 
 class RecordResource(Instruction):
     resource_type = ...  # type: str
@@ -90,8 +105,30 @@ class Pop(Instruction):
 
 class JPSearch(Instruction):
     expression = ...  # type: str
+    input_var = ...  # type: str
+    output_var = ...  # type: str
 
-    def __init__(self, expression: str) -> None: ...
+    def __init__(self,
+                 expression,    # type: str
+                 input_var,     # type: str
+                 output_var,    # type: str
+                 ):
+        # type: (...) -> None
+        ...
+
+
+class BuiltinFunction(Instruction):
+    function_name = ... # type: str
+    args = ... # type: List[Any]
+    output_var = ...  # type: str
+
+    def __init__(self,
+                 function_name,  # type: str
+                 args,           # type: List[Any]
+                 output_var,     # type: str
+                 ):
+        # type: (...) -> None
+        ...
 
 
 T = TypeVar('T')
@@ -169,14 +206,12 @@ class PreCreatedIAMRole(IAMRole):
 
 
 class ManagedIAMRole(IAMRole, ManagedModel):
-    role_arn = ... # type: DV[str]
     role_name = ... # type: str
     trust_policy = ... # type: Dict[str, Any]
     policy = ... # type: IAMPolicy
 
     def __init__(self,
                  resource_name,  # type: str
-                 role_arn,       # type: DV[str]
                  role_name,      # type: str
                  trust_policy,   # type: Dict[str, Any]
                  policy,         # type: IAMPolicy
@@ -221,6 +256,21 @@ class ScheduledEvent(ManagedModel):
                  resource_name,          # type: str
                  rule_name,              # type: str
                  schedule_expression,    # type: str
+                 lambda_function,        # type: LambdaFunction
+                 ):
+        # type: (...) -> None
+        ...
+
+
+class RestAPI(ManagedModel):
+    swagger_doc = ... # type: Dict[str, Any]
+    api_gateway_stage = ... # type: str
+    lambda_function = ... # type: LambdaFunction
+
+    def __init__(self,
+                 resource_name,          # type: str
+                 swagger_doc,            # type: DV[Dict[str, Any]]
+                 api_gateway_stage,      # type: str
                  lambda_function,        # type: LambdaFunction
                  ):
         # type: (...) -> None

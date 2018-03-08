@@ -21,14 +21,17 @@ from chalice.deploy.newdeployer import BuildStage
 from chalice.deploy.newdeployer import DependencyBuilder
 from chalice.deploy.newdeployer import ApplicationGraphBuilder
 from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
-from chalice.deploy.newdeployer import PolicyGenerator
+from chalice.deploy.newdeployer import PolicyGenerator, SwaggerBuilder
+from chalice.deploy.newdeployer import VariableResolver
+from chalice.deploy.newdeployer import TemplatedSwaggerGenerator
+from chalice.deploy.swagger import SwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable
-from chalice.deploy.planner import UnreferencedResourcePlanner
+from chalice.deploy.planner import UnreferencedResourcePlanner, StringFormat
 from chalice.deploy.newdeployer import Executor
 from chalice.deploy.newdeployer import UnresolvedValueError
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
-from chalice.deploy.models import RecordResource, RecordResourceVariable
-from chalice.deploy.models import Push, Pop, JPSearch
+from chalice.deploy.models import RecordResourceVariable
+from chalice.deploy.models import JPSearch, BuiltinFunction
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 
@@ -66,6 +69,17 @@ def scheduled_event_app():
 
     @app.schedule('rate(5 minutes)')
     def foo(event):
+        return {}
+
+    return app
+
+
+@fixture
+def rest_api_app():
+    app = Chalice('rest-api')
+
+    @app.route('/')
+    def index():
         return {}
 
     return app
@@ -154,11 +168,13 @@ class TestApplicationGraphBuilder(object):
 
     def create_config(self, app, app_name='lambda-only',
                       iam_role_arn=None, policy_file=None,
+                      api_gateway_stage='api',
                       autogen_policy=False):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
             'project_dir': '.',
+            'api_gateway_stage': api_gateway_stage,
         }
         if iam_role_arn is not None:
             # We want to use an existing role.
@@ -231,7 +247,6 @@ class TestApplicationGraphBuilder(object):
         assert isinstance(role, models.ManagedIAMRole)
         assert role == models.ManagedIAMRole(
             resource_name='default-role',
-            role_arn=models.Placeholder.DEPLOY_STAGE,
             role_name='lambda-only-dev',
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
@@ -250,6 +265,22 @@ class TestApplicationGraphBuilder(object):
         assert event.rule_name == 'scheduled-event-dev-foo-event'
         assert isinstance(event.lambda_function, models.LambdaFunction)
         assert event.lambda_function.resource_name == 'foo'
+
+    def test_can_build_rest_api(self, rest_api_app):
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        rest_api = application.resources[0]
+        assert isinstance(rest_api, models.RestAPI)
+        assert rest_api.resource_name == 'rest_api'
+        assert rest_api.api_gateway_stage == 'api'
+        assert rest_api.lambda_function.resource_name == 'rest-api-app'
+        # The swagger document is validated elsewhere so we just
+        # make sure it looks right.
+        assert rest_api.swagger_doc == models.Placeholder.BUILD_STAGE
 
 
 class RoleTestCase(object):
@@ -540,6 +571,26 @@ class TestPolicyGeneratorStage(object):
         assert not generator.generate_policy.called
 
 
+class TestSwaggerBuilder(object):
+    def test_can_generate_swagger_builder(self):
+        generator = mock.Mock(spec=SwaggerGenerator)
+        generator.generate_swagger.return_value = {'swagger': '2.0'}
+
+        rest_api = models.RestAPI(
+            resource_name='foo',
+            swagger_doc=models.Placeholder.BUILD_STAGE,
+            api_gateway_stage='api',
+            lambda_function=None,
+        )
+        config = Config.create(chalice_app=mock.sentinel.chalice_app)
+        p = SwaggerBuilder(generator)
+        p.handle(config, rest_api)
+        assert rest_api.swagger_doc == {'swagger': '2.0'}
+        generator.generate_swagger.assert_called_with(
+            mock.sentinel.chalice_app
+        )
+
+
 class TestDeploymentPackager(object):
     def test_can_generate_package(self):
         generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
@@ -584,11 +635,10 @@ class TestExecutor(object):
     def test_can_store_api_result(self):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
-        apicall = APICall('create_role', params)
+        apicall = APICall('create_role', params, output_var='my_variable_name')
         self.mock_client.create_role.return_value = 'myrole:arn'
-        store_instruction = StoreValue('my_variable_name')
 
-        self.executor.execute([apicall, store_instruction])
+        self.executor.execute([apicall])
 
         assert self.executor.variables['my_variable_name'] == 'myrole:arn'
 
@@ -611,14 +661,15 @@ class TestExecutor(object):
         )
 
     def test_can_return_created_resources(self):
-        function = create_function_resource('myfunction')
         params = {}
-        call = APICall('create_function', params, resource=function)
+        call = APICall('create_function', params,
+                       output_var='myfunction_arn')
         self.mock_client.create_function.return_value = 'function:arn'
-        record_instruction = RecordResource(
+        record_instruction = RecordResourceVariable(
             resource_type='lambda_function',
             resource_name='myfunction',
             name='myfunction_arn',
+            variable_name='myfunction_arn',
         )
         self.executor.execute([call, record_instruction])
         assert self.executor.resource_values == [{
@@ -630,8 +681,7 @@ class TestExecutor(object):
     def test_can_reference_varname(self):
         self.mock_client.create_function.return_value = 'function:arn'
         self.executor.execute([
-            APICall('create_function', {}),
-            StoreValue('myvarname'),
+            APICall('create_function', {}, output_var='myvarname'),
             RecordResourceVariable(
                 resource_type='lambda_function',
                 resource_name='myfunction',
@@ -660,11 +710,52 @@ class TestExecutor(object):
             'myfunction_arn': 'arn:foo',
         }]
 
+    def test_can_aggregate_multiple_resource_values(self):
+        self.executor.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='value1',
+            ),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key2',
+                value='value2',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'key1': 'value1',
+            'key2': 'value2',
+        }]
+
+    def test_new_keys_override_old_keys(self):
+        self.executor.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='OLD',
+            ),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='NEW',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'key1': 'NEW',
+        }]
+
     def test_validates_no_unresolved_deploy_vars(self):
-        function = create_function_resource('myfunction')
         params = {'zip_contents': models.Placeholder.BUILD_STAGE}
-        call = APICall('create_function', params,
-                       resource=function)
+        call = APICall('create_function', params)
         self.mock_client.create_function.return_value = 'function:arn'
         # We should raise an exception because a param has
         # a models.Placeholder.BUILD_STAGE value which should have
@@ -672,27 +763,39 @@ class TestExecutor(object):
         with pytest.raises(UnresolvedValueError):
             self.executor.execute([call])
 
-    def test_can_push_values(self):
-        self.executor.execute([
-            Push('foo')
-        ])
-        assert self.executor.stack == ['foo']
-
-    def test_can_push_pop_values(self):
-        self.executor.execute([
-            Push('foo'),
-            Pop(),
-            Push('bar'),
-            Push('baz'),
-        ])
-        assert self.executor.stack == ['bar', 'baz']
-
     def test_can_jp_search(self):
         self.executor.execute([
-            Push({'foo': {'bar': 'baz'}}),
-            JPSearch('foo.bar'),
+            StoreValue(name='searchval', value={'foo': {'bar': 'baz'}}),
+            JPSearch('foo.bar', input_var='searchval', output_var='result'),
         ])
-        assert self.executor.stack == ['baz']
+        assert self.executor.variables['result'] == 'baz'
+
+    def test_can_call_builtin_function(self):
+        self.executor.execute([
+            StoreValue(
+                name='my_arn',
+                value='arn:aws:lambda:us-west-2:123:function:name'),
+            BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable('my_arn')],
+                output_var='result',
+            )
+        ])
+        assert self.executor.variables['result'] == {
+            'account_id': '123',
+            'region': 'us-west-2',
+            'service': 'lambda'
+        }
+
+    def test_errors_out_on_unknown_function(self):
+        with pytest.raises(ValueError):
+            self.executor.execute([
+                BuiltinFunction(
+                    function_name='unknown_foo',
+                    args=[],
+                    output_var=None,
+                )
+            ])
 
 
 def test_build_stage():
@@ -767,7 +870,10 @@ class TestDeployer(unittest.TestCase):
 
 def test_can_create_default_deployer():
     session = botocore.session.get_session()
-    deployer = create_default_deployer(session)
+    deployer = create_default_deployer(session, Config.create(
+        project_dir='.',
+        chalice_stage='dev',
+    ))
     assert isinstance(deployer, Deployer)
 
 
@@ -775,3 +881,101 @@ def test_can_create_deletion_deployer():
     session = botocore.session.get_session()
     deployer = create_deletion_deployer(TypedAWSClient(session))
     assert isinstance(deployer, Deployer)
+
+
+class TestResolveVariables(object):
+
+    def resolve_vars(self, params, variables):
+        return VariableResolver().resolve_variables(
+            params, variables
+        )
+
+    def test_resolve_top_level_vars(self):
+        assert self.resolve_vars(
+            {'foo': Variable('myvar')},
+            {'myvar': 'value'}
+        ) == {'foo': 'value'}
+
+    def test_can_resolve_multiple_vars(self):
+        assert self.resolve_vars(
+            {'foo': Variable('myvar'),
+             'bar': Variable('myvar')},
+            {'myvar': 'value'}
+        ) == {'foo': 'value', 'bar': 'value'}
+
+    def test_unsolved_error_raises_error(self):
+        with pytest.raises(UnresolvedValueError):
+            self.resolve_vars({'foo': models.Placeholder.BUILD_STAGE}, {})
+
+    def test_can_resolve_nested_variable_refs(self):
+        assert self.resolve_vars(
+            {'foo': {'bar': Variable('myvar')}},
+            {'myvar': 'value'}
+        ) == {'foo': {'bar': 'value'}}
+
+    def test_can_resolve_vars_in_list(self):
+        assert self.resolve_vars(
+            {'foo': [0, 1, Variable('myvar')]},
+            {'myvar': 2}
+        ) == {'foo': [0, 1, 2]}
+
+    def test_deeply_nested(self):
+        nested = {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': Variable('foo')}}],
+                    }
+                }
+            }
+        }
+        variables = {'foo': 'value'}
+        assert self.resolve_vars(nested, variables) == {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': 'value'}}],
+                    }
+                }
+            }
+        }
+
+    def test_can_handle_format_string(self):
+        params = {'bar': StringFormat('value: {my_var}', ['my_var'])}
+        variables = {'my_var': 'foo'}
+        assert self.resolve_vars(params, variables) == {
+            'bar': 'value: foo',
+        }
+
+    def test_can_handle_deeply_nested_format_string(self):
+        nested = {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': StringFormat(
+                            'foo: {myvar}', ['myvar'])}}],
+                    }
+                }
+            }
+        }
+        variables = {'myvar': 'value'}
+        assert self.resolve_vars(nested, variables) == {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': 'foo: value'}}],
+                    }
+                }
+            }
+        }
+
+
+def test_templated_swagger_generator(rest_api_app):
+    doc = TemplatedSwaggerGenerator().generate_swagger(rest_api_app)
+    uri = doc['paths']['/']['get']['x-amazon-apigateway-integration']['uri']
+    assert isinstance(uri, StringFormat)
+    assert uri.template == (
+        'arn:aws:apigateway:{region_name}:lambda:path'
+        '/2015-03-31/functions/{api_handler_lambda_arn}/invocations'
+    )
+    assert uri.variables == ['region_name', 'api_handler_lambda_arn']

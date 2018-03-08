@@ -4,7 +4,6 @@ from attr import attrs, attrib
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
-    DEPLOY_STAGE = 'deploy_stage'
 
 
 class Instruction(object):
@@ -15,12 +14,19 @@ class Instruction(object):
 class APICall(Instruction):
     method_name = attrib()
     params = attrib()
-    resource = attrib(default=None)
+    output_var = attrib(default=None)
 
 
 @attrs(frozen=True)
 class StoreValue(Instruction):
     name = attrib()
+    value = attrib()
+
+
+@attrs(frozen=True)
+class CopyVariable(Instruction):
+    from_var = attrib()
+    to_var = attrib()
 
 
 @attrs(frozen=True)
@@ -41,18 +47,17 @@ class RecordResourceValue(RecordResource):
 
 
 @attrs(frozen=True)
-class Push(Instruction):
-    value = attrib()
-
-
-@attrs(frozen=True)
-class Pop(Instruction):
-    pass
-
-
-@attrs(frozen=True)
 class JPSearch(Instruction):
     expression = attrib()
+    input_var = attrib()
+    output_var = attrib()
+
+
+@attrs(frozen=True)
+class BuiltinFunction(Instruction):
+    function_name = attrib()
+    args = attrib()
+    output_var = attrib()
 
 
 class Model(object):
@@ -109,7 +114,6 @@ class PreCreatedIAMRole(IAMRole):
 @attrs
 class ManagedIAMRole(IAMRole, ManagedModel):
     resource_type = 'iam_role'
-    role_arn = attrib()
     role_name = attrib()
     trust_policy = attrib()
     policy = attrib()
@@ -140,6 +144,17 @@ class ScheduledEvent(ManagedModel):
     resource_type = 'scheduled_event'
     rule_name = attrib()
     schedule_expression = attrib()
+    lambda_function = attrib()
+
+    def dependencies(self):
+        return [self.lambda_function]
+
+
+@attrs
+class RestAPI(ManagedModel):
+    resource_type = 'rest_api'
+    swagger_doc = attrib()
+    api_gateway_stage = attrib()
     lambda_function = attrib()
 
     def dependencies(self):

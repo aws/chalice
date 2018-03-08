@@ -169,7 +169,8 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
         api_gateway_stage=api_gateway_stage,
     )
     session = factory.create_botocore_session()
-    d = factory.create_new_default_deployer(session=session)
+    d = factory.create_new_default_deployer(session=session,
+                                            config=config)
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     if deployed_values['stages'][stage].get('resources'):
         record_deployed_values(deployed_values, os.path.join(

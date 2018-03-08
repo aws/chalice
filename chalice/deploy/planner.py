@@ -1,6 +1,5 @@
 import json
 
-import attr
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 
 from chalice.config import Config, DeployedResources2  # noqa
@@ -10,35 +9,43 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 
 class RemoteState(object):
-    def __init__(self, client):
-        # type: (TypedAWSClient) -> None
+    def __init__(self, client, deployed_resources):
+        # type: (TypedAWSClient, Optional[DeployedResources2]) -> None
         self._client = client
         self._cache = {}  # type: Dict[Tuple[str, str], bool]
+        self._deployed_resources = deployed_resources
 
     def _cache_key(self, resource):
         # type: (models.ManagedModel) -> Tuple[str, str]
         return (resource.resource_type, resource.resource_name)
+
+    def resource_deployed_values(self, resource):
+        # type: (models.ManagedModel) -> Dict[str, str]
+        if self._deployed_resources is None:
+            raise ValueError("Resource is not deployed: %s" % resource)
+        return self._deployed_resources.resource_values(
+            resource.resource_name)
 
     def resource_exists(self, resource):
         # type: (models.ManagedModel) -> bool
         key = self._cache_key(resource)
         if key in self._cache:
             return self._cache[key]
-        # TODO: This code will likely be refactored and pulled into
-        # per-resource classes so the RemoteState object doesn't need
-        # to know about every type of resource.
-        if isinstance(resource, models.ManagedIAMRole):
-            result = self._resource_exists_iam_role(resource)
-        elif isinstance(resource, models.LambdaFunction):
-            result = self._resource_exists_lambda_function(resource)
+        try:
+            handler = getattr(self, '_resource_exists_%s'
+                              % resource.__class__.__name__.lower())
+        except AttributeError:
+            raise ValueError("RemoteState received an unsupported resource: %s"
+                             % resource.resource_type)
+        result = handler(resource)
         self._cache[key] = result
         return result
 
-    def _resource_exists_lambda_function(self, resource):
+    def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
 
-    def _resource_exists_iam_role(self, resource):
+    def _resource_exists_managediamrole(self, resource):
         # type: (models.ManagedIAMRole) -> bool
         try:
             self._client.get_role_arn_for_name(resource.role_name)
@@ -46,18 +53,14 @@ class RemoteState(object):
         except ResourceDoesNotExistError:
             return False
 
-    def get_remote_model(self, resource):
-        # type: (models.ManagedIAMRole) -> Optional[models.ManagedModel]
-        # We only need ManagedIAMRole support for now, but this will
-        # need to grow as needed.
-        # TODO: revisit adding caching.  We don't need to make 2 API calls
-        # here.
-        if not self.resource_exists(resource):
-            return None
-        role = self._client.get_role(resource.role_name)
-        return attr.evolve(resource,
-                           trust_policy=role['AssumeRolePolicyDocument'],
-                           role_arn=role['Arn'])
+    def _resource_exists_restapi(self, resource):
+        # type: (models.RestAPI) -> bool
+        if self._deployed_resources is None:
+            return False
+        deployed_values = self._deployed_resources.resource_values(
+            resource.resource_name)
+        rest_api_id = deployed_values['rest_api_id']
+        return self._client.rest_api_exists(rest_api_id)
 
 
 class UnreferencedResourcePlanner(object):
@@ -95,21 +98,22 @@ class UnreferencedResourcePlanner(object):
                     params={'function_name': resource_values['lambda_arn']},)
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'iam_role':
-                # TODO: Consider adding the role_name to the deployed.json.
-                # This is a separate value than the 'name' of the resource.
-                # For now we have to parse out the role name from the role_arn
-                # and it would be better if we could get the role name
-                # directly.
-                v = resource_values['role_arn'].rsplit('/')[1]
                 apicall = models.APICall(
                     method_name='delete_role',
-                    params={'name': v},
+                    params={'name': resource_values['role_name']},
                 )
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'cloudwatch_event':
                 apicall = models.APICall(
                     method_name='delete_rule',
                     params={'rule_name': resource_values['rule_name']},
+                )
+                plan.append(apicall)
+            elif resource_values['resource_type'] == 'rest_api':
+                rest_api_id = resource_values['rest_api_id']
+                apicall = models.APICall(
+                    method_name='delete_rest_api',
+                    params={'rest_api_id': rest_api_id}
                 )
                 plan.append(apicall)
 
@@ -159,9 +163,8 @@ class PlanStage(object):
                 models.APICall(
                     method_name='create_function',
                     params=params,
-                    resource=resource,
+                    output_var=varname,
                 ),
-                models.StoreValue(name=varname),
                 models.RecordResourceVariable(
                     resource_type='lambda_function',
                     resource_name=resource.resource_name,
@@ -173,7 +176,7 @@ class PlanStage(object):
         # to do an update() API call.
         params = {
             'function_name': resource.function_name,
-            'role_arn': resource.role.role_arn,
+            'role_arn': role_arn,
             'zip_contents': self._osutils.get_file_contents(
                 resource.deployment_package.filename, binary=True),
             'runtime': resource.runtime,
@@ -186,10 +189,13 @@ class PlanStage(object):
             models.APICall(
                 method_name='update_function',
                 params=params,
-                resource=resource,
+                output_var='update_function_result',
             ),
-            models.JPSearch('FunctionArn'),
-            models.StoreValue(name=varname),
+            models.JPSearch(
+                'FunctionArn',
+                input_var='update_function_result',
+                output_var=varname,
+            ),
             models.RecordResourceVariable(
                 resource_type='lambda_function',
                 resource_name=resource.resource_name,
@@ -202,42 +208,50 @@ class PlanStage(object):
         # type: (models.ManagedIAMRole) -> List[models.Instruction]
         document = self._get_policy_document(resource.policy)
         role_exists = self._remote_state.resource_exists(resource)
+        varname = '%s_role_arn' % resource.role_name
         if not role_exists:
-            varname = '%s_role_arn' % resource.role_name
             return [
                 models.APICall(
                     method_name='create_role',
                     params={'name': resource.role_name,
                             'trust_policy': resource.trust_policy,
                             'policy': document},
-                    resource=resource
+                    output_var=varname,
                 ),
-                models.StoreValue(varname),
                 models.RecordResourceVariable(
                     resource_type='iam_role',
                     resource_name=resource.resource_name,
                     name='role_arn',
                     variable_name=varname,
+                ),
+                models.RecordResourceValue(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='role_name',
+                    value=resource.role_name,
                 )
             ]
-        remote_model = cast(
-            models.ManagedIAMRole,
-            self._remote_state.get_remote_model(resource),
-        )
-        resource.role_arn = remote_model.role_arn
+        role_arn = self._remote_state.resource_deployed_values(
+            resource)['role_arn']
         return [
+            models.StoreValue(name=varname, value=role_arn),
             models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': resource.role_name,
                         'policy_name': resource.role_name,
                         'policy_document': document},
-                resource=resource
+            ),
+            models.RecordResourceVariable(
+                resource_type='iam_role',
+                resource_name=resource.resource_name,
+                name='role_arn',
+                variable_name=varname,
             ),
             models.RecordResourceValue(
                 resource_type='iam_role',
                 resource_name=resource.resource_name,
-                name='role_arn',
-                value=resource.role_arn,
+                name='role_name',
+                value=resource.role_name,
             )
         ]
 
@@ -256,8 +270,8 @@ class PlanStage(object):
                 method_name='get_or_create_rule_arn',
                 params={'rule_name': resource.rule_name,
                         'schedule_expression': resource.schedule_expression},
+                output_var='rule-arn',
             ),
-            models.StoreValue('rule-arn'),
             models.APICall(
                 method_name='connect_rule_to_lambda',
                 params={'rule_name': resource.rule_name,
@@ -279,14 +293,100 @@ class PlanStage(object):
         ]
         return plan
 
+    def plan_restapi(self, resource):
+        # type: (models.RestAPI) -> List[models.Instruction]
+        function = resource.lambda_function
+        function_name = function.function_name
+        varname = '%s_lambda_arn' % function.resource_name
+        lambda_arn_var = Variable(varname)
+        shared_plan = [
+            # The various API gateway API calls need
+            # to know the region name and account id so
+            # we'll take care of that up front and store
+            # them in variables.
+            models.BuiltinFunction(
+                'parse_arn',
+                [lambda_arn_var],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            # The swagger doc uses the 'api_handler_lambda_arn'
+            # var name so we need to make sure we populate this variable
+            # before importing the rest API.
+            models.CopyVariable(from_var=varname,
+                                to_var='api_handler_lambda_arn'),
+        ]
+        if not self._remote_state.resource_exists(resource):
+            plan = shared_plan + [
+                models.APICall(
+                    method_name='import_rest_api',
+                    params={'swagger_document': resource.swagger_doc},
+                    output_var='rest_api_id',
+                ),
+                models.RecordResourceVariable(
+                    resource_type='rest_api',
+                    resource_name=resource.resource_name,
+                    name='rest_api_id',
+                    variable_name='rest_api_id',
+                ),
+                models.APICall(
+                    method_name='deploy_rest_api',
+                    params={'rest_api_id': Variable('rest_api_id'),
+                            'api_gateway_stage': resource.api_gateway_stage},
+                ),
+                models.APICall(
+                    method_name='add_permission_for_apigateway_if_needed',
+                    params={'function_name': function_name,
+                            'region_name': Variable('region_name'),
+                            'account_id': Variable('account_id'),
+                            'rest_api_id': Variable('rest_api_id')},
+                ),
+            ]
+        else:
+            deployed = self._remote_state.resource_deployed_values(resource)
+            plan = shared_plan + [
+                models.StoreValue(
+                    name='rest_api_id',
+                    value=deployed['rest_api_id']),
+                models.RecordResourceVariable(
+                    resource_type='rest_api',
+                    resource_name=resource.resource_name,
+                    name='rest_api_id',
+                    variable_name='rest_api_id',
+                ),
+                models.APICall(
+                    method_name='update_api_from_swagger',
+                    params={
+                        'rest_api_id': Variable('rest_api_id'),
+                        'swagger_document': resource.swagger_doc,
+                    },
+                ),
+                models.APICall(
+                    method_name='deploy_rest_api',
+                    params={'rest_api_id': Variable('rest_api_id'),
+                            'api_gateway_stage': resource.api_gateway_stage},
+                ),
+                models.APICall(
+                    method_name='add_permission_for_apigateway_if_needed',
+                    params={'function_name': function_name,
+                            'region_name': Variable('region_name'),
+                            'account_id': Variable('account_id'),
+                            'rest_api_id': Variable('rest_api_id')},
+                ),
+            ]
+        return plan
+
     def _get_role_arn(self, resource):
         # type: (models.IAMRole) -> Union[str, Variable]
         if isinstance(resource, models.PreCreatedIAMRole):
             return resource.role_arn
         elif isinstance(resource, models.ManagedIAMRole):
-            if isinstance(resource.role_arn, models.Placeholder):
-                return Variable('%s_role_arn' % resource.role_name)
-            return resource.role_arn
+            return Variable('%s_role_arn' % resource.role_name)
         # Make mypy happy.
         raise RuntimeError("Unknown resource type: %s" % resource)
 
@@ -326,3 +426,10 @@ class Variable(object):
     def __eq__(self, other):
         # type: (Any) -> bool
         return isinstance(other, self.__class__) and self.name == other.name
+
+
+class StringFormat(object):
+    def __init__(self, template, variables):
+        # type: (str, List[str]) -> None
+        self.template = template
+        self.variables = variables
