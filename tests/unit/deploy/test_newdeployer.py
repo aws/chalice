@@ -277,7 +277,7 @@ class TestApplicationGraphBuilder(object):
         assert isinstance(rest_api, models.RestAPI)
         assert rest_api.resource_name == 'rest_api'
         assert rest_api.api_gateway_stage == 'api'
-        assert rest_api.lambda_function.resource_name == 'rest-api-app'
+        assert rest_api.lambda_function.resource_name == 'api_handler'
         # The swagger document is validated elsewhere so we just
         # make sure it looks right.
         assert rest_api.swagger_doc == models.Placeholder.BUILD_STAGE
