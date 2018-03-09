@@ -400,6 +400,13 @@ class TestPlanRestAPI(BasePlannerTests):
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
             ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_if_needed',
+                params={'rest_api_id': Variable("rest_api_id"),
+                        'region_name': Variable("region_name"),
+                        'account_id': Variable("account_id"),
+                        'function_name': 'appname-dev-function_name'},
+                output_var=None)
         ]
 
 

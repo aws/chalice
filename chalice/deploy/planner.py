@@ -299,7 +299,10 @@ class PlanStage(object):
         function_name = function.function_name
         varname = '%s_lambda_arn' % function.resource_name
         lambda_arn_var = Variable(varname)
-        shared_plan = [
+        # There's a set of shared instructions that are needed
+        # in both the update as well as the initial create case.
+        # That's what this shared_plan_premable is for.
+        shared_plan_preamble = [
             # The various API gateway API calls need
             # to know the region name and account id so
             # we'll take care of that up front and store
@@ -321,8 +324,30 @@ class PlanStage(object):
             models.CopyVariable(from_var=varname,
                                 to_var='api_handler_lambda_arn'),
         ]
+        # There's also a set of instructions that are needed
+        # at the end of deploying a rest API that apply to both
+        # the update and create case.
+        shared_plan_epilogue = [
+            models.APICall(
+                method_name='add_permission_for_apigateway_if_needed',
+                params={'function_name': function_name,
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'rest_api_id': Variable('rest_api_id')},
+            )
+        ]  # type: List[models.Instruction]
+        for auth in resource.authorizers:
+            shared_plan_epilogue.append(
+                models.APICall(
+                    method_name='add_permission_for_apigateway_if_needed',
+                    params={'function_name': auth.function_name,
+                            'region_name': Variable('region_name'),
+                            'account_id': Variable('account_id'),
+                            'rest_api_id': Variable('rest_api_id')},
+                )
+            )
         if not self._remote_state.resource_exists(resource):
-            plan = shared_plan + [
+            plan = shared_plan_preamble + [
                 models.APICall(
                     method_name='import_rest_api',
                     params={'swagger_document': resource.swagger_doc},
@@ -339,17 +364,10 @@ class PlanStage(object):
                     params={'rest_api_id': Variable('rest_api_id'),
                             'api_gateway_stage': resource.api_gateway_stage},
                 ),
-                models.APICall(
-                    method_name='add_permission_for_apigateway_if_needed',
-                    params={'function_name': function_name,
-                            'region_name': Variable('region_name'),
-                            'account_id': Variable('account_id'),
-                            'rest_api_id': Variable('rest_api_id')},
-                ),
-            ]
+            ] + shared_plan_epilogue
         else:
             deployed = self._remote_state.resource_deployed_values(resource)
-            plan = shared_plan + [
+            plan = shared_plan_preamble + [
                 models.StoreValue(
                     name='rest_api_id',
                     value=deployed['rest_api_id']),
@@ -378,7 +396,7 @@ class PlanStage(object):
                             'account_id': Variable('account_id'),
                             'rest_api_id': Variable('rest_api_id')},
                 ),
-            ]
+            ] + shared_plan_epilogue
         return plan
 
     def _get_role_arn(self, resource):
