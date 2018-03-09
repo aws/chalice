@@ -807,9 +807,7 @@ There's a couple of things to keep in mind when enabling cors for a view:
 .. code-block:: python
 
     from chalice import Chalice, Response
- 
-    app = Chalice(app_name='helloworld')
-    app.debug = True
+    app = Chalice(app_name='multipleorigincors')
  
     @app.route('/cors_multiple_origins', methods=['GET'])
     def supports_cors_multiple_origins():
