@@ -66,15 +66,16 @@ class RemoteState(object):
 class UnreferencedResourcePlanner(object):
 
     def execute(self, plan, config):
-        # type: (List[models.Instruction], Config) -> None
-        marked = set(self._mark_resources(plan))
+        # type: (models.Plan, Config) -> None
+        instructions = plan.instructions
+        marked = set(self._mark_resources(instructions))
         deployed = config.deployed_resources(config.chalice_stage)
         if deployed is not None:
             deployed_resource_names = reversed(deployed.resource_names())
             remaining = [
                 name for name in deployed_resource_names if name not in marked
             ]
-            self._plan_deletion(plan, remaining, deployed)
+            self._plan_deletion(instructions, remaining, deployed)
 
     def _mark_resources(self, plan):
         # type: (List[models.Instruction]) -> List[str]
@@ -125,7 +126,7 @@ class PlanStage(object):
         self._osutils = osutils
 
     def execute(self, resources):
-        # type: (List[models.Model]) -> List[models.Instruction]
+        # type: (List[models.Model]) -> models.Plan
         plan = []  # type: List[models.Instruction]
         for resource in resources:
             name = 'plan_%s' % resource.__class__.__name__.lower()
@@ -134,7 +135,7 @@ class PlanStage(object):
                 result = handler(resource)
                 if result:
                     plan.extend(result)
-        return plan
+        return models.Plan(plan, {})
 
     # TODO: This code will likely be refactored and pulled into
     # per-resource classes so the PlanStage object doesn't need
@@ -428,8 +429,8 @@ class NoopPlanner(PlanStage):
         pass
 
     def execute(self, resources):
-        # type: (List[models.Model]) -> List[models.Instruction]
-        return []
+        # type: (List[models.Model]) -> models.Plan
+        return models.Plan(instructions=[], messages={})
 
 
 class Variable(object):
