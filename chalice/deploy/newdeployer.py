@@ -245,9 +245,8 @@ class ApplicationGraphBuilder(object):
                                stage_name,    # type: str
                                ):
         # type: (...) -> models.RestAPI
-        resource_name = config.app_name
         lambda_function = self._create_lambda_model(
-            config=config, deployment=deployment, name=resource_name,
+            config=config, deployment=deployment, name='api_handler',
             handler_name='app.app', stage_name=stage_name
         )
         authorizers = []
