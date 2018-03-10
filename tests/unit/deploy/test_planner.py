@@ -99,7 +99,7 @@ class BasePlannerTests(object):
     def determine_plan(self, resource):
         planner = PlanStage(self.remote_state, self.osutils)
         plan = planner.execute([resource])
-        return plan
+        return plan.instructions
 
 
 class TestPlanManagedRole(BasePlannerTests):
@@ -534,11 +534,10 @@ class TestRemoteState(object):
 
 class TestUnreferencedResourcePlanner(object):
     def setup_method(self):
-        pass
+        self.sweeper = UnreferencedResourcePlanner()
 
-    @pytest.fixture
-    def sweeper(self):
-        return UnreferencedResourcePlanner()
+    def execute(self, plan, config):
+        self.sweeper.execute(models.Plan(plan, messages={}), config)
 
     @pytest.fixture
     def function_resource(self):
@@ -553,8 +552,7 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
 
-    def test_noop_when_all_resources_accounted_for(self, sweeper,
-                                                   function_resource):
+    def test_noop_when_all_resources_accounted_for(self, function_resource):
         plan = [
             models.RecordResource(
                 resource_type='lambda_function',
@@ -565,20 +563,20 @@ class TestUnreferencedResourcePlanner(object):
         original_plan = plan[:]
         deployed = self.one_deployed_lambda_function(name='myfunction')
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         # We shouldn't add anything to the list.
         assert plan == original_plan
 
-    def test_will_delete_unreferenced_resource(self, sweeper):
+    def test_will_delete_unreferenced_resource(self):
         plan = []
         deployed = self.one_deployed_lambda_function()
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 1
         assert plan[0].method_name == 'delete_function'
         assert plan[0].params == {'function_name': 'arn'}
 
-    def test_supports_multiple_unreferenced_and_unchanged(self, sweeper):
+    def test_supports_multiple_unreferenced_and_unchanged(self):
         first = create_function_resource('first')
         second = create_function_resource('second')
         third = create_function_resource('third')
@@ -606,12 +604,12 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 3
         assert plan[2].method_name == 'delete_function'
         assert plan[2].params == {'function_name': 'third_arn'}
 
-    def test_can_delete_iam_role(self, sweeper):
+    def test_can_delete_iam_role(self):
         plan = []
         deployed = {
             'resources': [{
@@ -622,12 +620,12 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 1
         assert plan[0].method_name == 'delete_role'
         assert plan[0].params == {'name': 'myrole'}
 
-    def test_correct_deletion_order_for_dependencies(self, sweeper):
+    def test_correct_deletion_order_for_dependencies(self):
         plan = []
         deployed = {
             # This is the order they were deployed.  While not
@@ -655,7 +653,7 @@ class TestUnreferencedResourcePlanner(object):
             ]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 3
         expected_api_calls = [p.method_name for p in plan]
         assert expected_api_calls == ['delete_function',
@@ -669,7 +667,7 @@ class TestUnreferencedResourcePlanner(object):
             {'name': 'myrole'},
         ]
 
-    def test_can_delete_scheduled_event(self, sweeper):
+    def test_can_delete_scheduled_event(self):
         plan = []
         deployed = {
             'resources': [{
@@ -679,7 +677,7 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert plan == [
             models.APICall(
                 method_name='delete_rule',
@@ -687,7 +685,7 @@ class TestUnreferencedResourcePlanner(object):
             )
         ]
 
-    def test_can_delete_rest_api(self, sweeper):
+    def test_can_delete_rest_api(self):
         plan = []
         deployed = {
             'resources': [{
@@ -697,7 +695,7 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert plan == [
             models.APICall(
                 method_name='delete_rest_api',

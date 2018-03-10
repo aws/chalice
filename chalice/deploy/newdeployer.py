@@ -512,9 +512,9 @@ class Executor(object):
         self._resource_value_index = {}  # type: Dict[str, Any]
         self._variable_resolver = VariableResolver()
 
-    def execute(self, api_calls):
-        # type: (List[models.Instruction]) -> None
-        for instruction in api_calls:
+    def execute(self, plan):
+        # type: (models.Plan) -> None
+        for instruction in plan.instructions:
             # TODO: Don't error out on unknown instruction
             getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
                     lambda x: None)(instruction)
