@@ -8,7 +8,7 @@ import mock
 import botocore.session
 
 from chalice.awsclient import TypedAWSClient
-from chalice.utils import OSUtils
+from chalice.utils import OSUtils, UI
 from chalice.deploy import models
 from chalice.deploy import packager
 from chalice.config import Config
@@ -639,10 +639,13 @@ class TestDeploymentPackager(object):
 class TestExecutor(object):
     def setup_method(self):
         self.mock_client = mock.Mock(spec=TypedAWSClient)
-        self.executor = Executor(self.mock_client)
+        self.ui = mock.Mock(spec=UI)
+        self.executor = Executor(self.mock_client, self.ui)
 
-    def execute(self, instructions):
-        self.executor.execute(models.Plan(instructions))
+    def execute(self, instructions, messages=None):
+        if messages is None:
+            messages = {}
+        self.executor.execute(models.Plan(instructions, messages))
 
     def test_can_invoke_api_call_with_no_output(self):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
@@ -818,6 +821,15 @@ class TestExecutor(object):
                 )
             ])
 
+    def test_can_print_ui_messages(self):
+        params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
+                  'policy': {'iam': 'policy'}}
+        call = APICall('create_role', params)
+        messages = {id(call): 'Creating role'}
+        self.execute([call], messages)
+        self.mock_client.create_role.assert_called_with(**params)
+        self.ui.write.assert_called_with('Creating role')
+
 
 def test_build_stage():
     first = mock.Mock(spec=BaseDeployStep)
@@ -894,13 +906,13 @@ def test_can_create_default_deployer():
     deployer = create_default_deployer(session, Config.create(
         project_dir='.',
         chalice_stage='dev',
-    ))
+    ), UI())
     assert isinstance(deployer, Deployer)
 
 
 def test_can_create_deletion_deployer():
     session = botocore.session.get_session()
-    deployer = create_deletion_deployer(TypedAWSClient(session))
+    deployer = create_deletion_deployer(TypedAWSClient(session), UI())
     assert isinstance(deployer, Deployer)
 
 
