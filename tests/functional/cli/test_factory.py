@@ -11,6 +11,7 @@ from chalice.deploy.deployer import Deployer as OldDeployer
 from chalice.deploy.newdeployer import Deployer
 from chalice.config import Config
 from chalice import local
+from chalice.utils import UI
 
 
 @fixture
@@ -73,7 +74,7 @@ def test_can_create_default_deployer(clifactory):
 
 def test_can_create_deletion_deployer(clifactory):
     session = clifactory.create_botocore_session()
-    deployer = clifactory.create_deletion_deployer(session)
+    deployer = clifactory.create_deletion_deployer(session, UI())
     assert isinstance(deployer, Deployer)
 
 

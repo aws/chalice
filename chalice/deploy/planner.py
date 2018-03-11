@@ -1,11 +1,15 @@
 import json
 
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
+from typing import Sequence  # noqa
 
 from chalice.config import Config, DeployedResources2  # noqa
 from chalice.utils import OSUtils  # noqa
 from chalice.deploy import models
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
+
+
+_INSTRUCTION_MSG = Union[models.Instruction, Tuple[models.Instruction, str]]
 
 
 class RemoteState(object):
@@ -75,7 +79,8 @@ class UnreferencedResourcePlanner(object):
             remaining = [
                 name for name in deployed_resource_names if name not in marked
             ]
-            self._plan_deletion(instructions, remaining, deployed)
+            self._plan_deletion(instructions, plan.messages,
+                                remaining, deployed)
 
     def _mark_resources(self, plan):
         # type: (List[models.Instruction]) -> List[str]
@@ -87,6 +92,7 @@ class UnreferencedResourcePlanner(object):
 
     def _plan_deletion(self,
                        plan,       # type: List[models.Instruction]
+                       messages,   # type: Dict[int, str]
                        remaining,  # type: List[str]
                        deployed,   # type: DeployedResources2
                        ):
@@ -97,12 +103,16 @@ class UnreferencedResourcePlanner(object):
                 apicall = models.APICall(
                     method_name='delete_function',
                     params={'function_name': resource_values['lambda_arn']},)
+                messages[id(apicall)] = (
+                    "Deleting function: %s" % resource_values['lambda_arn'])
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'iam_role':
                 apicall = models.APICall(
                     method_name='delete_role',
                     params={'name': resource_values['role_name']},
                 )
+                messages[id(apicall)] = (
+                    "Deleting IAM role: %s" % resource_values['role_name'])
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'cloudwatch_event':
                 apicall = models.APICall(
@@ -116,6 +126,8 @@ class UnreferencedResourcePlanner(object):
                     method_name='delete_rest_api',
                     params={'rest_api_id': rest_api_id}
                 )
+                messages[id(apicall)] = (
+                    "Deleting Rest API: %s" % resource_values['rest_api_id'])
                 plan.append(apicall)
 
 
@@ -128,21 +140,28 @@ class PlanStage(object):
     def execute(self, resources):
         # type: (List[models.Model]) -> models.Plan
         plan = []  # type: List[models.Instruction]
+        messages = {}  # type: Dict[int, str]
         for resource in resources:
-            name = 'plan_%s' % resource.__class__.__name__.lower()
+            name = '_plan_%s' % resource.__class__.__name__.lower()
             handler = getattr(self, name, None)
             if handler is not None:
                 result = handler(resource)
                 if result:
-                    plan.extend(result)
-        return models.Plan(plan, {})
+                    for single in result:
+                        if isinstance(single, tuple):
+                            instruction, message = single
+                            plan.append(instruction)
+                            messages[id(instruction)] = message
+                        else:
+                            plan.append(single)
+        return models.Plan(plan, messages)
 
     # TODO: This code will likely be refactored and pulled into
     # per-resource classes so the PlanStage object doesn't need
     # to know about every type of resource.
 
-    def plan_lambdafunction(self, resource):
-        # type: (models.LambdaFunction) -> List[models.Instruction]
+    def _plan_lambdafunction(self, resource):
+        # type: (models.LambdaFunction) -> Sequence[_INSTRUCTION_MSG]
         role_arn = self._get_role_arn(resource.role)
         # Make mypy happy, it complains if we don't "declare" this upfront.
         params = {}  # type: Dict[str, Any]
@@ -161,11 +180,11 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
             }
             return [
-                models.APICall(
+                (models.APICall(
                     method_name='create_function',
                     params=params,
                     output_var=varname,
-                ),
+                ), "Creating lambda function: %s\n" % resource.function_name),
                 models.RecordResourceVariable(
                     resource_type='lambda_function',
                     resource_name=resource.resource_name,
@@ -187,11 +206,11 @@ class PlanStage(object):
             'memory_size': resource.memory_size,
         }
         return [
-            models.APICall(
+            (models.APICall(
                 method_name='update_function',
                 params=params,
                 output_var='update_function_result',
-            ),
+            ), "Updating lambda function: %s\n" % resource.function_name),
             models.JPSearch(
                 'FunctionArn',
                 input_var='update_function_result',
@@ -205,20 +224,20 @@ class PlanStage(object):
             )
         ]
 
-    def plan_managediamrole(self, resource):
-        # type: (models.ManagedIAMRole) -> List[models.Instruction]
+    def _plan_managediamrole(self, resource):
+        # type: (models.ManagedIAMRole) -> Sequence[_INSTRUCTION_MSG]
         document = self._get_policy_document(resource.policy)
         role_exists = self._remote_state.resource_exists(resource)
         varname = '%s_role_arn' % resource.role_name
         if not role_exists:
             return [
-                models.APICall(
+                (models.APICall(
                     method_name='create_role',
                     params={'name': resource.role_name,
                             'trust_policy': resource.trust_policy,
                             'policy': document},
                     output_var=varname,
-                ),
+                ), "Creating IAM role: %s\n" % resource.role_name),
                 models.RecordResourceVariable(
                     resource_type='iam_role',
                     resource_name=resource.resource_name,
@@ -236,12 +255,12 @@ class PlanStage(object):
             resource)['role_arn']
         return [
             models.StoreValue(name=varname, value=role_arn),
-            models.APICall(
+            (models.APICall(
                 method_name='put_role_policy',
                 params={'role_name': resource.role_name,
                         'policy_name': resource.role_name,
                         'policy_document': document},
-            ),
+            ), "Updating policy for IAM role: %s\n" % resource.role_name),
             models.RecordResourceVariable(
                 resource_type='iam_role',
                 resource_name=resource.resource_name,
@@ -256,8 +275,8 @@ class PlanStage(object):
             )
         ]
 
-    def plan_scheduledevent(self, resource):
-        # type: (models.ScheduledEvent) -> List[models.Instruction]
+    def _plan_scheduledevent(self, resource):
+        # type: (models.ScheduledEvent) -> Sequence[_INSTRUCTION_MSG]
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
@@ -294,8 +313,8 @@ class PlanStage(object):
         ]
         return plan
 
-    def plan_restapi(self, resource):
-        # type: (models.RestAPI) -> List[models.Instruction]
+    def _plan_restapi(self, resource):
+        # type: (models.RestAPI) -> Sequence[_INSTRUCTION_MSG]
         function = resource.lambda_function
         function_name = function.function_name
         varname = '%s_lambda_arn' % function.resource_name
@@ -324,7 +343,7 @@ class PlanStage(object):
             # before importing the rest API.
             models.CopyVariable(from_var=varname,
                                 to_var='api_handler_lambda_arn'),
-        ]
+        ]  # type: List[_INSTRUCTION_MSG]
         # There's also a set of instructions that are needed
         # at the end of deploying a rest API that apply to both
         # the update and create case.
@@ -336,7 +355,7 @@ class PlanStage(object):
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
             )
-        ]  # type: List[models.Instruction]
+        ]  # type: List[_INSTRUCTION_MSG]
         for auth in resource.authorizers:
             shared_plan_epilogue.append(
                 models.APICall(
@@ -349,11 +368,11 @@ class PlanStage(object):
             )
         if not self._remote_state.resource_exists(resource):
             plan = shared_plan_preamble + [
-                models.APICall(
+                (models.APICall(
                     method_name='import_rest_api',
                     params={'swagger_document': resource.swagger_doc},
                     output_var='rest_api_id',
-                ),
+                ), "Creating Rest API\n"),
                 models.RecordResourceVariable(
                     resource_type='rest_api',
                     resource_name=resource.resource_name,
@@ -378,13 +397,13 @@ class PlanStage(object):
                     name='rest_api_id',
                     variable_name='rest_api_id',
                 ),
-                models.APICall(
+                (models.APICall(
                     method_name='update_api_from_swagger',
                     params={
                         'rest_api_id': Variable('rest_api_id'),
                         'swagger_document': resource.swagger_doc,
                     },
-                ),
+                ), "Updating rest API\n"),
                 models.APICall(
                     method_name='deploy_rest_api',
                     params={'rest_api_id': Variable('rest_api_id'),

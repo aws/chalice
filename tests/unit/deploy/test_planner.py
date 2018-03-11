@@ -84,6 +84,7 @@ class BasePlannerTests(object):
     def setup_method(self):
         self.osutils = mock.Mock(spec=OSUtils)
         self.remote_state = InMemoryRemoteState()
+        self.last_plan = None
 
     def assert_apicall_equals(self, expected, actual_api_call):
         # models.APICall has its own __eq__ method from attrs,
@@ -98,8 +99,8 @@ class BasePlannerTests(object):
 
     def determine_plan(self, resource):
         planner = PlanStage(self.remote_state, self.osutils)
-        plan = planner.execute([resource])
-        return plan.instructions
+        self.last_plan = planner.execute([resource])
+        return self.last_plan.instructions
 
 
 class TestPlanManagedRole(BasePlannerTests):
@@ -119,6 +120,9 @@ class TestPlanManagedRole(BasePlannerTests):
                     'policy': {'iam': 'policy'}},
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert self.last_plan.messages.values() == [
+            'Creating IAM role: myrole\n'
+        ]
 
     def test_can_create_plan_for_filebased_role(self):
         self.remote_state.declare_no_resources_exists()
@@ -137,6 +141,9 @@ class TestPlanManagedRole(BasePlannerTests):
                     'policy': {'iam': 'policy'}},
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert self.last_plan.messages.values() == [
+            'Creating IAM role: myrole\n'
+        ]
 
     def test_can_update_managed_role(self):
         role = models.ManagedIAMRole(
@@ -161,6 +168,9 @@ class TestPlanManagedRole(BasePlannerTests):
         )
         assert plan[-2].variable_name == 'myrole_role_arn'
         assert plan[-1].value == 'myrole'
+        assert self.last_plan.messages.values() == [
+            'Updating policy for IAM role: myrole\n'
+        ]
 
     def test_can_update_file_based_policy(self):
         role = models.ManagedIAMRole(
@@ -210,6 +220,9 @@ class TestPlanLambdaFunction(BasePlannerTests):
             },
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert self.last_plan.messages.values() == [
+            'Creating lambda function: appname-dev-function_name\n'
+        ]
 
     def test_can_update_lambda_function_code(self):
         function = create_function_resource('function_name')
@@ -234,6 +247,9 @@ class TestPlanLambdaFunction(BasePlannerTests):
             params=expected_params,
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert self.last_plan.messages.values() == [
+            'Updating lambda function: appname-dev-function_name\n'
+        ]
 
     def test_can_set_variables_when_needed(self):
         function = create_function_resource('function_name')
@@ -357,6 +373,9 @@ class TestPlanRestAPI(BasePlannerTests):
                     'rest_api_id': Variable('rest_api_id'),
                 }
             )
+        ]
+        assert self.last_plan.messages.values() == [
+            'Creating Rest API\n'
         ]
 
     def test_can_update_rest_api(self):

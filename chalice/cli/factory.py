@@ -94,13 +94,14 @@ class CLIFactory(object):
         return deployer.create_default_deployer(
             session=session, ui=ui)
 
-    def create_new_default_deployer(self, session, config):
-        # type: (Session, Config) -> newdeployer.Deployer
-        return newdeployer.create_default_deployer(session, config)
+    def create_new_default_deployer(self, session, config, ui):
+        # type: (Session, Config, UI) -> newdeployer.Deployer
+        return newdeployer.create_default_deployer(session, config, ui)
 
-    def create_deletion_deployer(self, session):
-        # type: (Session) -> newdeployer.Deployer
-        return newdeployer.create_deletion_deployer(TypedAWSClient(session))
+    def create_deletion_deployer(self, session, ui):
+        # type: (Session, UI) -> newdeployer.Deployer
+        return newdeployer.create_deletion_deployer(
+            TypedAWSClient(session), ui)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,

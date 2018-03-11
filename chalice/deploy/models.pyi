@@ -12,11 +12,11 @@ class Instruction:
 
 class Plan:
     instructions = ...  # type: List[Instruction]
-    messages = ...  # type: Dict[Instruction, str]
+    messages = ...  # type: Dict[int, str]
 
     def __init__(self,
                  instructions,  # type: List[Instruction]
-                 messages,      # type: Dict[Instruction, str]
+                 messages,      # type: Dict[int, str]
                  ):
         # type: (...) -> None
         ...
