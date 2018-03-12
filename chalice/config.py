@@ -284,18 +284,59 @@ class Config(object):
         """
         # This is arguably the wrong level of abstraction.
         # We might be able to move this elsewhere.
-        deployed_file = os.path.join(self.project_dir, '.chalice',
-                                     'deployed.json')
-        if not os.path.isfile(deployed_file):
-            return None
-        with open(deployed_file, 'r') as f:
-            data = json.load(f)
+        deployed_file = os.path.join(
+            self.project_dir, '.chalice', 'deployed',
+            '%s.json' % chalice_stage_name)
+        data = self._load_json_file(deployed_file)
+        if data is None:
+            return self._try_old_deployer_values(chalice_stage_name)
         schema_version = data.get('schema_version', '1.0')
         if schema_version == '2.0':
             if chalice_stage_name not in data['stages']:
                 return None
             return DeployedResources2(data['stages'][chalice_stage_name])
-        raise ValueError("")
+        return None
+
+    def _try_old_deployer_values(self, chalice_stage_name):
+        # type: (str) -> Optional[DeployedResources2]
+        # They are upgrading from v1.0 to v2.0 of the deployed.json
+        # schema.  Attempt to auto convert for them.
+        old_deployed_file = os.path.join(self.project_dir, '.chalice',
+                                         'deployed.json')
+        data = self._load_json_file(old_deployed_file)
+        if data is None:
+            return None
+        return self._upgrade_deployed_values(chalice_stage_name, data)
+
+    def _load_json_file(self, deployed_file):
+        # type: (str) -> Any
+        if not os.path.isfile(deployed_file):
+            return None
+        with open(deployed_file, 'r') as f:
+            return json.load(f)
+
+    def _upgrade_deployed_values(self, chalice_stage_name, data):
+        # type: (str, Any) -> Optional[DeployedResources2]
+        deployed = data[chalice_stage_name]
+        prefix = '%s-%s-' % (self.app_name, chalice_stage_name)
+        resources = []
+        for name, values in deployed.get('lambda_functions', {}).items():
+            short_name = name[len(prefix):]
+            current = {
+                'resource_type': 'lambda_function',
+                'lambda_arn': values['arn'],
+                'name': short_name,
+            }
+            resources.append(current)
+        resources.extend([
+            {'name': 'api_handler',
+             'resource_type': 'lambda_function',
+             'lambda_arn': deployed['api_handler_arn']},
+            {'name': 'rest_api',
+             'resource_type': 'rest_api',
+             'rest_api_id': deployed['rest_api_id']},
+        ])
+        return DeployedResources2({'resources': resources})
 
     def old_deployed_resources(self, chalice_stage_name):
         # type: (str) -> Optional[DeployedResources]
@@ -309,10 +350,9 @@ class Config(object):
         # We might be able to move this elsewhere.
         deployed_file = os.path.join(self.project_dir, '.chalice',
                                      'deployed.json')
-        if not os.path.isfile(deployed_file):
+        data = self._load_json_file(deployed_file)
+        if data is None:
             return None
-        with open(deployed_file, 'r') as f:
-            data = json.load(f)
         if chalice_stage_name not in data:
             return None
         return DeployedResources.from_dict(data[chalice_stage_name])

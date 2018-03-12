@@ -10,7 +10,7 @@ import pytest
 import requests
 
 from chalice.cli.factory import CLIFactory
-from chalice.utils import record_deployed_values, OSUtils
+from chalice.utils import record_deployed_values, OSUtils, UI
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.config import DeployedResources2
 
@@ -146,7 +146,7 @@ def _deploy_app(temp_dirname):
         autogen_policy=True
     )
     session = factory.create_botocore_session()
-    d = factory.create_new_default_deployer(session, config)
+    d = factory.create_new_default_deployer(session, config, UI())
     region = session.get_config_variable('region')
     deployed_stages = _deploy_with_retries(d, config)
     deployed = deployed_stages['stages']['dev']
@@ -157,9 +157,12 @@ def _deploy_app(temp_dirname):
         app_name=RANDOM_APP_NAME,
         app_dir=temp_dirname,
     )
+    deploy_dir = os.path.join(temp_dirname, '.chalice', 'deployed')
+    if not os.path.isdir(deploy_dir):
+        os.makedirs(deploy_dir)
     record_deployed_values(
         deployed_stages,
-        os.path.join(temp_dirname, '.chalice', 'deployed.json')
+        os.path.join(deploy_dir, 'dev.json')
     )
     return application
 
@@ -192,7 +195,7 @@ def _delete_app(application, temp_dirname):
         autogen_policy=True
     )
     session = factory.create_botocore_session()
-    d = factory.create_deletion_deployer(session)
+    d = factory.create_deletion_deployer(session, UI())
     _deploy_with_retries(d, config)
 
 

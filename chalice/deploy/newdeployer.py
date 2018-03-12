@@ -245,6 +245,7 @@ class ApplicationGraphBuilder(object):
                                stage_name,    # type: str
                                ):
         # type: (...) -> models.RestAPI
+        # Need to mess with the function name for back-compat.
         lambda_function = self._create_lambda_model(
             config=config, deployment=deployment, name='api_handler',
             handler_name='app.app', stage_name=stage_name

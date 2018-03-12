@@ -6,6 +6,23 @@ from chalice.config import Config, DeployedResources
 from chalice.config import DeployedResources2
 
 
+class FixedDataConfig(Config):
+    def __init__(self, files_to_content, app_name='app'):
+        self.files_to_content = files_to_content
+        self._app_name = app_name
+
+    @property
+    def app_name(self):
+        return self._app_name
+
+    @property
+    def project_dir(self):
+        return '.'
+
+    def _load_json_file(self, filename):
+        return self.files_to_content.get(filename)
+
+
 def test_config_create_method():
     c = Config.create(app_name='foo')
     assert c.app_name == 'foo'
@@ -504,7 +521,7 @@ class TestUpgradeNewDeployer(object):
             "api_handler_name": "app-dev",
             "api_handler_arn": (
                 "arn:aws:lambda:us-west-2:123:function:app-dev"),
-            "rest_api_id": "txahkyspm6",
+            "rest_api_id": "my_rest_api_id",
             "lambda_functions": {
                 "app-dev-foo": {
                     "type": "pure_lambda",
@@ -531,7 +548,7 @@ class TestUpgradeNewDeployer(object):
                 "arn:aws:lambda:us-west-2:123:function:app-dev"),
              "name": "api_handler",
              "resource_type": "lambda_function"},
-            {"rest_api_id": "5cofq6xbq5",
+            {"rest_api_id": "my_rest_api_id",
              "name": "rest_api",
              "resource_type": "rest_api"}
         ]
@@ -543,8 +560,20 @@ class TestUpgradeNewDeployer(object):
             },
             'schema_version': '2.0',
         }
-        self.config = FixedDataConfig(self.old_deployed)
+        self.config = FixedDataConfig(
+            {'./.chalice/deployed.json': self.old_deployed},
+        )
 
     def test_can_upgrade_rest_api(self):
-        #resources = self.config.deployed_resources('dev')
-        pass
+        resources = self.config.deployed_resources('dev')
+        # The 'default-role' isn't in this list because
+        # it's not in the old deployed.json so it's filled
+        # in on the first deploy with the new deployer.
+        assert sorted(resources.resource_names()) == [
+             'api_handler', 'foo', 'rest_api',
+        ]
+        assert resources.resource_values('rest_api') == {
+            'rest_api_id': 'my_rest_api_id',
+            'name': 'rest_api',
+            'resource_type': 'rest_api',
+        }

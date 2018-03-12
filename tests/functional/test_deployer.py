@@ -304,7 +304,10 @@ def test_can_delete_app(tmpdir):
             }
         }
     }
-    appdir.join('.chalice', 'deployed.json').write(json.dumps(deployed_json))
+    deployed_dir = appdir.join('.chalice', 'deployed')
+    deployed_dir.mkdir()
+    deployed_dir.join('dev.json').write(
+        json.dumps(deployed_json))
     mock_client = mock.Mock(spec=TypedAWSClient)
     ui = mock.Mock(spec=chalice.utils.UI)
     d = newdeployer.create_deletion_deployer(mock_client, ui)

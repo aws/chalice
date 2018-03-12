@@ -540,6 +540,35 @@ class TestRemoteState(object):
         with pytest.raises(ValueError):
             remote_state.resource_deployed_values(rest_api)
 
+    def test_value_error_raised_for_unknown_resource_name(self):
+        remote_state = RemoteState(
+            self.client, DeployedResources2({'resources': [
+                {'name': 'not_rest_api', 'rest_api_id': 'foo'}]})
+        )
+        rest_api = self.create_rest_api_model()
+        with pytest.raises(ValueError):
+            remote_state.resource_deployed_values(rest_api)
+
+    def test_dynamically_lookup_iam_role(self):
+        remote_state = RemoteState(
+            self.client, DeployedResources2({'resources': [
+                {'name': 'rest_api', 'rest_api_id': 'foo'}]})
+        )
+        resource = models.ManagedIAMRole(
+            resource_name='default-role',
+            role_name='myrole',
+            trust_policy={'trust': 'policy'},
+            policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
+        )
+        self.client.get_role_arn_for_name.return_value = 'my-role-arn'
+        values = remote_state.resource_deployed_values(resource)
+        assert values == {
+            'name': 'default-role',
+            'resource_type': 'iam_role',
+            'role_arn': 'my-role-arn',
+            'role_name': 'myrole'
+        }
+
     def test_unknown_model_type_raises_error(self):
 
         @attr.attrs
