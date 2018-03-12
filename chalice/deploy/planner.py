@@ -104,7 +104,7 @@ class UnreferencedResourcePlanner(object):
                     method_name='delete_function',
                     params={'function_name': resource_values['lambda_arn']},)
                 messages[id(apicall)] = (
-                    "Deleting function: %s" % resource_values['lambda_arn'])
+                    "Deleting function: %s\n" % resource_values['lambda_arn'])
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'iam_role':
                 apicall = models.APICall(
@@ -112,7 +112,7 @@ class UnreferencedResourcePlanner(object):
                     params={'name': resource_values['role_name']},
                 )
                 messages[id(apicall)] = (
-                    "Deleting IAM role: %s" % resource_values['role_name'])
+                    "Deleting IAM role: %s\n" % resource_values['role_name'])
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'cloudwatch_event':
                 apicall = models.APICall(
@@ -127,7 +127,7 @@ class UnreferencedResourcePlanner(object):
                     params={'rest_api_id': rest_api_id}
                 )
                 messages[id(apicall)] = (
-                    "Deleting Rest API: %s" % resource_values['rest_api_id'])
+                    "Deleting Rest API: %s\n" % resource_values['rest_api_id'])
                 plan.append(apicall)
 
 
