@@ -120,7 +120,7 @@ class TestPlanManagedRole(BasePlannerTests):
                     'policy': {'iam': 'policy'}},
         )
         self.assert_apicall_equals(plan[0], expected)
-        assert self.last_plan.messages.values() == [
+        assert list(self.last_plan.messages.values()) == [
             'Creating IAM role: myrole\n'
         ]
 
@@ -141,7 +141,7 @@ class TestPlanManagedRole(BasePlannerTests):
                     'policy': {'iam': 'policy'}},
         )
         self.assert_apicall_equals(plan[0], expected)
-        assert self.last_plan.messages.values() == [
+        assert list(self.last_plan.messages.values()) == [
             'Creating IAM role: myrole\n'
         ]
 
@@ -168,7 +168,7 @@ class TestPlanManagedRole(BasePlannerTests):
         )
         assert plan[-2].variable_name == 'myrole_role_arn'
         assert plan[-1].value == 'myrole'
-        assert self.last_plan.messages.values() == [
+        assert list(self.last_plan.messages.values()) == [
             'Updating policy for IAM role: myrole\n'
         ]
 
@@ -220,7 +220,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             },
         )
         self.assert_apicall_equals(plan[0], expected)
-        assert self.last_plan.messages.values() == [
+        assert list(self.last_plan.messages.values()) == [
             'Creating lambda function: appname-dev-function_name\n'
         ]
 
@@ -247,7 +247,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             params=expected_params,
         )
         self.assert_apicall_equals(plan[0], expected)
-        assert self.last_plan.messages.values() == [
+        assert list(self.last_plan.messages.values()) == [
             'Updating lambda function: appname-dev-function_name\n'
         ]
 
@@ -374,7 +374,7 @@ class TestPlanRestAPI(BasePlannerTests):
                 }
             )
         ]
-        assert self.last_plan.messages.values() == [
+        assert list(self.last_plan.messages.values()) == [
             'Creating Rest API\n'
         ]
 
