@@ -147,14 +147,22 @@ class PlanStage(object):
             if handler is not None:
                 result = handler(resource)
                 if result:
-                    for single in result:
-                        if isinstance(single, tuple):
-                            instruction, message = single
-                            plan.append(instruction)
-                            messages[id(instruction)] = message
-                        else:
-                            plan.append(single)
+                    self._add_result_to_plan(result, plan, messages)
         return models.Plan(plan, messages)
+
+    def _add_result_to_plan(self,
+                            result,    # type: Sequence[_INSTRUCTION_MSG]
+                            plan,      # type: List[models.Instruction]
+                            messages,  # type: Dict[int, str]
+                            ):
+        # type: (...) -> None
+        for single in result:
+            if isinstance(single, tuple):
+                instruction, message = single
+                plan.append(instruction)
+                messages[id(instruction)] = message
+            else:
+                plan.append(single)
 
     # TODO: This code will likely be refactored and pulled into
     # per-resource classes so the PlanStage object doesn't need
