@@ -815,7 +815,7 @@ There's a couple of things to keep in mind when enabling cors for a view:
         if origin == 'http://allowed1.example.com':
             return Response(body='You sent a whitelisted origin!',
                 status_code=200,
-                headers={'Access-Control-Allow-Origin': 'http://allowed2.example.com'})
+                headers={'Access-Control-Allow-Origin': 'http://allowed1.example.com'})
         elif origin == 'http://allowed2.example.com':
             return Response(body='You sent a whitelisted origin!',
                 status_code=200,
