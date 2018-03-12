@@ -27,8 +27,24 @@ class RemoteState(object):
         # type: (models.ManagedModel) -> Dict[str, str]
         if self._deployed_resources is None:
             raise ValueError("Resource is not deployed: %s" % resource)
-        return self._deployed_resources.resource_values(
-            resource.resource_name)
+        try:
+            return self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return self._dynamically_lookup_values(resource)
+
+    def _dynamically_lookup_values(self, resource):
+        # type: (models.ManagedModel) -> Dict[str, str]
+        if isinstance(resource, models.ManagedIAMRole):
+            arn = self._client.get_role_arn_for_name(resource.role_name)
+            return {
+                "role_name": resource.role_name,
+                "role_arn": arn,
+                "name": resource.resource_name,
+                "resource_type": "iam_role",
+            }
+        raise ValueError("Deployed values for resource does not exist: %s"
+                         % resource.resource_name)
 
     def resource_exists(self, resource):
         # type: (models.ManagedModel) -> bool

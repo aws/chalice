@@ -173,9 +173,13 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
                                             config=config,
                                             ui=UI())
     deployed_values = d.deploy(config, chalice_stage_name=stage)
+    deployed_dir = os.path.join(
+        config.project_dir, '.chalice', 'deployed')
+    if not os.path.isdir(deployed_dir):
+        os.makedirs(deployed_dir)
     if deployed_values['stages'][stage].get('resources'):
         record_deployed_values(deployed_values, os.path.join(
-            config.project_dir, '.chalice', 'deployed.json'))
+            deployed_dir, '%s.json' % stage))
 
 
 @cli.command('delete-new')
