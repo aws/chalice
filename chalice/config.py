@@ -329,7 +329,10 @@ class DeployedResources2(object):
 
     def resource_values(self, name):
         # type: (str) -> Dict[str, str]
-        return self._deployed_values_by_name[name]
+        try:
+            return self._deployed_values_by_name[name]
+        except KeyError:
+            raise ValueError("Resource does not exist: %s" % name)
 
     def resource_names(self):
         # type: () -> List[str]
