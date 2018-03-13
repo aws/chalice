@@ -249,6 +249,12 @@ class ApplicationGraphBuilder(object):
             config=config, deployment=deployment, name='api_handler',
             handler_name='app.app', stage_name=stage_name
         )
+        # For backwards compatibility with the old deployer, the
+        # lambda function for the API handler doesn't have the
+        # resource_name appended to its complete function_name,
+        # it's just <app>-<stage>.
+        function_name = '%s-%s' % (config.app_name, config.chalice_stage)
+        lambda_function.function_name = function_name
         authorizers = []
         for auth in config.chalice_app.builtin_auth_handlers:
             auth_lambda = self._create_lambda_model(
