@@ -3,6 +3,7 @@ import pytest
 
 from chalice import __version__ as chalice_version
 from chalice.config import Config, DeployedResources
+from chalice.config import DeployedResources2
 
 
 def test_config_create_method():
@@ -477,3 +478,73 @@ class TestConfigureTags(object):
         assert c.tags == {
             'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
         }
+
+
+def test_deployed_resource_does_not_exist():
+    deployed = DeployedResources2(
+        {'resources': [{'name': 'foo'}]}
+    )
+    with pytest.raises(ValueError):
+        deployed.resource_values('bar')
+
+
+def test_deployed_resource_exists():
+    deployed = DeployedResources2(
+        {'resources': [{'name': 'foo'}]}
+    )
+    assert deployed.resource_values('foo') == {'name': 'foo'}
+    assert deployed.resource_names() == ['foo']
+
+
+class TestUpgradeNewDeployer(object):
+    def setup_method(self):
+        # This is the "old deployer" format.
+        deployed = {
+            "region": "us-west-2",
+            "api_handler_name": "app-dev",
+            "api_handler_arn": (
+                "arn:aws:lambda:us-west-2:123:function:app-dev"),
+            "rest_api_id": "txahkyspm6",
+            "lambda_functions": {
+                "app-dev-foo": {
+                    "type": "pure_lambda",
+                    "arn": (
+                        "arn:aws:lambda:us-west-2:123:function:app-dev-foo"
+                    )},
+            },
+            "chalice_version": "1.1.1",
+            "api_gateway_stage": "api",
+            "backend": "api",
+        }
+        self.old_deployed = {"dev": deployed}
+        # This is "new deployer" format.  The deployed resources
+        # are just a list of resources.
+        resources = [
+            {"role_name": "app-dev",
+             "role_arn": "arn:aws:iam::123:role/app-dev",
+             "name": "default-role",
+             "resource_type": "iam_role"},
+            {"lambda_arn": "arn:aws:lambda:us-west-2:123:function:app-dev-foo",
+             "name": "foo",
+             "resource_type": "lambda_function"},
+            {"lambda_arn": (
+                "arn:aws:lambda:us-west-2:123:function:app-dev"),
+             "name": "api_handler",
+             "resource_type": "lambda_function"},
+            {"rest_api_id": "5cofq6xbq5",
+             "name": "rest_api",
+             "resource_type": "rest_api"}
+        ]
+        self.new_deployed = {
+            'stages': {
+                'dev': {
+                    'resources': resources
+                }
+            },
+            'schema_version': '2.0',
+        }
+        self.config = FixedDataConfig(self.old_deployed)
+
+    def test_can_upgrade_rest_api(self):
+        #resources = self.config.deployed_resources('dev')
+        pass
