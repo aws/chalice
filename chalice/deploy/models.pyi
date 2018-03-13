@@ -1,12 +1,25 @@
 from typing import List, Dict, Any, TypeVar, Union, Optional
 import enum
 
+
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
 
 
 class Instruction:
     pass
+
+
+class Plan:
+    instructions = ...  # type: List[Instruction]
+    messages = ...  # type: Dict[int, str]
+
+    def __init__(self,
+                 instructions,  # type: List[Instruction]
+                 messages,      # type: Dict[int, str]
+                 ):
+        # type: (...) -> None
+        ...
 
 
 class APICall(Instruction):

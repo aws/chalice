@@ -10,6 +10,12 @@ class Instruction(object):
     pass
 
 
+@attrs
+class Plan(object):
+    instructions = attrib(default=Factory(list))
+    messages = attrib(default=Factory(dict))
+
+
 @attrs(frozen=True)
 class APICall(Instruction):
     method_name = attrib()

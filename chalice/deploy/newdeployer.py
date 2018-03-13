@@ -105,8 +105,8 @@ from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.awsclient import TypedAWSClient
 
 
-def create_default_deployer(session, config):
-    # type: (Session, Config) -> Deployer
+def create_default_deployer(session, config, ui):
+    # type: (Session, Config, UI) -> Deployer
     client = TypedAWSClient(session)
     osutils = OSUtils()
     pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
@@ -143,19 +143,19 @@ def create_default_deployer(session, config):
                 client, config.deployed_resources(config.chalice_stage)),
         ),
         sweeper=UnreferencedResourcePlanner(),
-        executor=Executor(client),
+        executor=Executor(client, ui),
     )
 
 
-def create_deletion_deployer(client):
-    # type: (TypedAWSClient) -> Deployer
+def create_deletion_deployer(client, ui):
+    # type: (TypedAWSClient, UI) -> Deployer
     return Deployer(
         application_builder=ApplicationGraphBuilder(),
         deps_builder=DependencyBuilder(),
         build_stage=BuildStage(steps=[]),
         plan_stage=NoopPlanner(),
         sweeper=UnreferencedResourcePlanner(),
-        executor=Executor(client),
+        executor=Executor(client, ui),
     )
 
 
@@ -502,9 +502,10 @@ class BuildStage(object):
 
 
 class Executor(object):
-    def __init__(self, client):
-        # type: (TypedAWSClient) -> None
+    def __init__(self, client, ui):
+        # type: (TypedAWSClient, UI) -> None
         self._client = client
+        self._ui = ui
         # A mapping of variables that's populated as API calls
         # are made.  These can be used in subsequent API calls.
         self.variables = {}  # type: Dict[str, Any]
@@ -512,10 +513,14 @@ class Executor(object):
         self._resource_value_index = {}  # type: Dict[str, Any]
         self._variable_resolver = VariableResolver()
 
-    def execute(self, api_calls):
-        # type: (List[models.Instruction]) -> None
-        for instruction in api_calls:
+    def execute(self, plan):
+        # type: (models.Plan) -> None
+        messages = plan.messages
+        for instruction in plan.instructions:
             # TODO: Don't error out on unknown instruction
+            message = messages.get(id(instruction))
+            if message is not None:
+                self._ui.write(message)
             getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
                     lambda x: None)(instruction)
 

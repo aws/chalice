@@ -84,6 +84,7 @@ class BasePlannerTests(object):
     def setup_method(self):
         self.osutils = mock.Mock(spec=OSUtils)
         self.remote_state = InMemoryRemoteState()
+        self.last_plan = None
 
     def assert_apicall_equals(self, expected, actual_api_call):
         # models.APICall has its own __eq__ method from attrs,
@@ -98,8 +99,8 @@ class BasePlannerTests(object):
 
     def determine_plan(self, resource):
         planner = PlanStage(self.remote_state, self.osutils)
-        plan = planner.execute([resource])
-        return plan
+        self.last_plan = planner.execute([resource])
+        return self.last_plan.instructions
 
 
 class TestPlanManagedRole(BasePlannerTests):
@@ -119,6 +120,9 @@ class TestPlanManagedRole(BasePlannerTests):
                     'policy': {'iam': 'policy'}},
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert list(self.last_plan.messages.values()) == [
+            'Creating IAM role: myrole\n'
+        ]
 
     def test_can_create_plan_for_filebased_role(self):
         self.remote_state.declare_no_resources_exists()
@@ -137,6 +141,9 @@ class TestPlanManagedRole(BasePlannerTests):
                     'policy': {'iam': 'policy'}},
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert list(self.last_plan.messages.values()) == [
+            'Creating IAM role: myrole\n'
+        ]
 
     def test_can_update_managed_role(self):
         role = models.ManagedIAMRole(
@@ -161,6 +168,9 @@ class TestPlanManagedRole(BasePlannerTests):
         )
         assert plan[-2].variable_name == 'myrole_role_arn'
         assert plan[-1].value == 'myrole'
+        assert list(self.last_plan.messages.values()) == [
+            'Updating policy for IAM role: myrole\n'
+        ]
 
     def test_can_update_file_based_policy(self):
         role = models.ManagedIAMRole(
@@ -210,6 +220,9 @@ class TestPlanLambdaFunction(BasePlannerTests):
             },
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert list(self.last_plan.messages.values()) == [
+            'Creating lambda function: appname-dev-function_name\n'
+        ]
 
     def test_can_update_lambda_function_code(self):
         function = create_function_resource('function_name')
@@ -234,6 +247,9 @@ class TestPlanLambdaFunction(BasePlannerTests):
             params=expected_params,
         )
         self.assert_apicall_equals(plan[0], expected)
+        assert list(self.last_plan.messages.values()) == [
+            'Updating lambda function: appname-dev-function_name\n'
+        ]
 
     def test_can_set_variables_when_needed(self):
         function = create_function_resource('function_name')
@@ -357,6 +373,9 @@ class TestPlanRestAPI(BasePlannerTests):
                     'rest_api_id': Variable('rest_api_id'),
                 }
             )
+        ]
+        assert list(self.last_plan.messages.values()) == [
+            'Creating Rest API\n'
         ]
 
     def test_can_update_rest_api(self):
@@ -534,11 +553,10 @@ class TestRemoteState(object):
 
 class TestUnreferencedResourcePlanner(object):
     def setup_method(self):
-        pass
+        self.sweeper = UnreferencedResourcePlanner()
 
-    @pytest.fixture
-    def sweeper(self):
-        return UnreferencedResourcePlanner()
+    def execute(self, plan, config):
+        self.sweeper.execute(models.Plan(plan, messages={}), config)
 
     @pytest.fixture
     def function_resource(self):
@@ -553,8 +571,7 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
 
-    def test_noop_when_all_resources_accounted_for(self, sweeper,
-                                                   function_resource):
+    def test_noop_when_all_resources_accounted_for(self, function_resource):
         plan = [
             models.RecordResource(
                 resource_type='lambda_function',
@@ -565,20 +582,20 @@ class TestUnreferencedResourcePlanner(object):
         original_plan = plan[:]
         deployed = self.one_deployed_lambda_function(name='myfunction')
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         # We shouldn't add anything to the list.
         assert plan == original_plan
 
-    def test_will_delete_unreferenced_resource(self, sweeper):
+    def test_will_delete_unreferenced_resource(self):
         plan = []
         deployed = self.one_deployed_lambda_function()
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 1
         assert plan[0].method_name == 'delete_function'
         assert plan[0].params == {'function_name': 'arn'}
 
-    def test_supports_multiple_unreferenced_and_unchanged(self, sweeper):
+    def test_supports_multiple_unreferenced_and_unchanged(self):
         first = create_function_resource('first')
         second = create_function_resource('second')
         third = create_function_resource('third')
@@ -606,12 +623,12 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 3
         assert plan[2].method_name == 'delete_function'
         assert plan[2].params == {'function_name': 'third_arn'}
 
-    def test_can_delete_iam_role(self, sweeper):
+    def test_can_delete_iam_role(self):
         plan = []
         deployed = {
             'resources': [{
@@ -622,12 +639,12 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 1
         assert plan[0].method_name == 'delete_role'
         assert plan[0].params == {'name': 'myrole'}
 
-    def test_correct_deletion_order_for_dependencies(self, sweeper):
+    def test_correct_deletion_order_for_dependencies(self):
         plan = []
         deployed = {
             # This is the order they were deployed.  While not
@@ -655,7 +672,7 @@ class TestUnreferencedResourcePlanner(object):
             ]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert len(plan) == 3
         expected_api_calls = [p.method_name for p in plan]
         assert expected_api_calls == ['delete_function',
@@ -669,7 +686,7 @@ class TestUnreferencedResourcePlanner(object):
             {'name': 'myrole'},
         ]
 
-    def test_can_delete_scheduled_event(self, sweeper):
+    def test_can_delete_scheduled_event(self):
         plan = []
         deployed = {
             'resources': [{
@@ -679,7 +696,7 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert plan == [
             models.APICall(
                 method_name='delete_rule',
@@ -687,7 +704,7 @@ class TestUnreferencedResourcePlanner(object):
             )
         ]
 
-    def test_can_delete_rest_api(self, sweeper):
+    def test_can_delete_rest_api(self):
         plan = []
         deployed = {
             'resources': [{
@@ -697,7 +714,7 @@ class TestUnreferencedResourcePlanner(object):
             }]
         }
         config = FakeConfig(deployed)
-        sweeper.execute(plan, config)
+        self.execute(plan, config)
         assert plan == [
             models.APICall(
                 method_name='delete_rest_api',

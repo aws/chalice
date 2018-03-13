@@ -8,7 +8,7 @@ import mock
 import botocore.session
 
 from chalice.awsclient import TypedAWSClient
-from chalice.utils import OSUtils
+from chalice.utils import OSUtils, UI
 from chalice.deploy import models
 from chalice.deploy import packager
 from chalice.config import Config
@@ -639,14 +639,20 @@ class TestDeploymentPackager(object):
 class TestExecutor(object):
     def setup_method(self):
         self.mock_client = mock.Mock(spec=TypedAWSClient)
-        self.executor = Executor(self.mock_client)
+        self.ui = mock.Mock(spec=UI)
+        self.executor = Executor(self.mock_client, self.ui)
+
+    def execute(self, instructions, messages=None):
+        if messages is None:
+            messages = {}
+        self.executor.execute(models.Plan(instructions, messages))
 
     def test_can_invoke_api_call_with_no_output(self):
         params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
                   'policy': {'iam': 'policy'}}
         call = APICall('create_role', params)
 
-        self.executor.execute([call])
+        self.execute([call])
 
         self.mock_client.create_role.assert_called_with(**params)
 
@@ -656,7 +662,7 @@ class TestExecutor(object):
         apicall = APICall('create_role', params, output_var='my_variable_name')
         self.mock_client.create_role.return_value = 'myrole:arn'
 
-        self.executor.execute([apicall])
+        self.execute([apicall])
 
         assert self.executor.variables['my_variable_name'] == 'myrole:arn'
 
@@ -670,7 +676,7 @@ class TestExecutor(object):
         self.mock_client.create_role.return_value = 'myrole:arn'
 
         self.executor.variables['role_name'] = 'myrole-name'
-        self.executor.execute([call])
+        self.execute([call])
 
         self.mock_client.create_role.assert_called_with(
             name='myrole-name',
@@ -689,7 +695,7 @@ class TestExecutor(object):
             name='myfunction_arn',
             variable_name='myfunction_arn',
         )
-        self.executor.execute([call, record_instruction])
+        self.execute([call, record_instruction])
         assert self.executor.resource_values == [{
             'name': 'myfunction',
             'myfunction_arn': 'function:arn',
@@ -698,7 +704,7 @@ class TestExecutor(object):
 
     def test_can_reference_varname(self):
         self.mock_client.create_function.return_value = 'function:arn'
-        self.executor.execute([
+        self.execute([
             APICall('create_function', {}, output_var='myvarname'),
             RecordResourceVariable(
                 resource_type='lambda_function',
@@ -714,7 +720,7 @@ class TestExecutor(object):
         }]
 
     def test_can_record_value_directly(self):
-        self.executor.execute([
+        self.execute([
             RecordResourceValue(
                 resource_type='lambda_function',
                 resource_name='myfunction',
@@ -729,7 +735,7 @@ class TestExecutor(object):
         }]
 
     def test_can_aggregate_multiple_resource_values(self):
-        self.executor.execute([
+        self.execute([
             RecordResourceValue(
                 resource_type='lambda_function',
                 resource_name='myfunction',
@@ -751,7 +757,7 @@ class TestExecutor(object):
         }]
 
     def test_new_keys_override_old_keys(self):
-        self.executor.execute([
+        self.execute([
             RecordResourceValue(
                 resource_type='lambda_function',
                 resource_name='myfunction',
@@ -779,17 +785,17 @@ class TestExecutor(object):
         # a models.Placeholder.BUILD_STAGE value which should have
         # been handled in an earlier stage.
         with pytest.raises(UnresolvedValueError):
-            self.executor.execute([call])
+            self.execute([call])
 
     def test_can_jp_search(self):
-        self.executor.execute([
+        self.execute([
             StoreValue(name='searchval', value={'foo': {'bar': 'baz'}}),
             JPSearch('foo.bar', input_var='searchval', output_var='result'),
         ])
         assert self.executor.variables['result'] == 'baz'
 
     def test_can_call_builtin_function(self):
-        self.executor.execute([
+        self.execute([
             StoreValue(
                 name='my_arn',
                 value='arn:aws:lambda:us-west-2:123:function:name'),
@@ -807,13 +813,22 @@ class TestExecutor(object):
 
     def test_errors_out_on_unknown_function(self):
         with pytest.raises(ValueError):
-            self.executor.execute([
+            self.execute([
                 BuiltinFunction(
                     function_name='unknown_foo',
                     args=[],
                     output_var=None,
                 )
             ])
+
+    def test_can_print_ui_messages(self):
+        params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
+                  'policy': {'iam': 'policy'}}
+        call = APICall('create_role', params)
+        messages = {id(call): 'Creating role'}
+        self.execute([call], messages)
+        self.mock_client.create_role.assert_called_with(**params)
+        self.ui.write.assert_called_with('Creating role')
 
 
 def test_build_stage():
@@ -891,13 +906,13 @@ def test_can_create_default_deployer():
     deployer = create_default_deployer(session, Config.create(
         project_dir='.',
         chalice_stage='dev',
-    ))
+    ), UI())
     assert isinstance(deployer, Deployer)
 
 
 def test_can_create_deletion_deployer():
     session = botocore.session.get_session()
-    deployer = create_deletion_deployer(TypedAWSClient(session))
+    deployer = create_deletion_deployer(TypedAWSClient(session), UI())
     assert isinstance(deployer, Deployer)
 
 
