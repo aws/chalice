@@ -129,8 +129,9 @@ class SwaggerGenerator(object):
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
-        if view.view_function.__doc__:
-            doc_lines = inspect.getdoc(view.view_function).splitlines()
+        docstring = inspect.getdoc(view.view_function)
+        if docstring:
+            doc_lines = docstring.splitlines()
             current['summary'] = doc_lines[0]
             if len(doc_lines) > 1:
                 current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
