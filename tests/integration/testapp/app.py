@@ -45,6 +45,21 @@ def supports_path_params(name):
     return {'path': name}
 
 
+@app.route('/singledoc')
+def single_doc():
+    """Single line docstring."""
+    return {'docstring': 'single'}
+
+
+@app.route('/multidoc')
+def multi_doc():
+    """Multi-line docstring.
+
+    And here is another line.
+    """
+    return {'docstring': 'multi'}
+
+
 @app.route('/post', methods=['POST'])
 def supports_only_post():
     return {'success': True}
