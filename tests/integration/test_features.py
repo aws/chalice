@@ -226,7 +226,8 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
 
 
 def test_single_doc_mapped_in_api(smoke_test_app, apig_client):
-    # We'll use the same API Gateway technique as in test_path_params_mapped_in_api()
+    # We'll use the same API Gateway technique as in
+    # test_path_params_mapped_in_api()
     rest_api_id = smoke_test_app.rest_api_id
     doc_parts = apig_client.get_documentation_parts(
         restApiId=rest_api_id,
@@ -240,7 +241,8 @@ def test_single_doc_mapped_in_api(smoke_test_app, apig_client):
 
 
 def test_multi_doc_mapped_in_api(smoke_test_app, apig_client):
-    # We'll use the same API Gateway technique as in test_path_params_mapped_in_api()
+    # We'll use the same API Gateway technique as in
+    # test_path_params_mapped_in_api()
     rest_api_id = smoke_test_app.rest_api_id
     doc_parts = apig_client.get_documentation_parts(
         restApiId=rest_api_id,
