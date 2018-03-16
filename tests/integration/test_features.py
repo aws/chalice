@@ -213,7 +213,7 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     # query the resources we've created in API gateway
     # and make sure requestParameters are present.
     rest_api_id = smoke_test_app.rest_api_id
-    resource_id = _get_resource_id(apig_client, rest_api_id)
+    resource_id = _get_resource_id(apig_client, rest_api_id, '/path/{name}')
     method_config = apig_client.get_method(
         restApiId=rest_api_id,
         resourceId=resource_id,
@@ -225,15 +225,46 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     }
 
 
+def test_single_doc_mapped_in_api(smoke_test_app, apig_client):
+    # We'll use the same API Gateway technique as in test_path_params_mapped_in_api()
+    rest_api_id = smoke_test_app.rest_api_id
+    resource_id = _get_resource_id(apig_client, rest_api_id, '/singledoc')
+    doc_parts = apig_client.get_documentation_parts(
+        restApiId=rest_api_id,
+        type='METHOD',
+        path='/singledoc'
+    )
+    doc_props = json.loads(doc_parts['items'][0]['properties'])
+    assert 'summary' in doc_props
+    assert 'description' not in doc_props
+    assert doc_props['summary'] == 'Single line docstring.'
+
+
+def test_multi_doc_mapped_in_api(smoke_test_app, apig_client):
+    # We'll use the same API Gateway technique as in test_path_params_mapped_in_api()
+    rest_api_id = smoke_test_app.rest_api_id
+    resource_id = _get_resource_id(apig_client, rest_api_id, '/multidoc')
+    doc_parts = apig_client.get_documentation_parts(
+        restApiId=rest_api_id,
+        type='METHOD',
+        path='/multidoc'
+    )
+    doc_props = json.loads(doc_parts['items'][0]['properties'])
+    assert 'summary' in doc_props
+    assert 'description' in doc_props
+    assert doc_props['summary'] == 'Multi-line docstring.'
+    assert doc_props['description'] == 'And here is another line.'
+
+
 @retry(max_attempts=18, delay=10)
-def _get_resource_id(apig_client, rest_api_id):
+def _get_resource_id(apig_client, rest_api_id, path):
     # This is the resource id for the '/path/{name}'
     # route.  As far as I know this is the best way to get
     # this id.
     matches = [
         resource for resource in
         apig_client.get_resources(restApiId=rest_api_id)['items']
-        if resource['path'] == '/path/{name}'
+        if resource['path'] == path
     ]
     if matches:
         return matches[0]['id']
