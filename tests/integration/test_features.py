@@ -208,6 +208,12 @@ def test_returns_simple_response(smoke_test_app):
     assert smoke_test_app.get_json('/') == {'hello': 'world'}
 
 
+def test_implicit_head_response(smoke_test_app):
+    app_url = smoke_test_app.url
+    response = requests.head(app_url + '/')
+    response.raise_for_status()
+
+
 def test_can_have_nested_routes(smoke_test_app):
     assert smoke_test_app.get_json('/a/b/c/d/e/f/g') == {'nested': True}
 
