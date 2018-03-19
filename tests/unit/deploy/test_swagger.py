@@ -262,7 +262,7 @@ class TestPreflightCORS(object):
         allow_methods = self.get_access_control_methods(view_config)
         # PUT should not be included in allowed methods as it was not enabled
         # for CORS.
-        assert allow_methods == "'GET,OPTIONS'"
+        assert allow_methods == "'HEAD,GET,OPTIONS'"
 
 
 def test_can_add_api_key(sample_app, swagger_gen):
