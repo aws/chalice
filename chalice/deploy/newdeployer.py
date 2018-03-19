@@ -87,7 +87,7 @@ from typing import List, Set, Dict, Any, Optional, Union, cast  # noqa
 from botocore.session import Session  # noqa
 import jmespath
 
-from chalice.utils import OSUtils, UI
+from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.deploy import models  # noqa
 from chalice.config import Config  # noqa
 from chalice import app  # noqa
@@ -144,6 +144,7 @@ def create_default_deployer(session, config, ui):
         ),
         sweeper=UnreferencedResourcePlanner(),
         executor=Executor(client, ui),
+        recorder=ResultsRecorder(osutils=osutils),
     )
 
 
@@ -156,6 +157,7 @@ def create_deletion_deployer(client, ui):
         plan_stage=NoopPlanner(),
         sweeper=UnreferencedResourcePlanner(),
         executor=Executor(client, ui),
+        recorder=ResultsRecorder(osutils=OSUtils()),
     )
 
 
@@ -185,6 +187,7 @@ class Deployer(object):
                  plan_stage,           # type: PlanStage
                  sweeper,              # type: UnreferencedResourcePlanner
                  executor,             # type: Executor
+                 recorder,             # type: ResultsRecorder
                  ):
         # type: (...) -> None
         self._application_builder = application_builder
@@ -193,6 +196,7 @@ class Deployer(object):
         self._plan_stage = plan_stage
         self._sweeper = sweeper
         self._executor = executor
+        self._recorder = recorder
 
     def deploy(self, config, chalice_stage_name):
         # type: (Config, str) -> Dict[str, Any]
@@ -203,7 +207,7 @@ class Deployer(object):
         plan = self._plan_stage.execute(resources)
         self._sweeper.execute(plan, config)
         self._executor.execute(plan)
-        return {
+        deployed_values = {
             'stages': {
                 chalice_stage_name: {
                     'resources': self._executor.resource_values,
@@ -211,6 +215,12 @@ class Deployer(object):
             },
             'schema_version': '2.0',
         }
+        self._recorder.record_results(
+            deployed_values,
+            chalice_stage_name,
+            config.project_dir,
+        )
+        return deployed_values
 
 
 class ApplicationGraphBuilder(object):
@@ -671,4 +681,25 @@ class TemplatedSwaggerGenerator(SwaggerGenerator):
             'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
             '/functions/{%s}/invocations' % varname,
             ['region_name', varname],
+        )
+
+
+class ResultsRecorder(object):
+    def __init__(self, osutils):
+        # type: (OSUtils) -> None
+        self._osutils = osutils
+
+    def record_results(self, results, chalice_stage_name, project_dir):
+        # type: (Any, str, str) -> None
+        deployed_dir = self._osutils.joinpath(
+            project_dir, '.chalice', 'deployed')
+        deployed_filename = self._osutils.joinpath(
+            deployed_dir, '%s.json' % chalice_stage_name)
+        if not self._osutils.directory_exists(deployed_dir):
+            self._osutils.makedirs(deployed_dir)
+        serialized = serialize_to_json(results)
+        self._osutils.set_file_contents(
+            filename=deployed_filename,
+            contents=serialized,
+            binary=False
         )

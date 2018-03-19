@@ -172,14 +172,7 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
     d = factory.create_new_default_deployer(session=session,
                                             config=config,
                                             ui=UI())
-    deployed_values = d.deploy(config, chalice_stage_name=stage)
-    deployed_dir = os.path.join(
-        config.project_dir, '.chalice', 'deployed')
-    if not os.path.isdir(deployed_dir):
-        os.makedirs(deployed_dir)
-    if deployed_values['stages'][stage].get('resources'):
-        record_deployed_values(deployed_values, os.path.join(
-            deployed_dir, '%s.json' % stage))
+    d.deploy(config, chalice_stage_name=stage)
 
 
 @cli.command('delete-new')
@@ -197,9 +190,7 @@ def delete_new(ctx, profile, stage):
     config = factory.create_config_obj(chalice_stage_name=stage)
     session = factory.create_botocore_session()
     d = factory.create_deletion_deployer(session=session, ui=UI())
-    deployed_values = d.deploy(config, chalice_stage_name=stage)
-    record_deployed_values(deployed_values, os.path.join(
-        config.project_dir, '.chalice', 'deployed.json'))
+    d.deploy(config, chalice_stage_name=stage)
 
 
 @cli.command('delete')

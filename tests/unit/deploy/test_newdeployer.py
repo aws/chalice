@@ -8,7 +8,7 @@ import mock
 import botocore.session
 
 from chalice.awsclient import TypedAWSClient
-from chalice.utils import OSUtils, UI
+from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.deploy import models
 from chalice.deploy import packager
 from chalice.config import Config
@@ -24,6 +24,7 @@ from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator, SwaggerBuilder
 from chalice.deploy.newdeployer import VariableResolver
 from chalice.deploy.newdeployer import TemplatedSwaggerGenerator
+from chalice.deploy.newdeployer import ResultsRecorder
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable
 from chalice.deploy.planner import UnreferencedResourcePlanner, StringFormat
@@ -860,6 +861,7 @@ class TestDeployer(unittest.TestCase):
         self.plan_stage = mock.Mock(spec=PlanStage)
         self.sweeper = mock.Mock(spec=UnreferencedResourcePlanner)
         self.executor = mock.Mock(spec=Executor)
+        self.recorder = mock.Mock(spec=ResultsRecorder)
 
     def create_deployer(self):
         return Deployer(
@@ -868,7 +870,8 @@ class TestDeployer(unittest.TestCase):
             self.build_stage,
             self.plan_stage,
             self.sweeper,
-            self.executor
+            self.executor,
+            self.recorder,
         )
 
     def test_deploy_delegates_properly(self):
@@ -882,7 +885,7 @@ class TestDeployer(unittest.TestCase):
         self.executor.resource_values = {'foo': {'name': 'bar'}}
 
         deployer = self.create_deployer()
-        config = Config.create()
+        config = Config.create(project_dir='.')
         result = deployer.deploy(config, 'dev')
 
         self.resource_builder.build.assert_called_with(config, 'dev')
@@ -892,7 +895,7 @@ class TestDeployer(unittest.TestCase):
         self.sweeper.execute.assert_called_with(api_calls, config)
         self.executor.execute.assert_called_with(api_calls)
 
-        assert result == {
+        expected_result = {
             'stages': {
                 'dev': {
                     'resources': {'foo': {'name': 'bar'}}
@@ -900,6 +903,10 @@ class TestDeployer(unittest.TestCase):
             },
             'schema_version': '2.0',
         }
+
+        self.recorder.record_results.assert_called_with(
+            expected_result, 'dev', '.')
+        assert result == expected_result
 
 
 def test_can_create_default_deployer():
@@ -1033,3 +1040,33 @@ def test_templated_swagger_with_auth_uri(rest_api_app):
         '/2015-03-31/functions/{myauth_lambda_arn}/invocations'
     )
     assert uri.variables == ['region_name', 'myauth_lambda_arn']
+
+
+class TestRecordResults(object):
+    def setup_method(self):
+        self.osutils = mock.Mock(spec=OSUtils)
+        self.recorder = ResultsRecorder(self.osutils)
+        self.deployed_values = {
+            'stages': {
+                'dev': {'resources': []},
+            },
+            'schema_version': '2.0',
+        }
+        self.osutils.joinpath = os.path.join
+        self.deployed_dir = os.path.join('.', '.chalice', 'deployed')
+
+    def test_can_record_results_initial_deploy(self):
+        expected_filename = os.path.join(self.deployed_dir, 'dev.json')
+        self.osutils.file_exists.return_value = False
+        self.osutils.directory_exists.return_value = False
+        self.recorder.record_results(
+            self.deployed_values, 'dev', '.',
+        )
+        expected_contents = serialize_to_json(self.deployed_values)
+        # Verify we created the deployed dir on an initial deploy.
+        self.osutils.makedirs.assert_called_with(self.deployed_dir)
+        self.osutils.set_file_contents.assert_called_with(
+            filename=expected_filename,
+            contents=expected_contents,
+            binary=False
+        )
