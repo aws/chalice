@@ -522,4 +522,3 @@ class StringFormat(object):
             self.template == other.template and
             self.variables == other.variables
         )
-

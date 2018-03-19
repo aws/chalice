@@ -103,6 +103,10 @@ class CLIFactory(object):
         return newdeployer.create_deletion_deployer(
             TypedAWSClient(session), ui)
 
+    def create_deployment_reporter(self, ui):
+        # type: (UI) -> newdeployer.DeploymentReporter
+        return newdeployer.DeploymentReporter(ui=ui)
+
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
                           api_gateway_stage=None):

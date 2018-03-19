@@ -25,6 +25,7 @@ from chalice.deploy.newdeployer import PolicyGenerator, SwaggerBuilder
 from chalice.deploy.newdeployer import VariableResolver
 from chalice.deploy.newdeployer import TemplatedSwaggerGenerator
 from chalice.deploy.newdeployer import ResultsRecorder
+from chalice.deploy.newdeployer import DeploymentReporter
 from chalice.deploy.swagger import SwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable
 from chalice.deploy.planner import UnreferencedResourcePlanner, StringFormat
@@ -1085,3 +1086,43 @@ class TestRecordResults(object):
             contents=expected_contents,
             binary=False
         )
+
+
+class TestDeploymentReporter(object):
+    def setup_method(self):
+        self.ui = mock.Mock(spec=UI)
+        self.reporter = DeploymentReporter(ui=self.ui)
+
+    def test_can_generate_report(self):
+        deployed_values = {
+            "resources": [
+                {"role_name": "james2-dev",
+                 "role_arn": "my-role-arn",
+                 "name": "default-role",
+                 "resource_type": "iam_role"},
+                {"lambda_arn": "lambda-arn-foo",
+                 "name": "foo",
+                 "resource_type": "lambda_function"},
+                {"lambda_arn": "lambda-arn-dev",
+                 "name": "api_handler",
+                 "resource_type": "lambda_function"},
+                {"name": "rest_api",
+                 "rest_api_id": "rest_api_id",
+                 "rest_api_url": "https://host/api",
+                 "resource_type": "rest_api"},
+            ],
+        }
+        report = self.reporter.generate_report(deployed_values)
+        assert report == (
+            "Resources deployed:\n"
+            "  - Lambda ARN: lambda-arn-foo\n"
+            "  - Lambda ARN: lambda-arn-dev\n"
+            "  - Rest API URL: https://host/api\n"
+        )
+
+    def test_can_display_report(self):
+        deployed_values = {
+            'resources': []
+        }
+        self.reporter.display_report(deployed_values)
+        self.ui.write.assert_called_with('Resources deployed:\n')

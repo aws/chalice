@@ -708,3 +708,54 @@ class ResultsRecorder(object):
             contents=serialized,
             binary=False
         )
+
+
+class DeploymentReporter(object):
+    # We want the Rest API to be displayed last.
+    _SORT_ORDER = {
+        'rest_api': 100,
+    }
+    # The default is chosen to sort before the rest_api
+    _DEFAULT_ORDERING = 50
+
+    def __init__(self, ui):
+        # type: (UI) -> None
+        self._ui = ui
+
+    def generate_report(self, deployed_values):
+        # type: (Dict[str, Any]) -> str
+        report = [
+            'Resources deployed:',
+        ]
+        ordered = sorted(
+            deployed_values['resources'],
+            key=lambda x: self._SORT_ORDER.get(x['resource_type'],
+                                               self._DEFAULT_ORDERING))
+        for resource in ordered:
+            getattr(self, '_report_%s' % resource['resource_type'],
+                    self._default_report)(resource, report)
+        report.append('')
+        return '\n'.join(report)
+
+    def _report_rest_api(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append(
+            '  - Rest API URL: %s' % resource['rest_api_url']
+        )
+
+    def _report_lambda_function(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append(
+            '  - Lambda ARN: %s' % resource['lambda_arn']
+        )
+
+    def _default_report(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        # The default behavior is to not report a resource.  This
+        # cuts down on the output verbosity.
+        pass
+
+    def display_report(self, deployed_values):
+        # type: (Dict[str, Any]) -> None
+        report = self.generate_report(deployed_values)
+        self._ui.write(report)

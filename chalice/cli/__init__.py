@@ -169,10 +169,13 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
         api_gateway_stage=api_gateway_stage,
     )
     session = factory.create_botocore_session()
+    ui = UI()
     d = factory.create_new_default_deployer(session=session,
                                             config=config,
-                                            ui=UI())
-    d.deploy(config, chalice_stage_name=stage)
+                                            ui=ui)
+    deployed_values = d.deploy(config, chalice_stage_name=stage)
+    reporter = factory.create_deployment_reporter(ui=ui)
+    reporter.display_report(deployed_values)
 
 
 @cli.command('delete-new')
