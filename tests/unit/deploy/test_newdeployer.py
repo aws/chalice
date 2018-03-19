@@ -896,11 +896,7 @@ class TestDeployer(unittest.TestCase):
         self.executor.execute.assert_called_with(api_calls)
 
         expected_result = {
-            'stages': {
-                'dev': {
-                    'resources': {'foo': {'name': 'bar'}}
-                }
-            },
+            'resources': {'foo': {'name': 'bar'}},
             'schema_version': '2.0',
         }
 

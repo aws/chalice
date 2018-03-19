@@ -208,11 +208,7 @@ class Deployer(object):
         self._sweeper.execute(plan, config)
         self._executor.execute(plan)
         deployed_values = {
-            'stages': {
-                chalice_stage_name: {
-                    'resources': self._executor.resource_values,
-                },
-            },
+            'resources': self._executor.resource_values,
             'schema_version': '2.0',
         }
         self._recorder.record_results(
