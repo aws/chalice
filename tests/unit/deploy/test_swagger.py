@@ -260,9 +260,18 @@ class TestPreflightCORS(object):
         assert 'options' in view_config, (
             'Preflight OPTIONS method not added to CORS view')
         allow_methods = self.get_access_control_methods(view_config)
+        # Typically the header will follow the form of:
+        # "METHOD,METHOD,...OPTIONS"
+        # The individual assertions is needed because there is no guarantee
+        # on the order of these methods in the string because the order is
+        # derived from iterating through a dictionary, which is not ordered
+        # in python 2.7. So instead assert the correct methods are present in
+        # the string.
         # PUT should not be included in allowed methods as it was not enabled
         # for CORS.
-        assert allow_methods == "'GET,HEAD,OPTIONS'"
+        assert 'GET' in allow_methods
+        assert 'HEAD' in allow_methods
+        assert 'OPTIONS' in allow_methods
 
 
 def test_can_add_api_key(sample_app, swagger_gen):
