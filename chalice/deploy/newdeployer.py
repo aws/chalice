@@ -180,6 +180,9 @@ class UnresolvedValueError(Exception):
 
 
 class Deployer(object):
+
+    BACKEND_NAME = 'api'
+
     def __init__(self,
                  application_builder,  # type: ApplicationGraphBuilder
                  deps_builder,         # type: DependencyBuilder
@@ -210,6 +213,7 @@ class Deployer(object):
         deployed_values = {
             'resources': self._executor.resource_values,
             'schema_version': '2.0',
+            'backend': self.BACKEND_NAME,
         }
         self._recorder.record_results(
             deployed_values,

@@ -898,6 +898,7 @@ class TestDeployer(unittest.TestCase):
         expected_result = {
             'resources': {'foo': {'name': 'bar'}},
             'schema_version': '2.0',
+            'backend': 'api',
         }
 
         self.recorder.record_results.assert_called_with(

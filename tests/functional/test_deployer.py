@@ -286,6 +286,7 @@ def test_can_delete_app(tmpdir):
     )
     deployed_json = {
         'schema_version': '2.0',
+        'backend': 'api',
         'resources': [
             {'name': 'role-index',
                 'resource_type': 'iam_role',
@@ -320,6 +321,7 @@ def test_can_delete_app(tmpdir):
     returned_values = d.deploy(config, 'dev')
     assert returned_values == {
         'schema_version': '2.0',
+        'backend': 'api',
         'resources': [],
     }
     call = mock.call
