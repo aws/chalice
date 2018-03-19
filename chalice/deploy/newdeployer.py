@@ -597,7 +597,7 @@ class Executor(object):
 
     def _do_builtinfunction(self, instruction):
         # type: (models.BuiltinFunction) -> None
-        # Split this out to a separate class of built in functions
+        # TODO: Split this out to a separate class of built in functions
         # once we add more functions.
         if instruction.function_name == 'parse_arn':
             arg = instruction.args[0]
@@ -609,6 +609,11 @@ class Executor(object):
                 'account_id': parts[4],
             }
             self.variables[instruction.output_var] = result
+        elif instruction.function_name == 'string_format':
+            arg = {'arg': instruction.args[0]}
+            value = self._variable_resolver.resolve_variables(
+                arg, self.variables)['arg']
+            self.variables[instruction.output_var] = value
         else:
             raise ValueError("Unknown builtin function: %s"
                              % instruction.function_name)

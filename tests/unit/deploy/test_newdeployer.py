@@ -813,6 +813,24 @@ class TestExecutor(object):
             'service': 'lambda'
         }
 
+    def test_can_call_string_format(self):
+        self.execute([
+            StoreValue(
+                name='foo',
+                value='foo-value'),
+            StoreValue(
+                name='bar',
+                value='bar-value'),
+            BuiltinFunction(
+                function_name='string_format',
+                args=[StringFormat('foo: {foo}, bar: {bar}',
+                                   ['foo', 'bar'])],
+                output_var='result',
+            )
+        ])
+        assert self.executor.variables['result'] == (
+            'foo: foo-value, bar: bar-value')
+
     def test_errors_out_on_unknown_function(self):
         with pytest.raises(ValueError):
             self.execute([

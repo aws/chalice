@@ -378,7 +378,22 @@ class PlanStage(object):
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
-            )
+            ),
+            models.BuiltinFunction(
+                'string_format',
+                [StringFormat(
+                    'https://{rest_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/%s/' % resource.api_gateway_stage,
+                    ['rest_api_id', 'region_name'],
+                )],
+                output_var='rest_api_url',
+            ),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name=resource.resource_name,
+                name='rest_api_url',
+                variable_name='rest_api_url',
+            ),
         ]  # type: List[_INSTRUCTION_MSG]
         for auth in resource.authorizers:
             shared_plan_epilogue.append(
@@ -495,3 +510,16 @@ class StringFormat(object):
         # type: (str, List[str]) -> None
         self.template = template
         self.variables = variables
+
+    def __repr__(self):
+        # type: () -> str
+        return 'StringFormat("%s")' % self.template
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return (
+            isinstance(other, self.__class__) and
+            self.template == other.template and
+            self.variables == other.variables
+        )
+
