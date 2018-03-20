@@ -475,8 +475,12 @@ class PlanStage(object):
             # Placholder[T] to T.
             document = cast(Dict[str, Any], resource.document)
         elif isinstance(resource, models.FileBasedIAMPolicy):
-            document = json.loads(
-                self._osutils.get_file_contents(resource.filename))
+            try:
+                document = json.loads(
+                    self._osutils.get_file_contents(resource.filename))
+            except IOError as e:
+                raise RuntimeError("Unable to load IAM policy file %s: %s"
+                                   % (resource.filename, e))
         return document
 
 

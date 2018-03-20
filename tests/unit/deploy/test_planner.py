@@ -146,6 +146,19 @@ class TestPlanManagedRole(BasePlannerTests):
             'Creating IAM role: myrole\n'
         ]
 
+    def test_error_raised_when_filebased_policy_not_exist(self):
+        self.remote_state.declare_no_resources_exists()
+        resource = models.ManagedIAMRole(
+            resource_name='default-role',
+            role_name='myrole',
+            trust_policy={'trust': 'policy'},
+            policy=models.FileBasedIAMPolicy(filename='foo.json'),
+        )
+        self.osutils.get_file_contents.side_effect = IOError(
+            "File does not exist")
+        with pytest.raises(RuntimeError):
+            self.determine_plan(resource)
+
     def test_can_update_managed_role(self):
         role = models.ManagedIAMRole(
             resource_name='resource_name',
