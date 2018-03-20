@@ -540,3 +540,7 @@ class TestUpgradeNewDeployer(object):
             'name': 'rest_api',
             'resource_type': 'rest_api',
         }
+
+    def test_upgrade_for_new_stage_gives_empty_values(self):
+        resources = self.config.deployed_resources('prod')
+        assert resources.resource_names() == []

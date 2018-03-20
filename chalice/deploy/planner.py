@@ -14,7 +14,7 @@ _INSTRUCTION_MSG = Union[models.Instruction, Tuple[models.Instruction, str]]
 
 class RemoteState(object):
     def __init__(self, client, deployed_resources):
-        # type: (TypedAWSClient, Optional[DeployedResources]) -> None
+        # type: (TypedAWSClient, DeployedResources) -> None
         self._client = client
         self._cache = {}  # type: Dict[Tuple[str, str], bool]
         self._deployed_resources = deployed_resources
@@ -25,8 +25,6 @@ class RemoteState(object):
 
     def resource_deployed_values(self, resource):
         # type: (models.ManagedModel) -> Dict[str, str]
-        if self._deployed_resources is None:
-            raise ValueError("Resource is not deployed: %s" % resource)
         try:
             return self._deployed_resources.resource_values(
                 resource.resource_name)
@@ -75,10 +73,11 @@ class RemoteState(object):
 
     def _resource_exists_restapi(self, resource):
         # type: (models.RestAPI) -> bool
-        if self._deployed_resources is None:
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
             return False
-        deployed_values = self._deployed_resources.resource_values(
-            resource.resource_name)
         rest_api_id = deployed_values['rest_api_id']
         return self._client.rest_api_exists(rest_api_id)
 
