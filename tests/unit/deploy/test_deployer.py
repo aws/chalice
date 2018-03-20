@@ -19,11 +19,9 @@ from chalice.config import Config
 from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.deploy.newdeployer import ApplicationPolicyHandler
-from chalice.deploy.deployer import validate_configuration
-from chalice.deploy.deployer import validate_routes
-from chalice.deploy.deployer import validate_route_content_types
-from chalice.deploy.deployer import validate_python_version
-from chalice.deploy.deployer import validate_unique_function_names
+from chalice.deploy.validate import validate_configuration, validate_routes, \
+    validate_python_version, validate_route_content_types, \
+    validate_unique_function_names
 from chalice.utils import UI
 
 

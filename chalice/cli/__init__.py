@@ -21,8 +21,7 @@ from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
-from chalice.deploy.deployer import validate_python_version
-from chalice.deploy.deployer import validate_routes
+from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
