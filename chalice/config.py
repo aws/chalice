@@ -336,25 +336,6 @@ class Config(object):
         ])
         return DeployedResources2({'resources': resources})
 
-    def old_deployed_resources(self, chalice_stage_name):
-        # type: (str) -> Optional[DeployedResources]
-        """Return resources associated with a given stage.
-
-        If a deployment to a given stage has never happened,
-        this method will return a value of None.
-
-        """
-        # This is arguably the wrong level of abstraction.
-        # We might be able to move this elsewhere.
-        deployed_file = os.path.join(self.project_dir, '.chalice',
-                                     'deployed.json')
-        data = self._load_json_file(deployed_file)
-        if data is None:
-            return None
-        if chalice_stage_name not in data:
-            return None
-        return DeployedResources.from_dict(data[chalice_stage_name])
-
 
 class DeployedResources2(object):
     def __init__(self, deployed_values):
@@ -375,54 +356,3 @@ class DeployedResources2(object):
     def resource_names(self):
         # type: () -> List[str]
         return [r['name'] for r in self._deployed_values]
-
-
-class DeployedResources(object):
-    def __init__(self, backend, api_handler_arn,
-                 api_handler_name, rest_api_id, api_gateway_stage,
-                 region, chalice_version, lambda_functions):
-        # type: (str, str, str, str, str, str, str, StrMap) -> None
-        self.backend = backend
-        self.api_handler_arn = api_handler_arn
-        self.api_handler_name = api_handler_name
-        self.rest_api_id = rest_api_id
-        self.api_gateway_stage = api_gateway_stage
-        self.region = region
-        self.chalice_version = chalice_version
-        self.lambda_functions = lambda_functions
-        self._fixup_lambda_functions_if_needed()
-
-    def _fixup_lambda_functions_if_needed(self):
-        # type: () -> None
-        # In version 0.10.0 of chalice, 'lambda_functions'
-        # was introduced where the value was just the string ARN.
-        # With the introduction of scheduled events, we need to
-        # be able to distinguish the purpose of the lambda function.
-        # To smooth this over, we'll convert the old format to the
-        # new one.  The deployer.py module will take care of writing out
-        # a new deployed.json in the correct format.
-        if all(isinstance(v, dict) for v in self.lambda_functions.values()):
-            return
-        for k, v in self.lambda_functions.items():
-            # In 0.10.0 the only type of lambda function we supported
-            # was custom authorizers so we can safely assume the type
-            # was authorizer.
-            self.lambda_functions[k] = {'type': 'authorizer',
-                                        'arn': v}
-
-    @classmethod
-    def from_dict(cls, data):
-        # type: (Dict[str, Any]) -> DeployedResources
-        return cls(
-            data['backend'],
-            data['api_handler_arn'],
-            data['api_handler_name'],
-            data['rest_api_id'],
-            data['api_gateway_stage'],
-            data['region'],
-            data['chalice_version'],
-            # Versions prior to 0.10.0 did not have
-            # the 'lambda_functions' key, so we have
-            # to default this if it's missing.
-            data.get('lambda_functions', {}),
-        )

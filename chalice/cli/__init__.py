@@ -173,11 +173,12 @@ def logs(ctx, num_entries, include_lambda_messages, stage, profile):
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
-    deployed = config.old_deployed_resources(stage)
-    if deployed is not None:
+    deployed = config.deployed_resources(stage)
+    if deployed is not None and 'api_handler' in deployed.resource_names():
+        lambda_arn = deployed.resource_values('api_handler')['lambda_arn']
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
-            session, deployed.api_handler_arn)
+            session, lambda_arn)
         display_logs(retriever, num_entries, include_lambda_messages,
                      sys.stdout)
 
@@ -221,17 +222,12 @@ def url(ctx, stage):
     # type: (click.Context, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
-    deployed = config.old_deployed_resources(stage)
-    if deployed is not None:
-        click.echo(
-            "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
-            .format(api_id=deployed.rest_api_id,
-                    region=deployed.region,
-                    stage=deployed.api_gateway_stage)
-        )
+    deployed = config.deployed_resources(stage)
+    if deployed is not None and 'rest_api' in deployed.resource_names():
+        click.echo(deployed.resource_values('rest_api')['rest_api_url'])
     else:
         e = click.ClickException(
-            "Could not find a record of deployed values to chalice stage: '%s'"
+            "Could not find a record of a Rest API in chalice stage: '%s'"
             % stage)
         e.exit_code = 2
         raise e
@@ -249,17 +245,17 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
     config = factory.create_config_obj(stage)
     session = factory.create_botocore_session()
     client = TypedAWSClient(session)
-    deployed = config.old_deployed_resources(stage)
-    if deployed is None:
-        click.echo("Could not find API ID, has this application "
-                   "been deployed?", err=True)
-        raise click.Abort()
-    else:
-        rest_api_id = deployed.rest_api_id
-        api_gateway_stage = deployed.api_gateway_stage
+    deployed = config.deployed_resources(stage)
+    if deployed is not None and 'rest_api' in deployed.resource_names():
+        rest_api_id = deployed.resource_values('rest_api')['rest_api_id']
+        api_gateway_stage = config.api_gateway_stage
         client.download_sdk(rest_api_id, outdir,
                             api_gateway_stage=api_gateway_stage,
                             sdk_type=sdk_type)
+    else:
+        click.echo("Could not find API ID, has this application "
+                   "been deployed?", err=True)
+        raise click.Abort()
 
 
 @cli.command('package')
