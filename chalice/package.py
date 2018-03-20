@@ -7,7 +7,7 @@ from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import DependencyBuilder
-from chalice.deploy.newdeployer import ApplicationPolicyHandler
+from chalice.deploy.deployer import ApplicationPolicyHandler
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name

@@ -6,12 +6,12 @@ import mock
 from pytest import fixture
 import pytest
 
+import chalice.deploy.deployer
 import chalice.deploy.packager
 from chalice.awsclient import TypedAWSClient
 import chalice.utils
 from chalice.config import Config
 from chalice import Chalice
-from chalice.deploy import newdeployer
 from chalice.deploy.packager import MissingDependencyError
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import DependencyBuilder
@@ -299,7 +299,7 @@ def test_can_delete_app(tmpdir):
         json.dumps(deployed_json))
     mock_client = mock.Mock(spec=TypedAWSClient)
     ui = mock.Mock(spec=chalice.utils.UI)
-    d = newdeployer.create_deletion_deployer(mock_client, ui)
+    d = chalice.deploy.deployer.create_deletion_deployer(mock_client, ui)
 
     config = Config(
         chalice_stage='dev',

@@ -19,7 +19,7 @@ from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.logs import LogRetriever
 from chalice import local
 from chalice.utils import UI  # noqa
-from chalice.deploy import newdeployer
+from chalice.deploy import deployer  # noqa
 
 
 def create_botocore_session(profile=None, debug=False,
@@ -89,17 +89,17 @@ class CLIFactory(object):
                                        connection_timeout=connection_timeout)
 
     def create_new_default_deployer(self, session, config, ui):
-        # type: (Session, Config, UI) -> newdeployer.Deployer
-        return newdeployer.create_default_deployer(session, config, ui)
+        # type: (Session, Config, UI) -> deployer.Deployer
+        return deployer.create_default_deployer(session, config, ui)
 
     def create_deletion_deployer(self, session, ui):
-        # type: (Session, UI) -> newdeployer.Deployer
-        return newdeployer.create_deletion_deployer(
+        # type: (Session, UI) -> deployer.Deployer
+        return deployer.create_deletion_deployer(
             TypedAWSClient(session), ui)
 
     def create_deployment_reporter(self, ui):
-        # type: (UI) -> newdeployer.DeploymentReporter
-        return newdeployer.DeploymentReporter(ui=ui)
+        # type: (UI) -> deployer.DeploymentReporter
+        return deployer.DeploymentReporter(ui=ui)
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
