@@ -4,7 +4,7 @@ import pytest
 from chalice.config import Config
 from chalice import package
 from chalice import __version__ as chalice_version
-from chalice.deploy.deployer import ApplicationPolicyHandler
+from chalice.deploy.newdeployer import ApplicationPolicyHandler
 from chalice.deploy.swagger import SwaggerGenerator
 
 

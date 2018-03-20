@@ -25,7 +25,7 @@ from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice import constants
 from chalice.deploy.deployer import APIGatewayDeployer
-from chalice.deploy.deployer import ApplicationPolicyHandler
+from chalice.deploy.newdeployer import ApplicationPolicyHandler
 from chalice.deploy.deployer import Deployer
 from chalice.deploy.deployer import LambdaDeployer
 from chalice.deploy.deployer import validate_configuration
