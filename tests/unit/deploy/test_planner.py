@@ -374,14 +374,14 @@ class TestPlanRestAPI(BasePlannerTests):
                     'rest_api_id': Variable('rest_api_id'),
                 }
             ),
-            models.BuiltinFunction(
-                function_name='string_format',
-                args=[StringFormat(
+            models.StoreValue(
+                name='rest_api_url',
+                value=StringFormat(
                     'https://{rest_api_id}.execute-api.{region_name}'
                     '.amazonaws.com/api/',
                     ['rest_api_id', 'region_name'],
-                )],
-                output_var='rest_api_url'),
+                ),
+            ),
             models.RecordResourceVariable(
                 resource_type='rest_api',
                 resource_name='rest_api',
@@ -441,14 +441,14 @@ class TestPlanRestAPI(BasePlannerTests):
                         'account_id': Variable("account_id"),
                         'function_name': 'appname-dev-function_name'},
                 output_var=None),
-            models.BuiltinFunction(
-                function_name='string_format',
-                args=[StringFormat(
+            models.StoreValue(
+                name='rest_api_url',
+                value=StringFormat(
                     'https://{rest_api_id}.execute-api.{region_name}'
                     '.amazonaws.com/api/',
                     ['rest_api_id', 'region_name'],
-                )],
-                output_var='rest_api_url'),
+                ),
+            ),
             models.RecordResourceVariable(
                 resource_type='rest_api',
                 resource_name='rest_api',

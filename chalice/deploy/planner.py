@@ -379,14 +379,13 @@ class PlanStage(object):
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
             ),
-            models.BuiltinFunction(
-                'string_format',
-                [StringFormat(
+            models.StoreValue(
+                name='rest_api_url',
+                value=StringFormat(
                     'https://{rest_api_id}.execute-api.{region_name}'
                     '.amazonaws.com/%s/' % resource.api_gateway_stage,
                     ['rest_api_id', 'region_name'],
-                )],
-                output_var='rest_api_url',
+                ),
             ),
             models.RecordResourceVariable(
                 resource_type='rest_api',

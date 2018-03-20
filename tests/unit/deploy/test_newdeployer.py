@@ -813,24 +813,6 @@ class TestExecutor(object):
             'service': 'lambda'
         }
 
-    def test_can_call_string_format(self):
-        self.execute([
-            StoreValue(
-                name='foo',
-                value='foo-value'),
-            StoreValue(
-                name='bar',
-                value='bar-value'),
-            BuiltinFunction(
-                function_name='string_format',
-                args=[StringFormat('foo: {foo}, bar: {bar}',
-                                   ['foo', 'bar'])],
-                output_var='result',
-            )
-        ])
-        assert self.executor.variables['result'] == (
-            'foo: foo-value, bar: bar-value')
-
     def test_errors_out_on_unknown_function(self):
         with pytest.raises(ValueError):
             self.execute([
@@ -968,8 +950,11 @@ class TestResolveVariables(object):
         ) == {'foo': 'value', 'bar': 'value'}
 
     def test_unsolved_error_raises_error(self):
-        with pytest.raises(UnresolvedValueError):
+        with pytest.raises(UnresolvedValueError) as excinfo:
             self.resolve_vars({'foo': models.Placeholder.BUILD_STAGE}, {})
+        raised_exception = excinfo.value
+        assert raised_exception.key == 'foo'
+        assert raised_exception.value == models.Placeholder.BUILD_STAGE
 
     def test_can_resolve_nested_variable_refs(self):
         assert self.resolve_vars(

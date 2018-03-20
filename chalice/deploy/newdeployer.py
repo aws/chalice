@@ -563,7 +563,9 @@ class Executor(object):
 
     def _do_storevalue(self, instruction):
         # type: (models.StoreValue) -> None
-        self.variables[instruction.name] = instruction.value
+        result = self._variable_resolver.resolve_variables(
+            instruction.value, self.variables)
+        self.variables[instruction.name] = result
 
     def _do_recordresourcevariable(self, instruction):
         # type: (models.RecordResourceVariable) -> None
@@ -602,11 +604,12 @@ class Executor(object):
 
     def _do_builtinfunction(self, instruction):
         # type: (models.BuiltinFunction) -> None
-        # TODO: Split this out to a separate class of built in functions
+        # Split this out to a separate class of built in functions
         # once we add more functions.
         if instruction.function_name == 'parse_arn':
-            arg = instruction.args[0]
-            value = self.variables[arg.name]
+            resolved_args = self._variable_resolver.resolve_variables(
+                instruction.args, self.variables)
+            value = resolved_args[0]
             parts = value.split(':')
             result = {
                 'service': parts[2],
@@ -614,11 +617,6 @@ class Executor(object):
                 'account_id': parts[4],
             }
             self.variables[instruction.output_var] = result
-        elif instruction.function_name == 'string_format':
-            arg = {'arg': instruction.args[0]}
-            value = self._variable_resolver.resolve_variables(
-                arg, self.variables)['arg']
-            self.variables[instruction.output_var] = value
         else:
             raise ValueError("Unknown builtin function: %s"
                              % instruction.function_name)
@@ -634,18 +632,7 @@ class Executor(object):
 
 
 class VariableResolver(object):
-    def resolve_variables(self, params, variables):
-        # type: (Dict[str, Any], Dict[str, str]) -> Dict[str, Any]
-        final = {}
-        for key, value in params.items():
-            try:
-                final[key] = self._resolve_variables(value, variables)
-            except UnresolvedValueError as e:
-                e.key = key
-                raise
-        return final
-
-    def _resolve_variables(self, value, variables):
+    def resolve_variables(self, value, variables):
         # type: (Any, Dict[str, str]) -> Any
         if isinstance(value, Variable):
             return variables[value.name]
@@ -659,12 +646,16 @@ class VariableResolver(object):
         elif isinstance(value, dict):
             final = {}
             for k, v in value.items():
-                final[k] = self._resolve_variables(v, variables)
+                try:
+                    final[k] = self.resolve_variables(v, variables)
+                except UnresolvedValueError as e:
+                    e.key = k
+                    raise
             return final
         elif isinstance(value, list):
             final_list = []
             for v in value:
-                final_list.append(self._resolve_variables(v, variables))
+                final_list.append(self.resolve_variables(v, variables))
             return final_list
         else:
             return value
