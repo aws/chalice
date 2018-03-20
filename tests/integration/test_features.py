@@ -148,8 +148,7 @@ def _deploy_app(temp_dirname):
     session = factory.create_botocore_session()
     d = factory.create_new_default_deployer(session, config, UI())
     region = session.get_config_variable('region')
-    deployed_stages = _deploy_with_retries(d, config)
-    deployed = deployed_stages['stages']['dev']
+    deployed = _deploy_with_retries(d, config)
     application = SmokeTestApplication(
         region=region,
         deployed_values=deployed,
