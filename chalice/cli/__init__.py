@@ -21,8 +21,6 @@ from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
-from chalice.utils import record_deployed_values
-from chalice.utils import remove_stage_from_deployed_values
 from chalice.deploy.deployer import validate_python_version
 from chalice.deploy.deployer import validate_routes
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
@@ -138,37 +136,6 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     )
     session = factory.create_botocore_session(
         connection_timeout=connection_timeout)
-    d = factory.create_default_deployer(session=session,
-                                        ui=UI())
-    deployed_values = d.deploy(config, chalice_stage_name=stage)
-    record_deployed_values(deployed_values, os.path.join(
-        config.project_dir, '.chalice', 'deployed.json'))
-
-
-@cli.command('deploy-new')
-@click.option('--autogen-policy/--no-autogen-policy',
-              default=None,
-              help='Automatically generate IAM policy for app code.')
-@click.option('--profile', help='Override profile at deploy time.')
-@click.option('--api-gateway-stage',
-              help='Name of the API gateway stage to deploy to.')
-@click.option('--stage', default=DEFAULT_STAGE_NAME,
-              help=('Name of the Chalice stage to deploy to. '
-                    'Specifying a new chalice stage will create '
-                    'an entirely new set of AWS resources.'))
-@click.pass_context
-def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
-    # type: (click.Context, Optional[bool], str, str, str) -> None
-    # This is just a temporary command so that both deployers
-    # can be used simultaneously.  This will eventually just
-    # become the 'deploy' command and the old one will be removed.
-    factory = ctx.obj['factory']  # type: CLIFactory
-    factory.profile = profile
-    config = factory.create_config_obj(
-        chalice_stage_name=stage, autogen_policy=autogen_policy,
-        api_gateway_stage=api_gateway_stage,
-    )
-    session = factory.create_botocore_session()
     ui = UI()
     d = factory.create_new_default_deployer(session=session,
                                             config=config,
@@ -176,24 +143,6 @@ def deploy_new(ctx, autogen_policy, profile, api_gateway_stage, stage):
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     reporter = factory.create_deployment_reporter(ui=ui)
     reporter.display_report(deployed_values)
-
-
-@cli.command('delete-new')
-@click.option('--profile', help='Override profile at deploy time.')
-@click.option('--stage', default=DEFAULT_STAGE_NAME,
-              help='Name of the Chalice stage to delete.')
-@click.pass_context
-def delete_new(ctx, profile, stage):
-    # type: (click.Context, str, str) -> None
-    # TODO: We should consolidate the logic here with
-    # deploy_new, there's similar logic in both functions
-    # that can be shared.
-    factory = ctx.obj['factory']  # type: CLIFactory
-    factory.profile = profile
-    config = factory.create_config_obj(chalice_stage_name=stage)
-    session = factory.create_botocore_session()
-    d = factory.create_deletion_deployer(session=session, ui=UI())
-    d.deploy(config, chalice_stage_name=stage)
 
 
 @cli.command('delete')
@@ -207,10 +156,8 @@ def delete(ctx, profile, stage):
     factory.profile = profile
     config = factory.create_config_obj(chalice_stage_name=stage)
     session = factory.create_botocore_session()
-    d = factory.create_default_deployer(session=session, ui=UI())
-    d.delete(config, chalice_stage_name=stage)
-    remove_stage_from_deployed_values(stage, os.path.join(
-        config.project_dir, '.chalice', 'deployed.json'))
+    d = factory.create_deletion_deployer(session=session, ui=UI())
+    d.deploy(config, chalice_stage_name=stage)
 
 
 @cli.command()

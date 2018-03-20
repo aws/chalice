@@ -146,29 +146,6 @@ def test_can_package_with_single_file(runner):
             assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
 
 
-def test_can_deploy(runner, mock_cli_factory, mock_deployer):
-    deployed_values = {
-        'dev': {
-            # We don't need to fill in everything here.
-            'api_handler_arn': 'foo',
-            'rest_api_id': 'bar',
-        }
-    }
-    mock_deployer.deploy.return_value = deployed_values
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        result = _run_cli_command(runner, cli.deploy, [],
-                                  cli_factory=mock_cli_factory)
-        assert result.exit_code == 0
-        # We should have also created the deployed JSON file.
-        deployed_file = os.path.join('.chalice', 'deployed.json')
-        assert os.path.isfile(deployed_file)
-        with open(deployed_file) as f:
-            data = json.load(f)
-            assert data == deployed_values
-
-
 def test_does_deploy_with_default_api_gateway_stage_name(
         runner, mock_cli_factory, mock_deployer):
     with runner.isolated_filesystem():
@@ -185,42 +162,6 @@ def test_does_deploy_with_default_api_gateway_stage_name(
             api_gateway_stage=None
         )
         assert config.api_gateway_stage == DEFAULT_APIGATEWAY_STAGE_NAME
-
-
-def test_can_delete(runner, mock_cli_factory, mock_deployer):
-    deployed_values = {
-        'dev': {
-            'api_handler_arn': 'foo',
-            'rest_api_id': 'bar',
-        }
-    }
-    mock_deployer.delete.return_value = None
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        deployed_file = os.path.join('.chalice', 'deployed.json')
-        with open(deployed_file, 'wb') as f:
-            f.write(json.dumps(deployed_values).encode('utf-8'))
-        result = _run_cli_command(runner, cli.delete, [],
-                                  cli_factory=mock_cli_factory)
-
-        assert result.exit_code == 0
-        with open(deployed_file) as f:
-            data = json.load(f)
-            assert data == {}
-
-
-def test_can_specify_chalice_stage_arg(runner, mock_cli_factory,
-                                       mock_deployer):
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        result = _run_cli_command(runner, cli.deploy, ['--stage', 'prod'],
-                                  cli_factory=mock_cli_factory)
-        assert result.exit_code == 0
-
-    config = mock_cli_factory.create_config_obj.return_value
-    mock_deployer.deploy.assert_called_with(config, chalice_stage_name='prod')
 
 
 def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
