@@ -163,7 +163,7 @@ class OSUtils(object):
 
     def extract_tarfile(self, tarfile_path, unpack_dir):
         # type: (str, str) -> None
-        with tarfile.open(tarfile_path, 'r:gz') as tar:
+        with tarfile.open(tarfile_path, 'r:*') as tar:
             tar.extractall(unpack_dir)
 
     def directory_exists(self, path):

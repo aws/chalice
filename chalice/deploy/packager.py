@@ -561,7 +561,7 @@ class SDistMetadataFetcher(object):
         # type: (str, str) -> str
         if sdist_path.endswith('.zip'):
             self._osutils.extract_zipfile(sdist_path, unpack_dir)
-        elif sdist_path.endswith('.tar.gz'):
+        elif sdist_path.endswith(('.tar.gz', '.tar.bz2')):
             self._osutils.extract_tarfile(sdist_path, unpack_dir)
         else:
             raise InvalidSourceDistributionNameError(sdist_path)

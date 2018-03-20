@@ -4,6 +4,14 @@ CHANGELOG
 
 Next Release (TBD)
 ==================
+* Print out full stack trace when an error occurs
+  (`#711 <https://github.com/aws/chalice/issues/711>`__)
+* Add ``image/jpeg`` as a default binary content type
+  (`#707 <https://github.com/aws/chalice/pull/707>`__)
+
+
+1.1.1
+=====
 
 * Add ``--connection-timeout`` to the ``deploy`` command
   (`#344 <https://github.com/aws/chalice/issues/344>`__)
@@ -11,6 +19,10 @@ Next Release (TBD)
   (`#565 <https://github.com/aws/chalice/issues/565>`__)
 * Fix `chalice local` handling of browser requests
   (`#565 <https://github.com/aws/chalice/issues/628>`__)
+* Support async/await syntax in automatic policy generation
+  (`#565 <https://github.com/aws/chalice/issues/646>`__)
+* Support additional PyPi package formats (.tar.bz2)
+  (`#720 <https://github.com/aws/chalice/issues/720>`__)
 
 
 1.1.0

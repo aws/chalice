@@ -418,40 +418,62 @@ APIGateway
    .. attribute:: default_binary_types
 
       The value of ``default_binary_types`` are the ``Content-Types`` that are
-      considered binary by default. This value should not be changed, instead you
-      should modify the ``binary_types`` list to change the behavior of a content
-      type. Its value is: ``application/octet-stream``, ``application/x-tar``,
-      ``application/zip``, ``audio/basic``, ``audio/ogg``, ``audio/mp4``,
-      ``audio/mpeg``, ``audio/wav``, ``audio/webm``, ``image/png``,
-      ``image/jpg``, ``image/gif``, ``video/ogg``, ``video/mpeg``,
-      ``video/webm``.
+      considered binary by default. This value should not be changed, instead
+      you should modify the ``binary_types`` list to change the behavior of a
+      content type. Its value is: ``application/octet-stream``,
+      ``application/x-tar``, ``application/zip``, ``audio/basic``,
+      ``audio/ogg``, ``audio/mp4``, ``audio/mpeg``, ``audio/wav``,
+      ``audio/webm``, ``image/png``, ``image/jpg``, ``image/jpeg``,
+      ``image/gif``, ``video/ogg``, ``video/mpeg``, ``video/webm``.
 
 
    .. attribute:: binary_types
 
-      The value of ``binary_types`` controls how API Gateway interprets requests
-      and responses as detailed below.
+      The value of ``binary_types`` controls how API Gateway interprets
+      requests and responses as detailed below.
 
-      If an incoming request has a ``Content-Type`` header value that is present
-      in the ``binary_types`` list it will be assumed that its body is a sequence
-      of raw bytes. You can access these bytes by accessing the
+      If an incoming request has a ``Content-Type`` header value that is
+      present in the ``binary_types`` list it will be assumed that its body is
+      a sequence of raw bytes. You can access these bytes by accessing the
       ``app.current_request.raw_body`` property.
 
-      If an outgoing response from ``Chalice`` has a header ``Content-Type`` that
-      matches one of the ``binary_types`` its body must be a ``bytes`` type object.
-      It is important to note that originating request must have the ``Accept``
-      header for the same type as the ``Content-Type`` on the response. Otherwise
-      a ``400`` error will be returned.
+      If an outgoing response from ``Chalice`` has a header ``Content-Type``
+      that matches one of the ``binary_types`` its body must be a ``bytes``
+      type object. It is important to note that originating request must have
+      the ``Accept`` header for the same type as the ``Content-Type`` on the
+      response. Otherwise a ``400`` error will be returned.
 
-      Implementation note: API Gateway and Lambda communicate through a JSON event
-      which is encoded using ``UTF-8``. The raw bytes are temporarily encoded
-      using
+      This value can be modified to change what types API Gateway treats as
+      binary. The easiest way to do this is to simply append new types to
+      the list.
 
-      base64 when being passed between API Gateway and Lambda. In the worst case
-      this encoding can cause the binary body to be inflated up to ``4/3`` its
-      original size. Lambda only accepts an event up to ``6mb``, which means even
-      if your binary data was not quite at that limit, with the base64 encoding it
-      may exceed that limit. This will manifest as a ``502`` Bad Gateway error.
+      .. code-block:: python
+
+          app.api.binary_types.append('application/my-binary-data')
+
+
+      Keep in mind that there can only be a total of 25 binary types at a time
+      and Chalice by default has a list of 16 types. It is recommended if you
+      are going to make extensive use of binary types to reset the list to
+      the exact set of content types you will be using. This can easily be
+      done by reassigning the whole list.
+
+      .. code-block:: python
+
+          app.api.binary_types = [
+              'application/octet-stream',
+              'application/my-binary-data',
+          ]
+
+
+      **Implementation Note**: API Gateway and Lambda communicate through a
+      JSON event which is encoded using ``UTF-8``. The raw bytes are
+      temporarily encoded using base64 when being passed between API Gateway
+      and Lambda. In the worst case this encoding can cause the binary body
+      to be inflated up to ``4/3`` its original size. Lambda only accepts an
+      event up to ``6mb``, which means even if your binary data was not quite
+      at that limit, with the base64 encoding it may exceed that limit. This
+      will manifest as a ``502`` Bad Gateway error.
 
 
 CORS
