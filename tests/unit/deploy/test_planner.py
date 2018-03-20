@@ -42,6 +42,11 @@ def create_function_resource(name, function_name=None,
     )
 
 
+@pytest.fixture
+def no_deployed_values():
+    return DeployedResources({'resources': [], 'schema_version': '2.0'})
+
+
 class FakeConfig(object):
     def __init__(self, deployed_values):
         self._deployed_values = deployed_values
@@ -517,10 +522,10 @@ class TestRemoteState(object):
 
         assert self.client.lambda_function_exists.call_count == 1
 
-    def test_rest_api_exists_no_deploy(self):
+    def test_rest_api_exists_no_deploy(self, no_deployed_values):
         rest_api = self.create_rest_api_model()
         remote_state = RemoteState(
-            self.client, None)
+            self.client, no_deployed_values)
         assert not remote_state.resource_exists(rest_api)
         assert not self.client.rest_api_exists.called
 
@@ -563,8 +568,10 @@ class TestRemoteState(object):
         values = remote_state.resource_deployed_values(rest_api)
         assert values == {'name': 'rest_api', 'rest_api_id': 'foo'}
 
-    def test_value_error_raised_on_no_deployed_values(self):
-        remote_state = RemoteState(self.client, deployed_resources=None)
+    def test_value_error_raised_on_no_deployed_values(self,
+                                                      no_deployed_values):
+        remote_state = RemoteState(self.client,
+                                   deployed_resources=no_deployed_values)
         rest_api = self.create_rest_api_model()
         with pytest.raises(ValueError):
             remote_state.resource_deployed_values(rest_api)
