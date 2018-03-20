@@ -87,7 +87,7 @@ from typing import List, Set, Dict, Any, Optional, Union, cast  # noqa
 from botocore.session import Session  # noqa
 import jmespath
 
-from chalice.utils import OSUtils, UI
+from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.deploy import models  # noqa
 from chalice.config import Config  # noqa
 from chalice import app  # noqa
@@ -144,6 +144,7 @@ def create_default_deployer(session, config, ui):
         ),
         sweeper=UnreferencedResourcePlanner(),
         executor=Executor(client, ui),
+        recorder=ResultsRecorder(osutils=osutils),
     )
 
 
@@ -156,6 +157,7 @@ def create_deletion_deployer(client, ui):
         plan_stage=NoopPlanner(),
         sweeper=UnreferencedResourcePlanner(),
         executor=Executor(client, ui),
+        recorder=ResultsRecorder(osutils=OSUtils()),
     )
 
 
@@ -178,6 +180,9 @@ class UnresolvedValueError(Exception):
 
 
 class Deployer(object):
+
+    BACKEND_NAME = 'api'
+
     def __init__(self,
                  application_builder,  # type: ApplicationGraphBuilder
                  deps_builder,         # type: DependencyBuilder
@@ -185,6 +190,7 @@ class Deployer(object):
                  plan_stage,           # type: PlanStage
                  sweeper,              # type: UnreferencedResourcePlanner
                  executor,             # type: Executor
+                 recorder,             # type: ResultsRecorder
                  ):
         # type: (...) -> None
         self._application_builder = application_builder
@@ -193,6 +199,7 @@ class Deployer(object):
         self._plan_stage = plan_stage
         self._sweeper = sweeper
         self._executor = executor
+        self._recorder = recorder
 
     def deploy(self, config, chalice_stage_name):
         # type: (Config, str) -> Dict[str, Any]
@@ -203,14 +210,17 @@ class Deployer(object):
         plan = self._plan_stage.execute(resources)
         self._sweeper.execute(plan, config)
         self._executor.execute(plan)
-        return {
-            'stages': {
-                chalice_stage_name: {
-                    'resources': self._executor.resource_values,
-                },
-            },
+        deployed_values = {
+            'resources': self._executor.resource_values,
             'schema_version': '2.0',
+            'backend': self.BACKEND_NAME,
         }
+        self._recorder.record_results(
+            deployed_values,
+            chalice_stage_name,
+            config.project_dir,
+        )
+        return deployed_values
 
 
 class ApplicationGraphBuilder(object):
@@ -587,7 +597,7 @@ class Executor(object):
 
     def _do_builtinfunction(self, instruction):
         # type: (models.BuiltinFunction) -> None
-        # Split this out to a separate class of built in functions
+        # TODO: Split this out to a separate class of built in functions
         # once we add more functions.
         if instruction.function_name == 'parse_arn':
             arg = instruction.args[0]
@@ -599,6 +609,11 @@ class Executor(object):
                 'account_id': parts[4],
             }
             self.variables[instruction.output_var] = result
+        elif instruction.function_name == 'string_format':
+            arg = {'arg': instruction.args[0]}
+            value = self._variable_resolver.resolve_variables(
+                arg, self.variables)['arg']
+            self.variables[instruction.output_var] = value
         else:
             raise ValueError("Unknown builtin function: %s"
                              % instruction.function_name)
@@ -672,3 +687,75 @@ class TemplatedSwaggerGenerator(SwaggerGenerator):
             '/functions/{%s}/invocations' % varname,
             ['region_name', varname],
         )
+
+
+class ResultsRecorder(object):
+    def __init__(self, osutils):
+        # type: (OSUtils) -> None
+        self._osutils = osutils
+
+    def record_results(self, results, chalice_stage_name, project_dir):
+        # type: (Any, str, str) -> None
+        deployed_dir = self._osutils.joinpath(
+            project_dir, '.chalice', 'deployed')
+        deployed_filename = self._osutils.joinpath(
+            deployed_dir, '%s.json' % chalice_stage_name)
+        if not self._osutils.directory_exists(deployed_dir):
+            self._osutils.makedirs(deployed_dir)
+        serialized = serialize_to_json(results)
+        self._osutils.set_file_contents(
+            filename=deployed_filename,
+            contents=serialized,
+            binary=False
+        )
+
+
+class DeploymentReporter(object):
+    # We want the Rest API to be displayed last.
+    _SORT_ORDER = {
+        'rest_api': 100,
+    }
+    # The default is chosen to sort before the rest_api
+    _DEFAULT_ORDERING = 50
+
+    def __init__(self, ui):
+        # type: (UI) -> None
+        self._ui = ui
+
+    def generate_report(self, deployed_values):
+        # type: (Dict[str, Any]) -> str
+        report = [
+            'Resources deployed:',
+        ]
+        ordered = sorted(
+            deployed_values['resources'],
+            key=lambda x: self._SORT_ORDER.get(x['resource_type'],
+                                               self._DEFAULT_ORDERING))
+        for resource in ordered:
+            getattr(self, '_report_%s' % resource['resource_type'],
+                    self._default_report)(resource, report)
+        report.append('')
+        return '\n'.join(report)
+
+    def _report_rest_api(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append(
+            '  - Rest API URL: %s' % resource['rest_api_url']
+        )
+
+    def _report_lambda_function(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append(
+            '  - Lambda ARN: %s' % resource['lambda_arn']
+        )
+
+    def _default_report(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        # The default behavior is to not report a resource.  This
+        # cuts down on the output verbosity.
+        pass
+
+    def display_report(self, deployed_values):
+        # type: (Dict[str, Any]) -> None
+        report = self.generate_report(deployed_values)
+        self._ui.write(report)

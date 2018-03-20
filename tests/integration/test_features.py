@@ -10,7 +10,7 @@ import pytest
 import requests
 
 from chalice.cli.factory import CLIFactory
-from chalice.utils import record_deployed_values, OSUtils, UI
+from chalice.utils import OSUtils, UI
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.config import DeployedResources2
 
@@ -156,13 +156,6 @@ def _deploy_app(temp_dirname):
         stage_name='dev',
         app_name=RANDOM_APP_NAME,
         app_dir=temp_dirname,
-    )
-    deploy_dir = os.path.join(temp_dirname, '.chalice', 'deployed')
-    if not os.path.isdir(deploy_dir):
-        os.makedirs(deploy_dir)
-    record_deployed_values(
-        deployed_stages,
-        os.path.join(deploy_dir, 'dev.json')
     )
     return application
 

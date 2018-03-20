@@ -8,6 +8,7 @@ from chalice.deploy import models
 from chalice.config import DeployedResources2
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
+from chalice.deploy.planner import StringFormat
 from chalice.deploy.planner import UnreferencedResourcePlanner
 
 
@@ -372,7 +373,21 @@ class TestPlanRestAPI(BasePlannerTests):
                     'account_id': Variable('account_id'),
                     'rest_api_id': Variable('rest_api_id'),
                 }
-            )
+            ),
+            models.BuiltinFunction(
+                function_name='string_format',
+                args=[StringFormat(
+                    'https://{rest_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/api/',
+                    ['rest_api_id', 'region_name'],
+                )],
+                output_var='rest_api_url'),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='rest_api_url',
+                variable_name='rest_api_url'
+            ),
         ]
         assert list(self.last_plan.messages.values()) == [
             'Creating Rest API\n'
@@ -425,7 +440,21 @@ class TestPlanRestAPI(BasePlannerTests):
                         'region_name': Variable("region_name"),
                         'account_id': Variable("account_id"),
                         'function_name': 'appname-dev-function_name'},
-                output_var=None)
+                output_var=None),
+            models.BuiltinFunction(
+                function_name='string_format',
+                args=[StringFormat(
+                    'https://{rest_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/api/',
+                    ['rest_api_id', 'region_name'],
+                )],
+                output_var='rest_api_url'),
+            models.RecordResourceVariable(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='rest_api_url',
+                variable_name='rest_api_url'
+            ),
         ]
 
 

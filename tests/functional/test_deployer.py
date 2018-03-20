@@ -286,23 +286,20 @@ def test_can_delete_app(tmpdir):
     )
     deployed_json = {
         'schema_version': '2.0',
-        'stages': {
-            'dev': {
-                'resources': [
-                    {'name': 'role-index',
-                     'resource_type': 'iam_role',
-                     'role_name': 'testapp-dev-index',
-                     'role_arn': 'arn:aws:iam::1:role/testapp-dev-index'},
-                    {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-index',
-                     'name': 'index', 'resource_type': 'lambda_function'},
-                    {'name': 'role-james', 'resource_type': 'iam_role',
-                     'role_name': 'testapp-dev-foo',
-                     'role_arn': 'arn:aws:iam::1:role/testapp-dev-foo'},
-                    {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-foo',
-                     'name': 'james', 'resource_type': 'lambda_function'}
-                ]
-            }
-        }
+        'backend': 'api',
+        'resources': [
+            {'name': 'role-index',
+                'resource_type': 'iam_role',
+                'role_name': 'testapp-dev-index',
+                'role_arn': 'arn:aws:iam::1:role/testapp-dev-index'},
+            {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-index',
+                'name': 'index', 'resource_type': 'lambda_function'},
+            {'name': 'role-james', 'resource_type': 'iam_role',
+                'role_name': 'testapp-dev-foo',
+                'role_arn': 'arn:aws:iam::1:role/testapp-dev-foo'},
+            {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-foo',
+                'name': 'james', 'resource_type': 'lambda_function'}
+        ]
     }
     deployed_dir = appdir.join('.chalice', 'deployed')
     deployed_dir.mkdir()
@@ -324,7 +321,8 @@ def test_can_delete_app(tmpdir):
     returned_values = d.deploy(config, 'dev')
     assert returned_values == {
         'schema_version': '2.0',
-        'stages': {'dev': {'resources': []}}
+        'backend': 'api',
+        'resources': [],
     }
     call = mock.call
     expected_calls = [

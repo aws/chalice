@@ -292,9 +292,7 @@ class Config(object):
             return self._try_old_deployer_values(chalice_stage_name)
         schema_version = data.get('schema_version', '1.0')
         if schema_version == '2.0':
-            if chalice_stage_name not in data['stages']:
-                return None
-            return DeployedResources2(data['stages'][chalice_stage_name])
+            return DeployedResources2(data)
         return None
 
     def _try_old_deployer_values(self, chalice_stage_name):
