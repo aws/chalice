@@ -2,8 +2,8 @@ import sys
 import pytest
 
 from chalice import __version__ as chalice_version
-from chalice.config import Config, DeployedResources
-from chalice.config import DeployedResources2
+from chalice.config import Config
+from chalice.config import DeployedResources
 
 
 class FixedDataConfig(Config):
@@ -246,43 +246,6 @@ def test_new_scope_config_is_separate_copy():
     assert new_config.function_name == 'bar'
 
 
-def test_can_create_deployed_resource_from_dict():
-    d = DeployedResources.from_dict({
-        'backend': 'api',
-        'api_handler_arn': 'arn',
-        'api_handler_name': 'name',
-        'rest_api_id': 'id',
-        'api_gateway_stage': 'stage',
-        'region': 'region',
-        'chalice_version': '1.0.0',
-        'lambda_functions': {},
-    })
-    assert d.backend == 'api'
-    assert d.api_handler_arn == 'arn'
-    assert d.api_handler_name == 'name'
-    assert d.rest_api_id == 'id'
-    assert d.api_gateway_stage == 'stage'
-    assert d.region == 'region'
-    assert d.chalice_version == '1.0.0'
-    assert d.lambda_functions == {}
-
-
-def test_lambda_functions_not_required_from_dict():
-    older_version = {
-        # Older versions of chalice did not include the
-        # lambda_functions key.
-        'backend': 'api',
-        'api_handler_arn': 'arn',
-        'api_handler_name': 'name',
-        'rest_api_id': 'id',
-        'api_gateway_stage': 'stage',
-        'region': 'region',
-        'chalice_version': '1.0.0',
-    }
-    d = DeployedResources.from_dict(older_version)
-    assert d.lambda_functions == {}
-
-
 def test_environment_from_top_level():
     config_from_disk = {'environment_variables': {"foo": "bar"}}
     c = Config('dev', config_from_disk=config_from_disk)
@@ -498,7 +461,7 @@ class TestConfigureTags(object):
 
 
 def test_deployed_resource_does_not_exist():
-    deployed = DeployedResources2(
+    deployed = DeployedResources(
         {'resources': [{'name': 'foo'}]}
     )
     with pytest.raises(ValueError):
@@ -506,7 +469,7 @@ def test_deployed_resource_does_not_exist():
 
 
 def test_deployed_resource_exists():
-    deployed = DeployedResources2(
+    deployed = DeployedResources(
         {'resources': [{'name': 'foo'}]}
     )
     assert deployed.resource_values('foo') == {'name': 'foo'}

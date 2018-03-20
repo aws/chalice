@@ -3,7 +3,7 @@ import json
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 from typing import Sequence  # noqa
 
-from chalice.config import Config, DeployedResources2  # noqa
+from chalice.config import Config, DeployedResources  # noqa
 from chalice.utils import OSUtils  # noqa
 from chalice.deploy import models
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
@@ -14,7 +14,7 @@ _INSTRUCTION_MSG = Union[models.Instruction, Tuple[models.Instruction, str]]
 
 class RemoteState(object):
     def __init__(self, client, deployed_resources):
-        # type: (TypedAWSClient, Optional[DeployedResources2]) -> None
+        # type: (TypedAWSClient, Optional[DeployedResources]) -> None
         self._client = client
         self._cache = {}  # type: Dict[Tuple[str, str], bool]
         self._deployed_resources = deployed_resources
@@ -110,7 +110,7 @@ class UnreferencedResourcePlanner(object):
                        plan,       # type: List[models.Instruction]
                        messages,   # type: Dict[int, str]
                        remaining,  # type: List[str]
-                       deployed,   # type: DeployedResources2
+                       deployed,   # type: DeployedResources
                        ):
         # type: (...) -> None
         for name in remaining:
@@ -379,14 +379,13 @@ class PlanStage(object):
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
             ),
-            models.BuiltinFunction(
-                'string_format',
-                [StringFormat(
+            models.StoreValue(
+                name='rest_api_url',
+                value=StringFormat(
                     'https://{rest_api_id}.execute-api.{region_name}'
                     '.amazonaws.com/%s/' % resource.api_gateway_stage,
                     ['rest_api_id', 'region_name'],
-                )],
-                output_var='rest_api_url',
+                ),
             ),
             models.RecordResourceVariable(
                 resource_type='rest_api',

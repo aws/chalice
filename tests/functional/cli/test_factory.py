@@ -7,8 +7,7 @@ import pytest
 from pytest import fixture
 
 from chalice.cli import factory
-from chalice.deploy.deployer import Deployer as OldDeployer
-from chalice.deploy.newdeployer import Deployer, DeploymentReporter
+from chalice.deploy.deployer import Deployer, DeploymentReporter
 from chalice.config import Config
 from chalice import local
 from chalice.utils import UI
@@ -64,12 +63,6 @@ def test_can_create_botocore_session_cli_factory(clifactory):
     clifactory.profile = 'myprofile'
     session = clifactory.create_botocore_session()
     assert session.profile == 'myprofile'
-
-
-def test_can_create_default_deployer(clifactory):
-    session = clifactory.create_botocore_session()
-    deployer = clifactory.create_default_deployer(session, None)
-    assert isinstance(deployer, OldDeployer)
 
 
 def test_can_create_deletion_deployer(clifactory):

@@ -12,7 +12,7 @@ import requests
 from chalice.cli.factory import CLIFactory
 from chalice.utils import OSUtils, UI
 from chalice.deploy.deployer import ChaliceDeploymentError
-from chalice.config import DeployedResources2
+from chalice.config import DeployedResources
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -45,7 +45,7 @@ class SmokeTestApplication(object):
 
     def __init__(self, deployed_values, stage_name, app_name,
                  app_dir, region):
-        self._deployed_resources = DeployedResources2(deployed_values)
+        self._deployed_resources = DeployedResources(deployed_values)
         self.stage_name = stage_name
         self.app_name = app_name
         # The name of the tmpdir where the app is copied.
@@ -148,8 +148,7 @@ def _deploy_app(temp_dirname):
     session = factory.create_botocore_session()
     d = factory.create_new_default_deployer(session, config, UI())
     region = session.get_config_variable('region')
-    deployed_stages = _deploy_with_retries(d, config)
-    deployed = deployed_stages['stages']['dev']
+    deployed = _deploy_with_retries(d, config)
     application = SmokeTestApplication(
         region=region,
         deployed_values=deployed,
