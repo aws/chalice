@@ -23,10 +23,9 @@ from chalice.deploy.newdeployer import ApplicationGraphBuilder
 from chalice.deploy.newdeployer import InjectDefaults, DeploymentPackager
 from chalice.deploy.newdeployer import PolicyGenerator, SwaggerBuilder
 from chalice.deploy.newdeployer import VariableResolver
-from chalice.deploy.newdeployer import TemplatedSwaggerGenerator
 from chalice.deploy.newdeployer import ResultsRecorder
 from chalice.deploy.newdeployer import DeploymentReporter
-from chalice.deploy.swagger import SwaggerGenerator
+from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable
 from chalice.deploy.planner import UnreferencedResourcePlanner, StringFormat
 from chalice.deploy.newdeployer import Executor

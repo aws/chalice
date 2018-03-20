@@ -83,7 +83,7 @@ is used as the key in the ``deployed.json`` dictionary.
 """
 import os
 
-from typing import List, Set, Dict, Any, Optional, Union, cast  # noqa
+from typing import List, Set, Dict, Any, cast  # noqa
 from botocore.session import Session  # noqa
 import jmespath
 
@@ -94,7 +94,8 @@ from chalice import app  # noqa
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import PipRunner, SubprocessPip
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
-from chalice.deploy.swagger import SwaggerGenerator
+from chalice.deploy.swagger import SwaggerGenerator  # noqa
+from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.deploy.planner import StringFormat
 from chalice.deploy.planner import UnreferencedResourcePlanner, NoopPlanner
@@ -663,30 +664,6 @@ class VariableResolver(object):
             return final_list
         else:
             return value
-
-
-class TemplatedSwaggerGenerator(SwaggerGenerator):
-    def __init__(self):
-        # type: () -> None
-        pass
-
-    def _uri(self, lambda_arn=None):
-        # type: (Optional[str]) -> Any
-        return StringFormat(
-            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
-            '/functions/{api_handler_lambda_arn}/invocations',
-            ['region_name', 'api_handler_lambda_arn'],
-        )
-
-    def _auth_uri(self, authorizer):
-        # type: (app.ChaliceAuthorizer) -> Any
-        # This will be handled in a subsequent PR.
-        varname = '%s_lambda_arn' % authorizer.name
-        return StringFormat(
-            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
-            '/functions/{%s}/invocations' % varname,
-            ['region_name', varname],
-        )
 
 
 class ResultsRecorder(object):

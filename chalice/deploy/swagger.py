@@ -4,6 +4,7 @@ from typing import Any, List, Dict, Optional  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
+from chalice.deploy.planner import StringFormat
 from chalice.utils import to_cfn_resource_name
 
 
@@ -248,3 +249,26 @@ class CFNSwaggerGenerator(SwaggerGenerator):
                     authorizer.name)
             )
         }
+
+
+class TemplatedSwaggerGenerator(SwaggerGenerator):
+    def __init__(self):
+        # type: () -> None
+        pass
+
+    def _uri(self, lambda_arn=None):
+        # type: (Optional[str]) -> Any
+        return StringFormat(
+            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
+            '/functions/{api_handler_lambda_arn}/invocations',
+            ['region_name', 'api_handler_lambda_arn'],
+        )
+
+    def _auth_uri(self, authorizer):
+        # type: (ChaliceAuthorizer) -> Any
+        varname = '%s_lambda_arn' % authorizer.name
+        return StringFormat(
+            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
+            '/functions/{%s}/invocations' % varname,
+            ['region_name', varname],
+        )
