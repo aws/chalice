@@ -3,7 +3,7 @@ import pytest
 
 from chalice import __version__ as chalice_version
 from chalice.config import Config
-from chalice.config import DeployedResources2
+from chalice.config import DeployedResources
 
 
 class FixedDataConfig(Config):
@@ -461,7 +461,7 @@ class TestConfigureTags(object):
 
 
 def test_deployed_resource_does_not_exist():
-    deployed = DeployedResources2(
+    deployed = DeployedResources(
         {'resources': [{'name': 'foo'}]}
     )
     with pytest.raises(ValueError):
@@ -469,7 +469,7 @@ def test_deployed_resource_does_not_exist():
 
 
 def test_deployed_resource_exists():
-    deployed = DeployedResources2(
+    deployed = DeployedResources(
         {'resources': [{'name': 'foo'}]}
     )
     assert deployed.resource_values('foo') == {'name': 'foo'}

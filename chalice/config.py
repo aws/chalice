@@ -275,7 +275,7 @@ class Config(object):
         return clone
 
     def deployed_resources(self, chalice_stage_name):
-        # type: (str) -> Optional[DeployedResources2]
+        # type: (str) -> Optional[DeployedResources]
         """Return resources associated with a given stage.
 
         If a deployment to a given stage has never happened,
@@ -292,11 +292,11 @@ class Config(object):
             return self._try_old_deployer_values(chalice_stage_name)
         schema_version = data.get('schema_version', '1.0')
         if schema_version == '2.0':
-            return DeployedResources2(data)
+            return DeployedResources(data)
         return None
 
     def _try_old_deployer_values(self, chalice_stage_name):
-        # type: (str) -> Optional[DeployedResources2]
+        # type: (str) -> Optional[DeployedResources]
         # They are upgrading from v1.0 to v2.0 of the deployed.json
         # schema.  Attempt to auto convert for them.
         old_deployed_file = os.path.join(self.project_dir, '.chalice',
@@ -314,7 +314,7 @@ class Config(object):
             return json.load(f)
 
     def _upgrade_deployed_values(self, chalice_stage_name, data):
-        # type: (str, Any) -> Optional[DeployedResources2]
+        # type: (str, Any) -> Optional[DeployedResources]
         deployed = data[chalice_stage_name]
         prefix = '%s-%s-' % (self.app_name, chalice_stage_name)
         resources = []
@@ -334,10 +334,10 @@ class Config(object):
              'resource_type': 'rest_api',
              'rest_api_id': deployed['rest_api_id']},
         ])
-        return DeployedResources2({'resources': resources})
+        return DeployedResources({'resources': resources})
 
 
-class DeployedResources2(object):
+class DeployedResources(object):
     def __init__(self, deployed_values):
         # type: (Dict[str, Any]) -> None
         self._deployed_values = deployed_values['resources']

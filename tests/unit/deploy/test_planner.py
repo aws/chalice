@@ -5,7 +5,7 @@ import pytest
 
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.deploy import models
-from chalice.config import DeployedResources2
+from chalice.config import DeployedResources
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.deploy.planner import StringFormat
@@ -48,7 +48,7 @@ class FakeConfig(object):
         self.chalice_stage = 'dev'
 
     def deployed_resources(self, chalice_stage_name):
-        return DeployedResources2(self._deployed_values)
+        return DeployedResources(self._deployed_values)
 
 
 class InMemoryRemoteState(object):
@@ -535,7 +535,7 @@ class TestRemoteState(object):
         }
         self.client.rest_api_exists.return_value = True
         remote_state = RemoteState(
-            self.client, DeployedResources2(deployed_resources))
+            self.client, DeployedResources(deployed_resources))
         assert remote_state.resource_exists(rest_api)
         self.client.rest_api_exists.assert_called_with('my_rest_api_id')
 
@@ -550,13 +550,13 @@ class TestRemoteState(object):
         }
         self.client.rest_api_exists.return_value = False
         remote_state = RemoteState(
-            self.client, DeployedResources2(deployed_resources))
+            self.client, DeployedResources(deployed_resources))
         assert not remote_state.resource_exists(rest_api)
         self.client.rest_api_exists.assert_called_with('my_rest_api_id')
 
     def test_can_get_deployed_values(self):
         remote_state = RemoteState(
-            self.client, DeployedResources2({'resources': [
+            self.client, DeployedResources({'resources': [
                 {'name': 'rest_api', 'rest_api_id': 'foo'}]})
         )
         rest_api = self.create_rest_api_model()
@@ -571,7 +571,7 @@ class TestRemoteState(object):
 
     def test_value_error_raised_for_unknown_resource_name(self):
         remote_state = RemoteState(
-            self.client, DeployedResources2({'resources': [
+            self.client, DeployedResources({'resources': [
                 {'name': 'not_rest_api', 'rest_api_id': 'foo'}]})
         )
         rest_api = self.create_rest_api_model()
@@ -580,7 +580,7 @@ class TestRemoteState(object):
 
     def test_dynamically_lookup_iam_role(self):
         remote_state = RemoteState(
-            self.client, DeployedResources2({'resources': [
+            self.client, DeployedResources({'resources': [
                 {'name': 'rest_api', 'rest_api_id': 'foo'}]})
         )
         resource = models.ManagedIAMRole(
