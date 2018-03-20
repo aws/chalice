@@ -303,7 +303,7 @@ class Config(object):
         old_deployed_file = os.path.join(self.project_dir, '.chalice',
                                          'deployed.json')
         data = self._load_json_file(old_deployed_file)
-        if data is None:
+        if data is None or chalice_stage_name not in data:
             return DeployedResources.empty()
         return self._upgrade_deployed_values(chalice_stage_name, data)
 
