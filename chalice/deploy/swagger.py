@@ -232,7 +232,6 @@ class CFNSwaggerGenerator(SwaggerGenerator):
 
     def _uri(self, lambda_arn=None):
         # type: (Optional[str]) -> Any
-        # TODO: Does this have to be return type Any?
         return {
             'Fn::Sub': (
                 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31'
