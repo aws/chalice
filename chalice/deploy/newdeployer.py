@@ -535,12 +535,17 @@ class Executor(object):
         # type: (models.Plan) -> None
         messages = plan.messages
         for instruction in plan.instructions:
-            # TODO: Don't error out on unknown instruction
             message = messages.get(id(instruction))
             if message is not None:
                 self._ui.write(message)
             getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
-                    lambda x: None)(instruction)
+                    self._default_handler)(instruction)
+
+    def _default_handler(self, instruction):
+        # type: (models.Instruction) -> None
+        raise RuntimeError("Deployment executor encountered an "
+                           "unknown instruction: %s"
+                           % instruction.__class__.__name__)
 
     def _do_apicall(self, instruction):
         # type: (models.APICall) -> None

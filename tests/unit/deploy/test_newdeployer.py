@@ -32,7 +32,7 @@ from chalice.deploy.newdeployer import Executor
 from chalice.deploy.newdeployer import UnresolvedValueError
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
 from chalice.deploy.models import RecordResourceVariable
-from chalice.deploy.models import JPSearch, BuiltinFunction
+from chalice.deploy.models import JPSearch, BuiltinFunction, Instruction
 from chalice.policy import AppPolicyGenerator
 from chalice.constants import LAMBDA_TRUST_POLICY
 
@@ -849,6 +849,14 @@ class TestExecutor(object):
         self.execute([call], messages)
         self.mock_client.create_role.assert_called_with(**params)
         self.ui.write.assert_called_with('Creating role')
+
+    def test_error_out_on_unknown_instruction(self):
+
+        class CustomInstruction(Instruction):
+            pass
+
+        with pytest.raises(RuntimeError):
+            self.execute([CustomInstruction()])
 
 
 def test_build_stage():
