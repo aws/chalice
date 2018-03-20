@@ -317,8 +317,31 @@ class Config(object):
         # type: (str, Any) -> Optional[DeployedResources]
         deployed = data[chalice_stage_name]
         prefix = '%s-%s-' % (self.app_name, chalice_stage_name)
-        resources = []
-        for name, values in deployed.get('lambda_functions', {}).items():
+        resources = []  # type: List[Dict[str, Any]]
+        self._upgrade_lambda_functions(resources, deployed, prefix)
+        self._upgrade_rest_api(resources, deployed)
+        return DeployedResources({'resources': resources})
+
+    def _upgrade_lambda_functions(self, resources, deployed, prefix):
+        # type: (List[Dict[str, Any]], Dict[str, Any], str) -> None
+        lambda_functions = deployed.get('lambda_functions', {})
+        # In chalice 0.10.0, the lambda_functions had the format
+        # {"function-name": "lambda_arn"} as opposed to
+        # {"function-name": {"arn": "lambda_arn", "type": "...'}} used
+        # in later versions of chalice.  We'll check for both cases
+        # so people can upgrade from 0.10.0 to the new deployer.
+        is_pre_10_format = not all(
+            isinstance(v, dict)
+            for v in lambda_functions.values()
+        )
+        if is_pre_10_format:
+            lambda_functions = {
+                # The only supported lambda functions in 0.10.0
+                # was built in authorizers.
+                k: {'type': 'authorizer', 'arn': v}
+                for k, v in lambda_functions.items()
+            }
+        for name, values in lambda_functions.items():
             short_name = name[len(prefix):]
             current = {
                 'resource_type': 'lambda_function',
@@ -326,6 +349,9 @@ class Config(object):
                 'name': short_name,
             }
             resources.append(current)
+
+    def _upgrade_rest_api(self, resources, deployed):
+        # type: (List[Dict[str, Any]], Dict[str, Any]) -> None
         resources.extend([
             {'name': 'api_handler',
              'resource_type': 'lambda_function',
@@ -334,7 +360,6 @@ class Config(object):
              'resource_type': 'rest_api',
              'rest_api_id': deployed['rest_api_id']},
         ])
-        return DeployedResources({'resources': resources})
 
 
 class DeployedResources(object):

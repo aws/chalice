@@ -540,3 +540,33 @@ class TestUpgradeNewDeployer(object):
             'name': 'rest_api',
             'resource_type': 'rest_api',
         }
+
+    def test_can_upgrade_pre10_lambda_functions(self):
+        deployed = {
+            "region": "us-west-2",
+            "api_handler_name": "app-dev",
+            "api_handler_arn": (
+                "arn:aws:lambda:us-west-2:123:function:app-dev"),
+            "rest_api_id": "my_rest_api_id",
+            "lambda_functions": {
+                # This is the old < 1.0 style where the
+                # value was just the lambda arn.
+                "app-dev-foo": "my-lambda-arn",
+            },
+            "chalice_version": "1.1.1",
+            "api_gateway_stage": "api",
+            "backend": "api",
+        }
+        self.old_deployed = {"dev": deployed}
+        self.config = FixedDataConfig(
+            {'./.chalice/deployed.json': self.old_deployed},
+        )
+        resources = self.config.deployed_resources('dev')
+        assert sorted(resources.resource_names()) == [
+            'api_handler', 'foo', 'rest_api',
+        ]
+        assert resources.resource_values('foo') == {
+            'lambda_arn': 'my-lambda-arn',
+            'name': 'foo',
+            'resource_type': 'lambda_function',
+        }
