@@ -9,7 +9,6 @@ import mock
 
 from chalice import cli
 from chalice.cli import factory
-from chalice.deploy.deployer import Deployer
 from chalice.config import Config
 from chalice.utils import record_deployed_values
 from chalice import local
@@ -22,14 +21,7 @@ def runner():
 
 
 @pytest.fixture
-def mock_deployer():
-    d = mock.Mock(spec=Deployer)
-    d.deploy.return_value = {}
-    return d
-
-
-@pytest.fixture
-def mock_cli_factory(mock_deployer):
+def mock_cli_factory():
     cli_factory = mock.Mock(spec=factory.CLIFactory)
     cli_factory.create_config_obj.return_value = Config.create(project_dir='.')
     cli_factory.create_botocore_session.return_value = mock.sentinel.Session
@@ -145,8 +137,8 @@ def test_can_package_with_single_file(runner):
             assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
 
 
-def test_does_deploy_with_default_api_gateway_stage_name(
-        runner, mock_cli_factory, mock_deployer):
+def test_does_deploy_with_default_api_gateway_stage_name(runner,
+                                                         mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
@@ -163,8 +155,7 @@ def test_does_deploy_with_default_api_gateway_stage_name(
         assert config.api_gateway_stage == DEFAULT_APIGATEWAY_STAGE_NAME
 
 
-def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
-                                       mock_deployer):
+def test_can_specify_api_gateway_stage(runner, mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
@@ -178,8 +169,7 @@ def test_can_specify_api_gateway_stage(runner, mock_cli_factory,
         )
 
 
-def test_can_deploy_specify_connection_timeout(runner, mock_cli_factory,
-                                               mock_deployer):
+def test_can_deploy_specify_connection_timeout(runner, mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')

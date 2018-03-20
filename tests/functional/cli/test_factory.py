@@ -7,7 +7,6 @@ import pytest
 from pytest import fixture
 
 from chalice.cli import factory
-from chalice.deploy.deployer import Deployer as OldDeployer
 from chalice.deploy.newdeployer import Deployer, DeploymentReporter
 from chalice.config import Config
 from chalice import local

@@ -12,7 +12,6 @@ from chalice import __version__ as chalice_version
 from chalice.awsclient import TypedAWSClient
 from chalice.app import Chalice  # noqa
 from chalice.config import Config
-from chalice.deploy import deployer
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME

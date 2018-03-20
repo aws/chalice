@@ -3,7 +3,6 @@ import zipfile
 import json
 import mock
 
-import botocore.session
 from pytest import fixture
 import pytest
 
@@ -12,7 +11,6 @@ from chalice.awsclient import TypedAWSClient
 import chalice.utils
 from chalice.config import Config
 from chalice import Chalice
-from chalice.deploy import deployer
 from chalice.deploy import newdeployer
 from chalice.deploy.packager import MissingDependencyError
 from chalice.deploy.packager import LambdaDeploymentPackager
