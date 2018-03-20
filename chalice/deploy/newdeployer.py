@@ -551,7 +551,6 @@ class Executor(object):
         # type: (models.APICall) -> None
         final_kwargs = self._resolve_variables(instruction)
         method = getattr(self._client, instruction.method_name)
-        # TODO: we need proper error handling here.
         result = method(**final_kwargs)
         if instruction.output_var is not None:
             self.variables[instruction.output_var] = result
