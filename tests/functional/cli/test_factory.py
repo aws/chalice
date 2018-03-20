@@ -66,12 +66,6 @@ def test_can_create_botocore_session_cli_factory(clifactory):
     assert session.profile == 'myprofile'
 
 
-def test_can_create_default_deployer(clifactory):
-    session = clifactory.create_botocore_session()
-    deployer = clifactory.create_default_deployer(session, None)
-    assert isinstance(deployer, OldDeployer)
-
-
 def test_can_create_deletion_deployer(clifactory):
     session = clifactory.create_botocore_session()
     deployer = clifactory.create_deletion_deployer(session, UI())

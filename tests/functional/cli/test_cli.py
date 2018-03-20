@@ -33,7 +33,6 @@ def mock_cli_factory(mock_deployer):
     cli_factory = mock.Mock(spec=factory.CLIFactory)
     cli_factory.create_config_obj.return_value = Config.create(project_dir='.')
     cli_factory.create_botocore_session.return_value = mock.sentinel.Session
-    cli_factory.create_default_deployer.return_value = mock_deployer
     return cli_factory
 
 

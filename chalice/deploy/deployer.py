@@ -48,27 +48,6 @@ _AWSCLIENT_EXCEPTIONS = (
 )
 
 
-def create_default_deployer(session, ui=None):
-    # type: (botocore.session.Session, UI) -> Deployer
-    if ui is None:
-        ui = UI()
-    aws_client = TypedAWSClient(session)
-    api_gateway_deploy = APIGatewayDeployer(aws_client, ui)
-
-    osutils = OSUtils()
-    dependency_builder = DependencyBuilder(osutils)
-    packager = LambdaDeploymentPackager(
-        osutils=osutils,
-        dependency_builder=dependency_builder,
-        ui=ui
-    )
-    lambda_deploy = LambdaDeployer(
-        aws_client, packager, ui, osutils,
-        ApplicationPolicyHandler(
-            osutils, AppPolicyGenerator(osutils)))
-    return Deployer(api_gateway_deploy, lambda_deploy, ui)
-
-
 def validate_configuration(config):
     # type: (Config) -> None
     """Validate app configuration.

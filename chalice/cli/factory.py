@@ -89,11 +89,6 @@ class CLIFactory(object):
                                        debug=self.debug,
                                        connection_timeout=connection_timeout)
 
-    def create_default_deployer(self, session, ui):
-        # type: (Session, UI) -> deployer.Deployer
-        return deployer.create_default_deployer(
-            session=session, ui=ui)
-
     def create_new_default_deployer(self, session, config, ui):
         # type: (Session, Config, UI) -> newdeployer.Deployer
         return newdeployer.create_default_deployer(session, config, ui)
