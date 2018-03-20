@@ -553,7 +553,7 @@ class TestUpgradeNewDeployer(object):
                 # value was just the lambda arn.
                 "app-dev-foo": "my-lambda-arn",
             },
-            "chalice_version": "1.1.1",
+            "chalice_version": "0.10.0",
             "api_gateway_stage": "api",
             "backend": "api",
         }
