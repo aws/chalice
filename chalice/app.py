@@ -40,8 +40,9 @@ def handle_decimals(obj):
 
 def error_response(message, error_code, http_status_code, headers=None):
     body = {'Code': error_code, 'Message': message}
-    response = Response(body=body, status_code=http_status_code, headers=headers)
-    
+    response = Response(body=body, status_code=http_status_code,
+                        headers=headers)
+
     return response.to_dict()
 
 
