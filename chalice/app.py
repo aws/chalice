@@ -38,14 +38,10 @@ def handle_decimals(obj):
     return obj
 
 
-def error_response(message, error_code, http_status_code, cors_headers=None):
+def error_response(message, error_code, http_status_code, headers=None):
     body = {'Code': error_code, 'Message': message}
-    response = Response(body=body, status_code=http_status_code)
-    if cors_headers:
-        for name, value in cors_headers.items():
-            if name not in response.headers:
-                response.headers[name] = value
-
+    response = Response(body=body, status_code=http_status_code, headers=headers)
+    
     return response.to_dict()
 
 
