@@ -99,7 +99,7 @@ from chalice import app
 from chalice.config import Config  # noqa
 from chalice.compat import is_broken_pipe_error
 from chalice.awsclient import DeploymentPackageTooLargeError, TypedAWSClient
-from chalice.awsclient import LambdaClientError
+from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, \
     LAMBDA_TRUST_POLICY, DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.deploy import models
@@ -118,7 +118,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 _AWSCLIENT_EXCEPTIONS = (
-    botocore.exceptions.ClientError, LambdaClientError
+    botocore.exceptions.ClientError, AWSClientError
 )
 
 
@@ -327,6 +327,13 @@ class Deployer(object):
         self._recorder = recorder
 
     def deploy(self, config, chalice_stage_name):
+        # type: (Config, str) -> Dict[str, Any]
+        try:
+            return self._deploy(config, chalice_stage_name)
+        except _AWSCLIENT_EXCEPTIONS as e:
+            raise ChaliceDeploymentError(e)
+
+    def _deploy(self, config, chalice_stage_name):
         # type: (Config, str) -> Dict[str, Any]
         application = self._application_builder.build(
             config, chalice_stage_name)

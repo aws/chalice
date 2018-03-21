@@ -12,7 +12,7 @@ from pytest import fixture
 
 from chalice.app import Chalice
 from chalice.app import CORSConfig
-from chalice.awsclient import LambdaClientError
+from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaErrorContext
 from chalice.config import Config
@@ -1449,6 +1449,14 @@ class TestDeployer(unittest.TestCase):
         self.recorder.record_results.assert_called_with(
             expected_result, 'dev', '.')
         assert result == expected_result
+
+    def test_deploy_errors_raises_chalice_error(self):
+        self.resource_builder.build.side_effect = AWSClientError()
+
+        deployer = self.create_deployer()
+        config = Config.create(project_dir='.')
+        with pytest.raises(ChaliceDeploymentError):
+            deployer.deploy(config, 'dev')
 
 
 def test_can_create_default_deployer():
