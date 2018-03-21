@@ -622,7 +622,7 @@ class Chalice(object):
                     error_code='UnsupportedMediaType',
                     message='Unsupported media type: %s' % content_type,
                     http_status_code=415,
-                    cors_headers=cors_headers
+                    headers=cors_headers
                 )
         response = self._get_view_function_response(view_function,
                                                     function_args)
@@ -641,7 +641,7 @@ class Chalice(object):
                          'must specify an Accept header that matches.'
                          % (content_type, content_type)),
                 http_status_code=400,
-                cors_headers=cors_headers
+                headers=cors_headers
             )
         response = response.to_dict(self.api.binary_types)
         return response
