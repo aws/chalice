@@ -136,9 +136,9 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     session = factory.create_botocore_session(
         connection_timeout=connection_timeout)
     ui = UI()
-    d = factory.create_new_default_deployer(session=session,
-                                            config=config,
-                                            ui=ui)
+    d = factory.create_default_deployer(session=session,
+                                        config=config,
+                                        ui=ui)
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     reporter = factory.create_deployment_reporter(ui=ui)
     reporter.display_report(deployed_values)

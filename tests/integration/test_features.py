@@ -146,7 +146,7 @@ def _deploy_app(temp_dirname):
         autogen_policy=True
     )
     session = factory.create_botocore_session()
-    d = factory.create_new_default_deployer(session, config, UI())
+    d = factory.create_default_deployer(session, config, UI())
     region = session.get_config_variable('region')
     deployed = _deploy_with_retries(d, config)
     application = SmokeTestApplication(
