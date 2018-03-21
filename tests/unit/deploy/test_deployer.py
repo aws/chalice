@@ -1451,10 +1451,6 @@ class TestDeployer(unittest.TestCase):
         assert result == expected_result
 
     def test_deploy_errors_raises_chalice_error(self):
-        app = mock.Mock(spec=models.Application)
-        resources = [mock.Mock(spec=models.Model)]
-        api_calls = [mock.Mock(spec=APICall)]
-
         self.resource_builder.build.side_effect = AWSClientError()
 
         deployer = self.create_deployer()
