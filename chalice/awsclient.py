@@ -44,11 +44,15 @@ _REMOTE_CALL_ERRORS = (
 )
 
 
-class ResourceDoesNotExistError(Exception):
+class AWSClientError(Exception):
     pass
 
 
-class LambdaClientError(Exception):
+class ResourceDoesNotExistError(AWSClientError):
+    pass
+
+
+class LambdaClientError(AWSClientError):
     def __init__(self, original_error, context):
         # type: (Exception, LambdaErrorContext) -> None
         self.original_error = original_error
