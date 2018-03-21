@@ -1407,6 +1407,7 @@ class TestDeployer(unittest.TestCase):
         self.sweeper = mock.Mock(spec=UnreferencedResourcePlanner)
         self.executor = mock.Mock(spec=Executor)
         self.recorder = mock.Mock(spec=ResultsRecorder)
+        self.chalice_app = Chalice(app_name='foo')
 
     def create_deployer(self):
         return Deployer(
@@ -1430,7 +1431,7 @@ class TestDeployer(unittest.TestCase):
         self.executor.resource_values = {'foo': {'name': 'bar'}}
 
         deployer = self.create_deployer()
-        config = Config.create(project_dir='.')
+        config = Config.create(project_dir='.', chalice_app=self.chalice_app)
         result = deployer.deploy(config, 'dev')
 
         self.resource_builder.build.assert_called_with(config, 'dev')
@@ -1454,7 +1455,18 @@ class TestDeployer(unittest.TestCase):
         self.resource_builder.build.side_effect = AWSClientError()
 
         deployer = self.create_deployer()
-        config = Config.create(project_dir='.')
+        config = Config.create(project_dir='.', chalice_app=self.chalice_app)
+        with pytest.raises(ChaliceDeploymentError):
+            deployer.deploy(config, 'dev')
+
+    def test_validation_errors_raise_failure(self):
+
+        @self.chalice_app.route('')
+        def bad_route_empty_string():
+            return {}
+
+        deployer = self.create_deployer()
+        config = Config.create(project_dir='.', chalice_app=self.chalice_app)
         with pytest.raises(ChaliceDeploymentError):
             deployer.deploy(config, 'dev')
 
