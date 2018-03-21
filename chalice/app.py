@@ -607,7 +607,7 @@ class Chalice(object):
                                        event.get('isBase64Encoded', False))
         # We're getting the CORS headers before validation to be able to
         # output desired headers with
-        cors_headers = dict()
+        cors_headers = None
         if self._cors_enabled_for_route(route_entry):
             cors_headers = self._get_cors_headers(route_entry.cors)
         # We're doing the header validation after creating the request
@@ -626,7 +626,7 @@ class Chalice(object):
                 )
         response = self._get_view_function_response(view_function,
                                                     function_args)
-        if cors_headers:
+        if cors_headers is not None:
             self._add_cors_headers(response, cors_headers)
 
         response_headers = CaseInsensitiveMapping(response.headers)
