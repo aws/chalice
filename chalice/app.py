@@ -702,10 +702,7 @@ class Chalice(object):
         return route_entry.cors is not None
 
     def _get_cors_headers(self, cors):
-        headers = dict()
-        for name, value in cors.get_access_control_headers().items():
-            headers[name] = value
-        return headers
+        return dict(cors.get_access_control_headers())
 
     def _add_cors_headers(self, response, cors_headers):
         for name, value in cors_headers.items():
