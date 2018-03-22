@@ -7,6 +7,109 @@ interested in the high level changes, see the
 `CHANGELOG.rst <https://github.com/aws/chalice/blob/master/CHANGELOG.rst>`__)
 file.
 
+.. _v1-2-0:
+
+1.2.0
+-----
+
+This release features a rewrite of the Chalice deployer
+(`#604 <https://github.com/aws/chalice/issues/604>`__).
+This is a backwards compatible change, and should not have any
+noticeable changes with deployments with the exception of
+fixing deployer bugs (e.g. https://github.com/aws/chalice/issues/604).
+This code path affects the ``chalice deploy`` and ``chalice delete`` commands.
+
+While this release is backwards compatible, you will notice several
+changes when you upgrade to version 1.2.0.
+
+First, the output of ``chalice deploy`` has changed in order to give
+more details about the resources it creates along with a more detailed
+summary at the end::
+
+    $ chalice deploy
+    Creating deployment package.
+    Creating IAM role: myapp-dev
+    Creating lambda function: myapp-dev-foo
+    Creating lambda function: myapp-dev
+    Creating Rest API
+    Resources deployed:
+      - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:myapp-dev-foo
+      - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:myapp-dev
+      - Rest API URL: https://abcd.execute-api.us-west-2.amazonaws.com/api/
+
+Second, the files used to store deployed values has changed.  These files are
+used internally by the ``chalice deploy/delete`` commands and you typically
+do not interact with these files directly.  It's mentioned here in case
+you notice new files in your ``.chalice`` directory.  Note that these files
+are *not* part of the public interface of Chalice and are documented here
+for completeness and to help with debugging issues.
+
+In versions < 1.2.0, the value of deployed resources was stored in
+``.chalice/deployed.json`` and looked like this::
+
+  {
+    "dev": {
+      "region": "us-west-2",
+      "api_handler_name": "demoauth4-dev",
+      "api_handler_arn": "arn:aws:lambda:us-west-2:123:function:myapp-dev",
+      "rest_api_id": "abcd",
+      "lambda_functions": {
+        "myapp-dev-foo": {
+          "type": "pure_lambda",
+          "arn": "arn:aws:lambda:us-west-2:123:function:myapp-dev-foo"
+        }
+      },
+      "chalice_version": "1.1.1",
+      "api_gateway_stage": "api",
+      "backend": "api"
+    },
+    "prod": {...}
+  }
+
+
+In version 1.2.0, the deployed resources are split into multiple files, one
+file per chalice stage.  These files are in the
+``.chalice/deployed/<stage.json>``, so if you had a dev and a prod chalice
+stage you'd have ``.chalice/deployed/dev.json`` and
+``.chalice/deployed/prod.json``.  The schema has also changed and looks
+like this::
+
+
+  $ cat .chalice/deployed/dev.json
+  {
+    "schema_version": "2.0",
+    "resources": [
+      {
+        "role_name": "myapp-dev",
+        "role_arn": "arn:aws:iam::123:role/myapp-dev",
+        "name": "default-role",
+        "resource_type": "iam_role"
+      },
+      {
+        "lambda_arn": "arn:aws:lambda:us-west-2:123:function:myapp-dev-foo",
+        "name": "foo",
+        "resource_type": "lambda_function"
+      },
+      {
+        "lambda_arn": "arn:aws:lambda:us-west-2:123:function:myapp-dev",
+        "name": "api_handler",
+        "resource_type": "lambda_function"
+      },
+      {
+        "name": "rest_api",
+        "rest_api_id": "abcd",
+        "rest_api_url": "https://abcd.execute-api.us-west-2.amazonaws.com/api",
+        "resource_type": "rest_api"
+      }
+    ],
+    "backend": "api"
+  }
+
+When you run ``chalice deploy`` for the first time after upgrading to version
+1.2.0, chalice will automatically converted ``.chalice/deployed.json`` over to
+the format as you deploy a given stage.
+
+
 .. _v1-0-0b2:
 
 1.0.0b2
