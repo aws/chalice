@@ -111,6 +111,7 @@ from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.policy import AppPolicyGenerator
 from chalice.utils import OSUtils, UI, serialize_to_json
+from chalice.deploy.validate import validate_configuration
 
 
 OPT_STR = Optional[str]
@@ -335,6 +336,7 @@ class Deployer(object):
 
     def _deploy(self, config, chalice_stage_name):
         # type: (Config, str) -> Dict[str, Any]
+        self._validate_config(config)
         application = self._application_builder.build(
             config, chalice_stage_name)
         resources = self._deps_builder.build_dependencies(application)
@@ -353,6 +355,13 @@ class Deployer(object):
             config.project_dir,
         )
         return deployed_values
+
+    def _validate_config(self, config):
+        # type: (Config) -> None
+        try:
+            validate_configuration(config)
+        except ValueError as e:
+            raise ChaliceDeploymentError(e)
 
 
 class ApplicationGraphBuilder(object):
