@@ -109,6 +109,13 @@ When you run ``chalice deploy`` for the first time after upgrading to version
 1.2.0, chalice will automatically converted ``.chalice/deployed.json`` over to
 the format as you deploy a given stage.
 
+.. warning::
+
+  Once you upgrade to 1.2.0, chalice will only update the new
+  ``.chalice/deployed/<stage>.json``.  This means you cannot downgrade
+  to earlier versions of chalice unless you manually update
+  ``.chalice/deployed.json`` as well.
+
 
 .. _v1-0-0b2:
 
