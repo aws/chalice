@@ -172,6 +172,7 @@ class LambdaEventConverter(object):
                 'identity': {
                     'sourceIp': self.LOCAL_SOURCE_IP
                 },
+                'path': path.split('?')[0],
             },
             'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,
