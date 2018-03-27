@@ -94,7 +94,7 @@ class DeploymentPackage(Model):
 
 @attrs
 class IAMPolicy(Model):
-    pass
+    document = attrib()
 
 
 @attrs
@@ -104,7 +104,7 @@ class FileBasedIAMPolicy(IAMPolicy):
 
 @attrs
 class AutoGenIAMPolicy(IAMPolicy):
-    document = attrib()
+    pass
 
 
 @attrs

@@ -1104,13 +1104,22 @@ class TestDefaultsInjector(object):
 
 
 class TestPolicyGeneratorStage(object):
+    def setup_method(self):
+        self.osutils = mock.Mock(spec=OSUtils)
+
+    def create_policy_generator(self, generator=None):
+        if generator is None:
+            generator = mock.Mock(spec=AppPolicyGenerator)
+        p = PolicyGenerator(generator, self.osutils)
+        return p
+
     def test_invokes_policy_generator(self):
         generator = mock.Mock(spec=AppPolicyGenerator)
         generator.generate_policy.return_value = {'policy': 'doc'}
         policy = models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE)
         config = Config.create()
 
-        p = PolicyGenerator(generator)
+        p = self.create_policy_generator(generator)
         p.handle(config, policy)
 
         assert policy.document == {'policy': 'doc'}
@@ -1121,11 +1130,31 @@ class TestPolicyGeneratorStage(object):
         policy = models.AutoGenIAMPolicy(document={'policy': 'original'})
         config = Config.create()
 
-        p = PolicyGenerator(generator)
+        p = self.create_policy_generator(generator)
         p.handle(config, policy)
 
         assert policy.document == {'policy': 'original'}
         assert not generator.generate_policy.called
+
+    def test_policy_loaded_from_file_if_needed(self):
+        p = self.create_policy_generator()
+        policy = models.FileBasedIAMPolicy(
+            filename='foo.json', document=models.Placeholder.BUILD_STAGE)
+        self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
+
+        p.handle(Config.create(), policy)
+
+        assert policy.document == {'iam': 'policy'}
+        self.osutils.get_file_contents.assert_called_with('foo.json')
+
+    def test_error_raised_if_file_policy_not_exists(self):
+        p = self.create_policy_generator()
+        policy = models.FileBasedIAMPolicy(
+            filename='foo.json', document=models.Placeholder.BUILD_STAGE)
+        self.osutils.get_file_contents.side_effect = IOError()
+
+        with pytest.raises(RuntimeError):
+            p.handle(Config.create(), policy)
 
 
 class TestSwaggerBuilder(object):

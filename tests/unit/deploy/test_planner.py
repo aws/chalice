@@ -136,9 +136,9 @@ class TestPlanManagedRole(BasePlannerTests):
             resource_name='default-role',
             role_name='myrole',
             trust_policy={'trust': 'policy'},
-            policy=models.FileBasedIAMPolicy(filename='foo.json'),
+            policy=models.FileBasedIAMPolicy(
+                filename='foo.json', document={'iam': 'policy'}),
         )
-        self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         plan = self.determine_plan(resource)
         expected = models.APICall(
             method_name='create_role',
@@ -150,19 +150,6 @@ class TestPlanManagedRole(BasePlannerTests):
         assert list(self.last_plan.messages.values()) == [
             'Creating IAM role: myrole\n'
         ]
-
-    def test_error_raised_when_filebased_policy_not_exist(self):
-        self.remote_state.declare_no_resources_exists()
-        resource = models.ManagedIAMRole(
-            resource_name='default-role',
-            role_name='myrole',
-            trust_policy={'trust': 'policy'},
-            policy=models.FileBasedIAMPolicy(filename='foo.json'),
-        )
-        self.osutils.get_file_contents.side_effect = IOError(
-            "File does not exist")
-        with pytest.raises(RuntimeError):
-            self.determine_plan(resource)
 
     def test_can_update_managed_role(self):
         role = models.ManagedIAMRole(
@@ -196,10 +183,11 @@ class TestPlanManagedRole(BasePlannerTests):
             resource_name='resource_name',
             role_name='myrole',
             trust_policy={},
-            policy=models.FileBasedIAMPolicy(filename='foo.json'),
+            policy=models.FileBasedIAMPolicy(
+                filename='foo.json',
+                document={'iam': 'policy'}),
         )
         self.remote_state.declare_resource_exists(role, role_arn='myrole:arn')
-        self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
         plan = self.determine_plan(role)
         assert plan[0] == models.StoreValue(
             name='myrole_role_arn', value='myrole:arn')
@@ -277,7 +265,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
             resource_name='myrole',
             role_name='myrole-dev',
             trust_policy={'trust': 'policy'},
-            policy=models.FileBasedIAMPolicy(filename='foo.json'),
+            policy=models.FileBasedIAMPolicy(
+                filename='foo.json', document={'iam': 'role'}),
         )
         plan = self.determine_plan(function)
         call = plan[0]

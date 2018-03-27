@@ -258,6 +258,7 @@ def create_default_deployer(session, config, ui):
                     policy_gen=AppPolicyGenerator(
                         osutils=osutils
                     ),
+                    osutils=osutils,
                 ),
                 SwaggerBuilder(
                     swagger_generator=TemplatedSwaggerGenerator(),
@@ -509,7 +510,7 @@ class ApplicationGraphBuilder(object):
             return models.PreCreatedIAMRole(
                 role_arn=config.iam_role_arn,
             )
-        policy = models.IAMPolicy()
+        policy = models.IAMPolicy(document=models.Placeholder.BUILD_STAGE)
         if not config.autogen_policy:
             resource_name = 'role-%s' % function_name
             role_name = '%s-%s-%s' % (config.app_name, stage_name,
@@ -522,7 +523,8 @@ class ApplicationGraphBuilder(object):
                 filename = os.path.join(config.project_dir,
                                         '.chalice',
                                         'policy-%s.json' % stage_name)
-            policy = models.FileBasedIAMPolicy(filename=filename)
+            policy = models.FileBasedIAMPolicy(
+                filename=filename, document=models.Placeholder.BUILD_STAGE)
         else:
             resource_name = 'default-role'
             role_name = '%s-%s' % (config.app_name, stage_name)
@@ -637,9 +639,19 @@ class SwaggerBuilder(BaseDeployStep):
 
 
 class PolicyGenerator(BaseDeployStep):
-    def __init__(self, policy_gen):
-        # type: (AppPolicyGenerator) -> None
+    def __init__(self, policy_gen, osutils):
+        # type: (AppPolicyGenerator, OSUtils) -> None
         self._policy_gen = policy_gen
+        self._osutils = osutils
+
+    def handle_filebasediampolicy(self, config, resource):
+        # type: (Config, models.FileBasedIAMPolicy) -> None
+        try:
+            resource.document = json.loads(
+                self._osutils.get_file_contents(resource.filename))
+        except IOError as e:
+            raise RuntimeError("Unable to load IAM policy file %s: %s"
+                               % (resource.filename, e))
 
     def handle_autogeniampolicy(self, config, resource):
         # type: (Config, models.AutoGenIAMPolicy) -> None
