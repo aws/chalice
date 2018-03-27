@@ -211,6 +211,10 @@ class OSUtils(object):
         # type: (str) -> None
         shutil.rmtree(directory)
 
+    def copy(self, source, destination):
+        # type: (str, str) -> None
+        shutil.copy(source, destination)
+
     def move(self, source, destination):
         # type: (str, str) -> None
         shutil.move(source, destination)

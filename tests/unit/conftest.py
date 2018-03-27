@@ -49,6 +49,24 @@ def sample_app_with_auth():
 
 
 @fixture
+def sample_app_schedule_only():
+    app = Chalice('schedule_only')
+
+    @app.schedule('rate(5 minutes)')
+    def cron(event):
+        pass
+
+
+@fixture
+def sample_app_lambda_only():
+    app = Chalice('lambda_only')
+
+    @app.lambda_function()
+    def myfunction(event, context):
+        pass
+
+
+@fixture
 def create_event():
     def create_event_inner(uri, method, path, content_type='application/json'):
         return {

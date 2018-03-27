@@ -235,35 +235,11 @@ def create_default_deployer(session, config, ui):
     # type: (Session, Config, UI) -> Deployer
     client = TypedAWSClient(session)
     osutils = OSUtils()
-    pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
-                           osutils=osutils)
-    dependency_builder = PipDependencyBuilder(
-        osutils=osutils,
-        pip_runner=pip_runner
-    )
     return Deployer(
         application_builder=ApplicationGraphBuilder(),
         deps_builder=DependencyBuilder(),
-        build_stage=BuildStage(
-            steps=[
-                InjectDefaults(),
-                DeploymentPackager(
-                    packager=LambdaDeploymentPackager(
-                        osutils=osutils,
-                        dependency_builder=dependency_builder,
-                        ui=UI(),
-                    ),
-                ),
-                PolicyGenerator(
-                    policy_gen=AppPolicyGenerator(
-                        osutils=osutils
-                    ),
-                    osutils=osutils,
-                ),
-                SwaggerBuilder(
-                    swagger_generator=TemplatedSwaggerGenerator(),
-                )
-            ],
+        build_stage=create_build_stage(
+            osutils, UI(), TemplatedSwaggerGenerator(),
         ),
         plan_stage=PlanStage(
             osutils=osutils, remote_state=RemoteState(
@@ -273,6 +249,38 @@ def create_default_deployer(session, config, ui):
         executor=Executor(client, ui),
         recorder=ResultsRecorder(osutils=osutils),
     )
+
+
+def create_build_stage(osutils, ui, swagger_gen):
+    # type: (OSUtils, UI, SwaggerGenerator) -> BuildStage
+    pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
+                           osutils=osutils)
+    dependency_builder = PipDependencyBuilder(
+        osutils=osutils,
+        pip_runner=pip_runner
+    )
+    build_stage = BuildStage(
+        steps=[
+            InjectDefaults(),
+            DeploymentPackager(
+                packager=LambdaDeploymentPackager(
+                    osutils=osutils,
+                    dependency_builder=dependency_builder,
+                    ui=ui,
+                ),
+            ),
+            PolicyGenerator(
+                policy_gen=AppPolicyGenerator(
+                    osutils=osutils
+                ),
+                osutils=osutils,
+            ),
+            SwaggerBuilder(
+                swagger_generator=swagger_gen,
+            )
+        ],
+    )
+    return build_stage
 
 
 def create_deletion_deployer(client, ui):
