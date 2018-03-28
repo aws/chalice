@@ -22,6 +22,23 @@ class AbortedError(Exception):
     pass
 
 
+def to_cfn_case(key):
+    # type: (str) -> str
+    """Transform a name to a readable cfn name.
+
+    This is similar to the to_cfn_resource_name function
+    except it will first try to create a readable name.
+
+    This is useful when you want to generate something that's
+    user visible such as an output value or a parameter key name.
+
+    If this function is not able to generate a readable cfn
+    name it will fall back to to_cfn_resource_name.
+
+    """
+    return ''.join([k.capitalize() for k in key.split('_')])
+
+
 def to_cfn_resource_name(name):
     # type: (str) -> str
     """Transform a name to a valid cfn name.
