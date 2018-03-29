@@ -1,3 +1,4 @@
+import os
 import sys
 import pytest
 
@@ -523,8 +524,9 @@ class TestUpgradeNewDeployer(object):
             },
             'schema_version': '2.0',
         }
+        self.deployed_filename = os.path.join('.', '.chalice', 'deployed.json')
         self.config = FixedDataConfig(
-            {'./.chalice/deployed.json': self.old_deployed},
+            {self.deployed_filename: self.old_deployed},
         )
 
     def test_can_upgrade_rest_api(self):
@@ -563,7 +565,7 @@ class TestUpgradeNewDeployer(object):
         }
         self.old_deployed = {"dev": deployed}
         self.config = FixedDataConfig(
-            {'./.chalice/deployed.json': self.old_deployed},
+            {self.deployed_filename: self.old_deployed},
         )
         resources = self.config.deployed_resources('dev')
         assert sorted(resources.resource_names()) == [
