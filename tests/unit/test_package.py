@@ -1,3 +1,4 @@
+import os
 import mock
 
 import pytest
@@ -8,6 +9,7 @@ from chalice.deploy.deployer import DependencyBuilder
 from chalice.deploy.deployer import BuildStage
 from chalice.deploy import models
 from chalice.deploy.swagger import SwaggerGenerator
+from chalice.utils import OSUtils
 
 
 @pytest.fixture
@@ -19,6 +21,38 @@ def test_can_create_app_packager():
     config = Config()
     packager = package.create_app_packager(config)
     assert isinstance(packager, package.AppPackager)
+
+
+def test_template_post_processor_moves_files_once():
+    mock_osutils = mock.Mock(spec=OSUtils)
+    p = package.TemplatePostProcessor(mock_osutils)
+    template = {
+        'Resources': {
+            'foo': {
+                'Type': 'AWS::Serverless::Function',
+                'Properties': {
+                    'CodeUri': 'old-dir.zip',
+                }
+            },
+            'bar': {
+                'Type': 'AWS::Serverless::Function',
+                'Properties': {
+                    'CodeUri': 'old-dir.zip',
+                }
+            },
+        }
+    }
+    p.process(template, config=None,
+              outdir='outdir', chalice_stage_name='dev')
+    mock_osutils.copy.assert_called_with(
+        'old-dir.zip', os.path.join('outdir', 'deployment.zip'))
+    assert mock_osutils.copy.call_count == 1
+    assert template['Resources']['foo']['Properties']['CodeUri'] == (
+        './deployment.zip'
+    )
+    assert template['Resources']['bar']['Properties']['CodeUri'] == (
+        './deployment.zip'
+    )
 
 
 class TestSAMTemplate(object):

@@ -276,10 +276,13 @@ class TemplatePostProcessor(object):
         # outdir.  That would require plumbing through user
         # provided params such as "outdir" into the build stage
         # somehow, which isn't currently possible.
+        copied = False
         for resource in template['Resources'].values():
             if resource['Type'] != 'AWS::Serverless::Function':
                 continue
             original_location = resource['Properties']['CodeUri']
             new_location = os.path.join(outdir, 'deployment.zip')
-            self._osutils.copy(original_location, new_location)
+            if not copied:
+                self._osutils.copy(original_location, new_location)
+                copied = True
             resource['Properties']['CodeUri'] = './deployment.zip'
