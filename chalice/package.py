@@ -103,6 +103,10 @@ class SAMTemplateGenerator(object):
                 'MemorySize': resource.memory_size,
             },
         }
+        if resource.environment_variables:
+            resources[cfn_name]['Properties']['EnvironmentVariables'] = {
+                'Variables': resource.environment_variables
+            }
         self._inject_iam_permissions(resource, resources[cfn_name])
 
     def _inject_iam_permissions(self, resource, cfn_resource):

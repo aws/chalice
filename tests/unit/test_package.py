@@ -131,6 +131,17 @@ class TestSAMTemplate(object):
             },
         }
 
+    def test_adds_env_vars_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.environment_variables = {'foo': 'bar'}
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['EnvironmentVariables'] == {
+            'Variables': {
+                'foo': 'bar'
+            }
+        }
+
     def test_role_arn_inserted_when_necessary(self):
         function = models.LambdaFunction(
             resource_name='foo',
