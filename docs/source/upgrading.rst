@@ -17,12 +17,13 @@ This release features a rewrite of the Chalice deployer
 This is a backwards compatible change, and should not have any
 noticeable changes with deployments with the exception of
 fixing deployer bugs (e.g. https://github.com/aws/chalice/issues/604).
-This code path affects the ``chalice deploy`` and ``chalice delete`` commands.
+This code path affects the ``chalice deploy``, ``chalice delete``, and
+``chalice package`` commands.
 
 While this release is backwards compatible, you will notice several
 changes when you upgrade to version 1.2.0.
 
-First, the output of ``chalice deploy`` has changed in order to give
+The output of ``chalice deploy`` has changed in order to give
 more details about the resources it creates along with a more detailed
 summary at the end::
 
@@ -37,7 +38,7 @@ summary at the end::
       - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:myapp-dev
       - Rest API URL: https://abcd.execute-api.us-west-2.amazonaws.com/api/
 
-Second, the files used to store deployed values has changed.  These files are
+Also, the files used to store deployed values has changed.  These files are
 used internally by the ``chalice deploy/delete`` commands and you typically
 do not interact with these files directly.  It's mentioned here in case
 you notice new files in your ``.chalice`` directory.  Note that these files
@@ -115,6 +116,31 @@ the format as you deploy a given stage.
   ``.chalice/deployed/<stage>.json``.  This means you cannot downgrade
   to earlier versions of chalice unless you manually update
   ``.chalice/deployed.json`` as well.
+
+
+The ``chalice package`` command has also been updated to use the
+deployer.  This results in several changes compared to the previous
+version:
+
+* Pure lambdas are supported
+* Scheduled events are supported
+* Parity between the behavior of ``chalice deploy`` and ``chalice package``
+
+As part of this change, the CFN resource names have been updated
+to use ``CamelCase`` names.  Previously, chalice converted your
+python function names to CFN resource names by removing all
+non alphanumeric characters and appending an md5 checksum,
+e.g ``my_function -> myfunction3bfc``.  With this new packager
+update, the resource name would be converted as
+``my_function -> MyFunction``.  Note, the ``Outputs`` section
+renames unchanged in order to preserve backwards compatibility.
+In order to fix parity issues with ``chalice deploy`` and
+``chalice package``, we now explicitly create an IAM role
+resource as part of the default configuration.  This means
+the default SAM template requires capability ``CAPABILITY_NAMED_IAM``
+instead of ``CAPABILITY_IAM``.  As always, you still have the
+ability to control exactly how IAM roles map to your AWS Lambda
+functions.  This only affects the default configuration.
 
 
 .. _v1-0-0b2:

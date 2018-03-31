@@ -24,6 +24,9 @@ for more detailed information about upgrading to this release.
   (`#685 <https://github.com/aws/chalice/issues/685>`__)
 * Rewrite Chalice deployer to more easily support additional AWS resources
   (`#604 <https://github.com/aws/chalice/issues/604>`__)
+* Update the ``chalice package`` command to support
+  pure lambda functions and scheduled events.
+  (`#772 <https://github.com/aws/chalice/issues/772>`__)
 
 
 1.1.1
