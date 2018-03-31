@@ -3,7 +3,6 @@ import os
 import zipfile
 import json
 import contextlib
-import hashlib
 import tempfile
 import re
 import shutil

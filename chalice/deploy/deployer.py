@@ -520,7 +520,7 @@ class ApplicationGraphBuilder(object):
             )
         policy = models.IAMPolicy(document=models.Placeholder.BUILD_STAGE)
         if not config.autogen_policy:
-            resource_name = 'role-%s' % function_name
+            resource_name = '%s_role' % function_name
             role_name = '%s-%s-%s' % (config.app_name, stage_name,
                                       function_name)
             if config.iam_policy_file is not None:

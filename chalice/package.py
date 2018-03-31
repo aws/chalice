@@ -107,13 +107,17 @@ class SAMTemplateGenerator(object):
             resources[cfn_name]['Properties']['EnvironmentVariables'] = {
                 'Variables': resource.environment_variables
             }
-        self._inject_iam_permissions(resource, resources[cfn_name])
+        self._add_iam_role(resource, resources[cfn_name])
 
-    def _inject_iam_permissions(self, resource, cfn_resource):
+    def _add_iam_role(self, resource, cfn_resource):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
         role = resource.role
         if isinstance(role, models.ManagedIAMRole):
-            cfn_resource['Properties']['Policies'] = role.policy.document
+            cfn_resource['Properties']['Role'] = {
+                'Fn::GetAtt': [
+                    to_cfn_resource_name(role.resource_name), 'Arn'
+                ],
+            }
         else:
             # resource is a PreCreatedIAMRole
             cfn_resource['Properties']['Role'] = role.role_arn
@@ -207,7 +211,18 @@ class SAMTemplateGenerator(object):
 
     def _generate_managediamrole(self, resource, template):
         # type: (models.ManagedIAMRole, Dict[str, Any]) -> None
-        pass
+        role_cfn_name = to_cfn_resource_name(resource.resource_name)
+        template['Resources'][role_cfn_name] = {
+            'Type': 'AWS::IAM::Role',
+            'Properties': {
+                'AssumeRolePolicyDocument': resource.trust_policy,
+                'Policies': [
+                    {'PolicyDocument': resource.policy.document,
+                     'PolicyName': role_cfn_name + 'Policy'},
+                ],
+                'RoleName': resource.role_name,
+            }
+        }
 
     def _generate_filebasediampolicy(self, resource, template):
         # type: (models.FileBasedIAMPolicy, Dict[str, Any]) -> None
