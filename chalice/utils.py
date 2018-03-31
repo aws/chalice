@@ -29,10 +29,10 @@ def to_cfn_resource_name(name):
     This transform ensures that only alphanumeric characters are used
     and prevent collisions by appending the hash of the original name.
     """
-    alphanumeric_only_name = re.sub(r'[^A-Za-z0-9]+', '', name)
-    return ''.join([
-        alphanumeric_only_name, hashlib.md5(
-            name.encode('utf-8')).hexdigest()[:4]])
+    for word_separator in ['-', '_']:
+        word_parts = name.split(word_separator)
+        name = ''.join([w[0].upper() + w[1:] for w in word_parts])
+    return re.sub(r'[^A-Za-z0-9]+', '', name)
 
 
 def remove_stage_from_deployed_values(key, filename):

@@ -43,3 +43,24 @@ def test_serialize_json():
         '  "foo": "bar"\n'
         '}\n'
     )
+
+
+@pytest.mark.parametrize('name,cfn_name', [
+    ('f', 'F'),
+    ('foo', 'Foo'),
+    ('foo_bar', 'FooBar'),
+    ('foo_bar_baz', 'FooBarBaz'),
+    ('F', 'F'),
+    ('FooBar', 'FooBar'),
+    ('S3Bucket', 'S3Bucket'),
+    ('s3Bucket', 'S3Bucket'),
+    ('123', '123'),
+    ('foo-bar-baz', 'FooBarBaz'),
+    ('foo_bar-baz', 'FooBarBaz'),
+    ('foo-bar_baz', 'FooBarBaz'),
+    # Not actually possible, but we should
+    # ensure we only have alphanumeric chars.
+    ('foo_bar!?', 'FooBar'),
+])
+def test_to_cfn_resource_name(name, cfn_name):
+    assert utils.to_cfn_resource_name(name) == cfn_name
