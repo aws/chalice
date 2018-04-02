@@ -1,5 +1,3 @@
-import json
-
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 from typing import Sequence  # noqa
 
@@ -249,7 +247,7 @@ class PlanStage(object):
 
     def _plan_managediamrole(self, resource):
         # type: (models.ManagedIAMRole) -> Sequence[_INSTRUCTION_MSG]
-        document = self._get_policy_document(resource.policy)
+        document = resource.policy.document
         role_exists = self._remote_state.resource_exists(resource)
         varname = '%s_role_arn' % resource.role_name
         if not role_exists:
@@ -464,23 +462,6 @@ class PlanStage(object):
             return Variable('%s_role_arn' % resource.role_name)
         # Make mypy happy.
         raise RuntimeError("Unknown resource type: %s" % resource)
-
-    def _get_policy_document(self, resource):
-        # type: (models.IAMPolicy) -> Dict[str, Any]
-        if isinstance(resource, models.AutoGenIAMPolicy):
-            # mypy can't check this, but we assert that the
-            # placeholder values are filled in before we invoke
-            # any planners, so we can safely cast from
-            # Placholder[T] to T.
-            document = cast(Dict[str, Any], resource.document)
-        elif isinstance(resource, models.FileBasedIAMPolicy):
-            try:
-                document = json.loads(
-                    self._osutils.get_file_contents(resource.filename))
-            except IOError as e:
-                raise RuntimeError("Unable to load IAM policy file %s: %s"
-                                   % (resource.filename, e))
-        return document
 
 
 class NoopPlanner(PlanStage):

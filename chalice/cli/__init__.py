@@ -278,12 +278,12 @@ def package(ctx, single_file, stage, out):
     if single_file:
         dirname = tempfile.mkdtemp()
         try:
-            packager.package_app(config, dirname)
+            packager.package_app(config, dirname, stage)
             create_zip_file(source_dir=dirname, outfile=out)
         finally:
             shutil.rmtree(dirname)
     else:
-        packager.package_app(config, out)
+        packager.package_app(config, out, stage)
 
 
 @cli.command('generate-pipeline')

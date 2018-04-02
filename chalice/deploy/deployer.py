@@ -235,34 +235,11 @@ def create_default_deployer(session, config, ui):
     # type: (Session, Config, UI) -> Deployer
     client = TypedAWSClient(session)
     osutils = OSUtils()
-    pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
-                           osutils=osutils)
-    dependency_builder = PipDependencyBuilder(
-        osutils=osutils,
-        pip_runner=pip_runner
-    )
     return Deployer(
         application_builder=ApplicationGraphBuilder(),
         deps_builder=DependencyBuilder(),
-        build_stage=BuildStage(
-            steps=[
-                InjectDefaults(),
-                DeploymentPackager(
-                    packager=LambdaDeploymentPackager(
-                        osutils=osutils,
-                        dependency_builder=dependency_builder,
-                        ui=UI(),
-                    ),
-                ),
-                PolicyGenerator(
-                    policy_gen=AppPolicyGenerator(
-                        osutils=osutils
-                    ),
-                ),
-                SwaggerBuilder(
-                    swagger_generator=TemplatedSwaggerGenerator(),
-                )
-            ],
+        build_stage=create_build_stage(
+            osutils, UI(), TemplatedSwaggerGenerator(),
         ),
         plan_stage=PlanStage(
             osutils=osutils, remote_state=RemoteState(
@@ -272,6 +249,38 @@ def create_default_deployer(session, config, ui):
         executor=Executor(client, ui),
         recorder=ResultsRecorder(osutils=osutils),
     )
+
+
+def create_build_stage(osutils, ui, swagger_gen):
+    # type: (OSUtils, UI, SwaggerGenerator) -> BuildStage
+    pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
+                           osutils=osutils)
+    dependency_builder = PipDependencyBuilder(
+        osutils=osutils,
+        pip_runner=pip_runner
+    )
+    build_stage = BuildStage(
+        steps=[
+            InjectDefaults(),
+            DeploymentPackager(
+                packager=LambdaDeploymentPackager(
+                    osutils=osutils,
+                    dependency_builder=dependency_builder,
+                    ui=ui,
+                ),
+            ),
+            PolicyGenerator(
+                policy_gen=AppPolicyGenerator(
+                    osutils=osutils
+                ),
+                osutils=osutils,
+            ),
+            SwaggerBuilder(
+                swagger_generator=swagger_gen,
+            )
+        ],
+    )
+    return build_stage
 
 
 def create_deletion_deployer(client, ui):
@@ -509,7 +518,7 @@ class ApplicationGraphBuilder(object):
             return models.PreCreatedIAMRole(
                 role_arn=config.iam_role_arn,
             )
-        policy = models.IAMPolicy()
+        policy = models.IAMPolicy(document=models.Placeholder.BUILD_STAGE)
         if not config.autogen_policy:
             resource_name = 'role-%s' % function_name
             role_name = '%s-%s-%s' % (config.app_name, stage_name,
@@ -522,7 +531,8 @@ class ApplicationGraphBuilder(object):
                 filename = os.path.join(config.project_dir,
                                         '.chalice',
                                         'policy-%s.json' % stage_name)
-            policy = models.FileBasedIAMPolicy(filename=filename)
+            policy = models.FileBasedIAMPolicy(
+                filename=filename, document=models.Placeholder.BUILD_STAGE)
         else:
             resource_name = 'default-role'
             role_name = '%s-%s' % (config.app_name, stage_name)
@@ -637,9 +647,19 @@ class SwaggerBuilder(BaseDeployStep):
 
 
 class PolicyGenerator(BaseDeployStep):
-    def __init__(self, policy_gen):
-        # type: (AppPolicyGenerator) -> None
+    def __init__(self, policy_gen, osutils):
+        # type: (AppPolicyGenerator, OSUtils) -> None
         self._policy_gen = policy_gen
+        self._osutils = osutils
+
+    def handle_filebasediampolicy(self, config, resource):
+        # type: (Config, models.FileBasedIAMPolicy) -> None
+        try:
+            resource.document = json.loads(
+                self._osutils.get_file_contents(resource.filename))
+        except IOError as e:
+            raise RuntimeError("Unable to load IAM policy file %s: %s"
+                               % (resource.filename, e))
 
     def handle_autogeniampolicy(self, config, resource):
         # type: (Config, models.AutoGenIAMPolicy) -> None

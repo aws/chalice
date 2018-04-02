@@ -181,7 +181,13 @@ class DeploymentPackage(Model):
 
 
 class IAMPolicy(Model):
-    pass
+    document = ...  # type: DV[Dict[str, Any]]
+
+    def __init__(self,
+                 document,   # type: DV[Dict[str, Any]]
+                 ):
+        # type: (...) -> None
+        ...
 
 
 class FileBasedIAMPolicy(IAMPolicy):
@@ -189,6 +195,7 @@ class FileBasedIAMPolicy(IAMPolicy):
 
     def __init__(self,
                  filename,   # type: str
+                 document,   # type: DV[Dict[str, Any]]
                  ):
         # type: (...) -> None
         ...
