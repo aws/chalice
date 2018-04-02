@@ -26,7 +26,7 @@ Chalice
 
       A Lambda context object that is passed to the invoked view by AWS
       Lambda. You can find out more about this object by reading the
-      `lambda context object documentation <http://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
+      `lambda context object documentation <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
 
    .. attribute:: debug
 
@@ -157,7 +157,7 @@ Chalice
         instance of type ``ScheduleExpression``, which is either a
         :class:`Cron` or :class:`Rate` object.  If a string value is
         provided, it will be provided directly as the ``ScheduleExpression``
-        value in the `PutRule <http://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax>`__ API
+        value in the `PutRule <https://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax>`__ API
         call.
 
       :param name: The name of the function to use.  This name is combined
@@ -594,7 +594,7 @@ Scheduled Events
     supported.
 
   For more information, see the API
-  `docs page <http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions>`__.
+  `docs page <https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions>`__.
 
   Examples:
 

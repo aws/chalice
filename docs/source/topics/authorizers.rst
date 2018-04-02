@@ -40,7 +40,7 @@ To associate an IAM authorizer with a route in chalice, you use the
 
 
 See the `API Gateway documentation
-<http://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html>`__
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html>`__
 for more information on controlling access to API Gateway with IAM permissions.
 
 Amazon Cognito User Pools
@@ -69,7 +69,7 @@ cognito user pool configured.
 
 For more information about using Cognito user pools with API Gateway,
 see the `Use Amazon Cognito User Pools documentation
-<http://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html>`__.
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html>`__.
 
 
 Custom Authorizers
@@ -217,10 +217,10 @@ without modification back to API Gateway.
 
 For more information on custom authorizers, see the
 `Use API Gateway Custom Authorizers
-<http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html>`__
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html>`__
 page in the API Gateway user guide.
 
 
-.. _IAM permissions: http://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html
-.. _Cognito User Pools: http://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
-.. _API Gateway documentation: http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html#api-gateway-custom-authorizer-lambda-function-create
+.. _IAM permissions: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html
+.. _Cognito User Pools: https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
+.. _API Gateway documentation: https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html
