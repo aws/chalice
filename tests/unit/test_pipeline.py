@@ -1,6 +1,7 @@
 import pytest
 
 from chalice import pipeline
+from chalice import __version__ as chalice_version
 from chalice.pipeline import InvalidCodeBuildPythonVersion, PipelineParameters
 
 
@@ -137,10 +138,22 @@ def test_codepipeline_resource(pipeline_params):
     assert 'CodePipelineRole' in resources
     assert 'CFNDeployRole' in resources
     # Some basic sanity checks
-    resources['AppPipeline']['Type'] == 'AWS::CodePipeline::Pipeline'
-    resources['ArtifactBucketStore']['Type'] == 'AWS::S3::Bucket'
-    resources['CodePipelineRole']['Type'] == 'AWS::IAM::Role'
-    resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
+    assert resources['AppPipeline']['Type'] == 'AWS::CodePipeline::Pipeline'
+    assert resources['ArtifactBucketStore']['Type'] == 'AWS::S3::Bucket'
+    assert resources['CodePipelineRole']['Type'] == 'AWS::IAM::Role'
+    assert resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
+    properties = resources['AppPipeline']['Properties']
+    stages = properties['Stages']
+    beta_stage = stages[2]
+    beta_config = beta_stage['Actions'][0]['Configuration']
+    assert beta_config == {
+        'ActionMode': 'CHANGE_SET_REPLACE',
+        'Capabilities': 'CAPABILITY_NAMED_IAM',
+        'ChangeSetName': {'Fn::Sub': '${ApplicationName}ChangeSet'},
+        'RoleArn': {'Fn::GetAtt': 'CFNDeployRole.Arn'},
+        'StackName': {'Fn::Sub': '${ApplicationName}BetaStack'},
+        'TemplatePath': 'CompiledCFNTemplate::transformed.yaml'
+    }
 
 
 def test_install_requirements_in_buildspec(pipeline_params):
