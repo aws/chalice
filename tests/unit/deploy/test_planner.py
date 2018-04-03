@@ -9,7 +9,7 @@ from chalice.config import DeployedResources
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.deploy.planner import StringFormat
-from chalice.deploy.planner import UnreferencedResourcePlanner
+from chalice.deploy.planner import ResourceSweeper
 
 
 def create_function_resource(name, function_name=None,
@@ -620,7 +620,7 @@ class TestRemoteState(object):
 
 class TestUnreferencedResourcePlanner(object):
     def setup_method(self):
-        self.sweeper = UnreferencedResourcePlanner()
+        self.sweeper = ResourceSweeper()
 
     def execute(self, plan, config):
         self.sweeper.execute(models.Plan(plan, messages={}), config)
