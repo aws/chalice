@@ -5,7 +5,7 @@ You have several options for logging in your
 application.  You can use any of the options
 available to lambda functions as outlined
 in the
-`AWS Lambda Docs <http://docs.aws.amazon.com/lambda/latest/dg/python-logging.html>`_.
+`AWS Lambda Docs <https://docs.aws.amazon.com/lambda/latest/dg/python-logging.html>`_.
 The simplest option is to just use print statements.
 Anything you print will be accessible in cloudwatch logs
 as well as in the output of the ``chalice logs`` command.

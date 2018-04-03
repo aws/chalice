@@ -57,7 +57,7 @@ def remove_stage_from_deployed_values(key, filename):
 
 
 def record_deployed_values(deployed_values, filename):
-    # type: (Dict[str, str], str) -> None
+    # type: (Dict[str, Any], str) -> None
     """Record deployed values to a JSON file.
 
     This allows subsequent deploys to lookup previously deployed values.
@@ -163,7 +163,7 @@ class OSUtils(object):
 
     def extract_tarfile(self, tarfile_path, unpack_dir):
         # type: (str, str) -> None
-        with tarfile.open(tarfile_path, 'r:gz') as tar:
+        with tarfile.open(tarfile_path, 'r:*') as tar:
             tar.extractall(unpack_dir)
 
     def directory_exists(self, path):
@@ -210,6 +210,10 @@ class OSUtils(object):
     def rmtree(self, directory):
         # type: (str) -> None
         shutil.rmtree(directory)
+
+    def copy(self, source, destination):
+        # type: (str, str) -> None
+        shutil.copy(source, destination)
 
     def move(self, source, destination):
         # type: (str, str) -> None
