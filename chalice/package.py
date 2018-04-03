@@ -1,7 +1,7 @@
 import os
 import copy
 
-from typing import Any, Dict, List  # noqa
+from typing import Any, Dict, List, Set  # noqa
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
@@ -36,6 +36,10 @@ class UnsupportedFeatureError(Exception):
     pass
 
 
+class DuplicateResourceNameError(Exception):
+    pass
+
+
 class ResourceBuilder(object):
     def __init__(self,
                  application_builder,  # type: ApplicationGraphBuilder
@@ -64,9 +68,14 @@ class SAMTemplateGenerator(object):
         'Resources': {},
     }
 
+    def __init__(self):
+        # type: () -> None
+        self._seen_names = set([])  # type: Set[str]
+
     def generate_sam_template(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
         template = copy.deepcopy(self._BASE_TEMPLATE)
+        self._seen_names.clear()
         for resource in resources:
             name = '_generate_%s' % resource.__class__.__name__.lower()
             handler = getattr(self, name, self._default)
@@ -78,7 +87,8 @@ class SAMTemplateGenerator(object):
         function_cfn_name = to_cfn_resource_name(
             resource.lambda_function.resource_name)
         function_cfn = template['Resources'][function_cfn_name]
-        event_cfn_name = to_cfn_resource_name(resource.resource_name)
+        event_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
         function_cfn['Properties']['Events'] = {
             event_cfn_name: {
                 'Type': 'Schedule',
@@ -91,7 +101,7 @@ class SAMTemplateGenerator(object):
     def _generate_lambdafunction(self, resource, template):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
         resources = template['Resources']
-        cfn_name = to_cfn_resource_name(resource.resource_name)
+        cfn_name = self._register_cfn_resource_name(resource.resource_name)
         resources[cfn_name] = {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
@@ -211,7 +221,8 @@ class SAMTemplateGenerator(object):
 
     def _generate_managediamrole(self, resource, template):
         # type: (models.ManagedIAMRole, Dict[str, Any]) -> None
-        role_cfn_name = to_cfn_resource_name(resource.resource_name)
+        role_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
         template['Resources'][role_cfn_name] = {
             'Type': 'AWS::IAM::Role',
             'Properties': {
@@ -238,6 +249,17 @@ class SAMTemplateGenerator(object):
     def _default(self, resource, template):
         # type: (models.Model, Dict[str, Any]) -> None
         raise NotImplementedError(resource)
+
+    def _register_cfn_resource_name(self, name):
+        # type: (str) -> str
+        cfn_name = to_cfn_resource_name(name)
+        if cfn_name in self._seen_names:
+            raise DuplicateResourceNameError(
+                'A duplicate resource name was generated for '
+                'the SAM template: %s' % cfn_name,
+            )
+        self._seen_names.add(cfn_name)
+        return cfn_name
 
 
 class AppPackager(object):

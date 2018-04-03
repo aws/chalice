@@ -147,6 +147,14 @@ class TestSAMTemplate(object):
             }
         }
 
+    def test_duplicate_resource_name_raises_error(self):
+        one = self.lambda_function()
+        two = self.lambda_function()
+        one.resource_name = 'foo_bar'
+        two.resource_name = 'foo__bar'
+        with pytest.raises(package.DuplicateResourceNameError):
+            self.template_gen.generate_sam_template([one, two])
+
     def test_role_arn_inserted_when_necessary(self):
         function = models.LambdaFunction(
             resource_name='foo',
@@ -178,7 +186,7 @@ class TestSAMTemplate(object):
     def test_can_generate_scheduled_event(self):
         function = self.lambda_function()
         event = models.ScheduledEvent(
-            resource_name='foo',
+            resource_name='foo-event',
             rule_name='myrule',
             schedule_expression='rate(5 minutes)',
             lambda_function=function,
@@ -190,7 +198,7 @@ class TestSAMTemplate(object):
         assert len(resources) == 1
         cfn_resource = list(resources.values())[0]
         assert cfn_resource['Properties']['Events'] == {
-            'Foo': {
+            'FooEvent': {
                 'Type': 'Schedule',
                 'Properties': {
                     'Schedule': 'rate(5 minutes)'
