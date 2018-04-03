@@ -25,11 +25,17 @@ def to_cfn_resource_name(name):
     # type: (str) -> str
     """Transform a name to a valid cfn name.
 
-    This transform ensures that only alphanumeric characters are used
-    and prevent collisions by appending the hash of the original name.
+    This will convert the provided name to a CamelCase name.
+    It's possible that the conversion to a CFN resource name
+    can result in name collisions.  It's up to the caller
+    to handle name collisions appropriately.
+
     """
-    for word_separator in ['-', '_']:
-        word_parts = name.split(word_separator)
+    if not name:
+        raise ValueError("Invalid name: %r" % name)
+    word_separators = ['-', '_']
+    for word_separator in word_separators:
+        word_parts = [p for p in name.split(word_separator) if p]
         name = ''.join([w[0].upper() + w[1:] for w in word_parts])
     return re.sub(r'[^A-Za-z0-9]+', '', name)
 
