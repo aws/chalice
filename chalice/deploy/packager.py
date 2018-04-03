@@ -504,13 +504,13 @@ class Package(object):
             # {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-
             # {platform tag}.whl
             name, version = self.filename.split('-')[:2]
-            name = self._normalize_name(name)
         else:
             info_fetcher = SDistMetadataFetcher(osutils=self._osutils)
             sdist_path = self._osutils.joinpath(self._directory, self.filename)
             name, version = info_fetcher.get_package_name_and_version(
                 sdist_path)
-        return name, version
+        normalized_name = self._normalize_name(name)
+        return normalized_name, version
 
 
 class SDistMetadataFetcher(object):

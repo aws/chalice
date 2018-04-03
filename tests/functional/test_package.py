@@ -951,3 +951,21 @@ class TestPackage(object):
             pkgs.add(Package('', 'foobar-1.0-py3-none-any.whl'))
             pkgs.add(Package(tempdir, 'foobar-1.0.zip'))
             assert len(pkgs) == 1
+
+    def test_ensure_sdist_name_normalized_for_comparison(self, osutils,
+                                                         sdist_builder):
+        with osutils.tempdir() as tempdir:
+            sdist_builder.write_fake_sdist(tempdir, 'Foobar', '1.0')
+            pkgs = set()
+            pkgs.add(Package('', 'foobar-1.0-py3-none-any.whl'))
+            pkgs.add(Package(tempdir, 'Foobar-1.0.zip'))
+            assert len(pkgs) == 1
+
+    def test_ensure_wheel_name_normalized_for_comparison(self, osutils,
+                                                         sdist_builder):
+        with osutils.tempdir() as tempdir:
+            sdist_builder.write_fake_sdist(tempdir, 'foobar', '1.0')
+            pkgs = set()
+            pkgs.add(Package('', 'Foobar-1.0-py3-none-any.whl'))
+            pkgs.add(Package(tempdir, 'foobar-1.0.zip'))
+            assert len(pkgs) == 1
