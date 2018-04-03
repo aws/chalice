@@ -15,6 +15,15 @@ from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaClientError
 
 
+class FixedIDTypedAWSClient(TypedAWSClient):
+    def __init__(self, session, random_id):
+        super(FixedIDTypedAWSClient, self).__init__(session)
+        self._fixed_random_id = random_id
+
+    def _random_id(self):
+        return self._fixed_random_id
+
+
 def test_region_name_is_exposed(stubbed_session):
     assert TypedAWSClient(stubbed_session).region_name == 'us-west-2'
 
@@ -261,6 +270,36 @@ class TestGetRoleArn(object):
         awsclient = TypedAWSClient(stubbed_session)
         with pytest.raises(botocore.exceptions.ClientError):
             awsclient.get_role_arn_for_name(name='Yes')
+        stubbed_session.verify_stubs()
+
+
+class TestGetRole(object):
+    def test_get_role_success(self, stubbed_session):
+        today = datetime.datetime.today()
+        response = {
+            'Role': {
+                'Path': '/',
+                'RoleName': 'Yes',
+                'RoleId': 'abcd' * 4,
+                'CreateDate': today,
+                'Arn': 'good_arn' * 3,
+            }
+        }
+        stubbed_session.stub('iam').get_role(RoleName='Yes').returns(response)
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        actual = awsclient.get_role(name='Yes')
+        assert actual == response['Role']
+        stubbed_session.verify_stubs()
+
+    def test_get_role_raises_exception_when_no_exists(self, stubbed_session):
+        stubbed_session.stub('iam').get_role(RoleName='Yes').raises_error(
+            error_code='NoSuchEntity',
+            message='Foo')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            awsclient.get_role(name='Yes')
         stubbed_session.verify_stubs()
 
 
@@ -911,11 +950,12 @@ class TestAddPermissionsForAPIGateway(object):
             'function_name', 'us-west-2', '123', 'rest-api-id')
         stubbed_session.verify_stubs()
 
-    def should_call_add_permission(self, lambda_stub):
+    def should_call_add_permission(self, lambda_stub,
+                                   statement_id='random-id'):
         lambda_stub.add_permission(
             Action='lambda:InvokeFunction',
             FunctionName='name',
-            StatementId='random-id',
+            StatementId=statement_id,
             Principal='apigateway.amazonaws.com',
             SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
         ).returns({})
@@ -929,6 +969,16 @@ class TestAddPermissionsForAPIGateway(object):
         client = TypedAWSClient(stubbed_session)
         client.add_permission_for_apigateway_if_needed(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_random_id_optional(self, stubbed_session):
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
+        self.should_call_add_permission(lambda_stub, 'my-random-id')
+        stubbed_session.activate_stubs()
+        client = FixedIDTypedAWSClient(stubbed_session, 'my-random-id')
+        client.add_permission_for_apigateway_if_needed(
+            'name', 'us-west-2', '123', 'rest-api-id')
         stubbed_session.verify_stubs()
 
     def test_can_add_permission_for_apigateway_not_needed(self,

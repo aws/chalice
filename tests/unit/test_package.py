@@ -1,21 +1,20 @@
+import os
 import mock
 
 import pytest
 from chalice.config import Config
 from chalice import package
-from chalice import __version__ as chalice_version
-from chalice.deploy.deployer import ApplicationPolicyHandler
+from chalice.deploy.deployer import ApplicationGraphBuilder
+from chalice.deploy.deployer import DependencyBuilder
+from chalice.deploy.deployer import BuildStage
+from chalice.deploy import models
 from chalice.deploy.swagger import SwaggerGenerator
+from chalice.utils import OSUtils
 
 
 @pytest.fixture
 def mock_swagger_generator():
     return mock.Mock(spec=SwaggerGenerator)
-
-
-@pytest.fixture
-def mock_policy_generator():
-    return mock.Mock(spec=ApplicationPolicyHandler)
 
 
 def test_can_create_app_packager():
@@ -24,351 +23,229 @@ def test_can_create_app_packager():
     assert isinstance(packager, package.AppPackager)
 
 
-def test_can_create_app_packager_with_no_autogen():
-    # We can't actually observe a change here, but we want
-    # to make sure the function can handle this param being
-    # False.
-    config = Config.create(autogen_policy=False)
-    packager = package.create_app_packager(config)
-    assert isinstance(packager, package.AppPackager)
-
-
-def test_preconfigured_policy_proxies():
-    policy_gen = mock.Mock(spec=ApplicationPolicyHandler)
-    config = Config.create(project_dir='project_dir', autogen_policy=False)
-    policy_gen.generate_policy_from_app_source.return_value = {
-        'policy': True}
-    policy = policy_gen.generate_policy_from_app_source(config)
-    assert policy == {'policy': True}
-
-
-def test_sam_generates_sam_template_basic(sample_app,
-                                          mock_swagger_generator,
-                                          mock_policy_generator):
-    p = package.SAMTemplateGenerator(mock_swagger_generator,
-                                     mock_policy_generator)
-    config = Config.create(chalice_app=sample_app,
-                           api_gateway_stage='dev')
-    template = p.generate_sam_template(config, 'code-uri')
-    # Verify the basic structure is in place.  The specific parts
-    # are validated in other tests.
-    assert template['AWSTemplateFormatVersion'] == '2010-09-09'
-    assert template['Transform'] == 'AWS::Serverless-2016-10-31'
-    assert 'Outputs' in template
-    assert 'Resources' in template
-
-
-def test_sam_injects_policy(sample_app,
-                            mock_swagger_generator,
-                            mock_policy_generator):
-    p = package.SAMTemplateGenerator(mock_swagger_generator,
-                                     mock_policy_generator)
-
-    mock_policy_generator.generate_policy_from_app_source.return_value = {
-        'iam': 'policy',
-    }
-    config = Config.create(chalice_app=sample_app,
-                           api_gateway_stage='dev')
-    template = p.generate_sam_template(config)
-    assert template['Resources']['APIHandler']['Properties']['Policies'] == [{
-        'iam': 'policy',
-    }]
-    assert 'Role' not in template['Resources']['APIHandler']['Properties']
-
-
-def test_sam_injects_swagger_doc(sample_app,
-                                 mock_swagger_generator,
-                                 mock_policy_generator):
-    p = package.SAMTemplateGenerator(mock_swagger_generator,
-                                     mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app,
-                           api_gateway_stage='dev')
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['RestAPI']['Properties']
-    assert properties['DefinitionBody'] == {'swagger': 'document'}
-
-
-def test_can_inject_environment_vars(sample_app,
-                                     mock_swagger_generator,
-                                     mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app,
-        api_gateway_stage='dev',
-        environment_variables={
-            'FOO': 'BAR'
-        }
-    )
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert 'Environment' in properties
-    assert properties['Environment']['Variables'] == {'FOO': 'BAR'}
-
-
-def test_chalice_tag_added_to_function(sample_app,
-                                       mock_swagger_generator,
-                                       mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
-                           app_name='myapp')
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['Tags'] == {
-        'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version}
-
-
-def test_custom_tags_added_to_function(sample_app,
-                                       mock_swagger_generator,
-                                       mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
-                           app_name='myapp', tags={'mykey': 'myvalue'})
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['Tags'] == {
-        'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
-        'mykey': 'myvalue'
-    }
-
-
-def test_default_function_timeout(sample_app,
-                                  mock_swagger_generator,
-                                  mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev')
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['Timeout'] == 60
-
-
-def test_timeout_added_to_function(sample_app,
-                                   mock_swagger_generator,
-                                   mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
-                           app_name='myapp', lambda_timeout=240)
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['Timeout'] == 240
-
-
-def test_default_function_memory_size(sample_app,
-                                      mock_swagger_generator,
-                                      mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev')
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['MemorySize'] == 128
-
-
-def test_memory_size_added_to_function(sample_app,
-                                       mock_swagger_generator,
-                                       mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app, api_gateway_stage='dev',
-                           app_name='myapp', lambda_memory_size=256)
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['MemorySize'] == 256
-
-
-def test_endpoint_url_reflects_apig_stage(sample_app,
-                                          mock_swagger_generator,
-                                          mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app,
-        api_gateway_stage='prod',
-    )
-    template = p.generate_sam_template(config)
-    endpoint_url = template['Outputs']['EndpointURL']['Value']['Fn::Sub']
-    assert endpoint_url == (
-        'https://${RestAPI}.execute-api.${AWS::Region}.amazonaws.com/prod/')
-
-
-def test_maps_python_version(sample_app,
-                             mock_swagger_generator,
-                             mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app,
-        api_gateway_stage='dev',
-    )
-    template = p.generate_sam_template(config)
-    expected = config.lambda_python_version
-    actual = template['Resources']['APIHandler']['Properties']['Runtime']
-    assert actual == expected
-
-
-def test_role_arn_added_to_function(sample_app,
-                                    mock_swagger_generator,
-                                    mock_policy_generator):
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app, api_gateway_stage='dev', app_name='myapp',
-        manage_iam_role=False, iam_role_arn='role-arn')
-    template = p.generate_sam_template(config)
-    properties = template['Resources']['APIHandler']['Properties']
-    assert properties['Role'] == 'role-arn'
-    assert 'Policies' not in properties
-
-
-def test_app_incompatible_with_cf(sample_app,
-                                  mock_swagger_generator,
-                                  mock_policy_generator):
-
-    @sample_app.route('/foo')
-    def foo_invalid():
-        return {}
-
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(chalice_app=sample_app,
-                           api_gateway_stage='dev',
-                           app_name='sample_invalid_cf')
-    template = p.generate_sam_template(config)
-    events = template['Resources']['APIHandler']['Properties']['Events']
-    # The underscore should be removed from the event name.
-    assert 'fooinvalidget4cee' in events
-
-
-def test_app_with_auth(sample_app,
-                       mock_swagger_generator,
-                       mock_policy_generator):
-
-    @sample_app.authorizer('myauth')
-    def myauth(auth_request):
-        pass
-
-    @sample_app.route('/authorized', authorizer=myauth)
-    def foo():
-        return {}
-    # The last four digits come from the hash of the auth name
-    cfn_auth_name = 'myauthdb6d'
-
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app,
-        api_gateway_stage='dev',
-    )
-    template = p.generate_sam_template(config)
-    assert cfn_auth_name in template['Resources']
-    auth_function = template['Resources'][cfn_auth_name]
-    assert auth_function['Type'] == 'AWS::Serverless::Function'
-    assert auth_function['Properties']['Handler'] == 'app.myauth'
-
-    # Assert that the invoke permsissions were added as well.
-    assert cfn_auth_name + 'InvokePermission' in template['Resources']
-    assert template['Resources'][cfn_auth_name + 'InvokePermission'] == {
-        'Type': 'AWS::Lambda::Permission',
-        'Properties': {
-            'Action': 'lambda:InvokeFunction',
-            'FunctionName': {
-                'Fn::GetAtt': [
-                    cfn_auth_name,
-                    'Arn'
-                ]
+def test_template_post_processor_moves_files_once():
+    mock_osutils = mock.Mock(spec=OSUtils)
+    p = package.TemplatePostProcessor(mock_osutils)
+    template = {
+        'Resources': {
+            'foo': {
+                'Type': 'AWS::Serverless::Function',
+                'Properties': {
+                    'CodeUri': 'old-dir.zip',
+                }
             },
-            'Principal': 'apigateway.amazonaws.com'
-        }
-    }
-
-
-def test_app_with_auth_but_invalid_cfn_name(sample_app,
-                                            mock_swagger_generator,
-                                            mock_policy_generator):
-
-    # Underscores are not allowed for CFN resource names
-    # This instead should be referred to as customauth in CFN templates
-    # where the underscore is removed.
-    @sample_app.authorizer('custom_auth')
-    def custom_auth(auth_request):
-        pass
-
-    @sample_app.route('/authorized', authorizer=custom_auth)
-    def foo():
-        return {}
-
-    # The last four digits come from the hash of the auth name
-    cfn_auth_name = 'customauth8767'
-    p = package.SAMTemplateGenerator(
-        mock_swagger_generator, mock_policy_generator)
-    mock_swagger_generator.generate_swagger.return_value = {
-        'swagger': 'document'
-    }
-    config = Config.create(
-        chalice_app=sample_app,
-        api_gateway_stage='dev',
-    )
-    template = p.generate_sam_template(config)
-    assert cfn_auth_name in template['Resources']
-    auth_function = template['Resources'][cfn_auth_name]
-    assert auth_function['Type'] == 'AWS::Serverless::Function'
-    assert auth_function['Properties']['Handler'] == 'app.custom_auth'
-
-    # Assert that the invoke permsissions were added as well.
-    assert cfn_auth_name + 'InvokePermission' in template['Resources']
-    assert template['Resources'][cfn_auth_name + 'InvokePermission'] == {
-        'Type': 'AWS::Lambda::Permission',
-        'Properties': {
-            'Action': 'lambda:InvokeFunction',
-            'FunctionName': {
-                'Fn::GetAtt': [
-                    cfn_auth_name,
-                    'Arn'
-                ]
+            'bar': {
+                'Type': 'AWS::Serverless::Function',
+                'Properties': {
+                    'CodeUri': 'old-dir.zip',
+                }
             },
-            'Principal': 'apigateway.amazonaws.com'
         }
     }
+    p.process(template, config=None,
+              outdir='outdir', chalice_stage_name='dev')
+    mock_osutils.copy.assert_called_with(
+        'old-dir.zip', os.path.join('outdir', 'deployment.zip'))
+    assert mock_osutils.copy.call_count == 1
+    assert template['Resources']['foo']['Properties']['CodeUri'] == (
+        './deployment.zip'
+    )
+    assert template['Resources']['bar']['Properties']['CodeUri'] == (
+        './deployment.zip'
+    )
+
+
+class TestSAMTemplate(object):
+    def setup_method(self):
+        self.resource_builder = package.ResourceBuilder(
+            application_builder=ApplicationGraphBuilder(),
+            deps_builder=DependencyBuilder(),
+            build_stage=mock.Mock(spec=BuildStage)
+        )
+        self.template_gen = package.SAMTemplateGenerator()
+
+    def generate_template(self, config, chalice_stage_name):
+        resources = self.resource_builder.construct_resources(
+            config, chalice_stage_name)
+        return self.template_gen.generate_sam_template(resources)
+
+    def lambda_function(self):
+        return models.LambdaFunction(
+            resource_name='foo',
+            function_name='app-dev-foo',
+            environment_variables={},
+            runtime='python27',
+            handler='app.app',
+            tags={'foo': 'bar'},
+            timeout=120,
+            memory_size=128,
+            deployment_package=models.DeploymentPackage(filename='foo.zip'),
+            role=models.PreCreatedIAMRole(role_arn='role:arn'),
+        )
+
+    def test_sam_generates_sam_template_basic(self, sample_app):
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        # Verify the basic structure is in place.  The specific parts
+        # are validated in other tests.
+        assert template['AWSTemplateFormatVersion'] == '2010-09-09'
+        assert template['Transform'] == 'AWS::Serverless-2016-10-31'
+        assert 'Outputs' in template
+        assert 'Resources' in template
+        assert list(sorted(template['Resources'])) == [
+            'APIHandler', 'APIHandlerInvokePermission', 'RestAPI',
+        ]
+
+    def test_sam_injects_policy(self, sample_app):
+        function = models.LambdaFunction(
+            resource_name='foo',
+            function_name='app-dev-foo',
+            environment_variables={},
+            runtime='python27',
+            handler='app.app',
+            tags={'foo': 'bar'},
+            timeout=120,
+            memory_size=128,
+            deployment_package=models.DeploymentPackage(filename='foo.zip'),
+            role=models.ManagedIAMRole(
+                resource_name='role',
+                role_name='app-role',
+                trust_policy={},
+                policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
+            )
+        )
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource == {
+            'Type': 'AWS::Serverless::Function',
+            'Properties': {
+                'CodeUri': 'foo.zip',
+                'Handler': 'app.app',
+                'MemorySize': 128,
+                'Policies': {'iam': 'policy'},
+                'Runtime': 'python27',
+                'Tags': {'foo': 'bar'},
+                'Timeout': 120
+            },
+        }
+
+    def test_adds_env_vars_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.environment_variables = {'foo': 'bar'}
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['EnvironmentVariables'] == {
+            'Variables': {
+                'foo': 'bar'
+            }
+        }
+
+    def test_role_arn_inserted_when_necessary(self):
+        function = models.LambdaFunction(
+            resource_name='foo',
+            function_name='app-dev-foo',
+            environment_variables={},
+            runtime='python27',
+            handler='app.app',
+            tags={'foo': 'bar'},
+            timeout=120,
+            memory_size=128,
+            deployment_package=models.DeploymentPackage(filename='foo.zip'),
+            role=models.PreCreatedIAMRole(role_arn='role:arn'),
+        )
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource == {
+            'Type': 'AWS::Serverless::Function',
+            'Properties': {
+                'CodeUri': 'foo.zip',
+                'Handler': 'app.app',
+                'MemorySize': 128,
+                'Role': 'role:arn',
+                'Runtime': 'python27',
+                'Tags': {'foo': 'bar'},
+                'Timeout': 120
+            },
+        }
+
+    def test_can_generate_scheduled_event(self, sample_app_schedule_only):
+        function = self.lambda_function()
+        event = models.ScheduledEvent(
+            resource_name='foo',
+            rule_name='myrule',
+            schedule_expression='rate(5 minutes)',
+            lambda_function=function,
+        )
+        template = self.template_gen.generate_sam_template(
+            [function, event]
+        )
+        resources = template['Resources']
+        assert len(resources) == 1
+        cfn_resource = list(resources.values())[0]
+        assert cfn_resource['Properties']['Events'] == {
+            'fooacbd': {
+                'Type': 'Schedule',
+                'Properties': {
+                    'Schedule': 'rate(5 minutes)'
+                },
+            },
+        }
+
+    def test_can_generate_rest_api(self, sample_app_with_auth):
+        config = Config.create(chalice_app=sample_app_with_auth,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        resources = template['Resources']
+        # Lambda function should be created.
+        assert resources['APIHandler']['Type'] == 'AWS::Serverless::Function'
+        # Along with permission to invoke from API Gateway.
+        assert resources['APIHandlerInvokePermission'] == {
+            'Type': 'AWS::Lambda::Permission',
+            'Properties': {
+                'Action': 'lambda:InvokeFunction',
+                'FunctionName': {'Ref': 'APIHandler'},
+                'Principal': 'apigateway.amazonaws.com',
+                'SourceArn': {
+                    'Fn::Sub': [
+                        ('arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}'
+                         ':${RestAPIId}/*'),
+                        {'RestAPIId': {'Ref': 'RestAPI'}}]}},
+        }
+        assert resources['RestAPI']['Type'] == 'AWS::Serverless::Api'
+        # We should also create the auth lambda function.
+        assert resources['myauthdb6d']['Type'] == 'AWS::Serverless::Function'
+        # Along with permission to invoke from API Gateway.
+        assert resources['myauthdb6dInvokePermission'] == {
+            'Type': 'AWS::Lambda::Permission',
+            'Properties': {
+                'Action': 'lambda:InvokeFunction',
+                'FunctionName': {'Fn::GetAtt': ['myauthdb6d', 'Arn']},
+                'Principal': 'apigateway.amazonaws.com',
+                'SourceArn': {
+                    'Fn::Sub': [
+                        ('arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}'
+                         ':${RestAPIId}/*'),
+                        {'RestAPIId': {'Ref': 'RestAPI'}}]}},
+        }
+        # Also verify we add the expected outputs when using
+        # a Rest API.
+        assert template['Outputs'] == {
+            'APIHandlerArn': {
+                'Value': {
+                    'Fn::GetAtt': ['APIHandler', 'Arn']
+                }
+            },
+            'APIHandlerName': {'Value': {'Ref': 'APIHandler'}},
+            'EndpointURL': {
+                'Value': {
+                    'Fn::Sub': (
+                        'https://${RestAPI}.execute-api.'
+                        '${AWS::Region}.amazonaws.com/api/'
+                    )
+                }
+            },
+            'RestAPIId': {'Value': {'Ref': 'RestAPI'}}
+        }
