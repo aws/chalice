@@ -104,6 +104,7 @@ ALL_ERRORS = [
     NotFoundError,
     UnauthorizedError,
     ForbiddenError,
+    MethodNotAllowedError,
     RequestTimeoutError,
     ConflictError,
     UnprocessableEntityError,
