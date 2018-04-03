@@ -56,6 +56,8 @@ def sample_app_schedule_only():
     def cron(event):
         pass
 
+    return app
+
 
 @fixture
 def sample_app_lambda_only():
@@ -64,6 +66,8 @@ def sample_app_lambda_only():
     @app.lambda_function()
     def myfunction(event, context):
         pass
+
+    return app
 
 
 @fixture

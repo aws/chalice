@@ -9,6 +9,7 @@ from chalice.deploy.deployer import DependencyBuilder
 from chalice.deploy.deployer import BuildStage
 from chalice.deploy import models
 from chalice.deploy.swagger import SwaggerGenerator
+from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.utils import OSUtils
 
 
@@ -95,7 +96,11 @@ class TestSAMTemplate(object):
         assert 'Outputs' in template
         assert 'Resources' in template
         assert list(sorted(template['Resources'])) == [
-            'APIHandler', 'APIHandlerInvokePermission', 'RestAPI',
+            'APIHandler', 'APIHandlerInvokePermission',
+            # This casing on the ApiHandlerRole name is unfortunate, but the 3
+            # other resources in this list are hardcoded from the old deployer.
+            'ApiHandlerRole',
+            'RestAPI',
         ]
 
     def test_sam_injects_policy(self, sample_app):
@@ -124,7 +129,7 @@ class TestSAMTemplate(object):
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
-                'Policies': {'iam': 'policy'},
+                'Role': {'Fn::GetAtt': ['Role', 'Arn']},
                 'Runtime': 'python27',
                 'Tags': {'foo': 'bar'},
                 'Timeout': 120
@@ -141,6 +146,14 @@ class TestSAMTemplate(object):
                 'foo': 'bar'
             }
         }
+
+    def test_duplicate_resource_name_raises_error(self):
+        one = self.lambda_function()
+        two = self.lambda_function()
+        one.resource_name = 'foo_bar'
+        two.resource_name = 'foo__bar'
+        with pytest.raises(package.DuplicateResourceNameError):
+            self.template_gen.generate_sam_template([one, two])
 
     def test_role_arn_inserted_when_necessary(self):
         function = models.LambdaFunction(
@@ -170,10 +183,10 @@ class TestSAMTemplate(object):
             },
         }
 
-    def test_can_generate_scheduled_event(self, sample_app_schedule_only):
+    def test_can_generate_scheduled_event(self):
         function = self.lambda_function()
         event = models.ScheduledEvent(
-            resource_name='foo',
+            resource_name='foo-event',
             rule_name='myrule',
             schedule_expression='rate(5 minutes)',
             lambda_function=function,
@@ -185,7 +198,7 @@ class TestSAMTemplate(object):
         assert len(resources) == 1
         cfn_resource = list(resources.values())[0]
         assert cfn_resource['Properties']['Events'] == {
-            'fooacbd': {
+            'FooEvent': {
                 'Type': 'Schedule',
                 'Properties': {
                     'Schedule': 'rate(5 minutes)'
@@ -216,13 +229,13 @@ class TestSAMTemplate(object):
         }
         assert resources['RestAPI']['Type'] == 'AWS::Serverless::Api'
         # We should also create the auth lambda function.
-        assert resources['myauthdb6d']['Type'] == 'AWS::Serverless::Function'
+        assert resources['Myauth']['Type'] == 'AWS::Serverless::Function'
         # Along with permission to invoke from API Gateway.
-        assert resources['myauthdb6dInvokePermission'] == {
+        assert resources['MyauthInvokePermission'] == {
             'Type': 'AWS::Lambda::Permission',
             'Properties': {
                 'Action': 'lambda:InvokeFunction',
-                'FunctionName': {'Fn::GetAtt': ['myauthdb6d', 'Arn']},
+                'FunctionName': {'Fn::GetAtt': ['Myauth', 'Arn']},
                 'Principal': 'apigateway.amazonaws.com',
                 'SourceArn': {
                     'Fn::Sub': [
@@ -249,3 +262,57 @@ class TestSAMTemplate(object):
             },
             'RestAPIId': {'Value': {'Ref': 'RestAPI'}}
         }
+
+    def test_managed_iam_role(self):
+        role = models.ManagedIAMRole(
+            resource_name='default_role',
+            role_name='app-dev',
+            trust_policy=LAMBDA_TRUST_POLICY,
+            policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
+        )
+        template = self.template_gen.generate_sam_template([role])
+        resources = template['Resources']
+        assert len(resources) == 1
+        cfn_role = resources['DefaultRole']
+        assert cfn_role['Type'] == 'AWS::IAM::Role'
+        assert cfn_role['Properties']['Policies'] == [
+            {'PolicyName': 'DefaultRolePolicy',
+             'PolicyDocument': {'iam': 'policy'}}
+        ]
+        # Ensure the RoleName is not in the resource properties
+        # so we don't require CAPABILITY_NAMED_IAM.
+        assert 'RoleName' not in cfn_role['Properties']
+
+    def test_single_role_generated_for_default_config(self,
+                                                      sample_app_lambda_only):
+        # The sample_app has one lambda function.
+        # We'll add a few more and verify they all share the same role.
+        @sample_app_lambda_only.lambda_function()
+        def second(event, context):
+            pass
+
+        @sample_app_lambda_only.lambda_function()
+        def third(event, context):
+            pass
+
+        config = Config.create(chalice_app=sample_app_lambda_only,
+                               project_dir='.',
+                               autogen_policy=True,
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        roles = [resource for resource in template['Resources'].values()
+                 if resource['Type'] == 'AWS::IAM::Role']
+        assert len(roles) == 1
+        # The lambda functions should all reference this role.
+        functions = [
+            resource for resource in template['Resources'].values()
+            if resource['Type'] == 'AWS::Serverless::Function'
+        ]
+        role_names = [
+            function['Properties']['Role'] for function in functions
+        ]
+        assert role_names == [
+            {'Fn::GetAtt': ['DefaultRole', 'Arn']},
+            {'Fn::GetAtt': ['DefaultRole', 'Arn']},
+            {'Fn::GetAtt': ['DefaultRole', 'Arn']},
+        ]

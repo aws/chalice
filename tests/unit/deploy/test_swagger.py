@@ -502,7 +502,7 @@ def test_will_custom_auth_with_cfn(sample_app):
             'authorizerUri': {
                 'Fn::Sub': (
                     'arn:aws:apigateway:${AWS::Region}:lambda:path'
-                    '/2015-03-31/functions/${authfa53.Arn}/invocations'
+                    '/2015-03-31/functions/${Auth.Arn}/invocations'
                 )
             }
         }
