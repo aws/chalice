@@ -158,10 +158,22 @@ def test_codepipeline_resource(pipeline_params):
 
 def test_install_requirements_in_buildspec(pipeline_params):
     template = {}
+    pipeline_params.chalice_version_range = '>=1.0.0,<2.0.0'
     pipeline.CodeBuild().add_to_template(template, pipeline_params)
     build = template['Resources']['AppPackageBuild']
     build_spec = build['Properties']['Source']['BuildSpec']
     assert 'pip install -r requirements.txt' in build_spec
+    assert "pip install 'chalice>=1.0.0,<2.0.0'" in build_spec
+
+
+def test_default_version_range_locks_minor_version():
+    parts = [int(p) for p in chalice_version.split('.')]
+    min_version = '%s.%s.%s' % (parts[0], parts[1], 0)
+    max_version = '%s.%s.%s' % (parts[0], parts[1] + 1, 0)
+    params = pipeline.PipelineParameters('appname', 'python2.7')
+    assert params.chalice_version_range == '>=%s,<%s' % (
+        min_version, max_version
+    )
 
 
 def test_can_generate_github_source(pipeline_params):
