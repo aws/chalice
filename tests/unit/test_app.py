@@ -278,6 +278,7 @@ def test_error_contains_cors_headers(sample_app_with_cors, create_event):
     assert raw_response['statusCode'] == 415
     assert 'Access-Control-Allow-Origin' in raw_response['headers']
 
+
 def test_no_view_function_found(sample_app, create_event):
     bad_path = create_event('/noexist', 'GET', {})
     with pytest.raises(app.ChaliceError):
