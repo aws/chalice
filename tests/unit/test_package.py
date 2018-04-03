@@ -267,11 +267,13 @@ class TestSAMTemplate(object):
         assert len(resources) == 1
         cfn_role = resources['DefaultRole']
         assert cfn_role['Type'] == 'AWS::IAM::Role'
-        assert cfn_role['Properties']['RoleName'] == 'app-dev'
         assert cfn_role['Properties']['Policies'] == [
             {'PolicyName': 'DefaultRolePolicy',
              'PolicyDocument': {'iam': 'policy'}}
         ]
+        # Ensure the RoleName is not in the resource properties
+        # so we don't require CAPABILITY_NAMED_IAM.
+        assert 'RoleName' not in cfn_role['Properties']
 
     def test_single_role_generated_for_default_config(self,
                                                       sample_app_lambda_only):

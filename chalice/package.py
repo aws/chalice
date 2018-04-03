@@ -220,7 +220,6 @@ class SAMTemplateGenerator(object):
                     {'PolicyDocument': resource.policy.document,
                      'PolicyName': role_cfn_name + 'Policy'},
                 ],
-                'RoleName': resource.role_name,
             }
         }
 

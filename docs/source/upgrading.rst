@@ -136,11 +136,7 @@ update, the resource name would be converted as
 renames unchanged in order to preserve backwards compatibility.
 In order to fix parity issues with ``chalice deploy`` and
 ``chalice package``, we now explicitly create an IAM role
-resource as part of the default configuration.  This means
-the default SAM template requires capability ``CAPABILITY_NAMED_IAM``
-instead of ``CAPABILITY_IAM``.  As always, you still have the
-ability to control exactly how IAM roles map to your AWS Lambda
-functions.  This only affects the default configuration.
+resource as part of the default configuration.
 
 
 .. _v1-0-0b2:

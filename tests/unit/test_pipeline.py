@@ -148,7 +148,7 @@ def test_codepipeline_resource(pipeline_params):
     beta_config = beta_stage['Actions'][0]['Configuration']
     assert beta_config == {
         'ActionMode': 'CHANGE_SET_REPLACE',
-        'Capabilities': 'CAPABILITY_NAMED_IAM',
+        'Capabilities': 'CAPABILITY_IAM',
         'ChangeSetName': {'Fn::Sub': '${ApplicationName}ChangeSet'},
         'RoleArn': {'Fn::GetAtt': 'CFNDeployRole.Arn'},
         'StackName': {'Fn::Sub': '${ApplicationName}BetaStack'},

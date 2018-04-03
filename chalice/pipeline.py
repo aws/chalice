@@ -465,7 +465,7 @@ class CodePipeline(BaseResource):
                         "RoleArn": {
                             "Fn::GetAtt": "CFNDeployRole.Arn"
                         },
-                        "Capabilities": "CAPABILITY_NAMED_IAM",
+                        "Capabilities": "CAPABILITY_IAM",
                         "StackName": {
                             "Fn::Sub": "${ApplicationName}BetaStack"
                         },
