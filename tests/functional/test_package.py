@@ -248,6 +248,30 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_can_use_abi3_whl_for_any_python3(self, tmpdir, pip_runner):
+        reqs = ['foo', 'bar', 'baz', 'qux']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp33-abi3-manylinux1_x86_64.whl',
+                'bar-1.2-cp34-abi3-manylinux1_x86_64.whl',
+                'baz-1.2-cp35-abi3-manylinux1_x86_64.whl',
+                'qux-1.2-cp36-abi3-manylinux1_x86_64.whl',
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
     def test_can_expand_purelib_whl(self, tmpdir, pip_runner):
         reqs = ['foo']
         pip, runner = pip_runner
