@@ -561,6 +561,36 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_whitelist_sqlalchemy(self, tmpdir, osutils, pip_runner):
+        reqs = ['sqlalchemy==1.1.18']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'SQLAlchemy-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+            ]
+        )
+        pip.packages_to_download(
+            expected_args=[
+                '--only-binary=:all:', '--no-deps', '--platform',
+                'manylinux1_x86_64', '--implementation', 'cp',
+                '--abi', lambda_abi, '--dest', mock.ANY,
+                'sqlalchemy==1.1.18'
+            ],
+            packages=[
+                'SQLAlchemy-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+            ]
+        )
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        assert installed_packages == ['SQLAlchemy']
+
     def test_can_build_sdist(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner

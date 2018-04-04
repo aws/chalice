@@ -258,6 +258,9 @@ class DependencyBuilder(object):
     """
     _MANYLINUX_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64',
                                       'manylinux1_x86_64'}
+    _COMPATIBLE_PACKAGE_WHITELIST = {
+        'sqlalchemy'
+    }
 
     def __init__(self, osutils, pip_runner=None):
         # type: (OSUtils, Optional[PipRunner]) -> None
@@ -406,9 +409,33 @@ class DependencyBuilder(object):
         # any unmet dependencies left over. At this point there is nothing we
         # can do about any missing wheel files. We tried downloading a
         # compatible version directly and building from source.
-        compatible_wheels, _ = self._categorize_wheel_files(directory)
+        compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
+            directory)
+
+        # Now there is still the case left over where the setup.py has been
+        # made in such a way to be incompatible with python's setup tools,
+        # causing it to lie about its compatibility. To fix this we have a
+        # manually curated whitelist of packages that will work, despite
+        # claiming otherwise.
+        compatible_wheels, incompatible_wheels = self._apply_wheel_whitelist(
+            compatible_wheels, incompatible_wheels)
         missing_wheels = deps - compatible_wheels
+
         return compatible_wheels, missing_wheels
+
+    def _apply_wheel_whitelist(self,
+                               compatible_wheels,   # type: Set[Package]
+                               incompatible_wheels  # type: Set[Package]
+                               ):
+        # (...) ->Tuple[Set[Package], Set[Package]]
+        compatible_wheels = set(compatible_wheels)
+        actual_incompatible_wheels = set()
+        for missing_package in incompatible_wheels:
+            if missing_package.name in self._COMPATIBLE_PACKAGE_WHITELIST:
+                compatible_wheels.add(missing_package)
+            else:
+                actual_incompatible_wheels.add(missing_package)
+        return compatible_wheels, actual_incompatible_wheels
 
     def _install_purelib_and_platlib(self, wheel, root):
         # type: (Package, str) -> None
@@ -462,6 +489,11 @@ class Package(object):
             osutils = OSUtils()
         self._osutils = osutils
         self._name, self._version = self._calculate_name_and_version()
+
+    @property
+    def name(self):
+        # type: () -> str
+        return self._name
 
     @property
     def data_dir(self):
