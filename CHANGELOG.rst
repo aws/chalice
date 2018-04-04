@@ -29,6 +29,8 @@ for more detailed information about upgrading to this release.
   (`#772 <https://github.com/aws/chalice/issues/772>`__)
 * Fix packager edge case normalizing sdist names
   (`#778 <https://github.com/aws/chalice/issues/778>`__)
+* Fix SQLAlchemy packaging
+  (`#778 <https://github.com/aws/chalice/issues/778>`__)
 
 
 1.1.1
