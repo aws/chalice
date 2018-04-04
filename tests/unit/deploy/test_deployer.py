@@ -39,7 +39,7 @@ from chalice.deploy.deployer import create_default_deployer, \
     ResultsRecorder, DeploymentReporter
 from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanStage, Variable
-from chalice.deploy.planner import UnreferencedResourcePlanner, StringFormat
+from chalice.deploy.planner import ResourceSweeper, StringFormat
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
 from chalice.deploy.models import RecordResourceVariable
 from chalice.deploy.models import JPSearch, BuiltinFunction, Instruction
@@ -1433,7 +1433,7 @@ class TestDeployer(unittest.TestCase):
         self.deps_builder = mock.Mock(spec=DependencyBuilder)
         self.build_stage = mock.Mock(spec=BuildStage)
         self.plan_stage = mock.Mock(spec=PlanStage)
-        self.sweeper = mock.Mock(spec=UnreferencedResourcePlanner)
+        self.sweeper = mock.Mock(spec=ResourceSweeper)
         self.executor = mock.Mock(spec=Executor)
         self.recorder = mock.Mock(spec=ResultsRecorder)
         self.chalice_app = Chalice(app_name='foo')

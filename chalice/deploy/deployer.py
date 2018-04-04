@@ -106,7 +106,7 @@ from chalice.deploy import models
 from chalice.deploy.packager import PipRunner, SubprocessPip, \
     DependencyBuilder as PipDependencyBuilder, LambdaDeploymentPackager
 from chalice.deploy.planner import PlanStage, RemoteState, \
-    UnreferencedResourcePlanner, NoopPlanner, Variable, StringFormat
+    ResourceSweeper, NoopPlanner, Variable, StringFormat
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.policy import AppPolicyGenerator
@@ -245,7 +245,7 @@ def create_default_deployer(session, config, ui):
             osutils=osutils, remote_state=RemoteState(
                 client, config.deployed_resources(config.chalice_stage)),
         ),
-        sweeper=UnreferencedResourcePlanner(),
+        sweeper=ResourceSweeper(),
         executor=Executor(client, ui),
         recorder=ResultsRecorder(osutils=osutils),
     )
@@ -290,7 +290,7 @@ def create_deletion_deployer(client, ui):
         deps_builder=DependencyBuilder(),
         build_stage=BuildStage(steps=[]),
         plan_stage=NoopPlanner(),
-        sweeper=UnreferencedResourcePlanner(),
+        sweeper=ResourceSweeper(),
         executor=Executor(client, ui),
         recorder=ResultsRecorder(osutils=OSUtils()),
     )
@@ -323,7 +323,7 @@ class Deployer(object):
                  deps_builder,         # type: DependencyBuilder
                  build_stage,          # type: BuildStage
                  plan_stage,           # type: PlanStage
-                 sweeper,              # type: UnreferencedResourcePlanner
+                 sweeper,              # type: ResourceSweeper
                  executor,             # type: Executor
                  recorder,             # type: ResultsRecorder
                  ):

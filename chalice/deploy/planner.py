@@ -80,7 +80,7 @@ class RemoteState(object):
         return self._client.rest_api_exists(rest_api_id)
 
 
-class UnreferencedResourcePlanner(object):
+class ResourceSweeper(object):
 
     def execute(self, plan, config):
         # type: (models.Plan, Config) -> None
