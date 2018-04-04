@@ -31,6 +31,8 @@ for more detailed information about upgrading to this release.
   (`#778 <https://github.com/aws/chalice/issues/778>`__)
 * Fix SQLAlchemy packaging
   (`#778 <https://github.com/aws/chalice/issues/778>`__)
+* Fix packaging abi3, wheels this fixes cryptography 2.2.x packaging
+  (`#764 <https://github.com/aws/chalice/issues/764>`__)
 
 
 1.1.1
