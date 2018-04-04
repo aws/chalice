@@ -534,6 +534,7 @@ def test_can_create_lambda_event():
         'requestContext': {
             'httpMethod': 'GET',
             'resourcePath': '/foo/{capture}',
+            'path': '/foo/other',
             'identity': {
                 'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
             },
@@ -545,6 +546,29 @@ def test_can_create_lambda_event():
         'stageVariables': {},
     }
 
+def test_parse_query_string():
+    converter = local.LambdaEventConverter(
+        local.RouteMatcher(['/foo/bar', '/foo/{capture}']))
+    event = converter.create_lambda_event(
+        method='GET',
+        path='/foo/other?a=1&b=&c=3',
+        headers={'content-type': 'application/json'}
+    )
+    assert event == {
+        'requestContext': {
+            'httpMethod': 'GET',
+            'resourcePath': '/foo/{capture}',
+            'path': '/foo/other',
+            'identity': {
+                'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
+            },
+        },
+        'headers': {'content-type': 'application/json'},
+        'pathParameters': {'capture': 'other'},
+        'queryStringParameters': {'a': '1', 'b': '', 'c': '3'},
+        'body': None,
+        'stageVariables': {},
+    }
 
 def test_can_create_lambda_event_for_put_request():
     converter = local.LambdaEventConverter(
@@ -559,6 +583,7 @@ def test_can_create_lambda_event_for_put_request():
         'requestContext': {
             'httpMethod': 'PUT',
             'resourcePath': '/foo/{capture}',
+            'path': '/foo/other',
             'identity': {
                 'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
             },
@@ -585,6 +610,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         'requestContext': {
             'httpMethod': 'POST',
             'resourcePath': '/foo/{capture}',
+            'path': '/foo/other',
             'identity': {
                 'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
             },
