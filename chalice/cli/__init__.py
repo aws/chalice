@@ -21,10 +21,7 @@ from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
-from chalice.utils import record_deployed_values
-from chalice.utils import remove_stage_from_deployed_values
-from chalice.deploy.deployer import validate_python_version
-from chalice.deploy.deployer import validate_routes
+from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -138,11 +135,13 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     )
     session = factory.create_botocore_session(
         connection_timeout=connection_timeout)
+    ui = UI()
     d = factory.create_default_deployer(session=session,
-                                        ui=UI())
+                                        config=config,
+                                        ui=ui)
     deployed_values = d.deploy(config, chalice_stage_name=stage)
-    record_deployed_values(deployed_values, os.path.join(
-        config.project_dir, '.chalice', 'deployed.json'))
+    reporter = factory.create_deployment_reporter(ui=ui)
+    reporter.display_report(deployed_values)
 
 
 @cli.command('delete')
@@ -156,10 +155,8 @@ def delete(ctx, profile, stage):
     factory.profile = profile
     config = factory.create_config_obj(chalice_stage_name=stage)
     session = factory.create_botocore_session()
-    d = factory.create_default_deployer(session=session, ui=UI())
-    d.delete(config, chalice_stage_name=stage)
-    remove_stage_from_deployed_values(stage, os.path.join(
-        config.project_dir, '.chalice', 'deployed.json'))
+    d = factory.create_deletion_deployer(session=session, ui=UI())
+    d.deploy(config, chalice_stage_name=stage)
 
 
 @cli.command()
@@ -177,10 +174,11 @@ def logs(ctx, num_entries, include_lambda_messages, stage, profile):
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
     deployed = config.deployed_resources(stage)
-    if deployed is not None:
+    if deployed is not None and 'api_handler' in deployed.resource_names():
+        lambda_arn = deployed.resource_values('api_handler')['lambda_arn']
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
-            session, deployed.api_handler_arn)
+            session, lambda_arn)
         display_logs(retriever, num_entries, include_lambda_messages,
                      sys.stdout)
 
@@ -225,16 +223,11 @@ def url(ctx, stage):
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
     deployed = config.deployed_resources(stage)
-    if deployed is not None:
-        click.echo(
-            "https://{api_id}.execute-api.{region}.amazonaws.com/{stage}/"
-            .format(api_id=deployed.rest_api_id,
-                    region=deployed.region,
-                    stage=deployed.api_gateway_stage)
-        )
+    if deployed is not None and 'rest_api' in deployed.resource_names():
+        click.echo(deployed.resource_values('rest_api')['rest_api_url'])
     else:
         e = click.ClickException(
-            "Could not find a record of deployed values to chalice stage: '%s'"
+            "Could not find a record of a Rest API in chalice stage: '%s'"
             % stage)
         e.exit_code = 2
         raise e
@@ -253,16 +246,16 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
     session = factory.create_botocore_session()
     client = TypedAWSClient(session)
     deployed = config.deployed_resources(stage)
-    if deployed is None:
-        click.echo("Could not find API ID, has this application "
-                   "been deployed?", err=True)
-        raise click.Abort()
-    else:
-        rest_api_id = deployed.rest_api_id
-        api_gateway_stage = deployed.api_gateway_stage
+    if deployed is not None and 'rest_api' in deployed.resource_names():
+        rest_api_id = deployed.resource_values('rest_api')['rest_api_id']
+        api_gateway_stage = config.api_gateway_stage
         client.download_sdk(rest_api_id, outdir,
                             api_gateway_stage=api_gateway_stage,
                             sdk_type=sdk_type)
+    else:
+        click.echo("Could not find API ID, has this application "
+                   "been deployed?", err=True)
+        raise click.Abort()
 
 
 @cli.command('package')
@@ -285,12 +278,12 @@ def package(ctx, single_file, stage, out):
     if single_file:
         dirname = tempfile.mkdtemp()
         try:
-            packager.package_app(config, dirname)
+            packager.package_app(config, dirname, stage)
             create_zip_file(source_dir=dirname, outfile=out)
         finally:
             shutil.rmtree(dirname)
     else:
-        packager.package_app(config, out)
+        packager.package_app(config, out, stage)
 
 
 @cli.command('generate-pipeline')

@@ -58,4 +58,4 @@ Limitations:
   possible to deploy only lambda functions without an API Gateway API.
 
 
-.. _defined here: http://docs.aws.amazon.com/lambda/latest/dg/python-programming-model-handler-types.html
+.. _defined here: https://docs.aws.amazon.com/lambda/latest/dg/python-programming-model-handler-types.html
