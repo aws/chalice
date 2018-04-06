@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.2.0
+=====
 
 This release features a rewrite of the core deployment
 code used in Chalice.  This is a backwards compatible change
