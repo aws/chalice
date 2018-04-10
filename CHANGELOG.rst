@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add CORS headers to error response
+  (`#715 <https://github.com/aws/chalice/pull/715>`__)
+
 1.2.0
 =====
 
@@ -19,7 +25,7 @@ for more detailed information about upgrading to this release.
   (`#707 <https://github.com/aws/chalice/pull/707>`__)
 * Add support for AWS Lambda only projects
   (`#162 <https://github.com/aws/chalice/issues/162>`__,
-   `#640 <https://github.com/aws/chalice/issues/640>`__)
+  `#640 <https://github.com/aws/chalice/issues/640>`__)
 * Fix inconsistent IAM role generation with pure lambdas
   (`#685 <https://github.com/aws/chalice/issues/685>`__)
 * Rewrite Chalice deployer to more easily support additional AWS resources
