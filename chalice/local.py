@@ -123,7 +123,8 @@ class RouteMatcher(object):
         """
         # Otherwise we need to check for param substitution
         parsed_url = urlparse(url)
-        query_params = {k: v[0] for k, v in parse_qs(parsed_url.query).items()}
+        parsed_qs = parse_qs(parsed_url.query, keep_blank_values=True)
+        query_params = {k: v[0] for k, v in parsed_qs.items()}
         path = parsed_url.path
         # API Gateway removes the trailing slash if the route is not the root
         # path. We do the same here so our route matching works the same way.
@@ -171,6 +172,7 @@ class LambdaEventConverter(object):
                 'identity': {
                     'sourceIp': self.LOCAL_SOURCE_IP
                 },
+                'path': path.split('?')[0],
             },
             'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,

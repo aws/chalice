@@ -7,6 +7,9 @@ Next Release (TBD)
 
 * Add CORS headers to error response
   (`#715 <https://github.com/aws/chalice/pull/715>`__)
+* Fix parsing empty query strings in local mode
+  (`#767 <https://github.com/aws/chalice/pull/767>`__)
+
 
 1.2.0
 =====
