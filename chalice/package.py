@@ -114,7 +114,7 @@ class SAMTemplateGenerator(object):
             },
         }
         if resource.environment_variables:
-            resources[cfn_name]['Properties']['EnvironmentVariables'] = {
+            resources[cfn_name]['Properties']['Environment'] = {
                 'Variables': resource.environment_variables
             }
         self._add_iam_role(resource, resources[cfn_name])
