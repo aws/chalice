@@ -103,6 +103,17 @@ class TestSAMTemplate(object):
             'RestAPI',
         ]
 
+    def test_supports_precreated_role(self):
+        builder = DependencyBuilder()
+        resources = builder.build_dependencies(
+            models.Application(
+                stage='dev',
+                resources=[self.lambda_function()],
+            )
+        )
+        template = self.template_gen.generate_sam_template(resources)
+        assert template['Resources']['Foo']['Properties']['Role'] == 'role:arn'
+
     def test_sam_injects_policy(self, sample_app):
         function = models.LambdaFunction(
             resource_name='foo',

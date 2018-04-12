@@ -9,6 +9,8 @@ Next Release (TBD)
   (`#715 <https://github.com/aws/chalice/pull/715>`__)
 * Fix parsing empty query strings in local mode
   (`#767 <https://github.com/aws/chalice/pull/767>`__)
+* Fix regression in ``chalice package`` when using role arns
+  (`#793 <https://github.com/aws/chalice/issues/793>`__)
 
 
 1.2.0
