@@ -246,6 +246,10 @@ class SAMTemplateGenerator(object):
         # type: (models.DeploymentPackage, Dict[str, Any]) -> None
         pass
 
+    def _generate_precreatediamrole(self, resource, template):
+        # type: (models.DeploymentPackage, Dict[str, Any]) -> None
+        pass
+
     def _default(self, resource, template):
         # type: (models.Model, Dict[str, Any]) -> None
         raise NotImplementedError(resource)
