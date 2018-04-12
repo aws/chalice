@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.2.1
+=====
 
 * Add CORS headers to error response
   (`#715 <https://github.com/aws/chalice/pull/715>`__)
