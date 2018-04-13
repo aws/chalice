@@ -152,7 +152,7 @@ class TestSAMTemplate(object):
         function.environment_variables = {'foo': 'bar'}
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]
-        assert cfn_resource['Properties']['EnvironmentVariables'] == {
+        assert cfn_resource['Properties']['Environment'] == {
             'Variables': {
                 'foo': 'bar'
             }
