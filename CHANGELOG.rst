@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.2.2
+=====
 
 * Fix package command not correctly setting environment variables
   (`#795 <https://github.com/aws/chalice/issues/795>`__)
