@@ -119,6 +119,8 @@ class CLIFactory(object):
                                % err)
 
         self._validate_config_from_disk(config_from_disk)
+        app_obj = self.load_chalice_app()
+        user_provided_params['chalice_app'] = app_obj
         if autogen_policy is not None:
             user_provided_params['autogen_policy'] = autogen_policy
         if self.profile is not None:
@@ -129,10 +131,6 @@ class CLIFactory(object):
                         user_provided_params=user_provided_params,
                         config_from_disk=config_from_disk,
                         default_params=default_params)
-        # actually update the OS environment vars before loading the app
-        os.environ.update(config.environment_variables)
-        app_obj = self.load_chalice_app()
-        user_provided_params['chalice_app'] = app_obj
         return config
 
     def _validate_config_from_disk(self, config):
