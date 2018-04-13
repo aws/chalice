@@ -3,7 +3,6 @@ import os
 import zipfile
 import json
 import contextlib
-import hashlib
 import tempfile
 import re
 import shutil
@@ -26,13 +25,19 @@ def to_cfn_resource_name(name):
     # type: (str) -> str
     """Transform a name to a valid cfn name.
 
-    This transform ensures that only alphanumeric characters are used
-    and prevent collisions by appending the hash of the original name.
+    This will convert the provided name to a CamelCase name.
+    It's possible that the conversion to a CFN resource name
+    can result in name collisions.  It's up to the caller
+    to handle name collisions appropriately.
+
     """
-    alphanumeric_only_name = re.sub(r'[^A-Za-z0-9]+', '', name)
-    return ''.join([
-        alphanumeric_only_name, hashlib.md5(
-            name.encode('utf-8')).hexdigest()[:4]])
+    if not name:
+        raise ValueError("Invalid name: %r" % name)
+    word_separators = ['-', '_']
+    for word_separator in word_separators:
+        word_parts = [p for p in name.split(word_separator) if p]
+        name = ''.join([w[0].upper() + w[1:] for w in word_parts])
+    return re.sub(r'[^A-Za-z0-9]+', '', name)
 
 
 def remove_stage_from_deployed_values(key, filename):
@@ -57,7 +62,7 @@ def remove_stage_from_deployed_values(key, filename):
 
 
 def record_deployed_values(deployed_values, filename):
-    # type: (Dict[str, str], str) -> None
+    # type: (Dict[str, Any], str) -> None
     """Record deployed values to a JSON file.
 
     This allows subsequent deploys to lookup previously deployed values.
@@ -163,7 +168,7 @@ class OSUtils(object):
 
     def extract_tarfile(self, tarfile_path, unpack_dir):
         # type: (str, str) -> None
-        with tarfile.open(tarfile_path, 'r:gz') as tar:
+        with tarfile.open(tarfile_path, 'r:*') as tar:
             tar.extractall(unpack_dir)
 
     def directory_exists(self, path):
@@ -210,6 +215,10 @@ class OSUtils(object):
     def rmtree(self, directory):
         # type: (str) -> None
         shutil.rmtree(directory)
+
+    def copy(self, source, destination):
+        # type: (str, str) -> None
+        shutil.copy(source, destination)
 
     def move(self, source, destination):
         # type: (str, str) -> None

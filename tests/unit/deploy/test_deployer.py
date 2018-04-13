@@ -6,43 +6,47 @@ import socket
 import pytest
 import mock
 from botocore.stub import Stubber
-from botocore.exceptions import ClientError
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from pytest import fixture
 
-from chalice import __version__ as chalice_version
-from chalice import Rate
 from chalice.app import Chalice
 from chalice.app import CORSConfig
-from chalice.awsclient import TypedAWSClient
-from chalice.awsclient import ResourceDoesNotExistError
-from chalice.awsclient import LambdaClientError
+from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaErrorContext
-from chalice.config import Config, DeployedResources
+from chalice.config import Config
 from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
-from chalice import constants
-from chalice.deploy.deployer import APIGatewayDeployer
 from chalice.deploy.deployer import ApplicationPolicyHandler
-from chalice.deploy.deployer import Deployer
-from chalice.deploy.deployer import LambdaDeployer
-from chalice.deploy.deployer import validate_configuration
-from chalice.deploy.deployer import validate_routes
-from chalice.deploy.deployer import validate_route_content_types
-from chalice.deploy.deployer import validate_python_version
-from chalice.deploy.deployer import validate_unique_function_names
-from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.validate import validate_configuration, validate_routes, \
+    validate_python_version, validate_route_content_types, \
+    validate_unique_function_names
 from chalice.utils import UI
+import unittest
+
+from attr import attrs, attrib
+
+from chalice.awsclient import TypedAWSClient
+from chalice.utils import OSUtils, serialize_to_json
+from chalice.deploy import models
+from chalice.deploy import packager
+from chalice.deploy.deployer import create_default_deployer, \
+    create_deletion_deployer, UnresolvedValueError, Deployer, \
+    ApplicationGraphBuilder, DependencyBuilder, BaseDeployStep, \
+    InjectDefaults, DeploymentPackager, SwaggerBuilder, \
+    PolicyGenerator, BuildStage, Executor, VariableResolver, \
+    ResultsRecorder, DeploymentReporter
+from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
+from chalice.deploy.planner import PlanStage, Variable
+from chalice.deploy.planner import ResourceSweeper, StringFormat
+from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
+from chalice.deploy.models import RecordResourceVariable
+from chalice.deploy.models import JPSearch, BuiltinFunction, Instruction
+from chalice.constants import LAMBDA_TRUST_POLICY
 
 
 _SESSION = None
-
-
-class SimpleStub(object):
-    def __init__(self, stubber):
-        pass
 
 
 class InMemoryOSUtils(object):
@@ -59,16 +63,6 @@ class InMemoryOSUtils(object):
 
     def set_file_contents(self, filename, contents, binary=True):
         self.filemap[filename] = contents
-
-
-@fixture
-def stubbed_api_gateway():
-    return stubbed_client('apigateway')
-
-
-@fixture
-def stubbed_lambda():
-    return stubbed_client('lambda')
 
 
 @fixture
@@ -106,87 +100,6 @@ def config_obj(sample_app):
 @fixture
 def ui():
     return mock.Mock(spec=UI)
-
-
-def test_api_gateway_deployer_initial_deploy(config_obj, ui):
-    aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
-
-    # The rest_api_id does not exist which will trigger
-    # the initial import
-    aws_client.get_rest_api_id.return_value = None
-    aws_client.import_rest_api.return_value = 'rest-api-id'
-    lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
-
-    d = APIGatewayDeployer(aws_client, ui)
-    d.deploy(config_obj, None, {'api_handler_arn': lambda_arn})
-
-    # mock.ANY because we don't want to test the contents of the swagger
-    # doc.  That's tested exhaustively elsewhere.
-    # We will do a basic sanity check to make sure it looks like a swagger
-    # doc.
-    aws_client.import_rest_api.assert_called_with(mock.ANY)
-    first_arg = aws_client.import_rest_api.call_args[0][0]
-    assert isinstance(first_arg, dict)
-    assert 'swagger' in first_arg
-
-    aws_client.deploy_rest_api.assert_called_with('rest-api-id', 'api')
-    aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
-        'func-name', 'us-west-2', 'account-id', 'rest-api-id', mock.ANY
-    )
-
-
-def test_api_gateway_deployer_redeploy_api(config_obj, ui):
-    aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
-
-    # The rest_api_id does not exist which will trigger
-    # the initial import
-    deployed = DeployedResources(
-        None, None, None, 'existing-id', 'api', None, None, {})
-    aws_client.rest_api_exists.return_value = True
-    lambda_arn = 'arn:aws:lambda:us-west-2:account-id:function:func-name'
-
-    d = APIGatewayDeployer(aws_client, ui)
-    d.deploy(config_obj, deployed, {'api_handler_arn': lambda_arn})
-
-    aws_client.update_api_from_swagger.assert_called_with('existing-id',
-                                                          mock.ANY)
-    second_arg = aws_client.update_api_from_swagger.call_args[0][1]
-    assert isinstance(second_arg, dict)
-    assert 'swagger' in second_arg
-
-    aws_client.deploy_rest_api.assert_called_with('existing-id', 'api')
-    aws_client.add_permission_for_apigateway_if_needed.assert_called_with(
-        'func-name', 'us-west-2', 'account-id', 'existing-id', mock.ANY
-    )
-
-
-def test_api_gateway_deployer_delete(config_obj, ui):
-    aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
-
-    rest_api_id = 'abcdef1234'
-    deployed = DeployedResources(
-        None, None, None, rest_api_id, 'api', None, None, {})
-    aws_client.rest_api_exists.return_value = True
-
-    d = APIGatewayDeployer(aws_client, ui)
-    d.delete(deployed)
-    aws_client.delete_rest_api.assert_called_with(rest_api_id)
-
-
-def test_api_gateway_deployer_delete_already_deleted(ui):
-    rest_api_id = 'abcdef1234'
-    aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
-    aws_client.delete_rest_api.side_effect = ResourceDoesNotExistError(
-        rest_api_id)
-    deployed = DeployedResources(
-        None, None, None, rest_api_id, 'api', None, None, {})
-    aws_client.rest_api_exists.return_value = True
-    d = APIGatewayDeployer(aws_client, ui)
-    d.delete(deployed)
-
-    output = [call[0][0] for call in ui.write.call_args_list]
-    assert "No rest API with id %s found.\n" % rest_api_id in output
-    aws_client.delete_rest_api.assert_called_with(rest_api_id)
 
 
 def test_policy_autogenerated_when_enabled(app_policy,
@@ -538,462 +451,6 @@ class TestChaliceDeploymentError(object):
         )
 
 
-class TestDeployer(object):
-    def test_can_deploy_apig_and_lambda(self, sample_app, ui):
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-
-        lambda_deploy.deploy.return_value = {
-            'api_handler_name': 'lambda_function',
-            'api_handler_arn': 'my_lambda_arn',
-        }
-        apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
-
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.')
-        d.deploy(cfg)
-        lambda_deploy.deploy.assert_called_with(cfg, None, 'dev')
-        apig_deploy.deploy.assert_called_with(cfg, None, {
-            'rest_api_id': 'api_id',
-            'chalice_version': chalice_version,
-            'region': 'region',
-            'api_gateway_stage': 'stage',
-            'api_handler_name': 'lambda_function',
-            'api_handler_arn': 'my_lambda_arn', 'backend': 'api'
-        })
-
-    def test_deployer_returns_deployed_resources(self, sample_app, ui):
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.',
-        )
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-
-        apig_deploy.deploy.return_value = ('api_id', 'region', 'stage')
-        lambda_deploy.deploy.return_value = {
-            'api_handler_name': 'lambda_function',
-            'api_handler_arn': 'my_lambda_arn',
-        }
-
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        deployed_values = d.deploy(cfg)
-        assert deployed_values == {
-            'dev': {
-                'backend': 'api',
-                'api_handler_arn': 'my_lambda_arn',
-                'api_handler_name': 'lambda_function',
-                'rest_api_id': 'api_id',
-                'api_gateway_stage': 'stage',
-                'region': 'region',
-                'chalice_version': chalice_version,
-            }
-        }
-
-    def test_deployer_delete_calls_deletes(self, ui):
-        # Check that the deployer class calls other deployer classes delete
-        # methods.
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        cfg = mock.Mock(spec=Config)
-        deployed_resources = DeployedResources.from_dict({
-            'backend': 'api',
-            'api_handler_arn': 'lambda_arn',
-            'api_handler_name': 'lambda_name',
-            'rest_api_id': 'rest_id',
-            'api_gateway_stage': 'dev',
-            'region': 'us-west-2',
-            'chalice_version': '0',
-            'lambda_functions': {},
-        })
-        cfg.deployed_resources.return_value = deployed_resources
-
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        d.delete(cfg)
-
-        lambda_deploy.delete.assert_called_with(deployed_resources)
-        apig_deploy.delete.assert_called_with(deployed_resources)
-
-    def test_deployer_does_not_call_delete_when_no_resources(self, ui):
-        # If there is nothing to clean up the deployer should not call delete.
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        cfg = mock.Mock(spec=Config)
-        deployed_resources = None
-        cfg.deployed_resources.return_value = deployed_resources
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        d.delete(cfg)
-
-        output = [call[0][0] for call in ui.write.call_args_list]
-        assert 'No existing resources found for stage dev.\n' in output
-        lambda_deploy.delete.assert_not_called()
-        apig_deploy.delete.assert_not_called()
-
-    def test_raises_deployment_error_for_botcore_client_error(self,
-                                                              sample_app,
-                                                              ui):
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        lambda_deploy.deploy.side_effect = ClientError(
-            {
-                'Error': {
-                    'Code': 'AccessDenied',
-                    'Message': 'Denied'
-                }
-            },
-            'CreateFunction'
-        )
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.',
-        )
-        with pytest.raises(ChaliceDeploymentError) as excinfo:
-            d.deploy(cfg)
-        assert excinfo.match('ERROR - While deploying')
-        assert excinfo.match('Denied')
-
-    def test_raises_deployment_error_for_lambda_client_error(self,
-                                                             sample_app,
-                                                             ui):
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        lambda_deploy.deploy.side_effect = LambdaClientError(
-            Exception('my error'),
-            context=LambdaErrorContext(
-                function_name='foo',
-                client_method_name='create_function',
-                deployment_size=1024 ** 2
-            )
-        )
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.',
-        )
-        with pytest.raises(ChaliceDeploymentError) as excinfo:
-            d.deploy(cfg)
-        assert excinfo.match('ERROR - While sending')
-        assert excinfo.match('my error')
-
-    def test_raises_deployment_error_for_apig_error(self, sample_app, ui):
-        lambda_deploy = mock.Mock(spec=LambdaDeployer)
-        apig_deploy = mock.Mock(spec=APIGatewayDeployer)
-        lambda_deploy.deploy.return_value = {
-            'api_handler_name': 'lambda_function',
-            'api_handler_arn': 'my_lambda_arn',
-        }
-        apig_deploy.deploy.side_effect = ClientError(
-            {
-                'Error': {
-                    'Code': 'AccessDenied',
-                    'Message': 'Denied'
-                }
-            },
-            'CreateStage'
-        )
-        d = Deployer(apig_deploy, lambda_deploy, ui)
-        cfg = Config.create(
-            chalice_stage='dev',
-            chalice_app=sample_app,
-            project_dir='.',
-        )
-        with pytest.raises(ChaliceDeploymentError) as excinfo:
-            d.deploy(cfg)
-        assert excinfo.match('ERROR - While deploying')
-        assert excinfo.match('Denied')
-
-
-def test_deployer_does_not_reuse_pacakge_on_python_version_change(
-        app_policy, sample_app, ui):
-    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    packager = mock.Mock(spec=LambdaDeploymentPackager)
-
-    def write_deployment_file(*args, **kwargs):
-        osutils.set_file_contents('package2.zip', b'changed contents')
-        return 'package2.zip'
-
-    packager.deployment_package_filename.return_value = 'packages2.zip'
-    packager.create_deployment_package.side_effect = write_deployment_file
-
-    # Given the lambda function already exists:
-    aws_client.lambda_function_exists.return_value = True
-    aws_client.update_function.return_value = {"FunctionArn": "myarn"}
-    # And given we don't want chalice to manage our iam role for the lambda
-    # function:
-    cfg = Config.create(
-        chalice_stage='dev',
-        chalice_app=sample_app,
-        manage_iam_role=False,
-        app_name='appname',
-        iam_role_arn='role-arn',
-        project_dir='./myproject',
-        environment_variables={"FOO": "BAR"},
-        lambda_timeout=120,
-        lambda_memory_size=256,
-        tags={'mykey': 'myvalue'}
-    )
-
-    # Pick a fake python version that will not match our current runtime under
-    # both 2.7 and 3.6.
-    aws_client.get_function_configuration.return_value = {
-        'Runtime': 'python1.0',
-    }
-    ui.confirm.return_value = True
-
-    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
-    lambda_function_name = 'lambda_function_name'
-    deployed = DeployedResources(
-        'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None, {})
-    d.deploy(cfg, deployed, 'dev')
-
-    # Since the python version changed only the create_deployment_package
-    # method should be called. Injecting the lastest app would only get called
-    # if the python dependences could stay the same, so it must not be called
-    # in this case.
-    assert packager.create_deployment_package.called
-    assert packager.inject_latest_app.called is False
-
-
-def test_lambda_deployer_repeated_deploy(app_policy, sample_app, ui):
-    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    packager = mock.Mock(spec=LambdaDeploymentPackager)
-
-    packager.deployment_package_filename.return_value = 'packages.zip'
-    # Given the lambda function already exists:
-    aws_client.lambda_function_exists.return_value = True
-    aws_client.update_function.return_value = {"FunctionArn": "myarn"}
-    # And given we don't want chalice to manage our iam role for the lambda
-    # function:
-    cfg = Config.create(
-        chalice_stage='dev',
-        chalice_app=sample_app,
-        manage_iam_role=False,
-        app_name='appname',
-        iam_role_arn='role-arn',
-        project_dir='./myproject',
-        environment_variables={"FOO": "BAR"},
-        lambda_timeout=120,
-        lambda_memory_size=256,
-        tags={'mykey': 'myvalue'}
-    )
-    aws_client.get_function_configuration.return_value = {
-        'Runtime': cfg.lambda_python_version,
-    }
-
-    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
-    # Doing a lambda deploy:
-    lambda_function_name = 'lambda_function_name'
-    deployed = DeployedResources(
-        'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None, {})
-    d.deploy(cfg, deployed, 'dev')
-
-    # Should result in injecting the latest app code.
-    packager.inject_latest_app.assert_called_with('packages.zip',
-                                                  './myproject')
-
-    # And should result in the lambda function being updated with the API.
-    aws_client.update_function.assert_called_with(
-        function_name=lambda_function_name,
-        zip_contents=b'package contents',
-        runtime=cfg.lambda_python_version,
-        environment_variables={"FOO": "BAR"},
-        tags={
-            'aws-chalice': 'version=%s:stage=%s:app=%s' % (
-                chalice_version, 'dev', 'appname'),
-            'mykey': 'myvalue'
-        },
-        timeout=120, memory_size=256,
-        role_arn='role-arn'
-    )
-
-
-def test_lambda_deployer_delete(ui):
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
-    lambda_function_name = 'api-handler'
-    deployed = DeployedResources(
-        'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None, {'name': {'arn': 'auth-arn'}})
-    ui.confirm.return_value = True
-    d = LambdaDeployer(
-        aws_client, None, ui, None, None)
-    d.delete(deployed)
-
-    aws_client.get_role_arn_for_name.assert_called_with(lambda_function_name)
-    assert aws_client.delete_function.call_args_list == [
-        mock.call('api-handler'),
-        mock.call('auth-arn'),
-    ]
-    aws_client.delete_role.assert_called_with('role_name')
-
-
-def test_lambda_deployer_delete_rule(ui):
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
-    lambda_function_name = 'api-handler'
-    deployed = DeployedResources(
-        'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None, {'name': {'arn': 'schedule-arn',
-                                           'type': 'scheduled_event'}})
-    ui.confirm.return_value = True
-    d = LambdaDeployer(
-        aws_client, None, ui, None, None)
-    d.delete(deployed)
-
-    assert aws_client.delete_function.call_args_list == [
-        mock.call('api-handler'),
-        mock.call('schedule-arn'),
-    ]
-    aws_client.delete_rule.assert_called_with(rule_name='name')
-
-
-def test_lambda_deployer_delete_already_deleted(ui):
-    lambda_function_name = 'lambda_name'
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    aws_client.get_role_arn_for_name.return_value = 'arn_prefix/role_name'
-    aws_client.delete_function.side_effect = ResourceDoesNotExistError(
-        lambda_function_name)
-    deployed = DeployedResources(
-        'api', 'api_handler_arn/lambda_name', lambda_function_name,
-        None, 'dev', None, None, {})
-    d = LambdaDeployer(
-        aws_client, None, ui, None, None)
-    d.delete(deployed)
-
-    # check that we printed that no lambda function with that name was found
-    output = [call[0][0] for call in ui.write.call_args_list]
-    assert ("No lambda function named %s found.\n" %
-            lambda_function_name in output)
-    aws_client.delete_function.assert_called_with(lambda_function_name)
-
-
-def test_can_reject_policy_change(sample_app, ui):
-    app_policy = mock.Mock(spec=ApplicationPolicyHandler)
-    app_policy.generate_policy_from_app_source.return_value = {
-        'Statement': [{'policy': 1}, {'policy': 2}],
-    }
-    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    packager = mock.Mock(spec=LambdaDeploymentPackager)
-    aws_client.get_role_arn_for_name.side_effect = ResourceDoesNotExistError(
-        'function-name')
-
-    cfg = Config.create(
-        chalice_stage='dev',
-        chalice_app=sample_app,
-        manage_iam_role=True,
-        app_name='appname',
-        project_dir='.',
-    )
-    ui.confirm.side_effect = RuntimeError("Aborted")
-
-    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
-    with pytest.raises(RuntimeError):
-        d.deploy(cfg, existing_resources=None, stage_name='dev')
-    # Assert the policy was written to stdout
-    ui.write.assert_called_with(
-        '{\n'
-        '  "Statement": [\n'
-        '    {\n'
-        '      "policy": 1\n'
-        '    },\n'
-        '    {\n'
-        '      "policy": 2\n'
-        '    }\n'
-        '  ]\n'
-        '}\n'
-    )
-
-
-def test_prompted_on_runtime_change_can_reject_change(app_policy, sample_app,
-                                                      ui):
-    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    packager = mock.Mock(spec=LambdaDeploymentPackager)
-    packager.deployment_package_filename.return_value = 'packages.zip'
-    aws_client.lambda_function_exists.return_value = True
-    aws_client.get_function_configuration.return_value = {
-        'Runtime': 'python1.0',
-    }
-    aws_client.update_function.return_value = {"FunctionArn": "myarn"}
-    cfg = Config.create(
-        chalice_stage='dev',
-        chalice_app=sample_app,
-        manage_iam_role=False,
-        app_name='appname',
-        iam_role_arn=True,
-        project_dir='./myproject',
-        environment_variables={"FOO": "BAR"},
-    )
-    ui.confirm.side_effect = RuntimeError("Aborted")
-
-    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
-    # Doing a lambda deploy with a different runtime:
-    lambda_function_name = 'lambda_function_name'
-    deployed = DeployedResources(
-        'api', 'api_handler_arn', lambda_function_name,
-        None, 'dev', None, None, {})
-    with pytest.raises(RuntimeError):
-        d.deploy(cfg, deployed, 'dev')
-
-    assert not packager.inject_latest_app.called
-    assert not aws_client.update_function.called
-    assert ui.confirm.called
-    message = ui.confirm.call_args[0][0]
-    assert 'runtime will change' in message
-
-
-def test_lambda_deployer_initial_deploy(app_policy, sample_app, ui):
-    osutils = InMemoryOSUtils({'packages.zip': b'package contents'})
-    aws_client = mock.Mock(spec=TypedAWSClient)
-    aws_client.create_function.return_value = 'lambda-arn'
-    packager = mock.Mock(spec=LambdaDeploymentPackager)
-    packager.create_deployment_package.return_value = 'packages.zip'
-    cfg = Config.create(
-        chalice_stage='dev',
-        app_name='myapp',
-        chalice_app=sample_app,
-        manage_iam_role=False,
-        iam_role_arn='role-arn',
-        project_dir='.',
-        environment_variables={"FOO": "BAR"},
-        lambda_timeout=120,
-        lambda_memory_size=256,
-        tags={'mykey': 'myvalue'}
-    )
-
-    d = LambdaDeployer(aws_client, packager, ui, osutils, app_policy)
-    deployed = d.deploy(cfg, None, 'dev')
-    assert deployed == {
-        'api_handler_arn': 'lambda-arn',
-        'api_handler_name': 'myapp-dev',
-        'lambda_functions': {},
-    }
-    aws_client.create_function.assert_called_with(
-        function_name='myapp-dev', role_arn='role-arn',
-        zip_contents=b'package contents',
-        environment_variables={"FOO": "BAR"},
-        runtime=cfg.lambda_python_version,
-        tags={
-            'aws-chalice': 'version=%s:stage=dev:app=myapp' % chalice_version,
-            'mykey': 'myvalue'
-        },
-        handler='app.app',
-        timeout=120, memory_size=256,
-    )
-
-
 class TestValidateCORS(object):
     def test_cant_have_options_with_cors(self, sample_app):
         @sample_app.route('/badcors', methods=['GET', 'OPTIONS'], cors=True)
@@ -1117,630 +574,1133 @@ def test_can_validate_updated_custom_binary_types(sample_app):
                                         sample_app.api.binary_types) is None
 
 
-class TestAuthHandlersAreAuthorized(object):
-    def tests_apigateway_adds_auth_handler_policy(self, sample_app_with_auth,
-                                                  ui):
-        # When we create authorizers in API gateway, we also need to
-        # give the authorizers permission to invoke the lambda functions
-        # we've created.
-        aws_client = mock.Mock(spec=TypedAWSClient, region_name='us-west-2')
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp',
-            chalice_app=sample_app_with_auth,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.'
+@attrs
+class FooResource(models.Model):
+    name = attrib()
+    leaf = attrib()
+
+    def dependencies(self):
+        if not isinstance(self.leaf, list):
+            return [self.leaf]
+        return self.leaf
+
+
+@attrs
+class LeafResource(models.Model):
+    name = attrib()
+
+
+@fixture
+def lambda_app():
+    app = Chalice('lambda-only')
+
+    @app.lambda_function()
+    def foo(event, context):
+        return {}
+
+    return app
+
+
+@fixture
+def scheduled_event_app():
+    app = Chalice('scheduled-event')
+
+    @app.schedule('rate(5 minutes)')
+    def foo(event):
+        return {}
+
+    return app
+
+
+@fixture
+def rest_api_app():
+    app = Chalice('rest-api')
+
+    @app.route('/')
+    def index():
+        return {}
+
+    return app
+
+
+@fixture
+def mock_client():
+    return mock.Mock(spec=TypedAWSClient)
+
+
+@fixture
+def mock_osutils():
+    return mock.Mock(spec=OSUtils)
+
+
+def create_function_resource(name):
+    return models.LambdaFunction(
+        resource_name=name,
+        function_name='appname-dev-%s' % name,
+        environment_variables={},
+        runtime='python2.7',
+        handler='app.app',
+        tags={},
+        timeout=60,
+        memory_size=128,
+        deployment_package=models.DeploymentPackage(filename='foo'),
+        role=models.PreCreatedIAMRole(role_arn='role:arn')
+    )
+
+
+class TestDependencyBuilder(object):
+    def test_can_build_resource_with_single_dep(self):
+        role = models.PreCreatedIAMRole(role_arn='foo')
+        app = models.Application(stage='dev', resources=[role])
+
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [role]
+
+    def test_can_build_resource_with_dag_deps(self):
+        shared_leaf = LeafResource(name='leaf-resource')
+        first_parent = FooResource(name='first', leaf=shared_leaf)
+        second_parent = FooResource(name='second', leaf=shared_leaf)
+        app = models.Application(
+            stage='dev', resources=[first_parent, second_parent])
+
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [shared_leaf, first_parent, second_parent]
+
+    def test_is_first_element_in_list(self):
+        shared_leaf = LeafResource(name='leaf-resource')
+        first_parent = FooResource(name='first', leaf=shared_leaf)
+        app = models.Application(
+            stage='dev', resources=[first_parent, shared_leaf],
         )
-        d = APIGatewayDeployer(aws_client, ui)
-        deployed_resources = {
-            'api_handler_arn': (
-                'arn:aws:lambda:us-west-2:1:function:myapp-dev'
-            ),
-            'api_handler_name': 'myapp-dev',
-            'lambda_functions': {
-                'myapp-dev-myauth': {'arn': 'myauth:arn',
-                                     'type': 'authorizer'},
-            },
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [shared_leaf, first_parent]
+
+    def test_can_compares_with_identity_not_equality(self):
+        first_leaf = LeafResource(name='same-name')
+        second_leaf = LeafResource(name='same-name')
+        first_parent = FooResource(name='first', leaf=first_leaf)
+        second_parent = FooResource(name='second', leaf=second_leaf)
+        app = models.Application(
+            stage='dev', resources=[first_parent, second_parent])
+
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [first_leaf, first_parent, second_leaf, second_parent]
+
+    def test_no_duplicate_depedencies(self):
+        leaf = LeafResource(name='leaf')
+        second_parent = FooResource(name='second', leaf=leaf)
+        first_parent = FooResource(name='first', leaf=[leaf, second_parent])
+        app = models.Application(
+            stage='dev', resources=[first_parent])
+
+        dep_builder = DependencyBuilder()
+        deps = dep_builder.build_dependencies(app)
+        assert deps == [leaf, second_parent, first_parent]
+
+
+class TestApplicationGraphBuilder(object):
+
+    def create_config(self, app, app_name='lambda-only',
+                      iam_role_arn=None, policy_file=None,
+                      api_gateway_stage='api',
+                      autogen_policy=False):
+        kwargs = {
+            'chalice_app': app,
+            'app_name': app_name,
+            'project_dir': '.',
+            'api_gateway_stage': api_gateway_stage,
         }
-        aws_client.import_rest_api.return_value = 'rest-api-id'
-        d.deploy(cfg, None, deployed_resources)
-        # We should have add permission for the authorizer to invoke
-        # the auth lambda function.
-        aws_client.add_permission_for_authorizer.assert_called_with(
-            'rest-api-id', 'myauth:arn', mock.ANY)
+        if iam_role_arn is not None:
+            # We want to use an existing role.
+            # This will skip all the autogen-policy
+            # and role creation.
+            kwargs['manage_iam_role'] = False
+            kwargs['iam_role_arn'] = 'role:arn'
+        elif policy_file is not None:
+            # Otherwise this setting is when a user wants us to
+            # manage the role, but they've written a policy file
+            # they'd like us to use.
+            kwargs['autogen_policy'] = False
+            kwargs['iam_policy_file'] = policy_file
+        elif autogen_policy:
+            kwargs['autogen_policy'] = True
+        config = Config.create(**kwargs)
+        return config
 
-
-class TestLambdaInitialDeploymentWithConfigurations(object):
-    @fixture(autouse=True)
-    def setup_deployer_dependencies(self, app_policy, ui):
-        # This autouse fixture is used instead of ``setup_method`` because it:
-        # * Is ran for every test
-        # * Allows additional fixtures to be passed in to reduce the number
-        #   of fixtures that need to be supplied for the test methods.
-        # * ``setup_method`` is called before fixtures get applied so
-        #   they cannot be applied to the ``setup_method`` or you will
-        #   will get a TypeError for too few arguments.
-        self.package_name = 'packages.zip'
-        self.package_contents = b'package contents'
-        self.lambda_arn = 'lambda-arn'
-        self.osutils = InMemoryOSUtils(
-            {self.package_name: self.package_contents})
-        self.aws_client = mock.Mock(spec=TypedAWSClient)
-        self.aws_client.create_function.side_effect = [self.lambda_arn]
-        # Return a python Runtime that will never match our local runtime so
-        # the deployment package is not reused.
-        self.aws_client.get_function_configuration.return_value = {
-            'Runtime': 'FakePythonVersion'
-        }
-        self.packager = mock.Mock(spec=LambdaDeploymentPackager)
-        self.packager.create_deployment_package.return_value =\
-            self.package_name
-        self.packager.deployment_package_filename.return_value =\
-            self.package_name
-        self.app_policy = app_policy
-        self.ui = ui
-
-    def create_config_obj(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.'
-        )
-        return cfg
-
-    def test_can_create_auth_handlers(self, sample_app_with_auth):
-        config = self.create_config_obj(sample_app_with_auth)
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        self.aws_client.lambda_function_exists.return_value = False
-        self.aws_client.create_function.side_effect = [
-            self.lambda_arn, 'arn:auth-function']
-        deployed = deployer.deploy(config, None, stage_name='dev')
-        assert 'lambda_functions' in deployed
-        assert deployed['lambda_functions'] == {
-            'myapp-dev-myauth': {'arn': 'arn:auth-function',
-                                 'type': 'authorizer'}
-        }
-        self.aws_client.create_function.assert_called_with(
+    def test_can_build_single_lambda_function_app(self, lambda_app):
+        # This is the simplest configuration we can get.
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(lambda_app, iam_role_arn='role:arn')
+        application = builder.build(config, stage_name='dev')
+        # The top level resource is always an Application.
+        assert isinstance(application, models.Application)
+        assert len(application.resources) == 1
+        assert application.resources[0] == models.LambdaFunction(
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
             environment_variables={},
-            function_name='myapp-dev-myauth',
-            handler='app.myauth',
-            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
-            role_arn='role-arn',
-            # The python runtime versions are tested elsewhere.
-            runtime=mock.ANY,
-            # The tag format is tested elsewhere.
-            tags=mock.ANY,
-            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
-            zip_contents=b'package contents',
-        )
-
-    def test_can_create_scheduled_events(self, sample_app):
-        @sample_app.schedule('rate(1 hour)')
-        def foo(event):
-            pass
-
-        config = self.create_config_obj(sample_app)
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        self.aws_client.lambda_function_exists.return_value = False
-        self.aws_client.get_or_create_rule_arn.return_value = 'rule-arn'
-        self.aws_client.create_function.side_effect = [
-            self.lambda_arn, 'arn:event-function']
-        deployed = deployer.deploy(config, None, stage_name='dev')
-        assert 'lambda_functions' in deployed
-        assert deployed['lambda_functions'] == {
-            'myapp-dev-foo': {'arn': 'arn:event-function',
-                              'type': 'scheduled_event'}
-        }
-        self.aws_client.create_function.assert_called_with(
-            environment_variables={},
-            function_name='myapp-dev-foo',
+            runtime=config.lambda_python_version,
             handler='app.foo',
-            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
-            role_arn='role-arn',
-            # The python runtime versions are tested elsewhere.
-            runtime=mock.ANY,
-            # The tag format is tested elsewhere.
-            tags=mock.ANY,
-            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
-            zip_contents=b'package contents',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
         )
-        self.aws_client.get_or_create_rule_arn.assert_called_with(
-            'myapp-dev-foo', 'rate(1 hour)')
-        self.aws_client.connect_rule_to_lambda.assert_called_with(
-            'myapp-dev-foo', 'arn:event-function')
-        self.aws_client.add_permission_for_scheduled_event.assert_called_with(
-            'rule-arn', 'arn:event-function')
 
-    def test_can_create_scheduled_events_with_obj(self, sample_app):
-        @sample_app.schedule(Rate(value=1, unit=Rate.HOURS))
-        def foo(event):
+    def test_multiple_lambda_functions_share_role_and_package(self,
+                                                              lambda_app):
+        # We're going to add another lambda_function to our app.
+        @lambda_app.lambda_function()
+        def bar(event, context):
+            return {}
+
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(lambda_app, iam_role_arn='role:arn')
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 2
+        # The lambda functions by default share the same role
+        assert application.resources[0].role == application.resources[1].role
+        # Not just in equality but the exact same role objects.
+        assert application.resources[0].role is application.resources[1].role
+        # And all lambda functions share the same deployment package.
+        assert (application.resources[0].deployment_package ==
+                application.resources[1].deployment_package)
+
+    def test_autogen_policy_for_function(self, lambda_app):
+        # This test is just a sanity test that verifies all the params
+        # for an ManagedIAMRole.  The various combinations for role
+        # configuration is all tested via RoleTestCase.
+        config = self.create_config(lambda_app, autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        function = application.resources[0]
+        role = function.role
+        # We should have linked a ManagedIAMRole
+        assert isinstance(role, models.ManagedIAMRole)
+        assert role == models.ManagedIAMRole(
+            resource_name='default-role',
+            role_name='lambda-only-dev',
+            trust_policy=LAMBDA_TRUST_POLICY,
+            policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
+        )
+
+    def test_scheduled_event_models(self, scheduled_event_app):
+        config = self.create_config(scheduled_event_app,
+                                    app_name='scheduled-event',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        event = application.resources[0]
+        assert isinstance(event, models.ScheduledEvent)
+        assert event.resource_name == 'foo-event'
+        assert event.rule_name == 'scheduled-event-dev-foo-event'
+        assert isinstance(event.lambda_function, models.LambdaFunction)
+        assert event.lambda_function.resource_name == 'foo'
+
+    def test_can_build_rest_api(self, rest_api_app):
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        rest_api = application.resources[0]
+        assert isinstance(rest_api, models.RestAPI)
+        assert rest_api.resource_name == 'rest_api'
+        assert rest_api.api_gateway_stage == 'api'
+        assert rest_api.lambda_function.resource_name == 'api_handler'
+        assert rest_api.lambda_function.function_name == 'rest-api-app-dev'
+        # The swagger document is validated elsewhere so we just
+        # make sure it looks right.
+        assert rest_api.swagger_doc == models.Placeholder.BUILD_STAGE
+
+    def test_can_build_rest_api_with_authorizer(self, rest_api_app):
+        @rest_api_app.authorizer()
+        def my_auth(auth_request):
             pass
-        config = self.create_config_obj(sample_app)
-        self.aws_client.lambda_function_exists.return_value = False
-        self.aws_client.get_or_create_rule_arn.return_value = 'rule-arn'
-        self.aws_client.create_function.side_effect = [
-            self.lambda_arn, 'arn:event-function']
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        deployer.deploy(config, None, stage_name='dev')
 
-        # For this test we just want to double check that the
-        # Rate object was properly converted to a string value.
-        self.aws_client.get_or_create_rule_arn.assert_called_with(
-            'myapp-dev-foo', 'rate(1 hour)')
+        @rest_api_app.route('/auth', authorizer=my_auth)
+        def needs_auth():
+            return {'foo': 'bar'}
 
-    def test_can_create_pure_lambda_functions(self, sample_app):
-        @sample_app.lambda_function()
-        def foo(event, context):
-            pass
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        assert len(rest_api.authorizers) == 1
+        assert isinstance(rest_api.authorizers[0], models.LambdaFunction)
 
-        config = self.create_config_obj(sample_app)
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        self.aws_client.lambda_function_exists.return_value = False
-        self.aws_client.create_function.side_effect = [
-            self.lambda_arn, 'arn:foo-function']
-        deployed = deployer.deploy(config, None, stage_name='dev')
-        assert 'lambda_functions' in deployed
-        assert deployed['lambda_functions'] == {
-            'myapp-dev-foo': {'arn': 'arn:foo-function',
-                              'type': 'pure_lambda'}
+
+class RoleTestCase(object):
+    def __init__(self, given, roles, app_name='appname'):
+        self.given = given
+        self.roles = roles
+        self.app_name = app_name
+
+    def build(self):
+        app = Chalice(self.app_name)
+
+        for name in self.given:
+            def foo(event, context):
+                return {}
+            foo.__name__ = name
+            app.lambda_function(name)(foo)
+
+        user_provided_params = {
+            'chalice_app': app,
+            'app_name': self.app_name,
+            'project_dir': '.',
         }
-        self.aws_client.create_function.assert_called_with(
-            environment_variables={},
-            function_name='myapp-dev-foo',
-            handler='app.foo',
-            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
-            role_arn='role-arn',
-            # The python runtime versions are tested elsewhere.
-            runtime=mock.ANY,
-            # The tag format is tested elsewhere.
-            tags=mock.ANY,
-            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
-            zip_contents=b'package contents',
-        )
-
-    def test_can_update_auth_handlers(self, sample_app_with_auth):
-        config = self.create_config_obj(sample_app_with_auth)
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        self.aws_client.lambda_function_exists.return_value = True
-        self.aws_client.update_function.return_value = {
-            'FunctionArn': 'arn:auth-function'
-        }
-        deployed = deployer.deploy(config, None, stage_name='dev')
-        assert 'lambda_functions' in deployed
-        assert deployed['lambda_functions'] == {
-            'myapp-dev-myauth': {'arn': 'arn:auth-function',
-                                 'type': 'authorizer'}
-        }
-        self.aws_client.update_function.assert_called_with(
-            environment_variables={},
-            function_name='myapp-dev-myauth',
-            memory_size=constants.DEFAULT_LAMBDA_MEMORY_SIZE,
-            role_arn='role-arn',
-            # The python runtime versions are tested elsewhere.
-            runtime=mock.ANY,
-            # The tag format is tested elsewhere.
-            tags=mock.ANY,
-            timeout=constants.DEFAULT_LAMBDA_TIMEOUT,
-            zip_contents=b'package contents',
-        )
-
-    def test_can_create_auth_with_different_config(self, sample_app_with_auth):
-        # We're not using create_config_obj because we want to approximate
-        # loading config from disk which contains per-lambda configuration.
-        disk_config = {
-            'app_name': 'myapp',
-            'iam_role_arn': 'role-arn',
-            'manage_iam_role': False,
+        lambda_functions = {}
+        for key, value in self.given.items():
+            lambda_functions[key] = value
+        config_from_disk = {
             'stages': {
                 'dev': {
-                    'lambda_timeout': 10,
-                    'lambda_memory_size': 128,
-                    'lambda_functions': {
-                        'myauth': {
-                            'lambda_timeout': 20,
-                            'lambda_memory_size': 512,
-                        }
+                    'lambda_functions': lambda_functions,
+                }
+            }
+        }
+        config = Config(chalice_stage='dev',
+                        user_provided_params=user_provided_params,
+                        config_from_disk=config_from_disk)
+        return app, config
+
+    def assert_required_roles_created(self, application):
+        resources = application.resources
+        assert len(resources) == len(self.given)
+        functions_by_name = {f.function_name: f for f in resources}
+        # Roles that have the same name/arn should be the same
+        # object.  If we encounter a role that's already in
+        # roles_by_identifier, we'll verify that it's the exact same object.
+        roles_by_identifier = {}
+        for function_name, expected in self.roles.items():
+            full_name = 'appname-dev-%s' % function_name
+            assert full_name in functions_by_name
+            actual_role = functions_by_name[full_name].role
+            expectations = self.roles[function_name]
+            if not expectations.get('managed_role', True):
+                actual_role_arn = actual_role.role_arn
+                assert isinstance(actual_role, models.PreCreatedIAMRole)
+                assert expectations['iam_role_arn'] == actual_role_arn
+                if actual_role_arn in roles_by_identifier:
+                    assert roles_by_identifier[actual_role_arn] is actual_role
+                roles_by_identifier[actual_role_arn] = actual_role
+                continue
+            actual_name = actual_role.role_name
+            assert expectations['name'] == actual_name
+            if actual_name in roles_by_identifier:
+                assert roles_by_identifier[actual_name] is actual_role
+            roles_by_identifier[actual_name] = actual_role
+            is_autogenerated = expectations.get('autogenerated', False)
+            policy_file = expectations.get('policy_file')
+            if is_autogenerated:
+                assert isinstance(actual_role, models.ManagedIAMRole)
+                assert isinstance(actual_role.policy, models.AutoGenIAMPolicy)
+            if policy_file is not None and not is_autogenerated:
+                assert isinstance(actual_role, models.ManagedIAMRole)
+                assert isinstance(actual_role.policy,
+                                  models.FileBasedIAMPolicy)
+                assert actual_role.policy.filename == os.path.join(
+                    '.', '.chalice', expectations['policy_file'])
+
+
+# How to read these tests:
+# 'given' is a mapping of lambda function name to config values.
+# 'roles' is a mapping of lambda function to expected attributes
+# of the role associated with the given function.
+# The first test case is explained in more detail as an example.
+ROLE_TEST_CASES = [
+    # Default case, we use the shared 'appname-dev' role.
+    RoleTestCase(
+        # Given we have a lambda function in our app.py named 'a',
+        # and we have our config file state that the 'a' function
+        # should have an autogen'd policy,
+        given={'a': {'autogen_policy': True}},
+        # then we expect the IAM role associated with the lambda
+        # function 'a' should be named 'appname-dev', and it should
+        # be an autogenerated role/policy.
+        roles={'a': {'name': 'appname-dev', 'autogenerated': True}}),
+    # If you specify an explicit policy, we generate a function
+    # specific role.
+    RoleTestCase(
+        given={'a': {'autogen_policy': False,
+                     'iam_policy_file': 'mypolicy.json'}},
+        roles={'a': {'name': 'appname-dev-a',
+                     'autogenerated': False,
+                     'policy_file': 'mypolicy.json'}}),
+    # Multiple lambda functions that use autogen policies share
+    # the same 'appname-dev' role.
+    RoleTestCase(
+        given={'a': {'autogen_policy': True},
+               'b': {'autogen_policy': True}},
+        roles={'a': {'name': 'appname-dev'},
+               'b': {'name': 'appname-dev'}}),
+    # Multiple lambda functions with separate policies result
+    # in separate roles.
+    RoleTestCase(
+        given={'a': {'autogen_policy': False,
+                     'iam_policy_file': 'a.json'},
+               'b': {'autogen_policy': False,
+                     'iam_policy_file': 'b.json'}},
+        roles={'a': {'name': 'appname-dev-a',
+                     'autogenerated': False,
+                     'policy_file': 'a.json'},
+               'b': {'name': 'appname-dev-b',
+                     'autogenerated': False,
+                     'policy_file': 'b.json'}}),
+    # You can mix autogen and explicit policy files.  Autogen will
+    # always use the '{app}-{stage}' role.
+    RoleTestCase(
+        given={'a': {'autogen_policy': True},
+               'b': {'autogen_policy': False,
+                     'iam_policy_file': 'b.json'}},
+        roles={'a': {'name': 'appname-dev',
+                     'autogenerated': True},
+               'b': {'name': 'appname-dev-b',
+                     'autogenerated': False,
+                     'policy_file': 'b.json'}}),
+    # Default location if no policy file is given is
+    # policy-dev.json
+    RoleTestCase(
+        given={'a': {'autogen_policy': False}},
+        roles={'a': {'name': 'appname-dev-a',
+                     'autogenerated': False,
+                     'policy_file': 'policy-dev.json'}}),
+    # As soon as autogen_policy is false, we will *always*
+    # create a function specific role.
+    RoleTestCase(
+        given={'a': {'autogen_policy': False},
+               'b': {'autogen_policy': True}},
+        roles={'a': {'name': 'appname-dev-a',
+                     'autogenerated': False,
+                     'policy_file': 'policy-dev.json'},
+               'b': {'name': 'appname-dev'}}),
+    RoleTestCase(
+        given={'a': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'}},
+        # 'managed_role' will verify the associated role is a
+        # models.PreCreatedIAMRoleType with the provided iam_role_arn.
+        roles={'a': {'managed_role': False, 'iam_role_arn': 'role:arn'}}),
+    # Verify that we can use the same non-managed role for multiple
+    # lambda functions.
+    RoleTestCase(
+        given={'a': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'},
+               'b': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'}},
+        roles={'a': {'managed_role': False, 'iam_role_arn': 'role:arn'},
+               'b': {'managed_role': False, 'iam_role_arn': 'role:arn'}}),
+    RoleTestCase(
+        given={'a': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'},
+               'b': {'autogen_policy': True}},
+        roles={'a': {'managed_role': False, 'iam_role_arn': 'role:arn'},
+               'b': {'name': 'appname-dev', 'autogenerated': True}}),
+
+    # Functions that mix all four options:
+    RoleTestCase(
+        # 2 functions with autogen'd policies.
+        given={
+            'a': {'autogen_policy': True},
+            'b': {'autogen_policy': True},
+            # 2 functions with various iam role arns.
+            'c': {'manage_iam_role': False, 'iam_role_arn': 'role:arn'},
+            'd': {'manage_iam_role': False, 'iam_role_arn': 'role:arn2'},
+            # A function with a default filename for a policy.
+            'e': {'autogen_policy': False},
+            # Even though this uses the same policy as 'e', we will
+            # still create a new role.  This could be optimized in the
+            # future.
+            'f': {'autogen_policy': False},
+            # And finally 2 functions that have their own policy files.
+            'g': {'autogen_policy': False, 'iam_policy_file': 'g.json'},
+            'h': {'autogen_policy': False, 'iam_policy_file': 'h.json'}
+        },
+        roles={
+            'a': {'name': 'appname-dev', 'autogenerated': True},
+            'b': {'name': 'appname-dev', 'autogenerated': True},
+            'c': {'managed_role': False, 'iam_role_arn': 'role:arn'},
+            'd': {'managed_role': False, 'iam_role_arn': 'role:arn2'},
+            'e': {'name': 'appname-dev-e',
+                  'autogenerated': False,
+                  'policy_file': 'policy-dev.json'},
+            'f': {'name': 'appname-dev-f',
+                  'autogenerated': False,
+                  'policy_file': 'policy-dev.json'},
+            'g': {'name': 'appname-dev-g',
+                  'autogenerated': False,
+                  'policy_file': 'g.json'},
+            'h': {'name': 'appname-dev-h',
+                  'autogenerated': False,
+                  'policy_file': 'h.json'},
+        }),
+]
+
+
+@pytest.mark.parametrize('case', ROLE_TEST_CASES)
+def test_role_creation(case):
+    _, config = case.build()
+    builder = ApplicationGraphBuilder()
+    application = builder.build(config, stage_name='dev')
+    case.assert_required_roles_created(application)
+
+
+class TestDefaultsInjector(object):
+    def test_inject_when_values_are_none(self):
+        injector = InjectDefaults(
+            lambda_timeout=100,
+            lambda_memory_size=512,
+        )
+        function = models.LambdaFunction(
+            # The timeout/memory_size are set to
+            # None, so the injector should fill them
+            # in the with the default values above.
+            timeout=None,
+            memory_size=None,
+            resource_name='foo',
+            function_name='app-dev-foo',
+            environment_variables={},
+            runtime='python2.7',
+            handler='app.app',
+            tags={},
+            deployment_package=None,
+            role=None,
+        )
+        config = Config.create()
+        injector.handle(config, function)
+        assert function.timeout == 100
+        assert function.memory_size == 512
+
+    def test_no_injection_when_values_are_set(self):
+        injector = InjectDefaults(
+            lambda_timeout=100,
+            lambda_memory_size=512,
+        )
+        function = models.LambdaFunction(
+            # The timeout/memory_size are set to
+            # None, so the injector should fill them
+            # in the with the default values above.
+            timeout=1,
+            memory_size=1,
+            resource_name='foo',
+            function_name='app-stage-foo',
+            environment_variables={},
+            runtime='python2.7',
+            handler='app.app',
+            tags={},
+            deployment_package=None,
+            role=None,
+        )
+        config = Config.create()
+        injector.handle(config, function)
+        assert function.timeout == 1
+        assert function.memory_size == 1
+
+
+class TestPolicyGeneratorStage(object):
+    def setup_method(self):
+        self.osutils = mock.Mock(spec=OSUtils)
+
+    def create_policy_generator(self, generator=None):
+        if generator is None:
+            generator = mock.Mock(spec=AppPolicyGenerator)
+        p = PolicyGenerator(generator, self.osutils)
+        return p
+
+    def test_invokes_policy_generator(self):
+        generator = mock.Mock(spec=AppPolicyGenerator)
+        generator.generate_policy.return_value = {'policy': 'doc'}
+        policy = models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE)
+        config = Config.create()
+
+        p = self.create_policy_generator(generator)
+        p.handle(config, policy)
+
+        assert policy.document == {'policy': 'doc'}
+
+    def test_no_policy_generated_if_exists(self):
+        generator = mock.Mock(spec=AppPolicyGenerator)
+        generator.generate_policy.return_value = {'policy': 'new'}
+        policy = models.AutoGenIAMPolicy(document={'policy': 'original'})
+        config = Config.create()
+
+        p = self.create_policy_generator(generator)
+        p.handle(config, policy)
+
+        assert policy.document == {'policy': 'original'}
+        assert not generator.generate_policy.called
+
+    def test_policy_loaded_from_file_if_needed(self):
+        p = self.create_policy_generator()
+        policy = models.FileBasedIAMPolicy(
+            filename='foo.json', document=models.Placeholder.BUILD_STAGE)
+        self.osutils.get_file_contents.return_value = '{"iam": "policy"}'
+
+        p.handle(Config.create(), policy)
+
+        assert policy.document == {'iam': 'policy'}
+        self.osutils.get_file_contents.assert_called_with('foo.json')
+
+    def test_error_raised_if_file_policy_not_exists(self):
+        p = self.create_policy_generator()
+        policy = models.FileBasedIAMPolicy(
+            filename='foo.json', document=models.Placeholder.BUILD_STAGE)
+        self.osutils.get_file_contents.side_effect = IOError()
+
+        with pytest.raises(RuntimeError):
+            p.handle(Config.create(), policy)
+
+
+class TestSwaggerBuilder(object):
+    def test_can_generate_swagger_builder(self):
+        generator = mock.Mock(spec=SwaggerGenerator)
+        generator.generate_swagger.return_value = {'swagger': '2.0'}
+
+        rest_api = models.RestAPI(
+            resource_name='foo',
+            swagger_doc=models.Placeholder.BUILD_STAGE,
+            api_gateway_stage='api',
+            lambda_function=None,
+        )
+        config = Config.create(chalice_app=mock.sentinel.chalice_app)
+        p = SwaggerBuilder(generator)
+        p.handle(config, rest_api)
+        assert rest_api.swagger_doc == {'swagger': '2.0'}
+        generator.generate_swagger.assert_called_with(
+            mock.sentinel.chalice_app
+        )
+
+
+class TestDeploymentPackager(object):
+    def test_can_generate_package(self):
+        generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
+        generator.create_deployment_package.return_value = 'package.zip'
+
+        package = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
+        config = Config.create()
+
+        p = DeploymentPackager(generator)
+        p.handle(config, package)
+
+        assert package.filename == 'package.zip'
+
+    def test_package_not_generated_if_filename_populated(self):
+        generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
+        generator.create_deployment_package.return_value = 'NEWPACKAGE.zip'
+
+        package = models.DeploymentPackage(filename='original-name.zip')
+        config = Config.create()
+
+        p = DeploymentPackager(generator)
+        p.handle(config, package)
+
+        assert package.filename == 'original-name.zip'
+        assert not generator.create_deployment_package.called
+
+
+class TestExecutor(object):
+    def setup_method(self):
+        self.mock_client = mock.Mock(spec=TypedAWSClient)
+        self.ui = mock.Mock(spec=UI)
+        self.executor = Executor(self.mock_client, self.ui)
+
+    def execute(self, instructions, messages=None):
+        if messages is None:
+            messages = {}
+        self.executor.execute(models.Plan(instructions, messages))
+
+    def test_can_invoke_api_call_with_no_output(self):
+        params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
+                  'policy': {'iam': 'policy'}}
+        call = APICall('create_role', params)
+
+        self.execute([call])
+
+        self.mock_client.create_role.assert_called_with(**params)
+
+    def test_can_store_api_result(self):
+        params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
+                  'policy': {'iam': 'policy'}}
+        apicall = APICall('create_role', params, output_var='my_variable_name')
+        self.mock_client.create_role.return_value = 'myrole:arn'
+
+        self.execute([apicall])
+
+        assert self.executor.variables['my_variable_name'] == 'myrole:arn'
+
+    def test_can_reference_stored_results_in_api_calls(self):
+        params = {
+            'name': Variable('role_name'),
+            'trust_policy': {'trust': 'policy'},
+            'policy': {'iam': 'policy'}
+        }
+        call = APICall('create_role', params)
+        self.mock_client.create_role.return_value = 'myrole:arn'
+
+        self.executor.variables['role_name'] = 'myrole-name'
+        self.execute([call])
+
+        self.mock_client.create_role.assert_called_with(
+            name='myrole-name',
+            trust_policy={'trust': 'policy'},
+            policy={'iam': 'policy'},
+        )
+
+    def test_can_return_created_resources(self):
+        params = {}
+        call = APICall('create_function', params,
+                       output_var='myfunction_arn')
+        self.mock_client.create_function.return_value = 'function:arn'
+        record_instruction = RecordResourceVariable(
+            resource_type='lambda_function',
+            resource_name='myfunction',
+            name='myfunction_arn',
+            variable_name='myfunction_arn',
+        )
+        self.execute([call, record_instruction])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'myfunction_arn': 'function:arn',
+            'resource_type': 'lambda_function',
+        }]
+
+    def test_can_reference_varname(self):
+        self.mock_client.create_function.return_value = 'function:arn'
+        self.execute([
+            APICall('create_function', {}, output_var='myvarname'),
+            RecordResourceVariable(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='myfunction_arn',
+                variable_name='myvarname',
+            ),
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'myfunction_arn': 'function:arn',
+        }]
+
+    def test_can_record_value_directly(self):
+        self.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='myfunction_arn',
+                value='arn:foo',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'myfunction_arn': 'arn:foo',
+        }]
+
+    def test_can_aggregate_multiple_resource_values(self):
+        self.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='value1',
+            ),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key2',
+                value='value2',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'key1': 'value1',
+            'key2': 'value2',
+        }]
+
+    def test_new_keys_override_old_keys(self):
+        self.execute([
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='OLD',
+            ),
+            RecordResourceValue(
+                resource_type='lambda_function',
+                resource_name='myfunction',
+                name='key1',
+                value='NEW',
+            )
+        ])
+        assert self.executor.resource_values == [{
+            'name': 'myfunction',
+            'resource_type': 'lambda_function',
+            'key1': 'NEW',
+        }]
+
+    def test_validates_no_unresolved_deploy_vars(self):
+        params = {'zip_contents': models.Placeholder.BUILD_STAGE}
+        call = APICall('create_function', params)
+        self.mock_client.create_function.return_value = 'function:arn'
+        # We should raise an exception because a param has
+        # a models.Placeholder.BUILD_STAGE value which should have
+        # been handled in an earlier stage.
+        with pytest.raises(UnresolvedValueError):
+            self.execute([call])
+
+    def test_can_jp_search(self):
+        self.execute([
+            StoreValue(name='searchval', value={'foo': {'bar': 'baz'}}),
+            JPSearch('foo.bar', input_var='searchval', output_var='result'),
+        ])
+        assert self.executor.variables['result'] == 'baz'
+
+    def test_can_call_builtin_function(self):
+        self.execute([
+            StoreValue(
+                name='my_arn',
+                value='arn:aws:lambda:us-west-2:123:function:name'),
+            BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable('my_arn')],
+                output_var='result',
+            )
+        ])
+        assert self.executor.variables['result'] == {
+            'account_id': '123',
+            'region': 'us-west-2',
+            'service': 'lambda'
+        }
+
+    def test_errors_out_on_unknown_function(self):
+        with pytest.raises(ValueError):
+            self.execute([
+                BuiltinFunction(
+                    function_name='unknown_foo',
+                    args=[],
+                    output_var=None,
+                )
+            ])
+
+    def test_can_print_ui_messages(self):
+        params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
+                  'policy': {'iam': 'policy'}}
+        call = APICall('create_role', params)
+        messages = {id(call): 'Creating role'}
+        self.execute([call], messages)
+        self.mock_client.create_role.assert_called_with(**params)
+        self.ui.write.assert_called_with('Creating role')
+
+    def test_error_out_on_unknown_instruction(self):
+
+        class CustomInstruction(Instruction):
+            pass
+
+        with pytest.raises(RuntimeError):
+            self.execute([CustomInstruction()])
+
+
+def test_build_stage():
+    first = mock.Mock(spec=BaseDeployStep)
+    second = mock.Mock(spec=BaseDeployStep)
+    build = BuildStage([first, second])
+
+    foo_resource = mock.sentinel.foo_resource
+    bar_resource = mock.sentinel.bar_resource
+    config = Config.create()
+    build.execute(config, [foo_resource, bar_resource])
+
+    assert first.handle.call_args_list == [
+        mock.call(config, foo_resource),
+        mock.call(config, bar_resource),
+    ]
+    assert second.handle.call_args_list == [
+        mock.call(config, foo_resource),
+        mock.call(config, bar_resource),
+    ]
+
+
+class TestDeployer(unittest.TestCase):
+    def setUp(self):
+        self.resource_builder = mock.Mock(spec=ApplicationGraphBuilder)
+        self.deps_builder = mock.Mock(spec=DependencyBuilder)
+        self.build_stage = mock.Mock(spec=BuildStage)
+        self.plan_stage = mock.Mock(spec=PlanStage)
+        self.sweeper = mock.Mock(spec=ResourceSweeper)
+        self.executor = mock.Mock(spec=Executor)
+        self.recorder = mock.Mock(spec=ResultsRecorder)
+        self.chalice_app = Chalice(app_name='foo')
+
+    def create_deployer(self):
+        return Deployer(
+            self.resource_builder,
+            self.deps_builder,
+            self.build_stage,
+            self.plan_stage,
+            self.sweeper,
+            self.executor,
+            self.recorder,
+        )
+
+    def test_deploy_delegates_properly(self):
+        app = mock.Mock(spec=models.Application)
+        resources = [mock.Mock(spec=models.Model)]
+        api_calls = [mock.Mock(spec=APICall)]
+
+        self.resource_builder.build.return_value = app
+        self.deps_builder.build_dependencies.return_value = resources
+        self.plan_stage.execute.return_value = api_calls
+        self.executor.resource_values = {'foo': {'name': 'bar'}}
+
+        deployer = self.create_deployer()
+        config = Config.create(project_dir='.', chalice_app=self.chalice_app)
+        result = deployer.deploy(config, 'dev')
+
+        self.resource_builder.build.assert_called_with(config, 'dev')
+        self.deps_builder.build_dependencies.assert_called_with(app)
+        self.build_stage.execute.assert_called_with(config, resources)
+        self.plan_stage.execute.assert_called_with(resources)
+        self.sweeper.execute.assert_called_with(api_calls, config)
+        self.executor.execute.assert_called_with(api_calls)
+
+        expected_result = {
+            'resources': {'foo': {'name': 'bar'}},
+            'schema_version': '2.0',
+            'backend': 'api',
+        }
+
+        self.recorder.record_results.assert_called_with(
+            expected_result, 'dev', '.')
+        assert result == expected_result
+
+    def test_deploy_errors_raises_chalice_error(self):
+        self.resource_builder.build.side_effect = AWSClientError()
+
+        deployer = self.create_deployer()
+        config = Config.create(project_dir='.', chalice_app=self.chalice_app)
+        with pytest.raises(ChaliceDeploymentError):
+            deployer.deploy(config, 'dev')
+
+    def test_validation_errors_raise_failure(self):
+
+        @self.chalice_app.route('')
+        def bad_route_empty_string():
+            return {}
+
+        deployer = self.create_deployer()
+        config = Config.create(project_dir='.', chalice_app=self.chalice_app)
+        with pytest.raises(ChaliceDeploymentError):
+            deployer.deploy(config, 'dev')
+
+
+def test_can_create_default_deployer():
+    session = botocore.session.get_session()
+    deployer = create_default_deployer(session, Config.create(
+        project_dir='.',
+        chalice_stage='dev',
+    ), UI())
+    assert isinstance(deployer, Deployer)
+
+
+def test_can_create_deletion_deployer():
+    session = botocore.session.get_session()
+    deployer = create_deletion_deployer(TypedAWSClient(session), UI())
+    assert isinstance(deployer, Deployer)
+
+
+class TestResolveVariables(object):
+
+    def resolve_vars(self, params, variables):
+        return VariableResolver().resolve_variables(
+            params, variables
+        )
+
+    def test_resolve_top_level_vars(self):
+        assert self.resolve_vars(
+            {'foo': Variable('myvar')},
+            {'myvar': 'value'}
+        ) == {'foo': 'value'}
+
+    def test_can_resolve_multiple_vars(self):
+        assert self.resolve_vars(
+            {'foo': Variable('myvar'),
+             'bar': Variable('myvar')},
+            {'myvar': 'value'}
+        ) == {'foo': 'value', 'bar': 'value'}
+
+    def test_unsolved_error_raises_error(self):
+        with pytest.raises(UnresolvedValueError) as excinfo:
+            self.resolve_vars({'foo': models.Placeholder.BUILD_STAGE}, {})
+        raised_exception = excinfo.value
+        assert raised_exception.key == 'foo'
+        assert raised_exception.value == models.Placeholder.BUILD_STAGE
+
+    def test_can_resolve_nested_variable_refs(self):
+        assert self.resolve_vars(
+            {'foo': {'bar': Variable('myvar')}},
+            {'myvar': 'value'}
+        ) == {'foo': {'bar': 'value'}}
+
+    def test_can_resolve_vars_in_list(self):
+        assert self.resolve_vars(
+            {'foo': [0, 1, Variable('myvar')]},
+            {'myvar': 2}
+        ) == {'foo': [0, 1, 2]}
+
+    def test_deeply_nested(self):
+        nested = {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': Variable('foo')}}],
                     }
                 }
             }
         }
-        config = Config(
-            'dev',
-            config_from_disk=disk_config,
-            user_provided_params={'chalice_app': sample_app_with_auth,
-                                  'project_dir': '.'}
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        self.aws_client.lambda_function_exists.return_value = False
-        self.aws_client.create_function.side_effect = [
-            self.lambda_arn, 'arn:auth-function']
-        deployer.deploy(config, None, stage_name='dev')
-        create_function_calls = self.aws_client.create_function.call_args_list
-        assert create_function_calls == [
-            mock.call(
-                environment_variables={},
-                function_name='myapp-dev',
-                handler='app.app',
-                role_arn='role-arn',
-                runtime=mock.ANY,
-                tags=mock.ANY,
-                zip_contents=b'package contents',
-                # These come frmo the stage level config above.
-                timeout=10,
-                memory_size=128,
-            ),
-            mock.call(
-                environment_variables={},
-                function_name='myapp-dev-myauth',
-                handler='app.myauth',
-                role_arn='role-arn',
-                runtime=mock.ANY,
-                tags=mock.ANY,
-                zip_contents=b'package contents',
-                # These come from the 'lambda_functions.myauth' section
-                # in the config above.
-                timeout=20,
-                memory_size=512,
-            )
-        ]
-
-    def test_unreferenced_functions_are_deleted(self, sample_app_with_auth):
-        # Existing resources is the set of resources that have
-        # *previously* been deployed.
-        existing_lambda_functions = {
-            'old-function': 'arn:not-referenced-anymore',
-        }
-        existing = DeployedResources(
-            'api', 'api-handler-arn', 'api-handler-name',
-            'existing-id', 'dev', None, None,
-            existing_lambda_functions)
-        self.aws_client.lambda_function_exists.return_value = True
-        self.aws_client.update_function.return_value = {
-            'FunctionArn': 'arn:new-auth-function'
-        }
-        config = self.create_config_obj(sample_app_with_auth)
-        self.aws_client.get_function_configuration.return_value = {
-            'Runtime': config.lambda_python_version,
-        }
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-        deployed = deployer.deploy(config, existing, stage_name='dev')
-        # Because the "old-function" was not referenced in the update
-        # function calls, we should expect that it was deleted.
-        self.aws_client.delete_function.assert_called_with(
-            'arn:not-referenced-anymore')
-        # And the old-arn is not in the deployed resources
-        assert deployed['lambda_functions'] == {
-            'api-handler-name-myauth': {
-                'arn': 'arn:new-auth-function',
-                'type': 'authorizer'
+        variables = {'foo': 'value'}
+        assert self.resolve_vars(nested, variables) == {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': 'value'}}],
+                    }
+                }
             }
         }
 
-    def test_lambda_deployer_defaults(self, sample_app):
-        cfg = self.create_config_obj(sample_app)
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, None, 'dev')
-        self.aws_client.create_function.assert_called_with(
-            function_name='myapp-dev', role_arn='role-arn',
-            zip_contents=b'package contents',
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version)
-            },
-            environment_variables={},
-            handler='app.app',
-            timeout=60, memory_size=128
-        )
-
-    def test_lambda_deployer_with_environment_vars(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', environment_variables={'FOO': 'BAR'}
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, None, 'dev')
-        self.aws_client.create_function.assert_called_with(
-            function_name='myapp-dev', role_arn='role-arn',
-            zip_contents=b'package contents',
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version)
-            },
-            environment_variables={'FOO': 'BAR'},
-            handler='app.app',
-            timeout=60, memory_size=128
-        )
-
-    def test_lambda_deployer_with_timeout_configured(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', lambda_timeout=120
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, None, 'dev')
-        self.aws_client.create_function.assert_called_with(
-            function_name='myapp-dev', role_arn='role-arn',
-            zip_contents=b'package contents',
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version)
-            },
-            environment_variables={},
-            handler='app.app',
-            timeout=120, memory_size=128
-        )
-
-    def test_lambda_deployer_with_memory_size_configured(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', lambda_memory_size=256
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, None, 'dev')
-        self.aws_client.create_function.assert_called_with(
-            function_name='myapp-dev', role_arn='role-arn',
-            zip_contents=b'package contents',
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version)
-            },
-            environment_variables={},
-            handler='app.app',
-            timeout=60, memory_size=256
-        )
-
-    def test_lambda_deployer_with_tags(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', tags={'mykey': 'myvalue'}
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, None, 'dev')
-        self.aws_client.create_function.assert_called_with(
-            function_name='myapp-dev', role_arn='role-arn',
-            zip_contents=b'package contents',
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-                'mykey': 'myvalue'
-            },
-            environment_variables={},
-            handler='app.app',
-            timeout=60, memory_size=128
-        )
-
-
-class TestLambdaUpdateDeploymentWithConfigurations(object):
-    @fixture(autouse=True)
-    def setup_deployer_dependencies(self, app_policy, ui):
-        # This autouse fixture is used instead of ``setup_method`` because it:
-        # * Is ran for every test
-        # * Allows additional fixtures to be passed in to reduce the number
-        #   of fixtures that need to be supplied for the test methods.
-        # * ``setup_method`` is called before fixtures get applied so
-        #   they cannot be applied to the ``setup_method`` or you will
-        #   will get a TypeError for too few arguments.
-        self.package_name = 'packages.zip'
-        self.package_contents = b'package contents'
-        self.lambda_arn = 'lambda-arn'
-        self.lambda_function_name = 'lambda_function_name'
-
-        self.osutils = InMemoryOSUtils(
-            {self.package_name: self.package_contents})
-
-        self.aws_client = mock.Mock(spec=TypedAWSClient)
-        self.aws_client.lambda_function_exists.return_value = True
-        self.aws_client.update_function.return_value = {
-            'FunctionArn': self.lambda_arn}
-        self.aws_client.get_function_configuration.return_value = {
-            'Runtime': 'python2.7',
+    def test_can_handle_format_string(self):
+        params = {'bar': StringFormat('value: {my_var}', ['my_var'])}
+        variables = {'my_var': 'foo'}
+        assert self.resolve_vars(params, variables) == {
+            'bar': 'value: foo',
         }
 
-        self.ui = ui
-        self.ui.confirm.return_value = True
-
-        self.packager = mock.Mock(spec=LambdaDeploymentPackager)
-        self.packager.create_deployment_package.return_value =\
-            self.package_name
-
-        self.app_policy = app_policy
-
-        self.deployed_resources = DeployedResources(
-            'api', 'api_handler_arn', self.lambda_function_name,
-            None, 'dev', None, None, {})
-
-    def test_lambda_deployer_defaults(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.',
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
-        self.aws_client.update_function.assert_called_with(
-            function_name=self.lambda_function_name,
-            zip_contents=self.package_contents,
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-            },
-            environment_variables={},
-            timeout=60, memory_size=128,
-            role_arn='role-arn'
-        )
-
-    def test_lambda_deployer_with_environment_vars(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', environment_variables={'FOO': 'BAR'}
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
-        self.aws_client.update_function.assert_called_with(
-            function_name=self.lambda_function_name,
-            zip_contents=self.package_contents,
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-            },
-            environment_variables={'FOO': 'BAR'},
-            timeout=60, memory_size=128,
-            role_arn='role-arn'
-        )
-
-    def test_lambda_deployer_with_timeout_configured(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', lambda_timeout=120
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
-        self.aws_client.update_function.assert_called_with(
-            function_name=self.lambda_function_name,
-            zip_contents=self.package_contents,
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-            },
-            environment_variables={},
-            timeout=120, memory_size=128,
-            role_arn='role-arn'
-        )
-
-    def test_lambda_deployer_with_memory_size_configured(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', lambda_memory_size=256
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
-        self.aws_client.update_function.assert_called_with(
-            function_name=self.lambda_function_name,
-            zip_contents=self.package_contents,
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-            },
-            environment_variables={},
-            timeout=60, memory_size=256,
-            role_arn='role-arn'
-        )
-
-    def test_lambda_deployer_with_tags(self, sample_app):
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=False, iam_role_arn='role-arn',
-            project_dir='.', tags={'mykey': 'myvalue'}
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            self.app_policy)
-
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
-        self.aws_client.update_function.assert_called_with(
-            function_name=self.lambda_function_name,
-            zip_contents=self.package_contents,
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-                'mykey': 'myvalue'
-            },
-            environment_variables={},
-            timeout=60, memory_size=128,
-            role_arn='role-arn'
-        )
-
-    def test_update_lambda_updates_role_once(self, sample_app):
-        app_policy = mock.Mock(spec=ApplicationPolicyHandler)
-        app_policy.generate_policy_from_app_source.return_value = {
-            'Version': '2012-10-17', 'Statement': []
+    def test_can_handle_deeply_nested_format_string(self):
+        nested = {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': StringFormat(
+                            'foo: {myvar}', ['myvar'])}}],
+                    }
+                }
+            }
         }
-        app_policy.load_last_policy.return_value = {
-            'Version': '2012-10-17', 'Statement': []
+        variables = {'myvar': 'value'}
+        assert self.resolve_vars(nested, variables) == {
+            'a': {
+                'b': {
+                    'c': {
+                        'd': [{'e': {'f': 'foo: value'}}],
+                    }
+                }
+            }
         }
-        cfg = Config.create(
-            chalice_stage='dev', app_name='myapp', chalice_app=sample_app,
-            manage_iam_role=True, iam_role_arn='role-arn',
-            project_dir='.', tags={'mykey': 'myvalue'}
-        )
-        deployer = LambdaDeployer(
-            self.aws_client, self.packager, self.ui, self.osutils,
-            app_policy)
-        self.aws_client.get_role_arn_for_name.return_value = 'role-arn'
-        deployer.deploy(cfg, self.deployed_resources, 'dev')
-        self.aws_client.update_function.assert_called_with(
-            function_name=self.lambda_function_name,
-            zip_contents=self.package_contents,
-            runtime=cfg.lambda_python_version,
-            tags={
-                'aws-chalice': 'version=%s:stage=dev:app=myapp' % (
-                    chalice_version),
-                'mykey': 'myvalue'
+
+
+def test_templated_swagger_generator(rest_api_app):
+    doc = TemplatedSwaggerGenerator().generate_swagger(rest_api_app)
+    uri = doc['paths']['/']['get']['x-amazon-apigateway-integration']['uri']
+    assert isinstance(uri, StringFormat)
+    assert uri.template == (
+        'arn:aws:apigateway:{region_name}:lambda:path'
+        '/2015-03-31/functions/{api_handler_lambda_arn}/invocations'
+    )
+    assert uri.variables == ['region_name', 'api_handler_lambda_arn']
+
+
+def test_templated_swagger_with_auth_uri(rest_api_app):
+    @rest_api_app.authorizer()
+    def myauth(auth_request):
+        pass
+
+    @rest_api_app.route('/auth', authorizer=myauth)
+    def needsauth():
+        return {}
+
+    doc = TemplatedSwaggerGenerator().generate_swagger(rest_api_app)
+    uri = doc['securityDefinitions']['myauth'][
+        'x-amazon-apigateway-authorizer']['authorizerUri']
+    assert isinstance(uri, StringFormat)
+    assert uri.template == (
+        'arn:aws:apigateway:{region_name}:lambda:path'
+        '/2015-03-31/functions/{myauth_lambda_arn}/invocations'
+    )
+    assert uri.variables == ['region_name', 'myauth_lambda_arn']
+
+
+class TestRecordResults(object):
+    def setup_method(self):
+        self.osutils = mock.Mock(spec=OSUtils)
+        self.recorder = ResultsRecorder(self.osutils)
+        self.deployed_values = {
+            'stages': {
+                'dev': {'resources': []},
             },
-            environment_variables={},
-            timeout=60, memory_size=128,
-            role_arn='role-arn'
+            'schema_version': '2.0',
+        }
+        self.osutils.joinpath = os.path.join
+        self.deployed_dir = os.path.join('.', '.chalice', 'deployed')
+
+    def test_can_record_results_initial_deploy(self):
+        expected_filename = os.path.join(self.deployed_dir, 'dev.json')
+        self.osutils.file_exists.return_value = False
+        self.osutils.directory_exists.return_value = False
+        self.recorder.record_results(
+            self.deployed_values, 'dev', '.',
         )
-        self.aws_client.put_role_policy.assert_called_with(
-            policy_document={'Version': '2012-10-17', 'Statement': []},
-            policy_name='lambda_function_name',
-            role_name='lambda_function_name'
+        expected_contents = serialize_to_json(self.deployed_values)
+        # Verify we created the deployed dir on an initial deploy.
+        self.osutils.makedirs.assert_called_with(self.deployed_dir)
+        self.osutils.set_file_contents.assert_called_with(
+            filename=expected_filename,
+            contents=expected_contents,
+            binary=False
         )
-        assert self.aws_client.put_role_policy.call_count == 1
+
+
+class TestDeploymentReporter(object):
+    def setup_method(self):
+        self.ui = mock.Mock(spec=UI)
+        self.reporter = DeploymentReporter(ui=self.ui)
+
+    def test_can_generate_report(self):
+        deployed_values = {
+            "resources": [
+                {"role_name": "james2-dev",
+                 "role_arn": "my-role-arn",
+                 "name": "default-role",
+                 "resource_type": "iam_role"},
+                {"lambda_arn": "lambda-arn-foo",
+                 "name": "foo",
+                 "resource_type": "lambda_function"},
+                {"lambda_arn": "lambda-arn-dev",
+                 "name": "api_handler",
+                 "resource_type": "lambda_function"},
+                {"name": "rest_api",
+                 "rest_api_id": "rest_api_id",
+                 "rest_api_url": "https://host/api",
+                 "resource_type": "rest_api"},
+            ],
+        }
+        report = self.reporter.generate_report(deployed_values)
+        assert report == (
+            "Resources deployed:\n"
+            "  - Lambda ARN: lambda-arn-foo\n"
+            "  - Lambda ARN: lambda-arn-dev\n"
+            "  - Rest API URL: https://host/api\n"
+        )
+
+    def test_can_display_report(self):
+        deployed_values = {
+            'resources': []
+        }
+        self.reporter.display_report(deployed_values)
+        self.ui.write.assert_called_with('Resources deployed:\n')

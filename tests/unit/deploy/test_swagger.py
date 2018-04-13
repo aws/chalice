@@ -476,10 +476,7 @@ def test_will_default_to_function_name_for_auth(sample_app):
 
 
 def test_will_custom_auth_with_cfn(sample_app):
-    swagger_gen = CFNSwaggerGenerator(
-        region='us-west-2',
-        deployed_resources={}
-    )
+    swagger_gen = CFNSwaggerGenerator()
 
     # No "name=" kwarg provided should default
     # to a name of "auth".
@@ -505,7 +502,7 @@ def test_will_custom_auth_with_cfn(sample_app):
             'authorizerUri': {
                 'Fn::Sub': (
                     'arn:aws:apigateway:${AWS::Region}:lambda:path'
-                    '/2015-03-31/functions/${authfa53.Arn}/invocations'
+                    '/2015-03-31/functions/${Auth.Arn}/invocations'
                 )
             }
         }

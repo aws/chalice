@@ -101,6 +101,18 @@ def sample_app():
 
 
 @fixture
+def sample_app_with_cors():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/image', methods=['POST'], cors=True,
+                content_types=['image/gif'])
+    def image():
+        return {'image': True}
+
+    return demo
+
+
+@fixture
 def auth_request():
     method_arn = (
         "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth")
@@ -258,6 +270,13 @@ def test_error_on_unsupported_method_gives_feedback_on_method(sample_app,
     event = create_event('/name/{name}', method, {'name': 'james'})
     raw_response = sample_app(event, context=None)
     assert 'POST' in json_response_body(raw_response)['Message']
+
+
+def test_error_contains_cors_headers(sample_app_with_cors, create_event):
+    event = create_event('/image', 'POST', {'not': 'image'})
+    raw_response = sample_app_with_cors(event, context=None)
+    assert raw_response['statusCode'] == 415
+    assert 'Access-Control-Allow-Origin' in raw_response['headers']
 
 
 def test_no_view_function_found(sample_app, create_event):
