@@ -119,7 +119,7 @@ class SAMTemplateGenerator(object):
                 'Environment': {
                     'Variables': resource.environment_variables
                 }
-            }  # type: Dict[str, Dict[List[str]]]
+            }  # type: Dict[str, Dict[str, Dict[str, str]]]
             lambdafunction_definition['Properties'].update(environment_config)
         if resource.security_group_ids and resource.subnet_ids:
             vpc_config = {
@@ -127,7 +127,7 @@ class SAMTemplateGenerator(object):
                     'SecurityGroupIds': resource.security_group_ids,
                     'SubnetIds': resource.subnet_ids,
                 }
-            }  # type: Dict[str, Dict[List[str]]]
+            }  # type: Dict[str, Dict[str, List[str]]]
             lambdafunction_definition['Properties'].update(vpc_config)
         resources[cfn_name] = lambdafunction_definition
         self._add_iam_role(resource, resources[cfn_name])
