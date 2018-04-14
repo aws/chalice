@@ -45,11 +45,15 @@ _REMOTE_CALL_ERRORS = (
 )
 
 
-class ResourceDoesNotExistError(Exception):
+class AWSClientError(Exception):
     pass
 
 
-class LambdaClientError(Exception):
+class ResourceDoesNotExistError(AWSClientError):
+    pass
+
+
+class LambdaClientError(AWSClientError):
     def __init__(self, original_error, context):
         # type: (Exception, LambdaErrorContext) -> None
         self.original_error = original_error
@@ -118,8 +122,8 @@ class TypedAWSClient(object):
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
                         memory_size=None,            # type: _OPT_INT
-                        subnet_ids=None,             # type: _OPT_STR_LIST
                         security_group_ids=None,     # type: _OPT_STR_LIST
+                        subnet_ids=None,             # type: _OPT_STR_LIST
                         ):
         # type: (...) -> str
         kwargs = {
@@ -139,8 +143,8 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if subnet_ids is not None and security_group_ids is not None:
             kwargs['VpcConfig'] = self.create_vpc_config(
+                security_group_ids=security_group_ids,
                 subnet_ids=subnet_ids,
-                security_group_ids=security_group_ids
             )
         try:
             return self._call_client_method_with_retries(
@@ -294,12 +298,17 @@ class TypedAWSClient(object):
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
+        role = self.get_role(name)
+        return role['Arn']
+
+    def get_role(self, name):
+        # type: (str) -> Dict[str, Any]
         client = self._client('iam')
         try:
             role = client.get_role(RoleName=name)
         except client.exceptions.NoSuchEntityException:
             raise ResourceDoesNotExistError("No role ARN found for: %s" % name)
-        return role['Role']['Arn']
+        return role['Role']
 
     def delete_role_policy(self, role_name, policy_name):
         # type: (str, str) -> None
@@ -404,8 +413,8 @@ class TypedAWSClient(object):
 
     def add_permission_for_apigateway_if_needed(self, function_name,
                                                 region_name, account_id,
-                                                rest_api_id, random_id):
-        # type: (str, str, str, str, str) -> None
+                                                rest_api_id, random_id=None):
+        # type: (str, str, str, str, Optional[str]) -> None
         """Authorize API gateway to invoke a lambda function is needed.
 
         This method will first check if API gateway has permission to call
@@ -413,6 +422,8 @@ class TypedAWSClient(object):
         ``self.add_permission_for_apigateway(...).
 
         """
+        if random_id is None:
+            random_id = self._random_id()
         policy = self.get_function_policy(function_name)
         source_arn = self._build_source_arn_str(region_name, account_id,
                                                 rest_api_id)

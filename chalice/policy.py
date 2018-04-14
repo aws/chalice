@@ -79,7 +79,7 @@ class AppPolicyGenerator(object):
         app_source = self._osutils.get_file_contents(app_py, binary=False)
         app_policy = policy_from_source_code(app_source)
         app_policy['Statement'].append(CLOUDWATCH_LOGS)
-        if config.subnet_ids or config.security_group_ids:
+        if config.subnet_ids and config.security_group_ids:
             app_policy['Statement'].append(VPC_ATTACH_POLICY)
         return app_policy
 

@@ -248,6 +248,30 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_can_use_abi3_whl_for_any_python3(self, tmpdir, pip_runner):
+        reqs = ['foo', 'bar', 'baz', 'qux']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp33-abi3-manylinux1_x86_64.whl',
+                'bar-1.2-cp34-abi3-manylinux1_x86_64.whl',
+                'baz-1.2-cp35-abi3-manylinux1_x86_64.whl',
+                'qux-1.2-cp36-abi3-manylinux1_x86_64.whl',
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
     def test_can_expand_purelib_whl(self, tmpdir, pip_runner):
         reqs = ['foo']
         pip, runner = pip_runner
@@ -561,6 +585,36 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_whitelist_sqlalchemy(self, tmpdir, osutils, pip_runner):
+        reqs = ['sqlalchemy==1.1.18']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'SQLAlchemy-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+            ]
+        )
+        pip.packages_to_download(
+            expected_args=[
+                '--only-binary=:all:', '--no-deps', '--platform',
+                'manylinux1_x86_64', '--implementation', 'cp',
+                '--abi', lambda_abi, '--dest', mock.ANY,
+                'sqlalchemy==1.1.18'
+            ],
+            packages=[
+                'SQLAlchemy-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+            ]
+        )
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        assert installed_packages == ['SQLAlchemy']
+
     def test_can_build_sdist(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
@@ -737,7 +791,7 @@ def test_can_create_app_packager_with_no_autogen(tmpdir):
                            chalice_app=sample_app(),
                            **default_params)
     p = package.create_app_packager(config)
-    p.package_app(config, str(outdir))
+    p.package_app(config, str(outdir), 'dev')
     # We're not concerned with the contents of the files
     # (those are tested in the unit tests), we just want to make
     # sure they're written to disk and look (mostly) right.
@@ -754,7 +808,7 @@ def test_will_create_outdir_if_needed(tmpdir):
                            chalice_app=sample_app(),
                            **default_params)
     p = package.create_app_packager(config)
-    p.package_app(config, str(outdir))
+    p.package_app(config, str(outdir), 'dev')
     contents = os.listdir(str(outdir))
     assert 'deployment.zip' in contents
     assert 'sam.json' in contents
@@ -949,5 +1003,23 @@ class TestPackage(object):
             sdist_builder.write_fake_sdist(tempdir, 'foobar', '1.0')
             pkgs = set()
             pkgs.add(Package('', 'foobar-1.0-py3-none-any.whl'))
+            pkgs.add(Package(tempdir, 'foobar-1.0.zip'))
+            assert len(pkgs) == 1
+
+    def test_ensure_sdist_name_normalized_for_comparison(self, osutils,
+                                                         sdist_builder):
+        with osutils.tempdir() as tempdir:
+            sdist_builder.write_fake_sdist(tempdir, 'Foobar', '1.0')
+            pkgs = set()
+            pkgs.add(Package('', 'foobar-1.0-py3-none-any.whl'))
+            pkgs.add(Package(tempdir, 'Foobar-1.0.zip'))
+            assert len(pkgs) == 1
+
+    def test_ensure_wheel_name_normalized_for_comparison(self, osutils,
+                                                         sdist_builder):
+        with osutils.tempdir() as tempdir:
+            sdist_builder.write_fake_sdist(tempdir, 'foobar', '1.0')
+            pkgs = set()
+            pkgs.add(Package('', 'Foobar-1.0-py3-none-any.whl'))
             pkgs.add(Package(tempdir, 'foobar-1.0.zip'))
             assert len(pkgs) == 1

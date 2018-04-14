@@ -74,7 +74,7 @@ a change needs to be deployed.
 The default CodeCommit repository that is created is empty, you will have to
 populate it with the Chalice application code. Permissions will also need to be
 set up, you can find the documentation on how to do that
-`here <http://docs.aws.amazon.com/codebuild/latest/userguide/setting-up.html>`_
+`here <https://docs.aws.amazon.com/codebuild/latest/userguide/setting-up.html>`_
 .
 
 
