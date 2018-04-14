@@ -773,6 +773,7 @@ class TestApplicationGraphBuilder(object):
                                     security_group_ids=['sg1', 'sg2'],
                                     subnet_ids=['sn1', 'sn2'])
         application = builder.build(config, stage_name='dev')
+
         assert application.resources[0] == models.LambdaFunction(
             resource_name='foo',
             function_name='lambda-only-dev-foo',
