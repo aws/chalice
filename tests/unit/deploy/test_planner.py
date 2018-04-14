@@ -39,7 +39,6 @@ def create_function_resource(name, function_name=None,
         memory_size=memory_size,
         deployment_package=deployment_package,
         role=role,
-      
         security_group_ids=[],
         subnet_ids=[],
     )
