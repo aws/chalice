@@ -1,5 +1,5 @@
 # Dev requirements, used for various linting tools
-coverage==4.3.4
+coverage==4.5.1
 flake8==3.3.0
 tox==2.2.1
 wheel==0.26.0
