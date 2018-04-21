@@ -416,7 +416,7 @@ class LocalGateway(object):
         )
 
     def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, str) -> EventType
+        # type: (str, str, HeaderType, Optional[str]) -> EventType
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
             body=body,
@@ -429,7 +429,7 @@ class LocalGateway(object):
         return 'OPTIONS' in self._app_object.routes[route_key]
 
     def handle_request(self, method, path, headers, body):
-        # type: (str, str, HeaderType, str) -> ResponseType
+        # type: (str, str, HeaderType, Optional[str]) -> ResponseType
         lambda_context = self._generate_lambda_context()
         try:
             lambda_event = self._generate_lambda_event(
@@ -531,7 +531,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             self, request, client_address, server)  # type: ignore
 
     def _parse_payload(self):
-        # type: () -> Tuple[HeaderType, str]
+        # type: () -> Tuple[HeaderType, Optional[str]]
         body = None
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:

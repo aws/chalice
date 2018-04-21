@@ -264,8 +264,8 @@ class UI(object):
         # type: (str) -> None
         self._err.write(msg)
 
-    def confirm(self, msg, default=None, abort=False):
-        # type: (str, Optional[Any], bool) -> Any
+    def confirm(self, msg, default=False, abort=False):
+        # type: (str, bool, bool) -> Any
         try:
             return self._confirm(msg, default, abort)
         except click.Abort:

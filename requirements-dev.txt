@@ -19,4 +19,4 @@ mock==2.0.0
 requests==2.11.1
 hypothesis==3.56.3
 
-mypy==0.501; python_version >= '3.6'
+mypy==0.590; python_version >= '3.6'

@@ -8,7 +8,7 @@ from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
 
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
-from typing import Dict, MutableMapping  # noqa
+from typing import Dict, MutableMapping, AnyStr  # noqa
 from chalice.compat import lambda_abi
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
@@ -227,7 +227,7 @@ class LambdaDeploymentPackager(object):
         self._osutils.move(tmpzip, deployment_package_filename)
 
     def _needs_latest_version(self, filename):
-        # type: (str) -> bool
+        # type: (AnyStr) -> bool
         return filename == 'app.py' or filename.startswith(
             ('chalicelib/', 'chalice/'))
 
@@ -309,7 +309,7 @@ class DependencyBuilder(object):
         return False
 
     def _download_all_dependencies(self, requirements_filename, directory):
-        # type: (str, str) -> set[Package]
+        # type: (str, str) -> Set[Package]
         # Download dependencies prefering wheel files but falling back to
         # raw source dependences to get the transitive closure over
         # the dependency graph. Return the set of all package objects
@@ -321,13 +321,13 @@ class DependencyBuilder(object):
         return deps
 
     def _download_binary_wheels(self, packages, directory):
-        # type: (set[Package], str) -> None
+        # type: (Set[Package], str) -> None
         # Try to get binary wheels for each package that isn't compatible.
         self._pip.download_manylinux_wheels(
             [pkg.identifier for pkg in packages], directory)
 
     def _build_sdists(self, sdists, directory, compile_c=True):
-        # type: (set[Package], str, bool) -> None
+        # type: (Set[Package], str, bool) -> None
         for sdist in sdists:
             path_to_sdist = self._osutils.joinpath(directory, sdist.filename)
             self._pip.build_wheel(path_to_sdist, directory, compile_c)
@@ -429,7 +429,7 @@ class DependencyBuilder(object):
                                compatible_wheels,   # type: Set[Package]
                                incompatible_wheels  # type: Set[Package]
                                ):
-        # (...) ->Tuple[Set[Package], Set[Package]]
+        # type: (...) -> Tuple[Set[Package], Set[Package]]
         compatible_wheels = set(compatible_wheels)
         actual_incompatible_wheels = set()
         for missing_package in incompatible_wheels:
