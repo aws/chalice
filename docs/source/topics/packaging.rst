@@ -113,7 +113,7 @@ Cryptography Example
   files.
 
 Below shows an example of how to use the
-`cryptography 1.9 <https://pypi.python.org/pypi/cryptography/1.9>`__ package
+`cryptography 1.9 <https://pypi.org/project/cryptography/1.9/>`__ package
 in a Chalice app for the ``python3.6`` lambda environment.
 
 Suppose you are on a Mac or Windows and want to deploy a Chalice app that

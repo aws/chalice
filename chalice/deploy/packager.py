@@ -10,6 +10,7 @@ from zipfile import ZipFile  # noqa
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
 from typing import Dict, MutableMapping  # noqa
 from chalice.compat import lambda_abi
+from chalice.compat import pip_import_string
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
@@ -616,11 +617,14 @@ class SDistMetadataFetcher(object):
 
 class SubprocessPip(object):
     """Wrapper around calling pip through a subprocess."""
-    def __init__(self, osutils=None):
-        # type: (Optional[OSUtils]) -> None
+    def __init__(self, osutils=None, import_string=None):
+        # type: (Optional[OSUtils], OptStr) -> None
         if osutils is None:
             osutils = OSUtils()
         self._osutils = osutils
+        if import_string is None:
+            import_string = pip_import_string()
+        self._import_string = import_string
 
     def main(self, args, env_vars=None, shim=None):
         # type: (List[str], EnvVars, OptStr) -> Tuple[int, Optional[bytes]]
@@ -629,12 +633,15 @@ class SubprocessPip(object):
         if shim is None:
             shim = ''
         python_exe = sys.executable
-        run_pip = 'import pip, sys; sys.exit(pip.main(%s))' % args
+        run_pip = (
+            'import sys; %s; sys.exit(main(%s))'
+        ) % (self._import_string, args)
         exec_string = '%s%s' % (shim, run_pip)
         invoke_pip = [python_exe, '-c', exec_string]
-        p = subprocess.Popen(invoke_pip,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             env=env_vars)
+        p = self._osutils.popen(invoke_pip,
+                                stdout=self._osutils.pipe,
+                                stderr=self._osutils.pipe,
+                                env=env_vars)
         _, err = p.communicate()
         rc = p.returncode
         return rc, err

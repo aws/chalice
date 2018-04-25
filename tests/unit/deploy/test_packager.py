@@ -7,6 +7,7 @@ from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.deploy.packager import Package
 from chalice.deploy.packager import PipRunner
+from chalice.deploy.packager import SubprocessPip
 from chalice.deploy.packager import InvalidSourceDistributionNameError
 from chalice.deploy.packager import NoSuchPackageError
 from chalice.deploy.packager import PackageDownloadError
@@ -55,6 +56,26 @@ class CustomEnv(OSUtils):
 @pytest.fixture
 def osutils():
     return OSUtils()
+
+
+class FakePopen(object):
+    def __init__(self, rc, out, err):
+        self.returncode = 0
+        self._out = out
+        self._err = err
+
+    def communicate(self):
+        return self._out, self._err
+
+
+class FakePopenOSUtils(OSUtils):
+    def __init__(self, processes):
+        self.popens = []
+        self._processes = processes
+
+    def popen(self, *args, **kwargs):
+        self.popens.append((args, kwargs))
+        return self._processes.pop()
 
 
 class TestPackage(object):
@@ -213,3 +234,16 @@ class TestPipRunner(object):
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'Unknown error'
+
+
+class TestSubprocessPip(object):
+    def test_does_use_custom_pip_import_string(self):
+        fake_osutils = FakePopenOSUtils([FakePopen(0, '', '')])
+        expected_import_statement = 'foobarbaz'
+        pip = SubprocessPip(osutils=fake_osutils,
+                            import_string=expected_import_statement)
+        pip.main(['--version'])
+
+        pip_execution_string = fake_osutils.popens[0][0][0][2]
+        import_statement = pip_execution_string.split(';')[1].strip()
+        assert import_statement == expected_import_statement
