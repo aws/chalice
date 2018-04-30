@@ -8,7 +8,8 @@ Next Release (TBD)
 
 * Add support for pip 10
   (`#808 <https://github.com/aws/chalice/issues/808>`__)
-
+* Update ``policies.json`` file
+  (`#817 <https://github.com/aws/chalice/issues/817>`__)
 
 1.2.2
 =====
