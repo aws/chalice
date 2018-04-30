@@ -8,6 +8,7 @@ import re
 import shutil
 import sys
 import tarfile
+import subprocess
 
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
@@ -15,6 +16,10 @@ from typing import Optional, Union  # noqa
 from typing import MutableMapping  # noqa
 
 from chalice.constants import WELCOME_PROMPT
+
+
+OptInt = Optional[int]
+EnvVars = MutableMapping
 
 
 class AbortedError(Exception):
@@ -232,6 +237,16 @@ class OSUtils(object):
             yield tempdir
         finally:
             shutil.rmtree(tempdir)
+
+    def popen(self, command, stdout=None, stderr=None, env=None):
+        # type: (List[str], OptInt, OptInt, EnvVars) -> subprocess.Popen
+        p = subprocess.Popen(command, stdout=stdout, stderr=stderr, env=env)
+        return p
+
+    @property
+    def pipe(self):
+        # type: () -> int
+        return subprocess.PIPE
 
 
 def getting_started_prompt(prompter):
