@@ -126,6 +126,9 @@ class Boto3ClientType(BaseType):
 
     def __eq__(self, other):
         # type: (Any) -> bool
+        # NOTE: We can't use self.__class__ because of a mypy bug:
+        # https://github.com/python/mypy/issues/3061
+        # We can change this back once that bug is fixed.
         if not isinstance(other, Boto3ClientType):
             return False
         return self.service_name == other.service_name
