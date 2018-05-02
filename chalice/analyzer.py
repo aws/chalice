@@ -36,7 +36,7 @@ particular ``FunctionDef`` node.
 import ast
 import symtable
 
-from typing import Dict, Set, Any, Optional, List, Union  # noqa
+from typing import Dict, Set, Any, Optional, List, Union, cast  # noqa
 
 
 APICallT = Dict[str, Set[str]]
@@ -126,7 +126,10 @@ class Boto3ClientType(BaseType):
 
     def __eq__(self, other):
         # type: (Any) -> bool
-        if not isinstance(other, self.__class__):
+        # NOTE: We can't use self.__class__ because of a mypy bug:
+        # https://github.com/python/mypy/issues/3061
+        # We can change this back once that bug is fixed.
+        if not isinstance(other, Boto3ClientType):
             return False
         return self.service_name == other.service_name
 
@@ -160,6 +163,11 @@ class Boto3ClientMethodType(BaseType):
 
 class Boto3ClientMethodCallType(Boto3ClientMethodType):
     pass
+
+
+class TypedSymbol(symtable.Symbol):
+    inferred_type = None  # type: Any
+    ast_node = None  # type: ast.AST
 
 
 class FunctionType(BaseType):
@@ -256,7 +264,7 @@ class ChainedSymbolTable(object):
 
     def set_inferred_type(self, name, inferred_type):
         # type: (str, Any) -> None
-        symbol = self._local_table.lookup(name)
+        symbol = cast(TypedSymbol, self._local_table.lookup(name))
         symbol.inferred_type = inferred_type
 
     def lookup_sub_namespace(self, name):
@@ -283,7 +291,7 @@ class ChainedSymbolTable(object):
 
     def register_ast_node_for_symbol(self, name, node):
         # type: (str, ast.AST) -> None
-        symbol = self._local_table.lookup(name)
+        symbol = cast(TypedSymbol, self._local_table.lookup(name))
         symbol.ast_node = node
 
     def lookup_ast_node_for_symbol(self, name):
@@ -292,7 +300,7 @@ class ChainedSymbolTable(object):
         if symbol.is_global():
             symbol = self._global_table.lookup(name)
         try:
-            return symbol.ast_node
+            return cast(TypedSymbol, symbol).ast_node
         except AttributeError:
             raise ValueError(
                 "No AST node registered for symbol: %s" % name)
@@ -350,10 +358,10 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         else:
             table = self._symbol_table.lookup_sub_namespace(scope_name)
         return {
-            s.get_name(): s.inferred_type
+            s.get_name(): cast(TypedSymbol, s).inferred_type
             for s in table.get_symbols()
             if hasattr(s, 'inferred_type') and
-            s.inferred_type is not None and
+            cast(TypedSymbol, s).inferred_type is not None and
             s.is_local()
         }
 
@@ -633,7 +641,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         self._visit_comprehension_children(node, comprehension_type)
 
     def _get_matching_sub_namespace(self, name, lineno):
-        # type: (str, int) -> symtable.SymbolTable
+        # type: (str, int) -> Optional[symtable.SymbolTable]
         namespaces = [t for t in self._symbol_table.get_sub_namespaces()
                       if t.get_name() == name]
         if len(namespaces) == 1:

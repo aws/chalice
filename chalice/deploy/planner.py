@@ -485,7 +485,7 @@ class Variable(object):
 
     def __eq__(self, other):
         # type: (Any) -> bool
-        return isinstance(other, self.__class__) and self.name == other.name
+        return isinstance(other, Variable) and self.name == other.name
 
 
 class StringFormat(object):
@@ -501,7 +501,7 @@ class StringFormat(object):
     def __eq__(self, other):
         # type: (Any) -> bool
         return (
-            isinstance(other, self.__class__) and
+            isinstance(other, StringFormat) and
             self.template == other.template and
             self.variables == other.variables
         )

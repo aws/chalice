@@ -12,7 +12,7 @@ install_requires = [
     'typing==3.5.3.0',
     'six>=1.10.0,<2.0.0',
     'pip>=9,<11',
-    'attrs==17.2.0',
+    'attrs==17.4.0',
     'enum34==1.1.6',
     'jmespath>=0.9.3,<1.0.0',
 ]
