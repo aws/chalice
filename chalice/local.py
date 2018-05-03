@@ -123,7 +123,8 @@ class RouteMatcher(object):
         """
         # Otherwise we need to check for param substitution
         parsed_url = urlparse(url)
-        query_params = {k: v[0] for k, v in parse_qs(parsed_url.query).items()}
+        parsed_qs = parse_qs(parsed_url.query, keep_blank_values=True)
+        query_params = {k: v[0] for k, v in parsed_qs.items()}
         path = parsed_url.path
         # API Gateway removes the trailing slash if the route is not the root
         # path. We do the same here so our route matching works the same way.
@@ -171,6 +172,7 @@ class LambdaEventConverter(object):
                 'identity': {
                     'sourceIp': self.LOCAL_SOURCE_IP
                 },
+                'path': path.split('?')[0],
             },
             'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,
@@ -414,7 +416,7 @@ class LocalGateway(object):
         )
 
     def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, str) -> EventType
+        # type: (str, str, HeaderType, Optional[str]) -> EventType
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
             body=body,
@@ -427,7 +429,7 @@ class LocalGateway(object):
         return 'OPTIONS' in self._app_object.routes[route_key]
 
     def handle_request(self, method, path, headers, body):
-        # type: (str, str, HeaderType, str) -> ResponseType
+        # type: (str, str, HeaderType, Optional[str]) -> ResponseType
         lambda_context = self._generate_lambda_context()
         try:
             lambda_event = self._generate_lambda_event(
@@ -529,7 +531,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             self, request, client_address, server)  # type: ignore
 
     def _parse_payload(self):
-        # type: () -> Tuple[HeaderType, str]
+        # type: () -> Tuple[HeaderType, Optional[str]]
         body = None
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:

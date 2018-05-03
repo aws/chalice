@@ -6,6 +6,17 @@ from typing import Dict, Any  # noqa
 
 from six import StringIO
 
+
+def pip_import_string():
+    # type: () -> str
+    import pip
+    pip_major_version = pip.__version__.split('.')[0]
+    if pip_major_version == '10':
+        return 'from pip._internal import main'
+    else:
+        return 'from pip import main'
+
+
 if os.name == 'nt':
     # windows
     # This is the actual patch used on windows to prevent distutils from
