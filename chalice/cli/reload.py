@@ -1,12 +1,12 @@
 import os
-import subprocess
 import sys
 import threading
 import time
 import types
 
-import six
 from typing import Optional, Dict, Type  # noqa
+
+from chalice.compat import reload
 
 
 class Reloader(threading.Thread):
@@ -61,8 +61,4 @@ class Reloader(threading.Thread):
     def reload(self):
         # type: () -> None
         self.triggered = True
-        if sys.platform == 'win32':
-            subprocess.Popen(sys.argv, close_fds=True)
-            six.moves._thread.interrupt_main()
-        else:
-            os.execv(sys.executable, [sys.executable] + sys.argv)
+        reload()
