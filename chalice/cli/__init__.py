@@ -78,13 +78,15 @@ def cli(ctx, project_dir, debug=False):
 @click.option('--port', default=8000, type=click.INT)
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help='Name of the Chalice stage for the local server to use.')
-@click.option('--autoreload', is_flag=True)
+@click.option('--no-autoreload', is_flag=True)
 @click.pass_context
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
-          autoreload=False):
+          no_autoreload=False):
     # type: (click.Context, str, int, str, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    with Reloader(autoreload):
+    if no_autoreload:
+        run_local_server(factory, host, port, stage, os.environ)
+    with Reloader():
         run_local_server(factory, host, port, stage, os.environ)
 
 

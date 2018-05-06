@@ -12,18 +12,16 @@ from chalice.constants import AUTORELOAD_INTERVAL
 
 
 class Reloader(threading.Thread):
-    def __init__(self, autoreload=True):
-        # type: (bool) -> None
+    def __init__(self):
+        # type: () -> None
         super(Reloader, self).__init__()
-        self.autoreload = autoreload
         self.triggered = False
         self.mtimes = {}  # type: Dict[str, float]
 
     def __enter__(self):
         # type: () -> Reloader
-        if self.autoreload:
-            self.setDaemon(True)
-            self.start()
+        self.setDaemon(True)
+        self.start()
         return self
 
     def __exit__(self,
