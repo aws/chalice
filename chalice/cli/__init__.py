@@ -27,6 +27,7 @@ from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
+from chalice.constants import DEFAULT_AUTORELOAD_INTERVAL
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -78,15 +79,18 @@ def cli(ctx, project_dir, debug=False):
 @click.option('--port', default=8000, type=click.INT)
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help='Name of the Chalice stage for the local server to use.')
+@click.option('--autoreload-interval', default=DEFAULT_AUTORELOAD_INTERVAL,
+              type=click.INT)
 @click.option('--no-autoreload', is_flag=True)
 @click.pass_context
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
+          autoreload_interval=DEFAULT_AUTORELOAD_INTERVAL,
           no_autoreload=False):
     # type: (click.Context, str, int, str, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     if no_autoreload:
         run_local_server(factory, host, port, stage, os.environ)
-    with Reloader():
+    with Reloader(autoreload_interval):
         run_local_server(factory, host, port, stage, os.environ)
 
 

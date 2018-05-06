@@ -8,13 +8,12 @@ import types
 import six
 from typing import Optional, Dict, Type  # noqa
 
-from chalice.constants import AUTORELOAD_INTERVAL
-
 
 class Reloader(threading.Thread):
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, autoreload_interval):
+        # type: (int) -> None
         super(Reloader, self).__init__()
+        self.autoreload_interval = autoreload_interval
         self.triggered = False
         self.mtimes = {}  # type: Dict[str, float]
 
@@ -36,7 +35,7 @@ class Reloader(threading.Thread):
     def run(self):
         # type: () -> None
         while True:
-            time.sleep(AUTORELOAD_INTERVAL)
+            time.sleep(self.autoreload_interval)
             if self.find_changes():
                 self.reload()
 
