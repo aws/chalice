@@ -1,11 +1,12 @@
 import subprocess
 import tempfile
+import time
 import sys
 
 code = b"""
 from chalice.cli.reload import Reloader
 
-with Reloader() as r:
+with Reloader(0) as r:
     r.join()
 """
 
@@ -17,6 +18,7 @@ def test_reload():
         program_file.write(code)
         args = [sys.executable, program_file.name]
         with subprocess.Popen(args, stdout=subprocess.PIPE) as program:
+            time.sleep(1)
             program_file.seek(0)
             program_file.truncate()
             program_file.write(modified_code)

@@ -86,7 +86,7 @@ def cli(ctx, project_dir, debug=False):
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
           autoreload_interval=DEFAULT_AUTORELOAD_INTERVAL,
           no_autoreload=False):
-    # type: (click.Context, str, int, str, bool) -> None
+    # type: (click.Context, str, int, str, int, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     if no_autoreload:
         run_local_server(factory, host, port, stage, os.environ)
