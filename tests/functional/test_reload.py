@@ -14,12 +14,14 @@ modified_code = b'print("reloaded")'
 
 
 def test_reload():
-    with tempfile.NamedTemporaryFile(buffering=0) as program_file:
+    with tempfile.NamedTemporaryFile() as program_file:
         program_file.write(code)
+        program_file.flush()
         args = [sys.executable, program_file.name]
-        with subprocess.Popen(args, stdout=subprocess.PIPE) as program:
-            time.sleep(1)
-            program_file.seek(0)
-            program_file.truncate()
-            program_file.write(modified_code)
-            assert b'reloaded' in program.stdout.read()
+        program = subprocess.Popen(args, stdout=subprocess.PIPE)
+        time.sleep(1)
+        program_file.seek(0)
+        program_file.truncate()
+        program_file.write(modified_code)
+        program_file.flush()
+        assert b'reloaded' in program.stdout.read()
