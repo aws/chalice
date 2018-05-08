@@ -6,7 +6,7 @@ import types
 
 from typing import Optional, Dict, Type  # noqa
 
-from chalice.compat import reload
+from chalice.compat import reload_process
 
 
 class Reloader(threading.Thread):
@@ -61,4 +61,4 @@ class Reloader(threading.Thread):
     def reload(self):
         # type: () -> None
         self.triggered = True
-        reload()
+        reload_process()

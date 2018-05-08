@@ -96,7 +96,7 @@ if os.name == 'nt':
     ) % _SETUPTOOLS_SHIM
     pip_no_compile_c_env_vars = {}  # type: Dict[str, Any]
 
-    def reload():
+    def reload_process():
         # type: () -> None
         subprocess.Popen(sys.argv, close_fds=True)
         six.moves._thread.interrupt_main()
@@ -113,7 +113,7 @@ else:
         'CC': '/var/false'
     }
 
-    def reload():
+    def reload_process():
         # type: () -> None
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
