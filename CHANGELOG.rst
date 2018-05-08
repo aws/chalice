@@ -3,8 +3,8 @@ CHANGELOG
 =========
 
 
-Next Release (TBD)
-==================
+1.2.3
+=====
 
 * Add support for pip 10
   (`#808 <https://github.com/aws/chalice/issues/808>`__)

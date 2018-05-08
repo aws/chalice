@@ -19,7 +19,7 @@ install_requires = [
 
 setup(
     name='chalice',
-    version='1.2.2',
+    version='1.2.3',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
