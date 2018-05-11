@@ -177,7 +177,7 @@ as stage specific environment variables::
     "version": "2.0",
     "app_name": "app",
     "environment_variables": {
-      "SHARED_CONFIG": "foo"
+      "SHARED_CONFIG": "foo",
       "OTHER_CONFIG": "from-top"
     }
     "stages": {
