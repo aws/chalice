@@ -11,7 +11,6 @@ from chalice import cli
 from chalice.cli import factory
 from chalice.config import Config
 from chalice.utils import record_deployed_values
-from chalice import local
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 
 
@@ -307,22 +306,6 @@ def test_can_extract_buildspec_yaml(runner):
             # The contents of this file are tested elsewhere,
             # we just want a basic sanity check here.
             assert 'chalice package' in data
-
-
-def test_env_vars_set_in_local(runner, mock_cli_factory,
-                               monkeypatch):
-    local_server = mock.Mock(spec=local.LocalDevServer)
-    mock_cli_factory.create_local_server.return_value = local_server
-    mock_cli_factory.create_config_obj.return_value = Config.create(
-        project_dir='.', environment_variables={'foo': 'bar'})
-    actual_env = {}
-    monkeypatch.setattr(os, 'environ', actual_env)
-    with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
-        os.chdir('testproject')
-        _run_cli_command(runner, cli.local, [],
-                         cli_factory=mock_cli_factory)
-        assert actual_env['foo'] == 'bar'
 
 
 def test_can_specify_profile_for_logs(runner, mock_cli_factory):

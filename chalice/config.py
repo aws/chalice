@@ -126,7 +126,15 @@ class Config(object):
     @property
     def chalice_app(self):
         # type: () -> Chalice
-        return self._chain_lookup('chalice_app')
+        v = self._chain_lookup('chalice_app')
+        # There's two value we support.  If the value
+        # is a chalice app, we return it as is.
+        # Otherwise, we assume it's a callable that creates
+        # a chalice app.  This is used to lazy load the chalice
+        # app.
+        if isinstance(v, Chalice):
+            return v
+        return v()
 
     @property
     def config_from_disk(self):
