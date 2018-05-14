@@ -1168,13 +1168,12 @@ class TestSwaggerBuilder(object):
             api_gateway_stage='api',
             lambda_function=None,
         )
-        config = Config.create(chalice_app=mock.sentinel.chalice_app)
+        app = Chalice(app_name='foo')
+        config = Config.create(chalice_app=app)
         p = SwaggerBuilder(generator)
         p.handle(config, rest_api)
         assert rest_api.swagger_doc == {'swagger': '2.0'}
-        generator.generate_swagger.assert_called_with(
-            mock.sentinel.chalice_app
-        )
+        generator.generate_swagger.assert_called_with(app)
 
 
 class TestDeploymentPackager(object):
