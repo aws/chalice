@@ -137,7 +137,7 @@ class Config(object):
             return v
         elif self._chalice_app is not None:
             return self._chalice_app
-        elif not hasattr(v, '__call__'):
+        elif not callable(v):
             raise TypeError("Unable to load chalice app, lazy loader is "
                             "not callable: %s" % v)
         app = v()
