@@ -105,7 +105,7 @@ class TypedAWSClient(object):
             FunctionName=name)
         return response
 
-    def create_vpc_config(self, security_group_ids, subnet_ids):
+    def _create_vpc_config(self, security_group_ids, subnet_ids):
         # type: (List[str], List[str]) -> Dict[str, List[str]]
         vpc_config = {}
         vpc_config['SubnetIds'] = subnet_ids
@@ -142,7 +142,7 @@ class TypedAWSClient(object):
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
         if subnet_ids is not None and security_group_ids is not None:
-            kwargs['VpcConfig'] = self.create_vpc_config(
+            kwargs['VpcConfig'] = self._create_vpc_config(
                 security_group_ids=security_group_ids,
                 subnet_ids=subnet_ids,
             )
@@ -245,7 +245,31 @@ class TypedAWSClient(object):
                 len(zip_contents)
             )
             raise self._get_lambda_code_deployment_error(e, context)
+        self._update_function_config(
+            environment_variables=environment_variables,
+            runtime=runtime,
+            timeout=timeout,
+            memory_size=memory_size,
+            role_arn=role_arn,
+            subnet_ids=subnet_ids,
+            security_group_ids=security_group_ids,
+            function_name=function_name
+        )
+        if tags is not None:
+            self._update_function_tags(return_value['FunctionArn'], tags)
+        return return_value
 
+    def _update_function_config(self,
+                                environment_variables,  # type: _STR_MAP
+                                runtime,                # type: _OPT_STR
+                                timeout,                # type: _OPT_INT
+                                memory_size,            # type: _OPT_INT
+                                role_arn,               # type: _OPT_STR
+                                subnet_ids,             # type: _OPT_STR_LIST
+                                security_group_ids,     # type: _OPT_STR_LIST
+                                function_name,          # type: str
+                                ):
+        # type: (...) -> None
         kwargs = {}  # type: Dict[str, Any]
         if environment_variables is not None:
             kwargs['Environment'] = {'Variables': environment_variables}
@@ -258,17 +282,15 @@ class TypedAWSClient(object):
         if role_arn is not None:
             kwargs['Role'] = role_arn
         if subnet_ids is not None and security_group_ids is not None:
-            kwargs['VpcConfig'] = self.create_vpc_config(
+            kwargs['VpcConfig'] = self._create_vpc_config(
                 subnet_ids=subnet_ids,
                 security_group_ids=security_group_ids
             )
         if kwargs:
             kwargs['FunctionName'] = function_name
+            lambda_client = self._client('lambda')
             self._call_client_method_with_retries(
                 lambda_client.update_function_configuration, kwargs)
-        if tags is not None:
-            self._update_function_tags(return_value['FunctionArn'], tags)
-        return return_value
 
     def _update_function_tags(self, function_arn, requested_tags):
         # type: (str, Dict[str, str]) -> None
