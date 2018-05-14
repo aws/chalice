@@ -43,7 +43,7 @@ from chalice.deploy.planner import ResourceSweeper, StringFormat
 from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
 from chalice.deploy.models import RecordResourceVariable
 from chalice.deploy.models import JPSearch, BuiltinFunction, Instruction
-from chalice.constants import LAMBDA_TRUST_POLICY
+from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
 
 
 _SESSION = None
@@ -757,8 +757,8 @@ class TestApplicationGraphBuilder(object):
             deployment_package=models.DeploymentPackage(
                 models.Placeholder.BUILD_STAGE),
             role=models.PreCreatedIAMRole('role:arn'),
-            security_group_ids=None,
-            subnet_ids=None,
+            security_group_ids=[],
+            subnet_ids=[],
         )
 
     def test_can_build_lambda_function_app_with_vpc_config(self, lambda_app):
@@ -787,6 +787,24 @@ class TestApplicationGraphBuilder(object):
             role=models.PreCreatedIAMRole('role:arn'),
             security_group_ids=['sg1', 'sg2'],
             subnet_ids=['sn1', 'sn2'],
+        )
+
+    def test_vpc_trait_added_when_vpc_configured(self, lambda_app):
+        @lambda_app.lambda_function()
+        def foo(event, context):
+            pass
+
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(lambda_app,
+                                    autogen_policy=True,
+                                    security_group_ids=['sg1', 'sg2'],
+                                    subnet_ids=['sn1', 'sn2'])
+        application = builder.build(config, stage_name='dev')
+
+        policy = application.resources[0].role.policy
+        assert policy == models.AutoGenIAMPolicy(
+            document=models.Placeholder.BUILD_STAGE,
+            traits=set([models.RoleTraits.VPC_NEEDED]),
         )
 
     def test_multiple_lambda_functions_share_role_and_package(self,
@@ -1195,6 +1213,20 @@ class TestPolicyGeneratorStage(object):
 
         with pytest.raises(RuntimeError):
             p.handle(Config.create(), policy)
+
+    def test_vpc_policy_inject_if_needed(self):
+        generator = mock.Mock(spec=AppPolicyGenerator)
+        generator.generate_policy.return_value = {'Statement': []}
+        policy = models.AutoGenIAMPolicy(
+            document=models.Placeholder.BUILD_STAGE,
+            traits=set([models.RoleTraits.VPC_NEEDED]),
+        )
+        config = Config.create()
+
+        p = self.create_policy_generator(generator)
+        p.handle(config, policy)
+
+        assert policy.document['Statement'][0] == VPC_ATTACH_POLICY
 
 
 class TestSwaggerBuilder(object):

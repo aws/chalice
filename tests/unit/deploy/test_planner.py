@@ -226,6 +226,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'tags': {},
                 'timeout': 60,
                 'memory_size': 128,
+                'security_group_ids': [],
+                'subnet_ids': [],
             },
         )
         self.assert_apicall_equals(plan[0], expected)
@@ -249,6 +251,8 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'environment_variables': {},
             'tags': {},
             'timeout': 60,
+            'security_group_ids': [],
+            'subnet_ids': [],
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = models.APICall(

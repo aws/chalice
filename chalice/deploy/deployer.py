@@ -100,8 +100,8 @@ from chalice.config import Config  # noqa
 from chalice.compat import is_broken_pipe_error
 from chalice.awsclient import DeploymentPackageTooLargeError, TypedAWSClient
 from chalice.awsclient import LambdaClientError, AWSClientError
-from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, \
-    LAMBDA_TRUST_POLICY, DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE
+from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, VPC_ATTACH_POLICY, \
+    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY
 from chalice.deploy import models
 from chalice.deploy.packager import PipRunner, SubprocessPip, \
     DependencyBuilder as PipDependencyBuilder, LambdaDeploymentPackager
@@ -537,7 +537,9 @@ class ApplicationGraphBuilder(object):
             resource_name = 'default-role'
             role_name = '%s-%s' % (config.app_name, stage_name)
             policy = models.AutoGenIAMPolicy(
-                document=models.Placeholder.BUILD_STAGE)
+                document=models.Placeholder.BUILD_STAGE,
+                traits=set([]),
+            )
         return models.ManagedIAMRole(
             resource_name=resource_name,
             role_name=role_name,
@@ -555,7 +557,12 @@ class ApplicationGraphBuilder(object):
         # type: (...) -> models.LambdaFunction
         function_name = '%s-%s-%s' % (
             config.app_name, config.chalice_stage, name)
-        return models.LambdaFunction(
+        security_group_ids = config.security_group_ids
+        subnet_ids = config.subnet_ids
+        if security_group_ids is None or subnet_ids is None:
+            security_group_ids = []
+            subnet_ids = []
+        function = models.LambdaFunction(
             resource_name=name,
             function_name=function_name,
             environment_variables=config.environment_variables,
@@ -566,9 +573,21 @@ class ApplicationGraphBuilder(object):
             memory_size=config.lambda_memory_size,
             deployment_package=deployment,
             role=role,
-            security_group_ids=config.security_group_ids,
-            subnet_ids=config.subnet_ids,
+            security_group_ids=security_group_ids,
+            subnet_ids=subnet_ids,
         )
+        self._inject_role_traits(function, role)
+        return function
+
+    def _inject_role_traits(self, function, role):
+        # type: (models.LambdaFunction, models.IAMRole) -> None
+        if not isinstance(role, models.ManagedIAMRole):
+            return
+        policy = role.policy
+        if not isinstance(policy, models.AutoGenIAMPolicy):
+            return
+        if function.security_group_ids and function.subnet_ids:
+            policy.traits.add(models.RoleTraits.VPC_NEEDED)
 
 
 class DependencyBuilder(object):
@@ -666,7 +685,10 @@ class PolicyGenerator(BaseDeployStep):
     def handle_autogeniampolicy(self, config, resource):
         # type: (Config, models.AutoGenIAMPolicy) -> None
         if isinstance(resource.document, models.Placeholder):
-            resource.document = self._policy_gen.generate_policy(config)
+            policy = self._policy_gen.generate_policy(config)
+            if models.RoleTraits.VPC_NEEDED in resource.traits:
+                policy['Statement'].append(VPC_ATTACH_POLICY)
+            resource.document = policy
 
 
 class BuildStage(object):

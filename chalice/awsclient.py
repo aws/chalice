@@ -106,10 +106,19 @@ class TypedAWSClient(object):
         return response
 
     def _create_vpc_config(self, security_group_ids, subnet_ids):
-        # type: (List[str], List[str]) -> Dict[str, List[str]]
-        vpc_config = {}
-        vpc_config['SubnetIds'] = subnet_ids
-        vpc_config['SecurityGroupIds'] = security_group_ids
+        # type: (_OPT_STR_LIST, _OPT_STR_LIST) -> Dict[str, List[str]]
+        # We always set the SubnetIds and SecurityGroupIds to an empty
+        # list to ensure that we properly remove Vpc configuration
+        # if you remove these values from your config.json.  Omitting
+        # the VpcConfig key or just setting to {} won't actually remove
+        # the VPC configuration.
+        vpc_config = {
+            'SubnetIds': [],
+            'SecurityGroupIds': [],
+        }  # type: Dict[str, List[str]]
+        if security_group_ids is not None and subnet_ids is not None:
+            vpc_config['SubnetIds'] = subnet_ids
+            vpc_config['SecurityGroupIds'] = security_group_ids
         return vpc_config
 
     def create_function(self,
@@ -141,19 +150,25 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
-        if subnet_ids is not None and security_group_ids is not None:
+        if security_group_ids is not None and subnet_ids is not None:
             kwargs['VpcConfig'] = self._create_vpc_config(
                 security_group_ids=security_group_ids,
                 subnet_ids=subnet_ids,
             )
+        return self._create_lambda_function(kwargs)
+
+    def _create_lambda_function(self, api_args):
+        # type: (Dict[str, Any]) -> str
         try:
             return self._call_client_method_with_retries(
-                self._client('lambda').create_function, kwargs)['FunctionArn']
+                self._client('lambda').create_function,
+                api_args
+            )['FunctionArn']
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(
-                function_name,
+                api_args['FunctionName'],
                 'create_function',
-                len(zip_contents)
+                len(api_args['Code']['ZipFile']),
             )
             raise self._get_lambda_code_deployment_error(e, context)
 
@@ -234,17 +249,8 @@ class TypedAWSClient(object):
         is not provided, no changes will be made for that that parameter on
         the targeted lambda function.
         """
-        lambda_client = self._client('lambda')
-        try:
-            return_value = lambda_client.update_function_code(
-                FunctionName=function_name, ZipFile=zip_contents)
-        except _REMOTE_CALL_ERRORS as e:
-            context = LambdaErrorContext(
-                function_name,
-                'update_function_code',
-                len(zip_contents)
-            )
-            raise self._get_lambda_code_deployment_error(e, context)
+        return_value = self._update_function_code(function_name=function_name,
+                                                  zip_contents=zip_contents)
         self._update_function_config(
             environment_variables=environment_variables,
             runtime=runtime,
@@ -258,6 +264,20 @@ class TypedAWSClient(object):
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
         return return_value
+
+    def _update_function_code(self, function_name, zip_contents):
+        # type: (str, str) -> Dict[str, Any]
+        lambda_client = self._client('lambda')
+        try:
+            return lambda_client.update_function_code(
+                FunctionName=function_name, ZipFile=zip_contents)
+        except _REMOTE_CALL_ERRORS as e:
+            context = LambdaErrorContext(
+                function_name,
+                'update_function_code',
+                len(zip_contents)
+            )
+            raise self._get_lambda_code_deployment_error(e, context)
 
     def _update_function_config(self,
                                 environment_variables,  # type: _STR_MAP
@@ -281,7 +301,7 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
-        if subnet_ids is not None and security_group_ids is not None:
+        if security_group_ids is not None and subnet_ids is not None:
             kwargs['VpcConfig'] = self._create_vpc_config(
                 subnet_ids=subnet_ids,
                 security_group_ids=security_group_ids

@@ -199,6 +199,8 @@ class PlanStage(object):
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
+                'security_group_ids': resource.security_group_ids,
+                'subnet_ids': resource.subnet_ids,
             }
             return [
                 (models.APICall(
@@ -225,6 +227,8 @@ class PlanStage(object):
             'tags': resource.tags,
             'timeout': resource.timeout,
             'memory_size': resource.memory_size,
+            'security_group_ids': resource.security_group_ids,
+            'subnet_ids': resource.subnet_ids,
         }
         return [
             (models.APICall(

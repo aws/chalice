@@ -10,6 +10,10 @@ class Instruction(object):
     pass
 
 
+class RoleTraits(enum.Enum):
+    VPC_NEEDED = 'vpc_needed'
+
+
 @attrs
 class Plan(object):
     instructions = attrib(default=Factory(list))
@@ -104,7 +108,7 @@ class FileBasedIAMPolicy(IAMPolicy):
 
 @attrs
 class AutoGenIAMPolicy(IAMPolicy):
-    pass
+    traits = attrib(default=Factory(set))
 
 
 @attrs
