@@ -382,7 +382,7 @@ def test_will_respond_with_custom_cors_enabled_options(handler):
     method_line = methods_lines[0]
     _, methods_header_value = method_line.split(': ')
     methods = methods_header_value.strip().split(',')
-    assert ['GET', 'OPTIONS', 'PUT'] == sorted(methods)
+    assert ['GET', 'HEAD', 'OPTIONS', 'PUT'] == sorted(methods)
 
 
 def test_can_preflight_request(handler):

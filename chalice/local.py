@@ -12,9 +12,9 @@ import functools
 import warnings
 from collections import namedtuple
 
+from six.moves.socketserver import ThreadingMixIn
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
-from six.moves.socketserver import ThreadingMixIn
 from typing import List, Any, Dict, Tuple, Callable, Optional, Union  # noqa
 
 from chalice.app import Chalice  # noqa

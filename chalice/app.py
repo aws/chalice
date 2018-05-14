@@ -549,7 +549,7 @@ class Chalice(object):
 
     def _add_route(self, path, view_func, **kwargs):
         name = kwargs.pop('name', view_func.__name__)
-        methods = kwargs.pop('methods', ['GET'])
+        methods = kwargs.pop('methods', ('GET',))
         authorizer = kwargs.pop('authorizer', None)
         api_key_required = kwargs.pop('api_key_required', None)
         content_types = kwargs.pop('content_types', ['application/json'])
@@ -561,6 +561,9 @@ class Chalice(object):
         if kwargs:
             raise TypeError('TypeError: route() got unexpected keyword '
                             'arguments: %s' % ', '.join(list(kwargs)))
+        methods = set(item.upper() for item in methods)
+        if 'HEAD' not in methods and 'GET' in methods:
+            methods.add('HEAD')
         for method in methods:
             if method in self.routes[path]:
                 raise ValueError(
