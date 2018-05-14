@@ -5,7 +5,6 @@ from threading import Thread
 from threading import Event
 import json
 import subprocess
-import select
 from contextlib import contextmanager
 
 import pytest
@@ -182,14 +181,6 @@ def test_can_import_env_vars(unused_tcp_port):
 
 
 def _wait_for_server_ready(process):
-    result = select.select([process.stderr], [], [], 10)[0]
-    if not result:
-        raise AssertionError("Local server was unable to start up "
-                             "(did not send READY message).")
-    status = process.stderr.read(5)
-    if status != b'READY':
-        raise AssertionError("Local server did not sent expect READ message, "
-                             "instead sent: %s" % status)
     if process.poll() is not None:
         raise AssertionError(
             'Local server immediately exited with rc: %s' % process.poll()
