@@ -135,9 +135,12 @@ class Config(object):
         # app.
         if isinstance(v, Chalice):
             return v
-        elif self._chalice_app is None:
-            self._chalice_app = v()
-        return self._chalice_app
+        elif self._chalice_app is not None:
+            return self._chalice_app
+        app = v()
+        self._chalice_app = app
+        # Keep mypy happy.
+        return app
 
     @property
     def config_from_disk(self):
