@@ -10,6 +10,8 @@ from contextlib import contextmanager
 
 import pytest
 import requests
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 
 from chalice import app
 from chalice.local import LocalDevServer
@@ -195,6 +197,20 @@ def _wait_for_server_ready(process):
 
 
 def _assert_env_var_loaded(port_number):
-    response = requests.get('http://localhost:%s/' % port_number)
+    session = _get_requests_session_with_timeout()
+    response = session.get('http://localhost:%s/' % port_number)
     response.raise_for_status()
     assert json.loads(response.content) == {'hello': 'bar'}
+
+
+def _get_requests_session_with_timeout():
+    session = requests.Session()
+    retry = Retry(
+        # How many connection-related errors to retry on.
+        connect=5,
+        # How many connection-related errors to retry on.
+        # A backoff factor to apply between attempts after the second try.
+        backoff_factor=2,
+    )
+    session.mount('http://', HTTPAdapter(max_retries=retry))
+    return session
