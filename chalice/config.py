@@ -99,6 +99,7 @@ class Config(object):
         if default_params is None:
             default_params = {}
         self._default_params = default_params
+        self._chalice_app = None
 
     @classmethod
     def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
@@ -134,7 +135,9 @@ class Config(object):
         # app.
         if isinstance(v, Chalice):
             return v
-        return v()
+        elif self._chalice_app is None:
+            self._chalice_app = v()
+        return self._chalice_app
 
     @property
     def config_from_disk(self):
