@@ -65,6 +65,12 @@ def test_can_lazy_load_chalice_app():
     assert len(calls) == 1
 
 
+def test_lazy_load_chalice_app_must_be_callable():
+    c = Config.create(chalice_app='not a callable')
+    with pytest.raises(TypeError):
+        c.chalice_app
+
+
 def test_manage_iam_role_explicitly_set():
     c = Config.create(manage_iam_role=False)
     assert not c.manage_iam_role
