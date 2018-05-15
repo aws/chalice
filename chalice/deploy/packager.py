@@ -627,11 +627,11 @@ class SubprocessPip(object):
         self._import_string = import_string
 
     def main(self,
-             args,           # List[str]
-             env_vars=None,  # EnvVars
-             shim=None       # OptStr
+             args,           # type: List[str]
+             env_vars=None,  # type: EnvVars
+             shim=None       # type: OptStr
              ):
-        # type: (...) -> Tuple[int, OptBytes, OptBytes]
+        # type: (...) -> Tuple[int, bytes, bytes]
         if env_vars is None:
             env_vars = self._osutils.environ()
         if shim is None:
@@ -648,11 +648,16 @@ class SubprocessPip(object):
                                 env=env_vars)
         out, err = p.communicate()
         rc = p.returncode
-        return rc, err, out
+        return rc, out, err
 
 
 class PipRunner(object):
     """Wrapper around pip calls used by chalice."""
+
+    _LINK_IS_DIR_PATTERN = ("Processing (.+?)\n"
+                            "  Link is a directory,"
+                            " ignoring download_dir")
+
     def __init__(self, pip, osutils=None):
         # type: (SubprocessPip, Optional[OSUtils]) -> None
         if osutils is None:
@@ -666,12 +671,12 @@ class PipRunner(object):
                  env_vars=None,  # type: EnvVars
                  shim=None       # type: OptStr
                  ):
-        # type: (...) -> Tuple[int, OptBytes, OptBytes]
+        # type: (...) -> Tuple[int, bytes, bytes]
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
-        rc, err, out = self._wrapped_pip.main(main_args, env_vars=env_vars,
+        rc, out, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
                                               shim=shim)
-        return rc, err, out
+        return rc, out, err
 
     def build_wheel(self, wheel, directory, compile_c=True):
         # type: (str, str, bool) -> None
@@ -692,7 +697,7 @@ class PipRunner(object):
         # type: (str, str) -> None
         """Download all dependencies as sdist or wheel."""
         arguments = ['-r', requirements_filename, '--dest', directory]
-        rc, err, out = self._execute('download', arguments)
+        rc, out, err = self._execute('download', arguments)
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
         # what to download. If a package is not found it is likely because it
@@ -709,15 +714,19 @@ class PipRunner(object):
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
             raise PackageDownloadError(error)
-        if out is None:
-            out = b'Unknown output'
         stdout = out.decode()
-        match = re.search(("Processing (.+?)\n"
-                           "  Link is a directory, "
-                           "ignoring download_dir"), stdout)
+        match = re.search(self._LINK_IS_DIR_PATTERN, stdout)
         if match:
-            download_dir = match.group(1).decode()
-            self.build_wheel(download_dir.encode(), directory)
+            wheel_package_path = str(match.group(1))
+            # Looks odd we do not check on the error status of building the
+            # wheel here. We can assume this is a valid package path since
+            # we already passed the pip download stage. This stage would have
+            # thrown a PackageDownloadError if any of the listed packages were
+            # not valid.
+            # If it fails the actual build step, it will have the same behavior
+            # as any other package we fail to build a valid wheel for, and
+            # complain at deployment time.
+            self.build_wheel(wheel_package_path, directory)
 
     def download_manylinux_wheels(self, packages, directory):
         # type: (List[str], str) -> None

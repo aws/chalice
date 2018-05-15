@@ -7,3 +7,5 @@ __pycache__/
 .coverage
 chalice.egg-info/
 .hypothesis/
+.pytest_cache/
+.mypy_cache/

@@ -2,6 +2,11 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for packaging local directories
+  (`#653 https://github.com/aws/chalice/pull/653>`__)
 
 1.2.3
 =====

@@ -88,9 +88,9 @@ class FakePip(object):
         self._calls = defaultdict(lambda: [])
         self._call_history = []
         self._side_effects = defaultdict(lambda: [])
+        self._return_tuple = (0, b'', b'')
 
     def main(self, args, env_vars=None, shim=None):
-
         cmd, args = args[0], args[1:]
         self._calls[cmd].append((args, env_vars, shim))
         try:
@@ -104,7 +104,10 @@ class FakePip(object):
                 side_effect.execute(args)
         except IndexError:
             pass
-        return 0, b'', b''
+        return self._return_tuple
+
+    def set_return_tuple(self, rc, out, err):
+        self._return_tuple = (rc, out, err)
 
     def packages_to_download(self, expected_args, packages, whl_contents=None):
         side_effects = [PipSideEffect(pkg,
@@ -225,6 +228,29 @@ class TestDependencyBuilder(object):
         self._write_requirements_txt(reqs, appdir)
         builder = DependencyBuilder(OSUtils(), runner)
         return appdir, builder
+
+    def test_can_build_local_dir_as_whl(self, tmpdir, pip_runner):
+        reqs = ['../foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.set_return_tuple(0, (b"Processing ../foo\n"
+                                 b"  Link is a directory,"
+                                 b" ignoring download_dir"), b'')
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY, '../foo'],
+            wheels_to_build=[
+                'foo-1.2-cp36-none-any.whl'
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        assert ['foo'] == installed_packages
 
     def test_can_get_whls_all_manylinux(self, tmpdir, pip_runner):
         reqs = ['foo', 'bar']
@@ -502,6 +528,34 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_does_fail_on_invalid_local_package(self, tmpdir, osutils,
+                                                pip_runner):
+        reqs = ['../foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.set_return_tuple(0, (b"Processing ../foo\n"
+                                 b"  Link is a directory,"
+                                 b" ignoring download_dir"), b'')
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY, '../foo'],
+            wheels_to_build=[
+                'foo-1.2-cp36-cp36m-macosx_10_6_intel.whl'
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        with pytest.raises(MissingDependencyError) as e:
+            builder.build_site_packages(requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+        missing_packages = list(e.value.missing)
+
+        pip.validate()
+        assert len(missing_packages) == 1
+        assert missing_packages[0].identifier == 'foo==1.2'
+        assert len(installed_packages) == 0
+
     def test_does_fail_on_narrow_py27_unicode(self, tmpdir, osutils,
                                               pip_runner):
         reqs = ['baz']
@@ -521,10 +575,10 @@ class TestDependencyBuilder(object):
             builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
-        missing_pacakges = list(e.value.missing)
+        missing_packages = list(e.value.missing)
         pip.validate()
-        assert len(missing_pacakges) == 1
-        assert missing_pacakges[0].identifier == 'baz==1.5'
+        assert len(missing_packages) == 1
+        assert missing_packages[0].identifier == 'baz==1.5'
         assert len(installed_packages) == 0
 
     def test_does_fail_on_python_1_whl(self, tmpdir, osutils, pip_runner):
@@ -545,10 +599,10 @@ class TestDependencyBuilder(object):
             builder.build_site_packages(requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
-        missing_pacakges = list(e.value.missing)
+        missing_packages = list(e.value.missing)
         pip.validate()
-        assert len(missing_pacakges) == 1
-        assert missing_pacakges[0].identifier == 'baz==1.5'
+        assert len(missing_packages) == 1
+        assert missing_packages[0].identifier == 'baz==1.5'
         assert len(installed_packages) == 0
 
     def test_can_replace_incompat_whl(self, tmpdir, osutils, pip_runner):
@@ -677,10 +731,10 @@ class TestDependencyBuilder(object):
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
-        missing_pacakges = list(e.value.missing)
+        missing_packages = list(e.value.missing)
         pip.validate()
-        assert len(missing_pacakges) == 1
-        assert missing_pacakges[0].identifier == 'foo==1.2'
+        assert len(missing_packages) == 1
+        assert missing_packages[0].identifier == 'foo==1.2'
         assert installed_packages == ['bar']
 
     def test_can_build_package_with_optional_c_speedups_and_no_wheel(
@@ -775,10 +829,10 @@ class TestDependencyBuilder(object):
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
-        missing_pacakges = list(e.value.missing)
+        missing_packages = list(e.value.missing)
         pip.validate()
-        assert len(missing_pacakges) == 1
-        assert missing_pacakges[0].identifier == 'foo==1.2'
+        assert len(missing_packages) == 1
+        assert missing_packages[0].identifier == 'foo==1.2'
         assert installed_packages == ['bar']
 
 
@@ -817,15 +871,16 @@ def test_will_create_outdir_if_needed(tmpdir):
 class TestSubprocessPip(object):
     def test_can_invoke_pip(self):
         pip = SubprocessPip()
-        rc, err, _ = pip.main(['--version'])
+        rc, out, err = pip.main(['--version'])
         # Simple assertion that we can execute pip and it gives us some output
         # and nothing on stderr.
+        print(out, err)
         assert rc == 0
         assert err == b''
 
     def test_does_error_code_propagate(self):
         pip = SubprocessPip()
-        rc, err, _ = pip.main(['badcommand'])
+        rc, _, err = pip.main(['badcommand'])
         assert rc != 0
         # Don't want to depend on a particular error message from pip since it
         # may change if we pin a differnet version to Chalice at some point.

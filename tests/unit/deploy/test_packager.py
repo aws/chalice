@@ -214,8 +214,9 @@ class TestPipRunner(object):
 
     def test_raise_no_such_package_error(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, (b'Could not find a version that satisfies the '
-                            b'requirement BadPackageName '), b''))
+        pip.add_return((1, b'',
+                        (b'Could not find a version that satisfies the '
+                         b'requirement BadPackageName ')))
         with pytest.raises(NoSuchPackageError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == ('Could not satisfy the requirement: '
@@ -223,7 +224,7 @@ class TestPipRunner(object):
 
     def test_raise_other_unknown_error_during_downloads(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, b'SomeNetworkingError: Details here.', b''))
+        pip.add_return((1, b'', b'SomeNetworkingError: Details here.'))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'SomeNetworkingError: Details here.'
