@@ -17,6 +17,8 @@ you can use to control what happens when you ``chalice deploy``::
     1 directory, 3 files
 
 
+.. _stage-config:
+
 Stage Specific Configuration
 ----------------------------
 
@@ -160,6 +162,9 @@ that can be applied per function:
 * ``subnet_ids``
 * ``security_group_ids``
 
+
+See the :ref:`stage-config` section above for a description
+of these config options.
 
 Examples
 --------
