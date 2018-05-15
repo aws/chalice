@@ -801,6 +801,33 @@ There's a couple of things to keep in mind when enabling cors for a view:
   requests and matches the ``Origin`` header against a whitelist of origins.
   If the match is successful then return just their ``Origin`` back to them
   in the ``Access-Control-Allow-Origin`` header.
+
+  Example:
+  
+.. code-block:: python
+
+    from chalice import Chalice, Response
+
+    app = Chalice(app_name='multipleorigincors')
+
+    _ALLOWED_ORIGINS = set([
+        'http://allowed1.example.com',
+        'http://allowed2.example.com',
+    ])
+
+
+    @app.route('/cors_multiple_origins', methods=['GET'])
+    def supports_cors_multiple_origins():
+        origin = app.current_request.to_dict()['headers'].get('origin', '')
+        if origin in _ALLOWED_ORIGINS:
+            return Response(
+                body='You sent a whitelisted origin!\n',
+                headers={
+                    'Access-Control-Allow-Origin': origin
+                })
+        else:
+            return "The origin you sent has not been whitelisted: %s\n" % origin
+
 * Every view function must explicitly enable CORS support.
 
 The last point will change in the future.  See

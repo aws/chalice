@@ -9,7 +9,7 @@ import decimal
 import base64
 from collections import defaultdict, Mapping
 
-__version__ = '1.2.2'
+__version__ = '1.2.3'
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -303,7 +303,10 @@ class Request(object):
     def json_body(self):
         if self.headers.get('content-type', '').startswith('application/json'):
             if self._json_body is None:
-                self._json_body = json.loads(self.raw_body)
+                try:
+                    self._json_body = json.loads(self.raw_body)
+                except ValueError:
+                    raise BadRequestError('Error Parsing JSON')
             return self._json_body
 
     def to_dict(self):

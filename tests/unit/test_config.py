@@ -5,6 +5,7 @@ import pytest
 from chalice import __version__ as chalice_version
 from chalice.config import Config
 from chalice.config import DeployedResources
+from chalice import Chalice
 
 
 class FixedDataConfig(Config):
@@ -45,6 +46,29 @@ def test_version_defaults_to_1_when_missing():
 def test_default_value_of_manage_iam_role():
     c = Config.create()
     assert c.manage_iam_role
+
+
+def test_can_lazy_load_chalice_app():
+
+    app = Chalice(app_name='foo')
+    calls = []
+
+    def call_recorder(*args, **kwargs):
+        calls.append((args, kwargs))
+        return app
+
+    c = Config.create(chalice_app=call_recorder)
+    # Accessing the property multiple times will only
+    # invoke the call once.
+    assert isinstance(c.chalice_app, Chalice)
+    assert isinstance(c.chalice_app, Chalice)
+    assert len(calls) == 1
+
+
+def test_lazy_load_chalice_app_must_be_callable():
+    c = Config.create(chalice_app='not a callable')
+    with pytest.raises(TypeError):
+        c.chalice_app
 
 
 def test_manage_iam_role_explicitly_set():

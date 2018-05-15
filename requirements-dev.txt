@@ -16,7 +16,7 @@ pytest==3.5.0
 py==1.5.3
 pygments==2.1.3
 mock==2.0.0
-requests==2.11.1
+requests==2.18.4
 hypothesis==3.56.3
 
 mypy==0.590; python_version >= '3.6'

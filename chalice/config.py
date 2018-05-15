@@ -99,6 +99,7 @@ class Config(object):
         if default_params is None:
             default_params = {}
         self._default_params = default_params
+        self._chalice_app = None
 
     @classmethod
     def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
@@ -126,7 +127,23 @@ class Config(object):
     @property
     def chalice_app(self):
         # type: () -> Chalice
-        return self._chain_lookup('chalice_app')
+        v = self._chain_lookup('chalice_app')
+        # There's two value we support.  If the value
+        # is a chalice app, we return it as is.
+        # Otherwise, we assume it's a callable that creates
+        # a chalice app.  This is used to lazy load the chalice
+        # app.
+        if isinstance(v, Chalice):
+            return v
+        elif self._chalice_app is not None:
+            return self._chalice_app
+        elif not callable(v):
+            raise TypeError("Unable to load chalice app, lazy loader is "
+                            "not callable: %s" % v)
+        app = v()
+        self._chalice_app = app
+        # Keep mypy happy.
+        return app
 
     @property
     def config_from_disk(self):

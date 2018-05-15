@@ -1025,7 +1025,7 @@ class TestLocalDevServer(object):
         dev_server.serve_forever()
         http_server.serve_forever.assert_called_with()
 
-    def test_host_and_port_forwarded_to_server_creation(self):
+    def test_host_and_port_forwarded_to_server_creation(self, sample_app):
         provided_args = []
 
         def args_recorder(*args):
@@ -1037,3 +1037,10 @@ class TestLocalDevServer(object):
         )
 
         assert provided_args[0] == ('0.0.0.0', 8000)
+
+    def test_does_use_daemon_threads(self, sample_app):
+        server = LocalDevServer(
+            sample_app, Config(), '0.0.0.0', 8000
+        )
+
+        assert server.server.daemon_threads

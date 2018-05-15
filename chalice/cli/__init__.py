@@ -12,7 +12,7 @@ import traceback
 
 import botocore.exceptions
 import click
-from typing import Dict, Any, Optional, MutableMapping  # noqa
+from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
@@ -70,7 +70,7 @@ def cli(ctx, project_dir, debug=False):
         project_dir = os.getcwd()
     ctx.obj['project_dir'] = project_dir
     ctx.obj['debug'] = debug
-    ctx.obj['factory'] = CLIFactory(project_dir, debug)
+    ctx.obj['factory'] = CLIFactory(project_dir, debug, environ=os.environ)
     os.chdir(project_dir)
 
 
@@ -89,21 +89,17 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
     # type: (click.Context, str, int, str, int, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     if no_autoreload:
-        run_local_server(factory, host, port, stage, os.environ)
+        run_local_server(factory, host, port, stage)
     with Reloader(autoreload_interval):
-        run_local_server(factory, host, port, stage, os.environ)
+        run_local_server(factory, host, port, stage)
 
 
-def run_local_server(factory, host, port, stage, env):
-    # type: (CLIFactory, str, int, str, MutableMapping) -> None
+def run_local_server(factory, host, port, stage):
+    # type: (CLIFactory, str, int, str) -> None
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
-    # We only load the chalice app after loading the config
-    # so we can set any env vars needed before importing the
-    # app.
-    env.update(config.environment_variables)
-    app_obj = factory.load_chalice_app()
+    app_obj = config.chalice_app
     # Check that `chalice deploy` would let us deploy these routes, otherwise
     # there is no point in testing locally.
     routes = config.chalice_app.routes
