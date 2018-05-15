@@ -145,7 +145,7 @@ Here's an example that show config precedence::
   {
     "version": "2.0",
     "app_name": "app",
-    "api_gateway_stage": "api"
+    "api_gateway_stage": "api",
     "stages": {
       "dev": {
       },
@@ -179,7 +179,7 @@ as stage specific environment variables::
     "environment_variables": {
       "SHARED_CONFIG": "foo",
       "OTHER_CONFIG": "from-top"
-    }
+    },
     "stages": {
       "dev": {
         "environment_variables": {
