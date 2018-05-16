@@ -579,11 +579,6 @@ class ApplicationGraphBuilder(object):
         # type: (...) -> models.LambdaFunction
         function_name = '%s-%s-%s' % (
             config.app_name, config.chalice_stage, name)
-        security_group_ids = config.security_group_ids
-        subnet_ids = config.subnet_ids
-        if security_group_ids is None and subnet_ids is None:
-            security_group_ids = []
-            subnet_ids = []
         security_group_ids, subnet_ids = self._get_vpc_params(name, config)
         function = models.LambdaFunction(
             resource_name=name,
