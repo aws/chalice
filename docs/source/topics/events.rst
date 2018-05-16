@@ -22,10 +22,6 @@ decorator.  Let's look at an example.
     def every_hour(event):
         print(event.to_dict())
 
-    @app.route('/')
-    def index():
-        return {'hello': 'world'}
-
 
 In this example, we've updated the starter hello world app with
 a scheduled event.  When you run ``chalice deploy`` Chalice will create
@@ -48,8 +44,3 @@ instance of :class:`Rate` or :class:`Cron`.  For example:
 
 The function you decorate must accept a single argument,
 which will be of type :class:`CloudWatchEvent`.
-
-Limitations:
-
-* You must provide at least 1 ``@app.route`` decorator.  It is not
-  possible to deploy only scheduled events without an API Gateway API.
