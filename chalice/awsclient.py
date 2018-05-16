@@ -197,6 +197,8 @@ class TypedAWSClient(object):
         message = error.response['Error'].get('Message', '')
         if re.search('role.*cannot be assumed', message):
             return True
+        if re.search('role.*does not have permissions', message):
+            return True
         return False
 
     def _get_lambda_code_deployment_error(self, error, context):
