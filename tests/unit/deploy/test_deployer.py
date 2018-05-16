@@ -38,6 +38,7 @@ from chalice.deploy.models import APICall, StoreValue, RecordResourceValue
 from chalice.deploy.models import RecordResourceVariable
 from chalice.deploy.models import JPSearch, BuiltinFunction, Instruction
 from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
+from chalice.deploy.deployer import ChaliceBuildError
 
 
 _SESSION = None
@@ -465,6 +466,19 @@ class TestApplicationGraphBuilder(object):
             document=models.Placeholder.BUILD_STAGE,
             traits=set([models.RoleTraits.VPC_NEEDED]),
         )
+
+    def test_exception_raised_when_missing_vpc_params(self, lambda_app):
+        @lambda_app.lambda_function()
+        def foo(event, context):
+            pass
+
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(lambda_app,
+                                    iam_role_arn='role:arn',
+                                    security_group_ids=['sg1', 'sg2'],
+                                    subnet_ids=[])
+        with pytest.raises(ChaliceBuildError):
+            builder.build(config, stage_name='dev')
 
     def test_multiple_lambda_functions_share_role_and_package(self,
                                                               lambda_app):

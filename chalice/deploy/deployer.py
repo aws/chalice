@@ -93,7 +93,7 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
 import jmespath
-from typing import Optional, Dict, List, Any, Set, cast  # noqa
+from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 from chalice import app
 from chalice.config import Config  # noqa
@@ -229,6 +229,10 @@ class ChaliceDeploymentError(Exception):
     def _get_mb(self, value):
         # type: (int) -> str
         return '%.1f MB' % (float(value) / (1024 ** 2))
+
+
+class ChaliceBuildError(Exception):
+    pass
 
 
 def create_default_deployer(session, config, ui):
@@ -547,6 +551,24 @@ class ApplicationGraphBuilder(object):
             policy=policy,
         )
 
+    def _get_vpc_params(self, function_name, config):
+        # type: (str, Config) -> Tuple[List[str], List[str]]
+        security_group_ids = config.security_group_ids
+        subnet_ids = config.subnet_ids
+        if security_group_ids and subnet_ids:
+            return security_group_ids, subnet_ids
+        elif not security_group_ids and not subnet_ids:
+            return [], []
+        else:
+            raise ChaliceBuildError(
+                "Invalid VPC params for function '%s', in order to configure "
+                "VPC for a Lambda function, you must provide the subnet_ids "
+                "as well as the security_group_ids, got subnet_ids: %s, "
+                "security_group_ids: %s" % (function_name,
+                                            subnet_ids,
+                                            security_group_ids)
+            )
+
     def _build_lambda_function(self,
                                config,        # type: Config
                                name,          # type: str
@@ -559,9 +581,10 @@ class ApplicationGraphBuilder(object):
             config.app_name, config.chalice_stage, name)
         security_group_ids = config.security_group_ids
         subnet_ids = config.subnet_ids
-        if security_group_ids is None or subnet_ids is None:
+        if security_group_ids is None and subnet_ids is None:
             security_group_ids = []
             subnet_ids = []
+        security_group_ids, subnet_ids = self._get_vpc_params(name, config)
         function = models.LambdaFunction(
             resource_name=name,
             function_name=function_name,
