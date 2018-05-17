@@ -450,6 +450,27 @@ class TestCreateLambdaFunction(object):
             memory_size=256) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
+    def test_create_function_with_vpc_config(self, stubbed_session):
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn',
+            VpcConfig={
+                'SecurityGroupIds': ['sg1', 'sg2'],
+                'SubnetIds': ['sn1', 'sn2']
+            }
+        ).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo', 'python2.7', 'app.app',
+            subnet_ids=['sn1', 'sn2'],
+            security_group_ids=['sg1', 'sg2'],
+            ) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
     def test_create_function_is_retried_and_succeeds(self, stubbed_session):
         kwargs = {
             'FunctionName': 'name',
@@ -475,6 +496,35 @@ class TestCreateLambdaFunction(object):
         assert awsclient.create_function(
             'name', 'myarn', b'foo',
             'python2.7', 'app.app') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_retry_happens_on_insufficient_permissions(self, stubbed_session):
+        # This can happen if we deploy a lambda in a VPC.  Instead of the role
+        # not being able to be assumed, we can instead not have permissions
+        # to modify ENIs.  These can be retried.
+        kwargs = {
+            'FunctionName': 'name',
+            'Runtime': 'python2.7',
+            'Code': {'ZipFile': b'foo'},
+            'Handler': 'app.app',
+            'Role': 'myarn',
+            'VpcConfig': {'SubnetIds': ['sn-1'],
+                          'SecurityGroupIds': ['sg-1']},
+        }
+        stubbed_session.stub('lambda').create_function(
+            **kwargs).raises_error(
+            error_code='InvalidParameterValueException',
+            message=('The provided execution role does not have permissions '
+                     'to call CreateNetworkInterface on EC2 be assumed by '
+                     'Lambda.'))
+        stubbed_session.stub('lambda').create_function(
+            **kwargs).returns({'FunctionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app', security_group_ids=['sg-1'],
+            subnet_ids=['sn-1']) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_fails_after_max_retries(self, stubbed_session):
@@ -700,6 +750,25 @@ class TestUpdateLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', memory_size=256)
+        stubbed_session.verify_stubs()
+
+    def test_update_function_with_vpc_config(self, stubbed_session):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns({})
+        lambda_client.update_function_configuration(
+            FunctionName='name', VpcConfig={
+                'SecurityGroupIds': ['sg1', 'sg2'],
+                'SubnetIds': ['sn1', 'sn2']
+            }
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function(
+            'name', b'foo',
+            subnet_ids=['sn1', 'sn2'],
+            security_group_ids=['sg1', 'sg2'],
+        )
         stubbed_session.verify_stubs()
 
     def test_update_function_with_adding_tags(self, stubbed_session):

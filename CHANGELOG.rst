@@ -3,6 +3,15 @@ CHANGELOG
 =========
 
 
+Next Release (TBD)
+==================
+
+* Add support for Lambdas in a VPC
+  (`#413 <https://github.com/aws/chalice/issues/413>`__,
+  `#837 <https://github.com/aws/chalice/pull/837>`__,
+  `#673 <https://github.com/aws/chalice/pull/673>`__`)
+
+
 1.2.3
 =====
 
@@ -10,6 +19,7 @@ CHANGELOG
   (`#808 <https://github.com/aws/chalice/issues/808>`__)
 * Update ``policies.json`` file
   (`#817 <https://github.com/aws/chalice/issues/817>`__)
+
 
 1.2.2
 =====

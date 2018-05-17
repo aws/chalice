@@ -275,6 +275,20 @@ class Config(object):
             current_chalice_version, self.chalice_stage, self.app_name)
         return tags
 
+    @property
+    def security_group_ids(self):
+        # type: () -> List[str]
+        return self._chain_lookup('security_group_ids',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
+    def subnet_ids(self):
+        # type: () -> List[str]
+        return self._chain_lookup('subnet_ids',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
     def scope(self, chalice_stage, function_name):
         # type: (str, str) -> Config
         # Used to create a new config object that's scoped to a different

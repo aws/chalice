@@ -82,6 +82,8 @@ class TestSAMTemplate(object):
             memory_size=128,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
         )
 
     def test_sam_generates_sam_template_basic(self, sample_app):
@@ -130,7 +132,9 @@ class TestSAMTemplate(object):
                 role_name='app-role',
                 trust_policy={},
                 policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
-            )
+            ),
+            security_group_ids=[],
+            subnet_ids=[],
         )
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]
@@ -158,6 +162,17 @@ class TestSAMTemplate(object):
             }
         }
 
+    def test_adds_vpc_config_when_provided(self):
+        function = self.lambda_function()
+        function.security_group_ids = ['sg1', 'sg2']
+        function.subnet_ids = ['sn1', 'sn2']
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['VpcConfig'] == {
+            'SecurityGroupIds': ['sg1', 'sg2'],
+            'SubnetIds': ['sn1', 'sn2'],
+        }
+
     def test_duplicate_resource_name_raises_error(self):
         one = self.lambda_function()
         two = self.lambda_function()
@@ -178,6 +193,8 @@ class TestSAMTemplate(object):
             memory_size=128,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
         )
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]
@@ -327,3 +344,20 @@ class TestSAMTemplate(object):
             {'Fn::GetAtt': ['DefaultRole', 'Arn']},
             {'Fn::GetAtt': ['DefaultRole', 'Arn']},
         ]
+
+    def test_vpc_config_added_to_function(self, sample_app_lambda_only):
+        config = Config.create(chalice_app=sample_app_lambda_only,
+                               project_dir='.',
+                               autogen_policy=True,
+                               api_gateway_stage='api',
+                               security_group_ids=['sg1', 'sg2'],
+                               subnet_ids=['sn1', 'sn2'])
+        template = self.generate_template(config, 'dev')
+        resources = template['Resources'].values()
+        lambda_fns = [resource for resource in resources
+                      if resource['Type'] == 'AWS::Serverless::Function']
+        assert len(lambda_fns) == 1
+
+        vpc_config = lambda_fns[0]['Properties']['VpcConfig']
+        assert vpc_config['SubnetIds'] == ['sn1', 'sn2']
+        assert vpc_config['SecurityGroupIds'] == ['sg1', 'sg2']

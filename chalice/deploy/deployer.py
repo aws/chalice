@@ -93,15 +93,15 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
 import jmespath
-from typing import Optional, Dict, List, Any, Set, cast  # noqa
+from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 from chalice import app
 from chalice.config import Config  # noqa
 from chalice.compat import is_broken_pipe_error
 from chalice.awsclient import DeploymentPackageTooLargeError, TypedAWSClient
 from chalice.awsclient import LambdaClientError, AWSClientError
-from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, \
-    LAMBDA_TRUST_POLICY, DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE
+from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, VPC_ATTACH_POLICY, \
+    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY
 from chalice.deploy import models
 from chalice.deploy.packager import PipRunner, SubprocessPip, \
     DependencyBuilder as PipDependencyBuilder, LambdaDeploymentPackager
@@ -229,6 +229,10 @@ class ChaliceDeploymentError(Exception):
     def _get_mb(self, value):
         # type: (int) -> str
         return '%.1f MB' % (float(value) / (1024 ** 2))
+
+
+class ChaliceBuildError(Exception):
+    pass
 
 
 def create_default_deployer(session, config, ui):
@@ -537,13 +541,33 @@ class ApplicationGraphBuilder(object):
             resource_name = 'default-role'
             role_name = '%s-%s' % (config.app_name, stage_name)
             policy = models.AutoGenIAMPolicy(
-                document=models.Placeholder.BUILD_STAGE)
+                document=models.Placeholder.BUILD_STAGE,
+                traits=set([]),
+            )
         return models.ManagedIAMRole(
             resource_name=resource_name,
             role_name=role_name,
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=policy,
         )
+
+    def _get_vpc_params(self, function_name, config):
+        # type: (str, Config) -> Tuple[List[str], List[str]]
+        security_group_ids = config.security_group_ids
+        subnet_ids = config.subnet_ids
+        if security_group_ids and subnet_ids:
+            return security_group_ids, subnet_ids
+        elif not security_group_ids and not subnet_ids:
+            return [], []
+        else:
+            raise ChaliceBuildError(
+                "Invalid VPC params for function '%s', in order to configure "
+                "VPC for a Lambda function, you must provide the subnet_ids "
+                "as well as the security_group_ids, got subnet_ids: %s, "
+                "security_group_ids: %s" % (function_name,
+                                            subnet_ids,
+                                            security_group_ids)
+            )
 
     def _build_lambda_function(self,
                                config,        # type: Config
@@ -555,7 +579,8 @@ class ApplicationGraphBuilder(object):
         # type: (...) -> models.LambdaFunction
         function_name = '%s-%s-%s' % (
             config.app_name, config.chalice_stage, name)
-        return models.LambdaFunction(
+        security_group_ids, subnet_ids = self._get_vpc_params(name, config)
+        function = models.LambdaFunction(
             resource_name=name,
             function_name=function_name,
             environment_variables=config.environment_variables,
@@ -566,7 +591,21 @@ class ApplicationGraphBuilder(object):
             memory_size=config.lambda_memory_size,
             deployment_package=deployment,
             role=role,
+            security_group_ids=security_group_ids,
+            subnet_ids=subnet_ids,
         )
+        self._inject_role_traits(function, role)
+        return function
+
+    def _inject_role_traits(self, function, role):
+        # type: (models.LambdaFunction, models.IAMRole) -> None
+        if not isinstance(role, models.ManagedIAMRole):
+            return
+        policy = role.policy
+        if not isinstance(policy, models.AutoGenIAMPolicy):
+            return
+        if function.security_group_ids and function.subnet_ids:
+            policy.traits.add(models.RoleTraits.VPC_NEEDED)
 
 
 class DependencyBuilder(object):
@@ -664,7 +703,10 @@ class PolicyGenerator(BaseDeployStep):
     def handle_autogeniampolicy(self, config, resource):
         # type: (Config, models.AutoGenIAMPolicy) -> None
         if isinstance(resource.document, models.Placeholder):
-            resource.document = self._policy_gen.generate_policy(config)
+            policy = self._policy_gen.generate_policy(config)
+            if models.RoleTraits.VPC_NEEDED in resource.traits:
+                policy['Statement'].append(VPC_ATTACH_POLICY)
+            resource.document = policy
 
 
 class BuildStage(object):
@@ -891,94 +933,3 @@ class DeploymentReporter(object):
         # type: (Dict[str, Any]) -> None
         report = self.generate_report(deployed_values)
         self._ui.write(report)
-
-
-class ApplicationPolicyHandler(object):
-    """Manages the IAM policy for an application.
-
-    This class handles returning the policy that used by
-    used for the API handler lambda function for a given
-    stage.
-
-    It has several possible outcomes:
-
-        * By default, it will autogenerate a policy based on
-          analyzing the application source code.
-        * It will return a policy from a file on disk that's been
-          configured as the policy for the given stage.
-
-    This class has a precondition that we should be loading
-    some IAM policy for the the API handler function.
-
-    If a user has indicated that there's a pre-existing
-    role that they'd like to use for the API handler function,
-    this class should never be invoked.  In other words,
-    the logic of whether or not we even need to bother with
-    loading an IAM policy is handled a layer above where
-    this class should be used.
-
-    """
-
-    _EMPTY_POLICY = {
-        'Version': '2012-10-17',
-        'Statement': [],
-    }
-
-    def __init__(self, osutils, policy_generator):
-        # type: (OSUtils, AppPolicyGenerator) -> None
-        self._osutils = osutils
-        self._policy_gen = policy_generator
-
-    def generate_policy_from_app_source(self, config):
-        # type: (Config) -> Dict[str, Any]
-        """Generate a policy from application source code.
-
-        If the ``autogen_policy`` value is set to false, then
-        the .chalice/policy.json file will be used instead of generating
-        the policy from the source code.
-
-        """
-        if config.autogen_policy:
-            app_policy = self._do_generate_from_source(config)
-        else:
-            app_policy = self.load_last_policy(config)
-        return app_policy
-
-    def _do_generate_from_source(self, config):
-        # type: (Config) -> Dict[str, Any]
-        return self._policy_gen.generate_policy(config)
-
-    def load_last_policy(self, config):
-        # type: (Config) -> Dict[str, Any]
-        """Load the last recorded policy file for the app."""
-        filename = self._app_policy_file(config)
-        if config.autogen_policy and not self._osutils.file_exists(filename):
-            return self._EMPTY_POLICY
-        elif not self._osutils.file_exists(filename):
-            raise RuntimeError("Unable to load the policy file. Are you sure "
-                               "it exists?")
-        try:
-            return json.loads(
-                self._osutils.get_file_contents(filename, binary=False)
-            )
-        except ValueError as err:
-            raise RuntimeError("Unable to load the project policy file: %s"
-                               % err)
-
-    def record_policy(self, config, policy_document):
-        # type: (Config, Dict[str, Any]) -> None
-        policy_file = self._app_policy_file(config)
-        policy_json = serialize_to_json(policy_document)
-        self._osutils.set_file_contents(policy_file, policy_json, binary=False)
-
-    def _app_policy_file(self, config):
-        # type: (Config) -> str
-        if config.iam_policy_file:
-            filename = os.path.join(config.project_dir, '.chalice',
-                                    config.iam_policy_file)
-        else:
-            # Otherwise if the user doesn't specify a file it defaults
-            # to a fixed name based on the stage.
-            basename = 'policy-%s.json' % config.chalice_stage
-            filename = os.path.join(config.project_dir, '.chalice', basename)
-        return filename

@@ -1,9 +1,13 @@
-from typing import List, Dict, Any, TypeVar, Union, Optional
+from typing import List, Dict, Any, TypeVar, Union, Optional, Set
 import enum
 
 
 class Placeholder(enum.Enum):
     BUILD_STAGE = 'build_stage'
+
+
+class RoleTraits(enum.Enum):
+    VPC_NEEDED = 'vpc_needed'
 
 
 class Instruction:
@@ -203,9 +207,11 @@ class FileBasedIAMPolicy(IAMPolicy):
 
 class AutoGenIAMPolicy(IAMPolicy):
     document = ...  # type: DV[Dict[str, Any]]
+    traits = ...  # type: Set[RoleTraits]
 
     def __init__(self,
                  document,   # type: DV[Dict[str, Any]]
+                 traits,     # type: Set[RoleTraits]
                  ):
         # type: (...) -> None
         ...
@@ -250,6 +256,8 @@ class LambdaFunction(ManagedModel):
     timeout = ... # type: int
     memory_size = ... # type: int
     role = ... # type: IAMRole
+    security_group_ids = ... # type: List[str]
+    subnet_ids = ... # type: List[str]
 
     def __init__(self,
                  resource_name,           # type: str
@@ -262,6 +270,8 @@ class LambdaFunction(ManagedModel):
                  timeout,                 # type: int
                  memory_size,             # type: int
                  role,                    # type: IAMRole
+                 security_group_ids,      # type: List[str]
+                 subnet_ids,              # type: List[str]
                  ):
         # type: (...) -> None
         ...
