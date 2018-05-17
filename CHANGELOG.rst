@@ -5,16 +5,12 @@ CHANGELOG
 Next Release (TBD)
 ==================
 
-* Add support for packaging local directories
-  (`#653 https://github.com/aws/chalice/pull/653>`__)
-
-Next Release (TBD)
-==================
-
 * Add support for Lambdas in a VPC
   (`#413 <https://github.com/aws/chalice/issues/413>`__,
   `#837 <https://github.com/aws/chalice/pull/837>`__,
-  `#673 <https://github.com/aws/chalice/pull/673>`__`)
+  `#673 <https://github.com/aws/chalice/pull/673>`__)
+* Add support for packaging local directories
+  (`#653 <https://github.com/aws/chalice/pull/653>`__)
 
 
 1.2.3
