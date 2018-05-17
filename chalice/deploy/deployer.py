@@ -566,6 +566,8 @@ class ApplicationGraphBuilder(object):
             memory_size=config.lambda_memory_size,
             deployment_package=deployment,
             role=role,
+            security_group_ids=config.security_group_ids,
+            subnet_ids=config.subnet_ids,
         )
 
 

@@ -16,7 +16,9 @@ def lambda_function():
         tags={},
         timeout=None,
         memory_size=None,
-        role=models.PreCreatedIAMRole(role_arn='foobar')
+        role=models.PreCreatedIAMRole(role_arn='foobar'),
+        security_group_ids=[],
+        subnet_ids=[],
     )
 
 
