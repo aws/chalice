@@ -8,35 +8,17 @@ import os
 import sys
 import tempfile
 import shutil
-<<<<<<< HEAD
-<<<<<<< HEAD
 import traceback
+import functools
 
 import botocore.exceptions
 import click
 from typing import Dict, Any, Optional  # noqa
-=======
-import time
-import subprocess
-import threading
-import types
-=======
->>>>>>> Extract reloader into separate module
-
-import botocore.exceptions
-import click
-from typing import Dict, Any, Optional, MutableMapping  # noqa
-<<<<<<< HEAD
-from six.moves import _thread
->>>>>>> Add auto reloading stuff
-=======
->>>>>>> Extract reloader into separate module
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.cli.factory import CLIFactory
-from chalice.cli.reload import Reloader
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
@@ -45,7 +27,7 @@ from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
-from chalice.constants import DEFAULT_AUTORELOAD_INTERVAL
+from chalice.local import LocalDevServer  # noqa
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -97,88 +79,40 @@ def cli(ctx, project_dir, debug=False):
 @click.option('--port', default=8000, type=click.INT)
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help='Name of the Chalice stage for the local server to use.')
-@click.option('--autoreload-interval', default=DEFAULT_AUTORELOAD_INTERVAL,
-              type=click.INT)
-@click.option('--no-autoreload', is_flag=True)
+@click.option('--autoreload/--no-autoreload',
+              default=True,
+              help='Automatically restart server when code changes.')
 @click.pass_context
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
-          autoreload_interval=DEFAULT_AUTORELOAD_INTERVAL,
-          no_autoreload=False):
-    # type: (click.Context, str, int, str, int, bool) -> None
+          autoreload=True):
+    # type: (click.Context, str, int, str, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-<<<<<<< HEAD
-<<<<<<< HEAD
+    from chalice.cli import reloader
+    # We don't create the server here because that will bind the
+    # socket and we only want to do this in the worker process.
+    server_factory = functools.partial(
+        create_local_server, factory, host, port, stage)
+    # When running `chalice local`, a stdout logger is configured
+    # so you'll see the same stdout logging as you would when
+    # running in lambda.  This is configuring the root logger.
+    # The app-specific logger (app.log) will still continue
+    # to work.
+    logging.basicConfig(
+        stream=sys.stdout, level=logging.INFO, format='%(message)s')
+    if autoreload:
+        project_dir = factory.create_config_obj(
+            chalice_stage_name=stage).project_dir
+        rc = reloader.run_with_reloader(
+            server_factory, os.environ, project_dir)
+        # Click doesn't sys.exit() with the RC this function.  The
+        # recommended way to do this is to use sys.exit() directly,
+        # see: https://github.com/pallets/click/issues/747
+        sys.exit(rc)
     run_local_server(factory, host, port, stage)
-=======
-    with Reloader(autoreload):
-=======
-    if no_autoreload:
-        run_local_server(factory, host, port, stage, os.environ)
-<<<<<<< HEAD
-    with Reloader():
->>>>>>> Enable autoreloading by default
-=======
-    with Reloader(autoreload_interval):
->>>>>>> Add --autoreload-interval parameter
-        run_local_server(factory, host, port, stage, os.environ)
 
 
-<<<<<<< HEAD
-class Reloader(threading.Thread):
-    def __init__(self, autoreload=True):
-        super(Reloader, self).__init__()
-        self.autoreload = autoreload
-        self.triggered = False
-        self.mtimes = {}
-
-    def __enter__(self):
-        if self.autoreload:
-            self.setDaemon(True)
-            self.start()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is KeyboardInterrupt and self.triggered:
-            sys.exit(1)
-
-    def run(self):
-        while True:
-            time.sleep(1)
-            if self.is_changes():
-                self.reload()
-
-    def is_changes(self):
-        for module in list(sys.modules.values()):
-            if not isinstance(module, types.ModuleType):
-                continue
-            path = getattr(module, '__file__', None)
-            if not path:
-                continue
-            if path.endswith('.pyc') or path.endswith('.pyo'):
-                path = path[:-1]
-            try:
-                mtime = os.path.getmtime(path)
-            except OSError:
-                continue
-            old_time = self.mtimes.setdefault(path, mtime)
-            if mtime > old_time:
-                return True
-
-    def reload(self):
-        self.triggered = True
-        if sys.platform == 'win32':
-            subprocess.Popen(sys.argv, close_fds=True)
-            _thread.interrupt_main()
-        else:
-            os.execv(sys.executable, [sys.executable] + sys.argv)
->>>>>>> Add auto reloading stuff
-
-
-def run_local_server(factory, host, port, stage):
-    # type: (CLIFactory, str, int, str) -> None
-=======
-def run_local_server(factory, host, port, stage, env):
-    # type: (CLIFactory, str, int, str, MutableMapping) -> None
->>>>>>> Extract reloader into separate module
+def create_local_server(factory, host, port, stage):
+    # type: (CLIFactory, str, int, str) -> LocalDevServer
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
@@ -187,13 +121,13 @@ def run_local_server(factory, host, port, stage, env):
     # there is no point in testing locally.
     routes = config.chalice_app.routes
     validate_routes(routes)
-    # When running `chalice local`, a stdout logger is configured
-    # so you'll see the same stdout logging as you would when
-    # running in lambda.  This is configuring the root logger.
-    # The app-specific logger (app.log) will still continue
-    # to work.
-    logging.basicConfig(stream=sys.stdout)
     server = factory.create_local_server(app_obj, config, host, port)
+    return server
+
+
+def run_local_server(factory, host, port, stage):
+    # type: (CLIFactory, str, int, str) -> None
+    server = create_local_server(factory, host, port, stage)
     server.serve_forever()
 
 

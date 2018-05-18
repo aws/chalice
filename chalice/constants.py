@@ -50,8 +50,6 @@ DEFAULT_APIGATEWAY_STAGE_NAME = 'api'
 DEFAULT_LAMBDA_TIMEOUT = 60
 DEFAULT_LAMBDA_MEMORY_SIZE = 128
 MAX_LAMBDA_DEPLOYMENT_SIZE = 50 * (1024 ** 2)
-DEFAULT_AUTORELOAD_INTERVAL = 1
-
 # This is the name of the main handler used to
 # handle API gateway requests.  This is used as a key
 # in the config module.

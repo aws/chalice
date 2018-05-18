@@ -1,6 +1,4 @@
 import socket
-import subprocess
-import sys
 
 import six
 import os
@@ -95,11 +93,6 @@ if os.name == 'nt':
         'pip.wheel.SETUPTOOLS_SHIM = """%s""";'
     ) % _SETUPTOOLS_SHIM
     pip_no_compile_c_env_vars = {}  # type: Dict[str, Any]
-
-    def reload_process():
-        # type: () -> None
-        subprocess.Popen(sys.argv, close_fds=True)
-        six.moves._thread.interrupt_main()
 else:
     # posix
     # On posix systems setuptools/distutils uses the CC env variable to
@@ -113,9 +106,6 @@ else:
         'CC': '/var/false'
     }
 
-    def reload_process():
-        # type: () -> None
-        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 if six.PY3:
     from urllib.parse import urlparse, parse_qs
