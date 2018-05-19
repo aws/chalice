@@ -154,7 +154,7 @@ class CLIFactory(object):
     def create_log_retriever(self, session, lambda_arn):
         # type: (Session, str) -> LogRetriever
         client = TypedAWSClient(session)
-        retriever = LogRetriever.create_from_arn(client, lambda_arn)
+        retriever = LogRetriever.create_from_lambda_arn(client, lambda_arn)
         return retriever
 
     def load_chalice_app(self, environment_variables=None):
