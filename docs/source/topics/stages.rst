@@ -54,26 +54,42 @@ We now have two completely separate rest APIs::
     https://wk9fhx.execute-api.us-west-2.amazonaws.com/api/
 
 Additionally, we can see all our deployed values by looking
-at the ``.chalice/deployed.json`` file::
+at the ``.chalice/deployed/dev.json`` or ``.chalice/deployed/prod.json`` files::
 
-    $ cat .chalice/deployed.json
+    $ cat .chalice/deployed/dev.json
     {
-      "dev": {
-        "region": "us-west-2",
-        "api_handler_name": "myapp-dev",
-        "api_handler_arn": "arn:aws:lambda:...:function:myapp",
-        "rest_api_id": "wk9fhx",
-        "chalice_version": "0.7.0",
-        "api_gateway_stage": "dev",
-        "backend": "api"
-      },
-      "prod": {
-        "rest_api_id": "mmnkdi",
-        "chalice_version": "0.7.0",
-        "region": "us-west-2",
-        "backend": "api",
-        "api_handler_name": "myapp-prod",
-        "api_handler_arn": "arn:aws:lambda:...:function:myapp-prod",
-        "api_gateway_stage": "dev"
-      }
+      "resources": [
+        {
+          "name": "api_handler",
+          "resource_type": "lambda_function",
+          "lambda_arn": "arn:aws:lambda:...:function:myapp-dev"
+        },
+        {
+          "name": "rest_api",
+          "resource_type": "rest_api",
+          "rest_api_id": "wk9fhx",
+          "rest_api_url": "https://wk9fhx.execute-api.us-west-2.amazonaws.com/api/"
+        }
+      ],
+      "schema_version": "2.0",
+      "backend": "api"
+    }
+
+    $ cat .chalice/deployed/prod.json
+    {
+      "resources": [
+        {
+          "name": "api_handler",
+          "resource_type": "lambda_function",
+          "lambda_arn": "arn:aws:lambda:...:function:myapp-prod"
+        },
+        {
+          "name": "rest_api",
+          "resource_type": "rest_api",
+          "rest_api_id": "mmnkdi",
+          "rest_api_url": "https://mmnkdi.execute-api.us-west-2.amazonaws.com/api/"
+        }
+      ],
+      "schema_version": "2.0",
+      "backend": "api"
     }
