@@ -4,14 +4,15 @@ How It Works
 ============
 
 This approach borrow from what django, flask, and other frameworks do.
-Essentially, with reloading enabled ``chalice local`` will actually start up
-two processes (both will show as ``chalice local`` in ps).  One process is the
-parent process.  It's job is to start up a child process and restart it
-if it exits (due to a restart request).  The child process is the process
-that actually starts up the web server for local mode.  The child process
-also sets up a watcher thread.  It's job is to monitor directories for
-changes.  If a change is encountered it sys.exit()s the process with a known
-RC (the RESTART_REQUEST_RC constant in the module).
+Essentially, with reloading enabled ``chalice local`` will start up
+a worker process that runs the dev http server.  This means there will
+be a total of two processes running (both will show as ``chalice local``
+in ps).  One process is the parent process.  It's job is to start up a child
+process and restart it if it exits (due to a restart request).  The child
+process is the process that actually starts up the web server for local mode.
+The child process also sets up a watcher thread.  It's job is to monitor
+directories for changes.  If a change is encountered it sys.exit()s the process
+with a known RC (the RESTART_REQUEST_RC constant in the module).
 
 The parent process runs in an infinite loop.  If the child process exits with
 an RC of RESTART_REQUEST_RC the parent process starts up another child process.
@@ -109,7 +110,7 @@ class ParentProcess(object):
     def main(self):
         # type: () -> None
         # This method launches a child worker and restarts it if it
-        # exists with RESTART_REQUEST_RC.  This method doesn't return.
+        # exits with RESTART_REQUEST_RC.  This method doesn't return.
         # A user can Ctrl-C to stop the parent process.
         while True:
             self._env['CHALICE_WORKER'] = 'true'
