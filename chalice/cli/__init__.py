@@ -189,16 +189,19 @@ def delete(ctx, profile, stage):
               default=False,
               help='Controls whether or not lambda log messages are included.')
 @click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('-n', '--name',
+              help='The name of the lambda function to retrieve logs from.',
+              default='api_handler')
 @click.option('--profile', help='The profile to use for fetching logs.')
 @click.pass_context
-def logs(ctx, num_entries, include_lambda_messages, stage, profile):
-    # type: (click.Context, int, bool, str, str) -> None
+def logs(ctx, num_entries, include_lambda_messages, stage, name, profile):
+    # type: (click.Context, int, bool, str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
     deployed = config.deployed_resources(stage)
-    if deployed is not None and 'api_handler' in deployed.resource_names():
-        lambda_arn = deployed.resource_values('api_handler')['lambda_arn']
+    if name in deployed.resource_names():
+        lambda_arn = deployed.resource_values(name)['lambda_arn']
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
             session, lambda_arn)
