@@ -11,6 +11,11 @@ Next Release (TBD)
   `#673 <https://github.com/aws/chalice/pull/673>`__)
 * Add support for packaging local directories
   (`#653 <https://github.com/aws/chalice/pull/653>`__)
+* Add support for automatically reloading the local
+  dev server when files are modified
+  (`#316 <https://github.com/aws/chalice/issues/316>`__,
+  `#846 <https://github.com/aws/chalice/pull/846>`__,
+  `#706 <https://github.com/aws/chalice/pull/706>`__)
 
 
 1.2.3
