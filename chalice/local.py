@@ -631,3 +631,9 @@ class LocalDevServer(object):
         # type: () -> None
         print("Serving on %s:%s" % (self.host, self.port))
         self.server.serve_forever()
+
+    def shutdown(self):
+        # type: () -> None
+        # This must be called from another thread of else it
+        # will deadlock.
+        self.server.shutdown()

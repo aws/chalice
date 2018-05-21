@@ -1,5 +1,6 @@
 import os
 import socket
+import time
 import contextlib
 from threading import Thread
 from threading import Event
@@ -15,11 +16,24 @@ from requests.adapters import HTTPAdapter
 from chalice import app
 from chalice.local import LocalDevServer
 from chalice.config import Config
+from chalice.utils import OSUtils
 
 
-ENV_APP_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'envapp',
-)
+APPS_DIR = os.path.dirname(os.path.abspath(__file__))
+ENV_APP_DIR = os.path.join(APPS_DIR, 'envapp')
+BASIC_APP = os.path.join(APPS_DIR, 'basicapp')
+
+
+NEW_APP_VERSION = """
+from chalice import Chalice
+
+app = Chalice(app_name='basicapp')
+
+
+@app.route('/')
+def index():
+    return {'version': 'reloaded'}
+"""
 
 
 @contextmanager
@@ -30,6 +44,13 @@ def cd(path):
         yield
     finally:
         os.chdir(original_dir)
+
+
+@pytest.fixture()
+def basic_app(tmpdir):
+    tmpdir = str(tmpdir.mkdir('basicapp'))
+    OSUtils().copytree(BASIC_APP, tmpdir)
+    return tmpdir
 
 
 class ThreadedLocalServer(Thread):
@@ -75,6 +96,30 @@ def unused_tcp_port():
     with contextlib.closing(socket.socket()) as sock:
         sock.bind(('127.0.0.1', 0))
         return sock.getsockname()[1]
+
+
+@pytest.fixture()
+def http_session():
+    session = requests.Session()
+    retry = Retry(
+        # How many connection-related errors to retry on.
+        connect=5,
+        # How many connection-related errors to retry on.
+        # A backoff factor to apply between attempts after the second try.
+        backoff_factor=2,
+    )
+    session.mount('http://', HTTPAdapter(max_retries=retry))
+    return HTTPFetcher(session)
+
+
+class HTTPFetcher(object):
+    def __init__(self, session):
+        self.session = session
+
+    def json_get(self, url):
+        response = self.session.get(url)
+        response.raise_for_status()
+        return json.loads(response.content)
 
 
 @pytest.fixture()
@@ -167,7 +212,7 @@ def test_can_accept_multiple_connections(config, sample_app,
     assert response.text == '{"hello": "world"}'
 
 
-def test_can_import_env_vars(unused_tcp_port):
+def test_can_import_env_vars(unused_tcp_port, http_session):
     with cd(ENV_APP_DIR):
         p = subprocess.Popen(['chalice', 'local', '--port',
                               str(unused_tcp_port)],
@@ -175,7 +220,7 @@ def test_can_import_env_vars(unused_tcp_port):
                              stderr=subprocess.PIPE)
         _wait_for_server_ready(p)
         try:
-            _assert_env_var_loaded(unused_tcp_port)
+            _assert_env_var_loaded(unused_tcp_port, http_session)
         finally:
             p.terminate()
 
@@ -187,21 +232,25 @@ def _wait_for_server_ready(process):
         )
 
 
-def _assert_env_var_loaded(port_number):
-    session = _get_requests_session_with_timeout()
-    response = session.get('http://localhost:%s/' % port_number)
-    response.raise_for_status()
-    assert json.loads(response.content) == {'hello': 'bar'}
+def _assert_env_var_loaded(port_number, http_session):
+    response = http_session.json_get('http://localhost:%s/' % port_number)
+    assert response == {'hello': 'bar'}
 
 
-def _get_requests_session_with_timeout():
-    session = requests.Session()
-    retry = Retry(
-        # How many connection-related errors to retry on.
-        connect=5,
-        # How many connection-related errors to retry on.
-        # A backoff factor to apply between attempts after the second try.
-        backoff_factor=2,
-    )
-    session.mount('http://', HTTPAdapter(max_retries=retry))
-    return session
+def test_can_reload_server(unused_tcp_port, basic_app, http_session):
+    with cd(basic_app):
+        p = subprocess.Popen(['chalice', 'local', '--port',
+                              str(unused_tcp_port)],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        _wait_for_server_ready(p)
+        url = 'http://localhost:%s/' % unused_tcp_port
+        try:
+            assert http_session.json_get(url) == {'version': 'original'}
+            # Updating the app should trigger a reload.
+            with open(os.path.join(basic_app, 'app.py'), 'w') as f:
+                f.write(NEW_APP_VERSION)
+            time.sleep(2)
+            assert http_session.json_get(url) == {'version': 'reloaded'}
+        finally:
+            p.terminate()
