@@ -26,6 +26,7 @@ from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
+from chalice.constants import DEFAULT_HANDLER_NAME
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -164,7 +165,7 @@ def delete(ctx, profile, stage):
 @click.option('--stage', default=DEFAULT_STAGE_NAME)
 @click.option('-n', '--name',
               help='The name of the lambda function to retrieve logs from.',
-              default='api_handler')
+              default=DEFAULT_HANDLER_NAME)
 @click.option('--profile', help='The profile to use for fetching logs.')
 @click.pass_context
 def logs(ctx, num_entries, include_lambda_messages, stage, name, profile):
