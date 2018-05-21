@@ -63,7 +63,7 @@ def test_can_parse_short_id():
 
 
 def test_can_create_from_arn():
-    retriever = logs.LogRetriever.create_from_arn(
+    retriever = logs.LogRetriever.create_from_lambda_arn(
         mock.sentinel.client,
         'arn:aws:lambda:us-east-1:123:function:my-function'
     )

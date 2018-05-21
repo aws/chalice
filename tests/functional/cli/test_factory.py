@@ -12,6 +12,7 @@ from chalice.config import Config
 from chalice import local
 from chalice.utils import UI
 from chalice import Chalice
+from chalice.logs import LogRetriever
 
 
 @fixture
@@ -191,3 +192,12 @@ def test_can_create_deployment_reporter(clifactory):
 def test_can_access_lazy_loaded_app(clifactory):
     config = clifactory.create_config_obj()
     assert isinstance(config.chalice_app, Chalice)
+
+
+def test_can_create_log_retriever(clifactory):
+    session = clifactory.create_botocore_session()
+    lambda_arn = (
+        'arn:aws:lambda:us-west-2:1:function:app-dev-foo'
+    )
+    logs = clifactory.create_log_retriever(session, lambda_arn)
+    assert isinstance(logs, LogRetriever)

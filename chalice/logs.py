@@ -30,7 +30,7 @@ class LogRetriever(object):
         self._log_group_name = log_group_name
 
     @classmethod
-    def create_from_arn(cls, client, lambda_arn):
+    def create_from_lambda_arn(cls, client, lambda_arn):
         # type: (TypedAWSClient, str) -> LogRetriever
         """Create a LogRetriever from a client and lambda arn.
 
