@@ -16,6 +16,10 @@ Next Release (TBD)
   (`#316 <https://github.com/aws/chalice/issues/316>`__,
   `#846 <https://github.com/aws/chalice/pull/846>`__,
   `#706 <https://github.com/aws/chalice/pull/706>`__)
+* Add support for viewing cloudwatch logs of all
+  lambda functions
+  (`#841 <https://github.com/aws/chalice/issues/841>`__,
+  `#849 <https://github.com/aws/chalice/pull/849>`__)
 
 
 1.2.3
