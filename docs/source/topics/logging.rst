@@ -83,3 +83,36 @@ output of ``chalice logs``, we'll see the following log message::
 
 
 As you can see here, both the debug and error log message are shown.
+
+You can use the ``-n/--name`` option to view the logs for a specific lambda
+function.  By default, the logs for the API handler lambda function are shown.
+This corresponds to any log statements made within an ``@app.route()`` call.
+The name option is the logical name of the lambda function.  This is the
+name of the python function by default, or whatever name you provided
+as the ``name`` kwarg to the ``@app.lambda_function()`` call.  For example,
+given this app:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='multilog')
+
+
+    @app.lambda_function()
+    def foo(event, context):
+        app.log.debug("Invoking from function foo")
+        return {'hello': 'world'}
+
+
+    @app.lambda_function(name='MyFunction)
+    def bar(event, context):
+        incr_counter()
+        app.log.debug("Invoking from function bar")
+        return {'hello': 'world'}
+
+
+You can retrieve logs for the above function by running::
+
+    $ chalice logs --name foo
+    $ chalice logs --name MyFunction
