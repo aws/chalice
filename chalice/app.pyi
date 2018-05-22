@@ -129,6 +129,7 @@ class Chalice(object):
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
     event_sources = ... # type: List[CloudWatchEventSource]
     pure_lambda_functions = ... # type: List[LambdaFunction]
+    s3_events = ... # type: List[S3EventConfig]
 
     def __init__(self, app_name: str, debug: bool=False,
                  configure_logs: bool=True,
@@ -206,3 +207,12 @@ class LambdaFunction(object):
     name = ... # type: str
     handler_string = ... # type: str
     func = ... # type: Callable[..., Any]
+
+
+class S3EventConfig(object):
+    name = ... # type: str
+    bucket = ... # type: str
+    events = ... # type: List[str]
+    prefix = ... # type: str
+    suffix = ... # type: str
+    handler_string = ... # type: str

@@ -142,6 +142,14 @@ class ResourceSweeper(object):
                 messages[id(apicall)] = (
                     "Deleting Rest API: %s\n" % resource_values['rest_api_id'])
                 plan.append(apicall)
+            elif resource_values['resource_type'] == 's3_event':
+                bucket = resource_values['bucket']
+                function_arn = resource_values['lambda_arn']
+                apicall = models.APICall(
+                    method_name='disconnect_s3_bucket_from_lambda',
+                    params={'bucket': bucket, 'function_arn': function_arn}
+                )
+                plan.append(apicall)
 
 
 class PlanStage(object):
@@ -303,6 +311,41 @@ class PlanStage(object):
                 name='role_name',
                 value=resource.role_name,
             )
+        ]
+
+    def _plan_s3bucketnotification(self, resource):
+        # type: (models.S3BucketNotification) -> Sequence[_INSTRUCTION_MSG]
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        return [
+            models.APICall(
+                method_name='add_permission_for_s3_event',
+                params={'bucket': resource.bucket,
+                        'function_arn': function_arn},
+            ),
+            (models.APICall(
+                method_name='connect_s3_bucket_to_lambda',
+                params={'bucket': resource.bucket,
+                        'function_arn': function_arn,
+                        'prefix': resource.prefix,
+                        'suffix': resource.suffix,
+                        'events': resource.events}
+            ), 'Configuring S3 events in bucket %s to function %s\n'
+                % (resource.bucket, resource.lambda_function.function_name)
+            ),
+            models.RecordResourceValue(
+                resource_type='s3_event',
+                resource_name=resource.resource_name,
+                name='bucket',
+                value=resource.bucket,
+            ),
+            models.RecordResourceVariable(
+                resource_type='s3_event',
+                resource_name=resource.resource_name,
+                name='lambda_arn',
+                variable_name=function_arn.name,
+            ),
         ]
 
     def _plan_scheduledevent(self, resource):

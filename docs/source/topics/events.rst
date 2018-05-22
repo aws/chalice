@@ -3,6 +3,8 @@ Lambda Event Sources
 ====================
 
 
+.. _scheduled-events:
+
 Scheduled Events
 ================
 
@@ -66,3 +68,60 @@ event rule.  For example:
 In the app above, chalice will create two lambda functions,
 and configure ``every_hour`` to be invoked once an hour,
 and ``every_two_hours`` to be invoked once every two hours.
+
+
+.. _s3-events:
+
+S3 Events
+=========
+
+You can configure a lambda function to be invoked whenever
+certain events happen in an S3 bucket.  This uses the
+`event notifications`_ feature provided by Amazon S3.
+
+To configure this, you just tell Chalice the name of an existing
+S3 bucket, along with what events should trigger the lambda function.
+This is done with the :meth:`Chalice.on_s3_event` decorator.
+
+Here's an example:
+
+.. code-block:: python
+
+    import boto3
+    from chalice import Chalice
+
+    app = chalice.Chalice(app_name='s3eventdemo')
+    s3 = boto3.client('s3')
+
+    @app.on_s3_event(bucket='mybucket-name',
+                     events=['s3:ObjectCreated:*'])
+    def handle_s3_event(event):
+        # Download the newly created file locally.
+        s3.downlad_file(event.bucket, event.key, '/tmp/tempfile')
+        # Now we can process '/tmp/tempfile' however we want.
+
+In this example above, Chalice connects the S3 bucket to the
+``handle_s3_event`` Lambda function such that whenver an object is uploaded
+to the ``mybucket-name`` bucket, the Lambda function will be invoked.
+This example also uses the ``.bucket`` and ``.key`` attribute from the
+``event`` parameter, which is of type :class:`S3Event`.
+
+It will automatically create the appropriate S3 notification configuration
+as needed.  Chalice will also leave any existing notification configuration
+on the ``mybucket-name`` untouched.  It will only merge in the additional
+configuration needed for the ``handle_s3_event`` Lambda function.
+
+
+.. warning::
+
+  This feature only works when using `chalice deploy`.  Because you
+  configure the lambda function with the name of an existing S3 bucket,
+  it is not possible to describe this using a CloudFormation/SAM template.
+  The ``chalice package`` command will fail.  You will eventually be able
+  to request that chalice create a bucket for you, which will support
+  the ``chalice package`` command.
+
+The function you decorate must accept a single argument,
+which will be of type :class:`S3Event`.
+
+.. _event notifications: https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html

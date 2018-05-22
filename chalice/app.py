@@ -450,6 +450,7 @@ class Chalice(object):
         self.log = logging.getLogger(self.app_name)
         self.builtin_auth_handlers = []
         self.event_sources = []
+        self.s3_events = []
         self.pure_lambda_functions = []
         if env is None:
             env = os.environ
@@ -520,6 +521,27 @@ class Chalice(object):
             self.builtin_auth_handlers.append(auth_config)
             return ChaliceAuthorizer(auth_name, auth_func, auth_config)
         return _register_authorizer
+
+    def on_s3_event(self, bucket, events=None,
+                    prefix=None, suffix=None, name=None):
+        def _register_s3_event(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            trigger_events = events
+            if trigger_events is None:
+                trigger_events = ['s3:ObjectCreated:*']
+            s3_event = S3EventConfig(
+                name=handler_name,
+                bucket=bucket,
+                events=trigger_events,
+                prefix=prefix,
+                suffix=suffix,
+                handler_string='app.%s' % event_func.__name__,
+            )
+            self.s3_events.append(s3_event)
+            return S3EventHandler(event_func)
+        return _register_s3_event
 
     def schedule(self, expression, name=None):
         def _register_schedule(event_func):
@@ -932,3 +954,36 @@ class LambdaFunction(object):
 
     def __call__(self, event, context):
         return self.func(event, context)
+
+
+class S3EventConfig(object):
+    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
+        self.name = name
+        self.bucket = bucket
+        self.events = events
+        self.prefix = prefix
+        self.suffix = suffix
+        self.handler_string = handler_string
+
+
+class S3EventHandler(object):
+    def __init__(self, handler):
+        self.handler = handler
+
+    def __call__(self, event, context):
+        event_obj = self._convert_to_obj(event)
+        return self.handler(event_obj)
+
+    def _convert_to_obj(self, event_dict):
+        return S3Event(event_dict)
+
+
+class S3Event(object):
+    def __init__(self, event):
+        s3 = event['Records'][0]['s3']
+        self.bucket = s3['bucket']['name']
+        self.key = s3['object']['key']
+        self._original_payload = event
+
+    def to_dict(self):
+        return self._original_payload

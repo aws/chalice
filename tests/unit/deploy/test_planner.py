@@ -284,6 +284,55 @@ class TestPlanLambdaFunction(BasePlannerTests):
         assert role_arn.name == 'myrole-dev_role_arn'
 
 
+class TestPlanS3Events(BasePlannerTests):
+    def test_can_plan_s3_event(self):
+        function = create_function_resource('function_name')
+        bucket_event = models.S3BucketNotification(
+            resource_name='function_name-s3event',
+            bucket='mybucket',
+            events=['s3:ObjectCreated:*'],
+            prefix=None,
+            suffix=None,
+            lambda_function=function,
+        )
+        plan = self.determine_plan(bucket_event)
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='add_permission_for_s3_event',
+                params={
+                    'bucket': 'mybucket',
+                    'function_arn': Variable('function_name_lambda_arn'),
+                },
+            )
+        )
+        self.assert_apicall_equals(
+            plan[1],
+            models.APICall(
+                method_name='connect_s3_bucket_to_lambda',
+                params={
+                    'bucket': 'mybucket',
+                    'function_arn': Variable('function_name_lambda_arn'),
+                    'events': ['s3:ObjectCreated:*'],
+                    'prefix': None,
+                    'suffix': None,
+                },
+            )
+        )
+        assert plan[2] == models.RecordResourceValue(
+            resource_type='s3_event',
+            resource_name='function_name-s3event',
+            name='bucket',
+            value='mybucket',
+        )
+        assert plan[3] == models.RecordResourceVariable(
+            resource_type='s3_event',
+            resource_name='function_name-s3event',
+            name='lambda_arn',
+            variable_name='function_name_lambda_arn',
+        )
+
+
 class TestPlanScheduledEvent(BasePlannerTests):
     def test_can_plan_scheduled_event(self):
         function = create_function_resource('function_name')
@@ -774,6 +823,25 @@ class TestUnreferencedResourcePlanner(object):
             models.APICall(
                 method_name='delete_rule',
                 params={'rule_name': 'app-dev-index-event'},
+            )
+        ]
+
+    def test_can_delete_s3_event(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'test-s3-event',
+                'resource_type': 's3_event',
+                'bucket': 'mybucket',
+                'lambda_arn': 'lambda_arn',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='disconnect_s3_bucket_from_lambda',
+                params={'bucket': 'mybucket', 'function_arn': 'lambda_arn'},
             )
         ]
 

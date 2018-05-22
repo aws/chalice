@@ -131,7 +131,7 @@ Chalice
       function.  It will also schedule the lambda function to be invoked
       with a scheduled CloudWatch Event.
 
-      See :doc:`topics/events` for more information.
+      See :ref:`scheduled-events` for more information.
 
       .. code-block:: python
 
@@ -159,6 +159,56 @@ Chalice
         provided, it will be provided directly as the ``ScheduleExpression``
         value in the `PutRule <https://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax>`__ API
         call.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
+   .. method:: on_s3_event(bucket, events=None, prefix=None, suffix=None, name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever an event happens on an S3 bucket.
+
+      .. warning::
+
+          You can't use the ``chalice package`` command when using the
+          ``on_s3_event`` decorator.  This is because CFN does not support
+          configuring an existing S3 bucket.
+
+      See :ref:`s3-events` for more information.
+
+      This example shows how you could implement an image resizer that's
+      triggered whenever an object is uploaded to the ``images/`` prefix
+      of an S3 bucket (e.g ``s3://mybucket/images/house.jpg``).
+
+      .. code-block:: python
+
+          @app.on_s3_event('mybucket', events=['s3:ObjectCreated:Put'],
+                           prefix='images/', suffix='.jpg')
+          def resize_image(event):
+              with tempfile.NamedTemporaryFile('w') as f:
+                  s3.download_file(event.bucket, event.key, f.name)
+                  resize_image(f.name)
+                  s3.upload_file(event.bucket, 'resized/%s' % event.key, f.name)
+
+
+      :param bucket: The name of the S3 bucket.  This bucket must already exist.
+
+      :param events: A list of strings indicating the events that should trigger
+        the lambda function.  See `Supported Event Types <https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html#supported-notification-event-types>`__
+        for the full list of strings you can provide.  If this option is not
+        provided, a default of ``['s3:ObjectCreated:*']`` is used, which will
+        configure the lambda function to be invoked whenever a new object
+        is created in the S3 bucket.
+
+      :param prefix: An optional key prefix.  This specifies that
+        the lambda function should only be invoked if the key matches
+        this prefix (e.g. ``prefix='images/'``).
+
+      :param suffix: An optional key suffix.  This specifies that the
+        lambda function should only be invoked if the key name ends with
+        this suffix (e.g. ``suffix='.jpg'``).
 
       :param name: The name of the function to use.  This name is combined
         with the chalice app name as well as the stage name to create the
@@ -705,3 +755,36 @@ Scheduled Events
            'source': 'aws.events',
            'time': '2017-06-30T23:28:38Z',
            'version': '0'}
+
+
+.. class:: S3Event()
+
+   This is the input argument for an S3 event.
+
+   .. code-block:: python
+
+      @app.on_s3_event(bucket='mybucket')
+      def event_handler(event: S3Event):
+          app.log.info("Event received for bucket: %s, key %s",
+                       event.bucket, event.key)
+
+   In the code example above, the ``event`` argument is of
+   type ``S3Event``, which will have the following
+   attributes.
+
+   .. attribute:: bucket
+
+      The S3 bucket associated with the event.
+
+   .. attribute:: key
+
+      The S3 key name associated with the event.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``S3Event``
+      object.

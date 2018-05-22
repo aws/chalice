@@ -284,6 +284,17 @@ def rest_api_app():
 
 
 @fixture
+def s3_event_app():
+    app = Chalice('s3-event')
+
+    @app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def mock_client():
     return mock.Mock(spec=TypedAWSClient)
 
@@ -565,6 +576,23 @@ class TestApplicationGraphBuilder(object):
         rest_api = application.resources[0]
         assert len(rest_api.authorizers) == 1
         assert isinstance(rest_api.authorizers[0], models.LambdaFunction)
+
+    def test_can_create_s3_event_handler(self, s3_event_app):
+        # TODO: don't require app name, get it from app obj.
+        config = self.create_config(s3_event_app,
+                                    app_name='s3-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        s3_event = application.resources[0]
+        assert isinstance(s3_event, models.S3BucketNotification)
+        assert s3_event.resource_name == 'handler-s3event'
+        assert s3_event.bucket == 'mybucket'
+        assert s3_event.events == ['s3:ObjectCreated:*']
+        lambda_function = s3_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
 
 
 class RoleTestCase(object):
