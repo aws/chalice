@@ -28,7 +28,7 @@ def test_stack_trace_printed_on_error(local_app):
             'app = Chalice(app_name="test")\n'
             'foobarbaz\n'
         )
-    p = subprocess.Popen(['chalice', 'local'],
+    p = subprocess.Popen(['chalice', 'local', '--no-autoreload'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = p.communicate()[1].decode('ascii')
     rc = p.returncode
