@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.3.0
+=====
 
 * Add support for Lambdas in a VPC
   (`#413 <https://github.com/aws/chalice/issues/413>`__,
