@@ -97,6 +97,12 @@ def sample_app():
     def name(name):
         return {'provided-name': name}
 
+    @demo.route('/params', methods=['GET'], parameters=[{
+        'in': 'query', 'type': 'string', 'name': 'myparam', 'required': False
+    }])
+    def params():
+        return {'hello': 'params'}
+
     return demo
 
 
@@ -255,6 +261,12 @@ def test_will_pass_captured_params_to_view(sample_app, create_event):
     response = sample_app(event, context=None)
     response = json_response_body(response)
     assert response == {'provided-name': 'james'}
+
+
+def test_will_accept_openapi_params_declaration(sample_app, create_event):
+    event = create_event('/params', 'GET', {})
+    response = sample_app(event, context=None)
+    assert_response_body_is(response, {'hello': 'params'})
 
 
 def test_error_on_unsupported_method(sample_app, create_event):
