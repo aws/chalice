@@ -2,6 +2,8 @@ import sys
 import hashlib
 import inspect
 import re
+import os
+import shutil
 import subprocess
 from email.parser import FeedParser
 from email.message import Message  # noqa
@@ -97,6 +99,16 @@ class LambdaDeploymentPackager(object):
                 self._add_app_files(z, project_dir)
                 self._add_vendor_files(z, self._osutils.joinpath(
                     project_dir, self._VENDOR_DIR))
+                z.close()
+             
+            # HACK: Clone archive to ensure its has correct permissions   
+            with self._osutils.tempdir() as clone_dir:
+                self._osutils.extract_zipfile(package_filename, clone_dir)
+                self._osutils.remove_file(package_filename)
+                
+                os.system('chmod -R 777 {}'.format(clone_dir))
+                shutil.make_archive(package_filename[:-4], 'zip', clone_dir)
+              
         return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
