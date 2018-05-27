@@ -2,6 +2,7 @@ import sys
 import hashlib
 import inspect
 import re
+import os
 import subprocess
 from email.parser import FeedParser
 from email.message import Message  # noqa
@@ -70,7 +71,7 @@ class LambdaDeploymentPackager(object):
     def create_deployment_package(self, project_dir, python_version,
                                   package_filename=None):
         # type: (str, str, Optional[str]) -> str
-        self._ui.write("Creating deployment package.\n")
+        self._ui.write("Creating deployment package.")
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
         deployment_package_filename = self.deployment_package_filename(
@@ -97,6 +98,24 @@ class LambdaDeploymentPackager(object):
                 self._add_app_files(z, project_dir)
                 self._add_vendor_files(z, self._osutils.joinpath(
                     project_dir, self._VENDOR_DIR))
+                z.close()
+             
+            # HACK: Clone archive to ensure its has correct permissions   
+            with self._osutils.tempdir() as clone_dir:
+                self._osutils.extract_zipfile(package_filename, clone_dir)
+                self._osutils.remove_file(package_filename)
+                
+                os.system('chmod -R 777 {}'.format(clone_dir))
+                
+                with self._osutils.open_zip(package_filename, 'w', self._osutils.ZIP_DEFLATED) as z:
+                    for dirname, subdirs, files in self._osutils.walk(clone_dir):
+                      z.write(dirname)
+                      
+                      for filename in files:
+                          z.write(os.path.join(dirname, filename))
+                              
+                    z.close()
+              
         return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
