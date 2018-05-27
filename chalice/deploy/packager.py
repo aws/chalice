@@ -3,6 +3,7 @@ import hashlib
 import inspect
 import re
 import os
+import shutil
 import subprocess
 from email.parser import FeedParser
 from email.message import Message  # noqa
@@ -71,7 +72,7 @@ class LambdaDeploymentPackager(object):
     def create_deployment_package(self, project_dir, python_version,
                                   package_filename=None):
         # type: (str, str, Optional[str]) -> str
-        self._ui.write("Creating deployment package.")
+        self._ui.write("Creating deployment package.\n")
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
         deployment_package_filename = self.deployment_package_filename(
@@ -106,15 +107,7 @@ class LambdaDeploymentPackager(object):
                 self._osutils.remove_file(package_filename)
                 
                 os.system('chmod -R 777 {}'.format(clone_dir))
-                
-                with self._osutils.open_zip(package_filename, 'w', self._osutils.ZIP_DEFLATED) as z:
-                    for dirname, subdirs, files in self._osutils.walk(clone_dir):
-                      z.write(dirname)
-                      
-                      for filename in files:
-                          z.write(os.path.join(dirname, filename))
-                              
-                    z.close()
+                shutil.make_archive(package_filename[:-4], 'zip', clone_dir)
               
         return package_filename
 
