@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for generating python 3.6 pipelines
+  (`#858 <https://github.com/aws/chalice/pull/858>`)
+
+
 1.3.0
 =====
 
