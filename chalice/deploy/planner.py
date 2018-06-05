@@ -187,12 +187,17 @@ class PlanStage(object):
         # Make mypy happy, it complains if we don't "declare" this upfront.
         params = {}  # type: Dict[str, Any]
         varname = '%s_lambda_arn' % resource.resource_name
+        # Not sure the best way to express this via mypy, but we know
+        # that in the build stage we replace the deployment package
+        # name with the actual filename generated from the pip
+        # packager.  For now we resort to a cast.
+        filename = cast(str, resource.deployment_package.filename)
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,
                 'role_arn': role_arn,
                 'zip_contents': self._osutils.get_file_contents(
-                    resource.deployment_package.filename, binary=True),
+                    filename, binary=True),
                 'runtime': resource.runtime,
                 'handler': resource.handler,
                 'environment_variables': resource.environment_variables,
@@ -221,7 +226,7 @@ class PlanStage(object):
             'function_name': resource.function_name,
             'role_arn': role_arn,
             'zip_contents': self._osutils.get_file_contents(
-                resource.deployment_package.filename, binary=True),
+                filename, binary=True),
             'runtime': resource.runtime,
             'environment_variables': resource.environment_variables,
             'tags': resource.tags,

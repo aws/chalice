@@ -2,6 +2,7 @@ import os
 import copy
 
 from typing import Any, Dict, List, Set  # noqa
+from typing import cast
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
 from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
@@ -142,7 +143,9 @@ class SAMTemplateGenerator(object):
                 ],
             }
         else:
-            # resource is a PreCreatedIAMRole
+            # resource is a PreCreatedIAMRole.  This is the only other
+            # subclass of IAMRole.
+            role = cast(models.PreCreatedIAMRole, role)
             cfn_resource['Properties']['Role'] = role.role_arn
 
     def _generate_restapi(self, resource, template):

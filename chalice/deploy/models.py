@@ -1,4 +1,6 @@
 import enum
+from typing import List, Dict, Optional, Any, TypeVar, Union, Set  # noqa
+from typing import cast
 from attr import attrs, attrib, Factory
 
 
@@ -14,101 +16,108 @@ class RoleTraits(enum.Enum):
     VPC_NEEDED = 'vpc_needed'
 
 
+T = TypeVar('T')
+DV = Union[Placeholder, T]
+STR_MAP = Dict[str, str]
+
+
 @attrs
 class Plan(object):
-    instructions = attrib(default=Factory(list))
-    messages = attrib(default=Factory(dict))
+    instructions = attrib(default=Factory(list))  # type: List[Instruction]
+    messages = attrib(default=Factory(dict))      # type: Dict[int, str]
 
 
 @attrs(frozen=True)
 class APICall(Instruction):
-    method_name = attrib()
-    params = attrib()
-    output_var = attrib(default=None)
+    method_name = attrib()             # type: str
+    params = attrib()                  # type: Dict[str, Any]
+    output_var = attrib(default=None)  # type: Optional[str]
 
 
 @attrs(frozen=True)
 class StoreValue(Instruction):
-    name = attrib()
-    value = attrib()
+    name = attrib()   # type: str
+    value = attrib()  # type: Any
 
 
 @attrs(frozen=True)
 class CopyVariable(Instruction):
-    from_var = attrib()
-    to_var = attrib()
+    from_var = attrib()  # type: str
+    to_var = attrib()    # type: str
 
 
 @attrs(frozen=True)
 class RecordResource(Instruction):
-    resource_type = attrib()
-    resource_name = attrib()
-    name = attrib()
+    resource_type = attrib()  # type: str
+    resource_name = attrib()  # type: str
+    name = attrib()           # type: str
 
 
 @attrs(frozen=True)
 class RecordResourceVariable(RecordResource):
-    variable_name = attrib()
+    variable_name = attrib()  # type: str
 
 
 @attrs(frozen=True)
 class RecordResourceValue(RecordResource):
-    value = attrib()
+    value = attrib()  # type: Any
 
 
 @attrs(frozen=True)
 class JPSearch(Instruction):
-    expression = attrib()
-    input_var = attrib()
-    output_var = attrib()
+    expression = attrib()  # type: Any
+    input_var = attrib()   # type: Any
+    output_var = attrib()  # type: Any
 
 
 @attrs(frozen=True)
 class BuiltinFunction(Instruction):
-    function_name = attrib()
-    args = attrib()
-    output_var = attrib()
+    function_name = attrib()  # type: str
+    args = attrib()           # type: List[Any]
+    output_var = attrib()     # type: str
 
 
 class Model(object):
     def dependencies(self):
+        # type: () -> List[Model]
         return []
 
 
 @attrs
 class ManagedModel(Model):
-    resource_name = attrib()
+    resource_name = attrib()  # type: str
     # Subclasses must fill in this attribute.
-    resource_type = ''
+    resource_type = ''        # type: str
 
 
 @attrs
 class Application(Model):
-    stage = attrib()
-    resources = attrib()
+    stage = attrib()      # type: str
+    resources = attrib()  # type: List[Model]
 
     def dependencies(self):
+        # type: () -> List[Model]
         return self.resources
 
 
 @attrs
 class DeploymentPackage(Model):
-    filename = attrib()
+    filename = attrib()  # type: DV[str]
 
 
 @attrs
 class IAMPolicy(Model):
-    document = attrib()
+    document = attrib()  # type: DV[Dict[str, Any]]
 
 
 @attrs
 class FileBasedIAMPolicy(IAMPolicy):
-    filename = attrib()
+    filename = attrib()  # type: str
 
 
 @attrs
 class AutoGenIAMPolicy(IAMPolicy):
-    traits = attrib(default=Factory(set))
+    traits = attrib(default=Factory(set))  # type: Set[RoleTraits]
 
 
 @attrs
@@ -118,57 +127,61 @@ class IAMRole(Model):
 
 @attrs
 class PreCreatedIAMRole(IAMRole):
-    role_arn = attrib()
+    role_arn = attrib()  # type: str
 
 
 @attrs
 class ManagedIAMRole(IAMRole, ManagedModel):
     resource_type = 'iam_role'
-    role_name = attrib()
-    trust_policy = attrib()
-    policy = attrib()
+    role_name = attrib()     # type: str
+    trust_policy = attrib()  # type: Dict[str, Any]
+    policy = attrib()        # type: IAMPolicy
 
     def dependencies(self):
+        # type: () -> List[Model]
         return [self.policy]
 
 
 @attrs
 class LambdaFunction(ManagedModel):
     resource_type = 'lambda_function'
-    function_name = attrib()
-    deployment_package = attrib()
-    environment_variables = attrib()
-    runtime = attrib()
-    handler = attrib()
-    tags = attrib()
-    timeout = attrib()
-    memory_size = attrib()
-    role = attrib()
-    security_group_ids = attrib()
-    subnet_ids = attrib()
+    function_name = attrib()          # type: str
+    deployment_package = attrib()     # type: DeploymentPackage
+    environment_variables = attrib()  # type: STR_MAP
+    runtime = attrib()                # type: str
+    handler = attrib()                # type: str
+    tags = attrib()                   # type: STR_MAP
+    timeout = attrib()                # type: int
+    memory_size = attrib()            # type: int
+    role = attrib()                   # type: IAMRole
+    security_group_ids = attrib()     # type: List[str]
+    subnet_ids = attrib()             # type: List[str]
 
     def dependencies(self):
+        # type: () -> List[Model]
         return [self.role, self.deployment_package]
 
 
 @attrs
 class ScheduledEvent(ManagedModel):
     resource_type = 'scheduled_event'
-    rule_name = attrib()
-    schedule_expression = attrib()
-    lambda_function = attrib()
+    rule_name = attrib()            # type: str
+    schedule_expression = attrib()  # type: str
+    lambda_function = attrib()      # type: LambdaFunction
 
     def dependencies(self):
+        # type: () -> List[Model]
         return [self.lambda_function]
 
 
 @attrs
 class RestAPI(ManagedModel):
     resource_type = 'rest_api'
-    swagger_doc = attrib()
-    api_gateway_stage = attrib()
-    lambda_function = attrib()
-    authorizers = attrib(default=Factory(list))
+    swagger_doc = attrib()                       # type: DV[Dict[str, Any]]
+    api_gateway_stage = attrib()                 # type: str
+    lambda_function = attrib()                   # type: LambdaFunction
+    authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
 
     def dependencies(self):
-        return [self.lambda_function] + self.authorizers
+        # type: () -> List[Model]
+        return cast(List[Model], [self.lambda_function] + self.authorizers)
