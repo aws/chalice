@@ -205,7 +205,7 @@ def test_can_accept_multiple_connections(config, sample_app,
         response = local_server.make_call(requests.get, '/', port)
     except requests.exceptions.ReadTimeout:
         assert False, (
-            'Read timeout occured, the socket is blocking the next request '
+            'Read timeout occurred, the socket is blocking the next request '
             'from going though.'
         )
     assert response.status_code == 200
