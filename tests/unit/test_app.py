@@ -122,7 +122,7 @@ def auth_request():
 
 @pytest.mark.skipif(sys.version[0] == '2',
                     reason=('Test is irrelevant under python 2, since str and '
-                            'bytes are interchangable.'))
+                            'bytes are interchangeable.'))
 def test_invalid_binary_response_body_throws_value_error(sample_app):
     response = app.Response(
         status_code=200,
