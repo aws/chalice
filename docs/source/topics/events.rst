@@ -87,18 +87,16 @@ Here's an example:
 
 .. code-block:: python
 
-    import boto3
     from chalice import Chalice
 
     app = chalice.Chalice(app_name='s3eventdemo')
-    s3 = boto3.client('s3')
+    app.debug = True
 
     @app.on_s3_event(bucket='mybucket-name',
                      events=['s3:ObjectCreated:*'])
     def handle_s3_event(event):
-        # Download the newly created file locally.
-        s3.downlad_file(event.bucket, event.key, '/tmp/tempfile')
-        # Now we can process '/tmp/tempfile' however we want.
+        app.log.debug("Received event for bucket: %s, key: %s",
+                      event.bucket, event.key)
 
 In this example above, Chalice connects the S3 bucket to the
 ``handle_s3_event`` Lambda function such that whenver an object is uploaded
