@@ -8,6 +8,7 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 
 _INSTRUCTION_MSG = Union[models.Instruction, Tuple[models.Instruction, str]]
+_MARKED_RESOURCE = Dict[str, List[models.RecordResource]]
 
 
 class RemoteState(object):
@@ -85,22 +86,45 @@ class ResourceSweeper(object):
     def execute(self, plan, config):
         # type: (models.Plan, Config) -> None
         instructions = plan.instructions
-        marked = set(self._mark_resources(instructions))
+        marked = self._mark_resources(instructions)
         deployed = config.deployed_resources(config.chalice_stage)
         if deployed is not None:
-            deployed_resource_names = reversed(deployed.resource_names())
-            remaining = [
-                name for name in deployed_resource_names if name not in marked
-            ]
+            remaining = self._determine_remaining(plan, deployed, marked)
             self._plan_deletion(instructions, plan.messages,
                                 remaining, deployed)
 
+    def _determine_remaining(self, plan, deployed, marked):
+        # type: (models.Plan, DeployedResources, _MARKED_RESOURCE) -> List[str]
+        remaining = []
+        deployed_resource_names = reversed(deployed.resource_names())
+        for name in deployed_resource_names:
+            resource_values = deployed.resource_values(name)
+            if name not in marked:
+                remaining.append(name)
+            elif resource_values['resource_type'] == 's3_event':
+                # Special case, we have to check the resource values
+                # to see if they've changed.  For s3 events, the resource
+                # name is not tied to the bucket, which means if you change
+                # the bucket, the resource name will stay the same.
+                # So we match up the bucket referenced in the instruction
+                # and the bucket recorded in the deployed values match up.
+                # If they don't then we need to clean up the bucket config
+                # referenced in the deployed values.
+                bucket = [instruction for instruction in marked[name]
+                          if instruction.name == 'bucket' and
+                          isinstance(instruction,
+                                     models.RecordResourceValue)][0]
+                if bucket.value != resource_values['bucket']:
+                    remaining.append(name)
+        return remaining
+
     def _mark_resources(self, plan):
-        # type: (List[models.Instruction]) -> List[str]
-        marked = []  # type: List[str]
+        # type: (List[models.Instruction]) -> _MARKED_RESOURCE
+        marked = {}  # type: _MARKED_RESOURCE
         for instruction in plan:
             if isinstance(instruction, models.RecordResource):
-                marked.append(instruction.resource_name)
+                marked.setdefault(instruction.resource_name, []).append(
+                    instruction)
         return marked
 
     def _plan_deletion(self,
