@@ -263,8 +263,18 @@ class SAMTemplateGenerator(object):
         pass
 
     def _generate_precreatediamrole(self, resource, template):
-        # type: (models.DeploymentPackage, Dict[str, Any]) -> None
+        # type: (models.PreCreatedIAMRole, Dict[str, Any]) -> None
         pass
+
+    def _generate_s3bucketnotification(self, resource, template):
+        # type: (models.S3BucketNotification, Dict[str, Any]) -> None
+        message = (
+            "Unable to package chalice apps that @app.on_s3_event decorator. "
+            "CloudFormation does not support modifying the event "
+            "notifications of existing buckets. "
+            "You can deploy this app using `chalice deploy`."
+        )
+        raise NotImplementedError(message)
 
     def _default(self, resource, template):
         # type: (models.Model, Dict[str, Any]) -> None

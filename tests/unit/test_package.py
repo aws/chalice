@@ -361,3 +361,18 @@ class TestSAMTemplate(object):
         vpc_config = lambda_fns[0]['Properties']['VpcConfig']
         assert vpc_config['SubnetIds'] == ['sn1', 'sn2']
         assert vpc_config['SecurityGroupIds'] == ['sg1', 'sg2']
+
+    def test_helpful_error_message_on_s3_event(self, sample_app):
+        @sample_app.on_s3_event(bucket='foo')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        with pytest.raises(NotImplementedError) as excinfo:
+            self.generate_template(config, 'dev')
+        # Should mention the decorator name.
+        assert '@app.on_s3_event' in str(excinfo.value)
+        # Should mention you can use `chalice deploy`.
+        assert 'chalice deploy' in str(excinfo.value)
