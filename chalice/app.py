@@ -18,15 +18,15 @@ _PARAMS = re.compile(r'{\w+}')
 # on other parts of chalice so it can stay small and lightweight, with minimal
 # startup overhead.  This also means we need to handle py2/py3 compat issues
 # directly in this file instead of copying over compat.py
-if sys.version_info.major == 3:
-    from urllib.parse import unquote_plus  # pylint: disable=E0611,E0401
+try:
+    from urllib.parse import unquote_plus
 
     unquote_str = unquote_plus
 
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
-else:
+except ImportError:
     from urllib import unquote_plus
 
     # This is borrowed from botocore/compat.py
@@ -41,7 +41,7 @@ else:
         return unquote_plus(byte_string).decode(encoding)
     # In python 2 there is a base class for the string types that we can check
     # for. It was removed in python 3 so it will cause a name error.
-    _ANY_STRING = (basestring, bytes)  # noqa
+    _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
 
 
 def handle_decimals(obj):
