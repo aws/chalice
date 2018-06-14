@@ -1429,3 +1429,51 @@ def test_can_map_to_s3_event_object(sample_app):
     assert actual_event.bucket == 'mybucket'
     assert actual_event.key == 'hello-world.txt'
     assert actual_event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     'key': 'file+with+spaces',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event)
+    # We should urldecode the key name.
+    assert event.key == 'file with spaces'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_unicode_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     # This is u'\u2713'
+                     'key': '%E2%9C%93',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event)
+    # We should urldecode the key name.
+    assert event.key == u'\u2713'
+    assert event.bucket == u'mybucket'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event

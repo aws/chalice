@@ -11,25 +11,37 @@ from collections import defaultdict, Mapping
 
 
 __version__ = '1.3.0'
-
+_PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
-# startup overhead.
+# startup overhead.  This also means we need to handle py2/py3 compat issues
+# directly in this file instead of copying over compat.py
+if sys.version_info.major == 3:
+    from urllib.parse import unquote_plus  # pylint: disable=E0611,E0401
 
+    unquote_str = unquote_plus
 
-_PARAMS = re.compile(r'{\w+}')
-
-try:
-    # In python 2 there is a base class for the string types that
-    # we can check for. It was removed in python 3 so it will cause
-    # a name error.
-    _ANY_STRING = (basestring, bytes)
-except NameError:
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
+else:
+    from urllib import unquote_plus
+
+    # This is borrowed from botocore/compat.py
+    def unquote_str(value, encoding='utf-8'):
+        # In python2, unquote() gives us a string back that has the urldecoded
+        # bits, but not the unicode parts.  We need to decode this manually.
+        # unquote has special logic in which if it receives a unicode object it
+        # will decode it to latin1.  This is hard coded.  To avoid this, we'll
+        # encode the string with the passed in encoding before trying to
+        # unquote it.
+        byte_string = value.encode(encoding)
+        return unquote_plus(byte_string).decode(encoding)
+    # In python 2 there is a base class for the string types that we can check
+    # for. It was removed in python 3 so it will cause a name error.
+    _ANY_STRING = (basestring, bytes)
 
 
 def handle_decimals(obj):
@@ -409,22 +421,10 @@ class RouteEntry(object):
 class APIGateway(object):
 
     _DEFAULT_BINARY_TYPES = [
-        'application/octet-stream',
-        'application/x-tar',
-        'application/zip',
-        'audio/basic',
-        'audio/ogg',
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/wav',
-        'audio/webm',
-        'image/png',
-        'image/jpg',
-        'image/jpeg',
-        'image/gif',
-        'video/ogg',
-        'video/mpeg',
-        'video/webm',
+        'application/octet-stream', 'application/x-tar', 'application/zip',
+        'audio/basic', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
+        'audio/webm', 'image/png', 'image/jpg', 'image/jpeg', 'image/gif',
+        'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
     def __init__(self):
@@ -982,7 +982,7 @@ class S3Event(object):
     def __init__(self, event):
         s3 = event['Records'][0]['s3']
         self.bucket = s3['bucket']['name']
-        self.key = s3['object']['key']
+        self.key = unquote_str(s3['object']['key'])
         self._original_payload = event
 
     def to_dict(self):

@@ -779,6 +779,11 @@ Scheduled Events
    .. attribute:: key
 
       The S3 key name associated with the event.
+      The original key name in the S3 event payload
+      is URL encoded.  However, this ``key`` attribute automatically
+      URL decodes the key name for you.  If you need
+      access to the original URL encoded key name, you can
+      access it through the ``to_dict()`` method.
 
    .. method:: to_dict()
 
@@ -787,4 +792,7 @@ Scheduled Events
       access to the lambda event, for example if a
       new key is added to the lambda event that has not
       been mapped as an attribute to the ``S3Event``
-      object.
+      object.  Note that this event is not modified in any way.
+      This means that the key name of the S3 object is URL
+      encoded, which is the way that S3 sends this value
+      to Lambda.
