@@ -41,7 +41,7 @@ else:
         return unquote_plus(byte_string).decode(encoding)
     # In python 2 there is a base class for the string types that we can check
     # for. It was removed in python 3 so it will cause a name error.
-    _ANY_STRING = (basestring, bytes)
+    _ANY_STRING = (basestring, bytes)  # noqa
 
 
 def handle_decimals(obj):
