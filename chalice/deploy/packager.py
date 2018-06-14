@@ -3,6 +3,7 @@ import hashlib
 import inspect
 import re
 import subprocess
+import compileall
 from email.parser import FeedParser
 from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
@@ -469,6 +470,7 @@ class DependencyBuilder(object):
             zipfile_path = self._osutils.joinpath(src_dir, wheel.filename)
             self._osutils.extract_zipfile(zipfile_path, dst_dir)
             self._install_purelib_and_platlib(wheel, dst_dir)
+        compileall.compile_dir(dst_dir)
 
     def build_site_packages(self, requirements_filepath, target_directory):
         # type: (str, str) -> None
