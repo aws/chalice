@@ -11,25 +11,37 @@ from collections import defaultdict, Mapping
 
 
 __version__ = '1.3.0'
-
+_PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
-# startup overhead.
-
-
-_PARAMS = re.compile(r'{\w+}')
-
+# startup overhead.  This also means we need to handle py2/py3 compat issues
+# directly in this file instead of copying over compat.py
 try:
-    # In python 2 there is a base class for the string types that
-    # we can check for. It was removed in python 3 so it will cause
-    # a name error.
-    _ANY_STRING = (basestring, bytes)
-except NameError:
+    from urllib.parse import unquote_plus
+
+    unquote_str = unquote_plus
+
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
+except ImportError:
+    from urllib import unquote_plus
+
+    # This is borrowed from botocore/compat.py
+    def unquote_str(value, encoding='utf-8'):
+        # In python2, unquote() gives us a string back that has the urldecoded
+        # bits, but not the unicode parts.  We need to decode this manually.
+        # unquote has special logic in which if it receives a unicode object it
+        # will decode it to latin1.  This is hard coded.  To avoid this, we'll
+        # encode the string with the passed in encoding before trying to
+        # unquote it.
+        byte_string = value.encode(encoding)
+        return unquote_plus(byte_string).decode(encoding)
+    # In python 2 there is a base class for the string types that we can check
+    # for. It was removed in python 3 so it will cause a name error.
+    _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
 
 
 def handle_decimals(obj):
@@ -409,22 +421,10 @@ class RouteEntry(object):
 class APIGateway(object):
 
     _DEFAULT_BINARY_TYPES = [
-        'application/octet-stream',
-        'application/x-tar',
-        'application/zip',
-        'audio/basic',
-        'audio/ogg',
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/wav',
-        'audio/webm',
-        'image/png',
-        'image/jpg',
-        'image/jpeg',
-        'image/gif',
-        'video/ogg',
-        'video/mpeg',
-        'video/webm',
+        'application/octet-stream', 'application/x-tar', 'application/zip',
+        'audio/basic', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
+        'audio/webm', 'image/png', 'image/jpg', 'image/jpeg', 'image/gif',
+        'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
     def __init__(self):
@@ -450,6 +450,7 @@ class Chalice(object):
         self.log = logging.getLogger(self.app_name)
         self.builtin_auth_handlers = []
         self.event_sources = []
+        self.s3_events = []
         self.pure_lambda_functions = []
         if env is None:
             env = os.environ
@@ -520,6 +521,27 @@ class Chalice(object):
             self.builtin_auth_handlers.append(auth_config)
             return ChaliceAuthorizer(auth_name, auth_func, auth_config)
         return _register_authorizer
+
+    def on_s3_event(self, bucket, events=None,
+                    prefix=None, suffix=None, name=None):
+        def _register_s3_event(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            trigger_events = events
+            if trigger_events is None:
+                trigger_events = ['s3:ObjectCreated:*']
+            s3_event = S3EventConfig(
+                name=handler_name,
+                bucket=bucket,
+                events=trigger_events,
+                prefix=prefix,
+                suffix=suffix,
+                handler_string='app.%s' % event_func.__name__,
+            )
+            self.s3_events.append(s3_event)
+            return S3EventHandler(event_func)
+        return _register_s3_event
 
     def schedule(self, expression, name=None):
         def _register_schedule(event_func):
@@ -932,3 +954,36 @@ class LambdaFunction(object):
 
     def __call__(self, event, context):
         return self.func(event, context)
+
+
+class S3EventConfig(object):
+    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
+        self.name = name
+        self.bucket = bucket
+        self.events = events
+        self.prefix = prefix
+        self.suffix = suffix
+        self.handler_string = handler_string
+
+
+class S3EventHandler(object):
+    def __init__(self, handler):
+        self.handler = handler
+
+    def __call__(self, event, context):
+        event_obj = self._convert_to_obj(event)
+        return self.handler(event_obj)
+
+    def _convert_to_obj(self, event_dict):
+        return S3Event(event_dict)
+
+
+class S3Event(object):
+    def __init__(self, event):
+        s3 = event['Records'][0]['s3']
+        self.bucket = s3['bucket']['name']
+        self.key = unquote_str(s3['object']['key'])
+        self._original_payload = event
+
+    def to_dict(self):
+        return self._original_payload

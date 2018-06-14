@@ -1331,3 +1331,219 @@ def test_can_delete_rule(stubbed_session):
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.delete_rule('rule-name')
     stubbed_session.verify_stubs()
+
+
+def test_can_connect_bucket_to_lambda_new_config(stubbed_session):
+    s3 = stubbed_session.stub('s3')
+    s3.get_bucket_notification_configuration(Bucket='mybucket').returns({
+        'ResponseMetadata': {},
+    })
+    s3.put_bucket_notification_configuration(
+        Bucket='mybucket',
+        NotificationConfiguration={
+            'LambdaFunctionConfigurations': [{
+                'LambdaFunctionArn': 'function-arn',
+                'Events': ['s3:ObjectCreated:*'],
+            }]
+        }
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.connect_s3_bucket_to_lambda(
+        'mybucket', 'function-arn', ['s3:ObjectCreated:*'])
+    stubbed_session.verify_stubs()
+
+
+def test_can_connect_bucket_with_prefix_and_suffix(stubbed_session):
+    s3 = stubbed_session.stub('s3')
+    s3.get_bucket_notification_configuration(Bucket='mybucket').returns({})
+    s3.put_bucket_notification_configuration(
+        Bucket='mybucket',
+        NotificationConfiguration={
+            'LambdaFunctionConfigurations': [{
+                'LambdaFunctionArn': 'function-arn',
+                'Filter': {
+                    'Key': {
+                        'FilterRules': [
+                            {
+                                'Name': 'Prefix',
+                                'Value': 'images/'
+                            },
+                            {
+                                'Name': 'Suffix',
+                                'Value': '.jpg'
+                            }
+                        ]
+                    }
+                },
+                'Events': ['s3:ObjectCreated:*'],
+            }]
+        }
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.connect_s3_bucket_to_lambda(
+        'mybucket', 'function-arn', ['s3:ObjectCreated:*'],
+        prefix='images/', suffix='.jpg',
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_can_merge_s3_notification_config(stubbed_session):
+    s3 = stubbed_session.stub('s3')
+    s3.get_bucket_notification_configuration(Bucket='mybucket').returns({
+        'LambdaFunctionConfigurations': [
+            {'Events': ['s3:ObjectCreated:*'],
+             'LambdaFunctionArn': 'other-function-arn'}],
+    })
+    s3.put_bucket_notification_configuration(
+        Bucket='mybucket',
+        NotificationConfiguration={
+            'LambdaFunctionConfigurations': [
+                # The existing function arn remains untouched.
+                {'LambdaFunctionArn': 'other-function-arn',
+                 'Events': ['s3:ObjectCreated:*']},
+                # This is the new function arn that we've injected.
+                {'LambdaFunctionArn': 'function-arn',
+                 'Events': ['s3:ObjectCreated:*']},
+            ]
+        }
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.connect_s3_bucket_to_lambda(
+        'mybucket', 'function-arn', ['s3:ObjectCreated:*'])
+    stubbed_session.verify_stubs()
+
+
+def test_can_replace_existing_config(stubbed_session):
+    s3 = stubbed_session.stub('s3')
+    s3.get_bucket_notification_configuration(Bucket='mybucket').returns({
+        'LambdaFunctionConfigurations': [
+            {'Events': ['s3:ObjectRemoved:*'],
+             'LambdaFunctionArn': 'function-arn'}],
+    })
+    s3.put_bucket_notification_configuration(
+        Bucket='mybucket',
+        NotificationConfiguration={
+            'LambdaFunctionConfigurations': [
+                # Note the event is replaced from ObjectRemoved
+                # to ObjectCreated.
+                {'LambdaFunctionArn': 'function-arn',
+                 'Events': ['s3:ObjectCreated:*']},
+            ]
+        }
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.connect_s3_bucket_to_lambda(
+        'mybucket', 'function-arn', ['s3:ObjectCreated:*'])
+    stubbed_session.verify_stubs()
+
+
+def test_add_permission_for_s3_event(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.get_policy(FunctionName='function-arn').returns(
+        {'Policy': '{}'})
+    lambda_client.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='function-arn',
+        StatementId=stub.ANY,
+        Principal='s3.amazonaws.com',
+        SourceArn='arn:aws:s3:::mybucket',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_permission_for_s3_event(
+        'mybucket', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_skip_if_permission_already_granted_to_s3(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    policy = {
+        'Id': 'default',
+        'Statement': [{
+            'Action': 'lambda:InvokeFunction',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': 'arn:aws:s3:::mybucket',
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 's3.amazonaws.com'},
+            'Resource': 'resource-arn',
+            'Sid': 'statement-id',
+        }],
+        'Version': '2012-10-17'
+    }
+    lambda_client.get_policy(
+        FunctionName='function-arn').returns({'Policy': json.dumps(policy)})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_permission_for_s3_event(
+        'mybucket', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_can_disconnect_bucket_to_lambda_merged(stubbed_session):
+    s3 = stubbed_session.stub('s3')
+    s3.get_bucket_notification_configuration(Bucket='mybucket').returns({
+        'LambdaFunctionConfigurations': [
+            {'Events': ['s3:ObjectRemoved:*'],
+             'LambdaFunctionArn': 'function-arn-1'},
+            {'Events': ['s3:ObjectCreated:*'],
+             'LambdaFunctionArn': 'function-arn-2'}
+        ],
+        'ResponseMetadata': {},
+    })
+    s3.put_bucket_notification_configuration(
+        Bucket='mybucket',
+        NotificationConfiguration={
+            'LambdaFunctionConfigurations': [
+                {'Events': ['s3:ObjectCreated:*'],
+                 'LambdaFunctionArn': 'function-arn-2'}
+            ],
+        },
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.disconnect_s3_bucket_from_lambda(
+        'mybucket', 'function-arn-1')
+    stubbed_session.verify_stubs()
+
+
+def test_can_disconnect_bucket_to_lambda_not_exists(stubbed_session):
+    s3 = stubbed_session.stub('s3')
+    s3.get_bucket_notification_configuration(Bucket='mybucket').returns({
+        'LambdaFunctionConfigurations': [
+            {'Events': ['s3:ObjectRemoved:*'],
+             'LambdaFunctionArn': 'function-arn-1'},
+            {'Events': ['s3:ObjectCreated:*'],
+             'LambdaFunctionArn': 'function-arn-2'}
+        ],
+    })
+    s3.put_bucket_notification_configuration(
+        Bucket='mybucket',
+        NotificationConfiguration={
+            'LambdaFunctionConfigurations': [
+                {'Events': ['s3:ObjectRemoved:*'],
+                 'LambdaFunctionArn': 'function-arn-1'},
+                {'Events': ['s3:ObjectCreated:*'],
+                 'LambdaFunctionArn': 'function-arn-2'}
+            ],
+        },
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.disconnect_s3_bucket_from_lambda('mybucket', 'some-other-arn')
+    stubbed_session.verify_stubs()

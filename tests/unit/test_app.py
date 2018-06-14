@@ -1373,3 +1373,107 @@ def test_handles_binary_responses(body, content_type):
     assert serialized['isBase64Encoded']
     assert isinstance(serialized['body'], six.string_types)
     assert isinstance(base64.b64decode(serialized['body']), bytes)
+
+
+def test_can_create_s3_event_handler(sample_app):
+    @sample_app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        pass
+
+    assert len(sample_app.s3_events) == 1
+    event = sample_app.s3_events[0]
+    assert event.name == 'handler'
+    assert event.bucket == 'mybucket'
+    assert event.events == ['s3:ObjectCreated:*']
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_to_s3_event_object(sample_app):
+    @sample_app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        return event
+
+    s3_event = {
+        'Records': [
+            {'awsRegion': 'us-west-2',
+             'eventName': 'ObjectCreated:Put',
+             'eventSource': 'aws:s3',
+             'eventTime': '2018-05-22T04:41:23.823Z',
+             'eventVersion': '2.0',
+             'requestParameters': {'sourceIPAddress': '174.127.235.55'},
+             'responseElements': {
+                'x-amz-id-2': 'request-id-2',
+                'x-amz-request-id': 'request-id-1'},
+             's3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                     'ownerIdentity': {
+                         'principalId': 'ABCD'
+                     }
+                 },
+                 'configurationId': 'config-id',
+                 'object': {
+                     'eTag': 'd41d8cd98f00b204e9800998ecf8427e',
+                     'key': 'hello-world.txt',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+                 's3SchemaVersion': '1.0'
+             },
+             'userIdentity': {'principalId': 'AWS:XYZ'}
+             }
+        ]
+    }
+    actual_event = handler(s3_event, context=None)
+    assert actual_event.bucket == 'mybucket'
+    assert actual_event.key == 'hello-world.txt'
+    assert actual_event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     'key': 'file+with+spaces',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event)
+    # We should urldecode the key name.
+    assert event.key == 'file with spaces'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_unicode_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     # This is u'\u2713'
+                     'key': '%E2%9C%93',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event)
+    # We should urldecode the key name.
+    assert event.key == u'\u2713'
+    assert event.bucket == u'mybucket'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event

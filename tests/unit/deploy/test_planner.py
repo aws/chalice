@@ -284,6 +284,55 @@ class TestPlanLambdaFunction(BasePlannerTests):
         assert role_arn.name == 'myrole-dev_role_arn'
 
 
+class TestPlanS3Events(BasePlannerTests):
+    def test_can_plan_s3_event(self):
+        function = create_function_resource('function_name')
+        bucket_event = models.S3BucketNotification(
+            resource_name='function_name-s3event',
+            bucket='mybucket',
+            events=['s3:ObjectCreated:*'],
+            prefix=None,
+            suffix=None,
+            lambda_function=function,
+        )
+        plan = self.determine_plan(bucket_event)
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='add_permission_for_s3_event',
+                params={
+                    'bucket': 'mybucket',
+                    'function_arn': Variable('function_name_lambda_arn'),
+                },
+            )
+        )
+        self.assert_apicall_equals(
+            plan[1],
+            models.APICall(
+                method_name='connect_s3_bucket_to_lambda',
+                params={
+                    'bucket': 'mybucket',
+                    'function_arn': Variable('function_name_lambda_arn'),
+                    'events': ['s3:ObjectCreated:*'],
+                    'prefix': None,
+                    'suffix': None,
+                },
+            )
+        )
+        assert plan[2] == models.RecordResourceValue(
+            resource_type='s3_event',
+            resource_name='function_name-s3event',
+            name='bucket',
+            value='mybucket',
+        )
+        assert plan[3] == models.RecordResourceVariable(
+            resource_type='s3_event',
+            resource_name='function_name-s3event',
+            name='lambda_arn',
+            variable_name='function_name_lambda_arn',
+        )
+
+
 class TestPlanScheduledEvent(BasePlannerTests):
     def test_can_plan_scheduled_event(self):
         function = create_function_resource('function_name')
@@ -624,8 +673,9 @@ class TestRemoteState(object):
             self.remote_state.resource_exists(foo)
 
 
-class TestUnreferencedResourcePlanner(object):
+class TestUnreferencedResourcePlanner(BasePlannerTests):
     def setup_method(self):
+        super(TestUnreferencedResourcePlanner, self).setup_method()
         self.sweeper = ResourceSweeper()
 
     def execute(self, plan, config):
@@ -777,6 +827,25 @@ class TestUnreferencedResourcePlanner(object):
             )
         ]
 
+    def test_can_delete_s3_event(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'test-s3-event',
+                'resource_type': 's3_event',
+                'bucket': 'mybucket',
+                'lambda_arn': 'lambda_arn',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='disconnect_s3_bucket_from_lambda',
+                params={'bucket': 'mybucket', 'function_arn': 'lambda_arn'},
+            )
+        ]
+
     def test_can_delete_rest_api(self):
         plan = []
         deployed = {
@@ -794,3 +863,53 @@ class TestUnreferencedResourcePlanner(object):
                 params={'rest_api_id': 'my_rest_api_id'},
             )
         ]
+
+    def test_can_handle_when_resource_changes_values(self):
+        plan = self.determine_plan(
+            models.S3BucketNotification(
+                resource_name='test-s3-event',
+                bucket='NEWBUCKET',
+                events=['s3:ObjectCreated:*'],
+                prefix=None,
+                suffix=None,
+                lambda_function=create_function_resource('function_name'),
+            )
+        )
+        deployed = {
+            'resources': [{
+                'name': 'test-s3-event',
+                'resource_type': 's3_event',
+                'bucket': 'OLDBUCKET',
+                'lambda_arn': 'lambda_arn',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan[-1] == models.APICall(
+            method_name='disconnect_s3_bucket_from_lambda',
+            params={'bucket': 'OLDBUCKET', 'function_arn': 'lambda_arn'},
+        )
+
+    def test_no_sweeping_when_resource_value_unchanged(self):
+        plan = self.determine_plan(
+            models.S3BucketNotification(
+                resource_name='test-s3-event',
+                bucket='EXISTING-BUCKET',
+                events=['s3:ObjectCreated:*'],
+                prefix=None,
+                suffix=None,
+                lambda_function=create_function_resource('function_name'),
+            )
+        )
+        deployed = {
+            'resources': [{
+                'name': 'test-s3-event',
+                'resource_type': 's3_event',
+                'bucket': 'EXISTING-BUCKET',
+                'lambda_arn': 'lambda_arn',
+            }]
+        }
+        config = FakeConfig(deployed)
+        original_plan = plan[:]
+        self.execute(plan, config)
+        assert plan == original_plan

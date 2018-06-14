@@ -723,6 +723,109 @@ class TypedAWSClient(object):
             SourceArn=rule_arn,
         )
 
+    def connect_s3_bucket_to_lambda(self, bucket, function_arn, events,
+                                    prefix=None, suffix=None):
+        # type: (str, str, List[str], _OPT_STR, _OPT_STR) -> None
+        """Configure S3 bucket to invoke a lambda function.
+
+        The S3 bucket must already have permission to invoke the
+        lambda function before you call this function, otherwise
+        the service will return an error.  You can add permissions
+        by using the ``add_permission_for_s3_event`` below.  The
+        ``events`` param matches the event strings supported by the
+        service.
+
+        This method also only supports a single prefix/suffix for now,
+        which is what's offered in the Lambda console.
+
+        """
+        s3 = self._client('s3')
+        existing_config = s3.get_bucket_notification_configuration(
+            Bucket=bucket)
+        # Because we're going to PUT this config back to S3, we need
+        # to remove `ResponseMetadata` because that's added in botocore
+        # and isn't a param of the put_bucket_notification_configuration.
+        existing_config.pop('ResponseMetadata', None)
+        existing_lambda_config = existing_config.get(
+            'LambdaFunctionConfigurations', [])
+        single_config = {
+            'LambdaFunctionArn': function_arn, 'Events': events
+        }  # type: Dict[str, Any]
+        filter_rules = []
+        if prefix is not None:
+            filter_rules.append({'Name': 'Prefix', 'Value': prefix})
+        if suffix is not None:
+            filter_rules.append({'Name': 'Suffix', 'Value': suffix})
+        if filter_rules:
+            single_config['Filter'] = {'Key': {'FilterRules': filter_rules}}
+        new_config = self._merge_s3_notification_config(existing_lambda_config,
+                                                        single_config)
+        existing_config['LambdaFunctionConfigurations'] = new_config
+        s3.put_bucket_notification_configuration(
+            Bucket=bucket,
+            NotificationConfiguration=existing_config,
+        )
+
+    def _merge_s3_notification_config(self, existing_config, new_config):
+        # type: (List[Dict[str, Any]], Dict[str, Any]) -> List[Dict[str, Any]]
+        # Add the new_config to the existing_config.
+        # We have to handle two cases:
+        # 1. There's an existing config associated with the lambda arn.
+        #    In this case we replace the specific lambda config with the
+        #    new_config.
+        # 2. The new_config isn't part of the existing_config.  In
+        #    this case we just add it to the end of the existing config.
+        final_config = []
+        added_config = False
+        for config in existing_config:
+            if config['LambdaFunctionArn'] != new_config['LambdaFunctionArn']:
+                final_config.append(config)
+            else:
+                # Case 1, replace the existing config.
+                final_config.append(new_config)
+                added_config = True
+        if not added_config:
+            # Case 2, add it to the end of the existing list of configs.
+            final_config.append(new_config)
+        return final_config
+
+    def add_permission_for_s3_event(self, bucket, function_arn):
+        # type: (str, str) -> None
+        lambda_client = self._client('lambda')
+        policy = self.get_function_policy(function_arn)
+        bucket_arn = 'arn:aws:s3:::%s' % bucket
+        if self._policy_gives_access(policy, bucket_arn, 's3'):
+            return
+        random_id = self._random_id()
+        # We should be checking if the permission already exists and only
+        # adding it if necessary.
+        lambda_client.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_arn,
+            StatementId=random_id,
+            Principal='s3.amazonaws.com',
+            SourceArn=bucket_arn,
+        )
+
+    def disconnect_s3_bucket_from_lambda(self, bucket, function_arn):
+        # type: (str, str) -> None
+        s3 = self._client('s3')
+        existing_config = s3.get_bucket_notification_configuration(
+            Bucket=bucket)
+        existing_config.pop('ResponseMetadata', None)
+        existing_lambda_config = existing_config.get(
+            'LambdaFunctionConfigurations', [])
+        new_lambda_config = []
+        for config in existing_lambda_config:
+            if config['LambdaFunctionArn'] == function_arn:
+                continue
+            new_lambda_config.append(config)
+        existing_config['LambdaFunctionConfigurations'] = new_lambda_config
+        s3.put_bucket_notification_configuration(
+            Bucket=bucket,
+            NotificationConfiguration=existing_config,
+        )
+
     def _random_id(self):
         # type: () -> str
         return str(uuid.uuid4())

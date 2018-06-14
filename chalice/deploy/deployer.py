@@ -400,6 +400,10 @@ class ApplicationGraphBuilder(object):
             rest_api = self._create_rest_api_model(
                 config, deployment, config.chalice_app, stage_name)
             resources.append(rest_api)
+        for s3_event in config.chalice_app.s3_events:
+            bucket_notification = self._create_bucket_notification(
+                config, deployment, s3_event, stage_name)
+            resources.append(bucket_notification)
         return models.Application(stage_name, resources)
 
     def _create_rest_api_model(self,
@@ -606,6 +610,29 @@ class ApplicationGraphBuilder(object):
             return
         if function.security_group_ids and function.subnet_ids:
             policy.traits.add(models.RoleTraits.VPC_NEEDED)
+
+    def _create_bucket_notification(
+        self,
+        config,      # type: Config
+        deployment,  # type: models.DeploymentPackage
+        s3_event,    # type: app.S3EventConfig
+        stage_name,  # type: str
+    ):
+        # type: (...) -> models.S3BucketNotification
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=s3_event.name,
+            handler_name=s3_event.handler_string, stage_name=stage_name
+        )
+        resource_name = s3_event.name + '-s3event'
+        s3_bucket = models.S3BucketNotification(
+            resource_name=resource_name,
+            bucket=s3_event.bucket,
+            prefix=s3_event.prefix,
+            suffix=s3_event.suffix,
+            events=s3_event.events,
+            lambda_function=lambda_function,
+        )
+        return s3_bucket
 
 
 class DependencyBuilder(object):
