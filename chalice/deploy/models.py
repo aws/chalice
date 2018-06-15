@@ -156,6 +156,7 @@ class LambdaFunction(ManagedModel):
     role = attrib()                   # type: IAMRole
     security_group_ids = attrib()     # type: List[str]
     subnet_ids = attrib()             # type: List[str]
+    reserved_concurrency = attrib()   # type: int
 
     def dependencies(self):
         # type: () -> List[Model]

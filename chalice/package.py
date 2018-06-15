@@ -130,6 +130,12 @@ class SAMTemplateGenerator(object):
                 }
             }  # type: Dict[str, Dict[str, List[str]]]
             lambdafunction_definition['Properties'].update(vpc_config)
+        if resource.reserved_concurrency is not None:
+            reserved_concurrency_config = {
+                'ReservedConcurrentExecutions': resource.reserved_concurrency
+            }
+            lambdafunction_definition['Properties'].update(
+                reserved_concurrency_config)
         resources[cfn_name] = lambdafunction_definition
         self._add_iam_role(resource, resources[cfn_name])
 

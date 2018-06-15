@@ -10,7 +10,7 @@ you can use to control what happens when you ``chalice deploy``::
     $ tree -a
     .
     ├── .chalice
-    │   └── config.json
+    │   └── config.json
     ├── app.py
     └── requirements.txt
 
@@ -122,6 +122,13 @@ be checked.
   In order for this value to take effect, you must also provide the
   ``subnet_ids`` value.
 
+* ``reserved_concurrency`` - An integer representing each function's reserved
+  concurrency.  This value can be provided per stage as well as per Lambda
+  function. AWS Lambda reserves this value of concurrency to each lambda
+  deployed in this stage. If the value is set to 0, invocations to this function
+  are blocked. If the value is unset, there will be no reserved concurrency
+  allocations. For more information, see `AWS Documentation on managing
+  concurrency`_.
 
 Lambda Specific Configuration
 -----------------------------
@@ -161,6 +168,7 @@ that can be applied per function:
 * ``tags``
 * ``subnet_ids``
 * ``security_group_ids``
+* ``reserved_concurrency``
 
 
 See the :ref:`stage-config` section above for a description
@@ -350,3 +358,4 @@ We can accomplish all this with this config file::
   }
 
 .. _AWS Lambda VPC documentation: https://docs.aws.amazon.com/lambda/latest/dg/vpc.html#vpc-configuring
+.. _AWS Documentation on managing concurrency: https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html
