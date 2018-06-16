@@ -5,6 +5,7 @@ Contains commands for deploying chalice.
 """
 import logging
 import os
+import platform
 import sys
 import tempfile
 import shutil
@@ -57,8 +58,16 @@ def create_new_project_skeleton(project_name, profile=None):
         f.write(GITIGNORE)
 
 
+def getSystemInfo():
+    pythonVersion = '{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2])
+    platformInfo = '{}/{}'.format(platform.system(), platform.release())
+    systemInfo =  "python {}, {}".format(pythonVersion, platformInfo)
+    if not(pythonVersion.startswith('2.7') or pythonVersion.startswith('3.6')):
+        systemInfo += '\nWarning: Not using the recommended python version. Recommended versions are 2.7 and 3.6'
+    return systemInfo
+
 @click.group()
-@click.version_option(version=chalice_version, message='%(prog)s %(version)s')
+@click.version_option(version=chalice_version, message='%(prog)s %(version)s, {}'.format(getSystemInfo()))
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
 @click.option('--debug/--no-debug',
