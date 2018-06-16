@@ -1,5 +1,6 @@
 import mock
 import pytest
+import re
 
 from chalice import cli
 from chalice.cli.factory import CLIFactory
@@ -18,3 +19,19 @@ def test_cannot_run_local_mode_with_trailing_slash_route():
     with pytest.raises(ValueError) as e:
         cli.run_local_server(factory, 'localhost', 8000, local_stage_test)
     assert str(e.value) == 'Route cannot end with a trailing slash: foobar/'
+
+
+def test_get_system_info():
+    system_info = cli.get_system_info()
+    assert re.match(r'python\s*([\d.]+),?\s*(.*)/(.*)', system_info)
+
+
+def test_get_system_info_with_explicit_argument():
+    system_info = cli.get_system_info('2.7.12')
+    assert re.match(r'python\s*([\d.]+),?\s*(.*)/(.*)$', system_info)
+
+
+def test_get_system_info_with_warning_with_explicit_argument():
+    system_info = cli.get_system_info('3.5.2')
+    assert re.match(r'python\s*([\d.]+),?\s*(.*)/(.*)(\r\n|\r|\n)Warning:(.*)',
+                    system_info)

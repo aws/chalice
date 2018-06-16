@@ -58,16 +58,29 @@ def create_new_project_skeleton(project_name, profile=None):
         f.write(GITIGNORE)
 
 
-def getSystemInfo():
-    pythonVersion = '{}.{}.{}'.format(sys.version_info[0], sys.version_info[1], sys.version_info[2])
-    platformInfo = '{}/{}'.format(platform.system(), platform.release())
-    systemInfo =  "python {}, {}".format(pythonVersion, platformInfo)
-    if not(pythonVersion.startswith('2.7') or pythonVersion.startswith('3.6')):
-        systemInfo += '\nWarning: Not using the recommended python version. Recommended versions are 2.7 and 3.6'
-    return systemInfo
+def get_system_info(python_version_arg=None):
+    # type: (Optional[str]) -> str
+    if python_version_arg:
+        python_version = python_version_arg
+    else:
+        python_version = "{}.{}.{}".format(sys.version_info[0],
+                                           sys.version_info[1],
+                                           sys.version_info[2])
+    platform_system = platform.system()
+    platform_release = platform.release()
+    platform_info = "{}/{}".format(platform_system, platform_release)
+    system_info = "python {}, {}".format(python_version, platform_info)
+    if not(python_version.startswith("2.7.") or
+            python_version.startswith("3.6.")):
+        system_info += "\nWarning: Not using the recommended python version. "
+        system_info += "Recommended versions are 2.7 and 3.6"
+    return system_info
+
 
 @click.group()
-@click.version_option(version=chalice_version, message='%(prog)s %(version)s, {}'.format(getSystemInfo()))
+@click.version_option(version=chalice_version,
+                      message='%(prog)s %(version)s, {}'
+                      .format(get_system_info()))
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
 @click.option('--debug/--no-debug',
