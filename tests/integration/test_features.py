@@ -390,7 +390,7 @@ def test_to_dict_is_also_json_serializable(smoke_test_app):
     assert 'headers' in smoke_test_app.get_json('/todict')
 
 
-def test_multfile_support(smoke_test_app):
+def test_multifile_support(smoke_test_app):
     response = smoke_test_app.get_json('/multifile')
     assert response == {'message': 'success'}
 
