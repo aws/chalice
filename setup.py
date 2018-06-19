@@ -15,7 +15,6 @@ install_requires = [
     'attrs==17.4.0',
     'enum34==1.1.6',
     'jmespath>=0.9.3,<1.0.0',
-    'watchdog==0.8.3',
 ]
 
 setup(
@@ -28,6 +27,9 @@ setup(
     url='https://github.com/aws/chalice',
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
+    extras_require={
+        'file-watcher': ['watchdog==0.8.3'],
+    },
     license="Apache License 2.0",
     package_data={'chalice': ['*.json']},
     include_package_data=True,
