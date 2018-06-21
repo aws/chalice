@@ -125,10 +125,10 @@ be checked.
 * ``reserved_concurrency`` - An integer representing each function's reserved
   concurrency.  This value can be provided per stage as well as per Lambda
   function. AWS Lambda reserves this value of concurrency to each lambda
-  deployed in this stage. If the value is set to 0, invocations to this function
-  are blocked. If the value is unset, there will be no reserved concurrency
-  allocations. For more information, see `AWS Documentation on managing
-  concurrency`_.
+  deployed in this stage. If the value is set to 0, invocations to this
+  function are blocked. If the value is unset, there will be no reserved
+  concurrency allocations. For more information, see `AWS Documentation on
+  managing concurrency`_.
 
 Lambda Specific Configuration
 -----------------------------

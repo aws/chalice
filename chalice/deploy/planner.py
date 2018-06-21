@@ -224,6 +224,17 @@ class PlanStage(object):
         # name with the actual filename generated from the pip
         # packager.  For now we resort to a cast.
         filename = cast(str, resource.deployment_package.filename)
+        concurrency_method_name = ''
+        concurrency_params = {'function_name': resource.resource_name}
+        concurrency_varname = '%s_lambda_arn' % resource.resource_name
+        if resource.reserved_concurrency is None:
+            concurrency_method_name = 'delete_function_concurrency'
+        else:
+            concurrency_method_name = 'put_function_concurrency'
+            concurrency_params = {
+                'reserved_concurrent_executions': resource.reserved_concurrency
+            }
+
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,
@@ -245,6 +256,12 @@ class PlanStage(object):
                     params=params,
                     output_var=varname,
                 ), "Creating lambda function: %s\n" % resource.function_name),
+                (models.APICall(
+                    method_name=concurrency_method_name,
+                    params=concurrency_params,
+                    output_var=concurrency_varname,
+                ), "Updating lambda function concurrency limit: %s\n" %
+                    resource.function_name),
                 models.RecordResourceVariable(
                     resource_type='lambda_function',
                     resource_name=resource.resource_name,
@@ -273,6 +290,12 @@ class PlanStage(object):
                 params=params,
                 output_var='update_function_result',
             ), "Updating lambda function: %s\n" % resource.function_name),
+            (models.APICall(
+                method_name=concurrency_method_name,
+                params=concurrency_params,
+                output_var=concurrency_varname,
+            ), "Updating lambda function concurrency limit: %s\n" %
+                resource.function_name),
             models.JPSearch(
                 'FunctionArn',
                 input_var='update_function_result',
