@@ -84,6 +84,7 @@ class TestSAMTemplate(object):
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            reserved_concurrency=None,
         )
 
     def test_sam_generates_sam_template_basic(self, sample_app):
@@ -135,6 +136,7 @@ class TestSAMTemplate(object):
             ),
             security_group_ids=[],
             subnet_ids=[],
+            reserved_concurrency=None,
         )
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]
@@ -173,6 +175,13 @@ class TestSAMTemplate(object):
             'SubnetIds': ['sn1', 'sn2'],
         }
 
+    def test_adds_reserved_concurrency_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.reserved_concurrency = 5
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['ReservedConcurrentExecutions'] == 5
+
     def test_duplicate_resource_name_raises_error(self):
         one = self.lambda_function()
         two = self.lambda_function()
@@ -195,6 +204,7 @@ class TestSAMTemplate(object):
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            reserved_concurrency=None,
         )
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]

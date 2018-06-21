@@ -19,6 +19,7 @@ def lambda_function():
         role=models.PreCreatedIAMRole(role_arn='foobar'),
         security_group_ids=[],
         subnet_ids=[],
+        reserved_concurrency=None,
     )
 
 
