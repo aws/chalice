@@ -961,6 +961,28 @@ class TestUpdateLambdaFunction(object):
         stubbed_session.verify_stubs()
 
 
+class TestPutFunctionConcurrency(object):
+    def test_put_function_concurrency(self, stubbed_session):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.put_function_concurrency(
+            FunctionName='name', ReservedConcurrentExecutions=5).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.put_function_concurrency('name', 5)
+        stubbed_session.verify_stubs()
+
+
+class TestDeleteFunctionConcurrency(object):
+    def test_delete_function_concurrency(self, stubbed_session):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.delete_function_concurrency(
+            FunctionName='name').returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_function_concurrency('name')
+        stubbed_session.verify_stubs()
+
+
 class TestCanDeleteRolePolicy(object):
     def test_can_delete_role_policy(self, stubbed_session):
         stubbed_session.stub('iam').delete_role_policy(
