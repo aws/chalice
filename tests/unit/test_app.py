@@ -1477,3 +1477,47 @@ def test_s3_event_urldecodes_unicode_keys():
     assert event.bucket == u'mybucket'
     # But the key should remain unchanged in to_dict().
     assert event.to_dict() == s3_event
+
+
+def test_can_create_sns_handler(sample_app):
+    @sample_app.on_sns_message(topic_name='MyTopic')
+    def handler(event):
+        pass
+
+    assert len(sample_app.lambda_event_handlers) == 1
+    event = sample_app.lambda_event_handlers[0]
+    assert event.name == 'handler'
+    assert event.topic_name == 'MyTopic'
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_sns_event(sample_app):
+    @sample_app.on_sns_message(topic_name='MyTopic')
+    def handler(event):
+        return event
+
+    sns_event = {'Records': [{
+        'EventSource': 'aws:sns',
+        'EventSubscriptionArn': 'arn:subscription-arn',
+        'EventVersion': '1.0',
+        'Sns': {
+            'Message': 'This is a raw message',
+            'MessageAttributes': {
+                'AttributeKey': {
+                    'Type': 'String',
+                    'Value': 'AttributeValue'
+                }
+            },
+            'MessageId': 'abcdefgh-51e4-5ae2-9964-b296c8d65d1a',
+            'Signature': 'signature',
+            'SignatureVersion': '1',
+            'SigningCertUrl': 'https://sns.us-west-2.amazonaws.com/cert.pen',
+            'Subject': 'ThisIsTheSubject',
+            'Timestamp': '2018-06-26T19:41:38.695Z',
+            'TopicArn': 'arn:aws:sns:us-west-2:12345:ConsoleTestTopic',
+            'Type': 'Notification',
+            'UnsubscribeUrl': 'https://unsubscribe-url/'}}]}
+    actual_event = handler(sns_event, context=None)
+    assert actual_event.message == 'This is a raw message'
+    assert actual_event.subject == 'ThisIsTheSubject'
+    assert actual_event.to_dict() == sns_event

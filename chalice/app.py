@@ -1,4 +1,5 @@
 """Chalice app and routing code."""
+# pylint: disable=too-many-lines
 import re
 import sys
 import os
@@ -543,6 +544,20 @@ class Chalice(object):
             return S3EventHandler(event_func)
         return _register_s3_event
 
+    def on_sns_message(self, topic_name, name=None):
+        def _register_sns_message(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            sns_config = SNSEventConfig(
+                name=handler_name,
+                handler_string='app.%s' % event_func.__name__,
+                topic_name=topic_name,
+            )
+            self.lambda_event_handlers.append(sns_config)
+            return SNSMessageHandler(event_func)
+        return _register_sns_message
+
     def schedule(self, expression, name=None):
         def _register_schedule(event_func):
             handler_name = name
@@ -984,6 +999,36 @@ class S3Event(object):
         self.bucket = s3['bucket']['name']
         self.key = unquote_str(s3['object']['key'])
         self._original_payload = event
+
+    def to_dict(self):
+        return self._original_payload
+
+
+class SNSEventConfig(object):
+    def __init__(self, name, handler_string, topic_name):
+        self.name = name
+        self.handler_string = handler_string
+        self.topic_name = topic_name
+
+
+class SNSMessageHandler(object):
+    def __init__(self, handler):
+        self.handler = handler
+
+    def __call__(self, event, context):
+        event_obj = self._convert_to_obj(event)
+        return self.handler(event_obj)
+
+    def _convert_to_obj(self, event):
+        return SNSEvent(event)
+
+
+class SNSEvent(object):
+    def __init__(self, event):
+        self._original_payload = event
+        first_record = event['Records'][0]
+        self.message = first_record['Sns']['Message']
+        self.subject = first_record['Sns']['Subject']
 
     def to_dict(self):
         return self._original_payload

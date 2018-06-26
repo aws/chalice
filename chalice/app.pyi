@@ -216,3 +216,9 @@ class S3EventConfig(object):
     prefix = ... # type: str
     suffix = ... # type: str
     handler_string = ... # type: str
+
+
+class SNSEventConfig(object):
+    name = ... # type: str
+    handler_string = ... # type: str
+    topic_name = ... # type: str
