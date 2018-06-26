@@ -400,7 +400,7 @@ class ApplicationGraphBuilder(object):
             rest_api = self._create_rest_api_model(
                 config, deployment, config.chalice_app, stage_name)
             resources.append(rest_api)
-        for s3_event in config.chalice_app.s3_events:
+        for s3_event in config.chalice_app.lambda_event_handlers:
             bucket_notification = self._create_bucket_notification(
                 config, deployment, s3_event, stage_name)
             resources.append(bucket_notification)

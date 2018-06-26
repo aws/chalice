@@ -450,7 +450,7 @@ class Chalice(object):
         self.log = logging.getLogger(self.app_name)
         self.builtin_auth_handlers = []
         self.event_sources = []
-        self.s3_events = []
+        self.lambda_event_handlers = []
         self.pure_lambda_functions = []
         if env is None:
             env = os.environ
@@ -539,7 +539,7 @@ class Chalice(object):
                 suffix=suffix,
                 handler_string='app.%s' % event_func.__name__,
             )
-            self.s3_events.append(s3_event)
+            self.lambda_event_handlers.append(s3_event)
             return S3EventHandler(event_func)
         return _register_s3_event
 

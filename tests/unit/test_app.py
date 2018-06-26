@@ -1380,8 +1380,8 @@ def test_can_create_s3_event_handler(sample_app):
     def handler(event):
         pass
 
-    assert len(sample_app.s3_events) == 1
-    event = sample_app.s3_events[0]
+    assert len(sample_app.lambda_event_handlers) == 1
+    event = sample_app.lambda_event_handlers[0]
     assert event.name == 'handler'
     assert event.bucket == 'mybucket'
     assert event.events == ['s3:ObjectCreated:*']
