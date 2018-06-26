@@ -588,6 +588,56 @@ class TypedAWSClient(object):
             sdkType=sdk_type)
         return response['body']
 
+    def subscribe_function_to_topic(self, topic_arn, function_arn):
+        # type: (str, str) -> str
+        sns_client = self._client('sns')
+        response = sns_client.subscribe(
+            TopicArn=topic_arn, Protocol='lambda',
+            Endpoint=function_arn)
+        return response['SubscriptionArn']
+
+    def unsubscribe_from_topic(self, subscription_arn):
+        # type: (str) -> None
+        sns_client = self._client('sns')
+        sns_client.unsubscribe(SubscriptionArn=subscription_arn)
+
+    def verify_sns_subscription_current(self, subscription_arn, topic_name,
+                                        function_arn):
+        # type: (str, str, str) -> bool
+        """Verify a subscription arn matches the topic and function name.
+
+        Given a subscription arn, verify that the associated topic name
+        and function arn match up to the parameters passed in.
+
+        """
+        sns_client = self._client('sns')
+        try:
+            attributes = sns_client.get_subscription_attributes(
+                SubscriptionArn=subscription_arn)['Attributes']
+            return (
+                # Splitting on ':' is safe because topic names can't have
+                # a ':' char.
+                attributes['TopicArn'].rsplit(':', 1)[1] == topic_name and
+                attributes['Endpoint'] == function_arn
+            )
+        except sns_client.exceptions.NotFoundException:
+            return False
+
+    def add_permission_for_sns_topic(self, topic_arn, function_arn):
+        # type: (str, str) -> None
+        lambda_client = self._client('lambda')
+        policy = self.get_function_policy(function_arn)
+        if self._policy_gives_access(policy, topic_arn, service_name='sns'):
+            return
+        random_id = self._random_id()
+        lambda_client.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_arn,
+            StatementId=random_id,
+            Principal='sns.amazonaws.com',
+            SourceArn=topic_arn,
+        )
+
     def add_permission_for_apigateway(self, function_name, region_name,
                                       account_id, rest_api_id, random_id=None):
         # type: (str, str, str, str, Optional[str]) -> None
@@ -797,8 +847,6 @@ class TypedAWSClient(object):
         if self._policy_gives_access(policy, bucket_arn, 's3'):
             return
         random_id = self._random_id()
-        # We should be checking if the permission already exists and only
-        # adding it if necessary.
         lambda_client.add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
