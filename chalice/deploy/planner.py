@@ -129,6 +129,14 @@ class ResourceSweeper(object):
                                      models.RecordResourceValue)][0]
                 if bucket.value != resource_values['bucket']:
                     remaining.append(name)
+            elif resource_values['resource_type'] == 'sns_event':
+                existing_topic = resource_values['topic']
+                referenced_topic = [instruction for instruction in marked[name]
+                                    if instruction.name == 'topic' and
+                                    isinstance(instruction,
+                                               models.RecordResourceValue)][0]
+                if referenced_topic.value != existing_topic:
+                    remaining.append(name)
         return remaining
 
     def _mark_resources(self, plan):
@@ -185,6 +193,13 @@ class ResourceSweeper(object):
                 apicall = models.APICall(
                     method_name='disconnect_s3_bucket_from_lambda',
                     params={'bucket': bucket, 'function_arn': function_arn}
+                )
+                plan.append(apicall)
+            elif resource_values['resource_type'] == 'sns_event':
+                subscription_arn = resource_values['subscription_arn']
+                apicall = models.APICall(
+                    method_name='unsubscribe_from_topic',
+                    params={'subscription_arn': subscription_arn},
                 )
                 plan.append(apicall)
 

@@ -1084,3 +1084,76 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         original_plan = plan[:]
         self.execute(plan, config)
         assert plan == original_plan
+
+    def test_can_delete_sns_subscription(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'handler-sns-subscription',
+                'topic': 'mytopic',
+                'resource_type': 'sns_event',
+                'lambda_arn': 'arn:lambda',
+                'subscription_arn': 'arn:aws:subscribe',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='unsubscribe_from_topic',
+                params={'subscription_arn': 'arn:aws:subscribe'},
+            )
+        ]
+
+    def test_no_deletion_when_no_changes(self):
+        plan = self.determine_plan(
+            models.SNSLambdaSubscription(
+                resource_name='handler-sns-subscription',
+                topic='mytopic',
+                lambda_function=create_function_resource('function_name')
+            )
+        )
+        deployed = {
+            'resources': [{
+                'name': 'handler-sns-subscription',
+                'topic': 'mytopic',
+                'resource_type': 'sns_event',
+                'lambda_arn': 'arn:lambda',
+                'subscription_arn': 'arn:aws:subscribe',
+            }]
+        }
+        config = FakeConfig(deployed)
+        original_plan = plan[:]
+        self.execute(plan, config)
+        # We shouldn't have added anything to the plan.
+        assert plan == original_plan
+
+    def test_handles_when_topic_name_change(self):
+        # So let's say we subscribed to a topic 'old-topic'
+        # and deployed our app:
+        deployed = {
+            'resources': [{
+                'name': 'handler-sns-subscription',
+                'topic': 'old-topic',
+                'resource_type': 'sns_event',
+                'lambda_arn': 'arn:lambda',
+                'subscription_arn': 'arn:aws:subscribe',
+            }]
+        }
+        # Now we update our app and change the topic param
+        # to 'new-topic'
+        plan = self.determine_plan(
+            models.SNSLambdaSubscription(
+                resource_name='handler-sns-subscription',
+                topic='new-topic',
+                lambda_function=create_function_resource('function_name')
+            )
+        )
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        # Then we should unsubscribe from the old-topic because it's
+        # no longer referenced in our app.
+        assert plan[-1] == models.APICall(
+            method_name='unsubscribe_from_topic',
+            params={'subscription_arn': 'arn:aws:subscribe'},
+        )
