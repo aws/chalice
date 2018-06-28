@@ -400,11 +400,26 @@ class ApplicationGraphBuilder(object):
             rest_api = self._create_rest_api_model(
                 config, deployment, config.chalice_app, stage_name)
             resources.append(rest_api)
-        for s3_event in config.chalice_app.lambda_event_handlers:
-            bucket_notification = self._create_bucket_notification(
-                config, deployment, s3_event, stage_name)
-            resources.append(bucket_notification)
+        event_resources = self._create_lambda_event_resources(
+            config, deployment, stage_name)
+        resources.extend(event_resources)
         return models.Application(stage_name, resources)
+
+    def _create_lambda_event_resources(self, config, deployment, stage_name):
+        # type: (Config, models.DeploymentPackage, str) -> List[models.Model]
+        resources = []  # type: List[models.Model]
+        for event_handler in config.chalice_app.lambda_event_handlers:
+            if isinstance(event_handler, app.S3EventConfig):
+                bucket_notification = self._create_bucket_notification(
+                    config, deployment, event_handler, stage_name)
+                resources.append(bucket_notification)
+            elif isinstance(event_handler, app.SNSEventConfig):
+                resources.append(
+                    self._create_sns_subscription(
+                        config, deployment, event_handler, stage_name,
+                    )
+                )
+        return resources
 
     def _create_rest_api_model(self,
                                config,        # type: Config
@@ -633,6 +648,26 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
         )
         return s3_bucket
+
+    def _create_sns_subscription(
+        self,
+        config,      # type: Config
+        deployment,  # type: models.DeploymentPackage
+        sns_config,  # type: app.SNSEventConfig
+        stage_name,  # type: str
+    ):
+        # type: (...) -> models.SNSLambdaSubscription
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=sns_config.name,
+            handler_name=sns_config.handler_string, stage_name=stage_name
+        )
+        resource_name = sns_config.name + '-sns-subscription'
+        sns_subscription = models.SNSLambdaSubscription(
+            resource_name=resource_name,
+            topic=sns_config.topic_name,
+            lambda_function=lambda_function,
+        )
+        return sns_subscription
 
 
 class DependencyBuilder(object):

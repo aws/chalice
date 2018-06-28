@@ -295,6 +295,17 @@ def s3_event_app():
 
 
 @fixture
+def sns_event_app():
+    app = Chalice('sns-event')
+
+    @app.on_sns_message(topic_name='mytopic')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def mock_client():
     return mock.Mock(spec=TypedAWSClient)
 
@@ -591,6 +602,21 @@ class TestApplicationGraphBuilder(object):
         assert s3_event.bucket == 'mybucket'
         assert s3_event.events == ['s3:ObjectCreated:*']
         lambda_function = s3_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_sns_event_handler(self, sns_event_app):
+        config = self.create_config(sns_event_app,
+                                    app_name='s3-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        sns_event = application.resources[0]
+        assert isinstance(sns_event, models.SNSLambdaSubscription)
+        assert sns_event.resource_name == 'handler-sns-subscription'
+        assert sns_event.topic == 'mytopic'
+        lambda_function = sns_event.lambda_function
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 
