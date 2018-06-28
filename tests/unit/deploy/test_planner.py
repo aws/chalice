@@ -520,6 +520,132 @@ class TestPlanRestAPI(BasePlannerTests):
         ]
 
 
+class TestPlanSNSSubscription(BasePlannerTests):
+    def test_can_plan_sns_subscription(self):
+        function = create_function_resource('function_name')
+        sns_subscription = models.SNSLambdaSubscription(
+            resource_name='function_name-sns-subscription',
+            topic='mytopic',
+            lambda_function=function
+        )
+        plan = self.determine_plan(sns_subscription)
+        plan_parse_arn = plan[:4]
+        assert plan_parse_arn == [
+            models.BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn'),
+            models.JPSearch(
+                expression='account_id',
+                input_var='parsed_lambda_arn',
+                output_var='account_id'),
+            models.JPSearch(
+                expression='region',
+                input_var='parsed_lambda_arn',
+                output_var='region_name'),
+            models.StoreValue(
+                name='function_name-sns-subscription_topic_arn',
+                value=StringFormat(
+                    "arn:aws:sns:{region_name}:{account_id}:mytopic",
+                    variables=['region_name', 'account_id'],
+                )
+            ),
+        ]
+        topic_arn_var = Variable("function_name-sns-subscription_topic_arn")
+        assert plan[4:] == [
+            models.APICall(
+                method_name='add_permission_for_sns_topic',
+                params={
+                    'function_arn': Variable("function_name_lambda_arn"),
+                    'topic_arn': topic_arn_var,
+                },
+                output_var=None
+            ),
+            models.APICall(
+                method_name='subscribe_function_to_topic',
+                params={
+                    'function_arn': Variable("function_name_lambda_arn"),
+                    'topic_arn': topic_arn_var,
+                },
+                output_var='function_name-sns-subscription_subscription_arn'
+            ),
+            models.RecordResourceValue(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='topic',
+                value='mytopic'),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='lambda_arn',
+                variable_name='function_name_lambda_arn'
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='subscription_arn',
+                variable_name='function_name-sns-subscription_subscription_arn'
+            )
+        ]
+
+    def test_sns_subscription_exists_is_noop_for_planner(self):
+        function = create_function_resource('function_name')
+        sns_subscription = models.SNSLambdaSubscription(
+            resource_name='function_name-sns-subscription',
+            topic='mytopic',
+            lambda_function=function
+        )
+        self.remote_state.declare_resource_exists(
+            sns_subscription,
+            topic='mytopic',
+            resource_type='sns_event',
+            lambda_arn='arn:lambda',
+            subscription_arn='arn:aws:subscribe',
+        )
+        plan = self.determine_plan(sns_subscription)
+        plan_parse_arn = plan[:4]
+        assert plan_parse_arn == [
+            models.BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn'),
+            models.JPSearch(
+                expression='account_id',
+                input_var='parsed_lambda_arn',
+                output_var='account_id'),
+            models.JPSearch(
+                expression='region',
+                input_var='parsed_lambda_arn',
+                output_var='region_name'),
+            models.StoreValue(
+                name='function_name-sns-subscription_topic_arn',
+                value=StringFormat(
+                    "arn:aws:sns:{region_name}:{account_id}:mytopic",
+                    variables=['region_name', 'account_id'],
+                )
+            ),
+        ]
+        assert plan[4:] == [
+            models.RecordResourceValue(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='topic',
+                value='mytopic'),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='lambda_arn',
+                variable_name='function_name_lambda_arn'
+            ),
+            models.RecordResourceValue(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='subscription_arn',
+                value='arn:aws:subscribe',
+            )
+        ]
+
+
 class TestRemoteState(object):
     def setup_method(self):
         self.client = mock.Mock(spec=TypedAWSClient)
@@ -671,6 +797,51 @@ class TestRemoteState(object):
         foo = Foo(resource_name='myfoo')
         with pytest.raises(ValueError):
             self.remote_state.resource_exists(foo)
+
+    @pytest.mark.parametrize(
+        'resource_topic,deployed_topic,resource_exists,expected_result', [
+            ('mytopic', 'mytopic', True, True),
+            ('mytopic-new', 'mytopic-old', False, False),
+        ]
+    )
+    def test_sns_subscription_exists(self, resource_topic, deployed_topic,
+                                     resource_exists, expected_result):
+        sns_subscription = models.SNSLambdaSubscription(
+            topic=resource_topic, resource_name='handler-sns-subscription',
+            lambda_function=None
+        )
+        deployed_resources = {
+            'resources': [{
+                'name': 'handler-sns-subscription',
+                'topic': deployed_topic,
+                'resource_type': 'sns_event',
+                'lambda_arn': 'arn:lambda',
+                'subscription_arn': 'arn:aws:subscribe',
+            }]
+        }
+        self.client.verify_sns_subscription_current.return_value = \
+            resource_exists
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert (
+            remote_state.resource_exists(sns_subscription) == expected_result
+        )
+        self.client.verify_sns_subscription_current.assert_called_with(
+            'arn:aws:subscribe',
+            topic_name=resource_topic,
+            function_arn='arn:lambda',
+        )
+
+    def test_sns_subscription_not_in_deployed_values(self):
+        sns_subscription = models.SNSLambdaSubscription(
+            topic='mytopic', resource_name='handler-sns-subscription',
+            lambda_function=None
+        )
+        deployed_resources = {'resources': []}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert not remote_state.resource_exists(sns_subscription)
+        assert not self.client.verify_sns_subscription_current.called
 
 
 class TestUnreferencedResourcePlanner(BasePlannerTests):
