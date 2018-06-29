@@ -246,8 +246,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
 
         assert list(self.last_plan.messages.values()) == [
             'Creating lambda function: appname-dev-function_name\n',
-            'Updating lambda function concurrency limit:'
-            ' appname-dev-function_name\n',
         ]
 
     def test_can_update_lambda_function_code(self):
@@ -289,8 +287,6 @@ class TestPlanLambdaFunction(BasePlannerTests):
 
         assert list(self.last_plan.messages.values()) == [
             'Updating lambda function: appname-dev-function_name\n',
-            'Updating lambda function concurrency limit:'
-            ' appname-dev-function_name\n',
         ]
 
     def test_can_create_function_with_reserved_concurrency(self):

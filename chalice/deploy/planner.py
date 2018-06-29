@@ -224,20 +224,28 @@ class PlanStage(object):
         # name with the actual filename generated from the pip
         # packager.  For now we resort to a cast.
         filename = cast(str, resource.deployment_package.filename)
-        concurrency_method_name = ''
 
-        concurrency_params = {}  # type: Dict[str, Any]
-        concurrency_params['function_name'] = resource.function_name
         if resource.reserved_concurrency is None:
-            concurrency_method_name = 'delete_function_concurrency'
+            concurrency_api_call = models.APICall(
+                method_name='delete_function_concurrency',
+                params={'function_name': resource.function_name},
+                output_var='reserved_concurrency_result'
+            )
         else:
-            concurrency_method_name = 'put_function_concurrency'
-            concurrency_params.update({
-                'reserved_concurrent_executions': resource.reserved_concurrency
-            })
+            concurrency = resource.reserved_concurrency
+            concurrency_api_call = (
+                models.APICall(
+                    method_name='put_function_concurrency',
+                    params={
+                        'function_name': resource.function_name,
+                        'reserved_concurrent_executions': concurrency,
+                    },
+                    output_var='reserved_concurrency_result'),
+                "Updating lambda function concurrency limit: %s\n"
+                % resource.function_name
+            )
 
         api_calls = []  # type: List[_INSTRUCTION_MSG]
-
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,
@@ -300,14 +308,7 @@ class PlanStage(object):
                     variable_name=varname,
                 )
             ])
-
-        api_calls.append((models.APICall(
-            method_name=concurrency_method_name,
-            params=concurrency_params,
-            output_var='reserved_concurrency_result',
-        ), "Updating lambda function concurrency limit: %s\n" %
-            resource.function_name))
-
+        api_calls.append(concurrency_api_call)
         return api_calls
 
     def _plan_managediamrole(self, resource):
