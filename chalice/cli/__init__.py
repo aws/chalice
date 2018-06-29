@@ -5,6 +5,7 @@ Contains commands for deploying chalice.
 """
 import logging
 import os
+import platform
 import sys
 import tempfile
 import shutil
@@ -57,8 +58,21 @@ def create_new_project_skeleton(project_name, profile=None):
         f.write(GITIGNORE)
 
 
+def get_system_info():
+    # type: () -> str
+    python_info = "python {}.{}.{}".format(sys.version_info[0],
+                                           sys.version_info[1],
+                                           sys.version_info[2])
+    platform_system = platform.system().lower()
+    platform_release = platform.release()
+    platform_info = "{} {}".format(platform_system, platform_release)
+    return "{}, {}".format(python_info, platform_info)
+
+
 @click.group()
-@click.version_option(version=chalice_version, message='%(prog)s %(version)s')
+@click.version_option(version=chalice_version,
+                      message='%(prog)s %(version)s, {}'
+                      .format(get_system_info()))
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
 @click.option('--debug/--no-debug',
