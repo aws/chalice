@@ -276,6 +276,27 @@ class SAMTemplateGenerator(object):
         )
         raise NotImplementedError(message)
 
+    def _generate_snslambdasubscription(self, resource, template):
+        # type: (models.SNSLambdaSubscription, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        sns_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        function_cfn['Properties']['Events'] = {
+            sns_cfn_name: {
+                'Type': 'SNS',
+                'Properties': {
+                    'Topic': {
+                        'Fn::Sub': (
+                            'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:%s' %
+                            resource.topic
+                        )
+                    }
+                }
+            }
+        }
+
     def _default(self, resource, template):
         # type: (models.Model, Dict[str, Any]) -> None
         raise NotImplementedError(resource)
