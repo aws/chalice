@@ -215,7 +215,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_sns_message(topic_name, name=None)
+   .. method:: on_sns_message(topic, name=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever an SNS message is published to the specified topic.
@@ -235,7 +235,7 @@ Chalice
               app.log.info("SNS subject: %s", event.subject)
               app.log.info("SNS message: %s", event.message)
 
-      :param topic_name: The name of the SNS topic you want to subscribe to.
+      :param topic: The name of the SNS topic you want to subscribe to.
         This is the name of the topic, not the topic ARN.
 
       :param name: The name of the function to use.  This name is combined
@@ -832,7 +832,7 @@ Scheduled Events
 
    .. code-block:: python
 
-      @app.on_sns_message(topic_name='mytopic')
+      @app.on_sns_message(topic='mytopic')
       def event_handler(event: SNSEvent):
           app.log.info("Message received with subject: %s, message: %s",
                        event.subject, event.message)

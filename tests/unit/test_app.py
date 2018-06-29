@@ -1480,19 +1480,19 @@ def test_s3_event_urldecodes_unicode_keys():
 
 
 def test_can_create_sns_handler(sample_app):
-    @sample_app.on_sns_message(topic_name='MyTopic')
+    @sample_app.on_sns_message(topic='MyTopic')
     def handler(event):
         pass
 
     assert len(sample_app.lambda_event_handlers) == 1
     event = sample_app.lambda_event_handlers[0]
     assert event.name == 'handler'
-    assert event.topic_name == 'MyTopic'
+    assert event.topic == 'MyTopic'
     assert event.handler_string == 'app.handler'
 
 
 def test_can_map_sns_event(sample_app):
-    @sample_app.on_sns_message(topic_name='MyTopic')
+    @sample_app.on_sns_message(topic='MyTopic')
     def handler(event):
         return event
 

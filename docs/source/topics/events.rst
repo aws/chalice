@@ -167,7 +167,7 @@ We'll update the ``app.py`` file to use the ``on_sns_message`` decorator:
     app = chalice.Chalice(app_name='chalice-sns-demo')
     app.debug = True
 
-    @app.on_sns_message(topic_name='my-demo-topic')
+    @app.on_sns_message(topic='my-demo-topic')
     def handle_sns_message(event):
         app.log.debug("Received message with subject: %s, message: %s",
                       event.subject, event.message)

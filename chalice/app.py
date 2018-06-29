@@ -544,7 +544,7 @@ class Chalice(object):
             return S3EventHandler(event_func)
         return _register_s3_event
 
-    def on_sns_message(self, topic_name, name=None):
+    def on_sns_message(self, topic, name=None):
         def _register_sns_message(event_func):
             handler_name = name
             if handler_name is None:
@@ -552,7 +552,7 @@ class Chalice(object):
             sns_config = SNSEventConfig(
                 name=handler_name,
                 handler_string='app.%s' % event_func.__name__,
-                topic_name=topic_name,
+                topic=topic,
             )
             self.lambda_event_handlers.append(sns_config)
             return SNSMessageHandler(event_func)
@@ -1005,10 +1005,10 @@ class S3Event(object):
 
 
 class SNSEventConfig(object):
-    def __init__(self, name, handler_string, topic_name):
+    def __init__(self, name, handler_string, topic):
         self.name = name
         self.handler_string = handler_string
-        self.topic_name = topic_name
+        self.topic = topic
 
 
 class SNSMessageHandler(object):

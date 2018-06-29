@@ -664,7 +664,7 @@ class ApplicationGraphBuilder(object):
         resource_name = sns_config.name + '-sns-subscription'
         sns_subscription = models.SNSLambdaSubscription(
             resource_name=resource_name,
-            topic=sns_config.topic_name,
+            topic=sns_config.topic,
             lambda_function=lambda_function,
         )
         return sns_subscription

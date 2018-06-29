@@ -298,7 +298,7 @@ def s3_event_app():
 def sns_event_app():
     app = Chalice('sns-event')
 
-    @app.on_sns_message(topic_name='mytopic')
+    @app.on_sns_message(topic='mytopic')
     def handler(event):
         pass
 

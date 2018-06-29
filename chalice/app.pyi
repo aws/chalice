@@ -221,4 +221,4 @@ class S3EventConfig(object):
 class SNSEventConfig(object):
     name = ... # type: str
     handler_string = ... # type: str
-    topic_name = ... # type: str
+    topic = ... # type: str
