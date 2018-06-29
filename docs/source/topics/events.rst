@@ -122,4 +122,91 @@ configuration needed for the ``handle_s3_event`` Lambda function.
 The function you decorate must accept a single argument,
 which will be of type :class:`S3Event`.
 
+.. _sns-events:
+
+SNS Events
+==========
+
+You can configure a lambda function to be automatically invoked whenever
+something publishes to an SNS topic.  Chalice will automatically handle
+creating the lambda function, subscribing the lambda function to the
+SNS topic, and modifying the lambda function policy to allow SNS to invoke
+the function.
+
+To configure this, you just need the name of an existing SNS topic you'd
+like to subscribe to.  The SNS topic must already exist.
+
+Below is an example of how to set this up.  The example uses boto3 to
+create the SNS topic.  If you don't have boto3 installed in your virtual
+environment, be sure to install it with::
+
+    $ pip install boto3
+
+First, we'll create an SNS topic using boto3.
+
+::
+
+    $ python
+    >>> import boto3
+    >>> sns = boto3.client('sns')
+    >>> sns.create_topic(Name='my-demo-topic')
+    {'TopicArn': 'arn:aws:sns:us-west-2:12345:my-demo-topic',
+     'ResponseMetadata': {}}
+
+Next, we'll create our chalice app::
+
+    $ chalice new-project chalice-demo-sns
+    $ cd chalice-demo-sns/
+
+We'll update the ``app.py`` file to use the ``on_sns_message`` decorator:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = chalice.Chalice(app_name='chalice-sns-demo')
+    app.debug = True
+
+    @app.on_sns_message(topic_name='my-demo-topic')
+    def handle_sns_message(event):
+        app.log.debug("Received message with subject: %s, message: %s",
+                      event.subject, event.message)
+
+We can now deploy our chalice app::
+
+    $ chalice deploy
+    Creating deployment package.
+    Creating IAM role: chalice-demo-sns-dev
+    Creating lambda function: chalice-demo-sns-dev-handle_sns_message
+    Subscribing chalice-demo-sns-dev-handle_sns_message to SNS topic my-demo-topic
+    Resources deployed:
+      - Lambda ARN: arn:aws:lambda:us-west-2:123:function:...
+
+And now we can test our app by publishing a few SNS message to our topic.
+We'll do this using boto3.  In the example below, we're using ``list_topics()``
+to find the ARN associated with our topic name before calling the ``publish()``
+method.
+
+::
+
+    $ python
+    >>> import boto3
+    >>> sns = boto3.client('sns')
+    >>> topic_arn = [t['TopicArn'] for t in sns.list_topics()['Topics']
+    ...              if t['TopicArn'].endswith(':my-demo-topic')][0]
+    >>> sns.publish(Message='TestMessage1', Subject='TestSubject1',
+    ...             TopicArn=topic_arn)
+    {'MessageId': '12345', 'ResponseMetadata': {}}
+    >>> sns.publish(Message='TestMessage2', Subject='TestSubject2',
+    ...             TopicArn=topic_arn)
+    {'MessageId': '54321', 'ResponseMetadata': {}}
+
+To verify our function was called correctly, we can use the ``chalice logs``
+command::
+
+    $ chalice logs -n handle_sns_message
+    2018-06-28 17:49:30.513000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject1, message: TestMessage1
+    2018-06-28 17:49:40.391000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject2, message: TestMessage2
+
+
 .. _event notifications: https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
