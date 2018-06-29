@@ -41,6 +41,7 @@ def create_function_resource(name, function_name=None,
         role=role,
         security_group_ids=[],
         subnet_ids=[],
+        reserved_concurrency=None,
     )
 
 
@@ -214,7 +215,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
         function = create_function_resource('function_name')
         self.remote_state.declare_no_resources_exists()
         plan = self.determine_plan(function)
-        expected = models.APICall(
+        expected = [models.APICall(
             method_name='create_function',
             params={
                 'function_name': 'appname-dev-function_name',
@@ -229,10 +230,22 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'security_group_ids': [],
                 'subnet_ids': [],
             },
-        )
-        self.assert_apicall_equals(plan[0], expected)
+        ),
+            models.APICall(
+            method_name='delete_function_concurrency',
+            params={
+                'function_name': 'appname-dev-function_name',
+            },
+            output_var='reserved_concurrency_result',
+        )]
+
+        # create_function
+        self.assert_apicall_equals(plan[0], expected[0])
+        # delete_function_concurrency
+        self.assert_apicall_equals(plan[2], expected[1])
+
         assert list(self.last_plan.messages.values()) == [
-            'Creating lambda function: appname-dev-function_name\n'
+            'Creating lambda function: appname-dev-function_name\n',
         ]
 
     def test_can_update_lambda_function_code(self):
@@ -255,13 +268,66 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'subnet_ids': [],
         }
         expected_params = dict(memory_size=256, **existing_params)
-        expected = models.APICall(
+        expected = [models.APICall(
             method_name='update_function',
             params=expected_params,
-        )
-        self.assert_apicall_equals(plan[0], expected)
+        ),
+            models.APICall(
+            method_name='delete_function_concurrency',
+            params={
+                'function_name': 'appname-dev-function_name',
+            },
+            output_var='reserved_concurrency_result',
+        )]
+
+        # update_function
+        self.assert_apicall_equals(plan[0], expected[0])
+        # delete_function_concurrency
+        self.assert_apicall_equals(plan[3], expected[1])
+
         assert list(self.last_plan.messages.values()) == [
-            'Updating lambda function: appname-dev-function_name\n'
+            'Updating lambda function: appname-dev-function_name\n',
+        ]
+
+    def test_can_create_function_with_reserved_concurrency(self):
+        function = create_function_resource('function_name')
+        function.reserved_concurrency = 5
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(function)
+        expected = [models.APICall(
+            method_name='create_function',
+            params={
+                'function_name': 'appname-dev-function_name',
+                'role_arn': 'role:arn',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7',
+                'handler': 'app.app',
+                'environment_variables': {},
+                'tags': {},
+                'timeout': 60,
+                'memory_size': 128,
+                'security_group_ids': [],
+                'subnet_ids': [],
+            },
+        ),
+            models.APICall(
+            method_name='put_function_concurrency',
+            params={
+                'function_name': 'appname-dev-function_name',
+                'reserved_concurrent_executions': 5
+            },
+            output_var='reserved_concurrency_result',
+        )]
+
+        # create_function
+        self.assert_apicall_equals(plan[0], expected[0])
+        # put_function_concurrency
+        self.assert_apicall_equals(plan[2], expected[1])
+
+        assert list(self.last_plan.messages.values()) == [
+            'Creating lambda function: appname-dev-function_name\n',
+            'Updating lambda function concurrency limit:'
+            ' appname-dev-function_name\n',
         ]
 
     def test_can_set_variables_when_needed(self):

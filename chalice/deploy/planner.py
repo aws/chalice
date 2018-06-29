@@ -224,6 +224,28 @@ class PlanStage(object):
         # name with the actual filename generated from the pip
         # packager.  For now we resort to a cast.
         filename = cast(str, resource.deployment_package.filename)
+
+        if resource.reserved_concurrency is None:
+            concurrency_api_call = models.APICall(
+                method_name='delete_function_concurrency',
+                params={'function_name': resource.function_name},
+                output_var='reserved_concurrency_result'
+            )
+        else:
+            concurrency = resource.reserved_concurrency
+            concurrency_api_call = (
+                models.APICall(
+                    method_name='put_function_concurrency',
+                    params={
+                        'function_name': resource.function_name,
+                        'reserved_concurrent_executions': concurrency,
+                    },
+                    output_var='reserved_concurrency_result'),
+                "Updating lambda function concurrency limit: %s\n"
+                % resource.function_name
+            )
+
+        api_calls = []  # type: List[_INSTRUCTION_MSG]
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,
@@ -239,7 +261,7 @@ class PlanStage(object):
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
             }
-            return [
+            api_calls.extend([
                 (models.APICall(
                     method_name='create_function',
                     params=params,
@@ -251,40 +273,43 @@ class PlanStage(object):
                     name='lambda_arn',
                     variable_name=varname,
                 )
-            ]
-        # TODO: Consider a smarter diff where we check if we even need
-        # to do an update() API call.
-        params = {
-            'function_name': resource.function_name,
-            'role_arn': role_arn,
-            'zip_contents': self._osutils.get_file_contents(
-                filename, binary=True),
-            'runtime': resource.runtime,
-            'environment_variables': resource.environment_variables,
-            'tags': resource.tags,
-            'timeout': resource.timeout,
-            'memory_size': resource.memory_size,
-            'security_group_ids': resource.security_group_ids,
-            'subnet_ids': resource.subnet_ids,
-        }
-        return [
-            (models.APICall(
-                method_name='update_function',
-                params=params,
-                output_var='update_function_result',
-            ), "Updating lambda function: %s\n" % resource.function_name),
-            models.JPSearch(
-                'FunctionArn',
-                input_var='update_function_result',
-                output_var=varname,
-            ),
-            models.RecordResourceVariable(
-                resource_type='lambda_function',
-                resource_name=resource.resource_name,
-                name='lambda_arn',
-                variable_name=varname,
-            )
-        ]
+            ])
+        else:
+            # TODO: Consider a smarter diff where we check if we even need
+            # to do an update() API call.
+            params = {
+                'function_name': resource.function_name,
+                'role_arn': role_arn,
+                'zip_contents': self._osutils.get_file_contents(
+                    filename, binary=True),
+                'runtime': resource.runtime,
+                'environment_variables': resource.environment_variables,
+                'tags': resource.tags,
+                'timeout': resource.timeout,
+                'memory_size': resource.memory_size,
+                'security_group_ids': resource.security_group_ids,
+                'subnet_ids': resource.subnet_ids,
+            }
+            api_calls.extend([
+                (models.APICall(
+                    method_name='update_function',
+                    params=params,
+                    output_var='update_function_result',
+                ), "Updating lambda function: %s\n" % resource.function_name),
+                models.JPSearch(
+                    'FunctionArn',
+                    input_var='update_function_result',
+                    output_var=varname,
+                ),
+                models.RecordResourceVariable(
+                    resource_type='lambda_function',
+                    resource_name=resource.resource_name,
+                    name='lambda_arn',
+                    variable_name=varname,
+                )
+            ])
+        api_calls.append(concurrency_api_call)
+        return api_calls
 
     def _plan_managediamrole(self, resource):
         # type: (models.ManagedIAMRole) -> Sequence[_INSTRUCTION_MSG]

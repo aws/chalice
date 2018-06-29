@@ -281,6 +281,20 @@ class TypedAWSClient(object):
             )
             raise self._get_lambda_code_deployment_error(e, context)
 
+    def put_function_concurrency(self, function_name,
+                                 reserved_concurrent_executions):
+        # type: (str, int) -> None
+        lambda_client = self._client('lambda')
+        lambda_client.put_function_concurrency(
+            FunctionName=function_name,
+            ReservedConcurrentExecutions=reserved_concurrent_executions)
+
+    def delete_function_concurrency(self, function_name):
+        # type: (str) -> None
+        lambda_client = self._client('lambda')
+        lambda_client.delete_function_concurrency(
+            FunctionName=function_name)
+
     def _update_function_config(self,
                                 environment_variables,  # type: _STR_MAP
                                 runtime,                # type: _OPT_STR

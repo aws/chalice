@@ -381,7 +381,7 @@ class TestApplicationGraphBuilder(object):
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
                       autogen_policy=False, security_group_ids=None,
-                      subnet_ids=None):
+                      subnet_ids=None, reserved_concurrency=None):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
@@ -405,6 +405,8 @@ class TestApplicationGraphBuilder(object):
         if security_group_ids is not None and subnet_ids is not None:
             kwargs['security_group_ids'] = security_group_ids
             kwargs['subnet_ids'] = subnet_ids
+        if reserved_concurrency is not None:
+            kwargs['reserved_concurrency'] = reserved_concurrency
         config = Config.create(**kwargs)
         return config
 
@@ -430,6 +432,7 @@ class TestApplicationGraphBuilder(object):
             role=models.PreCreatedIAMRole('role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            reserved_concurrency=None,
         )
 
     def test_can_build_lambda_function_app_with_vpc_config(self, lambda_app):
@@ -458,6 +461,7 @@ class TestApplicationGraphBuilder(object):
             role=models.PreCreatedIAMRole('role:arn'),
             security_group_ids=['sg1', 'sg2'],
             subnet_ids=['sn1', 'sn2'],
+            reserved_concurrency=None,
         )
 
     def test_vpc_trait_added_when_vpc_configured(self, lambda_app):
@@ -490,6 +494,35 @@ class TestApplicationGraphBuilder(object):
                                     subnet_ids=[])
         with pytest.raises(ChaliceBuildError):
             builder.build(config, stage_name='dev')
+
+    def test_can_build_lambda_function_app_with_reserved_concurrency(
+            self,
+            lambda_app):
+        # This is the simplest configuration we can get.
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(lambda_app,
+                                    iam_role_arn='role:arn',
+                                    reserved_concurrency=5)
+        application = builder.build(config, stage_name='dev')
+        # The top level resource is always an Application.
+        assert isinstance(application, models.Application)
+        assert len(application.resources) == 1
+        assert application.resources[0] == models.LambdaFunction(
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
+            environment_variables={},
+            runtime=config.lambda_python_version,
+            handler='app.foo',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
+            reserved_concurrency=5,
+        )
 
     def test_multiple_lambda_functions_share_role_and_package(self,
                                                               lambda_app):
@@ -828,6 +861,7 @@ class TestDefaultsInjector(object):
             role=None,
             security_group_ids=[],
             subnet_ids=[],
+            reserved_concurrency=None,
         )
         config = Config.create()
         injector.handle(config, function)
@@ -855,6 +889,7 @@ class TestDefaultsInjector(object):
             role=None,
             security_group_ids=[],
             subnet_ids=[],
+            reserved_concurrency=None,
         )
         config = Config.create()
         injector.handle(config, function)

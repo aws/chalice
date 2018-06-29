@@ -597,6 +597,7 @@ class ApplicationGraphBuilder(object):
             role=role,
             security_group_ids=security_group_ids,
             subnet_ids=subnet_ids,
+            reserved_concurrency=config.reserved_concurrency,
         )
         self._inject_role_traits(function, role)
         return function
