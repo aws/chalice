@@ -23,15 +23,4 @@ def test_cannot_run_local_mode_with_trailing_slash_route():
 
 def test_get_system_info():
     system_info = cli.get_system_info()
-    assert re.match(r'python\s*([\d.]+),?\s*(.*)/(.*)', system_info)
-
-
-def test_get_system_info_with_explicit_argument():
-    system_info = cli.get_system_info('2.7.12')
-    assert re.match(r'python\s*([\d.]+),?\s*(.*)/(.*)$', system_info)
-
-
-def test_get_system_info_with_warning_with_explicit_argument():
-    system_info = cli.get_system_info('3.5.2')
-    assert re.match(r'python\s*([\d.]+),?\s*(.*)/(.*)(\r\n|\r|\n)Warning:(.*)',
-                    system_info)
+    assert re.match(r'python\s*([\d.]+),?\s*(.*) (.*)', system_info)

@@ -58,23 +58,15 @@ def create_new_project_skeleton(project_name, profile=None):
         f.write(GITIGNORE)
 
 
-def get_system_info(python_version_arg=None):
-    # type: (Optional[str]) -> str
-    if python_version_arg:
-        python_version = python_version_arg
-    else:
-        python_version = "{}.{}.{}".format(sys.version_info[0],
+def get_system_info():
+    # type: () -> str
+    python_info = "python {}.{}.{}".format(sys.version_info[0],
                                            sys.version_info[1],
                                            sys.version_info[2])
-    platform_system = platform.system()
+    platform_system = platform.system().lower()
     platform_release = platform.release()
-    platform_info = "{}/{}".format(platform_system, platform_release)
-    system_info = "python {}, {}".format(python_version, platform_info)
-    if not(python_version.startswith("2.7.") or
-            python_version.startswith("3.6.")):
-        system_info += "\nWarning: Not using the recommended python version. "
-        system_info += "Recommended versions are 2.7 and 3.6"
-    return system_info
+    platform_info = "{} {}".format(platform_system, platform_release)
+    return "{}, {}".format(python_info, platform_info)
 
 
 @click.group()
