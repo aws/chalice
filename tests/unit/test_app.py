@@ -1380,8 +1380,8 @@ def test_can_create_s3_event_handler(sample_app):
     def handler(event):
         pass
 
-    assert len(sample_app.lambda_event_handlers) == 1
-    event = sample_app.lambda_event_handlers[0]
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
     assert event.name == 'handler'
     assert event.bucket == 'mybucket'
     assert event.events == ['s3:ObjectCreated:*']
@@ -1484,8 +1484,8 @@ def test_can_create_sns_handler(sample_app):
     def handler(event):
         pass
 
-    assert len(sample_app.lambda_event_handlers) == 1
-    event = sample_app.lambda_event_handlers[0]
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
     assert event.name == 'handler'
     assert event.topic == 'MyTopic'
     assert event.handler_string == 'app.handler'

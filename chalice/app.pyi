@@ -127,9 +127,8 @@ class Chalice(object):
     log = ... # type: logging.Logger
     authorizers = ... # type: Dict[str, Dict[str, Any]]
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
-    event_sources = ... # type: List[CloudWatchEventSource]
+    event_sources = ... # type: List[BaseEventSourceConfig]
     pure_lambda_functions = ... # type: List[LambdaFunction]
-    lambda_event_handlers = ... # type: List[S3EventConfig]
 
     def __init__(self, app_name: str, debug: bool=False,
                  configure_logs: bool=True,
@@ -172,15 +171,6 @@ class AuthResponse(object):
     context = ... # type: Optional[Dict[str, str]]
 
 
-class EventSource(object):
-    name = ...  # type: str
-    handler_string = ...  # type: str
-
-
-class CloudWatchEventSource(EventSource):
-    schedule_expression = ...  # type: Union[str, ScheduleExpression]
-
-
 class ScheduleExpression(object):
     def to_string(self) -> str: ...
 
@@ -209,7 +199,12 @@ class LambdaFunction(object):
     func = ... # type: Callable[..., Any]
 
 
-class S3EventConfig(object):
+class BaseEventSourceConfig(object):
+    name = ... # type: str
+    handler_string = ... # type: str
+
+
+class S3EventConfig(BaseEventSourceConfig):
     name = ... # type: str
     bucket = ... # type: str
     events = ... # type: List[str]
@@ -218,7 +213,11 @@ class S3EventConfig(object):
     handler_string = ... # type: str
 
 
-class SNSEventConfig(object):
+class SNSEventConfig(BaseEventSourceConfig):
     name = ... # type: str
     handler_string = ... # type: str
     topic = ... # type: str
+
+
+class CloudWatchEventConfig(BaseEventSourceConfig):
+    schedule_expression = ...  # type: Union[str, ScheduleExpression]

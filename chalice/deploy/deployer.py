@@ -392,31 +392,35 @@ class ApplicationGraphBuilder(object):
                 name=function.name, handler_name=function.handler_string,
                 stage_name=stage_name)
             resources.append(resource)
-        for event_source in config.chalice_app.event_sources:
-            scheduled_event = self._create_event_model(
-                config, deployment, event_source, stage_name)
-            resources.append(scheduled_event)
-        if config.chalice_app.routes:
-            rest_api = self._create_rest_api_model(
-                config, deployment, config.chalice_app, stage_name)
-            resources.append(rest_api)
         event_resources = self._create_lambda_event_resources(
             config, deployment, stage_name)
         resources.extend(event_resources)
+        if config.chalice_app.routes:
+            rest_api = self._create_rest_api_model(
+                config, deployment, stage_name)
+            resources.append(rest_api)
         return models.Application(stage_name, resources)
 
     def _create_lambda_event_resources(self, config, deployment, stage_name):
         # type: (Config, models.DeploymentPackage, str) -> List[models.Model]
         resources = []  # type: List[models.Model]
-        for event_handler in config.chalice_app.lambda_event_handlers:
-            if isinstance(event_handler, app.S3EventConfig):
-                bucket_notification = self._create_bucket_notification(
-                    config, deployment, event_handler, stage_name)
-                resources.append(bucket_notification)
-            elif isinstance(event_handler, app.SNSEventConfig):
+        for event_source in config.chalice_app.event_sources:
+            if isinstance(event_source, app.S3EventConfig):
+                resources.append(
+                    self._create_bucket_notification(
+                        config, deployment, event_source, stage_name
+                    )
+                )
+            elif isinstance(event_source, app.SNSEventConfig):
                 resources.append(
                     self._create_sns_subscription(
-                        config, deployment, event_handler, stage_name,
+                        config, deployment, event_source, stage_name,
+                    )
+                )
+            elif isinstance(event_source, app.CloudWatchEventConfig):
+                resources.append(
+                    self._create_event_model(
+                        config, deployment, event_source, stage_name
                     )
                 )
         return resources
@@ -424,7 +428,6 @@ class ApplicationGraphBuilder(object):
     def _create_rest_api_model(self,
                                config,        # type: Config
                                deployment,    # type: models.DeploymentPackage
-                               chalice_app,   # type: app.Chalice
                                stage_name,    # type: str
                                ):
         # type: (...) -> models.RestAPI
@@ -457,7 +460,7 @@ class ApplicationGraphBuilder(object):
     def _create_event_model(self,
                             config,        # type: Config
                             deployment,    # type: models.DeploymentPackage
-                            event_source,  # type: app.CloudWatchEventSource
+                            event_source,  # type: app.CloudWatchEventConfig
                             stage_name,    # type: str
                             ):
         # type: (...) -> models.ScheduledEvent
