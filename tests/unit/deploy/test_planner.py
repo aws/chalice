@@ -428,7 +428,7 @@ class TestPlanRestAPI(BasePlannerTests):
                            params={'rest_api_id': Variable('rest_api_id'),
                                    'api_gateway_stage': 'api'}),
             models.APICall(
-                method_name='add_permission_for_apigateway_if_needed',
+                method_name='add_permission_for_apigateway',
                 params={
                     'function_name': 'appname-dev-function_name',
                     'region_name': Variable('region_name'),
@@ -490,14 +490,14 @@ class TestPlanRestAPI(BasePlannerTests):
                         'api_gateway_stage': 'api'},
             ),
             models.APICall(
-                method_name='add_permission_for_apigateway_if_needed',
+                method_name='add_permission_for_apigateway',
                 params={'function_name': 'appname-dev-function_name',
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
             ),
             models.APICall(
-                method_name='add_permission_for_apigateway_if_needed',
+                method_name='add_permission_for_apigateway',
                 params={'rest_api_id': Variable("rest_api_id"),
                         'region_name': Variable("region_name"),
                         'account_id': Variable("account_id"),

@@ -455,9 +455,9 @@ class TypedAWSClient(object):
             stageName=api_gateway_stage,
         )
 
-    def add_permission_for_apigateway_if_needed(self, function_name,
-                                                region_name, account_id,
-                                                rest_api_id, random_id=None):
+    def add_permission_for_apigateway(self, function_name,
+                                      region_name, account_id,
+                                      rest_api_id, random_id=None):
         # type: (str, str, str, str, Optional[str]) -> None
         """Authorize API gateway to invoke a lambda function is needed.
 

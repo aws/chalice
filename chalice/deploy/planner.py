@@ -568,7 +568,7 @@ class PlanStage(object):
         # the update and create case.
         shared_plan_epilogue = [
             models.APICall(
-                method_name='add_permission_for_apigateway_if_needed',
+                method_name='add_permission_for_apigateway',
                 params={'function_name': function_name,
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
@@ -592,7 +592,7 @@ class PlanStage(object):
         for auth in resource.authorizers:
             shared_plan_epilogue.append(
                 models.APICall(
-                    method_name='add_permission_for_apigateway_if_needed',
+                    method_name='add_permission_for_apigateway',
                     params={'function_name': auth.function_name,
                             'region_name': Variable('region_name'),
                             'account_id': Variable('account_id'),
@@ -643,7 +643,7 @@ class PlanStage(object):
                             'api_gateway_stage': resource.api_gateway_stage},
                 ),
                 models.APICall(
-                    method_name='add_permission_for_apigateway_if_needed',
+                    method_name='add_permission_for_apigateway',
                     params={'function_name': function_name,
                             'region_name': Variable('region_name'),
                             'account_id': Variable('account_id'),

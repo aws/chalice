@@ -1009,7 +1009,7 @@ class TestAddPermissionsForAPIGateway(object):
         self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.add_permission_for_apigateway_if_needed(
+        client.add_permission_for_apigateway(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
@@ -1019,7 +1019,7 @@ class TestAddPermissionsForAPIGateway(object):
         self.should_call_add_permission(lambda_stub, 'my-random-id')
         stubbed_session.activate_stubs()
         client = FixedIDTypedAWSClient(stubbed_session, 'my-random-id')
-        client.add_permission_for_apigateway_if_needed(
+        client.add_permission_for_apigateway(
             'name', 'us-west-2', '123', 'rest-api-id')
         stubbed_session.verify_stubs()
 
@@ -1078,7 +1078,7 @@ class TestAddPermissionsForAPIGateway(object):
         # necessary permissions, we should not call add_permission.
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.add_permission_for_apigateway_if_needed(
+        client.add_permission_for_apigateway(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
@@ -1092,7 +1092,7 @@ class TestAddPermissionsForAPIGateway(object):
         self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.add_permission_for_apigateway_if_needed(
+        client.add_permission_for_apigateway(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
