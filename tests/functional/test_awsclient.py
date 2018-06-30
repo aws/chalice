@@ -992,33 +992,6 @@ class TestCanDeleteRole(object):
 
 
 class TestAddPermissionsForAPIGateway(object):
-    def test_can_add_permission_for_apigateway(self, stubbed_session):
-        stubbed_session.stub('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName='function_name',
-            StatementId='random-id',
-            Principal='apigateway.amazonaws.com',
-            SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway(
-            'function_name', 'us-west-2', '123', 'rest-api-id', 'random-id')
-        stubbed_session.verify_stubs()
-
-    def test_random_id_can_be_omitted(self, stubbed_session):
-        stubbed_session.stub('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName='function_name',
-            StatementId=stub.ANY,
-            Principal='apigateway.amazonaws.com',
-            SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway(
-            # random_id is omitted here.
-            'function_name', 'us-west-2', '123', 'rest-api-id')
-        stubbed_session.verify_stubs()
-
     def should_call_add_permission(self, lambda_stub,
                                    statement_id='random-id'):
         lambda_stub.add_permission(

@@ -473,8 +473,14 @@ class TypedAWSClient(object):
                                                 rest_api_id)
         if self._policy_gives_access(policy, source_arn, 'apigateway'):
             return
-        self.add_permission_for_apigateway(
-            function_name, region_name, account_id, rest_api_id, random_id)
+        client = self._client('lambda')
+        client.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_name,
+            StatementId=random_id,
+            Principal='apigateway.amazonaws.com',
+            SourceArn=source_arn,
+        )
 
     def _policy_gives_access(self, policy, source_arn, service_name):
         # type: (Dict[str, Any], str, str) -> bool
@@ -636,23 +642,6 @@ class TypedAWSClient(object):
             StatementId=random_id,
             Principal='sns.amazonaws.com',
             SourceArn=topic_arn,
-        )
-
-    def add_permission_for_apigateway(self, function_name, region_name,
-                                      account_id, rest_api_id, random_id=None):
-        # type: (str, str, str, str, Optional[str]) -> None
-        """Authorize API gateway to invoke a lambda function."""
-        client = self._client('lambda')
-        source_arn = self._build_source_arn_str(region_name, account_id,
-                                                rest_api_id)
-        if random_id is None:
-            random_id = self._random_id()
-        client.add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_name,
-            StatementId=random_id,
-            Principal='apigateway.amazonaws.com',
-            SourceArn=source_arn,
         )
 
     def _build_source_arn_str(self, region_name, account_id, rest_api_id):
