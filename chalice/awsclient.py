@@ -473,8 +473,7 @@ class TypedAWSClient(object):
                                                 rest_api_id)
         if self._policy_gives_access(policy, source_arn, 'apigateway'):
             return
-        client = self._client('lambda')
-        client.add_permission(
+        self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_name,
             StatementId=random_id,
@@ -631,12 +630,11 @@ class TypedAWSClient(object):
 
     def add_permission_for_sns_topic(self, topic_arn, function_arn):
         # type: (str, str) -> None
-        lambda_client = self._client('lambda')
         policy = self.get_function_policy(function_arn)
         if self._policy_gives_access(policy, topic_arn, service_name='sns'):
             return
         random_id = self._random_id()
-        lambda_client.add_permission(
+        self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
             StatementId=random_id,
@@ -747,14 +745,13 @@ class TypedAWSClient(object):
     def add_permission_for_scheduled_event(self, rule_arn,
                                            function_arn):
         # type: (str, str) -> None
-        lambda_client = self._client('lambda')
         policy = self.get_function_policy(function_arn)
         if self._policy_gives_access(policy, rule_arn, 'events'):
             return
         random_id = self._random_id()
         # We should be checking if the permission already exists and only
         # adding it if necessary.
-        lambda_client.add_permission(
+        self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
             StatementId=random_id,
@@ -830,13 +827,12 @@ class TypedAWSClient(object):
 
     def add_permission_for_s3_event(self, bucket, function_arn):
         # type: (str, str) -> None
-        lambda_client = self._client('lambda')
         policy = self.get_function_policy(function_arn)
         bucket_arn = 'arn:aws:s3:::%s' % bucket
         if self._policy_gives_access(policy, bucket_arn, 's3'):
             return
         random_id = self._random_id()
-        lambda_client.add_permission(
+        self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
             StatementId=random_id,
