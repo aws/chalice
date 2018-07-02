@@ -1026,6 +1026,10 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             models.APICall(
                 method_name='disconnect_s3_bucket_from_lambda',
                 params={'bucket': 'mybucket', 'function_arn': 'lambda_arn'},
+            ),
+            models.APICall(
+                method_name='remove_permission_for_s3_event',
+                params={'bucket': 'mybucket', 'function_arn': 'lambda_arn'},
             )
         ]
 
@@ -1068,10 +1072,16 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         }
         config = FakeConfig(deployed)
         self.execute(plan, config)
-        assert plan[-1] == models.APICall(
-            method_name='disconnect_s3_bucket_from_lambda',
-            params={'bucket': 'OLDBUCKET', 'function_arn': 'lambda_arn'},
-        )
+        assert plan[-2:] == [
+            models.APICall(
+                method_name='disconnect_s3_bucket_from_lambda',
+                params={'bucket': 'OLDBUCKET', 'function_arn': 'lambda_arn'},
+            ),
+            models.APICall(
+                method_name='remove_permission_for_s3_event',
+                params={'bucket': 'OLDBUCKET', 'function_arn': 'lambda_arn'},
+            ),
+        ]
 
     def test_no_sweeping_when_resource_value_unchanged(self):
         plan = self.determine_plan(

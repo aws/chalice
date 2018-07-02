@@ -190,11 +190,16 @@ class ResourceSweeper(object):
             elif resource_values['resource_type'] == 's3_event':
                 bucket = resource_values['bucket']
                 function_arn = resource_values['lambda_arn']
-                apicall = models.APICall(
-                    method_name='disconnect_s3_bucket_from_lambda',
-                    params={'bucket': bucket, 'function_arn': function_arn}
-                )
-                plan.append(apicall)
+                plan.extend([
+                    models.APICall(
+                        method_name='disconnect_s3_bucket_from_lambda',
+                        params={'bucket': bucket, 'function_arn': function_arn}
+                    ),
+                    models.APICall(
+                        method_name='remove_permission_for_s3_event',
+                        params={'bucket': bucket, 'function_arn': function_arn}
+                    )
+                ])
             elif resource_values['resource_type'] == 'sns_event':
                 subscription_arn = resource_values['subscription_arn']
                 plan.extend([
