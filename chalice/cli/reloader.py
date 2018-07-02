@@ -61,6 +61,10 @@ class Restarter(FileSystemEventHandler):
         # We only care about reloading is a file is modified.
         if event.is_directory:
             return
+        self()
+
+    def __call__(self):
+        # type: () -> None
         self.restart_event.set()
 
 
@@ -131,6 +135,7 @@ class WorkerProcess(object):
         # type: (HTTPServerThread) -> None
         self._http_thread = http_thread
         self._restart_event = threading.Event()
+        self._restart_callback = Restarter(self._restart_event)
 
     def main(self, project_dir, timeout=None):
         # type: (str, Optional[int]) -> int
@@ -143,9 +148,30 @@ class WorkerProcess(object):
 
     def _start_file_watcher(self, project_dir):
         # type: (str) -> None
+        watcher = WatchdogFileWatcher()
+        watcher.watch_for_file_changes(
+            project_dir, self._restart_callback)
+
+
+class FileWatcher(object):
+    """Base class for watching files for changes."""
+
+    def watch_for_file_changes(self, root_dir, callback):
+        # type: (str, Callable[[], None]) -> None
+        """Recursively watch directory for changes.
+
+        When a changed file is detected, the provided callback
+        is immediately invoked and the current scan stops.
+
+        """
+        raise NotImplementedError("watch_for_file_changes")
+
+
+class WatchdogFileWatcher(FileWatcher):
+    def watch_for_file_changes(self, root_dir, callback):
+        # type: (str, Callable[[], None]) -> None
         observer = watchdog.observers.Observer()
-        restarter = Restarter(self._restart_event)
-        observer.schedule(restarter, project_dir, recursive=True)
+        observer.schedule(callback, root_dir, recursive=True)
         observer.start()
 
 
