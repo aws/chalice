@@ -1677,28 +1677,3 @@ def test_can_remove_s3_permission(stubbed_session):
     client.remove_permission_for_s3_event(
         'mybucket', 'name')
     stubbed_session.verify_stubs()
-
-
-def test_can_remove_scheduled_event_permissions(stubbed_session):
-    rule_arn = 'arn:myrule'
-    policy = {
-        'Id': 'default',
-        'Statement': [create_policy_statement(rule_arn,
-                                              service_name='events',
-                                              statement_id='12345')],
-        'Version': '2012-10-17'
-    }
-    lambda_stub = stubbed_session.stub('lambda')
-    lambda_stub.get_policy(
-        FunctionName='name').returns({'Policy': json.dumps(policy)})
-    lambda_stub.remove_permission(
-        FunctionName='name', StatementId='12345',
-    ).returns({})
-
-    # Because the policy above indicates that API gateway already has the
-    # necessary permissions, we should not call add_permission.
-    stubbed_session.activate_stubs()
-    client = TypedAWSClient(stubbed_session)
-    client.remove_permission_for_scheduled_event(
-        rule_arn, 'name')
-    stubbed_session.verify_stubs()

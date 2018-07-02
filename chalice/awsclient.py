@@ -700,15 +700,6 @@ class TypedAWSClient(object):
             service_name='events',
         )
 
-    def remove_permission_for_scheduled_event(self, rule_arn,
-                                              function_arn):
-        # type: (str, str) -> None
-        self._remove_lambda_permission_if_needed(
-            source_arn=rule_arn,
-            function_arn=function_arn,
-            service_name='events',
-        )
-
     def connect_s3_bucket_to_lambda(self, bucket, function_arn, events,
                                     prefix=None, suffix=None):
         # type: (str, str, List[str], _OPT_STR, _OPT_STR) -> None
