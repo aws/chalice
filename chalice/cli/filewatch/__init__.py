@@ -1,6 +1,6 @@
 import threading
 
-from typing import Callable, Optional  # noqa
+from typing import Callable, Optional, Type  # noqa
 from chalice.local import HTTPServerThread  # noqa
 
 

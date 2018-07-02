@@ -3,13 +3,22 @@ from subprocess import Popen
 
 import mock
 import pytest
-from watchdog.events import FileSystemEvent, DirModifiedEvent
 
-from chalice.cli.filewatch.eventbased import WatchdogRestarter
+try:
+    from watchdog.events import FileSystemEvent, DirModifiedEvent
+    from chalice.cli.filewatch.eventbased import WatchdogRestarter
+    HAS_WATCHDOG = True
+except ImportError:
+    HAS_WATCHDOG = False
 
 import chalice.local
 from chalice.cli import reloader
 from chalice.local import LocalDevServer
+
+
+# This will skip all the tests in this module if watchdog is not installed.
+pytestmark = pytest.mark.skipif(not HAS_WATCHDOG,
+                                reason='Tests require watchdog package.')
 
 
 # NOTE: Most of the reloader module relies on threads, subprocesses,

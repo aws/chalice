@@ -28,14 +28,24 @@ import logging
 import copy
 import sys
 
-from typing import MutableMapping, Type, Callable  # noqa
+from typing import MutableMapping, Type, Callable, Optional  # noqa
 
-from chalice.cli.filewatch import RESTART_REQUEST_RC
-from chalice.cli.filewatch.eventbased import WatchdogWorkerProcess
+from chalice.cli.filewatch import RESTART_REQUEST_RC, WorkerProcess
 from chalice.local import LocalDevServer, HTTPServerThread  # noqa
 
 
 LOGGER = logging.getLogger(__name__)
+_WORKER_PROC_TYPE = Optional[Type[WorkerProcess]]
+
+
+def get_best_worker_process():
+    # type: () -> Type[WorkerProcess]
+    try:
+        from chalice.cli.filewatch.eventbased import WatchdogWorkerProcess
+        return WatchdogWorkerProcess
+    except ImportError:
+        from chalice.cli.filewatch.stat import StatWorkerProcess
+        return StatWorkerProcess
 
 
 def start_parent_process(env):
@@ -44,10 +54,12 @@ def start_parent_process(env):
     process.main()
 
 
-def start_worker_process(server_factory, root_dir):
-    # type: (Callable[[], LocalDevServer], str) -> int
+def start_worker_process(server_factory, root_dir, worker_process_cls=None):
+    # type: (Callable[[], LocalDevServer], str, _WORKER_PROC_TYPE) -> int
+    if worker_process_cls is None:
+        worker_process_cls = get_best_worker_process()
     t = HTTPServerThread(server_factory)
-    worker = WatchdogWorkerProcess(t)
+    worker = worker_process_cls(t)
     LOGGER.debug("Starting worker...")
     rc = worker.main(root_dir)
     LOGGER.info("Restarting local dev server.")
@@ -79,15 +91,16 @@ class ParentProcess(object):
                 raise
 
 
-def run_with_reloader(server_factory, env, root_dir):
-    # type: (Callable, MutableMapping, str) -> int
+def run_with_reloader(server_factory, env, root_dir, worker_process_cls=None):
+    # type: (Callable, MutableMapping, str, _WORKER_PROC_TYPE) -> int
     # This function is invoked in two possible modes, as the parent process
     # or as a chalice worker.
     try:
         if env.get('CHALICE_WORKER') is not None:
             # This is a chalice worker.  We need to start the main dev server
             # in a daemon thread and install a file watcher.
-            return start_worker_process(server_factory, root_dir)
+            return start_worker_process(server_factory, root_dir,
+                                        worker_process_cls)
         else:
             # This is the parent process.  It's just is to spawn an identical
             # process but with the ``CHALICE_WORKER`` env var set.  It then
