@@ -197,11 +197,19 @@ class ResourceSweeper(object):
                 plan.append(apicall)
             elif resource_values['resource_type'] == 'sns_event':
                 subscription_arn = resource_values['subscription_arn']
-                apicall = models.APICall(
-                    method_name='unsubscribe_from_topic',
-                    params={'subscription_arn': subscription_arn},
-                )
-                plan.append(apicall)
+                plan.extend([
+                    models.APICall(
+                        method_name='unsubscribe_from_topic',
+                        params={'subscription_arn': subscription_arn},
+                    ),
+                    models.APICall(
+                        method_name='remove_permission_for_sns_topic',
+                        params={
+                            'topic_arn': resource_values['topic_arn'],
+                            'function_arn': resource_values['lambda_arn'],
+                        },
+                    )
+                ])
 
 
 class PlanStage(object):

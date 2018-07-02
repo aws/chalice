@@ -1103,6 +1103,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             'resources': [{
                 'name': 'handler-sns-subscription',
                 'topic': 'mytopic',
+                'topic_arn': 'arn:mytopic',
                 'resource_type': 'sns_event',
                 'lambda_arn': 'arn:lambda',
                 'subscription_arn': 'arn:aws:subscribe',
@@ -1114,6 +1115,13 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             models.APICall(
                 method_name='unsubscribe_from_topic',
                 params={'subscription_arn': 'arn:aws:subscribe'},
+            ),
+            models.APICall(
+                method_name='remove_permission_for_sns_topic',
+                params={
+                    'topic_arn': 'arn:mytopic',
+                    'function_arn': 'arn:lambda',
+                },
             )
         ]
 
@@ -1147,6 +1155,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             'resources': [{
                 'name': 'handler-sns-subscription',
                 'topic': 'old-topic',
+                'topic_arn': 'arn:old-topic',
                 'resource_type': 'sns_event',
                 'lambda_arn': 'arn:lambda',
                 'subscription_arn': 'arn:aws:subscribe',
@@ -1165,7 +1174,16 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         self.execute(plan, config)
         # Then we should unsubscribe from the old-topic because it's
         # no longer referenced in our app.
-        assert plan[-1] == models.APICall(
-            method_name='unsubscribe_from_topic',
-            params={'subscription_arn': 'arn:aws:subscribe'},
-        )
+        assert plan[-2:] == [
+            models.APICall(
+                method_name='unsubscribe_from_topic',
+                params={'subscription_arn': 'arn:aws:subscribe'},
+            ),
+            models.APICall(
+                method_name='remove_permission_for_sns_topic',
+                params={
+                    'topic_arn': 'arn:old-topic',
+                    'function_arn': 'arn:lambda',
+                },
+            ),
+        ]
