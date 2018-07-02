@@ -466,19 +466,12 @@ class TypedAWSClient(object):
         ``self.add_permission_for_apigateway(...).
 
         """
-        if random_id is None:
-            random_id = self._random_id()
-        policy = self.get_function_policy(function_name)
         source_arn = self._build_source_arn_str(region_name, account_id,
                                                 rest_api_id)
-        if self._policy_gives_access(policy, source_arn, 'apigateway'):
-            return
-        self._client('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_name,
-            StatementId=random_id,
-            Principal='apigateway.amazonaws.com',
-            SourceArn=source_arn,
+        self._add_lambda_permission_if_needed(
+            source_arn=source_arn,
+            function_arn=function_name,
+            service_name='apigateway',
         )
 
     def _policy_gives_access(self, policy, source_arn, service_name):
@@ -630,16 +623,10 @@ class TypedAWSClient(object):
 
     def add_permission_for_sns_topic(self, topic_arn, function_arn):
         # type: (str, str) -> None
-        policy = self.get_function_policy(function_arn)
-        if self._policy_gives_access(policy, topic_arn, service_name='sns'):
-            return
-        random_id = self._random_id()
-        self._client('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_arn,
-            StatementId=random_id,
-            Principal='sns.amazonaws.com',
-            SourceArn=topic_arn,
+        self._add_lambda_permission_if_needed(
+            source_arn=topic_arn,
+            function_arn=function_arn,
+            service_name='sns',
         )
 
     def _build_source_arn_str(self, region_name, account_id, rest_api_id):
@@ -745,18 +732,10 @@ class TypedAWSClient(object):
     def add_permission_for_scheduled_event(self, rule_arn,
                                            function_arn):
         # type: (str, str) -> None
-        policy = self.get_function_policy(function_arn)
-        if self._policy_gives_access(policy, rule_arn, 'events'):
-            return
-        random_id = self._random_id()
-        # We should be checking if the permission already exists and only
-        # adding it if necessary.
-        self._client('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_arn,
-            StatementId=random_id,
-            Principal='events.amazonaws.com',
-            SourceArn=rule_arn,
+        self._add_lambda_permission_if_needed(
+            source_arn=rule_arn,
+            function_arn=function_arn,
+            service_name='events',
         )
 
     def connect_s3_bucket_to_lambda(self, bucket, function_arn, events,
@@ -827,17 +806,11 @@ class TypedAWSClient(object):
 
     def add_permission_for_s3_event(self, bucket, function_arn):
         # type: (str, str) -> None
-        policy = self.get_function_policy(function_arn)
         bucket_arn = 'arn:aws:s3:::%s' % bucket
-        if self._policy_gives_access(policy, bucket_arn, 's3'):
-            return
-        random_id = self._random_id()
-        self._client('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_arn,
-            StatementId=random_id,
-            Principal='s3.amazonaws.com',
-            SourceArn=bucket_arn,
+        self._add_lambda_permission_if_needed(
+            source_arn=bucket_arn,
+            function_arn=function_arn,
+            service_name='s3',
         )
 
     def disconnect_s3_bucket_from_lambda(self, bucket, function_arn):
@@ -857,6 +830,21 @@ class TypedAWSClient(object):
         s3.put_bucket_notification_configuration(
             Bucket=bucket,
             NotificationConfiguration=existing_config,
+        )
+
+    def _add_lambda_permission_if_needed(self, source_arn, function_arn,
+                                         service_name):
+        # type: (str, str, str) -> None
+        policy = self.get_function_policy(function_arn)
+        if self._policy_gives_access(policy, source_arn, service_name):
+            return
+        random_id = self._random_id()
+        self._client('lambda').add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName=function_arn,
+            StatementId=random_id,
+            Principal='%s.amazonaws.com' % service_name,
+            SourceArn=source_arn,
         )
 
     def _random_id(self):
