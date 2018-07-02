@@ -243,6 +243,10 @@ class OSUtils(object):
         p = subprocess.Popen(command, stdout=stdout, stderr=stderr, env=env)
         return p
 
+    def mtime(self, path):
+        # type: (str) -> int
+        return os.stat(path).st_mtime
+
     @property
     def pipe(self):
         # type: () -> int
