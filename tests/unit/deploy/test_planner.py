@@ -585,7 +585,13 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 resource_name='function_name-sns-subscription',
                 name='subscription_arn',
                 variable_name='function_name-sns-subscription_subscription_arn'
-            )
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='topic_arn',
+                variable_name='function_name-sns-subscription_topic_arn',
+            ),
         ]
 
     def test_sns_subscription_exists_is_noop_for_planner(self):
@@ -642,7 +648,13 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 resource_name='function_name-sns-subscription',
                 name='subscription_arn',
                 value='arn:aws:subscribe',
-            )
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='topic_arn',
+                variable_name='function_name-sns-subscription_topic_arn',
+            ),
         ]
 
 

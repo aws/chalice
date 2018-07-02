@@ -424,6 +424,12 @@ class PlanStage(object):
                     name='subscription_arn',
                     value=subscription_arn,
                 ),
+                models.RecordResourceVariable(
+                    resource_type='sns_event',
+                    resource_name=resource.resource_name,
+                    name='topic_arn',
+                    variable_name=topic_arn_varname,
+                ),
             ]
         return instruction_for_topic_arn + [
             models.APICall(
@@ -456,6 +462,12 @@ class PlanStage(object):
                 resource_name=resource.resource_name,
                 name='subscription_arn',
                 variable_name=subscribe_varname,
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name=resource.resource_name,
+                name='topic_arn',
+                variable_name=topic_arn_varname,
             ),
         ]
 
