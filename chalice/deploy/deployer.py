@@ -92,7 +92,6 @@ import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
-import jmespath
 from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 from chalice import app
@@ -103,10 +102,11 @@ from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, VPC_ATTACH_POLICY, \
     DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY
 from chalice.deploy import models
+from chalice.deploy.executor import Executor
 from chalice.deploy.packager import PipRunner, SubprocessPip, \
     DependencyBuilder as PipDependencyBuilder, LambdaDeploymentPackager
 from chalice.deploy.planner import PlanStage, RemoteState, \
-    ResourceSweeper, NoopPlanner, Variable, StringFormat
+    ResourceSweeper, NoopPlanner
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.policy import AppPolicyGenerator
@@ -300,24 +300,6 @@ def create_deletion_deployer(client, ui):
     )
 
 
-class UnresolvedValueError(Exception):
-    MSG = (
-        "The API parameter '%s' has an unresolved value "
-        "of %s in the method call: %s"
-    )
-
-    def __init__(self, key, value, method_name):
-        # type: (str, models.Placeholder, str) -> None
-        super(UnresolvedValueError, self).__init__()
-        self.key = key
-        self.value = value
-        self.method_name = method_name
-
-    def __str__(self):
-        # type: () -> str
-        return self.MSG % (self.key, self.value, self.method_name)
-
-
 class Deployer(object):
 
     BACKEND_NAME = 'api'
@@ -392,24 +374,42 @@ class ApplicationGraphBuilder(object):
                 name=function.name, handler_name=function.handler_string,
                 stage_name=stage_name)
             resources.append(resource)
-        for event_source in config.chalice_app.event_sources:
-            scheduled_event = self._create_event_model(
-                config, deployment, event_source, stage_name)
-            resources.append(scheduled_event)
+        event_resources = self._create_lambda_event_resources(
+            config, deployment, stage_name)
+        resources.extend(event_resources)
         if config.chalice_app.routes:
             rest_api = self._create_rest_api_model(
-                config, deployment, config.chalice_app, stage_name)
+                config, deployment, stage_name)
             resources.append(rest_api)
-        for s3_event in config.chalice_app.s3_events:
-            bucket_notification = self._create_bucket_notification(
-                config, deployment, s3_event, stage_name)
-            resources.append(bucket_notification)
         return models.Application(stage_name, resources)
+
+    def _create_lambda_event_resources(self, config, deployment, stage_name):
+        # type: (Config, models.DeploymentPackage, str) -> List[models.Model]
+        resources = []  # type: List[models.Model]
+        for event_source in config.chalice_app.event_sources:
+            if isinstance(event_source, app.S3EventConfig):
+                resources.append(
+                    self._create_bucket_notification(
+                        config, deployment, event_source, stage_name
+                    )
+                )
+            elif isinstance(event_source, app.SNSEventConfig):
+                resources.append(
+                    self._create_sns_subscription(
+                        config, deployment, event_source, stage_name,
+                    )
+                )
+            elif isinstance(event_source, app.CloudWatchEventConfig):
+                resources.append(
+                    self._create_event_model(
+                        config, deployment, event_source, stage_name
+                    )
+                )
+        return resources
 
     def _create_rest_api_model(self,
                                config,        # type: Config
                                deployment,    # type: models.DeploymentPackage
-                               chalice_app,   # type: app.Chalice
                                stage_name,    # type: str
                                ):
         # type: (...) -> models.RestAPI
@@ -442,7 +442,7 @@ class ApplicationGraphBuilder(object):
     def _create_event_model(self,
                             config,        # type: Config
                             deployment,    # type: models.DeploymentPackage
-                            event_source,  # type: app.CloudWatchEventSource
+                            event_source,  # type: app.CloudWatchEventConfig
                             stage_name,    # type: str
                             ):
         # type: (...) -> models.ScheduledEvent
@@ -635,6 +635,26 @@ class ApplicationGraphBuilder(object):
         )
         return s3_bucket
 
+    def _create_sns_subscription(
+        self,
+        config,      # type: Config
+        deployment,  # type: models.DeploymentPackage
+        sns_config,  # type: app.SNSEventConfig
+        stage_name,  # type: str
+    ):
+        # type: (...) -> models.SNSLambdaSubscription
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=sns_config.name,
+            handler_name=sns_config.handler_string, stage_name=stage_name
+        )
+        resource_name = sns_config.name + '-sns-subscription'
+        sns_subscription = models.SNSLambdaSubscription(
+            resource_name=resource_name,
+            topic=sns_config.topic,
+            lambda_function=lambda_function,
+        )
+        return sns_subscription
+
 
 class DependencyBuilder(object):
     def __init__(self):
@@ -747,148 +767,6 @@ class BuildStage(object):
         for resource in resources:
             for step in self._steps:
                 step.handle(config, resource)
-
-
-class Executor(object):
-    def __init__(self, client, ui):
-        # type: (TypedAWSClient, UI) -> None
-        self._client = client
-        self._ui = ui
-        # A mapping of variables that's populated as API calls
-        # are made.  These can be used in subsequent API calls.
-        self.variables = {}  # type: Dict[str, Any]
-        self.resource_values = []  # type: List[Dict[str, Any]]
-        self._resource_value_index = {}  # type: Dict[str, Any]
-        self._variable_resolver = VariableResolver()
-
-    def execute(self, plan):
-        # type: (models.Plan) -> None
-        messages = plan.messages
-        for instruction in plan.instructions:
-            message = messages.get(id(instruction))
-            if message is not None:
-                self._ui.write(message)
-            getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
-                    self._default_handler)(instruction)
-
-    def _default_handler(self, instruction):
-        # type: (models.Instruction) -> None
-        raise RuntimeError("Deployment executor encountered an "
-                           "unknown instruction: %s"
-                           % instruction.__class__.__name__)
-
-    def _do_apicall(self, instruction):
-        # type: (models.APICall) -> None
-        final_kwargs = self._resolve_variables(instruction)
-        method = getattr(self._client, instruction.method_name)
-        result = method(**final_kwargs)
-        if instruction.output_var is not None:
-            self.variables[instruction.output_var] = result
-
-    def _do_copyvariable(self, instruction):
-        # type: (models.CopyVariable) -> None
-        to_var = instruction.to_var
-        from_var = instruction.from_var
-        self.variables[to_var] = self.variables[from_var]
-
-    def _do_storevalue(self, instruction):
-        # type: (models.StoreValue) -> None
-        result = self._variable_resolver.resolve_variables(
-            instruction.value, self.variables)
-        self.variables[instruction.name] = result
-
-    def _do_recordresourcevariable(self, instruction):
-        # type: (models.RecordResourceVariable) -> None
-        payload = {
-            'name': instruction.resource_name,
-            'resource_type': instruction.resource_type,
-            instruction.name: self.variables[instruction.variable_name],
-        }
-        self._add_to_deployed_values(payload)
-
-    def _do_recordresourcevalue(self, instruction):
-        # type: (models.RecordResourceValue) -> None
-        payload = {
-            'name': instruction.resource_name,
-            'resource_type': instruction.resource_type,
-            instruction.name: instruction.value,
-        }
-        self._add_to_deployed_values(payload)
-
-    def _add_to_deployed_values(self, payload):
-        # type: (Dict[str, str]) -> None
-        key = payload['name']
-        if key not in self._resource_value_index:
-            self._resource_value_index[key] = payload
-            self.resource_values.append(payload)
-        else:
-            # If the key already exists, we merge the new payload
-            # with the existing payload.
-            self._resource_value_index[key].update(payload)
-
-    def _do_jpsearch(self, instruction):
-        # type: (models.JPSearch) -> None
-        v = self.variables[instruction.input_var]
-        result = jmespath.search(instruction.expression, v)
-        self.variables[instruction.output_var] = result
-
-    def _do_builtinfunction(self, instruction):
-        # type: (models.BuiltinFunction) -> None
-        # Split this out to a separate class of built in functions
-        # once we add more functions.
-        if instruction.function_name == 'parse_arn':
-            resolved_args = self._variable_resolver.resolve_variables(
-                instruction.args, self.variables)
-            value = resolved_args[0]
-            parts = value.split(':')
-            result = {
-                'service': parts[2],
-                'region': parts[3],
-                'account_id': parts[4],
-            }
-            self.variables[instruction.output_var] = result
-        else:
-            raise ValueError("Unknown builtin function: %s"
-                             % instruction.function_name)
-
-    def _resolve_variables(self, api_call):
-        # type: (models.APICall) -> Dict[str, Any]
-        try:
-            return self._variable_resolver.resolve_variables(
-                api_call.params, self.variables)
-        except UnresolvedValueError as e:
-            e.method_name = api_call.method_name
-            raise
-
-
-class VariableResolver(object):
-    def resolve_variables(self, value, variables):
-        # type: (Any, Dict[str, str]) -> Any
-        if isinstance(value, Variable):
-            return variables[value.name]
-        elif isinstance(value, StringFormat):
-            v = {k: variables[k] for k in value.variables}
-            return value.template.format(**v)
-        elif isinstance(value, models.Placeholder):
-            # The key and method_name values are added
-            # as the exception propagates up the stack.
-            raise UnresolvedValueError('', value, '')
-        elif isinstance(value, dict):
-            final = {}
-            for k, v in value.items():
-                try:
-                    final[k] = self.resolve_variables(v, variables)
-                except UnresolvedValueError as e:
-                    e.key = k
-                    raise
-            return final
-        elif isinstance(value, list):
-            final_list = []
-            for v in value:
-                final_list.append(self.resolve_variables(v, variables))
-            return final_list
-        else:
-            return value
 
 
 class ResultsRecorder(object):

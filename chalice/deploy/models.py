@@ -200,3 +200,14 @@ class S3BucketNotification(ManagedModel):
     def dependencies(self):
         # type: () -> List[Model]
         return [self.lambda_function]
+
+
+@attrs
+class SNSLambdaSubscription(ManagedModel):
+    resource_type = 'sns_event'
+    topic = attrib()            # type: str
+    lambda_function = attrib()  # type: LambdaFunction
+
+    def dependencies(self):
+        # type: () -> List[Model]
+        return [self.lambda_function]

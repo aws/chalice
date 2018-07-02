@@ -386,3 +386,26 @@ class TestSAMTemplate(object):
         assert '@app.on_s3_event' in str(excinfo.value)
         # Should mention you can use `chalice deploy`.
         assert 'chalice deploy' in str(excinfo.value)
+
+    def test_can_package_sns_handler(self, sample_app):
+        @sample_app.on_sns_message(topic='foo')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        sns_handler = template['Resources']['Handler']
+        assert sns_handler['Properties']['Events'] == {
+            'HandlerSnsSubscription': {
+                'Type': 'SNS',
+                'Properties': {
+                    'Topic': {
+                        'Fn::Sub': (
+                            'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:foo'
+                        )
+                    }
+                },
+            }
+        }

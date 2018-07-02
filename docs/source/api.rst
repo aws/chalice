@@ -215,6 +215,34 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
+   .. method:: on_sns_message(topic, name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever an SNS message is published to the specified topic.
+
+      See :ref:`sns-events` for more information.
+
+      This example prints the subject and the contents of the message whenever
+      something publishes to the sns topic of ``mytopic``.  In this example,
+      the input parameter is of type :class:`SNSEvent`.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_sns_message(topic='mytopic')
+          def handler(event):
+              app.log.info("SNS subject: %s", event.subject)
+              app.log.info("SNS message: %s", event.message)
+
+      :param topic: The name of the SNS topic you want to subscribe to.
+        This is the name of the topic, not the topic ARN.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
    .. method:: lambda_function(name=None)
 
       Create a pure lambda function that's not connected to anything.
@@ -796,3 +824,36 @@ Scheduled Events
       This means that the key name of the S3 object is URL
       encoded, which is the way that S3 sends this value
       to Lambda.
+
+
+.. class:: SNSEvent()
+
+   This is the input argument for an SNS event handler.
+
+   .. code-block:: python
+
+      @app.on_sns_message(topic='mytopic')
+      def event_handler(event: SNSEvent):
+          app.log.info("Message received with subject: %s, message: %s",
+                       event.subject, event.message)
+
+   In the code example above, the ``event`` argument is of
+   type ``SNSEvent``, which will have the following
+   attributes.
+
+   .. attribute:: subject
+
+      The subject of the SNS message that was published.
+
+   .. attribute:: message
+
+      The string value of the SNS message that was published.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``SNSEvent``
+      object.

@@ -15,13 +15,19 @@ from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaClientError
 
 
-class FixedIDTypedAWSClient(TypedAWSClient):
-    def __init__(self, session, random_id):
-        super(FixedIDTypedAWSClient, self).__init__(session)
-        self._fixed_random_id = random_id
-
-    def _random_id(self):
-        return self._fixed_random_id
+def create_policy_statement(source_arn, service_name, statement_id):
+    return {
+        'Action': 'lambda:InvokeFunction',
+        'Condition': {
+            'ArnLike': {
+                'AWS:SourceArn': source_arn,
+            }
+        },
+        'Effect': 'Allow',
+        'Principal': {'Service': '%s.amazonaws.com' % service_name},
+        'Resource': 'function-arn',
+        'Sid': statement_id,
+    }
 
 
 def test_region_name_is_exposed(stubbed_session):
@@ -1014,35 +1020,8 @@ class TestCanDeleteRole(object):
 
 
 class TestAddPermissionsForAPIGateway(object):
-    def test_can_add_permission_for_apigateway(self, stubbed_session):
-        stubbed_session.stub('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName='function_name',
-            StatementId='random-id',
-            Principal='apigateway.amazonaws.com',
-            SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway(
-            'function_name', 'us-west-2', '123', 'rest-api-id', 'random-id')
-        stubbed_session.verify_stubs()
-
-    def test_random_id_can_be_omitted(self, stubbed_session):
-        stubbed_session.stub('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName='function_name',
-            StatementId=stub.ANY,
-            Principal='apigateway.amazonaws.com',
-            SourceArn='arn:aws:execute-api:us-west-2:123:rest-api-id/*',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        TypedAWSClient(stubbed_session).add_permission_for_apigateway(
-            # random_id is omitted here.
-            'function_name', 'us-west-2', '123', 'rest-api-id')
-        stubbed_session.verify_stubs()
-
     def should_call_add_permission(self, lambda_stub,
-                                   statement_id='random-id'):
+                                   statement_id=stub.ANY):
         lambda_stub.add_permission(
             Action='lambda:InvokeFunction',
             FunctionName='name',
@@ -1058,17 +1037,17 @@ class TestAddPermissionsForAPIGateway(object):
         self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.add_permission_for_apigateway_if_needed(
-            'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        client.add_permission_for_apigateway(
+            'name', 'us-west-2', '123', 'rest-api-id')
         stubbed_session.verify_stubs()
 
     def test_can_add_permission_random_id_optional(self, stubbed_session):
         lambda_stub = stubbed_session.stub('lambda')
         lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
-        self.should_call_add_permission(lambda_stub, 'my-random-id')
+        self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
-        client = FixedIDTypedAWSClient(stubbed_session, 'my-random-id')
-        client.add_permission_for_apigateway_if_needed(
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway(
             'name', 'us-west-2', '123', 'rest-api-id')
         stubbed_session.verify_stubs()
 
@@ -1127,8 +1106,8 @@ class TestAddPermissionsForAPIGateway(object):
         # necessary permissions, we should not call add_permission.
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.add_permission_for_apigateway_if_needed(
-            'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
+        client.add_permission_for_apigateway(
+            'name', 'us-west-2', '123', 'rest-api-id')
         stubbed_session.verify_stubs()
 
     def test_can_add_permission_when_policy_does_not_exist(self,
@@ -1141,7 +1120,7 @@ class TestAddPermissionsForAPIGateway(object):
         self.should_call_add_permission(lambda_stub)
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.add_permission_for_apigateway_if_needed(
+        client.add_permission_for_apigateway(
             'name', 'us-west-2', '123', 'rest-api-id', 'random-id')
         stubbed_session.verify_stubs()
 
@@ -1568,4 +1547,155 @@ def test_can_disconnect_bucket_to_lambda_not_exists(stubbed_session):
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.disconnect_s3_bucket_from_lambda('mybucket', 'some-other-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_add_permission_for_sns_publish(stubbed_session):
+    lambda_client = stubbed_session.stub('lambda')
+    lambda_client.get_policy(FunctionName='function-arn').returns(
+        {'Policy': '{"Statement": []}'}
+    )
+    lambda_client.add_permission(
+        Action='lambda:InvokeFunction',
+        FunctionName='function-arn',
+        StatementId=stub.ANY,
+        Principal='sns.amazonaws.com',
+        SourceArn='arn:aws:sns:::topic-arn',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.add_permission_for_sns_topic(
+        'arn:aws:sns:::topic-arn', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_subscribe_function_to_arn(stubbed_session):
+    sns_client = stubbed_session.stub('sns')
+    topic_arn = 'arn:aws:sns:topic-arn'
+    sns_client.subscribe(
+        TopicArn=topic_arn,
+        Protocol='lambda',
+        Endpoint='function-arn'
+    ).returns({'SubscriptionArn': 'subscribe-arn'})
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.subscribe_function_to_topic(
+        'arn:aws:sns:topic-arn', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_can_unsubscribe_from_topic(stubbed_session):
+    sns_client = stubbed_session.stub('sns')
+    subscription_arn = 'arn:aws:sns:subscribe-arn'
+    sns_client.unsubscribe(
+        SubscriptionArn=subscription_arn,
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.unsubscribe_from_topic(subscription_arn)
+    stubbed_session.verify_stubs()
+
+
+@pytest.mark.parametrize('topic_arn,function_arn,is_verified', [
+    ('arn:aws:sns:mytopic', 'arn:aws:lambda:myfunction', True),
+    ('arn:aws:sns:NEW-TOPIC', 'arn:aws:lambda:myfunction', False),
+    ('arn:aws:sns:mytopic', 'arn:aws:lambda:NEW-FUNCTION', False),
+    ('arn:aws:sns:NEW-TOPIC', 'arn:aws:lambda:NEW-FUNCTION', False),
+])
+def test_subscription_exists(stubbed_session, topic_arn,
+                             function_arn, is_verified):
+    sns_client = stubbed_session.stub('sns')
+    subscription_arn = 'arn:aws:sns:subscribe-arn'
+    sns_client.get_subscription_attributes(
+        SubscriptionArn=subscription_arn,
+    ).returns({
+        "Attributes": {
+            "Owner": "12345",
+            "RawMessageDelivery": "false",
+            "TopicArn": topic_arn,
+            "Endpoint": function_arn,
+            "Protocol": "lambda",
+            "PendingConfirmation": "false",
+            "ConfirmationWasAuthenticated": "true",
+            "SubscriptionArn": subscription_arn,
+        }
+    })
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.verify_sns_subscription_current(
+        subscription_arn,
+        topic_name='mytopic',
+        function_arn='arn:aws:lambda:myfunction',
+    ) == is_verified
+    stubbed_session.verify_stubs()
+
+
+def test_subscription_not_exists(stubbed_session):
+    sns_client = stubbed_session.stub('sns')
+    subscription_arn = 'arn:aws:sns:subscribe-arn'
+    sns_client.get_subscription_attributes(
+        SubscriptionArn=subscription_arn,
+    ).raises_error(error_code='NotFound', message='Does not exists.')
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert not awsclient.verify_sns_subscription_current(
+        subscription_arn, 'topic-arn', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_can_remove_lambda_sns_permission(stubbed_session):
+    topic_arn = 'arn:sns:topic'
+    policy = {
+        'Id': 'default',
+        'Statement': [create_policy_statement(topic_arn,
+                                              service_name='sns',
+                                              statement_id='12345')],
+        'Version': '2012-10-17'
+    }
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.get_policy(
+        FunctionName='name').returns({'Policy': json.dumps(policy)})
+    lambda_stub.remove_permission(
+        FunctionName='name', StatementId='12345',
+    ).returns({})
+
+    # Because the policy above indicates that API gateway already has the
+    # necessary permissions, we should not call add_permission.
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.remove_permission_for_sns_topic(
+        topic_arn, 'name')
+    stubbed_session.verify_stubs()
+
+
+def test_can_remove_s3_permission(stubbed_session):
+    policy = {
+        'Id': 'default',
+        'Statement': [create_policy_statement('arn:aws:s3:::mybucket',
+                                              service_name='s3',
+                                              statement_id='12345')],
+        'Version': '2012-10-17'
+    }
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.get_policy(
+        FunctionName='name').returns({'Policy': json.dumps(policy)})
+    lambda_stub.remove_permission(
+        FunctionName='name', StatementId='12345',
+    ).returns({})
+
+    # Because the policy above indicates that API gateway already has the
+    # necessary permissions, we should not call add_permission.
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.remove_permission_for_s3_event(
+        'mybucket', 'name')
     stubbed_session.verify_stubs()

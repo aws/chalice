@@ -1,4 +1,5 @@
 """Chalice app and routing code."""
+# pylint: disable=too-many-lines
 import re
 import sys
 import os
@@ -450,7 +451,6 @@ class Chalice(object):
         self.log = logging.getLogger(self.app_name)
         self.builtin_auth_handlers = []
         self.event_sources = []
-        self.s3_events = []
         self.pure_lambda_functions = []
         if env is None:
             env = os.environ
@@ -539,21 +539,35 @@ class Chalice(object):
                 suffix=suffix,
                 handler_string='app.%s' % event_func.__name__,
             )
-            self.s3_events.append(s3_event)
-            return S3EventHandler(event_func)
+            self.event_sources.append(s3_event)
+            return EventSourceHandler(event_func, S3Event)
         return _register_s3_event
+
+    def on_sns_message(self, topic, name=None):
+        def _register_sns_message(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            sns_config = SNSEventConfig(
+                name=handler_name,
+                handler_string='app.%s' % event_func.__name__,
+                topic=topic,
+            )
+            self.event_sources.append(sns_config)
+            return EventSourceHandler(event_func, SNSEvent)
+        return _register_sns_message
 
     def schedule(self, expression, name=None):
         def _register_schedule(event_func):
             handler_name = name
             if handler_name is None:
                 handler_name = event_func.__name__
-            event_source = CloudWatchEventSource(
+            event_source = CloudWatchEventConfig(
                 name=handler_name,
                 schedule_expression=expression,
                 handler_string='app.%s' % event_func.__name__)
             self.event_sources.append(event_source)
-            return ScheduledEventHandler(event_func)
+            return EventSourceHandler(event_func, CloudWatchEvent)
         return _register_schedule
 
     def lambda_function(self, name=None):
@@ -862,15 +876,25 @@ class AuthRoute(object):
         self.methods = methods
 
 
-class EventSource(object):
+class LambdaFunction(object):
+    def __init__(self, func, name, handler_string):
+        self.func = func
+        self.name = name
+        self.handler_string = handler_string
+
+    def __call__(self, event, context):
+        return self.func(event, context)
+
+
+class BaseEventSourceConfig(object):
     def __init__(self, name, handler_string):
         self.name = name
         self.handler_string = handler_string
 
 
-class CloudWatchEventSource(EventSource):
+class CloudWatchEventConfig(BaseEventSourceConfig):
     def __init__(self, name, handler_string, schedule_expression):
-        super(CloudWatchEventSource, self).__init__(name, handler_string)
+        super(CloudWatchEventConfig, self).__init__(name, handler_string)
         self.schedule_expression = schedule_expression
 
 
@@ -917,20 +941,50 @@ class Cron(ScheduleExpression):
         )
 
 
-class ScheduledEventHandler(object):
-    def __init__(self, func):
+class S3EventConfig(BaseEventSourceConfig):
+    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
+        super(S3EventConfig, self).__init__(name, handler_string)
+        self.bucket = bucket
+        self.events = events
+        self.prefix = prefix
+        self.suffix = suffix
+
+
+class SNSEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, topic):
+        super(SNSEventConfig, self).__init__(name, handler_string)
+        self.topic = topic
+
+
+class EventSourceHandler(object):
+
+    def __init__(self, func, event_class):
         self.func = func
+        self.event_class = event_class
 
     def __call__(self, event, context):
-        event_obj = self._convert_to_obj(event)
+        event_obj = self.event_class(event)
         return self.func(event_obj)
 
-    def _convert_to_obj(self, event_dict):
-        return CloudWatchEvent(event_dict)
 
+# These classes contain all the event types that are passed
+# in as arguments in the lambda event handlers.  These are
+# part of Chalice's public API and must be backwards compatible.
 
-class CloudWatchEvent(object):
+class BaseLambdaEvent(object):
     def __init__(self, event_dict):
+        self._event_dict = event_dict
+        self._extract_attributes(event_dict)
+
+    def _extract_attributes(self, event_dict):
+        raise NotImplementedError("_extract_attributes")
+
+    def to_dict(self):
+        return self._event_dict
+
+
+class CloudWatchEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
         self.version = event_dict['version']
         self.account = event_dict['account']
         self.region = event_dict['region']
@@ -940,50 +994,17 @@ class CloudWatchEvent(object):
         self.time = event_dict['time']
         self.event_id = event_dict['id']
         self.resources = event_dict['resources']
-        self._event_dict = event_dict
-
-    def to_dict(self):
-        return self._event_dict
 
 
-class LambdaFunction(object):
-    def __init__(self, func, name, handler_string):
-        self.func = func
-        self.name = name
-        self.handler_string = handler_string
-
-    def __call__(self, event, context):
-        return self.func(event, context)
+class SNSEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        first_record = event_dict['Records'][0]
+        self.message = first_record['Sns']['Message']
+        self.subject = first_record['Sns']['Subject']
 
 
-class S3EventConfig(object):
-    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
-        self.name = name
-        self.bucket = bucket
-        self.events = events
-        self.prefix = prefix
-        self.suffix = suffix
-        self.handler_string = handler_string
-
-
-class S3EventHandler(object):
-    def __init__(self, handler):
-        self.handler = handler
-
-    def __call__(self, event, context):
-        event_obj = self._convert_to_obj(event)
-        return self.handler(event_obj)
-
-    def _convert_to_obj(self, event_dict):
-        return S3Event(event_dict)
-
-
-class S3Event(object):
-    def __init__(self, event):
-        s3 = event['Records'][0]['s3']
+class S3Event(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        s3 = event_dict['Records'][0]['s3']
         self.bucket = s3['bucket']['name']
         self.key = unquote_str(s3['object']['key'])
-        self._original_payload = event
-
-    def to_dict(self):
-        return self._original_payload

@@ -58,6 +58,19 @@ class RemoteState(object):
         self._cache[key] = result
         return result
 
+    def _resource_exists_snslambdasubscription(self, resource):
+        # type: (models.SNSLambdaSubscription) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        return self._client.verify_sns_subscription_current(
+            deployed_values['subscription_arn'],
+            topic_name=resource.topic,
+            function_arn=deployed_values['lambda_arn'],
+        )
+
     def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
@@ -116,6 +129,14 @@ class ResourceSweeper(object):
                                      models.RecordResourceValue)][0]
                 if bucket.value != resource_values['bucket']:
                     remaining.append(name)
+            elif resource_values['resource_type'] == 'sns_event':
+                existing_topic = resource_values['topic']
+                referenced_topic = [instruction for instruction in marked[name]
+                                    if instruction.name == 'topic' and
+                                    isinstance(instruction,
+                                               models.RecordResourceValue)][0]
+                if referenced_topic.value != existing_topic:
+                    remaining.append(name)
         return remaining
 
     def _mark_resources(self, plan):
@@ -169,11 +190,31 @@ class ResourceSweeper(object):
             elif resource_values['resource_type'] == 's3_event':
                 bucket = resource_values['bucket']
                 function_arn = resource_values['lambda_arn']
-                apicall = models.APICall(
-                    method_name='disconnect_s3_bucket_from_lambda',
-                    params={'bucket': bucket, 'function_arn': function_arn}
-                )
-                plan.append(apicall)
+                plan.extend([
+                    models.APICall(
+                        method_name='disconnect_s3_bucket_from_lambda',
+                        params={'bucket': bucket, 'function_arn': function_arn}
+                    ),
+                    models.APICall(
+                        method_name='remove_permission_for_s3_event',
+                        params={'bucket': bucket, 'function_arn': function_arn}
+                    )
+                ])
+            elif resource_values['resource_type'] == 'sns_event':
+                subscription_arn = resource_values['subscription_arn']
+                plan.extend([
+                    models.APICall(
+                        method_name='unsubscribe_from_topic',
+                        params={'subscription_arn': subscription_arn},
+                    ),
+                    models.APICall(
+                        method_name='remove_permission_for_sns_topic',
+                        params={
+                            'topic_arn': resource_values['topic_arn'],
+                            'function_arn': resource_values['lambda_arn'],
+                        },
+                    )
+                ])
 
 
 class PlanStage(object):
@@ -362,6 +403,112 @@ class PlanStage(object):
             )
         ]
 
+    def _plan_snslambdasubscription(self, resource):
+        # type: (models.SNSLambdaSubscription) -> Sequence[_INSTRUCTION_MSG]
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        topic_arn_varname = '%s_topic_arn' % resource.resource_name
+        subscribe_varname = '%s_subscription_arn' % resource.resource_name
+        # To keep the user API simple, we only require the topic
+        # name and not the ARN.  However, the APIs require the topic
+        # ARN so we need to reconstruct it here in the planner.
+        instruction_for_topic_arn = [
+            models.BuiltinFunction(
+                'parse_arn',
+                [function_arn],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            models.StoreValue(
+                name=topic_arn_varname,
+                value=StringFormat(
+                    'arn:aws:sns:{region_name}:{account_id}:%s' % (
+                        resource.topic
+                    ),
+                    ['region_name', 'account_id'],
+                ),
+            ),
+        ]  # type: List[_INSTRUCTION_MSG]
+        if self._remote_state.resource_exists(resource):
+            # Given there's nothing about an SNS subscription you can
+            # configure for now, if the resource exists, we don't do
+            # anything.  The resource sweeper will verify that if the
+            # subscription doesn't actually apply that we should unsubscribe
+            # from the topic.
+            deployed = self._remote_state.resource_deployed_values(resource)
+            subscription_arn = deployed['subscription_arn']
+            return instruction_for_topic_arn + [
+                models.RecordResourceValue(
+                    resource_type='sns_event',
+                    resource_name=resource.resource_name,
+                    name='topic',
+                    value=resource.topic,
+                ),
+                models.RecordResourceVariable(
+                    resource_type='sns_event',
+                    resource_name=resource.resource_name,
+                    name='lambda_arn',
+                    variable_name=function_arn.name,
+                ),
+                models.RecordResourceValue(
+                    resource_type='sns_event',
+                    resource_name=resource.resource_name,
+                    name='subscription_arn',
+                    value=subscription_arn,
+                ),
+                models.RecordResourceVariable(
+                    resource_type='sns_event',
+                    resource_name=resource.resource_name,
+                    name='topic_arn',
+                    variable_name=topic_arn_varname,
+                ),
+            ]
+        return instruction_for_topic_arn + [
+            models.APICall(
+                method_name='add_permission_for_sns_topic',
+                params={'topic_arn': Variable(topic_arn_varname),
+                        'function_arn': function_arn},
+            ),
+            (models.APICall(
+                method_name='subscribe_function_to_topic',
+                params={'topic_arn': Variable(topic_arn_varname),
+                        'function_arn': function_arn},
+                output_var=subscribe_varname,
+            ), 'Subscribing %s to SNS topic %s\n'
+                % (resource.lambda_function.function_name, resource.topic)
+            ),
+            models.RecordResourceValue(
+                resource_type='sns_event',
+                resource_name=resource.resource_name,
+                name='topic',
+                value=resource.topic,
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name=resource.resource_name,
+                name='lambda_arn',
+                variable_name=function_arn.name,
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name=resource.resource_name,
+                name='subscription_arn',
+                variable_name=subscribe_varname,
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name=resource.resource_name,
+                name='topic_arn',
+                variable_name=topic_arn_varname,
+            ),
+        ]
+
     def _plan_s3bucketnotification(self, resource):
         # type: (models.S3BucketNotification) -> Sequence[_INSTRUCTION_MSG]
         function_arn = Variable(
@@ -471,7 +618,7 @@ class PlanStage(object):
         # the update and create case.
         shared_plan_epilogue = [
             models.APICall(
-                method_name='add_permission_for_apigateway_if_needed',
+                method_name='add_permission_for_apigateway',
                 params={'function_name': function_name,
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
@@ -495,7 +642,7 @@ class PlanStage(object):
         for auth in resource.authorizers:
             shared_plan_epilogue.append(
                 models.APICall(
-                    method_name='add_permission_for_apigateway_if_needed',
+                    method_name='add_permission_for_apigateway',
                     params={'function_name': auth.function_name,
                             'region_name': Variable('region_name'),
                             'account_id': Variable('account_id'),
@@ -546,7 +693,7 @@ class PlanStage(object):
                             'api_gateway_stage': resource.api_gateway_stage},
                 ),
                 models.APICall(
-                    method_name='add_permission_for_apigateway_if_needed',
+                    method_name='add_permission_for_apigateway',
                     params={'function_name': function_name,
                             'region_name': Variable('region_name'),
                             'account_id': Variable('account_id'),
