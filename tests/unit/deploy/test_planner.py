@@ -811,13 +811,13 @@ class TestRemoteState(object):
             self.remote_state.resource_exists(foo)
 
     @pytest.mark.parametrize(
-        'resource_topic,deployed_topic,resource_exists,expected_result', [
+        'resource_topic,deployed_topic,is_current,expected_result', [
             ('mytopic', 'mytopic', True, True),
             ('mytopic-new', 'mytopic-old', False, False),
         ]
     )
     def test_sns_subscription_exists(self, resource_topic, deployed_topic,
-                                     resource_exists, expected_result):
+                                     is_current, expected_result):
         sns_subscription = models.SNSLambdaSubscription(
             topic=resource_topic, resource_name='handler-sns-subscription',
             lambda_function=None
@@ -832,7 +832,7 @@ class TestRemoteState(object):
             }]
         }
         self.client.verify_sns_subscription_current.return_value = \
-            resource_exists
+            is_current
         remote_state = RemoteState(
             self.client, DeployedResources(deployed_resources))
         assert (
