@@ -205,17 +205,13 @@ class BaseEventSourceConfig(object):
 
 
 class S3EventConfig(BaseEventSourceConfig):
-    name = ... # type: str
     bucket = ... # type: str
     events = ... # type: List[str]
     prefix = ... # type: str
     suffix = ... # type: str
-    handler_string = ... # type: str
 
 
 class SNSEventConfig(BaseEventSourceConfig):
-    name = ... # type: str
-    handler_string = ... # type: str
     topic = ... # type: str
 
 
