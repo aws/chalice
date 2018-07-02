@@ -182,7 +182,7 @@ We can now deploy our chalice app::
     Resources deployed:
       - Lambda ARN: arn:aws:lambda:us-west-2:123:function:...
 
-And now we can test our app by publishing a few SNS message to our topic.
+And now we can test our app by publishing a few SNS messages to our topic.
 We'll do this using boto3.  In the example below, we're using ``list_topics()``
 to find the ARN associated with our topic name before calling the ``publish()``
 method.
