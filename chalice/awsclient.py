@@ -474,52 +474,6 @@ class TypedAWSClient(object):
             service_name='apigateway',
         )
 
-    def _policy_gives_access(self, policy, source_arn, service_name):
-        # type: (Dict[str, Any], str, str) -> bool
-        # Here's what a sample policy looks like after add_permission()
-        # has been previously called:
-        # {
-        #  "Id": "default",
-        #  "Statement": [
-        #   {
-        #    "Action": "lambda:InvokeFunction",
-        #    "Condition": {
-        #     "ArnLike": {
-        #       "AWS:SourceArn": <source_arn>
-        #     }
-        #    },
-        #    "Effect": "Allow",
-        #    "Principal": {
-        #     "Service": "apigateway.amazonaws.com"
-        #    },
-        #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
-        #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
-        #   }
-        #  ],
-        #  "Version": "2012-10-17"
-        # }
-        # So we need to check if there's a policy that looks like this.
-        for statement in policy.get('Statement', []):
-            if self._statement_gives_arn_access(statement, source_arn,
-                                                service_name):
-                return True
-        return False
-
-    def _statement_gives_arn_access(self, statement, source_arn, service_name):
-        # type: (Dict[str, Any], str, str) -> bool
-        if not statement['Action'] == 'lambda:InvokeFunction':
-            return False
-        if statement.get('Condition', {}).get(
-                'ArnLike', {}).get('AWS:SourceArn', '') != source_arn:
-            return False
-        if statement.get('Principal', {}).get('Service', '') != \
-                '%s.amazonaws.com' % service_name:
-            return False
-        # We're not checking the "Resource" key because we're assuming
-        # that lambda.get_policy() is returning the policy for the particular
-        # resource in question.
-        return True
-
     def get_function_policy(self, function_name):
         # type: (str) -> Dict[str, Any]
         """Return the function policy for a lambda function.
@@ -624,6 +578,14 @@ class TypedAWSClient(object):
     def add_permission_for_sns_topic(self, topic_arn, function_arn):
         # type: (str, str) -> None
         self._add_lambda_permission_if_needed(
+            source_arn=topic_arn,
+            function_arn=function_arn,
+            service_name='sns',
+        )
+
+    def remove_permission_for_sns_topic(self, topic_arn, function_arn):
+        # type: (str, str) -> None
+        self._remove_lambda_permission_if_needed(
             source_arn=topic_arn,
             function_arn=function_arn,
             service_name='sns',
@@ -738,6 +700,15 @@ class TypedAWSClient(object):
             service_name='events',
         )
 
+    def remove_permission_for_scheduled_event(self, rule_arn,
+                                              function_arn):
+        # type: (str, str) -> None
+        self._remove_lambda_permission_if_needed(
+            source_arn=rule_arn,
+            function_arn=function_arn,
+            service_name='events',
+        )
+
     def connect_s3_bucket_to_lambda(self, bucket, function_arn, events,
                                     prefix=None, suffix=None):
         # type: (str, str, List[str], _OPT_STR, _OPT_STR) -> None
@@ -813,6 +784,15 @@ class TypedAWSClient(object):
             service_name='s3',
         )
 
+    def remove_permission_for_s3_event(self, bucket, function_arn):
+        # type: (str, str) -> None
+        bucket_arn = 'arn:aws:s3:::%s' % bucket
+        self._remove_lambda_permission_if_needed(
+            source_arn=bucket_arn,
+            function_arn=function_arn,
+            service_name='s3',
+        )
+
     def disconnect_s3_bucket_from_lambda(self, bucket, function_arn):
         # type: (str, str) -> None
         s3 = self._client('s3')
@@ -846,6 +826,65 @@ class TypedAWSClient(object):
             Principal='%s.amazonaws.com' % service_name,
             SourceArn=source_arn,
         )
+
+    def _policy_gives_access(self, policy, source_arn, service_name):
+        # type: (Dict[str, Any], str, str) -> bool
+        # Here's what a sample policy looks like after add_permission()
+        # has been previously called:
+        # {
+        #  "Id": "default",
+        #  "Statement": [
+        #   {
+        #    "Action": "lambda:InvokeFunction",
+        #    "Condition": {
+        #     "ArnLike": {
+        #       "AWS:SourceArn": <source_arn>
+        #     }
+        #    },
+        #    "Effect": "Allow",
+        #    "Principal": {
+        #     "Service": "apigateway.amazonaws.com"
+        #    },
+        #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
+        #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
+        #   }
+        #  ],
+        #  "Version": "2012-10-17"
+        # }
+        # So we need to check if there's a policy that looks like this.
+        for statement in policy.get('Statement', []):
+            if self._statement_gives_arn_access(statement, source_arn,
+                                                service_name):
+                return True
+        return False
+
+    def _statement_gives_arn_access(self, statement, source_arn, service_name):
+        # type: (Dict[str, Any], str, str) -> bool
+        if not statement['Action'] == 'lambda:InvokeFunction':
+            return False
+        if statement.get('Condition', {}).get(
+                'ArnLike', {}).get('AWS:SourceArn', '') != source_arn:
+            return False
+        if statement.get('Principal', {}).get('Service', '') != \
+                '%s.amazonaws.com' % service_name:
+            return False
+        # We're not checking the "Resource" key because we're assuming
+        # that lambda.get_policy() is returning the policy for the particular
+        # resource in question.
+        return True
+
+    def _remove_lambda_permission_if_needed(self, source_arn, function_arn,
+                                            service_name):
+        # type: (str, str, str) -> None
+        client = self._client('lambda')
+        policy = self.get_function_policy(function_arn)
+        for statement in policy.get('Statement', []):
+            if self._statement_gives_arn_access(statement, source_arn,
+                                                service_name):
+                client.remove_permission(
+                    FunctionName=function_arn,
+                    StatementId=statement['Sid'],
+                )
 
     def _random_id(self):
         # type: () -> str
