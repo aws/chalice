@@ -5,6 +5,9 @@ import mock
 import pytest
 from watchdog.events import FileSystemEvent, DirModifiedEvent
 
+from chalice.cli.filewatch.eventbased import WatchdogRestarter
+
+import chalice.local
 from chalice.cli import reloader
 from chalice.local import LocalDevServer
 
@@ -30,7 +33,7 @@ class RecordingPopen(object):
 
 def test_restarter_triggers_event():
     restart_event = threading.Event()
-    restarter = reloader.Restarter(restart_event)
+    restarter = WatchdogRestarter(restart_event)
     app_modified = FileSystemEvent(src_path='./app.py')
     restarter.on_any_event(app_modified)
     assert restart_event.is_set()
@@ -38,7 +41,7 @@ def test_restarter_triggers_event():
 
 def test_directory_events_ignored():
     restart_event = threading.Event()
-    restarter = reloader.Restarter(restart_event)
+    restarter = WatchdogRestarter(restart_event)
     app_modified = DirModifiedEvent(src_path='./')
     restarter.on_any_event(app_modified)
     assert not restart_event.is_set()
@@ -46,7 +49,7 @@ def test_directory_events_ignored():
 
 def test_http_server_thread_starts_server_and_shutsdown():
     server = mock.Mock(spec=LocalDevServer)
-    thread = reloader.HTTPServerThread(lambda: server)
+    thread = chalice.local.HTTPServerThread(lambda: server)
     thread.run()
     thread.shutdown()
     server.serve_forever.assert_called_with()
@@ -55,7 +58,7 @@ def test_http_server_thread_starts_server_and_shutsdown():
 
 def test_shutdown_noop_if_server_not_started():
     server = mock.Mock(spec=LocalDevServer)
-    thread = reloader.HTTPServerThread(lambda: server)
+    thread = chalice.local.HTTPServerThread(lambda: server)
     thread.shutdown()
     assert not server.shutdown.called
 
@@ -78,7 +81,7 @@ def test_parent_process_starts_child_with_worker_env_var():
 def test_assert_child_restarted_until_not_restart_rc():
     process = mock.Mock(spec=Popen)
     popen = RecordingPopen(
-        process, return_codes=[reloader.RESTART_REQUEST_RC, 0])
+        process, return_codes=[chalice.cli.filewatch.RESTART_REQUEST_RC, 0])
     parent = reloader.ParentProcess({}, popen)
 
     parent.main()

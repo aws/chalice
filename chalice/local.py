@@ -5,6 +5,7 @@ This is intended only for local development purposes.
 """
 from __future__ import print_function
 import re
+import threading
 import time
 import uuid
 import base64
@@ -637,3 +638,29 @@ class LocalDevServer(object):
         # This must be called from another thread of else it
         # will deadlock.
         self.server.shutdown()
+
+
+class HTTPServerThread(threading.Thread):
+    """Thread that manages starting/stopping local HTTP server.
+
+    This is a small wrapper around a normal threading.Thread except
+    that it adds shutdown capability of the HTTP server, which is
+    not part of the normal threading.Thread interface.
+
+    """
+    def __init__(self, server_factory):
+        # type: (Callable[[], LocalDevServer]) -> None
+        threading.Thread.__init__(self)
+        self._server_factory = server_factory
+        self._server = None  # type: Optional[LocalDevServer]
+        self.daemon = True
+
+    def run(self):
+        # type: () -> None
+        self._server = self._server_factory()
+        self._server.serve_forever()
+
+    def shutdown(self):
+        # type: () -> None
+        if self._server is not None:
+            self._server.shutdown()

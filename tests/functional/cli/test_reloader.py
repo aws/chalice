@@ -1,7 +1,9 @@
 import mock
 import threading
 
-from chalice.cli import reloader
+from chalice.cli.filewatch.eventbased import WatchdogWorkerProcess
+
+import chalice.local
 
 
 DEFAULT_DELAY = 0.1
@@ -22,11 +24,11 @@ def modify_file(filename, contents):
 
 
 def assert_reload_happens(root_dir, when_modified_file):
-    http_thread = mock.Mock(spec=reloader.HTTPServerThread)
-    p = reloader.WorkerProcess(http_thread)
+    http_thread = mock.Mock(spec=chalice.local.HTTPServerThread)
+    p = WatchdogWorkerProcess(http_thread)
     modify_file_after_n_seconds(when_modified_file, 'contents')
     rc = p.main(root_dir, MAX_TIMEOUT)
-    assert rc == reloader.RESTART_REQUEST_RC
+    assert rc == chalice.cli.filewatch.RESTART_REQUEST_RC
 
 
 def test_can_reload_when_file_created(tmpdir):
@@ -40,7 +42,7 @@ def test_can_reload_when_subdir_file_created(tmpdir):
 
 
 def test_rc_0_when_no_file_modified(tmpdir):
-    http_thread = mock.Mock(spec=reloader.HTTPServerThread)
-    p = reloader.WorkerProcess(http_thread)
+    http_thread = mock.Mock(spec=chalice.local.HTTPServerThread)
+    p = WatchdogWorkerProcess(http_thread)
     rc = p.main(str(tmpdir), timeout=0.2)
     assert rc == 0
