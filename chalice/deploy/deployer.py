@@ -405,6 +405,12 @@ class ApplicationGraphBuilder(object):
                         config, deployment, event_source, stage_name
                     )
                 )
+            elif isinstance(event_source, app.SQSEventConfig):
+                resources.append(
+                    self._create_sqs_subscription(
+                        config, deployment, event_source, stage_name,
+                    )
+                )
         return resources
 
     def _create_rest_api_model(self,
@@ -654,6 +660,27 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
         )
         return sns_subscription
+
+    def _create_sqs_subscription(
+        self,
+        config,      # type: Config
+        deployment,  # type: models.DeploymentPackage
+        sqs_config,  # type: app.SQSEventConfig
+        stage_name,  # type: str
+    ):
+        # type: (...) -> models.SQSEventSource
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=sqs_config.name,
+            handler_name=sqs_config.handler_string, stage_name=stage_name
+        )
+        resource_name = sqs_config.name + '-sqs-event-source'
+        sqs_event_source = models.SQSEventSource(
+            resource_name=resource_name,
+            queue=sqs_config.queue,
+            batch_size=sqs_config.batch_size,
+            lambda_function=lambda_function,
+        )
+        return sqs_event_source
 
 
 class DependencyBuilder(object):

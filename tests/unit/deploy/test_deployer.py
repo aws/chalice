@@ -304,6 +304,17 @@ def sns_event_app():
 
 
 @fixture
+def sqs_event_app():
+    app = Chalice('sqs-event')
+
+    @app.on_sqs_message(queue='myqueue')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def mock_client():
     return mock.Mock(spec=TypedAWSClient)
 
@@ -648,6 +659,21 @@ class TestApplicationGraphBuilder(object):
         assert sns_event.resource_name == 'handler-sns-subscription'
         assert sns_event.topic == 'mytopic'
         lambda_function = sns_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_sqs_event_handler(self, sqs_event_app):
+        config = self.create_config(sqs_event_app,
+                                    app_name='sqs-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        sqs_event = application.resources[0]
+        assert isinstance(sqs_event, models.SQSEventSource)
+        assert sqs_event.resource_name == 'handler-sqs-event-source'
+        assert sqs_event.queue == 'myqueue'
+        lambda_function = sqs_event.lambda_function
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 

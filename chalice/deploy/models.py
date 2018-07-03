@@ -211,3 +211,15 @@ class SNSLambdaSubscription(ManagedModel):
     def dependencies(self):
         # type: () -> List[Model]
         return [self.lambda_function]
+
+
+@attrs
+class SQSEventSource(ManagedModel):
+    resource_type = 'sqs_event'
+    queue = attrib()            # type: str
+    batch_size = attrib()       # type: int
+    lambda_function = attrib()  # type: LambdaFunction
+
+    def dependencies(self):
+        # type: () -> List[Model]
+        return [self.lambda_function]
