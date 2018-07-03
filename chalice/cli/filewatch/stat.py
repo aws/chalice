@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 
-from typing import Callable, Dict, Optional  # noqa
+from typing import Callable, Dict, Optional, Iterator  # noqa
 
 from chalice.cli.filewatch import FileWatcher, WorkerProcess
 from chalice.utils import OSUtils
@@ -64,34 +64,37 @@ class StatFileWatcher(FileWatcher):
 
     def _single_pass_poll(self, root_dir, callback):
         # type: (str, Callable[[], None]) -> None
-        mtime_cache = self._mtime_cache
-        new_mtimes = {}
-        for rootdir, _, filenames in self._osutils.walk(root_dir):
-            for filename in filenames:
-                path = self._osutils.joinpath(rootdir, filename)
-                last_mtime = mtime_cache.get(path)
-                if last_mtime is None:
-                    # New file added, we don't need to look any further.
-                    mtime_cache[path] = self._osutils.mtime(path)
-                    LOGGER.debug("File added: %s, triggering restart.",
-                                 path)
-                    callback()
-                    return
-                try:
-                    new_mtime = self._osutils.mtime(path)
-                    if new_mtime > last_mtime:
-                        # File has been updated.
-                        mtime_cache[path] = new_mtime
-                        LOGGER.debug("File updated: %s, triggering restart.",
-                                     path)
-                        callback()
-                        return
-                    new_mtimes[path] = new_mtime
-                except OSError:
-                    pass
-        if new_mtimes != mtime_cache:
+        new_mtimes = {}  # type: Dict[str, int]
+        for path in self._recursive_walk_files(root_dir):
+            if self._is_changed_file(path, new_mtimes):
+                callback()
+                return
+        if new_mtimes != self._mtime_cache:
             # Files were removed.
             LOGGER.debug("Files removed, triggering restart.")
             self._mtime_cache = new_mtimes
             callback()
             return
+
+    def _is_changed_file(self, path, new_mtimes):
+        # type: (str, Dict[str, int]) -> bool
+        last_mtime = self._mtime_cache.get(path)
+        if last_mtime is None:
+            LOGGER.debug("File added: %s, triggering restart.", path)
+            return True
+        try:
+            new_mtime = self._osutils.mtime(path)
+            if new_mtime > last_mtime:
+                LOGGER.debug("File updated: %s, triggering restart.", path)
+                return True
+            new_mtimes[path] = new_mtime
+            return False
+        except OSError:
+            return False
+
+    def _recursive_walk_files(self, root_dir):
+        # type: (str) -> Iterator[str]
+        for rootdir, _, filenames in self._osutils.walk(root_dir):
+            for filename in filenames:
+                path = self._osutils.joinpath(rootdir, filename)
+                yield path
