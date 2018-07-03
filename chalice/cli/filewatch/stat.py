@@ -25,12 +25,14 @@ class StatWorkerProcess(WorkerProcess):
 class StatFileWatcher(FileWatcher):
     POLL_INTERVAL = 1
 
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, osutils=None):
+        # type: (Optional[OSUtils]) -> None
         self._mtime_cache = {}  # type: Dict[str, int]
         self._shutdown_event = threading.Event()
         self._thread = None  # type: Optional[threading.Thread]
-        self._osutils = OSUtils()
+        if osutils is None:
+            osutils = OSUtils()
+        self._osutils = osutils
 
     def watch_for_file_changes(self, root_dir, callback):
         # type: (str, Callable[[], None]) -> None
@@ -41,12 +43,6 @@ class StatFileWatcher(FileWatcher):
         self._thread = t
         LOGGER.debug("Stat file watching: %s, with callback: %s",
                      root_dir, callback)
-
-    def shutdown(self):
-        # type: () -> None
-        self._shutdown_event.set()
-        if self._thread is not None:
-            self._thread.join()
 
     def poll_for_changes_until_shutdown(self, root_dir, callback):
         # type: (str, Callable[[], None]) -> None
@@ -89,7 +85,7 @@ class StatFileWatcher(FileWatcher):
                 return True
             new_mtimes[path] = new_mtime
             return False
-        except OSError:
+        except (OSError, IOError):
             return False
 
     def _recursive_walk_files(self, root_dir):

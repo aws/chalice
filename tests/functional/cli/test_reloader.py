@@ -1,7 +1,9 @@
 import pytest
 import mock
 import threading
+import os
 import unittest
+import time
 
 from chalice.cli.filewatch.stat import StatWorkerProcess
 try:
@@ -14,6 +16,7 @@ import chalice.local
 
 
 DEFAULT_DELAY = 0.1
+SETTLE_DELAY = 1
 MAX_TIMEOUT = 5.0
 use_all_watcher_types = pytest.mark.parametrize(
     ['worker_class_type'], [('watchdog',), ('stat',)])
@@ -21,6 +24,12 @@ use_all_watcher_types = pytest.mark.parametrize(
 
 def modify_file_after_n_seconds(filename, contents, delay=DEFAULT_DELAY):
     t = threading.Timer(delay, function=modify_file, args=(filename, contents))
+    t.daemon = True
+    t.start()
+
+
+def delete_file_after_n_seconds(filename, delay=DEFAULT_DELAY):
+    t = threading.Timer(delay, function=os.remove, args=(filename,))
     t.daemon = True
     t.start()
 
@@ -36,7 +45,11 @@ def assert_reload_happens(root_dir, when_modified_file, using_worker_class):
     http_thread = mock.Mock(spec=chalice.local.HTTPServerThread)
     worker_cls = get_worker_cls(using_worker_class)
     p = worker_cls(http_thread)
-    modify_file_after_n_seconds(when_modified_file, 'contents')
+    if isinstance(when_modified_file, tuple):
+        if when_modified_file[1] == 'is_deleted':
+            delete_file_after_n_seconds(when_modified_file[0])
+    else:
+        modify_file_after_n_seconds(when_modified_file, 'contents')
     rc = p.main(root_dir, MAX_TIMEOUT)
     assert rc == chalice.cli.filewatch.RESTART_REQUEST_RC
 
@@ -66,6 +79,29 @@ def test_can_reload_when_subdir_file_created(tmpdir, worker_class_type):
     subdir_file = str(tmpdir.join('subdir').mkdir().join('foo.txt'))
     assert_reload_happens(str(tmpdir), when_modified_file=subdir_file,
                           using_worker_class=worker_class_type)
+
+
+@use_all_watcher_types
+def test_can_reload_when_file_modified(tmpdir, worker_class_type):
+    top_level_file = tmpdir.join('foo')
+    top_level_file.write('original contents')
+    # If you write to the file and immediately start the reloader, it
+    # won't see the initial write() above.  I tried out a few delay options,
+    # and a separate SETTLE_DELAY was necessary in order to prevent
+    # intermittent failures.
+    time.sleep(SETTLE_DELAY)
+    assert_reload_happens(str(tmpdir), when_modified_file=str(top_level_file),
+                          using_worker_class=worker_class_type)
+
+
+@use_all_watcher_types
+def test_can_reload_when_file_removed(tmpdir, worker_class_type):
+    top_level_file = tmpdir.join('foo')
+    top_level_file.write('original contents')
+    assert_reload_happens(
+        str(tmpdir), when_modified_file=(str(top_level_file), 'is_deleted'),
+        using_worker_class=worker_class_type
+    )
 
 
 @use_all_watcher_types
