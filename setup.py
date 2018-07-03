@@ -28,7 +28,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
     extras_require={
-        'file-watcher': ['watchdog==0.8.3'],
+        'event-file-poller': ['watchdog==0.8.3'],
     },
     license="Apache License 2.0",
     package_data={'chalice': ['*.json']},

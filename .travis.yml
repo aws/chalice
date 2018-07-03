@@ -9,7 +9,7 @@ matrix:
 install:
   - pip install -r requirements-dev.txt -r requirements-docs.txt
   - pip install -e .
-  - pip install -e ".[file-watcher]"
+  - pip install -e ".[event-file-poller]"
 script:
   - env
   - make $TEST_TYPE
