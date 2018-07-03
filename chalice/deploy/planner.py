@@ -71,6 +71,20 @@ class RemoteState(object):
             function_arn=deployed_values['lambda_arn'],
         )
 
+    def _resource_exists_sqseventsource(self, resource):
+        # type: (models.SQSEventSource) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        return self._client.verify_event_source_current(
+            event_uuid=deployed_values['event_uuid'],
+            resource_name=resource.queue,
+            service_name='sqs',
+            function_arn=deployed_values['lambda_arn'],
+        )
+
     def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
@@ -136,6 +150,14 @@ class ResourceSweeper(object):
                                     isinstance(instruction,
                                                models.RecordResourceValue)][0]
                 if referenced_topic.value != existing_topic:
+                    remaining.append(name)
+            elif resource_values['resource_type'] == 'sqs_event':
+                existing_queue = resource_values['queue']
+                referenced_queue = [instruction for instruction in marked[name]
+                                    if instruction.name == 'queue' and
+                                    isinstance(instruction,
+                                               models.RecordResourceValue)][0]
+                if referenced_queue.value != existing_queue:
                     remaining.append(name)
         return remaining
 
@@ -213,6 +235,13 @@ class ResourceSweeper(object):
                             'topic_arn': resource_values['topic_arn'],
                             'function_arn': resource_values['lambda_arn'],
                         },
+                    )
+                ])
+            elif resource_values['resource_type'] == 'sqs_event':
+                plan.extend([
+                    models.APICall(
+                        method_name='remove_sqs_event_source',
+                        params={'event_uuid': resource_values['event_uuid']},
                     )
                 ])
 
@@ -506,6 +535,107 @@ class PlanStage(object):
                 resource_name=resource.resource_name,
                 name='topic_arn',
                 variable_name=topic_arn_varname,
+            ),
+        ]
+
+    def _plan_sqseventsource(self, resource):
+        # type: (models.SQSEventSource) -> Sequence[_INSTRUCTION_MSG]
+        queue_arn_varname = '%s_queue_arn' % resource.resource_name
+        uuid_varname = '%s_uuid' % resource.resource_name
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        instruction_for_queue_arn = [
+            models.BuiltinFunction(
+                'parse_arn',
+                [function_arn],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            models.StoreValue(
+                name=queue_arn_varname,
+                value=StringFormat(
+                    'arn:aws:sqs:{region_name}:{account_id}:%s' % (
+                        resource.queue
+                    ),
+                    ['region_name', 'account_id'],
+                ),
+            ),
+        ]  # type: List[_INSTRUCTION_MSG]
+        if self._remote_state.resource_exists(resource):
+            deployed = self._remote_state.resource_deployed_values(resource)
+            uuid = deployed['event_uuid']
+            return instruction_for_queue_arn + [
+                models.APICall(
+                    method_name='update_sqs_event_source',
+                    params={'event_uuid': uuid,
+                            'batch_size': resource.batch_size}
+                ),
+                models.RecordResourceValue(
+                    resource_type='sqs_event',
+                    resource_name=resource.resource_name,
+                    name='queue_arn',
+                    value=deployed['queue_arn'],
+                ),
+                models.RecordResourceValue(
+                    resource_type='sqs_event',
+                    resource_name=resource.resource_name,
+                    name='event_uuid',
+                    value=uuid,
+                ),
+                models.RecordResourceValue(
+                    resource_type='sqs_event',
+                    resource_name=resource.resource_name,
+                    name='queue',
+                    value=resource.queue,
+                ),
+                models.RecordResourceValue(
+                    resource_type='sqs_event',
+                    resource_name=resource.resource_name,
+                    name='lambda_arn',
+                    value=deployed['lambda_arn'],
+                ),
+            ]
+        return instruction_for_queue_arn + [
+            (models.APICall(
+                method_name='create_sqs_event_source',
+                params={'queue_arn': Variable(queue_arn_varname),
+                        'batch_size': resource.batch_size,
+                        'function_arn': function_arn},
+                output_var=uuid_varname,
+            ), 'Subscribing %s to SQS queue %s\n'
+                % (resource.lambda_function.function_name, resource.queue)
+            ),
+            models.RecordResourceVariable(
+                resource_type='sqs_event',
+                resource_name=resource.resource_name,
+                name='queue_arn',
+                variable_name=queue_arn_varname,
+            ),
+            # We record this because this is what's used to unsubscribe
+            # lambda to the SQS queue.
+            models.RecordResourceVariable(
+                resource_type='sqs_event',
+                resource_name=resource.resource_name,
+                name='event_uuid',
+                variable_name=uuid_varname,
+            ),
+            models.RecordResourceValue(
+                resource_type='sqs_event',
+                resource_name=resource.resource_name,
+                name='queue',
+                value=resource.queue,
+            ),
+            models.RecordResourceVariable(
+                resource_type='sqs_event',
+                resource_name=resource.resource_name,
+                name='lambda_arn',
+                variable_name=function_arn.name,
             ),
         ]
 

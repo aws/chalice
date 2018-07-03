@@ -724,6 +724,153 @@ class TestPlanSNSSubscription(BasePlannerTests):
         ]
 
 
+class TestPlanSQSSubscription(BasePlannerTests):
+    def test_can_plan_sqs_event_source(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue='myqueue',
+            batch_size=10,
+            lambda_function=function
+        )
+        plan = self.determine_plan(sqs_event_source)
+        plan_parse_arn = plan[:4]
+        assert plan_parse_arn == [
+            models.BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn'
+            ),
+            models.JPSearch(
+                expression='account_id',
+                input_var='parsed_lambda_arn',
+                output_var='account_id'
+            ),
+            models.JPSearch(
+                expression='region',
+                input_var='parsed_lambda_arn',
+                output_var='region_name'
+            ),
+            models.StoreValue(
+                name='function_name-sqs-event-source_queue_arn',
+                value=StringFormat(
+                    "arn:aws:sqs:{region_name}:{account_id}:myqueue",
+                    variables=['region_name', 'account_id'],
+                ),
+            )
+        ]
+        assert plan[4:] == [
+            models.APICall(
+                method_name='create_sqs_event_source',
+                params={
+                    'queue_arn': Variable(
+                        "function_name-sqs-event-source_queue_arn"
+                    ),
+                    'batch_size': 10,
+                    'function_name': Variable("function_name_lambda_arn")
+                },
+                output_var='function_name-sqs-event-source_uuid'
+            ),
+            models.RecordResourceVariable(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='queue_arn',
+                variable_name='function_name-sqs-event-source_queue_arn'
+            ),
+            models.RecordResourceVariable(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='event_uuid',
+                variable_name='function_name-sqs-event-source_uuid'
+            ),
+            models.RecordResourceValue(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='queue',
+                value='myqueue'
+            ),
+            models.RecordResourceVariable(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='lambda_arn',
+                variable_name='function_name_lambda_arn'
+            )
+        ]
+
+    def test_sqs_event_source_exists_updates_batch_size(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue='myqueue',
+            batch_size=10,
+            lambda_function=function
+        )
+        self.remote_state.declare_resource_exists(
+            sqs_event_source,
+            queue='myqueue',
+            queue_arn='arn:sqs:myqueue',
+            resource_type='sqs_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(sqs_event_source)
+        plan_parse_arn = plan[:4]
+        assert plan_parse_arn == [
+            models.BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn'),
+            models.JPSearch(
+                expression='account_id',
+                input_var='parsed_lambda_arn',
+                output_var='account_id'),
+            models.JPSearch(
+                expression='region',
+                input_var='parsed_lambda_arn',
+                output_var='region_name'),
+            models.StoreValue(
+                name='function_name-sqs-event-source_queue_arn',
+                value=StringFormat(
+                    "arn:aws:sqs:{region_name}:{account_id}:myqueue",
+                    variables=['region_name', 'account_id'],
+                ),
+            )
+        ]
+        assert plan[4:] == [
+            models.APICall(
+                method_name='update_sqs_event_source',
+                params={
+                    'event_uuid': 'my-uuid',
+                    'batch_size': 10,
+                },
+            ),
+            models.RecordResourceValue(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='queue_arn',
+                value='arn:sqs:myqueue',
+            ),
+            models.RecordResourceValue(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='event_uuid',
+                value='my-uuid'
+            ),
+            models.RecordResourceValue(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='queue',
+                value='myqueue'
+            ),
+            models.RecordResourceValue(
+                resource_type='sqs_event',
+                resource_name='function_name-sqs-event-source',
+                name='lambda_arn',
+                value='arn:lambda'
+            )
+        ]
+
+
 class TestRemoteState(object):
     def setup_method(self):
         self.client = mock.Mock(spec=TypedAWSClient)
@@ -920,6 +1067,42 @@ class TestRemoteState(object):
             self.client, DeployedResources(deployed_resources))
         assert not remote_state.resource_exists(sns_subscription)
         assert not self.client.verify_sns_subscription_current.called
+
+    @pytest.mark.parametrize(
+        'new_queue,deployed_queue,expected_result', [
+            ('queue', 'queue', True),
+            ('new-queue', 'queue', False),
+            ('new-queue', None, False),
+        ]
+    )
+    def test_sqs_event_source_exists(self, new_queue, deployed_queue,
+                                     expected_result):
+        event_source = models.SQSEventSource(
+            resource_name='handler-sqs-event-source',
+            queue=new_queue, batch_size=100, lambda_function=None
+        )
+        deployed_resources = {
+            'resources': [{
+                'queue': deployed_queue,
+                'queue_arn': 'arn:aws:sqs:us-west-2:123:myqueue',
+                'name': 'handler-sqs-event-source',
+                'lambda_arn': 'arn:aws:lambda:handler',
+                'event_uuid': 'event-uid-123',
+                'resource_type': 'sqs_event'
+            }]
+        }
+        self.client.verify_event_source_current.return_value = \
+            new_queue == deployed_queue
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        assert remote_state.resource_exists(event_source) == expected_result
+        self.client.verify_event_source_current.assert_called_with(
+            event_uuid='event-uid-123',
+            resource_name=new_queue,
+            service_name='sqs',
+            function_arn='arn:aws:lambda:handler',
+        )
 
 
 class TestUnreferencedResourcePlanner(BasePlannerTests):
@@ -1261,5 +1444,75 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
                     'topic_arn': 'arn:old-topic',
                     'function_arn': 'arn:lambda',
                 },
+            ),
+        ]
+
+    def test_no_sqs_deletion_when_no_changes(self):
+        plan = self.determine_plan(
+            models.SQSEventSource(
+                resource_name='handler-sqs-event-source',
+                queue='my-queue',
+                batch_size=10,
+                lambda_function=create_function_resource('function_name')
+            )
+        )
+        deployed = {
+            'resources': [{
+                'name': 'handler-sqs-event-source',
+                'queue': 'my-queue',
+                'resource_type': 'sqs_event',
+                'lambda_arn': 'arn:lambda',
+                'event_uuid': 'event-uuid',
+            }]
+        }
+        config = FakeConfig(deployed)
+        original_plan = plan[:]
+        self.execute(plan, config)
+        assert plan == original_plan
+
+    def test_can_delete_sqs_subscription(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'handler-sqs-event-source',
+                'queue': 'my-queue',
+                'resource_type': 'sqs_event',
+                'lambda_arn': 'arn:lambda',
+                'event_uuid': 'event-uuid',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='remove_sqs_event_source',
+                params={'event_uuid': 'event-uuid'},
+            ),
+        ]
+
+    def test_handles_when_queue_name_change(self):
+        deployed = {
+            'resources': [{
+                'name': 'handler-sqs-event-source',
+                'queue': 'my-queue',
+                'resource_type': 'sqs_event',
+                'lambda_arn': 'arn:lambda',
+                'event_uuid': 'event-uuid',
+            }]
+        }
+        plan = self.determine_plan(
+            models.SQSEventSource(
+                resource_name='handler-sqs-event-source',
+                queue='my-new-queue',
+                batch_size=10,
+                lambda_function=create_function_resource('function_name')
+            )
+        )
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan[-1:] == [
+            models.APICall(
+                method_name='remove_sqs_event_source',
+                params={'event_uuid': 'event-uuid'},
             ),
         ]
