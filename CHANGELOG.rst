@@ -6,11 +6,14 @@ Next Release (TBD)
 ==================
 
 * Add support for generating python 3.6 pipelines
-  (`#858 <https://github.com/aws/chalice/pull/858>`)
+  (`#858 <https://github.com/aws/chalice/pull/858>`__)
 * Add support for connecting lambda functions to S3 events
-  (`#855 <https://github.com/aws/chalice/issues/855>`)
+  (`#855 <https://github.com/aws/chalice/issues/855>`__)
 * Add support for connecting lambda functions to SNS message
-  (`#488 <https://github.com/aws/chalice/issues/488>`)
+  (`#488 <https://github.com/aws/chalice/issues/488>`__)
+* Make ``watchdog`` an optional dependency and add a built in
+  ``stat()`` based file poller
+  (`#867 <https://github.com/aws/chalice/issues/867>`__)
 
 
 1.3.0

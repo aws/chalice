@@ -24,21 +24,30 @@ worker process).
 
 """
 import subprocess
-import threading
 import logging
 import copy
 import sys
 
-import watchdog.observers
-from watchdog.events import FileSystemEventHandler
-from watchdog.events import FileSystemEvent  # noqa
 from typing import MutableMapping, Type, Callable, Optional  # noqa
 
-from chalice.local import LocalDevServer  # noqa
+from chalice.cli.filewatch import RESTART_REQUEST_RC, WorkerProcess
+from chalice.local import LocalDevServer, HTTPServerThread  # noqa
 
 
-RESTART_REQUEST_RC = 3
 LOGGER = logging.getLogger(__name__)
+_WORKER_PROC_TYPE = Optional[Type[WorkerProcess]]
+
+
+def get_best_worker_process():
+    # type: () -> Type[WorkerProcess]
+    try:
+        from chalice.cli.filewatch.eventbased import WatchdogWorkerProcess
+        LOGGER.debug("Using watchdog worker process.")
+        return WatchdogWorkerProcess
+    except ImportError:
+        from chalice.cli.filewatch.stat import StatWorkerProcess
+        LOGGER.debug("Using stat() based worker process.")
+        return StatWorkerProcess
 
 
 def start_parent_process(env):
@@ -47,57 +56,16 @@ def start_parent_process(env):
     process.main()
 
 
-class Restarter(FileSystemEventHandler):
-
-    def __init__(self, restart_event):
-        # type: (threading.Event) -> None
-        # The reason we're using threading
-        self.restart_event = restart_event
-
-    def on_any_event(self, event):
-        # type: (FileSystemEvent) -> None
-        # If we modify a file we'll get a FileModifiedEvent
-        # as well as a DirectoryModifiedEvent.
-        # We only care about reloading is a file is modified.
-        if event.is_directory:
-            return
-        self.restart_event.set()
-
-
-def start_worker_process(server_factory, root_dir):
-    # type: (Callable[[], LocalDevServer], str) -> int
+def start_worker_process(server_factory, root_dir, worker_process_cls=None):
+    # type: (Callable[[], LocalDevServer], str, _WORKER_PROC_TYPE) -> int
+    if worker_process_cls is None:
+        worker_process_cls = get_best_worker_process()
     t = HTTPServerThread(server_factory)
-    worker = WorkerProcess(t)
+    worker = worker_process_cls(t)
     LOGGER.debug("Starting worker...")
     rc = worker.main(root_dir)
     LOGGER.info("Restarting local dev server.")
     return rc
-
-
-class HTTPServerThread(threading.Thread):
-    """Thread that manages starting/stopping local HTTP server.
-
-    This is a small wrapper around a normal threading.Thread except
-    that it adds shutdown capability of the HTTP server, which is
-    not part of the normal threading.Thread interface.
-
-    """
-    def __init__(self, server_factory):
-        # type: (Callable[[], LocalDevServer]) -> None
-        threading.Thread.__init__(self)
-        self._server_factory = server_factory
-        self._server = None  # type: Optional[LocalDevServer]
-        self.daemon = True
-
-    def run(self):
-        # type: () -> None
-        self._server = self._server_factory()
-        self._server.serve_forever()
-
-    def shutdown(self):
-        # type: () -> None
-        if self._server is not None:
-            self._server.shutdown()
 
 
 class ParentProcess(object):
@@ -125,39 +93,16 @@ class ParentProcess(object):
                 raise
 
 
-class WorkerProcess(object):
-    """Worker that runs the chalice dev server."""
-    def __init__(self, http_thread):
-        # type: (HTTPServerThread) -> None
-        self._http_thread = http_thread
-        self._restart_event = threading.Event()
-
-    def main(self, project_dir, timeout=None):
-        # type: (str, Optional[int]) -> int
-        self._http_thread.start()
-        self._start_file_watcher(project_dir)
-        if self._restart_event.wait(timeout):
-            self._http_thread.shutdown()
-            return RESTART_REQUEST_RC
-        return 0
-
-    def _start_file_watcher(self, project_dir):
-        # type: (str) -> None
-        observer = watchdog.observers.Observer()
-        restarter = Restarter(self._restart_event)
-        observer.schedule(restarter, project_dir, recursive=True)
-        observer.start()
-
-
-def run_with_reloader(server_factory, env, root_dir):
-    # type: (Callable, MutableMapping, str) -> int
+def run_with_reloader(server_factory, env, root_dir, worker_process_cls=None):
+    # type: (Callable, MutableMapping, str, _WORKER_PROC_TYPE) -> int
     # This function is invoked in two possible modes, as the parent process
     # or as a chalice worker.
     try:
         if env.get('CHALICE_WORKER') is not None:
             # This is a chalice worker.  We need to start the main dev server
             # in a daemon thread and install a file watcher.
-            return start_worker_process(server_factory, root_dir)
+            return start_worker_process(server_factory, root_dir,
+                                        worker_process_cls)
         else:
             # This is the parent process.  It's just is to spawn an identical
             # process but with the ``CHALICE_WORKER`` env var set.  It then
