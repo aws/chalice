@@ -1,4 +1,5 @@
 import os
+import time
 
 from chalice.cli.filewatch import stat
 
@@ -31,4 +32,9 @@ def test_can_ignore_stat_errors():
 
     watcher = stat.StatFileWatcher(FakeOSUtils())
     watcher.watch_for_file_changes('rootdir', callback)
-    assert len(calls) == 1
+    for _ in range(10):
+        if len(calls) == 1:
+            break
+        time.sleep(0.2)
+    else:
+        raise AssertionError("Expected callback to be invoked but was not.")
