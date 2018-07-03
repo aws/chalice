@@ -1699,3 +1699,100 @@ def test_can_remove_s3_permission(stubbed_session):
     client.remove_permission_for_s3_event(
         'mybucket', 'name')
     stubbed_session.verify_stubs()
+
+
+def test_can_create_sqs_event_source(stubbed_session):
+    queue_arn = 'arn:sqs:queue-name'
+    function_name = 'myfunction'
+    batch_size = 100
+
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size
+    ).returns({'UUID': 'my-uuid'})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    result = client.create_sqs_event_source(
+        queue_arn, function_name, batch_size
+    )
+    assert result == 'my-uuid'
+    stubbed_session.verify_stubs()
+
+
+def test_can_delete_sqs_event_source(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.delete_event_source_mapping(
+        UUID='my-uuid',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.remove_sqs_event_source(
+        'my-uuid',
+    )
+    stubbed_session.verify_stubs()
+
+
+@pytest.mark.parametrize('resource_name,service_name,is_verified', [
+    ('queue-name', 'sqs', True),
+    ('queue-name', 'not-sqs', False),
+    ('not-queue-name', 'sqs', False),
+    ('not-queue-name', 'not-sqs', False),
+])
+def test_verify_event_source_current(stubbed_session, resource_name,
+                                     service_name, is_verified):
+    client = stubbed_session.stub('lambda')
+    uuid = 'uuid-12345'
+    client.get_event_source_mapping(
+        UUID=uuid,
+    ).returns({
+        'UUID': uuid,
+        'BatchSize': 10,
+        'EventSourceArn': 'arn:aws:sqs:us-west-2:123:queue-name',
+        'FunctionArn': 'arn:aws:lambda:function-arn',
+        'LastModified': '2018-07-02T18:19:03.958000-07:00',
+        'State': 'Enabled',
+        'StateTransitionReason': 'USER_INITIATED'
+    })
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.verify_event_source_current(
+        uuid, resource_name=resource_name, service_name=service_name,
+        function_arn='arn:aws:lambda:function-arn',
+    ) == is_verified
+    stubbed_session.verify_stubs()
+
+
+def test_event_source_does_not_exist(stubbed_session):
+    client = stubbed_session.stub('lambda')
+    uuid = 'uuid-12345'
+    client.get_event_source_mapping(
+        UUID=uuid,
+    ).raises_error(error_code='ResourceNotFoundException',
+                   message='Does not exists.')
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert not awsclient.verify_event_source_current(
+        uuid, 'myqueue', 'sqs', 'function-arn')
+    stubbed_session.verify_stubs()
+
+
+def test_can_update_sqs_event_source(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.update_event_source_mapping(
+        UUID='my-uuid',
+        BatchSize=5,
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.update_sqs_event_source(
+        event_uuid='my-uuid', batch_size=5
+    )
+    stubbed_session.verify_stubs()

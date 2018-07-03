@@ -891,6 +891,56 @@ class TypedAWSClient(object):
                     StatementId=statement['Sid'],
                 )
 
+    def create_sqs_event_source(self, queue_arn, function_name, batch_size):
+        # type: (str, str, int) -> None
+        lambda_client = self._client('lambda')
+        return lambda_client.create_event_source_mapping(
+            EventSourceArn=queue_arn,
+            FunctionName=function_name,
+            BatchSize=batch_size,
+        )['UUID']
+
+    def update_sqs_event_source(self, event_uuid, batch_size):
+        # type: (str, int) -> None
+        lambda_client = self._client('lambda')
+        lambda_client.update_event_source_mapping(
+            UUID=event_uuid,
+            BatchSize=batch_size,
+        )
+
+    def remove_sqs_event_source(self, event_uuid):
+        # type: (str) -> None
+        lambda_client = self._client('lambda')
+        lambda_client.delete_event_source_mapping(UUID=event_uuid)
+
+    def verify_event_source_current(self, event_uuid, resource_name,
+                                    service_name, function_arn):
+        # type: (str, str, str, str) -> bool
+        """Check if the uuid matches the resource and function arn provided.
+
+        Given a uuid representing an event source mapping for a lambda
+        function, verify that the associated source arn
+        and function arn match up to the parameters passed in.
+
+        Instead of providing the event source arn, the resource name
+        is provided along with the service name.  For example, if we're
+        checking an SQS queue event source, the resource name would be
+        the queue name (e.g. ``myqueue``) and the service would be ``sqs``.
+
+        """
+        client = self._client('lambda')
+        try:
+            attributes = client.get_event_source_mapping(UUID=event_uuid)
+            actual_arn = attributes['EventSourceArn']
+            arn_start, actual_name = actual_arn.rsplit(':', 1)
+            return (
+                actual_name == resource_name and
+                arn_start.startswith('arn:aws:%s' % service_name) and
+                attributes['FunctionArn'] == function_arn
+            )
+        except client.exceptions.ResourceNotFoundException:
+            return False
+
     def _random_id(self):
         # type: () -> str
         return str(uuid.uuid4())
