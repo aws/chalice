@@ -557,6 +557,21 @@ class Chalice(object):
             return EventSourceHandler(event_func, SNSEvent)
         return _register_sns_message
 
+    def on_sqs_message(self, queue, batch_size=10, name=None):
+        def _register_sqs_message(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            sqs_config = SQSEventConfig(
+                name=handler_name,
+                handler_string='app.%s' % event_func.__name__,
+                queue=queue,
+                batch_size=batch_size,
+            )
+            self.event_sources.append(sqs_config)
+            return EventSourceHandler(event_func, SQSEvent)
+        return _register_sqs_message
+
     def schedule(self, expression, name=None):
         def _register_schedule(event_func):
             handler_name = name
@@ -956,6 +971,13 @@ class SNSEventConfig(BaseEventSourceConfig):
         self.topic = topic
 
 
+class SQSEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, queue, batch_size):
+        super(SQSEventConfig, self).__init__(name, handler_string)
+        self.queue = queue
+        self.batch_size = batch_size
+
+
 class EventSourceHandler(object):
 
     def __init__(self, func, event_class):
@@ -1008,3 +1030,19 @@ class S3Event(BaseLambdaEvent):
         s3 = event_dict['Records'][0]['s3']
         self.bucket = s3['bucket']['name']
         self.key = unquote_str(s3['object']['key'])
+
+
+class SQSEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        # We don't extract anything off the top level
+        # event.
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield SQSRecord(record)
+
+
+class SQSRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        self.body = event_dict['body']
