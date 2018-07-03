@@ -215,3 +215,14 @@ if missing dependencies are not present. For more information:
 http://chalice.readthedocs.io/en/latest/topics/packaging.html
 
 """
+
+
+SQS_EVENT_SOURCE_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+    ],
+    "Resource": "*",
+}

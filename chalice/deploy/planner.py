@@ -606,7 +606,7 @@ class PlanStage(object):
                 method_name='create_sqs_event_source',
                 params={'queue_arn': Variable(queue_arn_varname),
                         'batch_size': resource.batch_size,
-                        'function_arn': function_arn},
+                        'function_name': function_arn},
                 output_var=uuid_varname,
             ), 'Subscribing %s to SQS queue %s\n'
                 % (resource.lambda_function.function_name, resource.queue)

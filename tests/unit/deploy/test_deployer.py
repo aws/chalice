@@ -36,7 +36,9 @@ from chalice.deploy.planner import PlanStage
 from chalice.deploy.planner import ResourceSweeper, StringFormat
 from chalice.deploy.models import APICall
 from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
+from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.deploy.deployer import ChaliceBuildError
+from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
 
 
 _SESSION = None
@@ -1268,3 +1270,34 @@ class TestDeploymentReporter(object):
         }
         self.reporter.display_report(deployed_values)
         self.ui.write.assert_called_with('Resources deployed:\n')
+
+
+class TestLambdaEventSourcePolicyInjector(object):
+    def create_model_from_app(self, app, config):
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        return application.resources[0]
+
+    def test_can_inject_policy(self, sqs_event_app):
+        config = Config.create(chalice_app=sqs_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sqs_event_app, config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
+        }
+
+    def test_no_inject_if_not_autogen_policy(self, sqs_event_app):
+        config = Config.create(chalice_app=sqs_event_app,
+                               autogen_policy=False,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sqs_event_app, config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {'Statement': []}

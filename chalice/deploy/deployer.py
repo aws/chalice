@@ -100,7 +100,8 @@ from chalice.compat import is_broken_pipe_error
 from chalice.awsclient import DeploymentPackageTooLargeError, TypedAWSClient
 from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, VPC_ATTACH_POLICY, \
-    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY
+    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY, \
+    SQS_EVENT_SOURCE_POLICY
 from chalice.deploy import models
 from chalice.deploy.executor import Executor
 from chalice.deploy.packager import PipRunner, SubprocessPip, \
@@ -281,7 +282,8 @@ def create_build_stage(osutils, ui, swagger_gen):
             ),
             SwaggerBuilder(
                 swagger_generator=swagger_gen,
-            )
+            ),
+            LambdaEventSourcePolicyInjector(),
         ],
     )
     return build_stage
@@ -758,6 +760,25 @@ class SwaggerBuilder(BaseDeployStep):
         swagger_doc = self._swagger_generator.generate_swagger(
             config.chalice_app)
         resource.swagger_doc = swagger_doc
+
+
+class LambdaEventSourcePolicyInjector(BaseDeployStep):
+    def handle_sqseventsource(self, config, resource):
+        # type: (Config, models.SQSEventSource) -> None
+        # The sqs integration works by polling for
+        # available records so the lambda function needs
+        # permission to call sqs.
+        role = resource.lambda_function.role
+        if isinstance(role, models.ManagedIAMRole):
+            if isinstance(role.policy, models.AutoGenIAMPolicy):
+                if not isinstance(role.policy.document,
+                                  models.Placeholder):
+                    self._inject_trigger_policy(role.policy.document,
+                                                SQS_EVENT_SOURCE_POLICY.copy())
+
+    def _inject_trigger_policy(self, document, policy):
+        # type: (Dict[str, Any], Dict[str, Any]) -> None
+        document['Statement'].append(policy)
 
 
 class PolicyGenerator(BaseDeployStep):
