@@ -1535,6 +1535,16 @@ def test_can_create_sqs_handler(sample_app):
     assert event.handler_string == 'app.handler'
 
 
+def test_can_set_sqs_handler_name(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', name='sqs_handler')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'sqs_handler'
+
+
 def test_can_map_sqs_event(sample_app):
     @sample_app.on_sqs_message(queue='queue-name')
     def handler(event):

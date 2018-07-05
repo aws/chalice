@@ -1301,3 +1301,25 @@ class TestLambdaEventSourcePolicyInjector(object):
         injector = LambdaEventSourcePolicyInjector()
         injector.handle(config, event_source)
         assert role.policy.document == {'Statement': []}
+
+    def test_no_inject_is_already_injected(self, sqs_event_app):
+        @sqs_event_app.on_sqs_message(queue='second-queue')
+        def second_handler(event):
+            pass
+
+        config = Config.create(chalice_app=sqs_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        event_sources = application.resources
+        role = event_sources[0].lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_sources[0])
+        injector.handle(config, event_sources[1])
+        # Even though we have two queue handlers, we only need to
+        # inject the policy once.
+        assert role.policy.document == {
+            'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
+        }

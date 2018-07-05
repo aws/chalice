@@ -763,18 +763,23 @@ class SwaggerBuilder(BaseDeployStep):
 
 
 class LambdaEventSourcePolicyInjector(BaseDeployStep):
+    def __init__(self):
+        self._policy_injected = False
+
     def handle_sqseventsource(self, config, resource):
         # type: (Config, models.SQSEventSource) -> None
         # The sqs integration works by polling for
         # available records so the lambda function needs
         # permission to call sqs.
         role = resource.lambda_function.role
-        if isinstance(role, models.ManagedIAMRole):
-            if isinstance(role.policy, models.AutoGenIAMPolicy):
-                if not isinstance(role.policy.document,
-                                  models.Placeholder):
-                    self._inject_trigger_policy(role.policy.document,
-                                                SQS_EVENT_SOURCE_POLICY.copy())
+        if (not self._policy_injected and
+            isinstance(role, models.ManagedIAMRole) and
+            isinstance(role.policy, models.AutoGenIAMPolicy) and
+            not isinstance(role.policy.document,
+                           models.Placeholder)):
+            self._inject_trigger_policy(role.policy.document,
+                                        SQS_EVENT_SOURCE_POLICY.copy())
+            self._policy_injected = True
 
     def _inject_trigger_policy(self, document, policy):
         # type: (Dict[str, Any], Dict[str, Any]) -> None

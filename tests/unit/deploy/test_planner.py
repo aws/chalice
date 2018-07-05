@@ -1081,28 +1081,32 @@ class TestRemoteState(object):
             resource_name='handler-sqs-event-source',
             queue=new_queue, batch_size=100, lambda_function=None
         )
-        deployed_resources = {
-            'resources': [{
-                'queue': deployed_queue,
-                'queue_arn': 'arn:aws:sqs:us-west-2:123:myqueue',
-                'name': 'handler-sqs-event-source',
-                'lambda_arn': 'arn:aws:lambda:handler',
-                'event_uuid': 'event-uid-123',
-                'resource_type': 'sqs_event'
-            }]
-        }
+        if deployed_queue is not None:
+            deployed_resources = {
+                'resources': [{
+                    'queue': deployed_queue,
+                    'queue_arn': 'arn:aws:sqs:us-west-2:123:myqueue',
+                    'name': 'handler-sqs-event-source',
+                    'lambda_arn': 'arn:aws:lambda:handler',
+                    'event_uuid': 'event-uid-123',
+                    'resource_type': 'sqs_event'
+                }]
+            }
+        else:
+            deployed_resources = {'resources': []}
         self.client.verify_event_source_current.return_value = \
             new_queue == deployed_queue
         remote_state = RemoteState(
             self.client, DeployedResources(deployed_resources),
         )
         assert remote_state.resource_exists(event_source) == expected_result
-        self.client.verify_event_source_current.assert_called_with(
-            event_uuid='event-uid-123',
-            resource_name=new_queue,
-            service_name='sqs',
-            function_arn='arn:aws:lambda:handler',
-        )
+        if deployed_queue is not None:
+            self.client.verify_event_source_current.assert_called_with(
+                event_uuid='event-uid-123',
+                resource_name=new_queue,
+                service_name='sqs',
+                function_arn='arn:aws:lambda:handler',
+            )
 
 
 class TestUnreferencedResourcePlanner(BasePlannerTests):
