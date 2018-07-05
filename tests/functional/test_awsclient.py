@@ -1795,6 +1795,21 @@ def test_can_retry_delete_event_source(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_only_retry_settling_errors(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.delete_event_source_mapping(
+        UUID='my-uuid',
+    ).raises_error(
+        error_code='ResourceInUseException',
+        message='Wrong message'
+    )
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+    with pytest.raises(botocore.exceptions.ClientError):
+        client.remove_sqs_event_source('my-uuid')
+    stubbed_session.verify_stubs()
+
+
 def test_can_retry_update_event_source(stubbed_session):
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.update_event_source_mapping(
