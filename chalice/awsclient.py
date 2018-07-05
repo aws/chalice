@@ -894,10 +894,13 @@ class TypedAWSClient(object):
     def create_sqs_event_source(self, queue_arn, function_name, batch_size):
         # type: (str, str, int) -> None
         lambda_client = self._client('lambda')
-        return lambda_client.create_event_source_mapping(
-            EventSourceArn=queue_arn,
-            FunctionName=function_name,
-            BatchSize=batch_size,
+        kwargs = {
+            'EventSourceArn': queue_arn,
+            'FunctionName': function_name,
+            'BatchSize': batch_size,
+        }
+        return self._call_client_method_with_retries(
+            lambda_client.create_event_source_mapping, kwargs
         )['UUID']
 
     def update_sqs_event_source(self, event_uuid, batch_size):

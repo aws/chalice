@@ -1722,6 +1722,37 @@ def test_can_create_sqs_event_source(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_can_retry_create_sqs_event_source(stubbed_session):
+    queue_arn = 'arn:sqs:queue-name'
+    function_name = 'myfunction'
+    batch_size = 100
+
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size
+    ).raises_error(
+        error_code='InvalidParameterValueException',
+        message=('The provided execution role does not '
+                 'have permissions to call ReceiveMessage on SQS')
+    )
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size
+    ).returns({'UUID': 'my-uuid'})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+    result = client.create_sqs_event_source(
+        queue_arn, function_name, batch_size
+    )
+    assert result == 'my-uuid'
+
+    stubbed_session.verify_stubs()
+
+
 def test_can_delete_sqs_event_source(stubbed_session):
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.delete_event_source_mapping(
