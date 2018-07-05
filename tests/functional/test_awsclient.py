@@ -1757,12 +1757,55 @@ def test_can_delete_sqs_event_source(stubbed_session):
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.delete_event_source_mapping(
         UUID='my-uuid',
+    ).raises_error(
+        error_code='ResourceInUseException',
+        message=('Cannot delete the event source mapping '
+                 'because it is in use.')
+    )
+    lambda_stub.delete_event_source_mapping(
+        UUID='my-uuid',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+    client.remove_sqs_event_source(
+        'my-uuid',
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_can_retry_delete_event_source(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.delete_event_source_mapping(
+        UUID='my-uuid',
+    ).raises_error(
+        error_code='ResourceInUseException',
+        message=('Cannot update the event source mapping '
+                 'because it is in use.')
+    )
+    lambda_stub.delete_event_source_mapping(
+        UUID='my-uuid',
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+    client.remove_sqs_event_source(
+        'my-uuid',
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_can_retry_update_event_source(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.update_event_source_mapping(
+        UUID='my-uuid',
+        BatchSize=5,
     ).returns({})
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
-    client.remove_sqs_event_source(
-        'my-uuid',
+    client.update_sqs_event_source(
+        event_uuid='my-uuid', batch_size=5
     )
     stubbed_session.verify_stubs()
 
