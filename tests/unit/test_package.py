@@ -409,3 +409,27 @@ class TestSAMTemplate(object):
                 },
             }
         }
+
+    def test_can_package_sqs_handler(self, sample_app):
+        @sample_app.on_sqs_message(queue='foo', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        sns_handler = template['Resources']['Handler']
+        assert sns_handler['Properties']['Events'] == {
+            'HandlerSqsEventSource': {
+                'Type': 'SQS',
+                'Properties': {
+                    'Queue': {
+                        'Fn::Sub': (
+                            'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:foo'
+                        )
+                    },
+                    'BatchSize': 5,
+                },
+            }
+        }
