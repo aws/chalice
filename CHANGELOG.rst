@@ -14,6 +14,8 @@ Next Release (TBD)
 * Make ``watchdog`` an optional dependency and add a built in
   ``stat()`` based file poller
   (`#867 <https://github.com/aws/chalice/issues/867>`__)
+* Add support for connecting lambda functions to an SQS queue
+  (`#884 <https://github.com/aws/chalice/issues/884>`__)
 
 
 1.3.0
