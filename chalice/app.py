@@ -1046,3 +1046,4 @@ class SQSEvent(BaseLambdaEvent):
 class SQSRecord(BaseLambdaEvent):
     def _extract_attributes(self, event_dict):
         self.body = event_dict['body']
+        self.receipt_handle = event_dict['receiptHandle']

@@ -1554,12 +1554,13 @@ def test_can_map_sqs_event(sample_app):
         'md5OfBody': '754ac2f7a12df38320e0c5eafd060145',
         'messageAttributes': {},
         'messageId': 'message-id',
-        'receiptHandle': 'handle'
+        'receiptHandle': 'receipt-handle'
     }]}
     actual_event = handler(sqs_event, context=None)
     records = list(actual_event)
     assert len(records) == 1
     first_record = records[0]
     assert first_record.body == 'queue message body'
+    assert first_record.receipt_handle == 'receipt-handle'
     assert first_record.to_dict() == sqs_event['Records'][0]
     assert actual_event.to_dict() == sqs_event
