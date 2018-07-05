@@ -764,6 +764,7 @@ class SwaggerBuilder(BaseDeployStep):
 
 class LambdaEventSourcePolicyInjector(BaseDeployStep):
     def __init__(self):
+        # type: () -> None
         self._policy_injected = False
 
     def handle_sqseventsource(self, config, resource):
