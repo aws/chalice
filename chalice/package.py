@@ -320,7 +320,7 @@ class SAMTemplateGenerator(object):
                             resource.queue
                         )
                     },
-                    'BatchSize': 5,
+                    'BatchSize': resource.batch_size,
                 }
             }
         }
