@@ -557,7 +557,7 @@ class Chalice(object):
             return EventSourceHandler(event_func, SNSEvent)
         return _register_sns_message
 
-    def on_sqs_message(self, queue, batch_size=10, name=None):
+    def on_sqs_message(self, queue, batch_size=1, name=None):
         def _register_sqs_message(event_func):
             handler_name = name
             if handler_name is None:
