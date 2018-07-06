@@ -261,7 +261,7 @@ of our ``handle_sqs_message`` lambda function to 30 seconds::
         "lambda_functions": {
           "handle_sqs_message": {
             "lambda_timeout": 30
-  	}
+          }
         }
       }
     },

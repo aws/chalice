@@ -933,7 +933,7 @@ Scheduled Events
       from Lambda.  This is useful if you need direct
       access to the lambda event, for example if a
       new key is added to the lambda event that has not
-      been mapped as an attribute to the ``SNSEvent``
+      been mapped as an attribute to the ``SQSEvent``
       object.
 
 .. class:: SQSRecord()
