@@ -121,8 +121,8 @@ class PolicyBuilder(object):
             client = self._session.create_client(service,
                                                  region_name='us-east-1')
             mapping = client.meta.method_to_api_mapping
-            actions = [service_actions[mapping[method_name]] for
-                       method_name in method_calls
+            actions = [service_actions[mapping[method_name]]
+                       for method_name in method_calls
                        if mapping.get(method_name) in service_actions]
             actions.sort()
             if actions:

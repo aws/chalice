@@ -2810,6 +2810,7 @@
     "GetObjectTagging": "s3:GetObjectTagging",
     "GetObjectTorrent": "s3:GetObjectTorrent",
     "HeadBucket": "s3:HeadBucket",
+    "HeadObject": "s3:GetObject",
     "ListBuckets": "s3:ListAllMyBuckets",
     "ListObjects": "s3:ListBucket",
     "ListObjectsV2": "s3:ListBucket",
