@@ -1757,13 +1757,6 @@ def test_can_delete_sqs_event_source(stubbed_session):
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.delete_event_source_mapping(
         UUID='my-uuid',
-    ).raises_error(
-        error_code='ResourceInUseException',
-        message=('Cannot delete the event source mapping '
-                 'because it is in use.')
-    )
-    lambda_stub.delete_event_source_mapping(
-        UUID='my-uuid',
     ).returns({})
 
     stubbed_session.activate_stubs()
