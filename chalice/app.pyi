@@ -215,5 +215,10 @@ class SNSEventConfig(BaseEventSourceConfig):
     topic = ... # type: str
 
 
+class SQSEventConfig(BaseEventSourceConfig):
+    queue = ... # type: str
+    batch_size = ... # type: int
+
+
 class CloudWatchEventConfig(BaseEventSourceConfig):
     schedule_expression = ...  # type: Union[str, ScheduleExpression]

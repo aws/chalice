@@ -100,7 +100,8 @@ from chalice.compat import is_broken_pipe_error
 from chalice.awsclient import DeploymentPackageTooLargeError, TypedAWSClient
 from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, VPC_ATTACH_POLICY, \
-    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY
+    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY, \
+    SQS_EVENT_SOURCE_POLICY
 from chalice.deploy import models
 from chalice.deploy.executor import Executor
 from chalice.deploy.packager import PipRunner, SubprocessPip, \
@@ -281,7 +282,8 @@ def create_build_stage(osutils, ui, swagger_gen):
             ),
             SwaggerBuilder(
                 swagger_generator=swagger_gen,
-            )
+            ),
+            LambdaEventSourcePolicyInjector(),
         ],
     )
     return build_stage
@@ -403,6 +405,12 @@ class ApplicationGraphBuilder(object):
                 resources.append(
                     self._create_event_model(
                         config, deployment, event_source, stage_name
+                    )
+                )
+            elif isinstance(event_source, app.SQSEventConfig):
+                resources.append(
+                    self._create_sqs_subscription(
+                        config, deployment, event_source, stage_name,
                     )
                 )
         return resources
@@ -655,6 +663,27 @@ class ApplicationGraphBuilder(object):
         )
         return sns_subscription
 
+    def _create_sqs_subscription(
+        self,
+        config,      # type: Config
+        deployment,  # type: models.DeploymentPackage
+        sqs_config,  # type: app.SQSEventConfig
+        stage_name,  # type: str
+    ):
+        # type: (...) -> models.SQSEventSource
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=sqs_config.name,
+            handler_name=sqs_config.handler_string, stage_name=stage_name
+        )
+        resource_name = sqs_config.name + '-sqs-event-source'
+        sqs_event_source = models.SQSEventSource(
+            resource_name=resource_name,
+            queue=sqs_config.queue,
+            batch_size=sqs_config.batch_size,
+            lambda_function=lambda_function,
+        )
+        return sqs_event_source
+
 
 class DependencyBuilder(object):
     def __init__(self):
@@ -731,6 +760,31 @@ class SwaggerBuilder(BaseDeployStep):
         swagger_doc = self._swagger_generator.generate_swagger(
             config.chalice_app)
         resource.swagger_doc = swagger_doc
+
+
+class LambdaEventSourcePolicyInjector(BaseDeployStep):
+    def __init__(self):
+        # type: () -> None
+        self._policy_injected = False
+
+    def handle_sqseventsource(self, config, resource):
+        # type: (Config, models.SQSEventSource) -> None
+        # The sqs integration works by polling for
+        # available records so the lambda function needs
+        # permission to call sqs.
+        role = resource.lambda_function.role
+        if (not self._policy_injected and
+            isinstance(role, models.ManagedIAMRole) and
+            isinstance(role.policy, models.AutoGenIAMPolicy) and
+            not isinstance(role.policy.document,
+                           models.Placeholder)):
+            self._inject_trigger_policy(role.policy.document,
+                                        SQS_EVENT_SOURCE_POLICY.copy())
+            self._policy_injected = True
+
+    def _inject_trigger_policy(self, document, policy):
+        # type: (Dict[str, Any], Dict[str, Any]) -> None
+        document['Statement'].append(policy)
 
 
 class PolicyGenerator(BaseDeployStep):

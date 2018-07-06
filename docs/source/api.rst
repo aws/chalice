@@ -243,6 +243,53 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
+   .. method:: on_sqs_message(queue, batch_size=1, name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever a message is published to the specified SQS queue.
+
+      The lambda function must accept a single parameter which
+      is of type :class:`SQSEvent`.
+
+      If the decorated function returns without raising any exceptions
+      then Lambda will automatically delete the SQS messages associated
+      with the :class:`SQSEvent`.  You don't need to manually delete
+      messages.  If any exception is raised, Lambda won't delete any messages,
+      and the messages will become available once the visibility timeout
+      has been reached.  Note that for batch sizes of more than one, either
+      the entire batch succeeds and all the messages in the batch are
+      deleted by Lambda, or the entire batch fails.  The default batch size
+      is 1.  See the
+      `Using AWS Lambda with Amazon SQS <https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html>`__
+      for more information on how Lambda integrates with SQS.
+
+      See the :ref:`sqs-events` topic guide for more information on using SQS
+      in Chalice.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_sqs_message(queue='myqueue')
+          def handler(event):
+              app.log.info("Event: %s", event.to_dict())
+              for record in event:
+                  app.log.info("Message body: %s", record.body)
+
+      :param queue: The name of the SQS queue you want to subscribe to.
+        This is the name of the queue, not the ARN or Queue URL.
+
+      :param batch_size: The maximum number of messages to retrieve
+        when polling for SQS messages.  The event parameter can have
+        multiple SQS messages associated with it.  This is why the
+        event parameter passed to the lambda function is iterable.  The
+        batch size controls how many messages can be in a single event.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
    .. method:: lambda_function(name=None)
 
       Create a pure lambda function that's not connected to anything.
@@ -857,3 +904,54 @@ Scheduled Events
       new key is added to the lambda event that has not
       been mapped as an attribute to the ``SNSEvent``
       object.
+
+
+.. class:: SQSEvent()
+
+   This is the input argument for an SQS event handler.
+
+   .. code-block:: python
+
+      @app.on_sqs_message(queue='myqueue')
+      def event_handler(event: SQSEvent):
+          app.log.info("Event: %s", event.to_dict())
+
+   In the code example above, the ``event`` argument is of
+   type ``SQSEvent``.  An ``SQSEvent`` can have multiple
+   sqs messages associated with it.  To access the multiple
+   messages, you can iterate over the ``SQSEvent``.
+
+   .. method:: __iter__()
+
+      Iterate over individual SQS messages associated with
+      the event.  Each element in the iterable is of type
+      :class:`SQSRecord`.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``SQSEvent``
+      object.
+
+.. class:: SQSRecord()
+
+   Represents a single SQS record within an :class:`SQSEvent`.
+
+   .. attribute:: body
+
+      The body of the SQS message.
+
+   .. attribute:: receipt_handle
+
+      The receipt handle associated with the message.  This is useful
+      if you need to manually delete an SQS message to account for
+      partial failures.
+
+   .. method:: to_dict()
+
+      Return the original dictionary associated with the given
+      message. This is useful if you need direct
+      access to the lambda event.

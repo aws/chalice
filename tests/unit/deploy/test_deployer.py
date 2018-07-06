@@ -36,7 +36,9 @@ from chalice.deploy.planner import PlanStage
 from chalice.deploy.planner import ResourceSweeper, StringFormat
 from chalice.deploy.models import APICall
 from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
+from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.deploy.deployer import ChaliceBuildError
+from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
 
 
 _SESSION = None
@@ -297,6 +299,17 @@ def sns_event_app():
     app = Chalice('sns-event')
 
     @app.on_sns_message(topic='mytopic')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
+def sqs_event_app():
+    app = Chalice('sqs-event')
+
+    @app.on_sqs_message(queue='myqueue')
     def handler(event):
         pass
 
@@ -648,6 +661,21 @@ class TestApplicationGraphBuilder(object):
         assert sns_event.resource_name == 'handler-sns-subscription'
         assert sns_event.topic == 'mytopic'
         lambda_function = sns_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_sqs_event_handler(self, sqs_event_app):
+        config = self.create_config(sqs_event_app,
+                                    app_name='sqs-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        sqs_event = application.resources[0]
+        assert isinstance(sqs_event, models.SQSEventSource)
+        assert sqs_event.resource_name == 'handler-sqs-event-source'
+        assert sqs_event.queue == 'myqueue'
+        lambda_function = sqs_event.lambda_function
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 
@@ -1242,3 +1270,56 @@ class TestDeploymentReporter(object):
         }
         self.reporter.display_report(deployed_values)
         self.ui.write.assert_called_with('Resources deployed:\n')
+
+
+class TestLambdaEventSourcePolicyInjector(object):
+    def create_model_from_app(self, app, config):
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        return application.resources[0]
+
+    def test_can_inject_policy(self, sqs_event_app):
+        config = Config.create(chalice_app=sqs_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sqs_event_app, config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
+        }
+
+    def test_no_inject_if_not_autogen_policy(self, sqs_event_app):
+        config = Config.create(chalice_app=sqs_event_app,
+                               autogen_policy=False,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sqs_event_app, config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {'Statement': []}
+
+    def test_no_inject_is_already_injected(self, sqs_event_app):
+        @sqs_event_app.on_sqs_message(queue='second-queue')
+        def second_handler(event):
+            pass
+
+        config = Config.create(chalice_app=sqs_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        event_sources = application.resources
+        role = event_sources[0].lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_sources[0])
+        injector.handle(config, event_sources[1])
+        # Even though we have two queue handlers, we only need to
+        # inject the policy once.
+        assert role.policy.document == {
+            'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
+        }

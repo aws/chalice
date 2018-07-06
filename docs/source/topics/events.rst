@@ -209,4 +209,113 @@ command::
     2018-06-28 17:49:40.391000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject2, message: TestMessage2
 
 
+.. _sqs-events:
+
+SQS Events
+==========
+
+You can configure a lambda function to be invoked whenever messages are
+available on an SQS queue.  To configure this, use the
+:meth:`Chalice.on_sqs_message` decorator and provide the name of the SQS queue
+and an optional batch size.
+
+The message visibility timeout of your SQS queue must be greater than or
+equal to the lambda timeout.  The default message visibility timeout
+when you create an SQS queue is 30 seconds, and the default timeout
+for a Lambda function is 60 seconds, so you'll need to modify one of these
+values in order to succesfully connect an SQS queue to a Lambda function.
+
+You can check the visibility timeout of your queue using the
+``GetQueueAttributes`` API call.  Using the
+`AWS CLI <https://docs.aws.amazon.com/cli/latest/reference/sqs/get-queue-attributes.html>`__,
+you can run this command to check the value::
+
+  $ aws sqs get-queue-attributes \
+      --queue-url https://us-west-2.queue.amazonaws.com/1/testq \
+      --attribute-names VisibilityTimeout
+  {
+      "Attributes": {
+          "VisibilityTimeout": "30"
+      }
+  }
+
+You can set the visibility timeout of your SQS queue using the
+``SetQueueAttributes`` API call.  Again using the AWS CLI you can
+run this command::
+
+  $ aws sqs set-queue-attributes \
+      --queue-url https://us-west-2.queue.amazonaws.com/1/testq \
+      --attributes VisibilityTimeout=60
+
+If you would prefer to change the timeout of your lambda function instead,
+you can specify this timeout value using the ``lambda_timeout`` config key
+if your ``.chalice/config.json`` file.
+See :ref:`lambda-config` for a list of all supported lambda configuration
+values in chalice.  In this example below, we're setting the timeout
+of our ``handle_sqs_message`` lambda function to 30 seconds::
+
+  $ cat .chalice/config.json
+  {
+    "stages": {
+      "dev": {
+        "lambda_functions": {
+          "handle_sqs_message": {
+            "lambda_timeout": 30
+          }
+        }
+      }
+    },
+    "version": "2.0",
+    "app_name": "chalice-sqs-demo"
+  }
+
+
+.. note::
+
+    FIFO SQS queues are not currently supported.
+
+In this example below, we're connecting the ``handle_sqs_message`` lambda
+function to the ``my-queue`` SQS queue.
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = chalice.Chalice(app_name='chalice-sqs-demo')
+    app.debug = True
+
+    @app.on_sqs_message(queue='my-queue', batch_size=1)
+    def handle_sqs_message(event):
+        for record in event:
+            app.log.debug("Received message with contents: ", record.body)
+
+
+Whenver a message is sent to the SQS queue our function will be automatically
+invoked.  The function argument is an :class:`SQSEvent` object, and each
+``record`` in the example above is of type :class:`SQSRecord`.  Lambda takes
+care of automatically scaling your function as needed.  See `Understanding
+Scaling Behavior`_ for more information on how Lambda scaling works.
+
+If your lambda functions completes without raising an exception, then
+Lambda will automatically delete all the messages associated with the
+:class:`SQSEvent`.  You don't need to manually call ``sqs.delete_message()``
+in your lambda function.  If your lambda function raises an exception, then
+Lambda won't delete any messages, and once the visibility timeout has been
+reached, the messages will be available again in the SQS queue.  Note that
+if you are using a batch size of more than one, the entire batch succeeds or
+fails.  This means that it is possible for your lambda function to see
+a message multiple times, even if it's successfully processed the message
+previously.  There are a few options available to mitigate this:
+
+* Use a batch size of 1 (the default value).
+* Use a separate data store to check if you've already processed an SQS
+  message.  You can use services such as Amazon DynamoDB or Amazon ElastiCache.
+* Manually call ``sqs.delete_message()`` in your Lambda function once you've
+  successfully processed a message.
+
+For more information on Lambda and SQS,
+see the `AWS documentation`_.
+
 .. _event notifications: https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
+.. _AWS documentation: https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
+.. _Understanding Scaling Behavior: https://docs.aws.amazon.com/lambda/latest/dg/scaling.html

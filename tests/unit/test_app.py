@@ -1521,3 +1521,56 @@ def test_can_map_sns_event(sample_app):
     assert actual_event.message == 'This is a raw message'
     assert actual_event.subject == 'ThisIsTheSubject'
     assert actual_event.to_dict() == sns_event
+
+
+def test_can_create_sqs_handler(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', batch_size=200)
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.queue == 'MyQueue'
+    assert event.batch_size == 200
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_set_sqs_handler_name(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', name='sqs_handler')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'sqs_handler'
+
+
+def test_can_map_sqs_event(sample_app):
+    @sample_app.on_sqs_message(queue='queue-name')
+    def handler(event):
+        return event
+
+    sqs_event = {'Records': [{
+        'attributes': {
+            'ApproximateFirstReceiveTimestamp': '1530576251596',
+            'ApproximateReceiveCount': '1',
+            'SenderId': 'sender-id',
+            'SentTimestamp': '1530576251595'
+        },
+        'awsRegion': 'us-west-2',
+        'body': 'queue message body',
+        'eventSource': 'aws:sqs',
+        'eventSourceARN': 'arn:aws:sqs:us-west-2:12345:queue-name',
+        'md5OfBody': '754ac2f7a12df38320e0c5eafd060145',
+        'messageAttributes': {},
+        'messageId': 'message-id',
+        'receiptHandle': 'receipt-handle'
+    }]}
+    actual_event = handler(sqs_event, context=None)
+    records = list(actual_event)
+    assert len(records) == 1
+    first_record = records[0]
+    assert first_record.body == 'queue message body'
+    assert first_record.receipt_handle == 'receipt-handle'
+    assert first_record.to_dict() == sqs_event['Records'][0]
+    assert actual_event.to_dict() == sqs_event

@@ -162,7 +162,7 @@ class TypedAWSClient(object):
         try:
             return self._call_client_method_with_retries(
                 self._client('lambda').create_function,
-                api_args
+                api_args, max_attempts=self.LAMBDA_CREATE_ATTEMPTS,
             )['FunctionArn']
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(
@@ -172,25 +172,12 @@ class TypedAWSClient(object):
             )
             raise self._get_lambda_code_deployment_error(e, context)
 
-    def _call_client_method_with_retries(self, method, kwargs):
-        # type: (_CLIENT_METHOD, Dict[str, Any]) -> Dict[str, Any]
-        client = self._client('lambda')
-        attempts = 0
-        while True:
-            try:
-                response = method(**kwargs)
-            except client.exceptions.InvalidParameterValueException as e:
-                # We're assuming that if we receive an
-                # InvalidParameterValueException, it's because
-                # the role we just created can't be used by
-                # Lambda so retry until it can be.
-                self._sleep(self.DELAY_TIME)
-                attempts += 1
-                if attempts >= self.LAMBDA_CREATE_ATTEMPTS or \
-                        not self._is_iam_role_related_error(e):
-                    raise
-                continue
-            return response
+    def _is_settling_error(self, error):
+        # type: (botocore.exceptions.ClientError) -> bool
+        message = error.response['Error'].get('Message', '')
+        if re.search('event source mapping.*is in use', message):
+            return True
+        return False
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
@@ -326,7 +313,9 @@ class TypedAWSClient(object):
             kwargs['FunctionName'] = function_name
             lambda_client = self._client('lambda')
             self._call_client_method_with_retries(
-                lambda_client.update_function_configuration, kwargs)
+                lambda_client.update_function_configuration, kwargs,
+                max_attempts=self.LAMBDA_CREATE_ATTEMPTS
+            )
 
     def _update_function_tags(self, function_arn, requested_tags):
         # type: (str, Dict[str, str]) -> None
@@ -890,6 +879,99 @@ class TypedAWSClient(object):
                     FunctionName=function_arn,
                     StatementId=statement['Sid'],
                 )
+
+    def create_sqs_event_source(self, queue_arn, function_name, batch_size):
+        # type: (str, str, int) -> None
+        lambda_client = self._client('lambda')
+        kwargs = {
+            'EventSourceArn': queue_arn,
+            'FunctionName': function_name,
+            'BatchSize': batch_size,
+        }
+        return self._call_client_method_with_retries(
+            lambda_client.create_event_source_mapping, kwargs,
+            max_attempts=self.LAMBDA_CREATE_ATTEMPTS
+        )['UUID']
+
+    def update_sqs_event_source(self, event_uuid, batch_size):
+        # type: (str, int) -> None
+        lambda_client = self._client('lambda')
+        self._call_client_method_with_retries(
+            lambda_client.update_event_source_mapping,
+            {'UUID': event_uuid, 'BatchSize': batch_size},
+            max_attempts=10,
+            should_retry=self._is_settling_error,
+        )
+
+    def remove_sqs_event_source(self, event_uuid):
+        # type: (str) -> None
+        lambda_client = self._client('lambda')
+        self._call_client_method_with_retries(
+            lambda_client.delete_event_source_mapping,
+            {'UUID': event_uuid},
+            max_attempts=10,
+            should_retry=self._is_settling_error,
+        )
+
+    def verify_event_source_current(self, event_uuid, resource_name,
+                                    service_name, function_arn):
+        # type: (str, str, str, str) -> bool
+        """Check if the uuid matches the resource and function arn provided.
+
+        Given a uuid representing an event source mapping for a lambda
+        function, verify that the associated source arn
+        and function arn match up to the parameters passed in.
+
+        Instead of providing the event source arn, the resource name
+        is provided along with the service name.  For example, if we're
+        checking an SQS queue event source, the resource name would be
+        the queue name (e.g. ``myqueue``) and the service would be ``sqs``.
+
+        """
+        client = self._client('lambda')
+        try:
+            attributes = client.get_event_source_mapping(UUID=event_uuid)
+            actual_arn = attributes['EventSourceArn']
+            arn_start, actual_name = actual_arn.rsplit(':', 1)
+            return (
+                actual_name == resource_name and
+                arn_start.startswith('arn:aws:%s' % service_name) and
+                attributes['FunctionArn'] == function_arn
+            )
+        except client.exceptions.ResourceNotFoundException:
+            return False
+
+    def _call_client_method_with_retries(
+        self,
+        method,                 # type: _CLIENT_METHOD
+        kwargs,                 # type: Dict[str, Any]
+        max_attempts,           # type: int
+        should_retry=None,      # type: Callable[[Exception], bool]
+        delay_time=DELAY_TIME,  # type: int
+    ):
+        # type: (...) -> Dict[str, Any]
+        client = self._client('lambda')
+        attempts = 0
+        if should_retry is None:
+            should_retry = self._is_iam_role_related_error
+        retryable_exceptions = (
+            # We're assuming that if we receive an
+            # InvalidParameterValueException, it's because the role we just
+            # created can't be used by Lambda so retry until it can be.
+            client.exceptions.InvalidParameterValueException,
+            client.exceptions.ResourceInUseException,
+        )
+        while True:
+            try:
+                response = method(**kwargs)
+            except retryable_exceptions as e:
+                self._sleep(self.DELAY_TIME)
+                attempts += 1
+                if attempts >= max_attempts or \
+                        not should_retry(e):
+                    raise
+                continue
+            return response
 
     def _random_id(self):
         # type: () -> str

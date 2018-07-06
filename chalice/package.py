@@ -303,6 +303,28 @@ class SAMTemplateGenerator(object):
             }
         }
 
+    def _generate_sqseventsource(self, resource, template):
+        # type: (models.SQSEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        sns_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        function_cfn['Properties']['Events'] = {
+            sns_cfn_name: {
+                'Type': 'SQS',
+                'Properties': {
+                    'Queue': {
+                        'Fn::Sub': (
+                            'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:%s' %
+                            resource.queue
+                        )
+                    },
+                    'BatchSize': resource.batch_size,
+                }
+            }
+        }
+
     def _default(self, resource, template):
         # type: (models.Model, Dict[str, Any]) -> None
         raise NotImplementedError(resource)
