@@ -258,7 +258,8 @@ Chalice
       and the messages will become available once the visibility timeout
       has been reached.  Note that for batch sizes of more than one, either
       the entire batch succeeds and all the messages in the batch are
-      deleted by Lambda, or the entire batch fails.  See the
+      deleted by Lambda, or the entire batch fails.  The default batch size
+      is 1.  See the
       `Using AWS Lambda with Amazon SQS <https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html>`__
       for more information on how Lambda integrates with SQS.
 
