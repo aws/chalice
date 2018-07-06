@@ -130,6 +130,10 @@ be checked.
   concurrency allocations. For more information, see `AWS Documentation on
   managing concurrency`_.
 
+
+
+.. _lambda-config:
+
 Lambda Specific Configuration
 -----------------------------
 
