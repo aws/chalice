@@ -74,8 +74,8 @@ As well as an SQS queue:
 
     app = Chalice(app_name="helloworld")
 
-    # Whenver an object is uploaded to 'mybucket'
-    # this lambda function will be invoked.
+    # Invoke this lambda function whenever a message
+    # is sent to the ``my-queue-name`` SQS queue.
 
     @app.on_sqs_message(queue='my-queue-name')
     def handler(event):
