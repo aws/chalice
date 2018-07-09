@@ -158,3 +158,19 @@ def test_no_changes():
     first = iam_policy({'s3': {'list_buckets', 'list_objects'}})
     second = iam_policy({'s3': {'list_buckets', 'list_objects'}})
     assert diff_policies(first, second) == {}
+
+
+def test_can_handle_high_level_abstractions():
+    assert_policy_is(iam_policy({'s3': set(['download_file'])}), [{
+        'Effect': 'Allow',
+        'Action': [
+            's3:GetObject'
+        ],
+        'Resource': [
+            '*',
+        ]
+    }])
+
+
+def test_noop_for_unknown_methods():
+    assert_policy_is(iam_policy({'s3': set(['unknown_method'])}), [])

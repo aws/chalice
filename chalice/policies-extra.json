@@ -1,0 +1,9 @@
+{
+  "s3": {
+    "upload_file": ["s3:PutObject", "s3:AbortMultipartUpload"],
+    "upload_fileobj": ["s3:PutObject", "s3: AbortMultipartUpload"],
+    "download_file": ["s3:GetObject"],
+    "download_fileobj": ["s3:GetObject"],
+    "copy": ["s3:PutObject", "s3:AbortMultipartUpload"]
+  }
+}
