@@ -696,6 +696,21 @@ def test_can_analyze_sqs_events():
     """) == {'s3': set(['list_buckets'])}
 
 
+def test_can_analyze_transfer_manager_methods():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='sqs-event')
+
+        @app.on_s3_event(bucket='mybucket')
+        def index(event):
+            s3.download_file(event.bucket, event.key, 'foo')
+            return {}
+    """) == {'s3': set(['download_file'])}
+
+
 # def test_tuple_assignment():
 #     assert aws_calls("""\
 #         import boto3
