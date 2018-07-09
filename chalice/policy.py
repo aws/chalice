@@ -181,8 +181,8 @@ class PolicyBuilder(object):
             return []
         service_actions = self._custom_policy_actions[service]
         method_calls = client_calls[service]
-        actions = []  # type: List[str]
+        actions = set()  # type: Set[str]
         for method_name in method_calls:
             if method_name in service_actions:
-                actions.extend(service_actions[method_name])
-        return actions
+                actions.update(service_actions[method_name])
+        return list(sorted(actions))
