@@ -159,7 +159,7 @@ class PolicyBuilder(object):
         service_actions = self._api_policy_actions[service]
         method_calls = client_calls[service]
         # Next thing we need to do is convert the method_name to
-        # MethodName.  To this reliable we're going to use
+        # MethodName.  To do this reliably we're going to use
         # botocore clients.
         client = self._session.create_client(service,
                                              region_name='us-east-1')
