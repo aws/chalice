@@ -15,20 +15,18 @@ Python Serverless Microframework for AWS
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
-Chalice is a python serverless microframework for AWS. It allows you to quickly
-create and deploy applications that use Amazon API Gateway and AWS Lambda.
-It provides:
+Chalice is a microframework for writing serverless apps in python. It allows
+you to quickly create and deploy applications that use AWS Lambda.  It provides:
 
 * A command line tool for creating, deploying, and managing your app
-* A familiar and easy to use API for declaring views in python code
+* A decorator based API for integrating with Amazon API Gateway, Amazon S3,
+  Amazon SNS, Amazon SQS, and other AWS services.
 * Automatic IAM policy generation
 
 
-::
+You can create Rest APIs:
 
-    $ pip install chalice
-    $ chalice new-project helloworld && cd helloworld
-    $ cat app.py
+.. code-block:: python
 
     from chalice import Chalice
 
@@ -38,6 +36,60 @@ It provides:
     def index():
         return {"hello": "world"}
 
+Tasks that run on a periodic basis:
+
+.. code-block:: python
+
+    from chalice import Chalice, Rate
+
+    app = Chalice(app_name="helloworld")
+
+    # Automatically runs every 5 minutes
+    @app.schedule(Rate(5, unit=Rate.MINUTES))
+    def periodic_task():
+        return {"hello": "world"}
+
+
+You can connect a lambda function to an S3 event:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    # Whenver an object is uploaded to 'mybucket'
+    # this lambda function will be invoked.
+
+    @app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        print("Object uploaded for bucket: %s, key: %s"
+              % (event.bucket, event.key))
+
+As well as an SQS queue:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    # Invoke this lambda function whenever a message
+    # is sent to the ``my-queue-name`` SQS queue.
+
+    @app.on_sqs_message(queue='my-queue-name')
+    def handler(event):
+        for record in event:
+            print("Message body: %s" % record.body)
+
+
+And several other AWS resources.
+
+Once you've written your code, you just run ``chalice deploy``
+and Chalice takes take of deploying your app.
+
+::
+
     $ chalice deploy
     ...
     https://endpoint/dev
@@ -46,7 +98,6 @@ It provides:
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
-
 Give this project a try and share your feedback with us here on Github.
 
 The documentation is available
