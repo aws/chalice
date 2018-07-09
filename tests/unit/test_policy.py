@@ -161,8 +161,10 @@ def test_no_changes():
 
 
 def test_can_handle_high_level_abstractions():
-    assert_policy_is(iam_policy({'s3': set(['download_file', 'upload_file',
-                                            'copy'])}), [{
+    policy = iam_policy({
+        's3': set(['download_file', 'upload_file', 'copy'])
+    })
+    assert_policy_is(policy, [{
         'Effect': 'Allow',
         'Action': [
             's3:AbortMultipartUpload',
