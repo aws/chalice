@@ -636,6 +636,66 @@ def test_can_handle_async_await():
     """) == {'dynamodb': set(['list_tables'])}
 
 
+def test_can_analyze_custom_auth():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        ec2 = boto3.client('ec2')
+        app = Chalice(app_name='custom-auth')
+
+        @app.authorizer()
+        def index(auth_request):
+            ec2.describe_instances()
+            return {}
+    """) == {'ec2': set(['describe_instances'])}
+
+
+def test_can_analyze_s3_events():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='s3-event')
+
+        @app.on_s3_event(bucket='mybucket')
+        def index(event):
+            s3.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_analyze_sns_events():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='sns-event')
+
+        @app.on_sns_message(topic='mytopic')
+        def index(event):
+            s3.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_analyze_sqs_events():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='sqs-event')
+
+        @app.on_sqs_message(queue='myqueue')
+        def index(event):
+            s3.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
 # def test_tuple_assignment():
 #     assert aws_calls("""\
 #         import boto3

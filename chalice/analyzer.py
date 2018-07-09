@@ -659,6 +659,12 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
 
 class AppViewTransformer(ast.NodeTransformer):
+    _CHALICE_DECORATORS = [
+        'route', 'authorizer', 'lambda_function',
+        'schedule', 'on_s3_event', 'on_sns_message',
+        'on_sqs_message',
+    ]
+
     def visit_FunctionDef(self, node):
         # type: (ast.FunctionDef) -> Any
         if self._is_chalice_view(node):
@@ -677,12 +683,7 @@ class AppViewTransformer(ast.NodeTransformer):
         for decorator in decorator_list:
             if isinstance(decorator, ast.Call) and \
                     isinstance(decorator.func, ast.Attribute):
-                if decorator.func.attr == 'route' and \
-                        decorator.args:
-                    return True
-                # For lambda_function and schedule decorator.args
-                # not present.
-                if decorator.func.attr in ('lambda_function', 'schedule'):
+                if decorator.func.attr in self._CHALICE_DECORATORS:
                     return True
         return False
 
