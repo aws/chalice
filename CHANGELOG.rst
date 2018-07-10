@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for S3 upload_file/download_file in
+  policy generator
+  (`#889 <https://github.com/aws/chalice/pull/889>`__)
+
+
 1.4.0
 =====
 
