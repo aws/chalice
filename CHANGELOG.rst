@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.5.0
+=====
 
 * Add support for S3 upload_file/download_file in
   policy generator
