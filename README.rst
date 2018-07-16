@@ -86,7 +86,7 @@ As well as an SQS queue:
 And several other AWS resources.
 
 Once you've written your code, you just run ``chalice deploy``
-and Chalice takes take of deploying your app.
+and Chalice takes care of deploying your app.
 
 ::
 
