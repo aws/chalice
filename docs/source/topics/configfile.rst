@@ -352,7 +352,7 @@ We can accomplish all this with this config file::
           "bar": {
             "manage_iam_role": false,
             "iam_role_arn": "arn:aws:iam::my-role-name",
-            "environment_variable": {"TABLE_NAME": "mytable"}
+            "environment_variables": {"TABLE_NAME": "mytable"}
           }
         }
       }
