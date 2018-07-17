@@ -13,6 +13,7 @@ from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
 from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaClientError
+from chalice.awsclient import LambdaInvokeError
 
 
 def create_policy_statement(source_arn, service_name, statement_id):
@@ -357,6 +358,71 @@ class TestCreateRole(object):
         with pytest.raises(botocore.exceptions.ClientError):
             awsclient.create_role(
                 'role_name', {'trust': 'policy'}, {'policy': 'document'})
+        stubbed_session.verify_stubs()
+
+
+class TestInvokeLambdaFunction(object):
+    def test_invoke_no_payload_no_context(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            InvocationType='RequestResponse',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.invoke_function('name') == {}
+        stubbed_session.verify_stubs()
+
+    def test_invoke_context_provided(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            ClientContext='{"key": "value"}',
+            InvocationType='RequestResponse',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.invoke_function(
+            'name', context='{"key": "value"}') == {}
+        stubbed_session.verify_stubs()
+
+    def test_invoke_payload_provided(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            Payload=b'payload',
+            InvocationType='RequestResponse',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.invoke_function('name', payload=b'payload') == {}
+        stubbed_session.verify_stubs()
+
+    def test_invoke_payload_and_context_provided(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            ClientContext='{"key": "value"}',
+            Payload=b'payload',
+            InvocationType='RequestResponse',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.invoke_function(
+            'name', context='{"key": "value"}', payload=b'payload') == {}
+        stubbed_session.verify_stubs()
+
+    def test_invoke_error_does_pass_code_and_message(self, stubbed_session):
+        code = 'InvalidZipFileException'
+        message = 'AWS Lambda could not unzip the function zip file.'
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            InvocationType='RequestResponse',
+        ).raises_error(
+            error_code=code,
+            message=message)
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(LambdaInvokeError) as e:
+            awsclient.invoke_function('name')
+        assert e.value.code == code
+        assert e.value.message == message
         stubbed_session.verify_stubs()
 
 

@@ -11,6 +11,7 @@ import tempfile
 import shutil
 import traceback
 import functools
+import json
 
 import botocore.exceptions
 import click
@@ -19,9 +20,12 @@ from typing import Dict, Any, Optional  # noqa
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import LambdaInvokeError
 from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
+from chalice.invoke import LambdaInvoker
+from chalice.invoke import NoSuchFunctionError
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
@@ -180,6 +184,62 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     reporter = factory.create_deployment_reporter(ui=ui)
     reporter.display_report(deployed_values)
+
+
+@cli.command('invoke')
+@click.argument('name')
+@click.option('--profile', metavar='PROFILE',
+              help='Override profile at deploy time.')
+@click.option('--stage', metavar='STAGE', default=DEFAULT_STAGE_NAME,
+              help=('Name of the Chalice stage to deploy to. '
+                    'Specifying a new chalice stage will create '
+                    'an entirely new set of AWS resources.'))
+@click.option('--connection-timeout',
+              type=int,
+              help=('Overrides the default botocore connection '
+                    'timeout.'))
+@click.option('--payload',
+              default=None,
+              metavar='PAYLOAD',
+              help=('Set the payload to pass to lamda. '
+                    'To specify stdin use --.'))
+@click.option('--context',
+              default=None,
+              metavar='JSON',
+              help=('Set lambda context. This should be a JSON object '
+                    'encoded as a string. This will be added to the context '
+                    'under the `custom` attribute.'))
+@click.pass_context
+def invoke(ctx, name, profile, stage, connection_timeout, payload, context):
+    """This command invokes the deployed lambda function NAME."""
+    # type: (click.Context, str, str, str, int, str, str) -> None
+    factory = ctx.obj['factory']  # type: CLIFactory
+    config = factory.create_config_obj(stage)
+    session = factory.create_botocore_session(
+        connection_timeout=connection_timeout)
+    client = TypedAWSClient(session)
+    deployed = config.deployed_resources(stage)
+    invoker = LambdaInvoker(deployed, client)
+    if payload == '--':
+        payload = click.get_binary_stream('stdin').read()
+    try:
+        response = invoker.invoke(name, payload=payload, context=context)
+    except NoSuchFunctionError:
+        click.echo(
+            "Could not find invokable resource with name: %s" % name,
+            err=True
+        )
+        raise click.Abort()
+    except LambdaInvokeError as e:
+        click.echo(
+            'Error occured when invoking lambda: %s\n%s' % (e.code, e.message),
+            err=True
+        )
+        raise click.Abort()
+    payload = response['Payload'].read()
+    del response['Payload']
+    click.echo(json.dumps(response, indent=4))
+    click.echo(payload)
 
 
 @cli.command('delete')

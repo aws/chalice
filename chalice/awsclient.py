@@ -61,6 +61,14 @@ class LambdaClientError(AWSClientError):
         super(LambdaClientError, self).__init__(str(original_error))
 
 
+class LambdaInvokeError(AWSClientError):
+    def __init__(self, code, message):
+        # type: (str, str) -> None
+        self.code = code
+        self.message = message
+        super(LambdaInvokeError, self).__init__()
+
+
 class DeploymentPackageTooLargeError(LambdaClientError):
     pass
 
@@ -178,6 +186,27 @@ class TypedAWSClient(object):
         if re.search('event source mapping.*is in use', message):
             return True
         return False
+
+    def invoke_function(self, name, context=None, payload=None):
+        # type: (str, OptStr, bytes] -> Dict[str, Any]
+        kwargs = {
+            'FunctionName': name,
+            'InvocationType': 'RequestResponse',
+        }
+        if context is not None:
+            kwargs['ClientContext'] = context
+        if payload is not None:
+            kwargs['Payload'] = payload
+
+        try:
+            return self._call_client_method_with_retries(
+                self._client('lambda').invoke,
+                kwargs
+            )
+        except ClientError as e:
+            code = e.response['Error']['Code']
+            message = e.response['Error']['Message']
+            raise LambdaInvokeError(code, message)
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
