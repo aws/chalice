@@ -172,7 +172,7 @@ class LambdaDeploymentPackager(object):
 
     def _hash_vendor_dir(self, vendor_dir, md5):
         # type: (str, Any) -> None
-        for rootdir, _, filenames in self._osutils.walk(vendor_dir):
+        for rootdir, _, filenames in self._osutils.walk(vendor_dir, followlinks=True):
             for filename in filenames:
                 fullpath = self._osutils.joinpath(rootdir, filename)
                 with self._osutils.open(fullpath, 'rb') as f:
