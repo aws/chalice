@@ -188,7 +188,7 @@ class TypedAWSClient(object):
         return False
 
     def invoke_function(self, name, context=None, payload=None):
-        # type: (str, OptStr, bytes] -> Dict[str, Any]
+        # type: (str, _OPT_STR, bytes) -> Dict[str, Any]
         kwargs = {
             'FunctionName': name,
             'InvocationType': 'RequestResponse',

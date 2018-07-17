@@ -11,7 +11,6 @@ import tempfile
 import shutil
 import traceback
 import functools
-import json
 
 import botocore.exceptions
 import click
@@ -25,6 +24,7 @@ from chalice.cli.factory import CLIFactory
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.invoke import LambdaInvoker
+from chalice.invoke import LambdaResponseFormatter
 from chalice.invoke import NoSuchFunctionError
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
@@ -34,6 +34,9 @@ from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
+
+
+_OPT_STR = Optional[str]
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -187,7 +190,11 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
 
 
 @cli.command('invoke')
-@click.argument('name')
+@click.option('-n', '--name', metavar='NAME', required=True,
+              help=('The name of the function to invoke. '
+                    'This is the logical name of the function. The only '
+                    'exception is to invoke one of the routes the name '
+                    'api_handler should be used.'))
 @click.option('--profile', metavar='PROFILE',
               help='Override profile at deploy time.')
 @click.option('--stage', metavar='STAGE', default=DEFAULT_STAGE_NAME,
@@ -198,21 +205,10 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
               type=int,
               help=('Overrides the default botocore connection '
                     'timeout.'))
-@click.option('--payload',
-              default=None,
-              metavar='PAYLOAD',
-              help=('Set the payload to pass to lamda. '
-                    'To specify stdin use --.'))
-@click.option('--context',
-              default=None,
-              metavar='JSON',
-              help=('Set lambda context. This should be a JSON object '
-                    'encoded as a string. This will be added to the context '
-                    'under the `custom` attribute.'))
 @click.pass_context
-def invoke(ctx, name, profile, stage, connection_timeout, payload, context):
-    """This command invokes the deployed lambda function NAME."""
-    # type: (click.Context, str, str, str, int, str, str) -> None
+def invoke(ctx, name, profile, stage, connection_timeout):
+    # type: (click.Context, str, str, str, int) -> None
+    """Invoke the deployed lambda function NAME."""
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
     session = factory.create_botocore_session(
@@ -220,10 +216,16 @@ def invoke(ctx, name, profile, stage, connection_timeout, payload, context):
     client = TypedAWSClient(session)
     deployed = config.deployed_resources(stage)
     invoker = LambdaInvoker(deployed, client)
-    if payload == '--':
-        payload = click.get_binary_stream('stdin').read()
+    response_formatter = LambdaResponseFormatter(UI())
+
+    # Check for pipe to stdin
+    if not sys.stdin.isatty():
+        payload = click.get_binary_stream('stdin').read()  # type: _OPT_STR
+    else:
+        payload = None
+
     try:
-        response = invoker.invoke(name, payload=payload, context=context)
+        response = invoker.invoke(name, payload=payload)
     except NoSuchFunctionError:
         click.echo(
             "Could not find invokable resource with name: %s" % name,
@@ -236,10 +238,8 @@ def invoke(ctx, name, profile, stage, connection_timeout, payload, context):
             err=True
         )
         raise click.Abort()
-    payload = response['Payload'].read()
-    del response['Payload']
-    click.echo(json.dumps(response, indent=4))
-    click.echo(payload)
+
+    response_formatter.format_response(response)
 
 
 @cli.command('delete')
