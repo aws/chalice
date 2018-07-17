@@ -9,6 +9,7 @@ import shutil
 import sys
 import tarfile
 import subprocess
+import uuid
 
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
@@ -289,3 +290,8 @@ class UI(object):
             return self._confirm(msg, default, abort)
         except click.Abort:
             raise AbortedError()
+
+
+def generate_random_id():
+    # type: () -> str
+    return str(uuid.uuid4())

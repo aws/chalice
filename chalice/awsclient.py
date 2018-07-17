@@ -21,7 +21,6 @@ import zipfile
 import shutil
 import json
 import re
-import uuid
 
 import botocore.session  # noqa
 from botocore.exceptions import ClientError
@@ -31,6 +30,7 @@ from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
+from chalice.utils import generate_random_id
 
 
 _STR_MAP = Optional[Dict[str, str]]
@@ -86,7 +86,6 @@ class LambdaErrorContext(object):
 
 
 class TypedAWSClient(object):
-
     # 30 * 5 == 150 seconds or 2.5 minutes for the initial lambda
     # creation + role propagation.
     LAMBDA_CREATE_ATTEMPTS = 30
@@ -200,13 +199,11 @@ class TypedAWSClient(object):
 
         try:
             return self._call_client_method_with_retries(
-                self._client('lambda').invoke,
-                kwargs
+                self._client('lambda').invoke, kwargs, max_attempts=1
             )
         except ClientError as e:
-            code = e.response['Error']['Code']
-            message = e.response['Error']['Message']
-            raise LambdaInvokeError(code, message)
+            error = e.response['Error']
+            raise LambdaInvokeError(error['Code'], error['Message'])
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
@@ -691,7 +688,7 @@ class TypedAWSClient(object):
         source_arn = ("arn:aws:execute-api:%s:%s:%s/authorizers/%s" %
                       (region_name, account_id, rest_api_id, authorizer_id))
         if random_id is None:
-            random_id = self._random_id()
+            random_id = generate_random_id()
         self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_name,
@@ -841,7 +838,7 @@ class TypedAWSClient(object):
         policy = self.get_function_policy(function_arn)
         if self._policy_gives_access(policy, source_arn, service_name):
             return
-        random_id = self._random_id()
+        random_id = generate_random_id()
         self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
@@ -1001,7 +998,3 @@ class TypedAWSClient(object):
                     raise
                 continue
             return response
-
-    def _random_id(self):
-        # type: () -> str
-        return str(uuid.uuid4())
