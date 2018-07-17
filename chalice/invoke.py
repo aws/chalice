@@ -70,7 +70,7 @@ class LambdaResponseFormatter(object):
         stack_trace = loaded_error['stackTrace']
 
         self._ui.error(self._TRACEBACK_HEADING)
-        for frame in reversed(stack_trace):
+        for frame in stack_trace:
             self._format_frame(frame)
         self._ui.error('{}: {}\n'.format(error_type, error_message))
 
