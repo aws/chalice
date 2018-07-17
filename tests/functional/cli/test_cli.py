@@ -6,13 +6,18 @@ import sys
 import pytest
 from click.testing import CliRunner
 import mock
+from botocore.exceptions import ClientError
 
 from chalice import cli
 from chalice.cli import factory
 from chalice.config import Config, DeployedResources
 from chalice.utils import record_deployed_values
+from chalice.utils import PipeReader
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.logs import LogRetriever
+from chalice.invoke import LambdaInvokeHandler
+from chalice.invoke import UnhandledLambdaError
+from chalice.awsclient import ReadTimeout
 
 
 class FakeConfig(object):
@@ -354,3 +359,94 @@ def test_can_provide_lambda_name_for_logs(runner, mock_cli_factory):
     mock_cli_factory.create_log_retriever.assert_called_with(
         mock.sentinel.Session, 'arn:aws:lambda::app-dev-foo'
     )
+
+
+def test_can_call_invoke(runner, mock_cli_factory, monkeypatch):
+    invoke_handler = mock.Mock(spec=LambdaInvokeHandler)
+    mock_cli_factory.create_lambda_invoke_handler.return_value = invoke_handler
+    mock_reader = mock.Mock(spec=PipeReader)
+    mock_reader.read.return_value = 'barbaz'
+    mock_cli_factory.create_stdin_reader.return_value = mock_reader
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 0
+    assert invoke_handler.invoke.call_args == mock.call('barbaz')
+
+
+def test_invoke_does_raise_if_service_error(runner, mock_cli_factory):
+    deployed_resources = DeployedResources({"resources": []})
+    mock_cli_factory.create_config_obj.return_value = FakeConfig(
+        deployed_resources)
+    invoke_handler = mock.Mock(spec=LambdaInvokeHandler)
+    invoke_handler.invoke.side_effect = ClientError(
+        {
+            'Error': {
+                'Code': 'LambdaError',
+                'Message': 'Error message'
+            }
+        },
+        'Invoke'
+    )
+    mock_cli_factory.create_lambda_invoke_handler.return_value = invoke_handler
+    mock_reader = mock.Mock(spec=PipeReader)
+    mock_reader.read.return_value = 'barbaz'
+    mock_cli_factory.create_stdin_reader.return_value = mock_reader
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 1
+    assert invoke_handler.invoke.call_args == mock.call('barbaz')
+    assert (
+        "Error: got 'LambdaError' exception back from Lambda\n"
+        "Error message"
+    ) in result.output
+
+
+def test_invoke_does_raise_if_unhandled_error(runner, mock_cli_factory):
+    deployed_resources = DeployedResources({"resources": []})
+    mock_cli_factory.create_config_obj.return_value = FakeConfig(
+        deployed_resources)
+    invoke_handler = mock.Mock(spec=LambdaInvokeHandler)
+    invoke_handler.invoke.side_effect = UnhandledLambdaError('foo')
+    mock_cli_factory.create_lambda_invoke_handler.return_value = invoke_handler
+    mock_reader = mock.Mock(spec=PipeReader)
+    mock_reader.read.return_value = 'barbaz'
+    mock_cli_factory.create_stdin_reader.return_value = mock_reader
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 1
+    assert invoke_handler.invoke.call_args == mock.call('barbaz')
+    assert 'Unhandled exception in Lambda function, details above.' \
+        in result.output
+
+
+def test_invoke_does_raise_if_read_timeout(runner, mock_cli_factory):
+    mock_cli_factory.create_lambda_invoke_handler.side_effect = \
+        ReadTimeout('It took too long')
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 1
+        assert 'It took too long' in result.output
+
+
+def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
+    mock_cli_factory.create_lambda_invoke_handler.side_effect = \
+        factory.NoSuchFunctionError('foo')
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
+                                  cli_factory=mock_cli_factory)
+        assert result.exit_code == 2
+        assert 'foo' in result.output

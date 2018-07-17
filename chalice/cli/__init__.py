@@ -19,7 +19,9 @@ from typing import Dict, Any, Optional  # noqa
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ReadTimeout
 from chalice.cli.factory import CLIFactory
+from chalice.cli.factory import NoSuchFunctionError
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
@@ -30,6 +32,7 @@ from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.invoke import UnhandledLambdaError
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -180,6 +183,52 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
     deployed_values = d.deploy(config, chalice_stage_name=stage)
     reporter = factory.create_deployment_reporter(ui=ui)
     reporter.display_report(deployed_values)
+
+
+@cli.command('invoke')
+@click.option('-n', '--name', metavar='NAME', required=True,
+              help=('The name of the function to invoke. '
+                    'This is the logical name of the function. If the '
+                    'function is decorated by app.route use the name '
+                    'api_handler instead.'))
+@click.option('--profile', metavar='PROFILE',
+              help='Override profile at deploy time.')
+@click.option('--stage', metavar='STAGE', default=DEFAULT_STAGE_NAME,
+              help=('Name of the Chalice stage to deploy to. '
+                    'Specifying a new chalice stage will create '
+                    'an entirely new set of AWS resources.'))
+@click.pass_context
+def invoke(ctx, name, profile, stage):
+    # type: (click.Context, str, str, str) -> None
+    """Invoke the deployed lambda function NAME."""
+    factory = ctx.obj['factory']  # type: CLIFactory
+    factory.profile = profile
+
+    try:
+        invoke_handler = factory.create_lambda_invoke_handler(name, stage)
+        payload = factory.create_stdin_reader().read()
+        invoke_handler.invoke(payload)
+    except NoSuchFunctionError as e:
+        err = click.ClickException(
+            "could not find a lambda function named %s." % e.name)
+        err.exit_code = 2
+        raise err
+    except botocore.exceptions.ClientError as e:
+        error = e.response['Error']
+        err = click.ClickException(
+            "got '%s' exception back from Lambda\n%s"
+            % (error['Code'], error['Message']))
+        err.exit_code = 1
+        raise err
+    except UnhandledLambdaError:
+        err = click.ClickException(
+            "Unhandled exception in Lambda function, details above.")
+        err.exit_code = 1
+        raise err
+    except ReadTimeout as e:
+        err = click.ClickException(e.message)
+        err.exit_code = 1
+        raise err
 
 
 @cli.command('delete')

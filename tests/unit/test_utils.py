@@ -1,5 +1,6 @@
 import re
 import mock
+import sys
 import click
 import pytest
 from six import StringIO
@@ -39,6 +40,24 @@ class TestUI(object):
         ui = utils.UI(self.out, self.err, confirm)
         return_value = ui.confirm("Confirm?")
         assert return_value == 'foo'
+
+
+class TestPipeReader(object):
+    def test_pipe_reader_does_read_pipe(self):
+        mock_stream = mock.Mock(spec=sys.stdin)
+        mock_stream.isatty.return_value = False
+        mock_stream.read.return_value = 'foobar'
+        reader = utils.PipeReader(mock_stream)
+        value = reader.read()
+        assert value == 'foobar'
+
+    def test_pipe_reader_does_not_read_tty(self):
+        mock_stream = mock.Mock(spec=sys.stdin)
+        mock_stream.isatty.return_value = True
+        mock_stream.read.return_value = 'foobar'
+        reader = utils.PipeReader(mock_stream)
+        value = reader.read()
+        assert value is None
 
 
 def test_serialize_json():
