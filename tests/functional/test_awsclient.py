@@ -372,18 +372,6 @@ class TestInvokeLambdaFunction(object):
         assert awsclient.invoke_function('name') == {}
         stubbed_session.verify_stubs()
 
-    def test_invoke_context_provided(self, stubbed_session):
-        stubbed_session.stub('lambda').invoke(
-            FunctionName='name',
-            ClientContext='{"key": "value"}',
-            InvocationType='RequestResponse',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.invoke_function(
-            'name', context='{"key": "value"}') == {}
-        stubbed_session.verify_stubs()
-
     def test_invoke_payload_provided(self, stubbed_session):
         stubbed_session.stub('lambda').invoke(
             FunctionName='name',
@@ -393,19 +381,6 @@ class TestInvokeLambdaFunction(object):
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.invoke_function('name', payload=b'payload') == {}
-        stubbed_session.verify_stubs()
-
-    def test_invoke_payload_and_context_provided(self, stubbed_session):
-        stubbed_session.stub('lambda').invoke(
-            FunctionName='name',
-            ClientContext='{"key": "value"}',
-            Payload=b'payload',
-            InvocationType='RequestResponse',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
-        assert awsclient.invoke_function(
-            'name', context='{"key": "value"}', payload=b'payload') == {}
         stubbed_session.verify_stubs()
 
     def test_invoke_error_does_pass_code_and_message(self, stubbed_session):

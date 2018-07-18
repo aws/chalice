@@ -1,7 +1,7 @@
 """Abstraction for invoking a lambda function."""
 import json
 
-from typing import Any, Optional, Dict, List, Union  # noqa
+from typing import Any, Optional, Dict, List, Union, Tuple  # noqa
 
 from chalice.config import DeployedResources  # noqa
 from chalice.awsclient import TypedAWSClient  # noqa
@@ -56,8 +56,7 @@ class LambdaResponseFormatter(object):
     def format_response(self, response):
         # type: (Dict[str, Any]) -> None
         payload = response[self._PAYLOAD_KEY].read()
-        if self._ERROR_KEY in response and \
-           response[self._ERROR_KEY] == self._ERROR_VALUE:
+        if response.get(self._ERROR_KEY) == self._ERROR_VALUE:
             self._format_error(payload)
         else:
             self._format_success(payload)

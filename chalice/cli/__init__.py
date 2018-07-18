@@ -192,9 +192,9 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
 @cli.command('invoke')
 @click.option('-n', '--name', metavar='NAME', required=True,
               help=('The name of the function to invoke. '
-                    'This is the logical name of the function. The only '
-                    'exception is to invoke one of the routes the name '
-                    'api_handler should be used.'))
+                    'This is the logical name of the function. If the '
+                    'function is decorated by app.route use the name '
+                    'api_handler instead.'))
 @click.option('--profile', metavar='PROFILE',
               help='Override profile at deploy time.')
 @click.option('--stage', metavar='STAGE', default=DEFAULT_STAGE_NAME,
@@ -218,12 +218,21 @@ def invoke(ctx, name, profile, stage, connection_timeout):
     invoker = LambdaInvoker(deployed, client)
     response_formatter = LambdaResponseFormatter(UI())
 
-    # Check for pipe to stdin
+    payload = _read_stdin_if_piped()
+    _invoke_function(invoker, name, payload, response_formatter)
+
+
+def _read_stdin_if_piped():
+    # type: () -> _OPT_STR
     if not sys.stdin.isatty():
         payload = click.get_binary_stream('stdin').read()  # type: _OPT_STR
     else:
         payload = None
+    return payload
 
+
+def _invoke_function(invoker, name, payload, response_formatter):
+    # type: (LambdaInvoker, str, _OPT_STR, LambdaResponseFormatter) -> None
     try:
         response = invoker.invoke(name, payload=payload)
     except NoSuchFunctionError:
