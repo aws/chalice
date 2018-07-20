@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.6.0
+=====
 
 * Add ``chalice invoke`` command
   (`#900 <https://github.com/aws/chalice/issues/900>`__)
