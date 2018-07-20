@@ -575,6 +575,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     def _send_http_response_with_body(self, code, headers, body):
         # type: (int, HeaderType, Union[str,bytes]) -> None
+        if not isinstance(body, bytes):
+            body = body.encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Length', str(len(body)))
         content_type = headers.pop(
@@ -583,8 +585,6 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         for header_name, header_value in headers.items():
             self.send_header(header_name, header_value)
         self.end_headers()
-        if not isinstance(body, bytes):
-            body = body.encode('utf-8')
         self.wfile.write(body)
 
     do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = do_PATCH = do_OPTIONS = \

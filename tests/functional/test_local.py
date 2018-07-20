@@ -14,6 +14,7 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 from chalice import app
+from chalice import Response
 from chalice.local import LocalDevServer
 from chalice.config import Config
 from chalice.utils import OSUtils
@@ -149,6 +150,12 @@ def sample_app():
     def test_cors():
         return {'hello': 'world'}
 
+    @demo.route('/test-unicode', methods=['GET'])
+    def test_unicode():
+        return Response(body="le calice en s\u00e9curit\u00e9",
+                        status_code=200,
+                        headers={'Content-Type': 'text/plain; charset=utf-8'})
+
     return demo
 
 
@@ -165,6 +172,15 @@ def test_can_accept_options_request(config, sample_app, local_server_factory):
     assert response.headers['Content-Length'] == '0'
     assert response.headers['Access-Control-Allow-Methods'] == 'POST,OPTIONS'
     assert response.text == ''
+
+
+def test_content_length_unicode_body(config, sample_app, local_server_factory):
+    local_server, port = local_server_factory(sample_app, config)
+    response = local_server.make_call(requests.get, '/test-unicode', port)
+    expected_unicode = "le calice en s\u00e9curit\u00e9"
+    expected_length = len(expected_unicode.encode('utf-8'))
+    assert response.headers['Content-Length'] == '%d' % expected_length
+    assert response.text == expected_unicode
 
 
 def test_can_accept_multiple_options_request(config, sample_app,
