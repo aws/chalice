@@ -13,7 +13,7 @@ install_requires = [
     'six>=1.10.0,<2.0.0',
     'pip>=9,<11',
     'attrs==17.4.0',
-    'enum-compat',
+    'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
 ]
 
