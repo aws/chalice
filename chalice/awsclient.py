@@ -195,9 +195,10 @@ class TypedAWSClient(object):
         if payload is not None:
             kwargs['Payload'] = payload
 
-        return self._call_client_method_with_retries(
-            self._client('lambda').invoke, kwargs, max_attempts=1
-        )
+        try:
+            return self._client('lambda').invoke(**kwargs)
+        except RequestsReadTimeout as e:
+            raise ReadTimeout(str(e))
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
@@ -991,8 +992,6 @@ class TypedAWSClient(object):
                         not should_retry(e):
                     raise
                 continue
-            except RequestsReadTimeout as e:
-                raise ReadTimeout(str(e))
             return response
 
     def _random_id(self):
