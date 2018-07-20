@@ -204,6 +204,9 @@ class CLIFactory(object):
             raise NoSuchFunctionError(name)
 
         function_scoped_config = config.scope(stage, name)
+        # The session for max retries needs to be set to 0 for invoking a
+        # lambda function because in the case of a timeout or other retriable
+        # error the underlying client will call the function again.
         session = self.create_botocore_session(
             read_timeout=function_scoped_config.lambda_timeout,
             max_retries=0,
