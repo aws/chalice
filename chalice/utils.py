@@ -19,6 +19,7 @@ from chalice.constants import WELCOME_PROMPT
 
 
 OptInt = Optional[int]
+OptStr = Optional[str]
 EnvVars = MutableMapping
 
 
@@ -289,3 +290,15 @@ class UI(object):
             return self._confirm(msg, default, abort)
         except click.Abort:
             raise AbortedError()
+
+
+class PipeReader(object):
+    def __init__(self, stream):
+        # type: (IO[str]) -> None
+        self._stream = stream
+
+    def read(self):
+        # type: () -> OptStr
+        if not self._stream.isatty():
+            return self._stream.read()
+        return None

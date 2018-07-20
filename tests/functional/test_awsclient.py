@@ -7,12 +7,15 @@ import mock
 import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
+from botocore.vendored.requests.exceptions import ReadTimeout as \
+    RequestsReadTimeout
 from botocore import stub
 
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
 from chalice.awsclient import DeploymentPackageTooLargeError
 from chalice.awsclient import LambdaClientError
+from chalice.awsclient import ReadTimeout
 
 
 def create_policy_statement(source_arn, service_name, statement_id):
@@ -358,6 +361,40 @@ class TestCreateRole(object):
             awsclient.create_role(
                 'role_name', {'trust': 'policy'}, {'policy': 'document'})
         stubbed_session.verify_stubs()
+
+
+class TestInvokeLambdaFunction(object):
+    def test_invoke_no_payload_no_context(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            InvocationType='RequestResponse',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.invoke_function('name') == {}
+        stubbed_session.verify_stubs()
+
+    def test_invoke_payload_provided(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            Payload=b'payload',
+            InvocationType='RequestResponse',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.invoke_function('name', payload=b'payload') == {}
+        stubbed_session.verify_stubs()
+
+    def test_invoke_read_timeout_raises_correct_error(self, stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            Payload=b'payload',
+            InvocationType='RequestResponse',
+        ).raises_error(error=RequestsReadTimeout())
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ReadTimeout):
+            awsclient.invoke_function('name', payload=b'payload') == {}
 
 
 class TestCreateLambdaFunction(object):

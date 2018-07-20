@@ -5,6 +5,7 @@ import importlib
 import logging
 import functools
 
+import click
 from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
 from typing import Any, Optional, Dict, MutableMapping  # noqa
@@ -13,6 +14,7 @@ from chalice import __version__ as chalice_version
 from chalice.awsclient import TypedAWSClient
 from chalice.app import Chalice  # noqa
 from chalice.config import Config
+from chalice.config import DeployedResources  # noqa
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -20,19 +22,36 @@ from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.logs import LogRetriever
 from chalice import local
 from chalice.utils import UI  # noqa
+from chalice.utils import PipeReader  # noqa
 from chalice.deploy import deployer  # noqa
+from chalice.invoke import LambdaInvokeHandler
+from chalice.invoke import LambdaInvoker
+from chalice.invoke import LambdaResponseFormatter
+
+
+_OPT_STR = Optional[str]
+_OPT_INT = Optional[int]
 
 
 def create_botocore_session(profile=None, debug=False,
-                            connection_timeout=None):
-    # type: (str, bool, int) -> Session
+                            connection_timeout=None,
+                            read_timeout=None,
+                            max_retries=None):
+    # type: (_OPT_STR, bool, _OPT_INT, _OPT_INT, _OPT_INT) -> Session
     s = Session(profile=profile)
     _add_chalice_user_agent(s)
     if debug:
         s.set_debug_logger('')
         _inject_large_request_body_filter()
+    config_args = {}  # type: Dict[str, Any]
     if connection_timeout is not None:
-        config = BotocoreConfig(connect_timeout=connection_timeout)
+        config_args['connect_timeout'] = connection_timeout
+    if read_timeout is not None:
+        config_args['read_timeout'] = read_timeout
+    if max_retries is not None:
+        config_args['retries'] = {'max_attempts': max_retries}
+    if config_args:
+        config = BotocoreConfig(**config_args)
         s.set_default_client_config(config)
     return s
 
@@ -49,6 +68,14 @@ def _inject_large_request_body_filter():
     # type: () -> None
     log = logging.getLogger('botocore.endpoint')
     log.addFilter(LargeRequestBodyFilter())
+
+
+class NoSuchFunctionError(Exception):
+    """The specified function could not be found."""
+    def __init__(self, name):
+        # type: (str) -> None
+        self.name = name
+        super(NoSuchFunctionError, self).__init__()
 
 
 class UnknownConfigFileVersion(Exception):
@@ -86,11 +113,14 @@ class CLIFactory(object):
             environ = dict(os.environ)
         self._environ = environ
 
-    def create_botocore_session(self, connection_timeout=None):
-        # type: (int) -> Session
+    def create_botocore_session(self, connection_timeout=None,
+                                read_timeout=None, max_retries=None):
+        # type: (_OPT_INT, _OPT_INT, _OPT_INT) -> Session
         return create_botocore_session(profile=self.profile,
                                        debug=self.debug,
-                                       connection_timeout=connection_timeout)
+                                       connection_timeout=connection_timeout,
+                                       read_timeout=read_timeout,
+                                       max_retries=max_retries)
 
     def create_default_deployer(self, session, config, ui):
         # type: (Session, Config, UI) -> deployer.Deployer
@@ -156,6 +186,42 @@ class CLIFactory(object):
         client = TypedAWSClient(session)
         retriever = LogRetriever.create_from_lambda_arn(client, lambda_arn)
         return retriever
+
+    def create_stdin_reader(self):
+        # type: () -> PipeReader
+        stream = click.get_binary_stream('stdin')
+        reader = PipeReader(stream)
+        return reader
+
+    def create_lambda_invoke_handler(self, name, stage):
+        # type: (str, str) -> LambdaInvokeHandler
+        config = self.create_config_obj(stage)
+        deployed = config.deployed_resources(stage)
+        try:
+            resource = deployed.resource_values(name)
+            arn = resource['lambda_arn']
+        except (KeyError, ValueError):
+            raise NoSuchFunctionError(name)
+
+        function_scoped_config = config.scope(stage, name)
+        # The session for max retries needs to be set to 0 for invoking a
+        # lambda function because in the case of a timeout or other retriable
+        # error the underlying client will call the function again.
+        session = self.create_botocore_session(
+            read_timeout=function_scoped_config.lambda_timeout,
+            max_retries=0,
+        )
+
+        client = TypedAWSClient(session)
+        invoker = LambdaInvoker(arn, client)
+
+        handler = LambdaInvokeHandler(
+            invoker,
+            LambdaResponseFormatter(),
+            UI(),
+        )
+
+        return handler
 
     def load_chalice_app(self, environment_variables=None):
         # type: (Optional[MutableMapping]) -> Chalice

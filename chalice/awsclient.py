@@ -27,6 +27,8 @@ import botocore.session  # noqa
 from botocore.exceptions import ClientError
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
+from botocore.vendored.requests.exceptions import ReadTimeout as \
+    RequestsReadTimeout
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -39,7 +41,6 @@ _OPT_INT = Optional[int]
 _OPT_STR_LIST = Optional[List[str]]
 _CLIENT_METHOD = Callable[..., Dict[str, Any]]
 
-
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
 )
@@ -47,6 +48,12 @@ _REMOTE_CALL_ERRORS = (
 
 class AWSClientError(Exception):
     pass
+
+
+class ReadTimeout(AWSClientError):
+    def __init__(self, message):
+        # type: (str) -> None
+        self.message = message
 
 
 class ResourceDoesNotExistError(AWSClientError):
@@ -178,6 +185,20 @@ class TypedAWSClient(object):
         if re.search('event source mapping.*is in use', message):
             return True
         return False
+
+    def invoke_function(self, name, payload=None):
+        # type: (str, bytes) -> Dict[str, Any]
+        kwargs = {
+            'FunctionName': name,
+            'InvocationType': 'RequestResponse',
+        }
+        if payload is not None:
+            kwargs['Payload'] = payload
+
+        try:
+            return self._client('lambda').invoke(**kwargs)
+        except RequestsReadTimeout as e:
+            raise ReadTimeout(str(e))
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
