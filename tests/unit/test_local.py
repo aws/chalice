@@ -140,6 +140,12 @@ def sample_app():
                         status_code=200,
                         headers={'Content-Type': 'application/octet-stream'})
 
+    @demo.route('/unicode-response')
+    def unicode_response():
+        return Response(body="le calice en s\u00e9curit\u00e9",
+                        status_code=200,
+                        headers={'Content-Type': 'text/plain; charset=utf-8'})
+
     return demo
 
 
@@ -454,6 +460,17 @@ def test_can_round_trip_binary(handler):
     handler.do_POST()
     response = _get_raw_body_from_response_stream(handler)
     assert response == body
+
+
+def test_body_contains_unicode(handler):
+    set_current_request(handler, method='GET', path='/unicode-response')
+    handler.do_GET()
+    value = handler.wfile.getvalue()
+    response_lines = value.splitlines()
+    expected_bytes = "le calice en s\u00e9curit\u00e9".encode('utf-8')
+    expected_header = b'Content-Length: %d' % len(expected_bytes)
+    assert expected_header in response_lines
+    assert expected_bytes in response_lines
 
 
 def test_querystring_is_mapped(handler):
