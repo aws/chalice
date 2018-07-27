@@ -159,6 +159,19 @@ def test_can_accept_get_request(config, sample_app, local_server_factory):
     assert response.text == '{"hello": "world"}'
 
 
+def test_can_get_unicode_string_content_length(
+        config, local_server_factory):
+        demo = app.Chalice('app-name')
+
+        @demo.route('/')
+        def index_view():
+            return u'\u2713'
+
+        local_server, port = local_server_factory(demo, config)
+        response = local_server.make_call(requests.get, '/', port)
+        assert response.headers['Content-Length'] == '3'
+
+
 def test_can_accept_options_request(config, sample_app, local_server_factory):
     local_server, port = local_server_factory(sample_app, config)
     response = local_server.make_call(requests.options, '/test-cors', port)
