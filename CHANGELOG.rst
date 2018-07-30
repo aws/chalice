@@ -7,6 +7,10 @@ Next Release (TBD)
 
 * Fix local mode issue with unicode responses and Content-Length
   (`#910 <https://github.com/aws/chalice/pull/910>`__)
+* Fix issue with ``requirements-dev.txt`` not setting up a working
+  dev environment
+  (`#920 <https://github.com/aws/chalice/pull/920>`__)
+
 
 1.6.0
 =====
