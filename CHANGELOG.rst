@@ -10,6 +10,8 @@ Next Release (TBD)
 * Fix issue with ``requirements-dev.txt`` not setting up a working
   dev environment
   (`#920 <https://github.com/aws/chalice/pull/920>`__)
+* Add support for pip 18
+  (`#910 <https://github.com/aws/chalice/pull/908>`__)
 
 
 1.6.0
