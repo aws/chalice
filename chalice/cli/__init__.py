@@ -26,6 +26,7 @@ from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
+from chalice.deploy.packager import LOGGER_NAME as PACKAGER_LOGGER_NAME
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -33,6 +34,18 @@ from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
+
+
+def _configure_logging(name, level, format_string=None):
+    if format_string is None:
+        format_string = "%(asctime)s %(name)s [%(levelname)s] %(message)s"
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    formatter = logging.Formatter(format_string)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 def create_new_project_skeleton(project_name, profile=None):
@@ -363,6 +376,9 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
 def package(ctx, single_file, stage, out):
     # type: (click.Context, bool, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
+    debug = ctx.obj['debug']
+    if debug:
+        _configure_logging(PACKAGER_LOGGER_NAME, logging.DEBUG)
     config = factory.create_config_obj(stage)
     packager = factory.create_app_packager(config)
     if single_file:

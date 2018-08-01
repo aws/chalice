@@ -3,6 +3,7 @@ import hashlib
 import inspect
 import re
 import subprocess
+import logging
 from email.parser import FeedParser
 from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
@@ -26,6 +27,9 @@ OptStrMap = Optional[StrMap]
 EnvVars = MutableMapping
 OptStr = Optional[str]
 OptBytes = Optional[bytes]
+
+LOGGER_NAME = 'packager'
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class InvalidSourceDistributionNameError(Exception):
@@ -319,16 +323,20 @@ class DependencyBuilder(object):
         self._pip.download_all_dependencies(requirements_filename, directory)
         deps = {Package(directory, filename) for filename
                 in self._osutils.get_directory_contents(directory)}
+        logger.debug("Full dependency closure: %s", deps)
         return deps
 
     def _download_binary_wheels(self, packages, directory):
         # type: (Set[Package], str) -> None
         # Try to get binary wheels for each package that isn't compatible.
+        logger.debug("Downloading missing wheels: %s", packages)
         self._pip.download_manylinux_wheels(
             [pkg.identifier for pkg in packages], directory)
 
     def _build_sdists(self, sdists, directory, compile_c=True):
         # type: (Set[Package], str, bool) -> None
+        logger.debug("Build missing wheels from sdists "
+                     "(C compiling %s): %s", compile_c, sdists)
         for sdist in sdists:
             path_to_sdist = self._osutils.joinpath(directory, sdist.filename)
             self._pip.build_wheel(path_to_sdist, directory, compile_c)
@@ -355,7 +363,6 @@ class DependencyBuilder(object):
         # dependencies.
         deps = self._download_all_dependencies(
             requirements_filename, directory)
-
         # Sort the downloaded packages into three categories:
         # - sdists (Pip could not get a wheel so it gave us an sdist)
         # - lambda compatible wheel files
@@ -378,6 +385,8 @@ class DependencyBuilder(object):
                     compatible_wheels.add(package)
                 else:
                     incompatible_wheels.add(package)
+        logger.debug("compatible: %s", compatible_wheels)
+        logger.debug("incompatible: %s", incompatible_wheels | sdists)
 
         # Next we need to go through the downloaded packages and pick out any
         # dependencies that do not have a compatible wheel file downloaded.
@@ -392,6 +401,7 @@ class DependencyBuilder(object):
         # file ourselves.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
+        logger.debug("compatible: %s", compatible_wheels)
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=True)
 
@@ -405,6 +415,7 @@ class DependencyBuilder(object):
         # compiler.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
+        logger.debug("compatible: %s", compatible_wheels)
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=False)
 
@@ -423,7 +434,9 @@ class DependencyBuilder(object):
         compatible_wheels, incompatible_wheels = self._apply_wheel_whitelist(
             compatible_wheels, incompatible_wheels)
         missing_wheels = deps - compatible_wheels
-
+        logger.debug("Final compatible: %s", compatible_wheels)
+        logger.debug("Final incompatible: %s", incompatible_wheels)
+        logger.debug("Final missing wheels: %s", missing_wheels)
         return compatible_wheels, missing_wheels
 
     def _apply_wheel_whitelist(self,
@@ -674,6 +687,7 @@ class PipRunner(object):
         # type: (...) -> Tuple[int, bytes, bytes]
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
+        logger.debug("calling pip %s", ' '.join(main_args))
         rc, out, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
                                               shim=shim)
         return rc, out, err
