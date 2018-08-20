@@ -80,8 +80,9 @@ class LambdaDeploymentPackager(object):
         requirements_filepath = self._get_requirements_filename(project_dir)
         with self._osutils.tempdir() as site_packages_dir:
             try:
+                python_version_numerical = ''.join((s for s in python_version if s.isdigit()))
                 self._dependency_builder.build_site_packages(
-                    requirements_filepath, site_packages_dir)
+                    requirements_filepath, site_packages_dir, python_version_numerical)
             except MissingDependencyError as e:
                 missing_packages = '\n'.join([p.identifier for p
                                               in e.missing])
@@ -321,11 +322,11 @@ class DependencyBuilder(object):
                 in self._osutils.get_directory_contents(directory)}
         return deps
 
-    def _download_binary_wheels(self, packages, directory):
-        # type: (Set[Package], str) -> None
+    def _download_binary_wheels(self, packages, directory, python_version):
+        # type: (Set[Package], str, str) -> None
         # Try to get binary wheels for each package that isn't compatible.
         self._pip.download_manylinux_wheels(
-            [pkg.identifier for pkg in packages], directory)
+            [pkg.identifier for pkg in packages], directory, python_version)
 
     def _build_sdists(self, sdists, directory, compile_c=True):
         # type: (Set[Package], str, bool) -> None
@@ -347,8 +348,8 @@ class DependencyBuilder(object):
                 incompatible_wheels.add(wheel)
         return compatible_wheels, incompatible_wheels
 
-    def _download_dependencies(self, directory, requirements_filename):
-        # type: (str, str) -> Tuple[Set[Package], Set[Package]]
+    def _download_dependencies(self, directory, requirements_filename, python_version):
+        # type: (str, str, str) -> Tuple[Set[Package], Set[Package]]
         # Download all dependencies we can, letting pip choose what to
         # download.
         # deps should represent the best effort we can make to gather all the
@@ -384,7 +385,7 @@ class DependencyBuilder(object):
         # For these packages we need to explicitly try to download a
         # compatible wheel file.
         missing_wheels = sdists | incompatible_wheels
-        self._download_binary_wheels(missing_wheels, directory)
+        self._download_binary_wheels(missing_wheels, directory, python_version)
 
         # Re-count the wheel files after the second download pass. Anything
         # that has an sdist but not a valid wheel file is still not going to
@@ -470,12 +471,12 @@ class DependencyBuilder(object):
             self._osutils.extract_zipfile(zipfile_path, dst_dir)
             self._install_purelib_and_platlib(wheel, dst_dir)
 
-    def build_site_packages(self, requirements_filepath, target_directory):
-        # type: (str, str) -> None
+    def build_site_packages(self, requirements_filepath, target_directory, python_version):
+        # type: (str, str, str) -> None
         if self._has_at_least_one_package(requirements_filepath):
             with self._osutils.tempdir() as tempdir:
                 wheels, packages_without_wheels = self._download_dependencies(
-                    tempdir, requirements_filepath)
+                    tempdir, requirements_filepath, python_version)
                 self._install_wheels(tempdir, target_directory, wheels)
             if packages_without_wheels:
                 raise MissingDependencyError(packages_without_wheels)
@@ -728,7 +729,7 @@ class PipRunner(object):
             # complain at deployment time.
             self.build_wheel(wheel_package_path, directory)
 
-    def download_manylinux_wheels(self, packages, directory):
+    def download_manylinux_wheels(self, packages, directory, python_version):
         # type: (List[str], str) -> None
         """Download wheel files for manylinux for all the given packages."""
         # If any one of these dependencies fails pip will bail out. Since we
@@ -742,5 +743,6 @@ class PipRunner(object):
         for package in packages:
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
                          'manylinux1_x86_64', '--implementation', 'cp',
-                         '--abi', lambda_abi, '--dest', directory, package]
+                         '--abi', lambda_abi, '--python', python_version,
+                         '--dest', directory, package]
             self._execute('download', arguments)

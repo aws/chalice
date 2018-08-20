@@ -196,11 +196,14 @@ class TestPipRunner(object):
         runner.download_manylinux_wheels(packages, 'directory')
         if sys.version_info[0] == 2:
             abi = 'cp27mu'
+            python_version == '27'
         else:
             abi = 'cp36m'
+            python_version = '36'
         expected_prefix = ['download', '--only-binary=:all:', '--no-deps',
                            '--platform', 'manylinux1_x86_64',
                            '--implementation', 'cp', '--abi', abi,
+                           '--python', python_version,
                            '--dest', 'directory']
         for i, package in enumerate(packages):
             assert pip.calls[i].args == expected_prefix + [package]
