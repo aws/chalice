@@ -52,10 +52,4 @@ You'll need to manage connecting them to any additional AWS Resources on your
 own.
 
 
-Limitations:
-
-* You must provide at least 1 ``@app.route`` decorator.  It is not
-  possible to deploy only lambda functions without an API Gateway API.
-
-
-.. _defined here: http://docs.aws.amazon.com/lambda/latest/dg/python-programming-model-handler-types.html
+.. _defined here: https://docs.aws.amazon.com/lambda/latest/dg/python-programming-model-handler-types.html

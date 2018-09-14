@@ -113,7 +113,7 @@ Cryptography Example
   files.
 
 Below shows an example of how to use the
-`cryptography 1.9 <https://pypi.python.org/pypi/cryptography/1.9>`__ package
+`cryptography 1.9 <https://pypi.org/project/cryptography/1.9/>`__ package
 in a Chalice app for the ``python3.6`` lambda environment.
 
 Suppose you are on a Mac or Windows and want to deploy a Chalice app that
@@ -138,7 +138,7 @@ get the following warning during deployment::
   http://chalice.readthedocs.io/en/latest/topics/packaging.html
 
 This happened because the ``cryptography`` version 1.9 does not have wheel
-files availble on PyPi, and has C extensions. Since we are not on the same
+files available on PyPi, and has C extensions. Since we are not on the same
 platform as AWS Lambda, the compiled C extensions Chalice built were not
 compatible. To get around this we are going to leverage the ``vendor/``
 directory, and build the ``cryptography`` package on a compatible linux system.

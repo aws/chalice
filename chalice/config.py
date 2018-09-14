@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, List  # noqa
 from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -99,6 +99,7 @@ class Config(object):
         if default_params is None:
             default_params = {}
         self._default_params = default_params
+        self._chalice_app = None
 
     @classmethod
     def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
@@ -126,7 +127,23 @@ class Config(object):
     @property
     def chalice_app(self):
         # type: () -> Chalice
-        return self._chain_lookup('chalice_app')
+        v = self._chain_lookup('chalice_app')
+        # There's two value we support.  If the value
+        # is a chalice app, we return it as is.
+        # Otherwise, we assume it's a callable that creates
+        # a chalice app.  This is used to lazy load the chalice
+        # app.
+        if isinstance(v, Chalice):
+            return v
+        elif self._chalice_app is not None:
+            return self._chalice_app
+        elif not callable(v):
+            raise TypeError("Unable to load chalice app, lazy loader is "
+                            "not callable: %s" % v)
+        app = v()
+        self._chalice_app = app
+        # Keep mypy happy.
+        return app
 
     @property
     def config_from_disk(self):
@@ -258,6 +275,27 @@ class Config(object):
             current_chalice_version, self.chalice_stage, self.app_name)
         return tags
 
+    @property
+    def security_group_ids(self):
+        # type: () -> List[str]
+        return self._chain_lookup('security_group_ids',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
+    def subnet_ids(self):
+        # type: () -> List[str]
+        return self._chain_lookup('subnet_ids',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
+    def reserved_concurrency(self):
+        # type: () -> int
+        return self._chain_lookup('reserved_concurrency',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
     def scope(self, chalice_stage, function_name):
         # type: (str, str) -> Config
         # Used to create a new config object that's scoped to a different
@@ -275,7 +313,7 @@ class Config(object):
         return clone
 
     def deployed_resources(self, chalice_stage_name):
-        # type: (str) -> Optional[DeployedResources]
+        # type: (str) -> DeployedResources
         """Return resources associated with a given stage.
 
         If a deployment to a given stage has never happened,
@@ -284,63 +322,107 @@ class Config(object):
         """
         # This is arguably the wrong level of abstraction.
         # We might be able to move this elsewhere.
-        deployed_file = os.path.join(self.project_dir, '.chalice',
-                                     'deployed.json')
+        deployed_file = os.path.join(
+            self.project_dir, '.chalice', 'deployed',
+            '%s.json' % chalice_stage_name)
+        data = self._load_json_file(deployed_file)
+        if data is not None:
+            schema_version = data.get('schema_version', '1.0')
+            if schema_version != '2.0':
+                raise ValueError("Unsupported schema version (%s) in file: %s"
+                                 % (schema_version, deployed_file))
+            return DeployedResources(data)
+        return self._try_old_deployer_values(chalice_stage_name)
+
+    def _try_old_deployer_values(self, chalice_stage_name):
+        # type: (str) -> DeployedResources
+        # They are upgrading from v1.0 to v2.0 of the deployed.json
+        # schema.  Attempt to auto convert for them.
+        old_deployed_file = os.path.join(self.project_dir, '.chalice',
+                                         'deployed.json')
+        data = self._load_json_file(old_deployed_file)
+        if data is None or chalice_stage_name not in data:
+            return DeployedResources.empty()
+        return self._upgrade_deployed_values(chalice_stage_name, data)
+
+    def _load_json_file(self, deployed_file):
+        # type: (str) -> Any
         if not os.path.isfile(deployed_file):
             return None
         with open(deployed_file, 'r') as f:
-            data = json.load(f)
-        if chalice_stage_name not in data:
-            return None
-        return DeployedResources.from_dict(data[chalice_stage_name])
+            return json.load(f)
+
+    def _upgrade_deployed_values(self, chalice_stage_name, data):
+        # type: (str, Any) -> DeployedResources
+        deployed = data[chalice_stage_name]
+        prefix = '%s-%s-' % (self.app_name, chalice_stage_name)
+        resources = []  # type: List[Dict[str, Any]]
+        self._upgrade_lambda_functions(resources, deployed, prefix)
+        self._upgrade_rest_api(resources, deployed)
+        return DeployedResources(
+            {'resources': resources, 'schema_version': '2.0'})
+
+    def _upgrade_lambda_functions(self, resources, deployed, prefix):
+        # type: (List[Dict[str, Any]], Dict[str, Any], str) -> None
+        lambda_functions = deployed.get('lambda_functions', {})
+        # In chalice 0.10.0, the lambda_functions had the format
+        # {"function-name": "lambda_arn"} as opposed to
+        # {"function-name": {"arn": "lambda_arn", "type": "...'}} used
+        # in later versions of chalice.  We'll check for both cases
+        # so people can upgrade from 0.10.0 to the new deployer.
+        is_pre_10_format = not all(
+            isinstance(v, dict)
+            for v in lambda_functions.values()
+        )
+        if is_pre_10_format:
+            lambda_functions = {
+                # The only supported lambda functions in 0.10.0
+                # was built in authorizers.
+                k: {'type': 'authorizer', 'arn': v}
+                for k, v in lambda_functions.items()
+            }
+        for name, values in lambda_functions.items():
+            short_name = name[len(prefix):]
+            current = {
+                'resource_type': 'lambda_function',
+                'lambda_arn': values['arn'],
+                'name': short_name,
+            }
+            resources.append(current)
+
+    def _upgrade_rest_api(self, resources, deployed):
+        # type: (List[Dict[str, Any]], Dict[str, Any]) -> None
+        resources.extend([
+            {'name': 'api_handler',
+             'resource_type': 'lambda_function',
+             'lambda_arn': deployed['api_handler_arn']},
+            {'name': 'rest_api',
+             'resource_type': 'rest_api',
+             'rest_api_id': deployed['rest_api_id']},
+        ])
 
 
 class DeployedResources(object):
-    def __init__(self, backend, api_handler_arn,
-                 api_handler_name, rest_api_id, api_gateway_stage,
-                 region, chalice_version, lambda_functions):
-        # type: (str, str, str, str, str, str, str, StrMap) -> None
-        self.backend = backend
-        self.api_handler_arn = api_handler_arn
-        self.api_handler_name = api_handler_name
-        self.rest_api_id = rest_api_id
-        self.api_gateway_stage = api_gateway_stage
-        self.region = region
-        self.chalice_version = chalice_version
-        self.lambda_functions = lambda_functions
-        self._fixup_lambda_functions_if_needed()
-
-    def _fixup_lambda_functions_if_needed(self):
-        # type: () -> None
-        # In version 0.10.0 of chalice, 'lambda_functions'
-        # was introduced where the value was just the string ARN.
-        # With the introduction of scheduled events, we need to
-        # be able to distinguish the purpose of the lambda function.
-        # To smooth this over, we'll convert the old format to the
-        # new one.  The deployer.py module will take care of writing out
-        # a new deployed.json in the correct format.
-        if all(isinstance(v, dict) for v in self.lambda_functions.values()):
-            return
-        for k, v in self.lambda_functions.items():
-            # In 0.10.0 the only type of lambda function we supported
-            # was custom authorizers so we can safely assume the type
-            # was authorizer.
-            self.lambda_functions[k] = {'type': 'authorizer',
-                                        'arn': v}
+    def __init__(self, deployed_values):
+        # type: (Dict[str, Any]) -> None
+        self._deployed_values = deployed_values['resources']
+        self._deployed_values_by_name = {
+            resource['name']: resource
+            for resource in deployed_values['resources']
+        }
 
     @classmethod
-    def from_dict(cls, data):
-        # type: (Dict[str, Any]) -> DeployedResources
-        return cls(
-            data['backend'],
-            data['api_handler_arn'],
-            data['api_handler_name'],
-            data['rest_api_id'],
-            data['api_gateway_stage'],
-            data['region'],
-            data['chalice_version'],
-            # Versions prior to 0.10.0 did not have
-            # the 'lambda_functions' key, so we have
-            # to default this if it's missing.
-            data.get('lambda_functions', {}),
-        )
+    def empty(cls):
+        # type: () -> DeployedResources
+        return cls({'resources': [], 'schema_version': '2.0'})
+
+    def resource_values(self, name):
+        # type: (str) -> Dict[str, str]
+        try:
+            return self._deployed_values_by_name[name]
+        except KeyError:
+            raise ValueError("Resource does not exist: %s" % name)
+
+    def resource_names(self):
+        # type: () -> List[str]
+        return [r['name'] for r in self._deployed_values]

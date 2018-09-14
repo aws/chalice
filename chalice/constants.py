@@ -80,6 +80,18 @@ CLOUDWATCH_LOGS = {
 }
 
 
+VPC_ATTACH_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "ec2:CreateNetworkInterface",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DetachNetworkInterface",
+        "ec2:DeleteNetworkInterface"
+    ],
+    "Resource": "*"
+}
+
+
 CODEBUILD_POLICY = {
     "Version": "2012-10-17",
     # This is the policy straight from the console.
@@ -203,3 +215,14 @@ if missing dependencies are not present. For more information:
 http://chalice.readthedocs.io/en/latest/topics/packaging.html
 
 """
+
+
+SQS_EVENT_SOURCE_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+    ],
+    "Resource": "*",
+}

@@ -15,20 +15,18 @@ Python Serverless Microframework for AWS
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
-Chalice is a python serverless microframework for AWS. It allows you to quickly
-create and deploy applications that use Amazon API Gateway and AWS Lambda.
-It provides:
+Chalice is a microframework for writing serverless apps in python. It allows
+you to quickly create and deploy applications that use AWS Lambda.  It provides:
 
 * A command line tool for creating, deploying, and managing your app
-* A familiar and easy to use API for declaring views in python code
+* A decorator based API for integrating with Amazon API Gateway, Amazon S3,
+  Amazon SNS, Amazon SQS, and other AWS services.
 * Automatic IAM policy generation
 
 
-::
+You can create Rest APIs:
 
-    $ pip install chalice
-    $ chalice new-project helloworld && cd helloworld
-    $ cat app.py
+.. code-block:: python
 
     from chalice import Chalice
 
@@ -38,6 +36,60 @@ It provides:
     def index():
         return {"hello": "world"}
 
+Tasks that run on a periodic basis:
+
+.. code-block:: python
+
+    from chalice import Chalice, Rate
+
+    app = Chalice(app_name="helloworld")
+
+    # Automatically runs every 5 minutes
+    @app.schedule(Rate(5, unit=Rate.MINUTES))
+    def periodic_task():
+        return {"hello": "world"}
+
+
+You can connect a lambda function to an S3 event:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    # Whenver an object is uploaded to 'mybucket'
+    # this lambda function will be invoked.
+
+    @app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        print("Object uploaded for bucket: %s, key: %s"
+              % (event.bucket, event.key))
+
+As well as an SQS queue:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    # Invoke this lambda function whenever a message
+    # is sent to the ``my-queue-name`` SQS queue.
+
+    @app.on_sqs_message(queue='my-queue-name')
+    def handler(event):
+        for record in event:
+            print("Message body: %s" % record.body)
+
+
+And several other AWS resources.
+
+Once you've written your code, you just run ``chalice deploy``
+and Chalice takes care of deploying your app.
+
+::
+
     $ chalice deploy
     ...
     https://endpoint/dev
@@ -46,7 +98,6 @@ It provides:
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
-
 Give this project a try and share your feedback with us here on Github.
 
 The documentation is available
@@ -378,6 +429,7 @@ There are a few additional exceptions you can raise from your python code::
 * ForbiddenError - return a status code of 403
 * NotFoundError - return a status code of 404
 * ConflictError - return a status code of 409
+* UnprocessableEntityError - return a status code of 422
 * TooManyRequestsError - return a status code of 429
 * ChaliceViewError - return a status code of 500
 
@@ -800,6 +852,33 @@ There's a couple of things to keep in mind when enabling cors for a view:
   requests and matches the ``Origin`` header against a whitelist of origins.
   If the match is successful then return just their ``Origin`` back to them
   in the ``Access-Control-Allow-Origin`` header.
+
+  Example:
+  
+.. code-block:: python
+
+    from chalice import Chalice, Response
+
+    app = Chalice(app_name='multipleorigincors')
+
+    _ALLOWED_ORIGINS = set([
+        'http://allowed1.example.com',
+        'http://allowed2.example.com',
+    ])
+
+
+    @app.route('/cors_multiple_origins', methods=['GET'])
+    def supports_cors_multiple_origins():
+        origin = app.current_request.to_dict()['headers'].get('origin', '')
+        if origin in _ALLOWED_ORIGINS:
+            return Response(
+                body='You sent a whitelisted origin!\n',
+                headers={
+                    'Access-Control-Allow-Origin': origin
+                })
+        else:
+            return "The origin you sent has not been whitelisted: %s\n" % origin
+
 * Every view function must explicitly enable CORS support.
 
 The last point will change in the future.  See

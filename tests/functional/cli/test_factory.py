@@ -7,9 +7,19 @@ import pytest
 from pytest import fixture
 
 from chalice.cli import factory
-from chalice.deploy.deployer import Deployer
+from chalice.deploy.deployer import Deployer, DeploymentReporter
 from chalice.config import Config
+from chalice.config import DeployedResources
 from chalice import local
+from chalice.utils import UI
+from chalice import Chalice
+from chalice.logs import LogRetriever
+from chalice.invoke import LambdaInvokeHandler
+
+
+@fixture
+def no_deployed_values():
+    return DeployedResources({'resources': [], 'schema_version': '2.0'})
 
 
 @fixture
@@ -58,15 +68,38 @@ def test_can_create_botocore_session_connection_timeout():
     assert vars(session.get_default_client_config())['connect_timeout'] == 100
 
 
+def test_can_create_botocore_session_read_timeout():
+    session = factory.create_botocore_session(read_timeout=50)
+    assert vars(session.get_default_client_config())['read_timeout'] == 50
+
+
+def test_can_create_botocore_session_max_retries():
+    session = factory.create_botocore_session(max_retries=2)
+    assert vars(
+        session.get_default_client_config())['retries']['max_attempts'] == 2
+
+
+def test_can_create_botocore_session_with_multiple_configs():
+    session = factory.create_botocore_session(
+        connection_timeout=100,
+        read_timeout=50,
+        max_retries=5,
+    )
+    assert vars(session.get_default_client_config())['connect_timeout'] == 100
+    assert vars(session.get_default_client_config())['read_timeout'] == 50
+    assert vars(
+        session.get_default_client_config())['retries']['max_attempts'] == 5
+
+
 def test_can_create_botocore_session_cli_factory(clifactory):
     clifactory.profile = 'myprofile'
     session = clifactory.create_botocore_session()
     assert session.profile == 'myprofile'
 
 
-def test_can_create_default_deployer(clifactory):
+def test_can_create_deletion_deployer(clifactory):
     session = clifactory.create_botocore_session()
-    deployer = clifactory.create_default_deployer(session, None)
+    deployer = clifactory.create_deletion_deployer(session, UI())
     assert isinstance(deployer, Deployer)
 
 
@@ -178,3 +211,73 @@ def test_can_create_local_server(clifactory):
     assert isinstance(server, local.LocalDevServer)
     assert server.host == '0.0.0.0'
     assert server.port == 8000
+
+
+def test_can_create_deployment_reporter(clifactory):
+    ui = UI()
+    reporter = clifactory.create_deployment_reporter(ui=ui)
+    assert isinstance(reporter, DeploymentReporter)
+
+
+def test_can_access_lazy_loaded_app(clifactory):
+    config = clifactory.create_config_obj()
+    assert isinstance(config.chalice_app, Chalice)
+
+
+def test_can_create_log_retriever(clifactory):
+    session = clifactory.create_botocore_session()
+    lambda_arn = (
+        'arn:aws:lambda:us-west-2:1:function:app-dev-foo'
+    )
+    logs = clifactory.create_log_retriever(session, lambda_arn)
+    assert isinstance(logs, LogRetriever)
+
+
+def test_can_create_lambda_invoke_handler(clifactory):
+    lambda_arn = (
+        'arn:aws:lambda:us-west-2:1:function:app-dev-foo'
+    )
+    stage = 'dev'
+    deployed_dir = os.path.join(clifactory.project_dir, '.chalice', 'deployed')
+    os.mkdir(deployed_dir)
+    deployed_file = os.path.join(deployed_dir, '%s.json' % stage)
+    with open(deployed_file, 'w') as f:
+        f.write(json.dumps({
+            'resources': [
+                {
+                    'name': 'foobar',
+                    'resource_type': 'lambda_function',
+                    'lambda_arn': lambda_arn,
+                },
+            ], 'schema_version': '2.0'
+        }))
+
+    invoker = clifactory.create_lambda_invoke_handler('foobar', stage)
+    assert isinstance(invoker, LambdaInvokeHandler)
+
+
+def test_does_raise_not_found_error_when_no_function_found(
+        clifactory, no_deployed_values):
+    with pytest.raises(factory.NoSuchFunctionError) as e:
+        clifactory.create_lambda_invoke_handler('function_name', 'stage')
+    assert e.value.name == 'function_name'
+
+
+def test_does_raise_not_found_error_when_resource_is_not_lambda(clifactory):
+    stage = 'dev'
+    deployed_dir = os.path.join(clifactory.project_dir, '.chalice', 'deployed')
+    os.mkdir(deployed_dir)
+    deployed_file = os.path.join(deployed_dir, '%s.json' % stage)
+    with open(deployed_file, 'w') as f:
+        f.write(json.dumps({
+            'resources': [
+                {
+                    'name': 'foobar',
+                    'resource_type': 'iam_role',
+                    'role_arn': 'bazbuz',
+                },
+            ], 'schema_version': '2.0'
+        }))
+    with pytest.raises(factory.NoSuchFunctionError) as e:
+        clifactory.create_lambda_invoke_handler('foobar', stage)
+    assert e.value.name == 'foobar'

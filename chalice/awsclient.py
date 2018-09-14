@@ -27,6 +27,8 @@ import botocore.session  # noqa
 from botocore.exceptions import ClientError
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
+from botocore.vendored.requests.exceptions import ReadTimeout as \
+    RequestsReadTimeout
 from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -36,19 +38,29 @@ from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 _STR_MAP = Optional[Dict[str, str]]
 _OPT_STR = Optional[str]
 _OPT_INT = Optional[int]
+_OPT_STR_LIST = Optional[List[str]]
 _CLIENT_METHOD = Callable[..., Dict[str, Any]]
-
 
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
 )
 
 
-class ResourceDoesNotExistError(Exception):
+class AWSClientError(Exception):
     pass
 
 
-class LambdaClientError(Exception):
+class ReadTimeout(AWSClientError):
+    def __init__(self, message):
+        # type: (str) -> None
+        self.message = message
+
+
+class ResourceDoesNotExistError(AWSClientError):
+    pass
+
+
+class LambdaClientError(AWSClientError):
     def __init__(self, original_error, context):
         # type: (Exception, LambdaErrorContext) -> None
         self.original_error = original_error
@@ -100,6 +112,22 @@ class TypedAWSClient(object):
             FunctionName=name)
         return response
 
+    def _create_vpc_config(self, security_group_ids, subnet_ids):
+        # type: (_OPT_STR_LIST, _OPT_STR_LIST) -> Dict[str, List[str]]
+        # We always set the SubnetIds and SecurityGroupIds to an empty
+        # list to ensure that we properly remove Vpc configuration
+        # if you remove these values from your config.json.  Omitting
+        # the VpcConfig key or just setting to {} won't actually remove
+        # the VPC configuration.
+        vpc_config = {
+            'SubnetIds': [],
+            'SecurityGroupIds': [],
+        }  # type: Dict[str, List[str]]
+        if security_group_ids is not None and subnet_ids is not None:
+            vpc_config['SubnetIds'] = subnet_ids
+            vpc_config['SecurityGroupIds'] = security_group_ids
+        return vpc_config
+
     def create_function(self,
                         function_name,               # type: str
                         role_arn,                    # type: str
@@ -109,7 +137,9 @@ class TypedAWSClient(object):
                         environment_variables=None,  # type: _STR_MAP
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
-                        memory_size=None             # type: _OPT_INT
+                        memory_size=None,            # type: _OPT_INT
+                        security_group_ids=None,     # type: _OPT_STR_LIST
+                        subnet_ids=None,             # type: _OPT_STR_LIST
                         ):
         # type: (...) -> str
         kwargs = {
@@ -127,41 +157,55 @@ class TypedAWSClient(object):
             kwargs['Timeout'] = timeout
         if memory_size is not None:
             kwargs['MemorySize'] = memory_size
+        if security_group_ids is not None and subnet_ids is not None:
+            kwargs['VpcConfig'] = self._create_vpc_config(
+                security_group_ids=security_group_ids,
+                subnet_ids=subnet_ids,
+            )
+        return self._create_lambda_function(kwargs)
+
+    def _create_lambda_function(self, api_args):
+        # type: (Dict[str, Any]) -> str
         try:
             return self._call_client_method_with_retries(
-                self._client('lambda').create_function, kwargs)['FunctionArn']
+                self._client('lambda').create_function,
+                api_args, max_attempts=self.LAMBDA_CREATE_ATTEMPTS,
+            )['FunctionArn']
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(
-                function_name,
+                api_args['FunctionName'],
                 'create_function',
-                len(zip_contents)
+                len(api_args['Code']['ZipFile']),
             )
             raise self._get_lambda_code_deployment_error(e, context)
 
-    def _call_client_method_with_retries(self, method, kwargs):
-        # type: (_CLIENT_METHOD, Dict[str, Any]) -> Dict[str, Any]
-        client = self._client('lambda')
-        attempts = 0
-        while True:
-            try:
-                response = method(**kwargs)
-            except client.exceptions.InvalidParameterValueException as e:
-                # We're assuming that if we receive an
-                # InvalidParameterValueException, it's because
-                # the role we just created can't be used by
-                # Lambda so retry until it can be.
-                self._sleep(self.DELAY_TIME)
-                attempts += 1
-                if attempts >= self.LAMBDA_CREATE_ATTEMPTS or \
-                        not self._is_iam_role_related_error(e):
-                    raise
-                continue
-            return response
+    def _is_settling_error(self, error):
+        # type: (botocore.exceptions.ClientError) -> bool
+        message = error.response['Error'].get('Message', '')
+        if re.search('event source mapping.*is in use', message):
+            return True
+        return False
+
+    def invoke_function(self, name, payload=None):
+        # type: (str, bytes) -> Dict[str, Any]
+        kwargs = {
+            'FunctionName': name,
+            'InvocationType': 'RequestResponse',
+        }
+        if payload is not None:
+            kwargs['Payload'] = payload
+
+        try:
+            return self._client('lambda').invoke(**kwargs)
+        except RequestsReadTimeout as e:
+            raise ReadTimeout(str(e))
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
         message = error.response['Error'].get('Message', '')
         if re.search('role.*cannot be assumed', message):
+            return True
+        if re.search('role.*does not have permissions', message):
             return True
         return False
 
@@ -204,7 +248,9 @@ class TypedAWSClient(object):
                         tags=None,                   # type: _STR_MAP
                         timeout=None,                # type: _OPT_INT
                         memory_size=None,            # type: _OPT_INT
-                        role_arn=None                # type: _OPT_STR
+                        role_arn=None,               # type: _OPT_STR
+                        subnet_ids=None,             # type: _OPT_STR_LIST
+                        security_group_ids=None,     # type: _OPT_STR_LIST
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -213,9 +259,27 @@ class TypedAWSClient(object):
         is not provided, no changes will be made for that that parameter on
         the targeted lambda function.
         """
+        return_value = self._update_function_code(function_name=function_name,
+                                                  zip_contents=zip_contents)
+        self._update_function_config(
+            environment_variables=environment_variables,
+            runtime=runtime,
+            timeout=timeout,
+            memory_size=memory_size,
+            role_arn=role_arn,
+            subnet_ids=subnet_ids,
+            security_group_ids=security_group_ids,
+            function_name=function_name
+        )
+        if tags is not None:
+            self._update_function_tags(return_value['FunctionArn'], tags)
+        return return_value
+
+    def _update_function_code(self, function_name, zip_contents):
+        # type: (str, str) -> Dict[str, Any]
         lambda_client = self._client('lambda')
         try:
-            return_value = lambda_client.update_function_code(
+            return lambda_client.update_function_code(
                 FunctionName=function_name, ZipFile=zip_contents)
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(
@@ -225,6 +289,31 @@ class TypedAWSClient(object):
             )
             raise self._get_lambda_code_deployment_error(e, context)
 
+    def put_function_concurrency(self, function_name,
+                                 reserved_concurrent_executions):
+        # type: (str, int) -> None
+        lambda_client = self._client('lambda')
+        lambda_client.put_function_concurrency(
+            FunctionName=function_name,
+            ReservedConcurrentExecutions=reserved_concurrent_executions)
+
+    def delete_function_concurrency(self, function_name):
+        # type: (str) -> None
+        lambda_client = self._client('lambda')
+        lambda_client.delete_function_concurrency(
+            FunctionName=function_name)
+
+    def _update_function_config(self,
+                                environment_variables,  # type: _STR_MAP
+                                runtime,                # type: _OPT_STR
+                                timeout,                # type: _OPT_INT
+                                memory_size,            # type: _OPT_INT
+                                role_arn,               # type: _OPT_STR
+                                subnet_ids,             # type: _OPT_STR_LIST
+                                security_group_ids,     # type: _OPT_STR_LIST
+                                function_name,          # type: str
+                                ):
+        # type: (...) -> None
         kwargs = {}  # type: Dict[str, Any]
         if environment_variables is not None:
             kwargs['Environment'] = {'Variables': environment_variables}
@@ -236,13 +325,18 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
+        if security_group_ids is not None and subnet_ids is not None:
+            kwargs['VpcConfig'] = self._create_vpc_config(
+                subnet_ids=subnet_ids,
+                security_group_ids=security_group_ids
+            )
         if kwargs:
             kwargs['FunctionName'] = function_name
+            lambda_client = self._client('lambda')
             self._call_client_method_with_retries(
-                lambda_client.update_function_configuration, kwargs)
-        if tags is not None:
-            self._update_function_tags(return_value['FunctionArn'], tags)
-        return return_value
+                lambda_client.update_function_configuration, kwargs,
+                max_attempts=self.LAMBDA_CREATE_ATTEMPTS
+            )
 
     def _update_function_tags(self, function_arn, requested_tags):
         # type: (str, Dict[str, str]) -> None
@@ -272,12 +366,17 @@ class TypedAWSClient(object):
 
     def get_role_arn_for_name(self, name):
         # type: (str) -> str
+        role = self.get_role(name)
+        return role['Arn']
+
+    def get_role(self, name):
+        # type: (str) -> Dict[str, Any]
         client = self._client('iam')
         try:
             role = client.get_role(RoleName=name)
         except client.exceptions.NoSuchEntityException:
             raise ResourceDoesNotExistError("No role ARN found for: %s" % name)
-        return role['Role']['Arn']
+        return role['Role']
 
     def delete_role_policy(self, role_name, policy_name):
         # type: (str, str) -> None
@@ -380,10 +479,10 @@ class TypedAWSClient(object):
             stageName=api_gateway_stage,
         )
 
-    def add_permission_for_apigateway_if_needed(self, function_name,
-                                                region_name, account_id,
-                                                rest_api_id, random_id):
-        # type: (str, str, str, str, str) -> None
+    def add_permission_for_apigateway(self, function_name,
+                                      region_name, account_id,
+                                      rest_api_id, random_id=None):
+        # type: (str, str, str, str, Optional[str]) -> None
         """Authorize API gateway to invoke a lambda function is needed.
 
         This method will first check if API gateway has permission to call
@@ -391,59 +490,13 @@ class TypedAWSClient(object):
         ``self.add_permission_for_apigateway(...).
 
         """
-        policy = self.get_function_policy(function_name)
         source_arn = self._build_source_arn_str(region_name, account_id,
                                                 rest_api_id)
-        if self._policy_gives_access(policy, source_arn, 'apigateway'):
-            return
-        self.add_permission_for_apigateway(
-            function_name, region_name, account_id, rest_api_id, random_id)
-
-    def _policy_gives_access(self, policy, source_arn, service_name):
-        # type: (Dict[str, Any], str, str) -> bool
-        # Here's what a sample policy looks like after add_permission()
-        # has been previously called:
-        # {
-        #  "Id": "default",
-        #  "Statement": [
-        #   {
-        #    "Action": "lambda:InvokeFunction",
-        #    "Condition": {
-        #     "ArnLike": {
-        #       "AWS:SourceArn": <source_arn>
-        #     }
-        #    },
-        #    "Effect": "Allow",
-        #    "Principal": {
-        #     "Service": "apigateway.amazonaws.com"
-        #    },
-        #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
-        #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
-        #   }
-        #  ],
-        #  "Version": "2012-10-17"
-        # }
-        # So we need to check if there's a policy that looks like this.
-        for statement in policy.get('Statement', []):
-            if self._statement_gives_arn_access(statement, source_arn,
-                                                service_name):
-                return True
-        return False
-
-    def _statement_gives_arn_access(self, statement, source_arn, service_name):
-        # type: (Dict[str, Any], str, str) -> bool
-        if not statement['Action'] == 'lambda:InvokeFunction':
-            return False
-        if statement.get('Condition', {}).get(
-                'ArnLike', {}).get('AWS:SourceArn', '') != source_arn:
-            return False
-        if statement.get('Principal', {}).get('Service', '') != \
-                '%s.amazonaws.com' % service_name:
-            return False
-        # We're not checking the "Resource" key because we're assuming
-        # that lambda.get_policy() is returning the policy for the particular
-        # resource in question.
-        return True
+        self._add_lambda_permission_if_needed(
+            source_arn=source_arn,
+            function_arn=function_name,
+            service_name='apigateway',
+        )
 
     def get_function_policy(self, function_name):
         # type: (str) -> Dict[str, Any]
@@ -511,21 +564,55 @@ class TypedAWSClient(object):
             sdkType=sdk_type)
         return response['body']
 
-    def add_permission_for_apigateway(self, function_name, region_name,
-                                      account_id, rest_api_id, random_id=None):
-        # type: (str, str, str, str, Optional[str]) -> None
-        """Authorize API gateway to invoke a lambda function."""
-        client = self._client('lambda')
-        source_arn = self._build_source_arn_str(region_name, account_id,
-                                                rest_api_id)
-        if random_id is None:
-            random_id = self._random_id()
-        client.add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_name,
-            StatementId=random_id,
-            Principal='apigateway.amazonaws.com',
-            SourceArn=source_arn,
+    def subscribe_function_to_topic(self, topic_arn, function_arn):
+        # type: (str, str) -> str
+        sns_client = self._client('sns')
+        response = sns_client.subscribe(
+            TopicArn=topic_arn, Protocol='lambda',
+            Endpoint=function_arn)
+        return response['SubscriptionArn']
+
+    def unsubscribe_from_topic(self, subscription_arn):
+        # type: (str) -> None
+        sns_client = self._client('sns')
+        sns_client.unsubscribe(SubscriptionArn=subscription_arn)
+
+    def verify_sns_subscription_current(self, subscription_arn, topic_name,
+                                        function_arn):
+        # type: (str, str, str) -> bool
+        """Verify a subscription arn matches the topic and function name.
+
+        Given a subscription arn, verify that the associated topic name
+        and function arn match up to the parameters passed in.
+
+        """
+        sns_client = self._client('sns')
+        try:
+            attributes = sns_client.get_subscription_attributes(
+                SubscriptionArn=subscription_arn)['Attributes']
+            return (
+                # Splitting on ':' is safe because topic names can't have
+                # a ':' char.
+                attributes['TopicArn'].rsplit(':', 1)[1] == topic_name and
+                attributes['Endpoint'] == function_arn
+            )
+        except sns_client.exceptions.NotFoundException:
+            return False
+
+    def add_permission_for_sns_topic(self, topic_arn, function_arn):
+        # type: (str, str) -> None
+        self._add_lambda_permission_if_needed(
+            source_arn=topic_arn,
+            function_arn=function_arn,
+            service_name='sns',
+        )
+
+    def remove_permission_for_sns_topic(self, topic_arn, function_arn):
+        # type: (str, str) -> None
+        self._remove_lambda_permission_if_needed(
+            source_arn=topic_arn,
+            function_arn=function_arn,
+            service_name='sns',
         )
 
     def _build_source_arn_str(self, region_name, account_id, rest_api_id):
@@ -631,20 +718,281 @@ class TypedAWSClient(object):
     def add_permission_for_scheduled_event(self, rule_arn,
                                            function_arn):
         # type: (str, str) -> None
-        lambda_client = self._client('lambda')
+        self._add_lambda_permission_if_needed(
+            source_arn=rule_arn,
+            function_arn=function_arn,
+            service_name='events',
+        )
+
+    def connect_s3_bucket_to_lambda(self, bucket, function_arn, events,
+                                    prefix=None, suffix=None):
+        # type: (str, str, List[str], _OPT_STR, _OPT_STR) -> None
+        """Configure S3 bucket to invoke a lambda function.
+
+        The S3 bucket must already have permission to invoke the
+        lambda function before you call this function, otherwise
+        the service will return an error.  You can add permissions
+        by using the ``add_permission_for_s3_event`` below.  The
+        ``events`` param matches the event strings supported by the
+        service.
+
+        This method also only supports a single prefix/suffix for now,
+        which is what's offered in the Lambda console.
+
+        """
+        s3 = self._client('s3')
+        existing_config = s3.get_bucket_notification_configuration(
+            Bucket=bucket)
+        # Because we're going to PUT this config back to S3, we need
+        # to remove `ResponseMetadata` because that's added in botocore
+        # and isn't a param of the put_bucket_notification_configuration.
+        existing_config.pop('ResponseMetadata', None)
+        existing_lambda_config = existing_config.get(
+            'LambdaFunctionConfigurations', [])
+        single_config = {
+            'LambdaFunctionArn': function_arn, 'Events': events
+        }  # type: Dict[str, Any]
+        filter_rules = []
+        if prefix is not None:
+            filter_rules.append({'Name': 'Prefix', 'Value': prefix})
+        if suffix is not None:
+            filter_rules.append({'Name': 'Suffix', 'Value': suffix})
+        if filter_rules:
+            single_config['Filter'] = {'Key': {'FilterRules': filter_rules}}
+        new_config = self._merge_s3_notification_config(existing_lambda_config,
+                                                        single_config)
+        existing_config['LambdaFunctionConfigurations'] = new_config
+        s3.put_bucket_notification_configuration(
+            Bucket=bucket,
+            NotificationConfiguration=existing_config,
+        )
+
+    def _merge_s3_notification_config(self, existing_config, new_config):
+        # type: (List[Dict[str, Any]], Dict[str, Any]) -> List[Dict[str, Any]]
+        # Add the new_config to the existing_config.
+        # We have to handle two cases:
+        # 1. There's an existing config associated with the lambda arn.
+        #    In this case we replace the specific lambda config with the
+        #    new_config.
+        # 2. The new_config isn't part of the existing_config.  In
+        #    this case we just add it to the end of the existing config.
+        final_config = []
+        added_config = False
+        for config in existing_config:
+            if config['LambdaFunctionArn'] != new_config['LambdaFunctionArn']:
+                final_config.append(config)
+            else:
+                # Case 1, replace the existing config.
+                final_config.append(new_config)
+                added_config = True
+        if not added_config:
+            # Case 2, add it to the end of the existing list of configs.
+            final_config.append(new_config)
+        return final_config
+
+    def add_permission_for_s3_event(self, bucket, function_arn):
+        # type: (str, str) -> None
+        bucket_arn = 'arn:aws:s3:::%s' % bucket
+        self._add_lambda_permission_if_needed(
+            source_arn=bucket_arn,
+            function_arn=function_arn,
+            service_name='s3',
+        )
+
+    def remove_permission_for_s3_event(self, bucket, function_arn):
+        # type: (str, str) -> None
+        bucket_arn = 'arn:aws:s3:::%s' % bucket
+        self._remove_lambda_permission_if_needed(
+            source_arn=bucket_arn,
+            function_arn=function_arn,
+            service_name='s3',
+        )
+
+    def disconnect_s3_bucket_from_lambda(self, bucket, function_arn):
+        # type: (str, str) -> None
+        s3 = self._client('s3')
+        existing_config = s3.get_bucket_notification_configuration(
+            Bucket=bucket)
+        existing_config.pop('ResponseMetadata', None)
+        existing_lambda_config = existing_config.get(
+            'LambdaFunctionConfigurations', [])
+        new_lambda_config = []
+        for config in existing_lambda_config:
+            if config['LambdaFunctionArn'] == function_arn:
+                continue
+            new_lambda_config.append(config)
+        existing_config['LambdaFunctionConfigurations'] = new_lambda_config
+        s3.put_bucket_notification_configuration(
+            Bucket=bucket,
+            NotificationConfiguration=existing_config,
+        )
+
+    def _add_lambda_permission_if_needed(self, source_arn, function_arn,
+                                         service_name):
+        # type: (str, str, str) -> None
         policy = self.get_function_policy(function_arn)
-        if self._policy_gives_access(policy, rule_arn, 'events'):
+        if self._policy_gives_access(policy, source_arn, service_name):
             return
         random_id = self._random_id()
-        # We should be checking if the permission already exists and only
-        # adding it if necessary.
-        lambda_client.add_permission(
+        self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
             StatementId=random_id,
-            Principal='events.amazonaws.com',
-            SourceArn=rule_arn,
+            Principal='%s.amazonaws.com' % service_name,
+            SourceArn=source_arn,
         )
+
+    def _policy_gives_access(self, policy, source_arn, service_name):
+        # type: (Dict[str, Any], str, str) -> bool
+        # Here's what a sample policy looks like after add_permission()
+        # has been previously called:
+        # {
+        #  "Id": "default",
+        #  "Statement": [
+        #   {
+        #    "Action": "lambda:InvokeFunction",
+        #    "Condition": {
+        #     "ArnLike": {
+        #       "AWS:SourceArn": <source_arn>
+        #     }
+        #    },
+        #    "Effect": "Allow",
+        #    "Principal": {
+        #     "Service": "apigateway.amazonaws.com"
+        #    },
+        #    "Resource": "arn:aws:lambda:us-west-2:aid:function:name",
+        #    "Sid": "e4755709-067e-4254-b6ec-e7f9639e6f7b"
+        #   }
+        #  ],
+        #  "Version": "2012-10-17"
+        # }
+        # So we need to check if there's a policy that looks like this.
+        for statement in policy.get('Statement', []):
+            if self._statement_gives_arn_access(statement, source_arn,
+                                                service_name):
+                return True
+        return False
+
+    def _statement_gives_arn_access(self, statement, source_arn, service_name):
+        # type: (Dict[str, Any], str, str) -> bool
+        if not statement['Action'] == 'lambda:InvokeFunction':
+            return False
+        if statement.get('Condition', {}).get(
+                'ArnLike', {}).get('AWS:SourceArn', '') != source_arn:
+            return False
+        if statement.get('Principal', {}).get('Service', '') != \
+                '%s.amazonaws.com' % service_name:
+            return False
+        # We're not checking the "Resource" key because we're assuming
+        # that lambda.get_policy() is returning the policy for the particular
+        # resource in question.
+        return True
+
+    def _remove_lambda_permission_if_needed(self, source_arn, function_arn,
+                                            service_name):
+        # type: (str, str, str) -> None
+        client = self._client('lambda')
+        policy = self.get_function_policy(function_arn)
+        for statement in policy.get('Statement', []):
+            if self._statement_gives_arn_access(statement, source_arn,
+                                                service_name):
+                client.remove_permission(
+                    FunctionName=function_arn,
+                    StatementId=statement['Sid'],
+                )
+
+    def create_sqs_event_source(self, queue_arn, function_name, batch_size):
+        # type: (str, str, int) -> None
+        lambda_client = self._client('lambda')
+        kwargs = {
+            'EventSourceArn': queue_arn,
+            'FunctionName': function_name,
+            'BatchSize': batch_size,
+        }
+        return self._call_client_method_with_retries(
+            lambda_client.create_event_source_mapping, kwargs,
+            max_attempts=self.LAMBDA_CREATE_ATTEMPTS
+        )['UUID']
+
+    def update_sqs_event_source(self, event_uuid, batch_size):
+        # type: (str, int) -> None
+        lambda_client = self._client('lambda')
+        self._call_client_method_with_retries(
+            lambda_client.update_event_source_mapping,
+            {'UUID': event_uuid, 'BatchSize': batch_size},
+            max_attempts=10,
+            should_retry=self._is_settling_error,
+        )
+
+    def remove_sqs_event_source(self, event_uuid):
+        # type: (str) -> None
+        lambda_client = self._client('lambda')
+        self._call_client_method_with_retries(
+            lambda_client.delete_event_source_mapping,
+            {'UUID': event_uuid},
+            max_attempts=10,
+            should_retry=self._is_settling_error,
+        )
+
+    def verify_event_source_current(self, event_uuid, resource_name,
+                                    service_name, function_arn):
+        # type: (str, str, str, str) -> bool
+        """Check if the uuid matches the resource and function arn provided.
+
+        Given a uuid representing an event source mapping for a lambda
+        function, verify that the associated source arn
+        and function arn match up to the parameters passed in.
+
+        Instead of providing the event source arn, the resource name
+        is provided along with the service name.  For example, if we're
+        checking an SQS queue event source, the resource name would be
+        the queue name (e.g. ``myqueue``) and the service would be ``sqs``.
+
+        """
+        client = self._client('lambda')
+        try:
+            attributes = client.get_event_source_mapping(UUID=event_uuid)
+            actual_arn = attributes['EventSourceArn']
+            arn_start, actual_name = actual_arn.rsplit(':', 1)
+            return (
+                actual_name == resource_name and
+                arn_start.startswith('arn:aws:%s' % service_name) and
+                attributes['FunctionArn'] == function_arn
+            )
+        except client.exceptions.ResourceNotFoundException:
+            return False
+
+    def _call_client_method_with_retries(
+        self,
+        method,                 # type: _CLIENT_METHOD
+        kwargs,                 # type: Dict[str, Any]
+        max_attempts,           # type: int
+        should_retry=None,      # type: Callable[[Exception], bool]
+        delay_time=DELAY_TIME,  # type: int
+    ):
+        # type: (...) -> Dict[str, Any]
+        client = self._client('lambda')
+        attempts = 0
+        if should_retry is None:
+            should_retry = self._is_iam_role_related_error
+        retryable_exceptions = (
+            # We're assuming that if we receive an
+            # InvalidParameterValueException, it's because the role we just
+            # created can't be used by Lambda so retry until it can be.
+            client.exceptions.InvalidParameterValueException,
+            client.exceptions.ResourceInUseException,
+        )
+        while True:
+            try:
+                response = method(**kwargs)
+            except retryable_exceptions as e:
+                self._sleep(self.DELAY_TIME)
+                attempts += 1
+                if attempts >= max_attempts or \
+                        not should_retry(e):
+                    raise
+                continue
+            return response
 
     def _random_id(self):
         # type: () -> str

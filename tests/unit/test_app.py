@@ -101,6 +101,18 @@ def sample_app():
 
 
 @fixture
+def sample_app_with_cors():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/image', methods=['POST'], cors=True,
+                content_types=['image/gif'])
+    def image():
+        return {'image': True}
+
+    return demo
+
+
+@fixture
 def auth_request():
     method_arn = (
         "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth")
@@ -110,7 +122,7 @@ def auth_request():
 
 @pytest.mark.skipif(sys.version[0] == '2',
                     reason=('Test is irrelevant under python 2, since str and '
-                            'bytes are interchangable.'))
+                            'bytes are interchangeable.'))
 def test_invalid_binary_response_body_throws_value_error(sample_app):
     response = app.Response(
         status_code=200,
@@ -260,6 +272,13 @@ def test_error_on_unsupported_method_gives_feedback_on_method(sample_app,
     assert 'POST' in json_response_body(raw_response)['Message']
 
 
+def test_error_contains_cors_headers(sample_app_with_cors, create_event):
+    event = create_event('/image', 'POST', {'not': 'image'})
+    raw_response = sample_app_with_cors(event, context=None)
+    assert raw_response['statusCode'] == 415
+    assert 'Access-Control-Allow-Origin' in raw_response['headers']
+
+
 def test_no_view_function_found(sample_app, create_event):
     bad_path = create_event('/noexist', 'GET', {})
     with pytest.raises(app.ChaliceError):
@@ -365,6 +384,21 @@ def test_json_body_available_with_right_content_type(create_event):
     result = demo(event, context=None)
     result = json_response_body(result)
     assert result == {'foo': 'bar'}
+
+
+def test_json_body_none_with_malformed_json(create_event):
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'])
+    def index():
+        return demo.current_request.json_body
+
+    event = create_event('/', 'POST', {})
+    event['body'] = '{"foo": "bar"'
+
+    result = demo(event, context=None)
+    assert result['statusCode'] == 400
+    assert json_response_body(result)['Code'] == 'BadRequestError'
 
 
 def test_cant_access_json_body_with_wrong_content_type(create_event):
@@ -1339,3 +1373,204 @@ def test_handles_binary_responses(body, content_type):
     assert serialized['isBase64Encoded']
     assert isinstance(serialized['body'], six.string_types)
     assert isinstance(base64.b64decode(serialized['body']), bytes)
+
+
+def test_can_create_s3_event_handler(sample_app):
+    @sample_app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'handler'
+    assert event.bucket == 'mybucket'
+    assert event.events == ['s3:ObjectCreated:*']
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_to_s3_event_object(sample_app):
+    @sample_app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        return event
+
+    s3_event = {
+        'Records': [
+            {'awsRegion': 'us-west-2',
+             'eventName': 'ObjectCreated:Put',
+             'eventSource': 'aws:s3',
+             'eventTime': '2018-05-22T04:41:23.823Z',
+             'eventVersion': '2.0',
+             'requestParameters': {'sourceIPAddress': '174.127.235.55'},
+             'responseElements': {
+                'x-amz-id-2': 'request-id-2',
+                'x-amz-request-id': 'request-id-1'},
+             's3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                     'ownerIdentity': {
+                         'principalId': 'ABCD'
+                     }
+                 },
+                 'configurationId': 'config-id',
+                 'object': {
+                     'eTag': 'd41d8cd98f00b204e9800998ecf8427e',
+                     'key': 'hello-world.txt',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+                 's3SchemaVersion': '1.0'
+             },
+             'userIdentity': {'principalId': 'AWS:XYZ'}
+             }
+        ]
+    }
+    actual_event = handler(s3_event, context=None)
+    assert actual_event.bucket == 'mybucket'
+    assert actual_event.key == 'hello-world.txt'
+    assert actual_event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     'key': 'file+with+spaces',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event)
+    # We should urldecode the key name.
+    assert event.key == 'file with spaces'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_unicode_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     # This is u'\u2713'
+                     'key': '%E2%9C%93',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event)
+    # We should urldecode the key name.
+    assert event.key == u'\u2713'
+    assert event.bucket == u'mybucket'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event
+
+
+def test_can_create_sns_handler(sample_app):
+    @sample_app.on_sns_message(topic='MyTopic')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'handler'
+    assert event.topic == 'MyTopic'
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_sns_event(sample_app):
+    @sample_app.on_sns_message(topic='MyTopic')
+    def handler(event):
+        return event
+
+    sns_event = {'Records': [{
+        'EventSource': 'aws:sns',
+        'EventSubscriptionArn': 'arn:subscription-arn',
+        'EventVersion': '1.0',
+        'Sns': {
+            'Message': 'This is a raw message',
+            'MessageAttributes': {
+                'AttributeKey': {
+                    'Type': 'String',
+                    'Value': 'AttributeValue'
+                }
+            },
+            'MessageId': 'abcdefgh-51e4-5ae2-9964-b296c8d65d1a',
+            'Signature': 'signature',
+            'SignatureVersion': '1',
+            'SigningCertUrl': 'https://sns.us-west-2.amazonaws.com/cert.pen',
+            'Subject': 'ThisIsTheSubject',
+            'Timestamp': '2018-06-26T19:41:38.695Z',
+            'TopicArn': 'arn:aws:sns:us-west-2:12345:ConsoleTestTopic',
+            'Type': 'Notification',
+            'UnsubscribeUrl': 'https://unsubscribe-url/'}}]}
+    actual_event = handler(sns_event, context=None)
+    assert actual_event.message == 'This is a raw message'
+    assert actual_event.subject == 'ThisIsTheSubject'
+    assert actual_event.to_dict() == sns_event
+
+
+def test_can_create_sqs_handler(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', batch_size=200)
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.queue == 'MyQueue'
+    assert event.batch_size == 200
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_set_sqs_handler_name(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', name='sqs_handler')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'sqs_handler'
+
+
+def test_can_map_sqs_event(sample_app):
+    @sample_app.on_sqs_message(queue='queue-name')
+    def handler(event):
+        return event
+
+    sqs_event = {'Records': [{
+        'attributes': {
+            'ApproximateFirstReceiveTimestamp': '1530576251596',
+            'ApproximateReceiveCount': '1',
+            'SenderId': 'sender-id',
+            'SentTimestamp': '1530576251595'
+        },
+        'awsRegion': 'us-west-2',
+        'body': 'queue message body',
+        'eventSource': 'aws:sqs',
+        'eventSourceARN': 'arn:aws:sqs:us-west-2:12345:queue-name',
+        'md5OfBody': '754ac2f7a12df38320e0c5eafd060145',
+        'messageAttributes': {},
+        'messageId': 'message-id',
+        'receiptHandle': 'receipt-handle'
+    }]}
+    actual_event = handler(sqs_event, context=None)
+    records = list(actual_event)
+    assert len(records) == 1
+    first_record = records[0]
+    assert first_record.body == 'queue message body'
+    assert first_record.receipt_handle == 'receipt-handle'
+    assert first_record.to_dict() == sqs_event['Records'][0]
+    assert actual_event.to_dict() == sqs_event

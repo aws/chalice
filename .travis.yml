@@ -1,16 +1,17 @@
 language: python
 sudo: false
-env: HYPOTHESIS_PROFILE=ci
 matrix:
   include:
   - python: "3.6"
-    env: TEST_TYPE=prcheck
+    env: TEST_TYPE=prcheck HYPOTHESIS_PROFILE=ci
   - python: "2.7"
-    env: TEST_TYPE=prcheck-py2
+    env: TEST_TYPE=prcheck-py2 HYPOTHESIS_PROFILE=ci
 install:
   - pip install -r requirements-dev.txt -r requirements-docs.txt
   - pip install -e .
+  - pip install -e ".[event-file-poller]"
 script:
+  - env
   - make $TEST_TYPE
 after_success:
-  - if [[ $TEST_TYPE == 'coverage' ]]; then pip install codecov==2.0.5 && codecov; fi
+  - if [[ $TEST_TYPE == 'prcheck-py2' ]]; then pip install codecov==2.0.5 && codecov; fi

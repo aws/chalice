@@ -1,7 +1,12 @@
+import re
 import mock
+import sys
 import click
 import pytest
 from six import StringIO
+from hypothesis.strategies import text
+from hypothesis import given
+import string
 
 from chalice import utils
 
@@ -37,9 +42,61 @@ class TestUI(object):
         assert return_value == 'foo'
 
 
+class TestPipeReader(object):
+    def test_pipe_reader_does_read_pipe(self):
+        mock_stream = mock.Mock(spec=sys.stdin)
+        mock_stream.isatty.return_value = False
+        mock_stream.read.return_value = 'foobar'
+        reader = utils.PipeReader(mock_stream)
+        value = reader.read()
+        assert value == 'foobar'
+
+    def test_pipe_reader_does_not_read_tty(self):
+        mock_stream = mock.Mock(spec=sys.stdin)
+        mock_stream.isatty.return_value = True
+        mock_stream.read.return_value = 'foobar'
+        reader = utils.PipeReader(mock_stream)
+        value = reader.read()
+        assert value is None
+
+
 def test_serialize_json():
     assert utils.serialize_to_json({'foo': 'bar'}) == (
         '{\n'
         '  "foo": "bar"\n'
         '}\n'
     )
+
+
+@pytest.mark.parametrize('name,cfn_name', [
+    ('f', 'F'),
+    ('foo', 'Foo'),
+    ('foo_bar', 'FooBar'),
+    ('foo_bar_baz', 'FooBarBaz'),
+    ('F', 'F'),
+    ('FooBar', 'FooBar'),
+    ('S3Bucket', 'S3Bucket'),
+    ('s3Bucket', 'S3Bucket'),
+    ('123', '123'),
+    ('foo-bar-baz', 'FooBarBaz'),
+    ('foo_bar-baz', 'FooBarBaz'),
+    ('foo-bar_baz', 'FooBarBaz'),
+    # Not actually possible, but we should
+    # ensure we only have alphanumeric chars.
+    ('foo_bar!?', 'FooBar'),
+    ('_foo_bar', 'FooBar'),
+])
+def test_to_cfn_resource_name(name, cfn_name):
+    assert utils.to_cfn_resource_name(name) == cfn_name
+
+
+@given(name=text(alphabet=string.ascii_letters + string.digits + '-_'))
+def test_to_cfn_resource_name_properties(name):
+    try:
+        result = utils.to_cfn_resource_name(name)
+    except ValueError:
+        # This is acceptable, the function raises ValueError
+        # on bad input.
+        pass
+    else:
+        assert re.search('[^A-Za-z0-9]', result) is None

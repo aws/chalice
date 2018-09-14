@@ -1,4 +1,5 @@
 """Chalice app and routing code."""
+# pylint: disable=too-many-lines
 import re
 import sys
 import os
@@ -9,25 +10,39 @@ import decimal
 import base64
 from collections import defaultdict, Mapping
 
-__version__ = '1.1.0'
+
+__version__ = '1.6.0'
+_PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
-# startup overhead.
-
-
-_PARAMS = re.compile(r'{\w+}')
-
+# startup overhead.  This also means we need to handle py2/py3 compat issues
+# directly in this file instead of copying over compat.py
 try:
-    # In python 2 there is a base class for the string types that
-    # we can check for. It was removed in python 3 so it will cause
-    # a name error.
-    _ANY_STRING = (basestring, bytes)
-except NameError:
+    from urllib.parse import unquote_plus
+
+    unquote_str = unquote_plus
+
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
+except ImportError:
+    from urllib import unquote_plus
+
+    # This is borrowed from botocore/compat.py
+    def unquote_str(value, encoding='utf-8'):
+        # In python2, unquote() gives us a string back that has the urldecoded
+        # bits, but not the unicode parts.  We need to decode this manually.
+        # unquote has special logic in which if it receives a unicode object it
+        # will decode it to latin1.  This is hard coded.  To avoid this, we'll
+        # encode the string with the passed in encoding before trying to
+        # unquote it.
+        byte_string = value.encode(encoding)
+        return unquote_plus(byte_string).decode(encoding)
+    # In python 2 there is a base class for the string types that we can check
+    # for. It was removed in python 3 so it will cause a name error.
+    _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
 
 
 def handle_decimals(obj):
@@ -38,9 +53,11 @@ def handle_decimals(obj):
     return obj
 
 
-def error_response(message, error_code, http_status_code):
+def error_response(message, error_code, http_status_code, headers=None):
     body = {'Code': error_code, 'Message': message}
-    response = Response(body=body, status_code=http_status_code)
+    response = Response(body=body, status_code=http_status_code,
+                        headers=headers)
+
     return response.to_dict()
 
 
@@ -104,6 +121,7 @@ ALL_ERRORS = [
     NotFoundError,
     UnauthorizedError,
     ForbiddenError,
+    MethodNotAllowedError,
     RequestTimeoutError,
     ConflictError,
     UnprocessableEntityError,
@@ -300,7 +318,10 @@ class Request(object):
     def json_body(self):
         if self.headers.get('content-type', '').startswith('application/json'):
             if self._json_body is None:
-                self._json_body = json.loads(self.raw_body)
+                try:
+                    self._json_body = json.loads(self.raw_body)
+                except ValueError:
+                    raise BadRequestError('Error Parsing JSON')
             return self._json_body
 
     def to_dict(self):
@@ -401,21 +422,10 @@ class RouteEntry(object):
 class APIGateway(object):
 
     _DEFAULT_BINARY_TYPES = [
-        'application/octet-stream',
-        'application/x-tar',
-        'application/zip',
-        'audio/basic',
-        'audio/ogg',
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/wav',
-        'audio/webm',
-        'image/png',
-        'image/jpg',
-        'image/gif',
-        'video/ogg',
-        'video/mpeg',
-        'video/webm',
+        'application/octet-stream', 'application/x-tar', 'application/zip',
+        'audio/basic', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
+        'audio/webm', 'image/png', 'image/jpg', 'image/jpeg', 'image/gif',
+        'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
     def __init__(self):
@@ -512,17 +522,67 @@ class Chalice(object):
             return ChaliceAuthorizer(auth_name, auth_func, auth_config)
         return _register_authorizer
 
+    def on_s3_event(self, bucket, events=None,
+                    prefix=None, suffix=None, name=None):
+        def _register_s3_event(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            trigger_events = events
+            if trigger_events is None:
+                trigger_events = ['s3:ObjectCreated:*']
+            s3_event = S3EventConfig(
+                name=handler_name,
+                bucket=bucket,
+                events=trigger_events,
+                prefix=prefix,
+                suffix=suffix,
+                handler_string='app.%s' % event_func.__name__,
+            )
+            self.event_sources.append(s3_event)
+            return EventSourceHandler(event_func, S3Event)
+        return _register_s3_event
+
+    def on_sns_message(self, topic, name=None):
+        def _register_sns_message(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            sns_config = SNSEventConfig(
+                name=handler_name,
+                handler_string='app.%s' % event_func.__name__,
+                topic=topic,
+            )
+            self.event_sources.append(sns_config)
+            return EventSourceHandler(event_func, SNSEvent)
+        return _register_sns_message
+
+    def on_sqs_message(self, queue, batch_size=1, name=None):
+        def _register_sqs_message(event_func):
+            handler_name = name
+            if handler_name is None:
+                handler_name = event_func.__name__
+            sqs_config = SQSEventConfig(
+                name=handler_name,
+                handler_string='app.%s' % event_func.__name__,
+                queue=queue,
+                batch_size=batch_size,
+            )
+            self.event_sources.append(sqs_config)
+            return EventSourceHandler(event_func, SQSEvent)
+        return _register_sqs_message
+
     def schedule(self, expression, name=None):
         def _register_schedule(event_func):
             handler_name = name
             if handler_name is None:
                 handler_name = event_func.__name__
-            event_source = CloudWatchEventSource(
+            event_source = CloudWatchEventConfig(
                 name=handler_name,
                 schedule_expression=expression,
                 handler_string='app.%s' % event_func.__name__)
             self.event_sources.append(event_source)
-            return ScheduledEventHandler(event_func)
+            return EventSourceHandler(event_func, CloudWatchEvent)
         return _register_schedule
 
     def lambda_function(self, name=None):
@@ -603,6 +663,11 @@ class Chalice(object):
                                        event['requestContext'],
                                        event['stageVariables'],
                                        event.get('isBase64Encoded', False))
+        # We're getting the CORS headers before validation to be able to
+        # output desired headers with
+        cors_headers = None
+        if self._cors_enabled_for_route(route_entry):
+            cors_headers = self._get_cors_headers(route_entry.cors)
         # We're doing the header validation after creating the request
         # so can leverage the case insensitive dict that the Request class
         # uses for headers.
@@ -615,11 +680,12 @@ class Chalice(object):
                     error_code='UnsupportedMediaType',
                     message='Unsupported media type: %s' % content_type,
                     http_status_code=415,
+                    headers=cors_headers
                 )
         response = self._get_view_function_response(view_function,
                                                     function_args)
-        if self._cors_enabled_for_route(route_entry):
-            self._add_cors_headers(response, route_entry.cors)
+        if cors_headers is not None:
+            self._add_cors_headers(response, cors_headers)
 
         response_headers = CaseInsensitiveMapping(response.headers)
         if not self._validate_binary_response(
@@ -632,7 +698,8 @@ class Chalice(object):
                          'response has a binary Content-Type then the request '
                          'must specify an Accept header that matches.'
                          % (content_type, content_type)),
-                http_status_code=400
+                http_status_code=400,
+                headers=cors_headers
             )
         response = response.to_dict(self.api.binary_types)
         return response
@@ -692,8 +759,11 @@ class Chalice(object):
     def _cors_enabled_for_route(self, route_entry):
         return route_entry.cors is not None
 
-    def _add_cors_headers(self, response, cors):
-        for name, value in cors.get_access_control_headers().items():
+    def _get_cors_headers(self, cors):
+        return cors.get_access_control_headers()
+
+    def _add_cors_headers(self, response, cors_headers):
+        for name, value in cors_headers.items():
             if name not in response.headers:
                 response.headers[name] = value
 
@@ -821,15 +891,25 @@ class AuthRoute(object):
         self.methods = methods
 
 
-class EventSource(object):
+class LambdaFunction(object):
+    def __init__(self, func, name, handler_string):
+        self.func = func
+        self.name = name
+        self.handler_string = handler_string
+
+    def __call__(self, event, context):
+        return self.func(event, context)
+
+
+class BaseEventSourceConfig(object):
     def __init__(self, name, handler_string):
         self.name = name
         self.handler_string = handler_string
 
 
-class CloudWatchEventSource(EventSource):
+class CloudWatchEventConfig(BaseEventSourceConfig):
     def __init__(self, name, handler_string, schedule_expression):
-        super(CloudWatchEventSource, self).__init__(name, handler_string)
+        super(CloudWatchEventConfig, self).__init__(name, handler_string)
         self.schedule_expression = schedule_expression
 
 
@@ -876,20 +956,57 @@ class Cron(ScheduleExpression):
         )
 
 
-class ScheduledEventHandler(object):
-    def __init__(self, func):
+class S3EventConfig(BaseEventSourceConfig):
+    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
+        super(S3EventConfig, self).__init__(name, handler_string)
+        self.bucket = bucket
+        self.events = events
+        self.prefix = prefix
+        self.suffix = suffix
+
+
+class SNSEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, topic):
+        super(SNSEventConfig, self).__init__(name, handler_string)
+        self.topic = topic
+
+
+class SQSEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, queue, batch_size):
+        super(SQSEventConfig, self).__init__(name, handler_string)
+        self.queue = queue
+        self.batch_size = batch_size
+
+
+class EventSourceHandler(object):
+
+    def __init__(self, func, event_class):
         self.func = func
+        self.event_class = event_class
 
     def __call__(self, event, context):
-        event_obj = self._convert_to_obj(event)
+        event_obj = self.event_class(event)
         return self.func(event_obj)
 
-    def _convert_to_obj(self, event_dict):
-        return CloudWatchEvent(event_dict)
 
+# These classes contain all the event types that are passed
+# in as arguments in the lambda event handlers.  These are
+# part of Chalice's public API and must be backwards compatible.
 
-class CloudWatchEvent(object):
+class BaseLambdaEvent(object):
     def __init__(self, event_dict):
+        self._event_dict = event_dict
+        self._extract_attributes(event_dict)
+
+    def _extract_attributes(self, event_dict):
+        raise NotImplementedError("_extract_attributes")
+
+    def to_dict(self):
+        return self._event_dict
+
+
+class CloudWatchEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
         self.version = event_dict['version']
         self.account = event_dict['account']
         self.region = event_dict['region']
@@ -899,17 +1016,34 @@ class CloudWatchEvent(object):
         self.time = event_dict['time']
         self.event_id = event_dict['id']
         self.resources = event_dict['resources']
-        self._event_dict = event_dict
-
-    def to_dict(self):
-        return self._event_dict
 
 
-class LambdaFunction(object):
-    def __init__(self, func, name, handler_string):
-        self.func = func
-        self.name = name
-        self.handler_string = handler_string
+class SNSEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        first_record = event_dict['Records'][0]
+        self.message = first_record['Sns']['Message']
+        self.subject = first_record['Sns']['Subject']
 
-    def __call__(self, event, context):
-        return self.func(event, context)
+
+class S3Event(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        s3 = event_dict['Records'][0]['s3']
+        self.bucket = s3['bucket']['name']
+        self.key = unquote_str(s3['object']['key'])
+
+
+class SQSEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        # We don't extract anything off the top level
+        # event.
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield SQSRecord(record)
+
+
+class SQSRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        self.body = event_dict['body']
+        self.receipt_handle = event_dict['receiptHandle']

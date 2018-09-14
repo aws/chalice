@@ -161,4 +161,4 @@ page to test:
     </html>
 
 
-.. _API Gateway: http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-generate-sdk.html
+.. _API Gateway: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-generate-sdk.html

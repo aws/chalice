@@ -1,6 +1,7 @@
 import pytest
 
 from chalice import pipeline
+from chalice import __version__ as chalice_version
 from chalice.pipeline import InvalidCodeBuildPythonVersion, PipelineParameters
 
 
@@ -40,11 +41,16 @@ class TestPipelineGen(object):
         assert template['Parameters']['CodeBuildImage']['Default'] == \
             'aws/codebuild/python:2.7.12'
 
-    def test_py3_throws_error(self):
+    def test_python_36_in_param_default(self):
+        template = self.generate_template(lambda_python_version='python3.6')
+        assert template['Parameters']['CodeBuildImage']['Default'] == \
+            'aws/codebuild/python:3.6.5'
+
+    def test_invalid_python_throws_error(self):
         # This test can be removed when there is a 3.6 codebuild image
         # available.
         with pytest.raises(InvalidCodeBuildPythonVersion):
-            self.generate_template('app', 'python3.6')
+            self.generate_template('app', 'python2.6')
 
     def test_nonsense_py_version_throws_error(self):
         with pytest.raises(InvalidCodeBuildPythonVersion):
@@ -137,18 +143,42 @@ def test_codepipeline_resource(pipeline_params):
     assert 'CodePipelineRole' in resources
     assert 'CFNDeployRole' in resources
     # Some basic sanity checks
-    resources['AppPipeline']['Type'] == 'AWS::CodePipeline::Pipeline'
-    resources['ArtifactBucketStore']['Type'] == 'AWS::S3::Bucket'
-    resources['CodePipelineRole']['Type'] == 'AWS::IAM::Role'
-    resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
+    assert resources['AppPipeline']['Type'] == 'AWS::CodePipeline::Pipeline'
+    assert resources['ArtifactBucketStore']['Type'] == 'AWS::S3::Bucket'
+    assert resources['CodePipelineRole']['Type'] == 'AWS::IAM::Role'
+    assert resources['CFNDeployRole']['Type'] == 'AWS::IAM::Role'
+    properties = resources['AppPipeline']['Properties']
+    stages = properties['Stages']
+    beta_stage = stages[2]
+    beta_config = beta_stage['Actions'][0]['Configuration']
+    assert beta_config == {
+        'ActionMode': 'CHANGE_SET_REPLACE',
+        'Capabilities': 'CAPABILITY_IAM',
+        'ChangeSetName': {'Fn::Sub': '${ApplicationName}ChangeSet'},
+        'RoleArn': {'Fn::GetAtt': 'CFNDeployRole.Arn'},
+        'StackName': {'Fn::Sub': '${ApplicationName}BetaStack'},
+        'TemplatePath': 'CompiledCFNTemplate::transformed.yaml'
+    }
 
 
 def test_install_requirements_in_buildspec(pipeline_params):
     template = {}
+    pipeline_params.chalice_version_range = '>=1.0.0,<2.0.0'
     pipeline.CodeBuild().add_to_template(template, pipeline_params)
     build = template['Resources']['AppPackageBuild']
     build_spec = build['Properties']['Source']['BuildSpec']
     assert 'pip install -r requirements.txt' in build_spec
+    assert "pip install 'chalice>=1.0.0,<2.0.0'" in build_spec
+
+
+def test_default_version_range_locks_minor_version():
+    parts = [int(p) for p in chalice_version.split('.')]
+    min_version = '%s.%s.%s' % (parts[0], parts[1], 0)
+    max_version = '%s.%s.%s' % (parts[0], parts[1] + 1, 0)
+    params = pipeline.PipelineParameters('appname', 'python2.7')
+    assert params.chalice_version_range == '>=%s,<%s' % (
+        min_version, max_version
+    )
 
 
 def test_can_generate_github_source(pipeline_params):
