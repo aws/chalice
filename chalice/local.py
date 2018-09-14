@@ -163,7 +163,7 @@ class LambdaEventConverter(object):
         return headers.get('content-type', '') in self._binary_types
 
     def _get_local_context(self, headers):
-        # type: (Dict[str,Any]) -> bool
+        # type: (Dict[str,str]) -> Dict[str,str]
         local_context = headers.pop('local-request-context', "")
         if not local_context:
             return None
