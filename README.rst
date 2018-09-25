@@ -854,7 +854,7 @@ There's a couple of things to keep in mind when enabling cors for a view:
   in the ``Access-Control-Allow-Origin`` header.
 
   Example:
-  
+
 .. code-block:: python
 
     from chalice import Chalice, Response
@@ -862,22 +862,29 @@ There's a couple of things to keep in mind when enabling cors for a view:
     app = Chalice(app_name='multipleorigincors')
 
     _ALLOWED_ORIGINS = set([
-        'http://allowed1.example.com',
-        'http://allowed2.example.com',
+	'http://allowed1.example.com',
+	'http://allowed2.example.com',
     ])
 
 
-    @app.route('/cors_multiple_origins', methods=['GET'])
+    @app.route('/cors_multiple_origins', methods=['GET', 'OPTIONS'])
     def supports_cors_multiple_origins():
-        origin = app.current_request.to_dict()['headers'].get('origin', '')
-        if origin in _ALLOWED_ORIGINS:
-            return Response(
-                body='You sent a whitelisted origin!\n',
-                headers={
-                    'Access-Control-Allow-Origin': origin
-                })
-        else:
-            return "The origin you sent has not been whitelisted: %s\n" % origin
+	method = app.current_request.method
+	if method == 'OPTIONS':
+	    headers = {
+		'Access-Control-Allow-Method': 'GET,OPTIONS',
+		'Access-Control-Allow-Origin': ','.join(_ALLOWED_ORIGINS),
+		'Access-Control-Allow-Headers': 'X-Some-Header',
+	    }
+	    origin = app.current_request.headers.get('origin', '')
+	    if origin in _ALLOWED_ORIGINS:
+		headers.update({'Access-Control-Allow-Origin': origin})
+	    return Response(
+		body=None,
+		headers=headers,
+	    )
+	elif method == 'GET':
+	    return 'Foo'
 
 * Every view function must explicitly enable CORS support.
 
