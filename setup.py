@@ -15,7 +15,8 @@ install_requires = [
     'attrs==17.4.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
-    'wheel>=0.31.1'
+    'wheel',
+    'setuptools'
 ]
 
 setup(
