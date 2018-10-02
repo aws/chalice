@@ -28,8 +28,7 @@ EnvVars = MutableMapping
 OptStr = Optional[str]
 OptBytes = Optional[bytes]
 
-LOGGER_NAME = 'packager'
-logger = logging.getLogger(LOGGER_NAME)
+logger = logging.getLogger(__name__)
 
 
 class InvalidSourceDistributionNameError(Exception):
@@ -385,8 +384,8 @@ class DependencyBuilder(object):
                     compatible_wheels.add(package)
                 else:
                     incompatible_wheels.add(package)
-        logger.debug("compatible: %s", compatible_wheels)
-        logger.debug("incompatible: %s", incompatible_wheels | sdists)
+        logger.debug("initial compatible: %s", compatible_wheels)
+        logger.debug("initial incompatible: %s", incompatible_wheels | sdists)
 
         # Next we need to go through the downloaded packages and pick out any
         # dependencies that do not have a compatible wheel file downloaded.
@@ -401,7 +400,10 @@ class DependencyBuilder(object):
         # file ourselves.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
-        logger.debug("compatible: %s", compatible_wheels)
+        logger.debug(
+            "compatible wheels after second download pass: %s",
+            compatible_wheels
+        )
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=True)
 
@@ -415,7 +417,10 @@ class DependencyBuilder(object):
         # compiler.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
-        logger.debug("compatible: %s", compatible_wheels)
+        logger.debug(
+            "compatible after building wheels (no C compiling): %s",
+            compatible_wheels
+        )
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=False)
 
@@ -425,6 +430,10 @@ class DependencyBuilder(object):
         # compatible version directly and building from source.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             directory)
+        logger.debug(
+            "compatible after building wheels (C compiling): %s",
+            compatible_wheels
+        )
 
         # Now there is still the case left over where the setup.py has been
         # made in such a way to be incompatible with python's setup tools,

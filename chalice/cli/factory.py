@@ -41,7 +41,6 @@ def create_botocore_session(profile=None, debug=False,
     s = Session(profile=profile)
     _add_chalice_user_agent(s)
     if debug:
-        s.set_debug_logger('')
         _inject_large_request_body_filter()
     config_args = {}  # type: Dict[str, Any]
     if connection_timeout is not None:

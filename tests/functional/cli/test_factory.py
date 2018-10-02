@@ -41,26 +41,10 @@ def assert_has_no_request_body_filter(log_name):
         isinstance(f, factory.LargeRequestBodyFilter) for f in log.filters)
 
 
-def assert_request_body_filter_in_log(log_name):
-    log = logging.getLogger(log_name)
-    assert any(
-        isinstance(f, factory.LargeRequestBodyFilter) for f in log.filters)
-
-
 def test_can_create_botocore_session():
     session = factory.create_botocore_session()
     assert session.user_agent().startswith('aws-chalice/')
     assert session.get_default_client_config() is None
-
-
-def test_can_create_botocore_session_debug():
-    log_name = 'botocore.endpoint'
-    assert_has_no_request_body_filter(log_name)
-
-    factory.create_botocore_session(debug=True)
-
-    assert_request_body_filter_in_log(log_name)
-    assert logging.getLogger('').level == logging.DEBUG
 
 
 def test_can_create_botocore_session_connection_timeout():
