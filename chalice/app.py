@@ -345,7 +345,8 @@ class Response(object):
     def to_dict(self, binary_types=None):
         body = self.body
         if not isinstance(body, _ANY_STRING):
-            body = json.dumps(body, default=handle_decimals)
+            body = json.dumps(body, separators=(',', ':'),
+                              default=handle_decimals)
         response = {
             'headers': self.headers,
             'statusCode': self.status_code,

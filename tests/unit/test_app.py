@@ -171,7 +171,7 @@ def test_can_encode_binary_json(sample_app):
         headers={'Content-Type': 'application/json'}
     )
     encoded_response = response.to_dict(sample_app.api.binary_types)
-    assert encoded_response['body'] == 'eyJmb28iOiAiYmFyIn0='
+    assert encoded_response['body'] == 'eyJmb28iOiJiYXIifQ=='
 
 
 def test_can_parse_route_view_args():
@@ -510,7 +510,7 @@ def test_can_return_response_object(create_event):
 
     event = create_event('/index', 'GET', {})
     response = demo(event, context=None)
-    assert response == {'statusCode': 200, 'body': '{"foo": "bar"}',
+    assert response == {'statusCode': 200, 'body': '{"foo":"bar"}',
                         'headers': {'Content-Type': 'application/json'}}
 
 
