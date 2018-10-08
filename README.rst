@@ -1177,10 +1177,9 @@ Similar to the ``chalice deploy`` command, you can specify which
 chalice stage to delete.  By default it will delete the ``dev`` stage::
 
     $ chalice delete --stage dev
-    Deleting rest API duvw4kwyl3
-    Deleting lambda function helloworld-dev
-    Delete the role helloworld-dev? [y/N]: y
-    Deleting role name helloworld-dev
+    Deleting Rest API: duvw4kwyl3
+    Deleting function aws:arn:lambda:region:123456789:helloworld-dev
+    Deleting IAM Role helloworld-dev
 
 .. quick-start-end
 
