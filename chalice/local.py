@@ -125,7 +125,7 @@ class RouteMatcher(object):
         # Otherwise we need to check for param substitution
         parsed_url = urlparse(url)
         parsed_qs = parse_qs(parsed_url.query, keep_blank_values=True)
-        query_params = {k: v[0] for k, v in parsed_qs.items()}
+        query_params = {k: v[-1] for k, v in parsed_qs.items()}
         path = parsed_url.path
         # API Gateway removes the trailing slash if the route is not the root
         # path. We do the same here so our route matching works the same way.
