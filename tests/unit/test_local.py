@@ -462,6 +462,14 @@ def test_querystring_is_mapped(handler):
     assert _get_body_from_response_stream(handler) == {'a': 'b', 'c': 'd'}
 
 
+def test_querystring_undefined_is_mapped_consistent_with_apigateway(handler):
+    # API Gateway picks up the last element of duplicate keys in a
+    # querystring
+    set_current_request(handler, method='GET', path='/query-string?a=b&a=c')
+    handler.do_GET()
+    assert _get_body_from_response_stream(handler) == {'a': 'c'}
+
+
 def test_content_type_included_once(handler):
     set_current_request(handler, method='GET', path='/custom-response')
     handler.do_GET()
