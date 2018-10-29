@@ -16,7 +16,7 @@ pytest==3.5.0
 py==1.5.3
 pygments==2.1.3
 mock==2.0.0
-requests==2.18.4
+requests==2.20.0
 hypothesis==3.56.3
 # pip does not catch the <0.7 requirement in pytest so we need to add it to
 # the top level requirements.
