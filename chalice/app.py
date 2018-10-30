@@ -907,12 +907,12 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                                 status_code=e.STATUS_CODE)
         except Exception:
             headers = {}
+            self.log.error("Caught exception for %s", view_function,
+                           exc_info=True)
             if self.debug:
                 # If the user has turned on debug mode,
-                # we'll let the original exception propogate so
+                # we'll let the original exception propagate so
                 # they get more information about what went wrong.
-                self.log.debug("Caught exception for %s", view_function,
-                               exc_info=True)
                 stack_trace = ''.join(traceback.format_exc())
                 body = stack_trace
                 headers['Content-Type'] = 'text/plain'
