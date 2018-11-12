@@ -163,8 +163,9 @@ class LambdaEventConverter(object):
         # type: (Dict[str,Any]) -> bool
         return headers.get('content-type', '') in self._binary_types
 
-    def create_lambda_event(self, method, path, headers, body=None):
-        # type: (str, str, Dict[str, str], str) -> EventType
+    def create_lambda_event(self, method, path, headers, stage_vars,
+                            body=None):
+        # type: (str, str, Dict[str, str], Dict[str, str], str) -> EventType
         view_route = self._route_matcher.match_route(path)
         event = {
             'requestContext': {
@@ -177,7 +178,7 @@ class LambdaEventConverter(object):
             },
             'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,
-            'stageVariables': {},
+            'stageVariables': stage_vars,
         }
         if view_route.query_params:
             event['queryStringParameters'] = view_route.query_params
@@ -420,7 +421,7 @@ class LocalGateway(object):
         # type: (str, str, HeaderType, Optional[str]) -> EventType
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
-            body=body,
+            stage_vars=self._config.api_gateway_stage_vars, body=body,
         )
         return lambda_event
 

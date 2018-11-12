@@ -45,6 +45,9 @@ be checked.
   will also be the URL prefix for your API
   (``https://endpoint/prefix/your-api``).
 
+* ``stage_vars`` - A string-to-string mapping of stage variable.
+  Only used when running the server locally.
+
 * ``manage_iam_role`` - ``true``/``false``.  Indicates if you
   want chalice to create and update the IAM role
   used for your application.  By default, this value is ``true``.

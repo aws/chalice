@@ -213,6 +213,12 @@ class Config(object):
                                   varies_per_chalice_stage=True)
 
     @property
+    def api_gateway_stage_vars(self):
+        # type: () -> str
+        return self._chain_lookup('stage_vars',
+                                  varies_per_chalice_stage=True)
+
+    @property
     def iam_policy_file(self):
         # type: () -> str
         return self._chain_lookup('iam_policy_file',
