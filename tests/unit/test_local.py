@@ -524,6 +524,7 @@ def test_lambda_event_contains_source_ip():
     event = converter.create_lambda_event(
         method='GET',
         path='/foo/bar',
+        stage_vars={},
         headers={'content-type': 'application/json'}
     )
     source_ip = event.get('requestContext').get('identity').get('sourceIp')
@@ -536,6 +537,7 @@ def test_can_create_lambda_event():
     event = converter.create_lambda_event(
         method='GET',
         path='/foo/other',
+        stage_vars={"foo": "bar"},
         headers={'content-type': 'application/json'}
     )
     assert event == {
@@ -551,7 +553,7 @@ def test_can_create_lambda_event():
         'pathParameters': {'capture': 'other'},
         'queryStringParameters': None,
         'body': None,
-        'stageVariables': {},
+        'stageVariables': {"foo": "bar"},
     }
 
 
@@ -561,6 +563,7 @@ def test_parse_query_string():
     event = converter.create_lambda_event(
         method='GET',
         path='/foo/other?a=1&b=&c=3',
+        stage_vars={},
         headers={'content-type': 'application/json'}
     )
     assert event == {
@@ -587,6 +590,7 @@ def test_can_create_lambda_event_for_put_request():
         method='PUT',
         path='/foo/other',
         headers={'content-type': 'application/json'},
+        stage_vars={},
         body='{"foo": "bar"}',
     )
     assert event == {
@@ -614,6 +618,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         method='POST',
         path='/foo/other',
         headers={'content-type': 'application/x-www-form-urlencoded'},
+        stage_vars={},
         body=form_body,
     )
     assert event == {

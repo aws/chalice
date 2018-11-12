@@ -214,7 +214,7 @@ class Config(object):
 
     @property
     def api_gateway_stage_vars(self):
-        # type: () -> str
+        # type: () -> Dict[str, str]
         return self._chain_lookup('stage_vars',
                                   varies_per_chalice_stage=True)
 
