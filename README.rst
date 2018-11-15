@@ -776,6 +776,45 @@ This will result in a plain text response body::
     hello world!
 
 
+Tutorial: GZIP compression for json
+===================================
+The return value from a chalice view function is serialized as JSON as the
+response body returned back to the caller.  This makes it easy to create
+rest APIs that return JSON response bodies.
+
+Chalice allows you to control this behavior by returning an instance of
+a chalice specific ``Response`` class.  This behavior allows you to:
+
+* Add ``application/json`` to binary_types
+* Specify the status code to return
+* Specify custom header ``Content-Type: application/json``
+* Specify custom header ``Content-Encoding: gzip``
+
+Here's an example of this:
+
+.. code-block:: python
+
+    import json
+    import gzip
+    from chalice import Chalice, Response
+
+    app = Chalice(app_name='compress-response')
+    app.api.binary_types.append('application/json')
+
+    @app.route('/')
+    def index():
+        blob = json.dumps({'hello': 'world'}).encode('utf-8')
+        payload = gzip.compress(blob)
+        custom_headers = {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip'
+        }
+        return Response(body=payload,
+                        status_code=200,
+                        headers=custom_headers)
+
+
+
 Tutorial: CORS Support
 ======================
 

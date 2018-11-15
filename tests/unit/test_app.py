@@ -2,6 +2,7 @@ import sys
 import base64
 import logging
 import json
+import gzip
 
 import pytest
 from pytest import fixture
@@ -1574,3 +1575,20 @@ def test_can_map_sqs_event(sample_app):
     assert first_record.receipt_handle == 'receipt-handle'
     assert first_record.to_dict() == sqs_event['Records'][0]
     assert actual_event.to_dict() == sqs_event
+
+
+def test_bytes_when_binary_type_is_application_json():
+    demo = app.Chalice('demo-app')
+    demo.api.binary_types.append('application/json')
+
+    @demo.route('/compress_response')
+    def index():
+        blob = json.dumps({'hello': 'world'}).encode('utf-8')
+        payload = gzip.compress(blob)
+        custom_headers = {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip'
+        }
+        return Response(body=payload, status_code=200, headers=custom_headers)
+
+    return demo
