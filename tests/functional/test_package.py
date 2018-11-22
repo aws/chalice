@@ -17,7 +17,6 @@ from chalice.deploy.packager import MissingDependencyError
 from chalice.deploy.packager import SubprocessPip
 from chalice.deploy.packager import SDistMetadataFetcher
 from chalice.deploy.packager import InvalidSourceDistributionNameError
-from chalice.compat import lambda_abi
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
@@ -246,7 +245,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -267,7 +266,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -291,7 +290,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -313,7 +312,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -335,7 +334,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -362,7 +361,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -389,7 +388,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -417,7 +416,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -445,7 +444,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -475,7 +474,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -498,7 +497,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -521,7 +520,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp27mu', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -547,7 +546,8 @@ class TestDependencyBuilder(object):
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(requirements_file, site_packages)
+            builder.build_site_packages(
+                'cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
         missing_packages = list(e.value.missing)
 
@@ -572,7 +572,8 @@ class TestDependencyBuilder(object):
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(requirements_file, site_packages)
+            builder.build_site_packages(
+                'cp27mu', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         missing_packages = list(e.value.missing)
@@ -596,7 +597,8 @@ class TestDependencyBuilder(object):
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(requirements_file, site_packages)
+            builder.build_site_packages(
+                'cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         missing_packages = list(e.value.missing)
@@ -624,7 +626,7 @@ class TestDependencyBuilder(object):
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
                 'manylinux1_x86_64', '--implementation', 'cp',
-                '--abi', lambda_abi, '--dest', mock.ANY,
+                '--abi', 'cp36m', '--dest', mock.ANY,
                 'bar==1.2'
             ],
             packages=[
@@ -632,7 +634,7 @@ class TestDependencyBuilder(object):
             ]
         )
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -641,6 +643,7 @@ class TestDependencyBuilder(object):
 
     def test_whitelist_sqlalchemy(self, tmpdir, osutils, pip_runner):
         reqs = ['sqlalchemy==1.1.18']
+        abi = 'cp36m'
         pip, runner = pip_runner
         appdir, builder = self._make_appdir_and_dependency_builder(
             reqs, tmpdir, runner)
@@ -655,7 +658,7 @@ class TestDependencyBuilder(object):
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
                 'manylinux1_x86_64', '--implementation', 'cp',
-                '--abi', lambda_abi, '--dest', mock.ANY,
+                '--abi', abi, '--dest', mock.ANY,
                 'sqlalchemy==1.1.18'
             ],
             packages=[
@@ -663,7 +666,7 @@ class TestDependencyBuilder(object):
             ]
         )
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages(abi, requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -692,7 +695,7 @@ class TestDependencyBuilder(object):
             ]
         )
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -727,7 +730,8 @@ class TestDependencyBuilder(object):
         )
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(requirements_file, site_packages)
+            builder.build_site_packages(
+                'cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.
@@ -779,7 +783,7 @@ class TestDependencyBuilder(object):
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
-        builder.build_site_packages(requirements_file, site_packages)
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         # Now we should have successfully built the foo package.
@@ -794,6 +798,7 @@ class TestDependencyBuilder(object):
         # they may be there by happenstance, or from an incompatible version
         # of python.
         reqs = ['foo', 'bar']
+        abi = 'cp36m'
         pip, runner = pip_runner
         appdir, builder = self._make_appdir_and_dependency_builder(
             reqs, tmpdir, runner)
@@ -809,7 +814,7 @@ class TestDependencyBuilder(object):
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
                 'manylinux1_x86_64', '--implementation', 'cp',
-                '--abi', lambda_abi, '--dest', mock.ANY,
+                '--abi', abi, '--dest', mock.ANY,
                 'foo==1.2'
             ],
             packages=[
@@ -825,7 +830,8 @@ class TestDependencyBuilder(object):
         bar = os.path.join(site_packages, 'bar')
         os.makedirs(bar)
         with pytest.raises(MissingDependencyError) as e:
-            builder.build_site_packages(requirements_file, site_packages)
+            builder.build_site_packages(
+                abi, requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         # bar should succeed and foo should failed.

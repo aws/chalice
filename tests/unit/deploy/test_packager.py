@@ -1,4 +1,3 @@
-import sys
 import pytest
 from collections import namedtuple
 
@@ -193,11 +192,8 @@ class TestPipRunner(object):
         # for getting lambda compatible wheels.
         pip, runner = pip_factory()
         packages = ['foo', 'bar', 'baz']
-        runner.download_manylinux_wheels(packages, 'directory')
-        if sys.version_info[0] == 2:
-            abi = 'cp27mu'
-        else:
-            abi = 'cp36m'
+        abi = 'cp37m'
+        runner.download_manylinux_wheels(abi, packages, 'directory')
         expected_prefix = ['download', '--only-binary=:all:', '--no-deps',
                            '--platform', 'manylinux1_x86_64',
                            '--implementation', 'cp', '--abi', abi,
@@ -209,7 +205,7 @@ class TestPipRunner(object):
 
     def test_download_wheels_no_wheels(self, pip_factory):
         pip, runner = pip_factory()
-        runner.download_manylinux_wheels([], 'directory')
+        runner.download_manylinux_wheels('cp36m', [], 'directory')
         assert len(pip.calls) == 0
 
     def test_raise_no_such_package_error(self, pip_factory):
