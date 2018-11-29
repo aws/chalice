@@ -1109,7 +1109,7 @@ to the URI of your lambda function.
 
     authorizer = CustomAuthorizer(
         'MyCustomAuth', header='Authorization',
-        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-01'
+        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-31'
                         '/functions/arn:aws:lambda:region:account-id:'
                         'function:FunctionName/invocations'))
 
