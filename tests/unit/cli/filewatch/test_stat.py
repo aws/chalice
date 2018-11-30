@@ -9,7 +9,7 @@ class FakeOSUtils(object):
         self.initial_scan = True
 
     def walk(self, rootdir):
-        yield 'rootdir', [], ['bad-file', 'baz']
+        yield 'rootdir', [], ['bad-file', 'no-file', 'baz']
         if self.initial_scan:
             self.initial_scan = False
 
@@ -17,6 +17,8 @@ class FakeOSUtils(object):
         return os.path.join(*parts)
 
     def mtime(self, path):
+        if path.endswith('no-file'):
+            raise FileNotFoundError()
         if self.initial_scan:
             return 1
         if path.endswith('bad-file'):
