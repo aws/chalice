@@ -18,7 +18,9 @@ class FakeOSUtils(object):
 
     def mtime(self, path):
         if path.endswith('no-file'):
-            raise FileNotFoundError()
+            # actually FileNotFoundError in python 3, but it is
+            # subclass of OSError anyway
+            raise OSError('no such file')
         if self.initial_scan:
             return 1
         if path.endswith('bad-file'):
