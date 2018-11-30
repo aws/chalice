@@ -78,17 +78,25 @@ class StatFileWatcher(FileWatcher):
     def _is_changed_file(self, path, new_mtimes):
         # type: (str, Dict[str, int]) -> bool
         last_mtime = self._mtime_cache.get(path)
-        if last_mtime is None:
-            LOGGER.debug("File added: %s, triggering restart.", path)
-            return True
+
         try:
             new_mtime = self._osutils.mtime(path)
+
+            if last_mtime is None:
+                LOGGER.debug("File added: %s, triggering restart.", path)
+                return True
+
             if new_mtime > last_mtime:
                 LOGGER.debug("File updated: %s, triggering restart.", path)
                 return True
+
             new_mtimes[path] = new_mtime
             return False
         except (OSError, IOError):
+            # File does not exist (symlink to nothing, for
+            # example). But did it previously?
+            if last_mtime is not None:
+                return True
             return False
 
     def _recursive_walk_files(self, root_dir):
