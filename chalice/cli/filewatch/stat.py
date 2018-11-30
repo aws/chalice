@@ -56,7 +56,10 @@ class StatFileWatcher(FileWatcher):
         for rootdir, _, filenames in self._osutils.walk(root_dir):
             for filename in filenames:
                 path = self._osutils.joinpath(rootdir, filename)
-                self._mtime_cache[path] = self._osutils.mtime(path)
+                try:
+                    self._mtime_cache[path] = self._osutils.mtime(path)
+                except OSError:
+                    pass
 
     def _single_pass_poll(self, root_dir, callback):
         # type: (str, Callable[[], None]) -> None
