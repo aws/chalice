@@ -65,15 +65,12 @@ class StatFileWatcher(FileWatcher):
         # type: (str, Callable[[], None]) -> None
         new_mtimes = {}  # type: Dict[str, int]
         for path in self._recursive_walk_files(root_dir):
-            if self._is_changed_file(path, new_mtimes):
-                callback()
-                return
+            self._is_changed_file(path, new_mtimes)
+
         if new_mtimes != self._mtime_cache:
-            # Files were removed.
-            LOGGER.debug("Files removed, triggering restart.")
             self._mtime_cache = new_mtimes
+            LOGGER.debug("Change detected, triggering restart.")
             callback()
-            return
 
     def _is_changed_file(self, path, new_mtimes):
         # type: (str, Dict[str, int]) -> bool
@@ -81,6 +78,7 @@ class StatFileWatcher(FileWatcher):
 
         try:
             new_mtime = self._osutils.mtime(path)
+            new_mtimes[path] = new_mtime
 
             if last_mtime is None:
                 LOGGER.debug("File added: %s, triggering restart.", path)
@@ -90,7 +88,6 @@ class StatFileWatcher(FileWatcher):
                 LOGGER.debug("File updated: %s, triggering restart.", path)
                 return True
 
-            new_mtimes[path] = new_mtime
             return False
         except (OSError, IOError):
             # File does not exist (symlink to nothing, for
