@@ -1,5 +1,4 @@
 import os
-import time
 import threading
 
 from chalice.cli.filewatch import stat
@@ -80,8 +79,10 @@ detect_changes_cases = [
     ({}, 1, 1)
 ]
 
+
 def test_detects_changes():
     calls = []
+
     def callback(*args, **kwargs):
         calls.append((args, kwargs))
 
