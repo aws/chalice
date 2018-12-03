@@ -58,7 +58,7 @@ You can connect a lambda function to an S3 event:
 
     app = Chalice(app_name="helloworld")
 
-    # Whenver an object is uploaded to 'mybucket'
+    # Whenever an object is uploaded to 'mybucket'
     # this lambda function will be invoked.
 
     @app.on_s3_event(bucket='mybucket')
