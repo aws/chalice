@@ -92,6 +92,8 @@ class Config(object):
         (3, 7): 'python3.7',
     }
 
+    _PYTHON_LATEST = _PYTHON_VERSIONS[sorted(_PYTHON_VERSIONS)[-1]]
+
     def __init__(self,
                  chalice_stage=DEFAULT_STAGE_NAME,
                  function_name=DEFAULT_HANDLER_NAME,
@@ -171,7 +173,7 @@ class Config(object):
         # we attempt to match your python version to the closest version
         # supported by lambda.
         return self._PYTHON_VERSIONS.get(sys.version_info[:2],
-                self._PYTHON_VERSIONS[sorted(self._PYTHON_VERSIONS)[-1]])
+                                         self._PYTHON_LATEST)
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):
