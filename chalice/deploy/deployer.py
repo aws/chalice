@@ -115,7 +115,7 @@ from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.deploy.validate import validate_configuration
 
 
-OPT_STR = Optional[str]
+OptStr = Optional[str]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -188,7 +188,7 @@ class ChaliceDeploymentError(Exception):
         return message
 
     def _get_error_suggestion(self, error):
-        # type: (Exception) -> OPT_STR
+        # type: (Exception) -> OptStr
         suggestion = None
         if isinstance(error, DeploymentPackageTooLargeError):
             suggestion = (

@@ -51,7 +51,6 @@ class NoSuchPackageError(Exception):
 
 class PackageDownloadError(Exception):
     """Generic networking error during a package download."""
-    pass
 
 
 class LambdaDeploymentPackager(object):
@@ -280,7 +279,7 @@ class DependencyBuilder(object):
         self._pip = pip_runner
 
     def _is_compatible_wheel_filename(self, expected_abi, filename):
-        # type: (str) -> bool
+        # type: (str, str) -> bool
         wheel = filename[:-4]
         implementation, abi, platform = wheel.split('-')[-3:]
         # Verify platform is compatible

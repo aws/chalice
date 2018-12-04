@@ -17,8 +17,8 @@ from chalice.constants import CLOUDWATCH_LOGS, VPC_ATTACH_POLICY
 from chalice.utils import OSUtils  # noqa
 from chalice.config import Config  # noqa
 
-API_POLICY_T = Dict[str, Dict[str, str]]
-CUSTOM_POLICY_T = Dict[str, Dict[str, List[str]]]
+APIPolicyT = Dict[str, Dict[str, str]]
+CustomPolicyT = Dict[str, Dict[str, List[str]]]
 
 
 def policy_from_source_code(source_code):
@@ -31,12 +31,12 @@ def policy_from_source_code(source_code):
 
 
 def load_api_policy_actions():
-    # type: () -> API_POLICY_T
+    # type: () -> APIPolicyT
     return _load_json_file('policies.json')
 
 
 def load_custom_policy_actions():
-    # type: () -> CUSTOM_POLICY_T
+    # type: () -> CustomPolicyT
     return _load_json_file('policies-extra.json')
 
 
@@ -101,7 +101,7 @@ class PolicyBuilder(object):
 
     def __init__(self, session=None, api_policy_actions=None,
                  custom_policy_actions=None):
-        # type: (Any, API_POLICY_T, CUSTOM_POLICY_T) -> None
+        # type: (Any, APIPolicyT, CustomPolicyT) -> None
         if session is None:
             session = botocore.session.get_session()
         # The difference between api_policy_actions and custom_policy_actions

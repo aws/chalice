@@ -1,5 +1,5 @@
 """Chalice app and routing code."""
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,ungrouped-imports
 import re
 import sys
 import os
@@ -8,7 +8,7 @@ import json
 import traceback
 import decimal
 import base64
-from collections import defaultdict, Mapping
+from collections import defaultdict
 
 
 __version__ = '1.6.1'
@@ -21,6 +21,7 @@ _PARAMS = re.compile(r'{\w+}')
 # directly in this file instead of copying over compat.py
 try:
     from urllib.parse import unquote_plus
+    from collections.abc import Mapping
 
     unquote_str = unquote_plus
 
@@ -29,6 +30,7 @@ try:
     _ANY_STRING = (str, bytes)
 except ImportError:
     from urllib import unquote_plus
+    from collections import Mapping
 
     # This is borrowed from botocore/compat.py
     def unquote_str(value, encoding='utf-8'):
@@ -276,6 +278,7 @@ class CORSConfig(object):
         if isinstance(other, self.__class__):
             return self.get_access_control_headers() == \
                 other.get_access_control_headers()
+        return False
 
 
 class Request(object):
@@ -875,7 +878,7 @@ class AuthResponse(object):
         # '/'.join(...)'d properly.
         base.extend([method, route[1:]])
         last_arn_segment = '/'.join(base)
-        if route == '/' or route == '*':
+        if route in ['/', '*']:
             # We have to special case the '/' case.  For whatever
             # reason, API gateway adds an extra '/' to the method_arn
             # of the auth request, so we need to do the same thing.

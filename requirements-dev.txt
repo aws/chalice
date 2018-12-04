@@ -6,8 +6,8 @@ wheel==0.26.0
 doc8==0.8.0
 # Pylint will fail on py3.  Locking to a commit on master
 # until pylint2 is released.
-pylint==2.0.0
-astroid==2.0.0
+pylint==2.2.2
+astroid==2.1.0
 pytest-cov==2.5.1
 pycodestyle==2.4.0
 
