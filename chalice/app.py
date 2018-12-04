@@ -733,7 +733,7 @@ class Chalice(object):
             response = Response(body={'Code': e.__class__.__name__,
                                       'Message': str(e)},
                                 status_code=e.STATUS_CODE)
-        except Exception as e:
+        except Exception:
             headers = {}
             if self.debug:
                 # If the user has turned on debug mode,

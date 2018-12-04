@@ -1,6 +1,6 @@
 # Dev requirements, used for various linting tools
 coverage==4.5.1
-flake8==3.5.0
+flake8==3.6.0
 tox==3.0.0
 wheel==0.26.0
 doc8==0.8.0
@@ -9,7 +9,7 @@ doc8==0.8.0
 pylint==2.0.0
 astroid==2.0.0
 pytest-cov==2.5.1
-pydocstyle==2.0.0
+pycodestyle==2.4.0
 
 # Test requirements
 pytest==3.5.0
