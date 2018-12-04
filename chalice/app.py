@@ -745,7 +745,8 @@ class Chalice(object):
                 body = stack_trace
                 headers['Content-Type'] = 'text/plain'
             else:
-                self.log.error("%s", traceback.format_exc())
+                self.log.error("Internal Error for %s", view_function,
+                               exc_info=True)
                 body = {'Code': 'InternalServerError',
                         'Message': 'An internal server error occurred.'}
             response = Response(body=body, headers=headers, status_code=500)
