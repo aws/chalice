@@ -454,7 +454,7 @@ for an ``@app.route(authorizer=...)`` call:
 
      The URI of the lambda function to use for the custom authorizer.  This
      usually has the form
-     ``arn:aws:apigateway:{region}:lambda:path/2015-03-01/functions/{lambda_arn}/invocations``.
+     ``arn:aws:apigateway:{region}:lambda:path/2015-03-31/functions/{lambda_arn}/invocations``.
 
   .. attribute:: ttl_seconds
 
