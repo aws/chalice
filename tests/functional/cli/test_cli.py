@@ -149,6 +149,16 @@ def test_can_package_with_single_file(runner):
             assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
 
 
+def test_debug_flag_enables_logging(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = runner.invoke(
+            cli.cli, ['--debug', 'package', 'outdir'], obj={})
+        assert result.exit_code == 0
+        assert '[DEBUG]' in result.output
+
+
 def test_does_deploy_with_default_api_gateway_stage_name(runner,
                                                          mock_cli_factory):
     with runner.isolated_filesystem():

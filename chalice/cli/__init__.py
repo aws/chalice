@@ -35,6 +35,19 @@ from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
 
 
+def _configure_logging(level, format_string=None):
+    # type: (int, Optional[str]) -> None
+    if format_string is None:
+        format_string = "%(asctime)s %(name)s [%(levelname)s] %(message)s"
+    logger = logging.getLogger('')
+    logger.setLevel(level)
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    formatter = logging.Formatter(format_string)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
 def create_new_project_skeleton(project_name, profile=None):
     # type: (str, Optional[str]) -> None
     chalice_dir = os.path.join(project_name, '.chalice')
@@ -86,6 +99,8 @@ def cli(ctx, project_dir, debug=False):
     # type: (click.Context, str, bool) -> None
     if project_dir is None:
         project_dir = os.getcwd()
+    if debug is True:
+        _configure_logging(logging.DEBUG)
     ctx.obj['project_dir'] = project_dir
     ctx.obj['debug'] = debug
     ctx.obj['factory'] = CLIFactory(project_dir, debug, environ=os.environ)
