@@ -9,7 +9,7 @@ doc8==0.8.0
 pylint==2.2.2
 astroid==2.1.0
 pytest-cov==2.5.1
-pycodestyle==2.4.0
+pydocstyle==2.0.0
 
 # Test requirements
 pytest==3.5.0
