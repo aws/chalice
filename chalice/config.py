@@ -158,8 +158,7 @@ class Config(object):
         # for python versions 3.0-3.6. 3.7 and higher will use python3.7.
         elif (major, minor) <= (3, 6):
             return 'python3.6'
-        elif major == 3:
-            return 'python3.7'
+        return 'python3.7'
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):
