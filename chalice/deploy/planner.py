@@ -7,8 +7,8 @@ from chalice.deploy import models
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 
-_INSTRUCTION_MSG = Union[models.Instruction, Tuple[models.Instruction, str]]
-_MARKED_RESOURCE = Dict[str, List[models.RecordResource]]
+InstructionMsg = Union[models.Instruction, Tuple[models.Instruction, str]]
+MarkedResource = Dict[str, List[models.RecordResource]]
 
 
 class RemoteState(object):
@@ -121,7 +121,7 @@ class ResourceSweeper(object):
                                 remaining, deployed)
 
     def _determine_remaining(self, plan, deployed, marked):
-        # type: (models.Plan, DeployedResources, _MARKED_RESOURCE) -> List[str]
+        # type: (models.Plan, DeployedResources, MarkedResource) -> List[str]
         remaining = []
         deployed_resource_names = reversed(deployed.resource_names())
         for name in deployed_resource_names:
@@ -162,8 +162,8 @@ class ResourceSweeper(object):
         return remaining
 
     def _mark_resources(self, plan):
-        # type: (List[models.Instruction]) -> _MARKED_RESOURCE
-        marked = {}  # type: _MARKED_RESOURCE
+        # type: (List[models.Instruction]) -> MarkedResource
+        marked = {}  # type: MarkedResource
         for instruction in plan:
             if isinstance(instruction, models.RecordResource):
                 marked.setdefault(instruction.resource_name, []).append(
@@ -266,7 +266,7 @@ class PlanStage(object):
         return models.Plan(plan, messages)
 
     def _add_result_to_plan(self,
-                            result,    # type: Sequence[_INSTRUCTION_MSG]
+                            result,    # type: Sequence[InstructionMsg]
                             plan,      # type: List[models.Instruction]
                             messages,  # type: Dict[int, str]
                             ):
@@ -284,7 +284,7 @@ class PlanStage(object):
     # to know about every type of resource.
 
     def _plan_lambdafunction(self, resource):
-        # type: (models.LambdaFunction) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.LambdaFunction) -> Sequence[InstructionMsg]
         role_arn = self._get_role_arn(resource.role)
         # Make mypy happy, it complains if we don't "declare" this upfront.
         params = {}  # type: Dict[str, Any]
@@ -315,7 +315,7 @@ class PlanStage(object):
                 % resource.function_name
             )
 
-        api_calls = []  # type: List[_INSTRUCTION_MSG]
+        api_calls = []  # type: List[InstructionMsg]
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,
@@ -382,7 +382,7 @@ class PlanStage(object):
         return api_calls
 
     def _plan_managediamrole(self, resource):
-        # type: (models.ManagedIAMRole) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.ManagedIAMRole) -> Sequence[InstructionMsg]
         document = resource.policy.document
         role_exists = self._remote_state.resource_exists(resource)
         varname = '%s_role_arn' % resource.role_name
@@ -433,7 +433,7 @@ class PlanStage(object):
         ]
 
     def _plan_snslambdasubscription(self, resource):
-        # type: (models.SNSLambdaSubscription) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.SNSLambdaSubscription) -> Sequence[InstructionMsg]
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
@@ -463,7 +463,7 @@ class PlanStage(object):
                     ['region_name', 'account_id'],
                 ),
             ),
-        ]  # type: List[_INSTRUCTION_MSG]
+        ]  # type: List[InstructionMsg]
         if self._remote_state.resource_exists(resource):
             # Given there's nothing about an SNS subscription you can
             # configure for now, if the resource exists, we don't do
@@ -539,7 +539,7 @@ class PlanStage(object):
         ]
 
     def _plan_sqseventsource(self, resource):
-        # type: (models.SQSEventSource) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.SQSEventSource) -> Sequence[InstructionMsg]
         queue_arn_varname = '%s_queue_arn' % resource.resource_name
         uuid_varname = '%s_uuid' % resource.resource_name
         function_arn = Variable(
@@ -566,7 +566,7 @@ class PlanStage(object):
                     ['region_name', 'account_id'],
                 ),
             ),
-        ]  # type: List[_INSTRUCTION_MSG]
+        ]  # type: List[InstructionMsg]
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
@@ -640,7 +640,7 @@ class PlanStage(object):
         ]
 
     def _plan_s3bucketnotification(self, resource):
-        # type: (models.S3BucketNotification) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.S3BucketNotification) -> Sequence[InstructionMsg]
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
@@ -675,7 +675,7 @@ class PlanStage(object):
         ]
 
     def _plan_scheduledevent(self, resource):
-        # type: (models.ScheduledEvent) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.ScheduledEvent) -> Sequence[InstructionMsg]
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
@@ -713,7 +713,7 @@ class PlanStage(object):
         return plan
 
     def _plan_restapi(self, resource):
-        # type: (models.RestAPI) -> Sequence[_INSTRUCTION_MSG]
+        # type: (models.RestAPI) -> Sequence[InstructionMsg]
         function = resource.lambda_function
         function_name = function.function_name
         varname = '%s_lambda_arn' % function.resource_name
@@ -742,7 +742,7 @@ class PlanStage(object):
             # before importing the rest API.
             models.CopyVariable(from_var=varname,
                                 to_var='api_handler_lambda_arn'),
-        ]  # type: List[_INSTRUCTION_MSG]
+        ]  # type: List[InstructionMsg]
         # There's also a set of instructions that are needed
         # at the end of deploying a rest API that apply to both
         # the update and create case.
@@ -768,7 +768,7 @@ class PlanStage(object):
                 name='rest_api_url',
                 variable_name='rest_api_url',
             ),
-        ]  # type: List[_INSTRUCTION_MSG]
+        ]  # type: List[InstructionMsg]
         for auth in resource.authorizers:
             shared_plan_epilogue.append(
                 models.APICall(

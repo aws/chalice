@@ -328,10 +328,13 @@ def test_env_vars_chain_merge():
 
 def test_can_load_python_version():
     c = Config('dev')
-    expected_runtime = {
-        2: 'python2.7',
-        3: 'python3.6',
-    }[sys.version_info[0]]
+    major, minor = sys.version_info[0], sys.version_info[1]
+    if major == 2:
+        expected_runtime = 'python2.7'
+    elif minor <= 6:
+        expected_runtime = 'python3.6'
+    else:
+        expected_runtime = 'python3.7'
     assert c.lambda_python_version == expected_runtime
 
 

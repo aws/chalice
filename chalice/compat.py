@@ -111,14 +111,12 @@ else:
 
 if six.PY3:
     from urllib.parse import urlparse, parse_qs
-    lambda_abi = 'cp36m'
 
     def is_broken_pipe_error(error):
         # type: (Exception) -> bool
         return isinstance(error, BrokenPipeError)  # noqa
 else:
     from urlparse import urlparse, parse_qs
-    lambda_abi = 'cp27mu'
 
     def is_broken_pipe_error(error):
         # type: (Exception) -> bool

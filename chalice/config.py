@@ -73,11 +73,6 @@ class Config(object):
 
     """
 
-    _PYTHON_VERSIONS = {
-        2: 'python2.7',
-        3: 'python3.6',
-    }
-
     def __init__(self,
                  chalice_stage=DEFAULT_STAGE_NAME,
                  function_name=DEFAULT_HANDLER_NAME,
@@ -156,7 +151,14 @@ class Config(object):
         # We may open this up to configuration later, but for now,
         # we attempt to match your python version to the closest version
         # supported by lambda.
-        return self._PYTHON_VERSIONS[sys.version_info[0]]
+        major, minor = sys.version_info[0], sys.version_info[1]
+        if major == 2:
+            return 'python2.7'
+        # Python 3 for backwards compatibility needs to select python3.6
+        # for python versions 3.0-3.6. 3.7 and higher will use python3.7.
+        elif (major, minor) <= (3, 6):
+            return 'python3.6'
+        return 'python3.7'
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):

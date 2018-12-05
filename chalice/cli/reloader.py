@@ -35,7 +35,7 @@ from chalice.local import LocalDevServer, HTTPServerThread  # noqa
 
 
 LOGGER = logging.getLogger(__name__)
-_WORKER_PROC_TYPE = Optional[Type[WorkerProcess]]
+WorkerProcType = Optional[Type[WorkerProcess]]
 
 
 def get_best_worker_process():
@@ -57,7 +57,7 @@ def start_parent_process(env):
 
 
 def start_worker_process(server_factory, root_dir, worker_process_cls=None):
-    # type: (Callable[[], LocalDevServer], str, _WORKER_PROC_TYPE) -> int
+    # type: (Callable[[], LocalDevServer], str, WorkerProcType) -> int
     if worker_process_cls is None:
         worker_process_cls = get_best_worker_process()
     t = HTTPServerThread(server_factory)
@@ -94,7 +94,7 @@ class ParentProcess(object):
 
 
 def run_with_reloader(server_factory, env, root_dir, worker_process_cls=None):
-    # type: (Callable, MutableMapping, str, _WORKER_PROC_TYPE) -> int
+    # type: (Callable, MutableMapping, str, WorkerProcType) -> int
     # This function is invoked in two possible modes, as the parent process
     # or as a chalice worker.
     try:

@@ -81,7 +81,7 @@ def test_app_injection_still_compresses_file(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app v1')
     name = chalice_deployer.create_deployment_package(
-        str(appdir), 'python 2.7')
+        str(appdir), 'python2.7')
     original_size = os.path.getsize(name)
     appdir.join('app.py').write('# Test app v2')
     chalice_deployer.inject_latest_app(name, str(appdir))

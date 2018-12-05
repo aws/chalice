@@ -35,11 +35,11 @@ from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 
 
-_STR_MAP = Optional[Dict[str, str]]
-_OPT_STR = Optional[str]
-_OPT_INT = Optional[int]
-_OPT_STR_LIST = Optional[List[str]]
-_CLIENT_METHOD = Callable[..., Dict[str, Any]]
+StrMap = Optional[Dict[str, str]]
+OptStr = Optional[str]
+OptInt = Optional[int]
+OptStrList = Optional[List[str]]
+ClientMethod = Callable[..., Dict[str, Any]]
 
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
@@ -113,7 +113,7 @@ class TypedAWSClient(object):
         return response
 
     def _create_vpc_config(self, security_group_ids, subnet_ids):
-        # type: (_OPT_STR_LIST, _OPT_STR_LIST) -> Dict[str, List[str]]
+        # type: (OptStrList, OptStrList) -> Dict[str, List[str]]
         # We always set the SubnetIds and SecurityGroupIds to an empty
         # list to ensure that we properly remove Vpc configuration
         # if you remove these values from your config.json.  Omitting
@@ -134,12 +134,12 @@ class TypedAWSClient(object):
                         zip_contents,                # type: str
                         runtime,                     # type: str
                         handler,                     # type: str
-                        environment_variables=None,  # type: _STR_MAP
-                        tags=None,                   # type: _STR_MAP
-                        timeout=None,                # type: _OPT_INT
-                        memory_size=None,            # type: _OPT_INT
-                        security_group_ids=None,     # type: _OPT_STR_LIST
-                        subnet_ids=None,             # type: _OPT_STR_LIST
+                        environment_variables=None,  # type: StrMap
+                        tags=None,                   # type: StrMap
+                        timeout=None,                # type: OptInt
+                        memory_size=None,            # type: OptInt
+                        security_group_ids=None,     # type: OptStrList
+                        subnet_ids=None,             # type: OptStrList
                         ):
         # type: (...) -> str
         kwargs = {
@@ -243,14 +243,14 @@ class TypedAWSClient(object):
     def update_function(self,
                         function_name,               # type: str
                         zip_contents,                # type: str
-                        environment_variables=None,  # type: _STR_MAP
-                        runtime=None,                # type: _OPT_STR
-                        tags=None,                   # type: _STR_MAP
-                        timeout=None,                # type: _OPT_INT
-                        memory_size=None,            # type: _OPT_INT
-                        role_arn=None,               # type: _OPT_STR
-                        subnet_ids=None,             # type: _OPT_STR_LIST
-                        security_group_ids=None,     # type: _OPT_STR_LIST
+                        environment_variables=None,  # type: StrMap
+                        runtime=None,                # type: OptStr
+                        tags=None,                   # type: StrMap
+                        timeout=None,                # type: OptInt
+                        memory_size=None,            # type: OptInt
+                        role_arn=None,               # type: OptStr
+                        subnet_ids=None,             # type: OptStrList
+                        security_group_ids=None,     # type: OptStrList
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -304,13 +304,13 @@ class TypedAWSClient(object):
             FunctionName=function_name)
 
     def _update_function_config(self,
-                                environment_variables,  # type: _STR_MAP
-                                runtime,                # type: _OPT_STR
-                                timeout,                # type: _OPT_INT
-                                memory_size,            # type: _OPT_INT
-                                role_arn,               # type: _OPT_STR
-                                subnet_ids,             # type: _OPT_STR_LIST
-                                security_group_ids,     # type: _OPT_STR_LIST
+                                environment_variables,  # type: StrMap
+                                runtime,                # type: OptStr
+                                timeout,                # type: OptInt
+                                memory_size,            # type: OptInt
+                                role_arn,               # type: OptStr
+                                subnet_ids,             # type: OptStrList
+                                security_group_ids,     # type: OptStrList
                                 function_name,          # type: str
                                 ):
         # type: (...) -> None
@@ -726,7 +726,7 @@ class TypedAWSClient(object):
 
     def connect_s3_bucket_to_lambda(self, bucket, function_arn, events,
                                     prefix=None, suffix=None):
-        # type: (str, str, List[str], _OPT_STR, _OPT_STR) -> None
+        # type: (str, str, List[str], OptStr, OptStr) -> None
         """Configure S3 bucket to invoke a lambda function.
 
         The S3 bucket must already have permission to invoke the
@@ -964,7 +964,7 @@ class TypedAWSClient(object):
 
     def _call_client_method_with_retries(
         self,
-        method,                 # type: _CLIENT_METHOD
+        method,                 # type: ClientMethod
         kwargs,                 # type: Dict[str, Any]
         max_attempts,           # type: int
         should_retry=None,      # type: Callable[[Exception], bool]
