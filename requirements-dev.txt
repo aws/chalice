@@ -9,7 +9,7 @@ pylint==2.2.2 ; python_version >= '3.6'
 astroid==2.1.0 ; python_version >= '3.6'
 # For python2, there are a few bugs in the latest versions of 1.x,
 # so we're locking to a specific version that we know works.
-pylint==1.9.3 ; python_version >= '3.6'
+pylint==1.9.3 ; python_version <= '2.7'
 astroid==1.6.5 ; python_version <= '2.7'
 pytest-cov==2.5.1
 pydocstyle==2.0.0
