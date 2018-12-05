@@ -554,6 +554,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             )
             status_code = response['statusCode']
             headers = response['headers']
+            headers['Connection'] = 'Close'
             body = response['body']
             self._send_http_response(status_code, headers, body)
         except LocalGatewayException as e:
@@ -615,7 +616,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class LocalDevServer(object):
     def __init__(self, app_object, config, host, port,
                  handler_cls=ChaliceRequestHandler,
-                 server_cls=ThreadedHTTPServer):
+                 server_cls=HTTPServer):
         # type: (Chalice, Config, str, int, HandlerCls, ServerCls) -> None
         self.app_object = app_object
         self.host = host
