@@ -77,7 +77,9 @@ class LambdaDeploymentPackager(object):
     def create_deployment_package(self, project_dir, python_version,
                                   package_filename=None):
         # type: (str, str, Optional[str]) -> str
-        self._ui.write("Creating deployment package.\n")
+        msg = "Creating deployment package."
+        self._ui.write("%s\n" % msg)
+        logger.debug(msg)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
         deployment_package_filename = self.deployment_package_filename(

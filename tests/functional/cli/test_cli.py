@@ -2,6 +2,7 @@ import json
 import zipfile
 import os
 import sys
+import re
 
 import pytest
 from click.testing import CliRunner
@@ -157,7 +158,8 @@ def test_debug_flag_enables_logging(runner):
         result = runner.invoke(
             cli.cli, ['--debug', 'package', 'outdir'], obj={})
         assert result.exit_code == 0
-        assert '[DEBUG]' in result.output
+        assert re.search('[DEBUG].*Creating deployment package',
+                         result.output) is not None
 
 
 def test_does_deploy_with_default_api_gateway_stage_name(runner,
