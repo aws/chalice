@@ -851,7 +851,7 @@ class TestCORSConfig(object):
     def test_not_eq_different_type(self):
         cors_config = app.CORSConfig()
         different_type_obj = object()
-        assert cors_config != different_type_obj
+        assert not cors_config == different_type_obj
 
     def test_not_eq_differing_configurations(self):
         cors_config = app.CORSConfig()
