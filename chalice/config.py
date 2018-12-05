@@ -155,11 +155,11 @@ class Config(object):
         if major == 2:
             return 'python2.7'
         # Python 3 for backwards compatibility needs to select python3.6
-        # for python versions 3.0-3.6. 3.7 will use pytohn3.7, and future
-        # versions of of python 3 will map to 3.7 as well.
-        if minor <= 6:
-            return 'python.3.6'
-        return 'python3.7'
+        # for python versions 3.0-3.6. 3.7 and higher will use python3.7.
+        elif (major, minor) <= (3, 6):
+            return 'python3.6'
+        elif major == 3:
+            return 'python3.7'
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):
