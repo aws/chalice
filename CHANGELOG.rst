@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for python3.7
+  (`#992 <https://github.com/aws/chalice/pull/992>`__)
+
+
 1.6.1
 =====
 
