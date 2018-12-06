@@ -7,6 +7,12 @@ Next Release (TBD)
 
 * Add support for python3.7
   (`#992 <https://github.com/aws/chalice/pull/992>`__)
+* Support bytes for the application/json binary type
+  (`#988 <https://github.com/aws/chalice/issues/988>`__)
+* Use more compact JSON representation by default for dicts
+  (`#958 <https://github.com/aws/chalice/pull/958>`__)
+* Log internal exceptions as errors
+  (`#254 <https://github.com/aws/chalice/issues/254>`__)
 
 
 1.6.1
