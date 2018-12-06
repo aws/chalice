@@ -1315,6 +1315,21 @@ def test_debug_mode_changes_log_level():
     assert test_app.log.getEffectiveLevel() == logging.DEBUG
 
 
+def test_internal_exception_debug_false(capsys, create_event):
+    test_app = app.Chalice('logger-test-5', debug=False)
+
+    @test_app.route('/error')
+    def error():
+        raise Exception('Something bad happened')
+
+    event = create_event('/error', 'GET', {})
+    test_app(event, context=None)
+    out, err = capsys.readouterr()
+    assert 'logger-test-5' in out
+    assert 'Internal Error' in out
+    assert 'Something bad happened' in out
+
+
 def test_raw_body_is_none_if_body_is_none():
     misc_kwargs = {
         'query_params': {},
