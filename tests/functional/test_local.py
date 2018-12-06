@@ -156,7 +156,7 @@ def test_can_accept_get_request(config, sample_app, local_server_factory):
     local_server, port = local_server_factory(sample_app, config)
     response = local_server.make_call(requests.get, '/', port)
     assert response.status_code == 200
-    assert response.text == '{"hello": "world"}'
+    assert response.text == '{"hello":"world"}'
 
 
 def test_can_get_unicode_string_content_length(
@@ -222,7 +222,7 @@ def test_can_accept_multiple_connections(config, sample_app,
             'from going though.'
         )
     assert response.status_code == 200
-    assert response.text == '{"hello": "world"}'
+    assert response.text == '{"hello":"world"}'
 
 
 def test_can_import_env_vars(unused_tcp_port, http_session):
