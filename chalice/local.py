@@ -630,7 +630,7 @@ class LocalDevServer(object):
 
     def serve_forever(self):
         # type: () -> None
-        print("Serving on %s:%s" % (self.host, self.port))
+        print("Serving on http://%s:%s" % (self.host, self.port))
         self.server.serve_forever()
 
     def shutdown(self):
