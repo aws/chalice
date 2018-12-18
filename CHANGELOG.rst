@@ -13,6 +13,8 @@ Next Release (TBD)
   (`#958 <https://github.com/aws/chalice/pull/958>`__)
 * Log internal exceptions as errors
   (`#254 <https://github.com/aws/chalice/issues/254>`__)
+* Generate swagger documentation from docstrings
+  (`#574 <https://github.com/aws/chalice/issues/574>`__)
 
 
 1.6.1
