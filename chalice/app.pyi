@@ -222,3 +222,7 @@ class SQSEventConfig(BaseEventSourceConfig):
 
 class CloudWatchEventConfig(BaseEventSourceConfig):
     schedule_expression = ...  # type: Union[str, ScheduleExpression]
+
+
+class Blueprint(Chalice):
+    pass
