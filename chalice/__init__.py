@@ -1,4 +1,4 @@
-from chalice.app import Chalice
+from chalice.app import Chalice, Blueprint
 from chalice.app import (
     ChaliceViewError, BadRequestError, UnauthorizedError, ForbiddenError,
     NotFoundError, ConflictError, TooManyRequestsError, Response, CORSConfig,

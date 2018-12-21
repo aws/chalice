@@ -63,6 +63,7 @@ Topics
    topics/authorizers
    topics/events
    topics/purelambda
+   topics/blueprints
    topics/cd
 
 

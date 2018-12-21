@@ -894,7 +894,6 @@ def test_can_handle_builtin_auth():
     assert isinstance(authorizer, app.BuiltinAuthConfig)
     assert authorizer.name == 'my_auth'
     assert authorizer.handler_string == 'app.my_auth'
-    assert my_auth.name == 'my_auth'
 
 
 def test_builtin_auth_can_transform_event():
@@ -1607,3 +1606,167 @@ def test_bytes_when_binary_type_is_application_json():
         return Response(body=payload, status_code=200, headers=custom_headers)
 
     return demo
+
+
+def test_can_register_blueprint_on_app():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+
+    @foo.route('/foo')
+    def first():
+        pass
+
+    myapp.register_blueprint(foo)
+    assert sorted(list(myapp.routes.keys())) == ['/foo']
+
+
+def test_can_combine_multiple_blueprints_in_single_app():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+    bar = app.Blueprint('bar')
+
+    @foo.route('/foo')
+    def myfoo():
+        pass
+
+    @bar.route('/bar')
+    def mybar():
+        pass
+
+    myapp.register_blueprint(foo)
+    myapp.register_blueprint(bar)
+
+    assert sorted(list(myapp.routes)) == ['/bar', '/foo']
+
+
+def test_can_mount_apis_at_url_prefix():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+
+    @foo.route('/foo')
+    def myfoo():
+        pass
+
+    @foo.route('/bar')
+    def mybar():
+        pass
+
+    myapp.register_blueprint(foo, url_prefix='/myprefix')
+    assert list(sorted(myapp.routes)) == ['/myprefix/bar', '/myprefix/foo']
+
+
+def test_can_combine_lambda_functions_and_routes_in_blueprints():
+    myapp = app.Chalice('myapp')
+
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.route('/foo')
+    def myfoo():
+        pass
+
+    @foo.lambda_function()
+    def myfunction(event, context):
+        pass
+
+    myapp.register_blueprint(foo)
+    assert len(myapp.pure_lambda_functions) == 1
+    lambda_function = myapp.pure_lambda_functions[0]
+    assert lambda_function.name == 'myfunction'
+    assert lambda_function.handler_string == (
+        'app.chalicelib.blueprints.foo.myfunction')
+
+    assert list(myapp.routes) == ['/foo']
+
+
+def test_can_mount_lambda_functions_with_name_prefix():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.lambda_function()
+    def myfunction(event, context):
+        return event, context
+
+    myapp.register_blueprint(foo, name_prefix='myprefix_')
+    assert len(myapp.pure_lambda_functions) == 1
+    lambda_function = myapp.pure_lambda_functions[0]
+    assert lambda_function.name == 'myprefix_myfunction'
+    assert lambda_function.handler_string == (
+        'app.chalicelib.blueprints.foo.myfunction')
+
+    assert myfunction('foo', 'bar') == ('foo', 'bar')
+
+
+def test_can_mount_event_sources_with_blueprint():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.schedule('rate(5 minutes)')
+    def myfunction(event):
+        return event
+
+    myapp.register_blueprint(foo, name_prefix='myprefix_')
+    assert len(myapp.event_sources) == 1
+    event_source = myapp.event_sources[0]
+    assert event_source.name == 'myprefix_myfunction'
+    assert event_source.schedule_expression == 'rate(5 minutes)'
+    assert event_source.handler_string == (
+        'app.chalicelib.blueprints.foo.myfunction')
+
+
+def test_can_mount_all_decorators_in_blueprint():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.route('/foo')
+    def routefoo():
+        pass
+
+    @foo.lambda_function(name='mylambdafunction')
+    def mylambda(event, context):
+        pass
+
+    @foo.schedule('rate(5 minutes)')
+    def bar(event):
+        pass
+
+    @foo.on_s3_event('MyBucket')
+    def on_s3(event):
+        pass
+
+    @foo.on_sns_message('MyTopic')
+    def on_sns(event):
+        pass
+
+    @foo.on_sqs_message('MyQueue')
+    def on_sqs(event):
+        pass
+
+    myapp.register_blueprint(foo, name_prefix='myprefix_', url_prefix='/bar')
+    event_sources = myapp.event_sources
+    assert len(event_sources) == 4
+    lambda_functions = myapp.pure_lambda_functions
+    assert len(lambda_functions) == 1
+    # Handles the name prefix and the name='' override in the decorator.
+    assert lambda_functions[0].name == 'myprefix_mylambdafunction'
+    assert list(myapp.routes) == ['/bar/foo']
+
+
+def test_can_call_current_request_on_blueprint_when_mounted(create_event):
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/todict')
+    def todict():
+        return bp.current_request.to_dict()
+
+    myapp.register_blueprint(bp)
+    event = create_event('/todict', 'GET', {})
+    response = json_response_body(myapp(event, context=None))
+    assert isinstance(response, dict)
+    assert response['method'] == 'GET'
+
+
+def test_runtime_error_if_current_request_access_on_non_registered_blueprint():
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+    with pytest.raises(RuntimeError):
+        bp.current_request
