@@ -662,7 +662,7 @@ class AppViewTransformer(ast.NodeTransformer):
     _CHALICE_DECORATORS = [
         'route', 'authorizer', 'lambda_function',
         'schedule', 'on_s3_event', 'on_sns_message',
-        'on_sqs_message',
+        'on_sqs_message', 'websocket',
     ]
 
     def visit_FunctionDef(self, node):

@@ -12,7 +12,6 @@ import hypothesis.strategies as st
 from hypothesis import given, assume
 import six
 
-
 from chalice import app
 from chalice import NotFoundError
 from chalice.app import (
@@ -21,6 +20,7 @@ from chalice.app import (
     Response,
     handle_extra_types,
     MultiDict,
+    WebsocketEvent,
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -76,6 +76,24 @@ class FakeLambdaContext(object):
         serialized.update(vars(self))
         serialized['identity'] = vars(self.identity)
         return serialized
+
+
+class FakeClient(object):
+    def __init__(self):
+        self.calls = []
+
+    def post_to_connection(self, ConnectionId, Data):
+        self.calls.append((ConnectionId, Data))
+
+
+class FakeSession(object):
+    def __init__(self, client=None):
+        self.calls = []
+        self._client = client
+
+    def client(self, name, endpoint_url=None):
+        self.calls.append((name, endpoint_url))
+        return self._client
 
 
 @pytest.fixture
@@ -140,6 +158,28 @@ def sample_app_with_cors():
         return {'image': True}
 
     return demo
+
+
+@fixture
+def sample_websocket_app():
+    demo = app.Chalice('app-name')
+    demo.websocket_api.session = FakeSession()
+
+    calls = []
+
+    @demo.on_ws_connect()
+    def connect(event):
+        calls.append(('connect', event))
+
+    @demo.on_ws_disconnect()
+    def disconnect(event):
+        calls.append(('disconnect', event))
+
+    @demo.on_ws_message()
+    def message(event):
+        calls.append(('default', event))
+
+    return demo, calls
 
 
 @fixture
@@ -2033,3 +2073,134 @@ def test_multidict_str():
     assert rep.startswith('MultiDict({')
     assert "'foo': ['bar', 'baz']" in rep
     assert "'buz': ['qux']" in rep
+
+
+def test_can_configure_websockets(sample_websocket_app):
+    demo, _ = sample_websocket_app
+
+    assert len(demo.websocket_handlers) == 3, demo.websocket_handlers
+    assert '$connect' in demo.websocket_handlers, demo.websocket_handlers
+    assert '$disconnect' in demo.websocket_handlers, demo.websocket_handlers
+    assert '$default' in demo.websocket_handlers, demo.websocket_handlers
+
+
+def test_can_route_websocket_connect_message(sample_websocket_app,
+                                             create_websocket_event):
+    demo, calls = sample_websocket_app
+
+    event = create_websocket_event('$connect')
+    response = demo(event, context=None)
+
+    assert response == {'statusCode': 200}
+    assert len(calls) == 1
+    assert calls[0][0] == 'connect'
+    event = calls[0][1]
+    assert isinstance(event, WebsocketEvent)
+    assert event.domain_name == 'abcd1234.us-west-2.amazonaws.com'
+    assert event.stage == 'api'
+    assert event.connection_id == 'ABCD1234='
+
+
+def test_can_route_websocket_disconnect_message(sample_websocket_app,
+                                                create_websocket_event):
+    demo, calls = sample_websocket_app
+
+    event = create_websocket_event('$disconnect')
+    response = demo(event, context=None)
+
+    assert response == {'statusCode': 200}
+    assert len(calls) == 1
+    assert calls[0][0] == 'disconnect'
+    event = calls[0][1]
+    assert isinstance(event, WebsocketEvent)
+    assert event.domain_name == 'abcd1234.us-west-2.amazonaws.com'
+    assert event.stage == 'api'
+    assert event.connection_id == 'ABCD1234='
+
+
+def test_can_route_websocket_default_message(sample_websocket_app,
+                                             create_websocket_event):
+    demo, calls = sample_websocket_app
+    event = create_websocket_event('$default', body='foo bar')
+    response = demo(event, context=None)
+
+    assert response == {'statusCode': 200}
+    assert len(calls) == 1
+    assert calls[0][0] == 'default'
+    event = calls[0][1]
+    assert isinstance(event, WebsocketEvent)
+    assert event.domain_name == 'abcd1234.us-west-2.amazonaws.com'
+    assert event.stage == 'api'
+    assert event.connection_id == 'ABCD1234='
+    assert event.body == 'foo bar'
+
+
+def test_can_configure_client_on_connect(sample_websocket_app,
+                                         create_websocket_event):
+    demo, calls = sample_websocket_app
+
+    event = create_websocket_event('$connect')
+    demo(event, context=None)
+
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.us-west-2.amazonaws.com/api'),
+    ]
+
+
+def test_can_configure_client_on_disconnect(sample_websocket_app,
+                                            create_websocket_event):
+    demo, calls = sample_websocket_app
+
+    event = create_websocket_event('$disconnect')
+    demo(event, context=None)
+
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.us-west-2.amazonaws.com/api'),
+    ]
+
+
+def test_can_configure_client_on_message(sample_websocket_app,
+                                         create_websocket_event):
+    demo, calls = sample_websocket_app
+    event = create_websocket_event('$default', body='foo bar')
+    demo(event, context=None)
+
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.us-west-2.amazonaws.com/api'),
+    ]
+
+
+def test_cannot_configure_client_without_session(sample_websocket_app,
+                                                 create_websocket_event):
+    demo, calls = sample_websocket_app
+    demo.websocket_api.session = None
+    event = create_websocket_event('$default', body='foo bar')
+    with pytest.raises(ValueError) as e:
+        demo(event, context=None)
+
+    assert str(e.value) == (
+        'Assign app.websocket_api.session to a boto3 session before using '
+        'the WebsocketAPI'
+    )
+
+
+def test_can_send_websocket_message(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        demo.websocket_api.send('connection_id', event.body)
+
+    event = create_websocket_event('$default', body='foo bar')
+    demo(event, context=None)
+
+    assert len(client.calls) == 1
+    call = client.calls[0]
+    connection_id, message = call
+    assert connection_id == 'connection_id'
+    assert message == 'foo bar'

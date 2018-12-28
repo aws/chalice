@@ -107,143 +107,15 @@ class RemoteState(object):
         rest_api_id = deployed_values['rest_api_id']
         return self._client.rest_api_exists(rest_api_id)
 
-
-class ResourceSweeper(object):
-
-    def execute(self, plan, config):
-        # type: (models.Plan, Config) -> None
-        instructions = plan.instructions
-        marked = self._mark_resources(instructions)
-        deployed = config.deployed_resources(config.chalice_stage)
-        if deployed is not None:
-            remaining = self._determine_remaining(plan, deployed, marked)
-            self._plan_deletion(instructions, plan.messages,
-                                remaining, deployed)
-
-    def _determine_remaining(self, plan, deployed, marked):
-        # type: (models.Plan, DeployedResources, MarkedResource) -> List[str]
-        remaining = []
-        deployed_resource_names = reversed(deployed.resource_names())
-        for name in deployed_resource_names:
-            resource_values = deployed.resource_values(name)
-            if name not in marked:
-                remaining.append(name)
-            elif resource_values['resource_type'] == 's3_event':
-                # Special case, we have to check the resource values
-                # to see if they've changed.  For s3 events, the resource
-                # name is not tied to the bucket, which means if you change
-                # the bucket, the resource name will stay the same.
-                # So we match up the bucket referenced in the instruction
-                # and the bucket recorded in the deployed values match up.
-                # If they don't then we need to clean up the bucket config
-                # referenced in the deployed values.
-                bucket = [instruction for instruction in marked[name]
-                          if instruction.name == 'bucket' and
-                          isinstance(instruction,
-                                     models.RecordResourceValue)][0]
-                if bucket.value != resource_values['bucket']:
-                    remaining.append(name)
-            elif resource_values['resource_type'] == 'sns_event':
-                existing_topic = resource_values['topic']
-                referenced_topic = [instruction for instruction in marked[name]
-                                    if instruction.name == 'topic' and
-                                    isinstance(instruction,
-                                               models.RecordResourceValue)][0]
-                if referenced_topic.value != existing_topic:
-                    remaining.append(name)
-            elif resource_values['resource_type'] == 'sqs_event':
-                existing_queue = resource_values['queue']
-                referenced_queue = [instruction for instruction in marked[name]
-                                    if instruction.name == 'queue' and
-                                    isinstance(instruction,
-                                               models.RecordResourceValue)][0]
-                if referenced_queue.value != existing_queue:
-                    remaining.append(name)
-        return remaining
-
-    def _mark_resources(self, plan):
-        # type: (List[models.Instruction]) -> MarkedResource
-        marked = {}  # type: MarkedResource
-        for instruction in plan:
-            if isinstance(instruction, models.RecordResource):
-                marked.setdefault(instruction.resource_name, []).append(
-                    instruction)
-        return marked
-
-    def _plan_deletion(self,
-                       plan,       # type: List[models.Instruction]
-                       messages,   # type: Dict[int, str]
-                       remaining,  # type: List[str]
-                       deployed,   # type: DeployedResources
-                       ):
-        # type: (...) -> None
-        for name in remaining:
-            resource_values = deployed.resource_values(name)
-            if resource_values['resource_type'] == 'lambda_function':
-                apicall = models.APICall(
-                    method_name='delete_function',
-                    params={'function_name': resource_values['lambda_arn']},)
-                messages[id(apicall)] = (
-                    "Deleting function: %s\n" % resource_values['lambda_arn'])
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 'iam_role':
-                apicall = models.APICall(
-                    method_name='delete_role',
-                    params={'name': resource_values['role_name']},
-                )
-                messages[id(apicall)] = (
-                    "Deleting IAM role: %s\n" % resource_values['role_name'])
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 'cloudwatch_event':
-                apicall = models.APICall(
-                    method_name='delete_rule',
-                    params={'rule_name': resource_values['rule_name']},
-                )
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 'rest_api':
-                rest_api_id = resource_values['rest_api_id']
-                apicall = models.APICall(
-                    method_name='delete_rest_api',
-                    params={'rest_api_id': rest_api_id}
-                )
-                messages[id(apicall)] = (
-                    "Deleting Rest API: %s\n" % resource_values['rest_api_id'])
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 's3_event':
-                bucket = resource_values['bucket']
-                function_arn = resource_values['lambda_arn']
-                plan.extend([
-                    models.APICall(
-                        method_name='disconnect_s3_bucket_from_lambda',
-                        params={'bucket': bucket, 'function_arn': function_arn}
-                    ),
-                    models.APICall(
-                        method_name='remove_permission_for_s3_event',
-                        params={'bucket': bucket, 'function_arn': function_arn}
-                    )
-                ])
-            elif resource_values['resource_type'] == 'sns_event':
-                subscription_arn = resource_values['subscription_arn']
-                plan.extend([
-                    models.APICall(
-                        method_name='unsubscribe_from_topic',
-                        params={'subscription_arn': subscription_arn},
-                    ),
-                    models.APICall(
-                        method_name='remove_permission_for_sns_topic',
-                        params={
-                            'topic_arn': resource_values['topic_arn'],
-                            'function_arn': resource_values['lambda_arn'],
-                        },
-                    )
-                ])
-            elif resource_values['resource_type'] == 'sqs_event':
-                plan.extend([
-                    models.APICall(
-                        method_name='remove_sqs_event_source',
-                        params={'event_uuid': resource_values['event_uuid']},
-                    )
-                ])
+    def _resource_exists_websocketapi(self, resource):
+        # type: (models.WebsocketAPI) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        api_id = deployed_values['websocket_api_id']
+        return self._client.websocket_api_exists(api_id)
 
 
 class PlanStage(object):
@@ -723,6 +595,169 @@ class PlanStage(object):
             )
         ]
         return plan
+
+    def _plan_websocketapi(self, resource):
+        # type: (models.WebsocketAPI) -> Sequence[InstructionMsg]
+        function = resource.lambda_function
+        function_name = function.function_name
+        varname = '%s_lambda_arn' % function.resource_name
+        lambda_arn_var = Variable(varname)
+        routes = resource.routes
+
+        shared_plan_preamble = [
+            # The various API gateway API calls need
+            # to know the region name and account id so
+            # we'll take care of that up front and store
+            # them in variables.
+            models.BuiltinFunction(
+                'parse_arn',
+                [lambda_arn_var],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            # The swagger doc uses the 'api_handler_lambda_arn'
+            # var name so we need to make sure we populate this variable
+            # before importing the rest API.
+            models.CopyVariable(from_var=varname,
+                                to_var='api_handler_lambda_arn'),
+        ]  # type: List[InstructionMsg]
+
+        # There's also a set of instructions that are needed
+        # at the end of deploying a rest API that apply to both
+        # the update and create case.
+        shared_plan_epilogue = [
+            models.StoreValue(
+                name='websocket_api_url',
+                value=StringFormat(
+                    'wss://{websocket_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/%s/' % resource.api_gateway_stage,
+                    ['websocket_api_id', 'region_name'],
+                ),
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name=resource.resource_name,
+                name='websocket_api_url',
+                variable_name='websocket_api_url',
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': function_name,
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name=resource.resource_name,
+                name='websocket_api_id',
+                variable_name='websocket_api_id',
+            ),
+        ]  # type: List[InstructionMsg]
+
+        main_plan = []  # type: List[InstructionMsg]
+        if not self._remote_state.resource_exists(resource):
+            # The resource does not exist, we create it in full here.
+            main_plan += [
+                (models.APICall(
+                    method_name='create_websocket_api',
+                    params={'name': resource.name},
+                    output_var='websocket_api_id',
+                ), "Creating websocket api: %s\n" % resource.name),
+                models.StoreValue(
+                    name='websocket-integration-lambda-path',
+                    value=StringFormat(
+                        'arn:aws:apigateway:{region_name}:lambda:path/'
+                        '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                        '{account_id}:function:%s/'
+                        'invocations' %
+                        resource.lambda_function.function_name,
+                        ['region_name', 'account_id'],
+                    ),
+                ),
+                models.APICall(
+                    method_name='create_integration',
+                    params={
+                        'integration_name': 'lambda-integration',
+                        'api_id': Variable('websocket_api_id'),
+                        'lambda_function': Variable(
+                            'websocket-integration-lambda-path'),
+                    },
+                    output_var='integration-id',
+                ),
+            ]
+            for route_key in routes:
+                main_plan.append(
+                    models.APICall(
+                        method_name='create_route',
+                        params={
+                            'api_id': Variable('websocket_api_id'),
+                            'route_key': route_key,
+                            'integration_id': Variable('integration-id'),
+                        },
+                    )
+                )
+            main_plan += [
+                models.APICall(
+                    method_name='deploy_websocket_api',
+                    params={
+                        'api_id': Variable('websocket_api_id'),
+                    },
+                    output_var='deployment-id',
+                ),
+                models.APICall(
+                    method_name='create_stage',
+                    params={
+                        'api_id': Variable('websocket_api_id'),
+                        'stage_name': resource.api_gateway_stage,
+                        'deployment_id': Variable('deployment-id'),
+                    }
+                ),
+            ]
+        else:
+            # Already exists. Need to sync up the routes
+            deployed = self._remote_state.resource_deployed_values(resource)
+            main_plan += [
+                models.StoreValue(
+                    name='websocket_api_id',
+                    value=deployed['websocket_api_id']
+                ),
+                models.APICall(
+                    method_name='get_routes',
+                    params={'api_id': Variable('websocket_api_id')},
+                    output_var='routes',
+                ),
+                models.APICall(
+                    method_name='get_integration',
+                    params={'api_id': Variable('websocket_api_id')},
+                    output_var='integration-id',
+                ),
+                models.APICall(
+                    method_name='delete_unused_routes',
+                    params={
+                        'api_id': Variable('websocket_api_id'),
+                        'existing_routes': Variable('routes'),
+                        'current_routes': routes,
+                    },
+                ),
+            ]
+            for route_key in routes:
+                main_plan.append(
+                    models.APICall(
+                        method_name='create_route_if_needed',
+                        params={
+                            'api_id': Variable('websocket_api_id'),
+                            'route_key': route_key,
+                            'integration_id': Variable('integration-id'),
+                            'existing_routes': Variable('routes'),
+                        },
+                    )
+                )
+
+        return shared_plan_preamble + main_plan + shared_plan_epilogue
 
     def _plan_restapi(self, resource):
         # type: (models.RestAPI) -> Sequence[InstructionMsg]

@@ -9,7 +9,7 @@ from chalice.config import DeployedResources
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.deploy.planner import StringFormat
-from chalice.deploy.planner import ResourceSweeper
+from chalice.deploy.sweeper import ResourceSweeper
 
 
 def create_function_resource(name, function_name=None,
@@ -488,6 +488,223 @@ class TestPlanScheduledEvent(BasePlannerTests):
             name='rule_name',
             value='myrulename',
         )
+
+
+class TestPlanWebsocketAPI(BasePlannerTests):
+    def assert_loads_needed_variables(self, plan):
+        # Parse arn and store region/account id for future
+        # API calls.
+        assert plan[0:4] == [
+            models.BuiltinFunction(
+                'parse_arn', [Variable('function_name_lambda_arn')],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            # Verify we copy the function arn as needed.
+            models.CopyVariable(
+                from_var='function_name_lambda_arn',
+                to_var='api_handler_lambda_arn'),
+        ]
+
+    def test_can_plan_websocket_api(self):
+        function = create_function_resource('function_name')
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-dev-websocket-api',
+            api_gateway_stage='api',
+            routes=['$connect', '$default', '$disconnect'],
+            lambda_function=function,
+        )
+        plan = self.determine_plan(websocket_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[4:] == [
+            models.APICall(
+                method_name='create_websocket_api',
+                params={'name': 'app-dev-websocket-api'},
+                output_var='websocket_api_id',
+            ),
+            models.StoreValue(
+                name='websocket-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_integration',
+                params={
+                    'integration_name': 'lambda-integration',
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-integration-lambda-path'),
+                },
+                output_var='integration-id',
+            ),
+            models.APICall(
+                method_name='create_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$connect',
+                    'integration_id': Variable('integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='create_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$default',
+                    'integration_id': Variable('integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='create_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$disconnect',
+                    'integration_id': Variable('integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='deploy_websocket_api',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                },
+                output_var='deployment-id',
+            ),
+            models.APICall(
+                method_name='create_stage',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'stage_name': 'api',
+                    'deployment_id': Variable('deployment-id'),
+                }
+            ),
+            models.StoreValue(
+                name='websocket_api_url',
+                value=StringFormat(
+                    'wss://{websocket_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/%s/' % 'api',
+                    ['websocket_api_id', 'region_name'],
+                ),
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_url',
+                variable_name='websocket_api_url',
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': 'appname-dev-function_name',
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_id',
+                variable_name='websocket_api_id',
+            ),
+        ]
+
+    def test_can_update_websocket_api(self):
+        function = create_function_resource('function_name')
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-dev-websocket-api',
+            api_gateway_stage='api',
+            routes=['$connect', '$default', '$disconnect'],
+            lambda_function=function,
+        )
+        self.remote_state.declare_resource_exists(websocket_api)
+        self.remote_state.deployed_values['websocket_api'] = {
+            'websocket_api_id': 'my_websocket_api_id',
+        }
+        plan = self.determine_plan(websocket_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[4:] == [
+            models.StoreValue(
+                name='websocket_api_id',
+                value='my_websocket_api_id',
+            ),
+            models.APICall(
+                method_name='get_routes',
+                params={'api_id': Variable('websocket_api_id')},
+                output_var='routes',
+            ),
+            models.APICall(
+                method_name='get_integration',
+                params={'api_id': Variable('websocket_api_id')},
+                output_var='integration-id',
+            ),
+            models.APICall(
+                method_name='delete_unused_routes',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'existing_routes': Variable('routes'),
+                    'current_routes': ['$connect', '$default', '$disconnect'],
+                },
+            ),
+            models.APICall(
+                method_name='create_route_if_needed',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$connect',
+                    'integration_id': Variable('integration-id'),
+                    'existing_routes': Variable('routes'),
+                },
+            ),
+            models.APICall(
+                method_name='create_route_if_needed',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$default',
+                    'integration_id': Variable('integration-id'),
+                    'existing_routes': Variable('routes'),
+                },
+            ),
+            models.APICall(
+                method_name='create_route_if_needed',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$disconnect',
+                    'integration_id': Variable('integration-id'),
+                    'existing_routes': Variable('routes'),
+                },
+            ),
+            models.StoreValue(
+                name='websocket_api_url',
+                value=StringFormat(
+                    'wss://{websocket_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/%s/' % 'api',
+                    ['websocket_api_id', 'region_name'],
+                ),
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_url',
+                variable_name='websocket_api_url',
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': 'appname-dev-function_name',
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_id',
+                variable_name='websocket_api_id',
+            ),
+        ]
 
 
 class TestPlanRestAPI(BasePlannerTests):

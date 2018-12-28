@@ -1045,3 +1045,35 @@ Blueprints
       @myblueprint.route('/')
       def index():
           return {'hello': 'world'}
+
+
+Websockets
+==========
+
+.. class:: WebsocketEvent()
+
+  Event object event that is passed as the sole arugment to any handler
+  function decorated with one of the three websocket related handlers:
+  ``on_ws_connect``, ``on_ws_disconnect``, ``on_ws_message``.
+
+  .. attribute:: domain_name
+
+     The domain name of the endpoint for the API Gateway Websocket API.
+
+  .. attribute:: stage
+
+     The API Gateway stage of the Websocket API.
+
+  .. attribute:: connection_id
+
+     A handle that uniquely identifies a connection with API Gateway.
+
+  .. attribute:: body
+
+     The message body received. This is only populated on the ``on_ws_message``
+     otherwise it will be set to ``None``.
+
+  .. attribute:: json_body
+
+     The parsed JSON body (``json.loads(body)``) of the message. If the body is
+     not JSON parsable then using this attribute will raise a ``ValueError``.

@@ -296,6 +296,7 @@ def create_build_stage(osutils, ui, swagger_gen):
                 swagger_generator=swagger_gen,
             ),
             LambdaEventSourcePolicyInjector(),
+            WebsocketPolicyInjector()
         ],
     )
     return build_stage
@@ -395,6 +396,10 @@ class ApplicationGraphBuilder(object):
             rest_api = self._create_rest_api_model(
                 config, deployment, stage_name)
             resources.append(rest_api)
+        if config.chalice_app.websocket_handlers:
+            websocket_api = self._create_websocket_api_model(
+                config, deployment, stage_name)
+            resources.append(websocket_api)
         return models.Application(stage_name, resources)
 
     def _create_lambda_event_resources(self, config, deployment, stage_name):
@@ -462,6 +467,26 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
+        )
+
+    def _create_websocket_api_model(
+            self,
+            config,      # type: Config
+            deployment,  # type: models.DeploymentPackage
+            stage_name,  # type: str
+    ):
+        # type: (...) -> models.WebsocketAPI
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name='websocket_handler',
+            handler_name='app.app', stage_name=stage_name
+        )
+        return models.WebsocketAPI(
+            name='%s-%s-websocket-api' % (config.app_name, stage_name),
+            resource_name='websocket_api',
+            lambda_function=lambda_function,
+            routes=[h.route_key_handled for h
+                    in config.chalice_app.websocket_handlers.values()],
+            api_gateway_stage=config.api_gateway_stage,
         )
 
     def _create_event_model(self,
@@ -811,6 +836,29 @@ class LambdaEventSourcePolicyInjector(BaseDeployStep):
         document['Statement'].append(policy)
 
 
+class WebsocketPolicyInjector(BaseDeployStep):
+    def __init__(self):
+        # type: () -> None
+        self._policy_injected = False
+
+    def handle_websocketapi(self, config, resource):
+        # type: (Config, models.SQSEventSource) -> None
+        role = resource.lambda_function.role
+        if (not self._policy_injected and
+            isinstance(role, models.ManagedIAMRole) and
+            isinstance(role.policy, models.AutoGenIAMPolicy) and
+            not isinstance(role.policy.document,
+                           models.Placeholder)):
+            self._inject_policy(
+                role.policy.document,
+                POST_TO_WEBSOCKET_CONNETION_POLICY.copy())
+            self._policy_injected = True
+
+    def _inject_policy(self, document, policy):
+        # type: (Dict[str, Any], Dict[str, Any]) -> None
+        document['Statement'].append(policy)
+
+
 class PolicyGenerator(BaseDeployStep):
     def __init__(self, policy_gen, osutils):
         # type: (AppPolicyGenerator, OSUtils) -> None
@@ -899,6 +947,12 @@ class DeploymentReporter(object):
         # type: (Dict[str, Any], List[str]) -> None
         report.append(
             '  - Rest API URL: %s' % resource['rest_api_url']
+        )
+
+    def _report_websocket_api(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append(
+            '  - Websocket API URL: %s' % resource['websocket_api_url']
         )
 
     def _report_lambda_function(self, resource, report):

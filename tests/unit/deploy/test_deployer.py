@@ -33,7 +33,8 @@ from chalice.deploy.deployer import create_default_deployer, \
 from chalice.deploy.executor import Executor
 from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanStage
-from chalice.deploy.planner import ResourceSweeper, StringFormat
+from chalice.deploy.planner import StringFormat
+from chalice.deploy.sweeper import ResourceSweeper
 from chalice.deploy.models import APICall
 from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
@@ -311,6 +312,25 @@ def sqs_event_app():
 
     @app.on_sqs_message(queue='myqueue')
     def handler(event):
+        pass
+
+    return app
+
+
+@fixture
+def websocket_app():
+    app = Chalice('websocket-event')
+
+    @app.on_ws_connect()
+    def connect(event):
+        pass
+
+    @app.on_ws_message()
+    def message(event):
+        pass
+
+    @app.on_ws_disconnect()
+    def disconnect(event):
         pass
 
     return app
@@ -712,6 +732,23 @@ class TestApplicationGraphBuilder(object):
         lambda_function = sqs_event.lambda_function
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_websocket_event_handler(self, websocket_app):
+        config = self.create_config(websocket_app,
+                                    app_name='websocket-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        websocket_api = application.resources[0]
+        assert isinstance(websocket_api, models.WebsocketAPI)
+        assert websocket_api.resource_name == 'websocket_api'
+        assert sorted(websocket_api.routes) == sorted(
+            ['$connect', '$default', '$disconnect'])
+        assert websocket_api.api_gateway_stage == 'api'
+        lambda_function = websocket_api.lambda_function
+        assert lambda_function.resource_name == 'websocket_handler'
+        assert lambda_function.handler == 'app.app'
 
 
 class RoleTestCase(object):
