@@ -422,7 +422,7 @@ class DependencyBuilder(object):
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             abi, directory)
         logger.debug(
-            "compatible after building wheels (no C compiling): %s",
+            "compatible after building wheels (C compiling): %s",
             compatible_wheels
         )
         missing_wheels = sdists - compatible_wheels
@@ -435,7 +435,7 @@ class DependencyBuilder(object):
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             abi, directory)
         logger.debug(
-            "compatible after building wheels (C compiling): %s",
+            "compatible after building wheels (no C compiling): %s",
             compatible_wheels
         )
 
