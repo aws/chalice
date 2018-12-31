@@ -21,7 +21,7 @@ class FixedDataConfig(Config):
     def project_dir(self):
         return '.'
 
-    def _load_json_file(self, filename):
+    def _load_yaml_file(self, filename):
         return self.files_to_content.get(filename)
 
 
@@ -163,7 +163,7 @@ def test_can_create_scope_obj_with_new_function():
                 'manage_iam_role': True,
                 'iam_role_arn': 'role-arn',
                 'autogen_policy': True,
-                'iam_policy_file': 'policy.json',
+                'iam_policy_file': 'policy.yml',
                 'environment_variables': {'env': 'stage'},
                 'lambda_timeout': 1,
                 'lambda_memory_size': 1,
@@ -180,7 +180,7 @@ def test_can_create_scope_obj_with_new_function():
                         'manage_iam_role': True,
                         'iam_role_arn': 'auth-role-arn',
                         'autogen_policy': True,
-                        'iam_policy_file': 'function.json',
+                        'iam_policy_file': 'function.yml',
                         'environment_variables': {'env': 'function'},
                         'lambda_timeout': 2,
                         'lambda_memory_size': 2,
@@ -196,7 +196,7 @@ def test_can_create_scope_obj_with_new_function():
     assert new_config.manage_iam_role
     assert new_config.iam_role_arn == 'auth-role-arn'
     assert new_config.autogen_policy
-    assert new_config.iam_policy_file == 'function.json'
+    assert new_config.iam_policy_file == 'function.yml'
     assert new_config.environment_variables == {'env': 'function'}
     assert new_config.lambda_timeout == 2
     assert new_config.lambda_memory_size == 2
@@ -551,7 +551,7 @@ class TestUpgradeNewDeployer(object):
             },
             'schema_version': '2.0',
         }
-        self.deployed_filename = os.path.join('.', '.chalice', 'deployed.json')
+        self.deployed_filename = os.path.join('.', '.chalice', 'deployed.yml')
         self.config = FixedDataConfig(
             {self.deployed_filename: self.old_deployed},
         )
@@ -559,7 +559,7 @@ class TestUpgradeNewDeployer(object):
     def test_can_upgrade_rest_api(self):
         resources = self.config.deployed_resources('dev')
         # The 'default-role' isn't in this list because
-        # it's not in the old deployed.json so it's filled
+        # it's not in the old deployed.yml so it's filled
         # in on the first deploy with the new deployer.
         assert sorted(resources.resource_names()) == [
              'api_handler', 'foo', 'rest_api',

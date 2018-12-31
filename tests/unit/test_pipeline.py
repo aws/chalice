@@ -44,17 +44,11 @@ class TestPipelineGen(object):
     def test_python_36_in_param_default(self):
         template = self.generate_template(lambda_python_version='python3.6')
         assert template['Parameters']['CodeBuildImage']['Default'] == \
-            'aws/codebuild/python:3.6.5'
+            'aws/codebuild/python:3.6.7'
 
     def test_invalid_python_throws_error(self):
         with pytest.raises(InvalidCodeBuildPythonVersion):
             self.generate_template('app', 'python2.6')
-
-    def test_python_37_throws_error(self):
-        # This test can be removed when there is a 3.7 codebuild image
-        # available.
-        with pytest.raises(InvalidCodeBuildPythonVersion):
-            self.generate_template('app', 'python3.7')
 
     def test_nonsense_py_version_throws_error(self):
         with pytest.raises(InvalidCodeBuildPythonVersion):

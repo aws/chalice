@@ -9,10 +9,11 @@ import botocore.session
 import pytest
 import requests
 
-from chalice.cli.factory import CLIFactory
+from chalice.cli.factory import CliFactory
 from chalice.utils import OSUtils, UI
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.config import DeployedResources
+import yaml
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -129,18 +130,18 @@ def smoke_test_app(tmpdir_factory):
 
 
 def _inject_app_name(dirname):
-    config_filename = os.path.join(dirname, '.chalice', 'config.json')
+    config_filename = os.path.join(dirname, '.chalice', 'config.yml')
     with open(config_filename) as f:
-        data = json.load(f)
+        data = yaml.load(f)
     data['app_name'] = RANDOM_APP_NAME
     data['stages']['dev']['environment_variables']['APP_NAME'] = \
         RANDOM_APP_NAME
-    with open(config_filename, 'w') as f:
-        f.write(json.dumps(data, indent=2))
+    with open(config_filename, 'w', encoding='utf-8') as f:
+        yaml.dump(data, indent=2, default_flow_style=False, stream=f)
 
 
 def _deploy_app(temp_dirname):
-    factory = CLIFactory(temp_dirname)
+    factory = CliFactory(temp_dirname)
     config = factory.create_config_obj(
         chalice_stage_name='dev',
         autogen_policy=True
@@ -181,7 +182,7 @@ def _get_error_code_from_exception(exception):
 
 
 def _delete_app(application, temp_dirname):
-    factory = CLIFactory(temp_dirname)
+    factory = CliFactory(temp_dirname)
     config = factory.create_config_obj(
         chalice_stage_name='dev',
         autogen_policy=True
@@ -303,7 +304,7 @@ def test_supports_shared_routes(smoke_test_app):
 def test_can_read_json_body_on_post(smoke_test_app):
     app_url = smoke_test_app.url
     response = requests.post(
-        app_url + '/jsonpost', data=json.dumps({'hello': 'world'}),
+        app_url + '/jsonpost', json={'hello': 'world'},
         headers={'Content-Type': 'application/json'})
     response.raise_for_status()
     assert response.json() == {'json_body': {'hello': 'world'}}

@@ -45,7 +45,7 @@ class TestPackage(object):
         package = 'googleapis-common-protos==1.5.2'
         with open(req, 'w') as f:
             f.write('%s\n' % package)
-        cli_factory = factory.CLIFactory(app_skeleton)
+        cli_factory = factory.CliFactory(app_skeleton)
         package_output_location = os.path.join(app_skeleton, 'pkg')
         result = runner.invoke(
             cli.package, [package_output_location],
@@ -65,7 +65,7 @@ class TestPackage(object):
         package = _get_random_package_name()
         with open(req, 'w') as f:
             f.write('%s\n' % package)
-        cli_factory = factory.CLIFactory(app_skeleton)
+        cli_factory = factory.CliFactory(app_skeleton)
 
         # Try to build a deployment package from the bad requirements file.
         # It should fail with a NoSuchPackageError error since the package

@@ -10,7 +10,7 @@ prefer to structure your application in multiple files.
 You can create a ``chalicelib/`` directory, and anything
 in that directory is recursively included in the deployment
 package.  This means that you can have files besides just
-``.py`` files in ``chalicelib/``, including ``.json`` files
+``.py`` files in ``chalicelib/``, including ``.yml`` files
 for config, or any kind of binary assets.
 
 Let's take a look at a few examples.
@@ -59,14 +59,14 @@ this app structure layout::
     .
     ├── app.py
     ├── chalicelib
-    │   └── config.json
+    │   └── config.yml
     └── requirements.txt
 
 
-With ``chalicelib/config.json`` containing::
+With ``chalicelib/config.yml`` containing::
 
-    {"message": "world"}
-
+    ---
+    message: world
 
 In our ``app.py`` code, we can load and use our config file:
 
@@ -75,15 +75,16 @@ In our ``app.py`` code, we can load and use our config file:
 
     import os
     import json
+    import yaml
 
     from chalice import Chalice
 
     app = Chalice(app_name="multifile")
 
     filename = os.path.join(
-        os.path.dirname(__file__), 'chalicelib', 'config.json')
+        os.path.dirname(__file__), 'chalicelib', 'config.yml')
     with open(filename) as f:
-        config = json.load(f)
+        config = yaml.load(f)
 
     @app.route("/")
     def index():
