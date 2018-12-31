@@ -320,8 +320,7 @@ class PlanStage(object):
             params = {
                 'function_name': resource.function_name,
                 'role_arn': role_arn,
-                'zip_contents': self._osutils.get_file_contents(
-                    filename, binary=True),
+                'zip_contents': self._osutils.get_binary_contents(filename),
                 'runtime': resource.runtime,
                 'handler': resource.handler,
                 'environment_variables': resource.environment_variables,
@@ -330,6 +329,7 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
+                'layers': resource.layers,
             }
             api_calls.extend([
                 (models.APICall(
@@ -350,8 +350,7 @@ class PlanStage(object):
             params = {
                 'function_name': resource.function_name,
                 'role_arn': role_arn,
-                'zip_contents': self._osutils.get_file_contents(
-                    filename, binary=True),
+                'zip_contents': self._osutils.get_binary_contents(filename),
                 'runtime': resource.runtime,
                 'environment_variables': resource.environment_variables,
                 'tags': resource.tags,
@@ -359,6 +358,7 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
+                'layers': resource.layers,
             }
             api_calls.extend([
                 (models.APICall(

@@ -7,11 +7,11 @@ for you.
 """
 from __future__ import print_function
 import os
-import json
 import uuid
 
 from typing import Any, List, Dict, Set  # noqa
 import botocore.session
+import yaml
 
 from chalice.constants import CLOUDWATCH_LOGS, VPC_ATTACH_POLICY
 from chalice.utils import OSUtils  # noqa
@@ -32,21 +32,21 @@ def policy_from_source_code(source_code):
 
 def load_api_policy_actions():
     # type: () -> APIPolicyT
-    return _load_json_file('policies.json')
+    return _load_yaml_file('policies.yml')
 
 
 def load_custom_policy_actions():
     # type: () -> CustomPolicyT
-    return _load_json_file('policies-extra.json')
+    return _load_yaml_file('policies-extra.yml')
 
 
-def _load_json_file(relative_filename):
+def _load_yaml_file(relative_filename):
     # type: (str) -> Dict[str, Any]
-    policy_json = os.path.join(
+    path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         relative_filename)
-    with open(policy_json) as f:
-        return json.loads(f.read())
+    with open(path, encoding='utf-8') as f:
+        return yaml.load(f)
 
 
 def diff_policies(old, new):
@@ -88,7 +88,7 @@ class AppPolicyGenerator(object):
         # This may change in the future.
         app_py = os.path.join(config.project_dir, 'app.py')
         assert self._osutils.file_exists(app_py)
-        app_source = self._osutils.get_file_contents(app_py, binary=False)
+        app_source = self._osutils.get_text_contents(app_py)
         app_policy = policy_from_source_code(app_source)
         app_policy['Statement'].append(CLOUDWATCH_LOGS)
         if config.subnet_ids and config.security_group_ids:

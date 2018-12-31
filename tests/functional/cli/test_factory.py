@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 
+import yaml
 import pytest
 from pytest import fixture
 
@@ -31,8 +32,8 @@ def clifactory(tmpdir):
         'app = chalice.Chalice(app_name="test")\n'
     )
     chalice_dir = appdir.mkdir('.chalice')
-    chalice_dir.join('config.json').write('{}')
-    return factory.CLIFactory(str(appdir))
+    chalice_dir.join('config.yml').write('{}')
+    return factory.CliFactory(str(appdir))
 
 
 def assert_has_no_request_body_filter(log_name):
@@ -56,11 +57,8 @@ def test_can_create_botocore_session():
 def test_can_create_botocore_session_debug():
     log_name = 'botocore.endpoint'
     assert_has_no_request_body_filter(log_name)
-
     factory.create_botocore_session(debug=True)
-
     assert_request_body_filter_in_log(log_name)
-    assert logging.getLogger('').level == logging.DEBUG
 
 
 def test_can_create_botocore_session_connection_timeout():
@@ -115,7 +113,7 @@ def test_can_create_config_obj_default_autogen_policy_true(clifactory):
 
 def test_provided_autogen_policy_overrides_config_file(clifactory):
     config_file = os.path.join(
-        clifactory.project_dir, '.chalice', 'config.json')
+        clifactory.project_dir, '.chalice', 'config.yml')
     with open(config_file, 'w') as f:
         f.write('{"autogen_policy": false}')
     config = clifactory.create_config_obj(autogen_policy=True)
@@ -129,7 +127,7 @@ def test_can_create_config_obj_with_override_autogen(clifactory):
 
 def test_config_file_override_autogen_policy(clifactory):
     config_file = os.path.join(
-        clifactory.project_dir, '.chalice', 'config.json')
+        clifactory.project_dir, '.chalice', 'config.yml')
     with open(config_file, 'w') as f:
         f.write('{"autogen_policy": false}')
     config = clifactory.create_config_obj()
@@ -154,9 +152,9 @@ def test_cant_load_config_obj_with_bad_project(clifactory):
 
 def test_error_raised_on_unknown_config_version(clifactory):
     filename = os.path.join(
-        clifactory.project_dir, '.chalice', 'config.json')
+        clifactory.project_dir, '.chalice', 'config.yml')
     with open(filename, 'w') as f:
-        f.write(json.dumps({"version": "100.0"}))
+        yaml.dump({"version": "100.0"}, f)
 
     with pytest.raises(factory.UnknownConfigFileVersion):
         clifactory.create_config_obj()
@@ -194,11 +192,11 @@ def test_can_import_vendor_package(clifactory):
     assert sys.path[-1] == vendor_lib
 
 
-def test_error_raised_on_invalid_config_json(clifactory):
+def test_error_raised_on_invalid_config_yaml(clifactory):
     filename = os.path.join(
-        clifactory.project_dir, '.chalice', 'config.json')
+        clifactory.project_dir, '.chalice', 'config.yml')
     with open(filename, 'w') as f:
-        f.write("INVALID_JSON")
+        f.write('this is: "invalid\\"')
 
     with pytest.raises(RuntimeError):
         clifactory.create_config_obj()
@@ -240,7 +238,7 @@ def test_can_create_lambda_invoke_handler(clifactory):
     stage = 'dev'
     deployed_dir = os.path.join(clifactory.project_dir, '.chalice', 'deployed')
     os.mkdir(deployed_dir)
-    deployed_file = os.path.join(deployed_dir, '%s.json' % stage)
+    deployed_file = os.path.join(deployed_dir, '%s.yml' % stage)
     with open(deployed_file, 'w') as f:
         f.write(json.dumps({
             'resources': [
@@ -267,7 +265,7 @@ def test_does_raise_not_found_error_when_resource_is_not_lambda(clifactory):
     stage = 'dev'
     deployed_dir = os.path.join(clifactory.project_dir, '.chalice', 'deployed')
     os.mkdir(deployed_dir)
-    deployed_file = os.path.join(deployed_dir, '%s.json' % stage)
+    deployed_file = os.path.join(deployed_dir, '%s.yml' % stage)
     with open(deployed_file, 'w') as f:
         f.write(json.dumps({
             'resources': [

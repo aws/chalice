@@ -10,6 +10,7 @@ from chalice.compat import StringIO
 
 
 OptStr = Optional[str]
+OptBytes = Optional[bytes]
 _ERROR_KEY = 'FunctionError'
 _ERROR_VALUE = 'Unhandled'
 
@@ -37,7 +38,7 @@ class LambdaInvokeHandler(object):
         self._ui = ui
 
     def invoke(self, payload=None):
-        # type: (OptStr) -> None
+        # type: (OptBytes) -> None
         response = self._invoker.invoke(payload)
         formatted_response = self._formatter.format_response(response)
         if _response_is_error(response):
@@ -54,7 +55,7 @@ class LambdaInvoker(object):
         self._client = client
 
     def invoke(self, payload=None):
-        # type: (OptStr) -> Dict[str, Any]
+        # type: (OptBytes) -> Dict[str, Any]
         return self._client.invoke_function(
             self._lambda_arn,
             payload=payload

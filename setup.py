@@ -8,6 +8,7 @@ with open('README.rst') as readme_file:
 
 install_requires = [
     'click>=6.6,<7.0',
+    'boto3>=1.9.73',
     'botocore>=1.10.48,<2.0.0',
     'typing==3.6.4',
     'six>=1.10.0,<2.0.0',
@@ -16,12 +17,13 @@ install_requires = [
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
     'wheel',
-    'setuptools'
+    'setuptools',
+    'pyyaml',
 ]
 
 setup(
-    name='chalice',
-    version='1.6.1',
+    name='parfait',
+    version='0.1',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
@@ -33,13 +35,17 @@ setup(
         'event-file-poller': ['watchdog==0.8.3'],
     },
     license="Apache License 2.0",
-    package_data={'chalice': ['*.json']},
+    package_data={
+        'chalice': [ '*.json', '*.yml' ],
+        # 'parfait': [ '*.json', '*.yml' ],
+    },
     include_package_data=True,
     zip_safe=False,
-    keywords='chalice',
+    keywords='chalice,parfait,aws,lambda,amazon web services',
     entry_points={
         'console_scripts': [
             'chalice = chalice.cli:main',
+            # 'parfait = parfait.cli:main',
         ]
     },
     classifiers=[
@@ -47,8 +53,8 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.7',
+        "Programming Language :: Python :: 3",
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 )

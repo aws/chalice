@@ -1,13 +1,14 @@
-import json
-import zipfile
+from io import StringIO
+import logging
 import os
-import sys
 import re
+import zipfile
 
 import pytest
 from click.testing import CliRunner
 import mock
 from botocore.exceptions import ClientError
+import yaml
 
 from chalice import cli
 from chalice.cli import factory
@@ -36,7 +37,7 @@ def runner():
 
 @pytest.fixture
 def mock_cli_factory():
-    cli_factory = mock.Mock(spec=factory.CLIFactory)
+    cli_factory = mock.Mock(spec=factory.CliFactory)
     cli_factory.create_config_obj.return_value = Config.create(project_dir='.')
     cli_factory.create_botocore_session.return_value = mock.sentinel.Session
     return cli_factory
@@ -56,7 +57,7 @@ def _run_cli_command(runner, function, args, cli_factory=None):
     # click doesn't support this natively so we have to duplicate
     # what 'def cli(...)' is doing.
     if cli_factory is None:
-        cli_factory = factory.CLIFactory('.')
+        cli_factory = factory.CliFactory('.')
     result = runner.invoke(
         function, args, obj={'project_dir': '.', 'debug': False,
                              'factory': cli_factory})
@@ -94,7 +95,7 @@ def test_can_load_project_config_after_project_creation(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
-        config = factory.CLIFactory('testproject').load_project_config()
+        config = factory.CliFactory('testproject').load_project_config()
         assert config == {
             'version': '2.0',
             'app_name': 'testproject',
@@ -108,7 +109,7 @@ def test_default_new_project_adds_index_route(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
-        app = factory.CLIFactory('testproject').load_chalice_app()
+        app = factory.CliFactory('testproject').load_chalice_app()
         assert '/' in app.routes
 
 
@@ -118,8 +119,9 @@ def test_gen_policy_command_creates_policy(runner):
         os.chdir('testproject')
         result = runner.invoke(cli.cli, ['gen-policy'], obj={})
         assert result.exit_code == 0
-        # The output should be valid JSON.
-        parsed_policy = json.loads(result.output)
+        # The output should be valid yaml.
+        buffer = StringIO(result.output)
+        parsed_policy = yaml.load(buffer)
         # We don't want to validate the specific parts of the policy
         # (that's tested elsewhere), but we'll check to make sure
         # it looks like a policy document.
@@ -135,7 +137,7 @@ def test_can_package_command(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isdir('outdir')
         dir_contents = os.listdir('outdir')
-        assert 'sam.json' in dir_contents
+        assert 'sam.yml' in dir_contents
         assert 'deployment.zip' in dir_contents
 
 
@@ -148,7 +150,7 @@ def test_can_package_with_single_file(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('package.zip')
         with zipfile.ZipFile('package.zip', 'r') as f:
-            assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
+            assert sorted(f.namelist()) == ['deployment.zip', 'sam.yml']
 
 
 def test_debug_flag_enables_logging(runner):
@@ -157,6 +159,7 @@ def test_debug_flag_enables_logging(runner):
         os.chdir('testproject')
         result = runner.invoke(
             cli.cli, ['--debug', 'package', 'outdir'], obj={})
+        assert logging.getLogger('').level == logging.DEBUG
         assert result.exit_code == 0
         assert re.search('[DEBUG].*Creating deployment package',
                          result.output) is not None
@@ -171,7 +174,7 @@ def test_does_deploy_with_default_api_gateway_stage_name(runner,
         # create the config_obj like the deploy() command does,
         # it should give us more confidence that the api gateway
         # stage defaults are still working.
-        cli_factory = factory.CLIFactory('.')
+        cli_factory = factory.CliFactory('.')
         config = cli_factory.create_config_obj(
             chalice_stage_name='dev',
             autogen_policy=None,
@@ -231,11 +234,11 @@ def test_can_retrieve_url(runner, mock_cli_factory):
         os.makedirs(deployed_dir)
         record_deployed_values(
             deployed_values_dev,
-            os.path.join(deployed_dir, 'dev.json')
+            os.path.join(deployed_dir, 'dev.yml')
         )
         record_deployed_values(
             deployed_values_prod,
-            os.path.join(deployed_dir, 'prod.json')
+            os.path.join(deployed_dir, 'prod.yml')
         )
         result = _run_cli_command(runner, cli.url, [],
                                   cli_factory=mock_cli_factory)
@@ -258,18 +261,16 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
         assert 'not find' in result.output
 
 
-@pytest.mark.skipif(sys.version_info[:2] == (3, 7),
-                    reason="Cannot generate pipeline for python3.7.")
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
-            runner, cli.generate_pipeline, ['pipeline.json'])
+            runner, cli.generate_pipeline, ['pipeline.yml'])
         assert result.exit_code == 0, result.output
-        assert os.path.isfile('pipeline.json')
-        with open('pipeline.json', 'r') as f:
-            template = json.load(f)
+        assert os.path.isfile('pipeline.yml')
+        with open('pipeline.yml', 'r') as f:
+            template = yaml.load(f)
             # The actual contents are tested in the unit
             # tests.  Just a sanity check that it looks right.
             assert "AWSTemplateFormatVersion" in template
@@ -282,11 +283,11 @@ def test_no_errors_if_override_codebuild_image(runner):
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.generate_pipeline,
-            ['-i', 'python:3.6.1', 'pipeline.json'])
+            ['-i', 'python:3.6.1', 'pipeline.yml'])
         assert result.exit_code == 0, result.output
-        assert os.path.isfile('pipeline.json')
-        with open('pipeline.json', 'r') as f:
-            template = json.load(f)
+        assert os.path.isfile('pipeline.yml')
+        with open('pipeline.yml', 'r') as f:
+            template = yaml.load(f)
             # The actual contents are tested in the unit
             # tests.  Just a sanity check that it looks right.
             image = template['Parameters']['CodeBuildImage']['Default']
@@ -301,11 +302,11 @@ def test_can_configure_github(runner):
         # test on python3.6
         result = _run_cli_command(
             runner, cli.generate_pipeline,
-            ['--source', 'github', '-i' 'python:3.6.1', 'pipeline.json'])
+            ['--source', 'github', '-i' 'python:3.6.1', 'pipeline.yml'])
         assert result.exit_code == 0, result.output
-        assert os.path.isfile('pipeline.json')
-        with open('pipeline.json', 'r') as f:
-            template = json.load(f)
+        assert os.path.isfile('pipeline.yml')
+        with open('pipeline.yml', 'r') as f:
+            template = yaml.load(f)
             # The template is already tested in the unit tests
             # for template generation.  We just want a basic
             # sanity check to make sure things are mapped
@@ -322,7 +323,7 @@ def test_can_extract_buildspec_yaml(runner):
             runner, cli.generate_pipeline,
             ['--buildspec-file', 'buildspec.yml',
              '-i', 'python:3.6.1',
-             'pipeline.json'])
+             'pipeline.yml'])
         assert result.exit_code == 0, result.output
         assert os.path.isfile('buildspec.yml')
         with open('buildspec.yml') as f:

@@ -9,10 +9,11 @@ import botocore.session
 import pytest
 import requests
 
-from chalice.cli.factory import CLIFactory
+from chalice.cli.factory import CliFactory
 from chalice.utils import OSUtils, UI
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.config import DeployedResources
+import yaml
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -90,7 +91,7 @@ class SmokeTestApplication(object):
         time.sleep(self._REDEPLOY_SLEEP)
         self._wait_for_stablize()
 
-    @retry(max_attempts=10, delay=5)
+    @retry(max_attempts=3, delay=5)
     def _wait_for_stablize(self):
         # After a deployment we sometimes need to wait for
         # API Gateway to propagate all of its changes.
@@ -129,18 +130,18 @@ def smoke_test_app(tmpdir_factory):
 
 
 def _inject_app_name(dirname):
-    config_filename = os.path.join(dirname, '.chalice', 'config.json')
+    config_filename = os.path.join(dirname, '.chalice', 'config.yml')
     with open(config_filename) as f:
-        data = json.load(f)
+        data = yaml.load(f)
     data['app_name'] = RANDOM_APP_NAME
     data['stages']['dev']['environment_variables']['APP_NAME'] = \
         RANDOM_APP_NAME
-    with open(config_filename, 'w') as f:
-        f.write(json.dumps(data, indent=2))
+    with open(config_filename, 'w', encoding='utf-8') as f:
+        yaml.dump(data, indent=2, default_flow_style=False, stream=f)
 
 
 def _deploy_app(temp_dirname):
-    factory = CLIFactory(temp_dirname)
+    factory = CliFactory(temp_dirname)
     config = factory.create_config_obj(
         chalice_stage_name='dev',
         autogen_policy=True
@@ -159,7 +160,7 @@ def _deploy_app(temp_dirname):
     return application
 
 
-@retry(max_attempts=10, delay=20)
+@retry(max_attempts=3, delay=20)
 def _deploy_with_retries(deployer, config):
     try:
         deployed_stages = deployer.deploy(config, 'dev')
@@ -181,7 +182,7 @@ def _get_error_code_from_exception(exception):
 
 
 def _delete_app(application, temp_dirname):
-    factory = CLIFactory(temp_dirname)
+    factory = CliFactory(temp_dirname)
     config = factory.create_config_obj(
         chalice_stage_name='dev',
         autogen_policy=True
@@ -256,7 +257,7 @@ def test_multi_doc_mapped_in_api(smoke_test_app, apig_client):
     assert doc_props['description'] == 'And here is another line.'
 
 
-@retry(max_attempts=18, delay=10)
+@retry(max_attempts=3, delay=10)
 def _get_resource_id(apig_client, rest_api_id, path):
     # This is the resource id for the '/path/{name}'
     # route.  As far as I know this is the best way to get
@@ -303,7 +304,7 @@ def test_supports_shared_routes(smoke_test_app):
 def test_can_read_json_body_on_post(smoke_test_app):
     app_url = smoke_test_app.url
     response = requests.post(
-        app_url + '/jsonpost', data=json.dumps({'hello': 'world'}),
+        app_url + '/jsonpost', json={'hello': 'world'},
         headers={'Content-Type': 'application/json'})
     response.raise_for_status()
     assert response.json() == {'json_body': {'hello': 'world'}}

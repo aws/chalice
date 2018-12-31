@@ -3,13 +3,13 @@ import pytest
 import re
 
 from chalice import cli
-from chalice.cli.factory import CLIFactory
+from chalice.cli.factory import CliFactory
 from chalice.local import LocalDevServer
 
 
 def test_cannot_run_local_mode_with_trailing_slash_route():
     local_stage_test = 'local_test'
-    factory = mock.Mock(spec=CLIFactory)
+    factory = mock.Mock(spec=CliFactory)
     factory.create_config_obj.return_value.environment_variables = {}
     factory.create_config_obj.return_value.chalice_app.routes = {
         'foobar/': None

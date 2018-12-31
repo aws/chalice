@@ -20,18 +20,19 @@ from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ReadTimeout
-from chalice.cli.factory import CLIFactory
+from chalice.cli.factory import CliFactory
 from chalice.cli.factory import NoSuchFunctionError
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
-from chalice.utils import getting_started_prompt, UI, serialize_to_json
+from chalice.utils import getting_started_prompt, UI, serialize_to_yaml
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.constants import FANCY_NAME
 from chalice.invoke import UnhandledLambdaError
 
 
@@ -52,7 +53,7 @@ def create_new_project_skeleton(project_name, profile=None):
     # type: (str, Optional[str]) -> None
     chalice_dir = os.path.join(project_name, '.chalice')
     os.makedirs(chalice_dir)
-    config = os.path.join(project_name, '.chalice', 'config.json')
+    config = os.path.join(project_name, '.chalice', 'config.yml')
     cfg = {
         'version': CONFIG_VERSION,
         'app_name': project_name,
@@ -65,7 +66,7 @@ def create_new_project_skeleton(project_name, profile=None):
     if profile is not None:
         cfg['profile'] = profile
     with open(config, 'w') as f:
-        f.write(serialize_to_json(cfg))
+        f.write(serialize_to_yaml(cfg))
     with open(os.path.join(project_name, 'requirements.txt'), 'w'):
         pass
     with open(os.path.join(project_name, 'app.py'), 'w') as f:
@@ -87,7 +88,7 @@ def get_system_info():
 
 @click.group()
 @click.version_option(version=chalice_version,
-                      message='%(prog)s %(version)s, {}'
+                      message=FANCY_NAME + '%(prog)s %(version)s, {}'
                       .format(get_system_info()))
 @click.option('--project-dir',
               help='The project directory.  Defaults to CWD')
@@ -103,7 +104,7 @@ def cli(ctx, project_dir, debug=False):
         _configure_logging(logging.DEBUG)
     ctx.obj['project_dir'] = project_dir
     ctx.obj['debug'] = debug
-    ctx.obj['factory'] = CLIFactory(project_dir, debug, environ=os.environ)
+    ctx.obj['factory'] = CliFactory(project_dir, debug, environ=os.environ)
     os.chdir(project_dir)
 
 
@@ -119,7 +120,7 @@ def cli(ctx, project_dir, debug=False):
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
           autoreload=True):
     # type: (click.Context, str, int, str, bool) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     from chalice.cli import reloader
     # We don't create the server here because that will bind the
     # socket and we only want to do this in the worker process.
@@ -145,7 +146,7 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
 
 
 def create_local_server(factory, host, port, stage):
-    # type: (CLIFactory, str, int, str) -> LocalDevServer
+    # type: (CliFactory, str, int, str) -> LocalDevServer
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
@@ -159,7 +160,7 @@ def create_local_server(factory, host, port, stage):
 
 
 def run_local_server(factory, host, port, stage):
-    # type: (CLIFactory, str, int, str) -> None
+    # type: (CliFactory, str, int, str) -> None
     server = create_local_server(factory, host, port, stage)
     server.serve_forever()
 
@@ -183,7 +184,7 @@ def run_local_server(factory, host, port, stage):
 def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
            connection_timeout):
     # type: (click.Context, Optional[bool], str, str, str, int) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     factory.profile = profile
     config = factory.create_config_obj(
         chalice_stage_name=stage, autogen_policy=autogen_policy,
@@ -216,7 +217,7 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
 def invoke(ctx, name, profile, stage):
     # type: (click.Context, str, str, str) -> None
     """Invoke the deployed lambda function NAME."""
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     factory.profile = profile
 
     try:
@@ -253,7 +254,7 @@ def invoke(ctx, name, profile, stage):
 @click.pass_context
 def delete(ctx, profile, stage):
     # type: (click.Context, str, str) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     factory.profile = profile
     config = factory.create_config_obj(chalice_stage_name=stage)
     session = factory.create_botocore_session()
@@ -275,7 +276,7 @@ def delete(ctx, profile, stage):
 @click.pass_context
 def logs(ctx, num_entries, include_lambda_messages, stage, name, profile):
     # type: (click.Context, int, bool, str, str, str) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
     deployed = config.deployed_resources(stage)
@@ -303,7 +304,7 @@ def gen_policy(ctx, filename):
     with open(filename) as f:
         contents = f.read()
         generated = policy.policy_from_source_code(contents)
-        click.echo(serialize_to_json(generated))
+        click.echo(serialize_to_yaml(generated))
 
 
 @cli.command('new-project')
@@ -325,7 +326,7 @@ def new_project(project_name, profile):
 @click.pass_context
 def url(ctx, stage):
     # type: (click.Context, str) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     config = factory.create_config_obj(stage)
     deployed = config.deployed_resources(stage)
     if deployed is not None and 'rest_api' in deployed.resource_names():
@@ -346,7 +347,7 @@ def url(ctx, stage):
 @click.pass_context
 def generate_sdk(ctx, sdk_type, stage, outdir):
     # type: (click.Context, str, str, str) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     config = factory.create_config_obj(stage)
     session = factory.create_botocore_session()
     client = TypedAWSClient(session)
@@ -377,7 +378,7 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
 @click.pass_context
 def package(ctx, single_file, stage, out):
     # type: (click.Context, bool, str, str) -> None
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     config = factory.create_config_obj(stage)
     packager = factory.create_app_packager(config)
     if single_file:
@@ -433,7 +434,7 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
             --template-file pipeline.json --capabilities CAPABILITY_IAM
     """
     from chalice import pipeline
-    factory = ctx.obj['factory']  # type: CLIFactory
+    factory = ctx.obj['factory']  # type: CliFactory
     config = factory.create_config_obj()
     p = pipeline.CreatePipelineTemplate()
     params = pipeline.PipelineParameters(
@@ -449,7 +450,7 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
         with open(buildspec_file, 'w') as f:
             f.write(buildspec_contents)
     with open(filename, 'w') as f:
-        f.write(serialize_to_json(output))
+        f.write(serialize_to_yaml(output))
 
 
 def main():

@@ -25,6 +25,7 @@ import uuid
 
 import botocore.session  # noqa
 from botocore.exceptions import ClientError
+from botocore.response import StreamingBody
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
@@ -39,8 +40,8 @@ StrMap = Optional[Dict[str, str]]
 OptStr = Optional[str]
 OptInt = Optional[int]
 OptStrList = Optional[List[str]]
+OptDictList = Optional[List[Dict]]
 ClientMethod = Callable[..., Dict[str, Any]]
-
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
 )
@@ -89,6 +90,7 @@ class TypedAWSClient(object):
     # 30 * 5 == 150 seconds or 2.5 minutes for the initial lambda
     # creation + role propagation.
     LAMBDA_CREATE_ATTEMPTS = 30
+    LAYER_GET_ATTEMPTS = 3
     DELAY_TIME = 5
 
     def __init__(self, session, sleep=time.sleep):
@@ -140,6 +142,7 @@ class TypedAWSClient(object):
                         memory_size=None,            # type: OptInt
                         security_group_ids=None,     # type: OptStrList
                         subnet_ids=None,             # type: OptStrList
+                        layers=None,                 # type: OptDictList
                         ):
         # type: (...) -> str
         kwargs = {
@@ -162,7 +165,54 @@ class TypedAWSClient(object):
                 security_group_ids=security_group_ids,
                 subnet_ids=subnet_ids,
             )
+        if layers:
+            kwargs['Layers'] = self._get_layer_arns(layers)
         return self._create_lambda_function(kwargs)
+
+    def _get_layer_version_arn(self, name, version):
+        client = self._client('lambda')
+        return self._call_client_method_with_retries(
+            client.get_layer_version,
+            kwargs={
+                'LayerName': name,
+                'VersionNumber': version,
+            }, max_attempts=self.LAYER_GET_ATTEMPTS,
+        )['LayerVersionArn']
+
+    def _get_layer_latest_arn(self, name):
+        client = self._client('lambda')
+        params = { 'LayerName': name, }
+        marker, first = None, True
+        versions = []
+        while marker or first:
+            if first:
+                first = False
+            if marker:
+                params['Marker'] = marker
+            response = self._call_client_method_with_retries(
+                client.list_layer_versions,
+                kwargs=params, max_attempts=self.LAYER_GET_ATTEMPTS,
+            )
+            marker = response.get('Marker')
+            versions += response['LayerVersions']
+        n_max = versions[0]
+        max_created_date = n_max['CreatedDate']
+        for x in versions[1:]:
+            if x['CreatedDate'] > max_created_date:
+                n_max = x
+                max_created_date = x['CreatedDate']
+        return n_max['LayerVersionArn']
+
+    def _get_layer_arns(self, layers):
+        # type: (List[Dict]]) -> List[str]
+        arns = []
+        for x in layers:
+            if 'version' in x:
+                arn = self._get_layer_version_arn(x['name'], x['version'])
+            else:
+                arn = self._get_layer_latest_arn(x['name'])
+            arns.append(arn)
+        return arns
 
     def _create_lambda_function(self, api_args):
         # type: (Dict[str, Any]) -> str
@@ -186,9 +236,10 @@ class TypedAWSClient(object):
             return True
         return False
 
-    def invoke_function(self, name, payload=None):
-        # type: (str, bytes) -> Dict[str, Any]
-        kwargs = {
+    def invoke_function(
+            self, name: str,
+            payload: bytes = None) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = {
             'FunctionName': name,
             'InvocationType': 'RequestResponse',
         }
@@ -251,6 +302,7 @@ class TypedAWSClient(object):
                         role_arn=None,               # type: OptStr
                         subnet_ids=None,             # type: OptStrList
                         security_group_ids=None,     # type: OptStrList
+                        layers=None,                 # type: OptDictList
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -269,7 +321,8 @@ class TypedAWSClient(object):
             role_arn=role_arn,
             subnet_ids=subnet_ids,
             security_group_ids=security_group_ids,
-            function_name=function_name
+            function_name=function_name,
+            layers=layers,
         )
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
@@ -311,6 +364,7 @@ class TypedAWSClient(object):
                                 role_arn,               # type: OptStr
                                 subnet_ids,             # type: OptStrList
                                 security_group_ids,     # type: OptStrList
+                                layers,                 # type: OptDictList
                                 function_name,          # type: str
                                 ):
         # type: (...) -> None
@@ -330,6 +384,8 @@ class TypedAWSClient(object):
                 subnet_ids=subnet_ids,
                 security_group_ids=security_group_ids
             )
+        if layers:
+            kwargs['Layers'] = self._get_layer_arns(layers=layers)
         if kwargs:
             kwargs['FunctionName'] = function_name
             lambda_client = self._client('lambda')
@@ -549,10 +605,9 @@ class TypedAWSClient(object):
             "The downloaded SDK had an unexpected directory structure: %s" %
             (', '.join(dirnames)))
 
-    def get_sdk_download_stream(self, rest_api_id,
-                                api_gateway_stage=DEFAULT_STAGE_NAME,
-                                sdk_type='javascript'):
-        # type: (str, str, str) -> file
+    def get_sdk_download_stream(self, rest_api_id: str,
+                                api_gateway_stage: str = DEFAULT_STAGE_NAME,
+                                sdk_type: str = 'javascript') -> StreamingBody:
         """Generate an SDK for a given SDK.
 
         Returns a file like object that streams a zip contents for the
