@@ -8,7 +8,7 @@ Next Release (TBD)
 * Add support for pip 18.2
   (`#991 <https://github.com/aws/chalice/pull/991>`__)
 * Add more detailed debug logs to the packager.
-  (`#994 <https://github.com/aws/chalice/pull/934>`__)
+  (`#934 <https://github.com/aws/chalice/pull/934>`__)
 * Add support for python3.7
   (`#992 <https://github.com/aws/chalice/pull/992>`__)
 * Support bytes for the application/json binary type
