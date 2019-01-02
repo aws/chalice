@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.6.2
+=====
 
 * Add support for pip 18.2
   (`#991 <https://github.com/aws/chalice/pull/991>`__)
