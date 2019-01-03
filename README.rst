@@ -120,7 +120,9 @@ is recommended::
 Note: **make sure you are using python2.7, python3.6, or python3.7**.
 These are the only python versions currently supported by AWS Lambda so they
 are also the only versions supported by the ``chalice`` CLI and ``chalice``
-python package. You can check the version of python in your virtualenv by
+python package. You can find the latest versions of python on the
+`Python download page <https://www.python.org/downloads/>`_. You can check
+the version of python in your virtualenv by
 running::
 
     # Double check you have a supported python version in your virtualenv
