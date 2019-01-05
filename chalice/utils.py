@@ -95,10 +95,10 @@ def serialize_to_yaml(data):
     to serialize yaml  to disk.
 
     """
-    buffer = io.StringIO()
-    buffer.write('---\n')
-    yaml.dump(data, indent=2, stream=buffer, default_flow_style=False)
-    return buffer.getvalue()
+    b = io.StringIO()
+    b.write('---\n')
+    yaml.dump(data, indent=2, stream=b, default_flow_style=False)
+    return b.getvalue()
 
 
 def create_zip_file(source_dir, outfile):
