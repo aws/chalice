@@ -44,7 +44,7 @@ def create_botocore_session(profile=None, debug=False,
     _add_chalice_user_agent(s)
     if debug:
         _inject_large_request_body_filter()
-    config_args: Dict[str, Any] = {}
+    config_args = {}  # type: Dict[str, Any]
     if connection_timeout is not None:
         config_args['connect_timeout'] = connection_timeout
     if read_timeout is not None:
@@ -150,8 +150,10 @@ class CliFactory(object):
             raise RuntimeError("Unable to load the project config file. "
                                "Are you sure this is a chalice project?")
         except (ValueError, ScannerError) as err:
-            raise RuntimeError(f'Unable to load the '
-                               f'project config file: {err}')
+            raise RuntimeError(
+                'Unable to load the '
+                'project config file: {err}'.format(
+                    err=err))
 
         self._validate_config_from_disk(config_from_disk)
         if autogen_policy is not None:

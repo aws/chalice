@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 
@@ -357,7 +358,7 @@ class Config(object):
             deployed_file = replace_yaml_extension(deployed_file)
         if not os.path.isfile(deployed_file):
             return None
-        with open(deployed_file, 'r', encoding='utf-8') as f:
+        with io.open(deployed_file, 'r', encoding='utf-8') as f:
             return yaml.load(f)
 
     def _upgrade_deployed_values(self, chalice_stage_name, data):

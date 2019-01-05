@@ -5,7 +5,9 @@ and make a best effort attempt to generate an IAM policy
 for you.
 
 """
+
 from __future__ import print_function
+import io
 import os
 import uuid
 
@@ -45,7 +47,7 @@ def _load_yaml_file(relative_filename):
     path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         relative_filename)
-    with open(path, encoding='utf-8') as f:
+    with io.open(path, encoding='utf-8') as f:
         return yaml.load(f)
 
 

@@ -50,6 +50,7 @@ def remove_stage_from_deployed_values(key, filename):
     # type: (str, str) -> None
     """Delete a top level key from the deployed yaml file."""
     final_values = {}  # type: Dict[str, Any]
+    f = None  # type: Optional[IO[Any]]
     try:
         with open(filename, 'r') as f:
             final_values = yaml.load(f)
@@ -59,7 +60,7 @@ def remove_stage_from_deployed_values(key, filename):
 
     try:
         del final_values[key]
-        with open(filename, 'w', encoding='utf-8') as f:
+        with io.open(filename, 'w', encoding='utf-8') as f:
             data = serialize_to_yaml(final_values)
             f.write(data)
     except KeyError:
@@ -75,17 +76,18 @@ def record_deployed_values(deployed_values, filename):
 
     """
     final_values = {}  # type: Dict[str, Any]
+    f = None  # type: Optional[IO[Any]]
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
             final_values = yaml.load(f)
     final_values.update(deployed_values)
-    with open(filename, 'w', encoding='utf-8') as f:
+    with io.open(filename, 'w', encoding='utf-8') as f:
         data = serialize_to_yaml(final_values)
         f.write(data)
 
 
 def serialize_to_yaml(data):
-    # type: (Any) -> str
+    # type: (Any) -> Any
     """Serialize to pretty printed yaml.
 
     This includes using 2 space indentation, no trailing whitespace, and
@@ -162,7 +164,7 @@ class OSUtils(object):
             return f.read()
 
     def get_buffered_contents(self, filename, binary=True, encoding='utf-8'):
-        # type: (str, bool, Any) -> io.TextIOWrapper
+        # type: (str, bool, Any) -> IO[Any]
         # It looks like the type definition for io.open is wrong.
         # the encoding arg is unicode, but the actual type is
         # Optional[Text].  For now we have to use Any to keep mypy happy.
@@ -320,7 +322,8 @@ class PipeReader(object):
         return None
 
 
-def replace_yaml_extension(yaml_filename: str) -> str:
+def replace_yaml_extension(yaml_filename):
+    # type: (str) -> str
     """
     Replace yaml suffixes with json suffixes.
 
