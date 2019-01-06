@@ -64,7 +64,7 @@ def create_new_project_skeleton(project_name, profile=None):
     }
     if profile is not None:
         cfg['profile'] = profile
-    with open(config, 'w') as f:
+    with open(config, 'wb') as f:
         f.write(serialize_to_yaml(cfg))
     with open(os.path.join(project_name, 'requirements.txt'), 'w'):
         pass
@@ -303,7 +303,7 @@ def gen_policy(ctx, filename):
     with open(filename) as f:
         contents = f.read()
         generated = policy.policy_from_source_code(contents)
-        click.echo(serialize_to_yaml(generated))
+        click.echo(serialize_to_yaml(generated).decode('utf-8'))
 
 
 @cli.command('new-project')
@@ -448,7 +448,7 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
         buildspec_contents = extractor.extract_buildspec(output)
         with open(buildspec_file, 'w') as f:
             f.write(buildspec_contents)
-    with open(filename, 'w') as f:
+    with open(filename, 'wb') as f:
         f.write(serialize_to_yaml(output))
 
 

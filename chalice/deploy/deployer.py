@@ -846,7 +846,7 @@ class ResultsRecorder(object):
         self._osutils.set_file_contents(
             filename=deployed_filename,
             contents=serialized,
-            binary=False
+            binary=True
         )
 
 

@@ -355,7 +355,7 @@ class AppPackager(object):
         self._osutils = osutils
 
     def _to_yaml(self, doc):
-        # type: (Any) -> str
+        # type: (Any) -> bytes
         return serialize_to_yaml(doc)
 
     def package_app(self, config, outdir, chalice_stage_name):
@@ -374,7 +374,7 @@ class AppPackager(object):
         self._osutils.set_file_contents(
             filename=os.path.join(outdir, 'sam.yml'),
             contents=self._to_yaml(sam_template),
-            binary=False
+            binary=True
         )
 
 

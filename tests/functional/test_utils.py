@@ -76,11 +76,11 @@ def test_can_remove_stage_from_deployed_values(tmpdir):
         'prod': {'deployed': 'values'}
     }
     deployed.update(left_after_removal)
-    with open(filename, 'w', encoding='utf-8') as f:
+    with io.open(filename, 'w', encoding='utf-8') as f:
         yaml.dump(deployed, f)
     utils.remove_stage_from_deployed_values('dev', filename)
 
-    with open(filename, 'r', encoding='utf-8') as f:
+    with io.open(filename, 'r', encoding='utf-8') as f:
         data = yaml.load(f)
     assert data == left_after_removal
 
@@ -91,11 +91,11 @@ def test_remove_stage_from_deployed_values_already_removed(tmpdir):
         'dev': {'deployed': 'values'},
         'prod': {'deployed': 'values'}
     }
-    with open(filename, 'w', encoding='utf-8') as f:
+    with io.open(filename, 'w', encoding='utf-8') as f:
         yaml.dump(deployed, f)
     utils.remove_stage_from_deployed_values('fake_key', filename)
 
-    with open(filename, 'r', encoding='utf-8') as f:
+    with io.open(filename, 'r', encoding='utf-8') as f:
         data = yaml.load(f)
     assert data == deployed
 

@@ -61,7 +61,7 @@ class TestPipeReader(object):
 
 
 def test_serialize_yaml():
-    assert utils.serialize_to_yaml({'foo': 'bar'}) == '---\nfoo: bar\n'
+    assert utils.serialize_to_yaml({'foo': 'bar'}) == b'---\nfoo: bar\n'
 
 
 @pytest.mark.parametrize('name,cfn_name', [

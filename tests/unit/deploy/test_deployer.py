@@ -984,7 +984,7 @@ class TestPolicyGeneratorStage(object):
 
     def test_policy_loaded_from_file_if_needed(self):
         p = self.create_policy_generator()
-        read_data = StringIO('---\niam:\n  policy')
+        read_data = StringIO(u'---\niam:\n  policy')
         policy = models.FileBasedIAMPolicy(
             filename='foo.yml', document=models.Placeholder.BUILD_STAGE)
         self.osutils.get_buffered_contents.return_value = read_data
@@ -1229,7 +1229,7 @@ class TestRecordResults(object):
         self.osutils.set_file_contents.assert_called_with(
             filename=expected_filename,
             contents=expected_contents,
-            binary=False
+            binary=True
         )
 
 

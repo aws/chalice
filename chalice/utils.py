@@ -60,7 +60,7 @@ def remove_stage_from_deployed_values(key, filename):
 
     try:
         del final_values[key]
-        with io.open(filename, 'w', encoding='utf-8') as f:
+        with io.open(filename, 'wb') as f:
             data = serialize_to_yaml(final_values)
             f.write(data)
     except KeyError:
@@ -78,16 +78,24 @@ def record_deployed_values(deployed_values, filename):
     final_values = {}  # type: Dict[str, Any]
     f = None  # type: Optional[IO[Any]]
     if os.path.isfile(filename):
-        with open(filename, 'r') as f:
+        with io.open(filename, 'r', encoding='utf-8') as f:
             final_values = yaml.load(f)
     final_values.update(deployed_values)
-    with io.open(filename, 'w', encoding='utf-8') as f:
+    with open(filename, 'wb') as f:
         data = serialize_to_yaml(final_values)
         f.write(data)
 
 
+def io_buffer():
+    # type: () -> Tuple[Any, Any]
+    from io import BytesIO
+    from io import TextIOWrapper
+    b = BytesIO()
+    return b, TextIOWrapper(b, encoding='utf-8')
+
+
 def serialize_to_yaml(data):
-    # type: (Any) -> Any
+    # type: (Any) -> bytes
     """Serialize to pretty printed yaml.
 
     This includes using 2 space indentation, no trailing whitespace, and
@@ -95,9 +103,9 @@ def serialize_to_yaml(data):
     to serialize yaml  to disk.
 
     """
-    b = io.StringIO()
-    b.write('---\n')
-    yaml.dump(data, indent=2, stream=b, default_flow_style=False)
+    b, wrapper = io_buffer()
+    wrapper.write(u'---\n')
+    yaml.dump(data, indent=2, stream=wrapper, default_flow_style=False)
     return b.getvalue()
 
 
