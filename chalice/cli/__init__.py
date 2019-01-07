@@ -90,7 +90,8 @@ def get_system_info():
                       message='%(prog)s %(version)s, {}'
                       .format(get_system_info()))
 @click.option('--project-dir',
-              help='The project directory path (absolute or relative). Defaults to CWD')
+              help='The project directory path (absolute or relative).'
+                   'Defaults to CWD')
 @click.option('--debug/--no-debug',
               default=False,
               help='Print debug logs to stderr.')
