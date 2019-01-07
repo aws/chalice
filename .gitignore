@@ -10,3 +10,4 @@ chalice.egg-info/
 .pytest_cache/
 .mypy_cache/
 *.pyc
+.vscode
