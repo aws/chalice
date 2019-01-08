@@ -109,10 +109,10 @@ def http_session():
         backoff_factor=2,
     )
     session.mount('http://', HTTPAdapter(max_retries=retry))
-    return HTTPFetcher(session)
+    return HttpFetcher(session)
 
 
-class HTTPFetcher(object):
+class HttpFetcher(object):
     def __init__(self, session):
         self.session = session
 

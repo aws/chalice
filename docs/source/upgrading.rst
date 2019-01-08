@@ -46,7 +46,7 @@ are *not* part of the public interface of Chalice and are documented here
 for completeness and to help with debugging issues.
 
 In versions < 1.2.0, the value of deployed resources was stored in
-``.chalice/deployed.json`` and looked like this::
+``.chalice/deployed.yml`` and looked like this::
 
   {
     "dev": {
@@ -70,13 +70,13 @@ In versions < 1.2.0, the value of deployed resources was stored in
 
 In version 1.2.0, the deployed resources are split into multiple files, one
 file per chalice stage.  These files are in the
-``.chalice/deployed/<stage.json>``, so if you had a dev and a prod chalice
-stage you'd have ``.chalice/deployed/dev.json`` and
-``.chalice/deployed/prod.json``.  The schema has also changed and looks
+``.chalice/deployed/<stage.yml>``, so if you had a dev and a prod chalice
+stage you'd have ``.chalice/deployed/dev.yml`` and
+``.chalice/deployed/prod.yml``.  The schema has also changed and looks
 like this::
 
 
-  $ cat .chalice/deployed/dev.json
+  $ cat .chalice/deployed/dev.yml
   {
     "schema_version": "2.0",
     "resources": [
@@ -107,15 +107,15 @@ like this::
   }
 
 When you run ``chalice deploy`` for the first time after upgrading to version
-1.2.0, chalice will automatically converted ``.chalice/deployed.json`` over to
+1.2.0, chalice will automatically converted ``.chalice/deployed.yml`` over to
 the format as you deploy a given stage.
 
 .. warning::
 
   Once you upgrade to 1.2.0, chalice will only update the new
-  ``.chalice/deployed/<stage>.json``.  This means you cannot downgrade
+  ``.chalice/deployed/<stage>.yml``.  This means you cannot downgrade
   to earlier versions of chalice unless you manually update
-  ``.chalice/deployed.json`` as well.
+  ``.chalice/deployed.yml`` as well.
 
 
 The ``chalice package`` command has also been updated to use the
@@ -319,19 +319,19 @@ transition to this new model, the following changes were made:
   defaulting to a ``dev`` stage, the pre-existing behavior of not
   specifying a stage name, e.g ``chalice deploy``, ``chalice url``, etc.
   will still work exactly the same.
-* A new ``stages`` key is supported in the ``.chalice/config.json``.  This
+* A new ``stages`` key is supported in the ``.chalice/config.yml``.  This
   allows you to specify configuration specific to a chalice stage.
   See the :doc:`topics/configfile` doc for more information about stage
   specific configuration.
 * Setting ``autogen_policy`` to false will result in chalice looking
-  for a IAM policy file named ``.chalice/policy-<stage-name>.json``.
-  Previously it would look for a file named ``.chalice/policy.json``.
+  for a IAM policy file named ``.chalice/policy-<stage-name>.yml``.
+  Previously it would look for a file named ``.chalice/policy.yml``.
   You can also explicitly set this value to
   In order to ease transition, chalice will check for a
-  ``.chalice/policy.json`` file when depoying to the ``dev`` stage.
-  Support for ``.chalice/policy.json`` will be removed in future
+  ``.chalice/policy.yml`` file when depoying to the ``dev`` stage.
+  Support for ``.chalice/policy.yml`` will be removed in future
   versions of chalice and users are encouraged to switch to the
-  stage specific ``.chalice/policy-<stage-name>.json`` files.
+  stage specific ``.chalice/policy-<stage-name>.yml`` files.
 
 
 See the :doc:`topics/stages` doc for more details on the new chalice stages
@@ -342,7 +342,7 @@ feature.
 
 We recommend using the new stage specific resource names.  However, If you
 would like to use the existing resource names for a specific stage, you can
-create a ``.chalice/deployed.json`` file that specifies the existing values::
+create a ``.chalice/deployed.yml`` file that specifies the existing values::
 
   {
     "dev": {
@@ -364,16 +364,16 @@ Deployed Values
 
 In version 0.7.0, the way deployed values are stored and retrieved
 has changed.  In prior versions, only the ``lambda_arn`` was saved,
-and its value was written to the ``.chalice/config.json`` file.
+and its value was written to the ``.chalice/config.yml`` file.
 Any of other deployed values that were needed (for example the
 API Gateway rest API id) was dynamically queried by assuming the
 resource names matches the app name.  In this version of chalice,
-a separate ``.chalice/deployed.json`` file is written on every
+a separate ``.chalice/deployed.yml`` file is written on every
 deployement which contains all the resources that have been created.
 While this should be a transparent change, you may noticed
 issues if you run commands such as ``chalice url`` and ``chalice logs``
 without first deploying.  To fix this issue, run ``chalice deploy``
-and version 0.7.0 of chalice so a ``.chalice/deployed.json`` will
+and version 0.7.0 of chalice so a ``.chalice/deployed.yml`` will
 be created for you.
 
 

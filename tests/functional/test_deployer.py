@@ -113,7 +113,7 @@ def test_osutils_proxies_os_functions(tmpdir):
 
     app_file = str(appdir.join('app.py'))
     assert osutils.file_exists(app_file)
-    assert osutils.get_file_contents(app_file) == b'hello'
+    assert osutils.get_binary_contents(app_file) == b'hello'
     assert osutils.open(app_file, 'rb').read() == b'hello'
     osutils.remove_file(app_file)
     # Removing again doesn't raise an error.
@@ -128,20 +128,20 @@ def test_includes_app_and_chalicelib_dir(tmpdir, chalice_deployer):
     chalicelib = appdir.mkdir('chalicelib')
     appdir.join('chalicelib', '__init__.py').write('# Test package')
     appdir.join('chalicelib', 'mymodule.py').write('# Test module')
-    appdir.join('chalicelib', 'config.json').write('{"test": "config"}')
+    appdir.join('chalicelib', 'config.yml').write('{"test": "config"}')
     # Should also include sub directories
     subdir = chalicelib.mkdir('subdir')
     subdir.join('submodule.py').write('# Test submodule')
-    subdir.join('subconfig.json').write('{"test": "subconfig"}')
+    subdir.join('subconfig.yml').write('{"test": "subconfig"}')
     name = chalice_deployer.create_deployment_package(
         str(appdir), 'python2.7')
     with zipfile.ZipFile(name) as f:
         _assert_in_zip('chalicelib/__init__.py', b'# Test package', f)
         _assert_in_zip('chalicelib/mymodule.py', b'# Test module', f)
-        _assert_in_zip('chalicelib/config.json', b'{"test": "config"}', f)
+        _assert_in_zip('chalicelib/config.yml', b'{"test": "config"}', f)
         _assert_in_zip('chalicelib/subdir/submodule.py',
                        b'# Test submodule', f)
-        _assert_in_zip('chalicelib/subdir/subconfig.json',
+        _assert_in_zip('chalicelib/subdir/subconfig.yml',
                        b'{"test": "subconfig"}', f)
 
 
@@ -276,27 +276,30 @@ def test_can_delete_app(tmpdir):
         'from chalice import Chalice\n'
         'app = Chalice("testapp")'
     )
-    deployed_json = {
+    deployed = {
         'schema_version': '2.0',
         'backend': 'api',
-        'resources': [
-            {'name': 'role-index',
-                'resource_type': 'iam_role',
-                'role_name': 'testapp-dev-index',
-                'role_arn': 'arn:aws:iam::1:role/testapp-dev-index'},
-            {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-index',
-                'name': 'index', 'resource_type': 'lambda_function'},
-            {'name': 'role-james', 'resource_type': 'iam_role',
-                'role_name': 'testapp-dev-foo',
-                'role_arn': 'arn:aws:iam::1:role/testapp-dev-foo'},
-            {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-foo',
-                'name': 'james', 'resource_type': 'lambda_function'}
-        ]
+        'resources': [{
+            'name': 'role-index',
+            'resource_type': 'iam_role',
+            'role_name': 'testapp-dev-index',
+            'role_arn': 'arn:aws:iam::1:role/testapp-dev-index'
+        }, {
+            'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-index',
+            'name': 'index', 'resource_type': 'lambda_function'
+        }, {
+            'name': 'role-james', 'resource_type': 'iam_role',
+            'role_name': 'testapp-dev-foo',
+            'role_arn': 'arn:aws:iam::1:role/testapp-dev-foo'
+        }, {
+            'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-foo',
+            'name': 'james', 'resource_type': 'lambda_function'
+        }]
     }
     deployed_dir = appdir.join('.chalice', 'deployed')
     deployed_dir.mkdir()
-    deployed_dir.join('dev.json').write(
-        json.dumps(deployed_json))
+    deployed_dir.join('dev.yml').write(
+        json.dumps(deployed))
     mock_client = mock.Mock(spec=TypedAWSClient)
     ui = mock.Mock(spec=chalice.utils.UI)
     d = chalice.deploy.deployer.create_deletion_deployer(mock_client, ui)

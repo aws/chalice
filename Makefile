@@ -25,7 +25,7 @@ test:
 	py.test -v $(TESTS)
 
 typecheck:
-	mypy --py2 --ignore-missing-imports --follow-imports=skip -p chalice --disallow-untyped-defs --strict-optional --warn-no-return
+	mypy --ignore-missing-imports --follow-imports=skip -p chalice --disallow-untyped-defs --strict-optional --warn-no-return
 
 coverage:
 	py.test --cov chalice --cov-report term-missing $(TESTS)

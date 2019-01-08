@@ -164,7 +164,7 @@ class LambdaEventConverter(object):
         return headers.get('content-type', '') in self._binary_types
 
     def create_lambda_event(self, method, path, headers, body=None):
-        # type: (str, str, Dict[str, str], str) -> EventType
+        # type: (str, str, Dict[str, str], Union[str, bytes]) -> EventType
         view_route = self._route_matcher.match_route(path)
         event = {
             'requestContext': {
@@ -186,7 +186,12 @@ class LambdaEventConverter(object):
             # this to None so we're doing this for parity.
             event['queryStringParameters'] = None
         if self._is_binary(headers) and body is not None:
-            event['body'] = base64.b64encode(body).decode('ascii')
+            if isinstance(body, str):
+                p = body.encode('utf-8')
+            else:
+                p = body
+            p = base64.b64encode(p)
+            event['body'] = p.decode('ascii')
             event['isBase64Encoded'] = True
         else:
             event['body'] = body
@@ -417,7 +422,9 @@ class LocalGateway(object):
         )
 
     def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[str]) -> EventType
+        # type: (str, str, HeaderType, Optional[bytes]) -> EventType
+        if isinstance(body, str):
+            body = body.encode('utf-8')
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
             body=body,
@@ -430,7 +437,7 @@ class LocalGateway(object):
         return 'OPTIONS' in self._app_object.routes[route_key]
 
     def handle_request(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[str]) -> ResponseType
+        # type: (str, str, HeaderType, Optional[bytes]) -> ResponseType
         lambda_context = self._generate_lambda_context()
         try:
             lambda_event = self._generate_lambda_event(
@@ -532,7 +539,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             self, request, client_address, server)  # type: ignore
 
     def _parse_payload(self):
-        # type: () -> Tuple[HeaderType, Optional[str]]
+        # type: () -> Tuple[HeaderType, Optional[bytes]]
         body = None
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:

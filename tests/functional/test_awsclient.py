@@ -212,29 +212,43 @@ class TestDeleteRestAPI(object):
             assert awsclient.delete_rest_api('name')
 
 
-class TestGetRestAPI(object):
+class TestGetRestApi(object):
     def test_rest_api_exists(self, stubbed_session):
         desired_name = 'myappname'
-        stubbed_session.stub('apigateway').get_rest_apis()\
-            .returns(
-                {'items': [
-                    {'createdDate': 1, 'id': 'wrongid1', 'name': 'wrong1'},
-                    {'createdDate': 2, 'id': 'correct', 'name': desired_name},
-                    {'createdDate': 3, 'id': 'wrongid3', 'name': 'wrong3'},
-                ]})
+        stubbed_session.stub('apigateway').get_rest_apis().returns(
+            {'items': [{
+                'createdDate': 1546313171,
+                'id': 'wrongid1',
+                'name': 'wrong1'
+            }, {
+                'createdDate': 1546313171,
+                'id': 'correct',
+                'name': desired_name
+            }, {
+                'createdDate': 1546313171,
+                'id': 'wrongid3',
+                'name': 'wrong3'
+            }, ]})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.get_rest_api_id(desired_name) == 'correct'
         stubbed_session.verify_stubs()
 
     def test_rest_api_does_not_exist(self, stubbed_session):
-        stubbed_session.stub('apigateway').get_rest_apis()\
-            .returns(
-                {'items': [
-                    {'createdDate': 1, 'id': 'wrongid1', 'name': 'wrong1'},
-                    {'createdDate': 2, 'id': 'wrongid1', 'name': 'wrong2'},
-                    {'createdDate': 3, 'id': 'wrongid3', 'name': 'wrong3'},
-                ]})
+        stubbed_session.stub('apigateway').get_rest_apis().returns(
+            {'items': [{
+                'createdDate': 1546313171,
+                'id': 'wrongid1',
+                'name': 'wrong1'
+            }, {
+                'createdDate': 1546313171,
+                'id': 'wrongid1',
+                'name': 'wrong2'
+            }, {
+                'createdDate': 1546313171,
+                'id': 'wrongid3',
+                'name': 'wrong3'
+            }, ]})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.get_rest_api_id('myappname') is None
@@ -404,13 +418,65 @@ class TestCreateLambdaFunction(object):
             Runtime='python2.7',
             Code={'ZipFile': b'foo'},
             Handler='app.app',
-            Role='myarn'
+            Role='myarn',
         ).returns({'FunctionArn': 'arn:12345:name'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
             'name', 'myarn', b'foo',
             'python2.7', 'app.app') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_layers(self, stubbed_session):
+        stubbed_session.stub('lambda').get_layer_version(
+            LayerName='layer',
+            VersionNumber=2,
+        ).returns({'LayerVersionArn': 'arn:aws:lambda:us-east-2:1234567890:layer:2'})
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Layers=['arn:aws:lambda:us-east-2:1234567890:layer:2'],
+            Role='myarn',
+        ).returns({'FunctionArn': 'arn:12345:name'})
+
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app', layers=[{
+                'name': 'layer',
+                'version': 2,
+            }]) == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_with_latest_layers(self, stubbed_session):
+        stubbed_session.stub('lambda').list_layer_versions(
+            LayerName='layer',
+        ).returns({ 'LayerVersions': [{
+            'LayerVersionArn': 'arn:aws:lambda:us-east-2:1234567890:layer:1',
+            'CreatedDate': '2019-01-05T03:49:59.116+0000',
+        }, {
+            'LayerVersionArn': 'arn:aws:lambda:us-east-2:1234567890:layer:2',
+            'CreatedDate': '2019-01-05T03:50:59.116+0000',
+        }]})
+        stubbed_session.stub('lambda').create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Layers=['arn:aws:lambda:us-east-2:1234567890:layer:2'],
+            Role='myarn',
+        ).returns({'FunctionArn': 'arn:12345:name'})
+
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app', layers=[{
+                'name': 'layer',
+            }]) == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_with_non_python2_runtime(self, stubbed_session):

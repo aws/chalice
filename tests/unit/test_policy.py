@@ -8,8 +8,11 @@ class OsUtilsMock(OSUtils):
     def file_exists(self, *args, **kwargs):
         return True
 
-    def get_file_contents(selfs, *args, **kwargs):
+    def get_text_contents(self, *args, **kwargs):
         return ''
+
+    def get_binary_contents(self, *args, **kwargs):
+        return b''
 
 
 def iam_policy(client_calls):

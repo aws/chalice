@@ -53,6 +53,8 @@ python3.4.6                python3.6
 python3.5.3                python3.6
 python3.6.0                python3.6
 python3.6.1                python3.6
+python3.7.0                python3.7
+python3.7.1                python3.7
 ====================      =====================
 
 We strongly encourage you to develop your application using the same

@@ -75,18 +75,17 @@ function needs the ``role_arn`` that's the result of a previous ``create_role``
 API call, a ``Variable`` object is used to forward this information.
 
 The executor also records these variables with their associated resources so a
-``deployed.json`` file can be written to disk afterwards.  An ``APICall``
+``deployed.yml`` file can be written to disk afterwards.  An ``APICall``
 takes an optional resource object when it's created whose ``resource_name``
-is used as the key in the ``deployed.json`` dictionary.
+is used as the key in the ``deployed.yml`` dictionary.
 
 
 """
 
-import json
-import os
-import textwrap
-import socket
 import logging
+import os
+import socket
+import textwrap
 
 import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
@@ -94,6 +93,7 @@ from botocore.vendored.requests import ConnectionError as \
 from botocore.session import Session  # noqa
 from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
+import yaml
 from chalice import app
 from chalice.config import Config  # noqa
 from chalice.compat import is_broken_pipe_error
@@ -111,7 +111,8 @@ from chalice.deploy.planner import PlanStage, RemoteState, \
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
 from chalice.policy import AppPolicyGenerator
-from chalice.utils import OSUtils, UI, serialize_to_json
+from chalice.utils import OSUtils, UI, serialize_to_yaml
+from chalice.utils import replace_yaml_extension
 from chalice.deploy.validate import validate_configuration
 
 
@@ -546,7 +547,7 @@ class ApplicationGraphBuilder(object):
             else:
                 filename = os.path.join(config.project_dir,
                                         '.chalice',
-                                        'policy-%s.json' % stage_name)
+                                        'policy-%s.yml' % stage_name)
             policy = models.FileBasedIAMPolicy(
                 filename=filename, document=models.Placeholder.BUILD_STAGE)
         else:
@@ -606,6 +607,7 @@ class ApplicationGraphBuilder(object):
             security_group_ids=security_group_ids,
             subnet_ids=subnet_ids,
             reserved_concurrency=config.reserved_concurrency,
+            layers=config.layers,
         )
         self._inject_role_traits(function, role)
         return function
@@ -796,8 +798,13 @@ class PolicyGenerator(BaseDeployStep):
     def handle_filebasediampolicy(self, config, resource):
         # type: (Config, models.FileBasedIAMPolicy) -> None
         try:
-            resource.document = json.loads(
-                self._osutils.get_file_contents(resource.filename))
+            filename = resource.filename
+            if not os.path.exists(filename):
+                # try the json file if we couldn't find the yaml
+                # file
+                filename = replace_yaml_extension(filename)
+            f = self._osutils.get_buffered_contents(filename)
+            resource.document = yaml.load(f)
         except IOError as e:
             raise RuntimeError("Unable to load IAM policy file %s: %s"
                                % (resource.filename, e))
@@ -833,10 +840,10 @@ class ResultsRecorder(object):
         deployed_dir = self._osutils.joinpath(
             project_dir, '.chalice', 'deployed')
         deployed_filename = self._osutils.joinpath(
-            deployed_dir, '%s.json' % chalice_stage_name)
+            deployed_dir, '%s.yml' % chalice_stage_name)
         if not self._osutils.directory_exists(deployed_dir):
             self._osutils.makedirs(deployed_dir)
-        serialized = serialize_to_json(results)
+        serialized = serialize_to_yaml(results)
         self._osutils.set_file_contents(
             filename=deployed_filename,
             contents=serialized,

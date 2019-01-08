@@ -1,0 +1,9 @@
+---
+stages:
+  dev:
+    api_gateway_stage: api
+    environment_variables:
+      APP_NAME: replaceme
+version: 2.0
+app_name: replaceme
+
