@@ -488,8 +488,8 @@ class DecoratorAPI(object):
             handler_type='route',
             name=kwargs.get('name'),
             # This looks a little weird taking kwargs as a key,
-            # but to preserve backwards compatibility we have to
-            # keep the **kwargs signature in the route decorator.
+            # but we want to preserve keep the **kwargs signature
+            # in the route decorator.
             registration_kwargs={'path': path, 'kwargs': kwargs},
         )
 
