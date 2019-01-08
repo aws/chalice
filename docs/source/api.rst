@@ -301,6 +301,20 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
+   .. method:: register_blueprint(blueprint, name_prefix=None, url_prefix=None)
+
+      Register a :class:`Blueprint` to a Chalice app.
+      See :doc:`topics/blueprints` for more information.
+
+      :param blueprint: The :class:`Blueprint` to register to the app.
+
+      :param name_prefix: An optional name prefix that's added to all the
+        resources specified in the blueprint.
+
+      :param url_prefix: An optional url prefix that's added to all the
+        routes defined the Blueprint.  This allows you to set the root mount
+        point for all URLs in a Blueprint.
+
 
 Request
 =======
@@ -657,8 +671,8 @@ CORS
      ``Access-Control-Allow-Credentials``.
 
 
-Scheduled Events
-================
+Event Sources
+=============
 
 .. versionadded:: 1.0.0b1
 
@@ -955,3 +969,43 @@ Scheduled Events
       Return the original dictionary associated with the given
       message. This is useful if you need direct
       access to the lambda event.
+
+
+Blueprints
+==========
+
+.. class:: Blueprint(import_name)
+
+  An object used for grouping related handlers together.
+  This is primarily used as a mechanism for organizing your lambda
+  handlers.  Any decorator methods defined in the :class:`Chalice`
+  object are also defined on a ``Blueprint`` object.  You can register
+  a blueprint to a Chalice app using the :meth:`Chalice.register_blueprint`
+  method.
+
+  The ``import_name`` is the module in which the Blueprint is defined.
+  It is used to construct the appropriate handler string when creating
+  the Lambda functions associated with a Blueprint.  This is typically
+  the `__name__` attribute:``mybp = Blueprint(__name__)``.
+
+  See :doc:`topics/blueprints` for more information.
+
+  .. code-block:: python
+
+      # In ./app.py
+
+      from chalice import Chalice
+      from chalicelib import myblueprint
+
+      app = Chalice(app_name='blueprints')
+      app.register_blueprint(myblueprint)
+
+      # In chalicelib/myblueprint.py
+
+      from chalice import Blueprint
+
+      myblueprint = Blueprint(__name__)
+
+      @myblueprint.route('/')
+      def index():
+          return {'hello': 'world'}
