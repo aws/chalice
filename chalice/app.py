@@ -508,13 +508,13 @@ class DecoratorAPI(object):
             else:
                 kwargs = {}
             wrapped = self._wrap_handler(handler_type, handler_name,
-                                         user_handler, kwargs)
+                                         user_handler)
             self._register_handler(handler_type, handler_name,
                                    user_handler, wrapped, kwargs)
             return wrapped
         return _register_handler
 
-    def _wrap_handler(self, handler_type, handler_name, user_handler, kwargs):
+    def _wrap_handler(self, handler_type, handler_name, user_handler):
         event_classes = {
             'on_s3_event': S3Event,
             'on_sns_message': SNSEvent,
