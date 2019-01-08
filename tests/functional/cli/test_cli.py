@@ -460,3 +460,28 @@ def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
                                   cli_factory=mock_cli_factory)
         assert result.exit_code == 2
         assert 'foo' in result.output
+
+
+@pytest.mark.parametrize(
+    "runner,path",
+    [
+        (runner(), 'empty'),
+        (runner(), 'relative'),
+        (runner(), 'absolute')
+    ],
+)
+def test_cli_with_absolute_path(runner, path):
+    with runner.isolated_filesystem():
+        if path == 'empty':
+            project_dir = None
+        elif path == 'relative':
+            project_dir = '.'
+        elif path == 'absolute':
+            project_dir = os.getcwd()
+        result = runner.invoke(
+            cli.cli,
+            ['--project-dir', project_dir, 'new-project', 'testproject'],
+            obj={})
+        assert result.exit_code == 0
+        assert os.listdir(os.getcwd()) == ['testproject']
+        assert_chalice_app_structure_created(dirname='testproject')
