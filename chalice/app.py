@@ -1186,10 +1186,8 @@ class SQSRecord(BaseLambdaEvent):
 
 
 class Blueprint(DecoratorAPI):
-    def __init__(self, import_name, name_prefix=None, url_prefix=None):
+    def __init__(self, import_name):
         self._import_name = import_name
-        self._name_prefix = name_prefix
-        self._url_prefix = url_prefix
         self._deferred_registrations = []
         self._current_app = None
         self._lambda_context = None
