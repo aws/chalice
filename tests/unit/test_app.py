@@ -3,6 +3,7 @@ import base64
 import logging
 import json
 import gzip
+import inspect
 
 import pytest
 from pytest import fixture
@@ -1784,3 +1785,18 @@ def test_runtime_error_if_current_request_access_on_non_registered_blueprint():
     bp = app.Blueprint('app.chalicelib.blueprints.foo')
     with pytest.raises(RuntimeError):
         bp.current_request
+
+
+def test_every_decorator_added_to_blueprint():
+    def is_public_method(obj):
+        return inspect.isfunction(obj) and not obj.__name__.startswith('_')
+    public_api = inspect.getmembers(
+        app.DecoratorAPI,
+        predicate=is_public_method
+    )
+    blueprint_api = [
+        i[0] for i in
+        inspect.getmembers(app.Blueprint, predicate=is_public_method)
+    ]
+    for method_name, _ in public_api:
+        assert method_name in blueprint_api
