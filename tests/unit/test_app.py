@@ -1766,6 +1766,20 @@ def test_can_call_current_request_on_blueprint_when_mounted(create_event):
     assert response['method'] == 'GET'
 
 
+def test_can_call_lambda_context_on_blueprint_when_mounted(create_event):
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/context')
+    def context():
+        return bp.lambda_context
+
+    myapp.register_blueprint(bp)
+    event = create_event('/context', 'GET', {})
+    response = json_response_body(myapp(event, context={'context': 'foo'}))
+    assert response == {'context': 'foo'}
+
+
 def test_runtime_error_if_current_request_access_on_non_registered_blueprint():
     bp = app.Blueprint('app.chalicelib.blueprints.foo')
     with pytest.raises(RuntimeError):
