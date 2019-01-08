@@ -116,7 +116,38 @@ class APIGateway(object):
     binary_types = ... # type: List[str]
 
 
-class Chalice(object):
+class DecoratorAPI(object):
+    def authorizer(self,
+                   ttl_seconds: Optional[int]=None,
+                   execution_role: Optional[str]=None,
+                   name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def on_s3_event(self,
+                    bucket: str,
+                    events: Optional[List[str]]=None,
+                    prefix: Optional[str]=None,
+                    suffix: Optional[str]=None,
+                    name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def on_sns_message(self,
+                      topic: str,
+                      name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def on_sqs_message(self,
+                       queue: str,
+                       batch_size: int=1,
+                       name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def schedule(self,
+                 expression: str,
+                 name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
+
+    def lambda_function(self, name: Optional[str]=None) -> Callable[..., Any]: ...
+
+
+class Chalice(DecoratorAPI):
     app_name = ... # type: str
     api = ... # type: APIGateway
     routes = ... # type: Dict[str, Dict[str, RouteEntry]]
@@ -134,8 +165,6 @@ class Chalice(object):
                  configure_logs: bool=True,
                  env: Optional[Dict[str, str]]=None) -> None: ...
 
-    def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
-    def _add_route(self, path: str, view_func: Callable[..., Any], **kwargs: Any) -> None: ...
     def __call__(self, event: Any, context: Any) -> Any: ...
     def _get_view_function_response(self,
                                     view_function: Callable[..., Any],
@@ -224,5 +253,6 @@ class CloudWatchEventConfig(BaseEventSourceConfig):
     schedule_expression = ...  # type: Union[str, ScheduleExpression]
 
 
-class Blueprint(Chalice):
-    pass
+class Blueprint(DecoratorAPI):
+    current_request = ... # type: Request
+    lambda_context = ... # type: LambdaContext
