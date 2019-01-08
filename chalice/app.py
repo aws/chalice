@@ -1192,6 +1192,7 @@ class Blueprint(DecoratorAPI):
         self._url_prefix = url_prefix
         self._deferred_registrations = []
         self._current_app = None
+        self._lambda_context = None
 
     @property
     def current_request(self):
@@ -1201,6 +1202,15 @@ class Blueprint(DecoratorAPI):
                 "to an app."
             )
         return self._current_app.current_request
+
+    @property
+    def lambda_context(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.lambda_context if it's registered "
+                "to an app."
+            )
+        return self._current_app.lambda_context
 
     def register(self, app, options):
         self._current_app = app
