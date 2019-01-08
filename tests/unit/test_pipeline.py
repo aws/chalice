@@ -170,10 +170,10 @@ def test_install_requirements_in_buildspec(pipeline_params):
 
 
 def test_default_version_range_locks_minor_version():
-    parts = [int(p) for p in chalice_version.split('.')]
+    parts = [int(p) for p in chalice_version.rsplit(' ', 1)[-1].split('.')]
     min_version = '%s.%s.%s' % (parts[0], parts[1], 0)
     max_version = '%s.%s.%s' % (parts[0], parts[1] + 1, 0)
-    params = pipeline.PipelineParameters('appname', 'python2.7')
+    params = pipeline.PipelineParameters('appname', 'python3.7')
     assert params.chalice_version_range == '>=%s,<%s' % (
         min_version, max_version
     )

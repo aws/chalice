@@ -42,6 +42,7 @@ def create_function_resource(name, function_name=None,
         security_group_ids=[],
         subnet_ids=[],
         reserved_concurrency=None,
+        layers=None,
     )
 
 
@@ -229,6 +230,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
+                'layers': None,
             },
         ),
             models.APICall(
@@ -266,6 +268,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'timeout': 60,
             'security_group_ids': [],
             'subnet_ids': [],
+            'layers': None,
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -308,6 +311,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
+                'layers': None,
             },
         ),
             models.APICall(

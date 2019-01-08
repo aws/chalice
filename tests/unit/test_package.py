@@ -85,6 +85,7 @@ class TestSAMTemplate(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=None,
+            layers=None,
         )
 
     def test_sam_generates_sam_template_basic(self, sample_app):
@@ -137,6 +138,7 @@ class TestSAMTemplate(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=None,
+            layers=None,
         )
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]
@@ -205,6 +207,7 @@ class TestSAMTemplate(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=None,
+            layers=None,
         )
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]

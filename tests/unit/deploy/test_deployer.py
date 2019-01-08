@@ -340,6 +340,7 @@ def create_function_resource(name):
         role=models.PreCreatedIAMRole(role_arn='role:arn'),
         security_group_ids=[],
         subnet_ids=[],
+        layers=None,
     )
 
 
@@ -455,6 +456,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=None,
+            layers=None,
         )
 
     def test_can_build_lambda_function_app_with_vpc_config(self, lambda_app):
@@ -484,6 +486,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=['sg1', 'sg2'],
             subnet_ids=['sn1', 'sn2'],
             reserved_concurrency=None,
+            layers=None,
         )
 
     def test_vpc_trait_added_when_vpc_configured(self, lambda_app):
@@ -544,6 +547,7 @@ class TestApplicationGraphBuilder(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=5,
+            layers=None,
         )
 
     def test_multiple_lambda_functions_share_role_and_package(self,
@@ -914,6 +918,7 @@ class TestDefaultsInjector(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=None,
+            layers=None,
         )
         config = Config.create()
         injector.handle(config, function)
@@ -942,6 +947,7 @@ class TestDefaultsInjector(object):
             security_group_ids=[],
             subnet_ids=[],
             reserved_concurrency=None,
+            layers=None,
         )
         config = Config.create()
         injector.handle(config, function)

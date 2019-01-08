@@ -30,7 +30,7 @@ class PipelineParameters(object):
 
     def _lock_to_minor_version(self):
         # type: () -> str
-        parts = [int(p) for p in chalice_version.split('.')]
+        parts = [int(p) for p in chalice_version.rsplit(' ', 1)[-1].split('.')]
         min_version = '%s.%s.%s' % (parts[0], parts[1], 0)
         max_version = '%s.%s.%s' % (parts[0], parts[1] + 1, 0)
         return '>=%s,<%s' % (min_version, max_version)

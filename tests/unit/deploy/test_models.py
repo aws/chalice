@@ -20,6 +20,7 @@ def lambda_function():
         security_group_ids=[],
         subnet_ids=[],
         reserved_concurrency=None,
+        layers=None,
     )
 
 
