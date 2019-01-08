@@ -279,4 +279,8 @@ class CliFactory(object):
 
     def create_local_server(self, app_obj, config, host, port):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer
-        return local.create_local_server(app_obj, config, host, port)
+        return local.create_local_server(
+            app_obj,
+            config,
+            host,
+            port)

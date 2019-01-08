@@ -31,6 +31,7 @@ from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
+from chalice.local import LocalLayerDownloader
 from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.constants import FANCY_NAME
 from chalice.invoke import UnhandledLambdaError
@@ -132,10 +133,11 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
     # The app-specific logger (app.log) will still continue
     # to work.
     logging.basicConfig(
-        stream=sys.stdout, level=logging.INFO, format='%(message)s')
+        stream=sys.stdout, level=logging.INFO,
+        format='{message}', style='{')
+    config = factory.create_config_obj(chalice_stage_name=stage)
     if autoreload:
-        project_dir = factory.create_config_obj(
-            chalice_stage_name=stage).project_dir
+        project_dir = config.project_dir
         rc = reloader.run_with_reloader(
             server_factory, os.environ, project_dir)
         # Click doesn't sys.exit() with the RC this function.  The
@@ -145,11 +147,11 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
     run_local_server(factory, host, port, stage)
 
 
-def create_local_server(factory, host, port, stage):
-    # type: (CliFactory, str, int, str) -> LocalDevServer
-    config = factory.create_config_obj(
-        chalice_stage_name=stage
-    )
+def create_local_server(factory: CliFactory, host: str,
+                        port: int, stage: str) -> LocalDevServer:
+    config = factory.create_config_obj(chalice_stage_name=stage)
+    session = factory.create_botocore_session()
+    LocalLayerDownloader(config, session)
     app_obj = config.chalice_app
     # Check that `chalice deploy` would let us deploy these routes, otherwise
     # there is no point in testing locally.

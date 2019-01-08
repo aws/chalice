@@ -14,6 +14,7 @@ def test_cannot_run_local_mode_with_trailing_slash_route():
     factory.create_config_obj.return_value.chalice_app.routes = {
         'foobar/': None
     }
+    factory.create_config_obj.return_value.layers = None
     local_server = mock.Mock(spec=LocalDevServer)
     factory.create_local_server.return_value = local_server
     with pytest.raises(ValueError) as e:

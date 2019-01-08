@@ -6,7 +6,7 @@ import mock
 from pytest import fixture
 from six import BytesIO
 from six.moves.BaseHTTPServer import HTTPServer
-
+from botocore.session import Session
 from chalice import app
 from chalice import local, BadRequestError, CORSConfig
 from chalice import Response

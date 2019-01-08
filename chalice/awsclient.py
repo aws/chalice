@@ -169,15 +169,32 @@ class TypedAWSClient(object):
             kwargs['Layers'] = self._get_layer_arns(layers)
         return self._create_lambda_function(kwargs)
 
-    def _get_layer_version_arn(self, name, version):
+    def get_layer_version(self, name, version):
         client = self._client('lambda')
         return self._call_client_method_with_retries(
             client.get_layer_version,
             kwargs={
                 'LayerName': name,
                 'VersionNumber': version,
-            }, max_attempts=self.LAYER_GET_ATTEMPTS,
-        )['LayerVersionArn']
+            }, max_attempts=self.LAYER_GET_ATTEMPTS)
+
+    def _get_layer_version_arn(self, name, version):
+        return self.get_layer_version(
+            name, version)['LayerVersionArn']
+
+    def yield_layers(self, name):
+        client = self._client('lambda')
+        paginator = client.get_paginator('list_layer_versions')
+        for page in paginator.paginate(LayerName=name):
+            yield from page['LayerVersions']
+
+    def get_latest_version(self, name):
+        max_created_date, n_max = None, None
+        for x in self.yield_layers(name):
+            if not max_created_date or x['CreatedDate'] > max_created_date:
+                n_max = x
+                max_created_date = x['CreatedDate']
+        return n_max
 
     def _get_layer_latest_arn(self, name):
         client = self._client('lambda')
