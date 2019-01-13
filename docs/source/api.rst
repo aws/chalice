@@ -812,6 +812,12 @@ Scheduled Events
       For scheduled events, this will include the ARN of the CloudWatch
       rule that triggered this event.
 
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
    .. method:: to_dict()
 
       Return the original event dictionary provided
@@ -860,6 +866,12 @@ Scheduled Events
       access to the original URL encoded key name, you can
       access it through the ``to_dict()`` method.
 
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
    .. method:: to_dict()
 
       Return the original event dictionary provided
@@ -896,6 +908,12 @@ Scheduled Events
 
       The string value of the SNS message that was published.
 
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
    .. method:: to_dict()
 
       Return the original event dictionary provided
@@ -927,6 +945,12 @@ Scheduled Events
       the event.  Each element in the iterable is of type
       :class:`SQSRecord`.
 
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
    .. method:: to_dict()
 
       Return the original event dictionary provided
@@ -949,6 +973,11 @@ Scheduled Events
       The receipt handle associated with the message.  This is useful
       if you need to manually delete an SQS message to account for
       partial failures.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda.
 
    .. method:: to_dict()
 

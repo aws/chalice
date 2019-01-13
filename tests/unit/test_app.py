@@ -1463,7 +1463,7 @@ def test_s3_event_urldecodes_keys():
             }},
         ]
     }
-    event = app.S3Event(s3_event)
+    event = app.S3Event(s3_event, FakeLambdaContext())
     # We should urldecode the key name.
     assert event.key == 'file with spaces'
     # But the key should remain unchanged in to_dict().
@@ -1487,7 +1487,7 @@ def test_s3_event_urldecodes_unicode_keys():
             }},
         ]
     }
-    event = app.S3Event(s3_event)
+    event = app.S3Event(s3_event, FakeLambdaContext())
     # We should urldecode the key name.
     assert event.key == u'\u2713'
     assert event.bucket == u'mybucket'
@@ -1533,10 +1533,12 @@ def test_can_map_sns_event(sample_app):
             'TopicArn': 'arn:aws:sns:us-west-2:12345:ConsoleTestTopic',
             'Type': 'Notification',
             'UnsubscribeUrl': 'https://unsubscribe-url/'}}]}
-    actual_event = handler(sns_event, context=None)
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(sns_event, context=lambda_context)
     assert actual_event.message == 'This is a raw message'
     assert actual_event.subject == 'ThisIsTheSubject'
     assert actual_event.to_dict() == sns_event
+    assert actual_event.context == lambda_context
 
 
 def test_can_create_sqs_handler(sample_app):
@@ -1582,7 +1584,8 @@ def test_can_map_sqs_event(sample_app):
         'messageId': 'message-id',
         'receiptHandle': 'receipt-handle'
     }]}
-    actual_event = handler(sqs_event, context=None)
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(sqs_event, context=lambda_context)
     records = list(actual_event)
     assert len(records) == 1
     first_record = records[0]
@@ -1590,6 +1593,7 @@ def test_can_map_sqs_event(sample_app):
     assert first_record.receipt_handle == 'receipt-handle'
     assert first_record.to_dict() == sqs_event['Records'][0]
     assert actual_event.to_dict() == sqs_event
+    assert actual_event.context == lambda_context
 
 
 def test_bytes_when_binary_type_is_application_json():
