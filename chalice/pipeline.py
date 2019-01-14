@@ -41,6 +41,7 @@ class CreatePipelineTemplate(object):
     _CODEBUILD_IMAGE = {
         'python2.7': 'python:2.7.12',
         'python3.6': 'python:3.6.5',
+        'python3.7': 'python:3.7.1',
     }
 
     _BASE_TEMPLATE = {
