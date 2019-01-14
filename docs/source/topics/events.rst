@@ -208,6 +208,10 @@ command::
     2018-06-28 17:49:30.513000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject1, message: TestMessage1
     2018-06-28 17:49:40.391000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject2, message: TestMessage2
 
+In this example we used the SNS topic name to register our handler, but you can
+also use the topic arn. This can be useful if your topic is in another region
+or account.
+
 
 .. _sqs-events:
 

@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Fix packaging multiple local directories as dependencies
   (`#1047 <https://github.com/aws/chalice/pull/1047>`__)
+* Add support for passing SNS ARNs to ``on_sns_message``
+  (`#1048 <https://github.com/aws/chalice/pull/1048>`__)
 
 
 1.6.2

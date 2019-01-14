@@ -660,6 +660,63 @@ class TestPlanSNSSubscription(BasePlannerTests):
             ),
         ]
 
+    def test_can_plan_sns_arn_subscription(self):
+        function = create_function_resource('function_name')
+        topic_arn = 'arn:aws:sns:mars-west-2:123456789:mytopic'
+        sns_subscription = models.SNSLambdaSubscription(
+            resource_name='function_name-sns-subscription',
+            topic=topic_arn,
+            lambda_function=function
+        )
+        plan = self.determine_plan(sns_subscription)
+        plan_parse_arn = plan[0]
+        assert plan_parse_arn == models.StoreValue(
+            name='function_name-sns-subscription_topic_arn',
+            value=topic_arn,
+        )
+        topic_arn_var = Variable("function_name-sns-subscription_topic_arn")
+        assert plan[1:] == [
+            models.APICall(
+                method_name='add_permission_for_sns_topic',
+                params={
+                    'function_arn': Variable("function_name_lambda_arn"),
+                    'topic_arn': topic_arn_var,
+                },
+                output_var=None
+            ),
+            models.APICall(
+                method_name='subscribe_function_to_topic',
+                params={
+                    'function_arn': Variable("function_name_lambda_arn"),
+                    'topic_arn': topic_arn_var,
+                },
+                output_var='function_name-sns-subscription_subscription_arn'
+            ),
+            models.RecordResourceValue(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='topic',
+                value=topic_arn),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='lambda_arn',
+                variable_name='function_name_lambda_arn'
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='subscription_arn',
+                variable_name='function_name-sns-subscription_subscription_arn'
+            ),
+            models.RecordResourceVariable(
+                resource_type='sns_event',
+                resource_name='function_name-sns-subscription',
+                name='topic_arn',
+                variable_name='function_name-sns-subscription_topic_arn',
+            ),
+        ]
+
     def test_sns_subscription_exists_is_noop_for_planner(self):
         function = create_function_resource('function_name')
         sns_subscription = models.SNSLambdaSubscription(
