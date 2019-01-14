@@ -208,6 +208,36 @@ class TestPipRunner(object):
         runner.download_manylinux_wheels('cp36m', [], 'directory')
         assert len(pip.calls) == 0
 
+    def test_does_find_local_directory(self, pip_factory):
+        pip, runner = pip_factory()
+        pip.add_return((0,
+                        (b"Processing ../local-dir\n"
+                         b"  Link is a directory,"
+                         b" ignoring download_dir"),
+                        b''))
+        runner.download_all_dependencies('requirements.txt', 'directory')
+        assert len(pip.calls) == 2
+        assert pip.calls[1].args == ['wheel', '--no-deps', '--wheel-dir',
+                                     'directory', '../local-dir']
+
+    def test_does_find_multiple_local_directories(self, pip_factory):
+        pip, runner = pip_factory()
+        pip.add_return((0,
+                        (b"Processing ../local-dir-1\n"
+                         b"  Link is a directory,"
+                         b" ignoring download_dir"
+                         b"\nsome pip output...\n"
+                         b"Processing ../local-dir-2\n"
+                         b"  Link is a directory,"
+                         b" ignoring download_dir"),
+                        b''))
+        runner.download_all_dependencies('requirements.txt', 'directory')
+        assert len(pip.calls) == 3
+        assert pip.calls[1].args == ['wheel', '--no-deps', '--wheel-dir',
+                                     'directory', '../local-dir-1']
+        assert pip.calls[2].args == ['wheel', '--no-deps', '--wheel-dir',
+                                     'directory', '../local-dir-2']
+
     def test_raise_no_such_package_error(self, pip_factory):
         pip, runner = pip_factory()
         pip.add_return((1, b'',
