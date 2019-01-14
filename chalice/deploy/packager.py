@@ -743,8 +743,8 @@ class PipRunner(object):
                 raise NoSuchPackageError(str(package_name))
             raise PackageDownloadError(error)
         stdout = out.decode()
-        match = re.search(self._LINK_IS_DIR_PATTERN, stdout)
-        if match:
+        matches = re.finditer(self._LINK_IS_DIR_PATTERN, stdout)
+        for match in matches:
             wheel_package_path = str(match.group(1))
             # Looks odd we do not check on the error status of building the
             # wheel here. We can assume this is a valid package path since
