@@ -1,7 +1,7 @@
 import os
 import copy
 
-from typing import Any, Dict, List, Set  # noqa
+from typing import Any, Dict, List, Set, Union  # noqa
 from typing import cast
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
@@ -289,16 +289,21 @@ class SAMTemplateGenerator(object):
         function_cfn = template['Resources'][function_cfn_name]
         sns_cfn_name = self._register_cfn_resource_name(
             resource.resource_name)
+
+        if resource.topic.startswith('arn:aws:sns:'):
+            topic_arn = resource.topic  # type: Union[str, Dict[str, str]]
+        else:
+            topic_arn = {
+                'Fn::Sub': (
+                    'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:%s' %
+                    resource.topic
+                )
+            }
         function_cfn['Properties']['Events'] = {
             sns_cfn_name: {
                 'Type': 'SNS',
                 'Properties': {
-                    'Topic': {
-                        'Fn::Sub': (
-                            'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:%s' %
-                            resource.topic
-                        )
-                    }
+                    'Topic': topic_arn,
                 }
             }
         }

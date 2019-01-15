@@ -410,6 +410,27 @@ class TestSAMTemplate(object):
             }
         }
 
+    def test_can_package_sns_arn_handler(self, sample_app):
+        arn = 'arn:aws:sns:space-leo-1:1234567890:foo'
+
+        @sample_app.on_sns_message(topic=arn)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        sns_handler = template['Resources']['Handler']
+        assert sns_handler['Properties']['Events'] == {
+            'HandlerSnsSubscription': {
+                'Type': 'SNS',
+                'Properties': {
+                    'Topic': arn,
+                }
+            }
+        }
+
     def test_can_package_sqs_handler(self, sample_app):
         @sample_app.on_sqs_message(queue='foo', batch_size=5)
         def handler(event):
