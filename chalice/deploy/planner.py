@@ -439,31 +439,41 @@ class PlanStage(object):
         )
         topic_arn_varname = '%s_topic_arn' % resource.resource_name
         subscribe_varname = '%s_subscription_arn' % resource.resource_name
-        # To keep the user API simple, we only require the topic
-        # name and not the ARN.  However, the APIs require the topic
-        # ARN so we need to reconstruct it here in the planner.
-        instruction_for_topic_arn = [
-            models.BuiltinFunction(
-                'parse_arn',
-                [function_arn],
-                output_var='parsed_lambda_arn',
-            ),
-            models.JPSearch('account_id',
-                            input_var='parsed_lambda_arn',
-                            output_var='account_id'),
-            models.JPSearch('region',
-                            input_var='parsed_lambda_arn',
-                            output_var='region_name'),
-            models.StoreValue(
-                name=topic_arn_varname,
-                value=StringFormat(
-                    'arn:aws:sns:{region_name}:{account_id}:%s' % (
-                        resource.topic
-                    ),
-                    ['region_name', 'account_id'],
+
+        instruction_for_topic_arn = []  # type: List[InstructionMsg]
+        if resource.topic.startswith('arn:aws:sns:'):
+            instruction_for_topic_arn += [
+                models.StoreValue(
+                    name=topic_arn_varname,
+                    value=resource.topic,
+                )
+            ]
+        else:
+            # To keep the user API simple, we only require the topic
+            # name and not the ARN.  However, the APIs require the topic
+            # ARN so we need to reconstruct it here in the planner.
+            instruction_for_topic_arn += [
+                models.BuiltinFunction(
+                    'parse_arn',
+                    [function_arn],
+                    output_var='parsed_lambda_arn',
                 ),
-            ),
-        ]  # type: List[InstructionMsg]
+                models.JPSearch('account_id',
+                                input_var='parsed_lambda_arn',
+                                output_var='account_id'),
+                models.JPSearch('region',
+                                input_var='parsed_lambda_arn',
+                                output_var='region_name'),
+                models.StoreValue(
+                    name=topic_arn_varname,
+                    value=StringFormat(
+                        'arn:aws:sns:{region_name}:{account_id}:%s' % (
+                            resource.topic
+                        ),
+                        ['region_name', 'account_id'],
+                    ),
+                ),
+            ]
         if self._remote_state.resource_exists(resource):
             # Given there's nothing about an SNS subscription you can
             # configure for now, if the resource exists, we don't do

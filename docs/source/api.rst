@@ -235,8 +235,7 @@ Chalice
               app.log.info("SNS subject: %s", event.subject)
               app.log.info("SNS message: %s", event.message)
 
-      :param topic: The name of the SNS topic you want to subscribe to.
-        This is the name of the topic, not the topic ARN.
+      :param topic: The name or ARN of the SNS topic you want to subscribe to.
 
       :param name: The name of the function to use.  This name is combined
         with the chalice app name as well as the stage name to create the
