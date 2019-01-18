@@ -4,7 +4,7 @@ Continuous Deployment (CD)
 Chalice can be used to set up a basic Continuous Deployment pipeline. The
 ``chalice deploy`` command is good for getting up and running quickly with
 Chalice, but in a team environment properly managing permissions and sharing
-and updating the ``deployed.json`` file will get messy.
+and updating the ``deployed.yml`` file will get messy.
 
 One way to scale up your chalice app is to create a continuous deployment
 pipeline. The pipeline can run tests on code changes and, if they pass, promote
@@ -29,9 +29,9 @@ the ``aws cloudformation deploy`` command. Below is an example.
 
 ::
 
-   $ chalice generate-pipeline pipeline.json
+   $ chalice generate-pipeline pipeline.yml
    $ aws cloudformation deploy --stack-name mystack
-         --template-file pipeline.json --capabilities CAPABILITY_IAM
+         --template-file pipeline.yml --capabilities CAPABILITY_IAM
    Waiting for changeset to be created..
    Waiting for stack create/update to complete
    Successfully created/updated stack - mystack
@@ -67,7 +67,7 @@ The CodeCommit repository can be added as a git remote for deployment. This
 makes it easy to kick off deployments. The developer doing the deployment only
 needs to push the release code up to the CodeCommit repository master branch.
 All the developer needs is keys that allow for push access to the CodeCommit
-repository. This is a lot easier than managing a set of ``deployed.json``
+repository. This is a lot easier than managing a set of ``deployed.yml``
 resources across a repsoitory and manually doing ``chalice deploy`` whenever
 a change needs to be deployed.
 
@@ -106,7 +106,7 @@ that does the following.
       - sudo pip install -r requirements.txt
       - chalice package /tmp/packaged
       - aws cloudformation package --template-file
-          tmp/packaged/sam.json --s3-bucket ${APP_S3_BUCKET}
+          tmp/packaged/sam.yml --s3-bucket ${APP_S3_BUCKET}
           --output-template-file transformed.yaml
   artifacts:
     type: zip

@@ -10,3 +10,10 @@ chalice.egg-info/
 .pytest_cache/
 .mypy_cache/
 *.pyc
+bin/
+dist/
+lib/
+lib64
+pip-selfcheck.json
+pyvenv.cfg
+

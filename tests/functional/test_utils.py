@@ -1,11 +1,11 @@
 import zipfile
-import json
 import os
 import io
 
 import pytest
 
 from chalice import utils
+import yaml
 
 
 @pytest.fixture
@@ -48,14 +48,14 @@ def test_can_zip_recursive_contents(tmpdir):
 
 
 def test_can_write_recorded_values(tmpdir):
-    filename = str(tmpdir.join('deployed.json'))
+    filename = str(tmpdir.join('deployed.yml'))
     utils.record_deployed_values({'dev': {'deployed': 'foo'}}, filename)
     with open(filename, 'r') as f:
-        assert json.load(f) == {'dev': {'deployed': 'foo'}}
+        assert yaml.load(f) == {'dev': {'deployed': 'foo'}}
 
 
 def test_can_merge_recorded_values(tmpdir):
-    filename = str(tmpdir.join('deployed.json'))
+    filename = str(tmpdir.join('deployed.yml'))
     first = {'dev': {'deployed': 'values'}}
     second = {'prod': {'deployed': 'values'}}
     utils.record_deployed_values(first, filename)
@@ -63,12 +63,12 @@ def test_can_merge_recorded_values(tmpdir):
     combined = first.copy()
     combined.update(second)
     with open(filename, 'r') as f:
-        data = json.load(f)
+        data = yaml.load(f)
     assert data == combined
 
 
 def test_can_remove_stage_from_deployed_values(tmpdir):
-    filename = str(tmpdir.join('deployed.json'))
+    filename = str(tmpdir.join('deployed.yml'))
     deployed = {
         'dev': {'deployed': 'values'},
     }
@@ -76,32 +76,32 @@ def test_can_remove_stage_from_deployed_values(tmpdir):
         'prod': {'deployed': 'values'}
     }
     deployed.update(left_after_removal)
-    with open(filename, 'wb') as f:
-        f.write(json.dumps(deployed).encode('utf-8'))
+    with io.open(filename, 'w', encoding='utf-8') as f:
+        yaml.dump(deployed, f)
     utils.remove_stage_from_deployed_values('dev', filename)
 
-    with open(filename, 'r') as f:
-        data = json.load(f)
+    with io.open(filename, 'r', encoding='utf-8') as f:
+        data = yaml.load(f)
     assert data == left_after_removal
 
 
 def test_remove_stage_from_deployed_values_already_removed(tmpdir):
-    filename = str(tmpdir.join('deployed.json'))
+    filename = str(tmpdir.join('deployed.yml'))
     deployed = {
         'dev': {'deployed': 'values'},
         'prod': {'deployed': 'values'}
     }
-    with open(filename, 'wb') as f:
-        f.write(json.dumps(deployed).encode('utf-8'))
+    with io.open(filename, 'w', encoding='utf-8') as f:
+        yaml.dump(deployed, f)
     utils.remove_stage_from_deployed_values('fake_key', filename)
 
-    with open(filename, 'r') as f:
-        data = json.load(f)
+    with io.open(filename, 'r', encoding='utf-8') as f:
+        data = yaml.load(f)
     assert data == deployed
 
 
 def test_remove_stage_from_deployed_values_no_file(tmpdir):
-    filename = str(tmpdir.join('deployed.json'))
+    filename = str(tmpdir.join('deployed.yml'))
     utils.remove_stage_from_deployed_values('fake_key', filename)
 
     # Make sure it doesn't create the file if it didn't already exist

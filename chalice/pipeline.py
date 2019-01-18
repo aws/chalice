@@ -40,7 +40,8 @@ class CreatePipelineTemplate(object):
 
     _CODEBUILD_IMAGE = {
         'python2.7': 'python:2.7.12',
-        'python3.6': 'python:3.6.5',
+        'python3.6': 'python:3.6.7',
+        'python3.7': 'python:3.7.1',
     }
 
     _BASE_TEMPLATE = {
@@ -52,7 +53,7 @@ class CreatePipelineTemplate(object):
                 "Description": "Enter the name of your application"
             },
             "CodeBuildImage": {
-                "Default": "aws/codebuild/python:2.7.12",
+                "Default": "aws/codebuild/python:3.7.1",
                 "Type": "String",
                 "Description": "Name of codebuild image to use."
             }

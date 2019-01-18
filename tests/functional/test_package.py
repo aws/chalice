@@ -857,7 +857,7 @@ def test_can_create_app_packager_with_no_autogen(tmpdir):
     # sure they're written to disk and look (mostly) right.
     contents = os.listdir(str(outdir))
     assert 'deployment.zip' in contents
-    assert 'sam.json' in contents
+    assert 'sam.yml' in contents
 
 
 def test_will_create_outdir_if_needed(tmpdir):
@@ -871,7 +871,7 @@ def test_will_create_outdir_if_needed(tmpdir):
     p.package_app(config, str(outdir), 'dev')
     contents = os.listdir(str(outdir))
     assert 'deployment.zip' in contents
-    assert 'sam.json' in contents
+    assert 'sam.yml' in contents
 
 
 class TestSubprocessPip(object):

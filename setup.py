@@ -16,7 +16,8 @@ install_requires = [
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
     'wheel',
-    'setuptools'
+    'setuptools',
+    'pyyaml',
 ]
 
 setup(
@@ -33,7 +34,7 @@ setup(
         'event-file-poller': ['watchdog==0.8.3'],
     },
     license="Apache License 2.0",
-    package_data={'chalice': ['*.json']},
+    package_data={'chalice': ['*.json', '*.yml']},
     include_package_data=True,
     zip_safe=False,
     keywords='chalice',

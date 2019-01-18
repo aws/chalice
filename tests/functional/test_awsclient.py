@@ -212,29 +212,43 @@ class TestDeleteRestAPI(object):
             assert awsclient.delete_rest_api('name')
 
 
-class TestGetRestAPI(object):
+class TestGetRestApi(object):
     def test_rest_api_exists(self, stubbed_session):
         desired_name = 'myappname'
-        stubbed_session.stub('apigateway').get_rest_apis()\
-            .returns(
-                {'items': [
-                    {'createdDate': 1, 'id': 'wrongid1', 'name': 'wrong1'},
-                    {'createdDate': 2, 'id': 'correct', 'name': desired_name},
-                    {'createdDate': 3, 'id': 'wrongid3', 'name': 'wrong3'},
-                ]})
+        stubbed_session.stub('apigateway').get_rest_apis().returns(
+            {'items': [{
+                'createdDate': 1546313171,
+                'id': 'wrongid1',
+                'name': 'wrong1'
+            }, {
+                'createdDate': 1546313171,
+                'id': 'correct',
+                'name': desired_name
+            }, {
+                'createdDate': 1546313171,
+                'id': 'wrongid3',
+                'name': 'wrong3'
+            }, ]})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.get_rest_api_id(desired_name) == 'correct'
         stubbed_session.verify_stubs()
 
     def test_rest_api_does_not_exist(self, stubbed_session):
-        stubbed_session.stub('apigateway').get_rest_apis()\
-            .returns(
-                {'items': [
-                    {'createdDate': 1, 'id': 'wrongid1', 'name': 'wrong1'},
-                    {'createdDate': 2, 'id': 'wrongid1', 'name': 'wrong2'},
-                    {'createdDate': 3, 'id': 'wrongid3', 'name': 'wrong3'},
-                ]})
+        stubbed_session.stub('apigateway').get_rest_apis().returns(
+            {'items': [{
+                'createdDate': 1546313171,
+                'id': 'wrongid1',
+                'name': 'wrong1'
+            }, {
+                'createdDate': 1546313171,
+                'id': 'wrongid1',
+                'name': 'wrong2'
+            }, {
+                'createdDate': 1546313171,
+                'id': 'wrongid3',
+                'name': 'wrong3'
+            }, ]})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.get_rest_api_id('myappname') is None

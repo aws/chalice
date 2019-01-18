@@ -3,14 +3,14 @@ Configuration File
 
 Whenever you create a new project using
 ``chalice new-project``, a ``.chalice`` directory is created
-for you.  In this directory is a ``config.json`` file that
+for you.  In this directory is a ``config.yml`` file that
 you can use to control what happens when you ``chalice deploy``::
 
 
     $ tree -a
     .
     ├── .chalice
-    │   └── config.json
+    │   └── config.yml
     ├── app.py
     └── requirements.txt
 
@@ -66,14 +66,14 @@ be checked.
   should try to automatically generate an IAM policy based on
   analyzing your application source code.  The default value is
   ``true``.  If this value is ``false`` then chalice will load
-  try to a local file in ``.chalice/policy-<stage-name>.json``
+  try to a local file in ``.chalice/policy-<stage-name>.yml``
   instead of auto-generating a policy from source code analysis.
 
 * ``iam_policy_file`` - When ``autogen_policy`` is false, chalice
   will try to load an IAM policy from disk instead of auto-generating
   one based on source code analysis.  The default location of this
-  file is ``.chalice/policy-<stage-name>.json``, e.g
-  ``.chalice/policy-dev.json``, ``.chalice/policy-prod.json``, etc.
+  file is ``.chalice/policy-<stage-name>.yml``, e.g
+  ``.chalice/policy-dev.yml``, ``.chalice/policy-prod.yml``, etc.
   You can change the filename by providing this ``iam_policy_file``
   config option.  This filename is relative to the ``.chalice``
   directory.
@@ -143,19 +143,15 @@ stages, and a stage can have many Lambda functions.  To configure
 per lambda configuration, you add a ``lambda_functions`` key in your
 stage configuration::
 
-  {
-    "version": "2.0",
-    "app_name": "app",
-    "stages": {
-      "dev": {
-        "lambda_functions": {
-          "foo": {
-            "lambda_timeout": 120
-          }
-        }
-      }
-    }
-  }
+
+    version: 2.0
+    app_name: app
+    stages:
+      dev:
+        lambda_functions:
+          foo:
+            lambda_timeout: 120
+
 
 Each key in the ``lambda_functions`` dictionary is the name of a Lambda
 function in your app.  The value is a dictionary of configuration that
@@ -190,30 +186,25 @@ IAM Roles and Policies
 
 Here's an example for configuring IAM policies across stages::
 
-  {
-    "version": "2.0",
-    "app_name": "app",
-    "stages": {
-      "dev": {
-        "autogen_policy": true,
-        "api_gateway_stage": "dev"
-      },
-      "beta": {
-        "autogen_policy": false,
-        "iam_policy_file": "beta-app-policy.json"
-      },
-      "prod": {
-        "manage_iam_role": false,
-        "iam_role_arn": "arn:aws:iam::...:role/prod-role"
-      }
-    }
-  }
+    ---
+    version: 2.0
+    app_name: app
+    stages:
+      dev:
+        autogen_policy: true
+        api_gateway_stage: dev
+      beta:
+        autogen_policy: false
+        iam_policy_file: beta-app-policy.yml
+      prod:
+        manage_iam_role: false
+        iam_role_arn: "arn:aws:iam::...:role/prod-role"
 
 In this config file we're specifying three stages, ``dev``, ``beta``,
 and ``prod``.  In the ``dev`` stage, chalice will automatically
 generate an IAM policy based on analyzing the application source code.
 For the ``beta`` stage, chalice will load the
-``.chalice/beta-app-policy.json`` file and use it as the policy to
+``.chalice/beta-app-policy.yml`` file and use it as the policy to
 associate with the IAM role for that stage.  In the ``prod`` stage,
 chalice won't modify any IAM roles.  It will just set the IAM role
 for the Lambda function to be ``arn:aws:iam::...:role/prod-role``.
@@ -221,22 +212,17 @@ for the Lambda function to be ``arn:aws:iam::...:role/prod-role``.
 Here's an example that show config precedence::
 
 
-  {
-    "version": "2.0",
-    "app_name": "app",
-    "api_gateway_stage": "api",
-    "stages": {
-      "dev": {
-      },
-      "beta": {
-      },
-      "prod": {
-        "api_gateway_stage": "prod",
-        "manage_iam_role": false,
-        "iam_role_arn": "arn:aws:iam::...:role/prod-role"
-      }
-    }
-  }
+  ---
+  version: "2.0"
+  app_name: "app",
+  api_gateway_stage: "api",
+  stages:
+      dev: {}
+      beta: {}
+      prod:
+        api_gateway_stage: prod
+        manage_iam_role: false
+        iam_role_arn: "arn:aws:iam::...:role/prod-role"
 
 In this config file, both the ``dev`` and ``beta`` stage will
 have an API gateway stage name of ``api`` because they will
@@ -257,45 +243,43 @@ provide environment variables that all stages should have as well
 as stage specific environment variables::
 
 
-  {
-    "version": "2.0",
-    "app_name": "app",
-    "environment_variables": {
-      "SHARED_CONFIG": "foo",
-      "OTHER_CONFIG": "from-top"
-    },
-    "stages": {
-      "dev": {
-        "environment_variables": {
-          "TABLE_NAME": "dev-table",
-          "OTHER_CONFIG": "dev-value"
-        }
-      },
-      "prod": {
-        "environment_variables": {
-          "TABLE_NAME": "prod-table",
-          "OTHER_CONFIG": "prod-value"
-        }
-      }
-    }
-  }
+    ---
+    version: 2.0,
+    app_name: app
+    environment_variables:
+      SHARED_CONFIG: foo
+      OTHER_CONFIG: from-top
+    stages:
+      dev:
+        environment_variables:
+          TABLE_NAME: dev-table
+          OTHER_CONFIG: dev-value
+      prod:
+        environment_variables:
+          TABLE_NAME: prod-table
+          OTHER_CONFIG: prod-value
+
+
+
+
 
 For the above config, the ``dev`` stage will have the
 following environment variables set::
 
-  {
-    "SHARED_CONFIG": "foo",
-    "TABLE_NAME": "dev-table",
-    "OTHER_CONFIG": "dev-value",
-  }
+    ---
+    SHARED_CONFIG: foo
+    TABLE_NAME: dev-table
+    OTHER_CONFIG: dev-value
+
 
 The ``prod`` stage will have these environment variables set::
 
-  {
-    "SHARED_CONFIG": "foo",
-    "TABLE_NAME": "prod-table",
-    "OTHER_CONFIG": "prod-value",
-  }
+
+    ---
+    SHARED_CONFIG: foo
+    TABLE_NAME: prod-table
+    OTHER_CONFIG: prod-value
+
 
 
 Per Lambda Examples
@@ -337,29 +321,30 @@ as follows:
 
 We can accomplish all this with this config file::
 
-  {
-    "stages": {
-      "dev": {
-        "environment_variables": {
-          "OWNER": "dev-team"
-        }
-        "api_gateway_stage": "api",
-        "lambda_functions": {
-          "foo": {
-            "subnet_ids": ["sn-1", "sn-2"],
-            "security_group_ids": ["sg-10", "sg-11"],
-          },
-          "bar": {
-            "manage_iam_role": false,
-            "iam_role_arn": "arn:aws:iam::my-role-name",
-            "environment_variables": {"TABLE_NAME": "mytable"}
-          }
-        }
-      }
-    },
-    "version": "2.0",
-    "app_name": "demo"
-  }
+    ---
+    stages:
+      dev:
+        environment_variables:
+          OWNER: dev-team
+        api_gateway_stage: api
+        lambda_functions:
+          foo:
+            subnet_ids:
+              - sn-1
+              - sn-2
+            security_group_ids:
+              - sg-10
+              - sg-11
+
+          bar:
+            manage_iam_role: false
+            iam_role_arn: "arn:aws:iam::my-role-name"
+            environment_variables:
+              TABLE_NAME: mytable
+
+    version: 2.0
+    app_name: demo
+
 
 .. _AWS Lambda VPC documentation: https://docs.aws.amazon.com/lambda/latest/dg/vpc.html#vpc-configuring
 .. _AWS Documentation on managing concurrency: https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html

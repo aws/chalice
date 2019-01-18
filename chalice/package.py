@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Set, Union  # noqa
 from typing import cast
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
-from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
+from chalice.utils import OSUtils, UI, serialize_to_yaml, to_cfn_resource_name
 from chalice.config import Config  # noqa
 from chalice.deploy import models
 from chalice.deploy.deployer import ApplicationGraphBuilder
@@ -359,9 +359,9 @@ class AppPackager(object):
         self._template_post_processor = post_processor
         self._osutils = osutils
 
-    def _to_json(self, doc):
-        # type: (Any) -> str
-        return serialize_to_json(doc)
+    def _to_yaml(self, doc):
+        # type: (Any) -> bytes
+        return serialize_to_yaml(doc)
 
     def package_app(self, config, outdir, chalice_stage_name):
         # type: (Config, str, str) -> None
@@ -377,9 +377,9 @@ class AppPackager(object):
         self._template_post_processor.process(
             sam_template, config, outdir, chalice_stage_name)
         self._osutils.set_file_contents(
-            filename=os.path.join(outdir, 'sam.json'),
-            contents=self._to_json(sam_template),
-            binary=False
+            filename=os.path.join(outdir, 'sam.yml'),
+            contents=self._to_yaml(sam_template),
+            binary=True
         )
 
 

@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 import importlib
 import logging
 import functools
@@ -9,6 +8,8 @@ import click
 from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
 from typing import Any, Optional, Dict, MutableMapping  # noqa
+import yaml
+from yaml.scanner import ScannerError
 
 from chalice import __version__ as chalice_version
 from chalice.awsclient import TypedAWSClient
@@ -23,6 +24,7 @@ from chalice.logs import LogRetriever
 from chalice import local
 from chalice.utils import UI  # noqa
 from chalice.utils import PipeReader  # noqa
+from chalice.utils import replace_yaml_extension
 from chalice.deploy import deployer  # noqa
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import LambdaInvoker
@@ -81,7 +83,7 @@ class UnknownConfigFileVersion(Exception):
     def __init__(self, version):
         # type: (str) -> None
         super(UnknownConfigFileVersion, self).__init__(
-            "Unknown version '%s' in config.json" % version)
+            "Unknown version '%s' in config.yml" % version)
 
 
 class LargeRequestBodyFilter(logging.Filter):
@@ -102,7 +104,7 @@ class LargeRequestBodyFilter(logging.Filter):
         return True
 
 
-class CLIFactory(object):
+class CliFactory(object):
     def __init__(self, project_dir, debug=False, profile=None, environ=None):
         # type: (str, bool, Optional[str], Optional[MutableMapping]) -> None
         self.project_dir = project_dir
@@ -147,9 +149,11 @@ class CLIFactory(object):
         except (OSError, IOError):
             raise RuntimeError("Unable to load the project config file. "
                                "Are you sure this is a chalice project?")
-        except ValueError as err:
-            raise RuntimeError("Unable to load the project config file: %s"
-                               % err)
+        except (ValueError, ScannerError) as err:
+            raise RuntimeError(
+                'Unable to load the '
+                'project config file: {err}'.format(
+                    err=err))
 
         self._validate_config_from_disk(config_from_disk)
         if autogen_policy is not None:
@@ -267,9 +271,13 @@ class CLIFactory(object):
         :raise: OSError/IOError if unable to load the config file.
 
         """
-        config_file = os.path.join(self.project_dir, '.chalice', 'config.json')
+        config_file = os.path.join(self.project_dir, '.chalice', 'config.yml')
+        if not os.path.exists(config_file):
+            # if we couldn't find the file, then try again using
+            # the legacy .json suffix.
+            config_file = replace_yaml_extension(config_file)
         with open(config_file) as f:
-            return json.loads(f.read())
+            return yaml.load(f)
 
     def create_local_server(self, app_obj, config, host, port):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer

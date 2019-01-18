@@ -1,12 +1,14 @@
+import io
 import os
 import sys
-import json
 
 from typing import Dict, Any, Optional, List  # noqa
+import yaml
 from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.utils import replace_yaml_extension
 
 
 StrMap = Dict[str, Any]
@@ -87,7 +89,7 @@ class Config(object):
         if user_provided_params is None:
             user_provided_params = {}
         self._user_provided_params = user_provided_params
-        #: The json.loads() from .chalice/config.json
+        #: The yaml.load() from .chalice/config.yml
         if config_from_disk is None:
             config_from_disk = {}
         self._config_from_disk = config_from_disk
@@ -326,8 +328,8 @@ class Config(object):
         # We might be able to move this elsewhere.
         deployed_file = os.path.join(
             self.project_dir, '.chalice', 'deployed',
-            '%s.json' % chalice_stage_name)
-        data = self._load_json_file(deployed_file)
+            '%s.yml' % chalice_stage_name)
+        data = self._load_yaml_file(deployed_file)
         if data is not None:
             schema_version = data.get('schema_version', '1.0')
             if schema_version != '2.0':
@@ -338,21 +340,26 @@ class Config(object):
 
     def _try_old_deployer_values(self, chalice_stage_name):
         # type: (str) -> DeployedResources
-        # They are upgrading from v1.0 to v2.0 of the deployed.json
+        # They are upgrading from v1.0 to v2.0 of the deployed.yml
         # schema.  Attempt to auto convert for them.
         old_deployed_file = os.path.join(self.project_dir, '.chalice',
-                                         'deployed.json')
-        data = self._load_json_file(old_deployed_file)
+                                         'deployed.yml')
+        data = self._load_yaml_file(old_deployed_file)
         if data is None or chalice_stage_name not in data:
             return DeployedResources.empty()
         return self._upgrade_deployed_values(chalice_stage_name, data)
 
-    def _load_json_file(self, deployed_file):
+    def _load_yaml_file(self, deployed_file):
         # type: (str) -> Any
         if not os.path.isfile(deployed_file):
+            # if the specified deployed file does not
+            # exist, we should try to find a legacy json
+            # json file
+            deployed_file = replace_yaml_extension(deployed_file)
+        if not os.path.isfile(deployed_file):
             return None
-        with open(deployed_file, 'r') as f:
-            return json.load(f)
+        with io.open(deployed_file, 'r', encoding='utf-8') as f:
+            return yaml.load(f)
 
     def _upgrade_deployed_values(self, chalice_stage_name, data):
         # type: (str, Any) -> DeployedResources

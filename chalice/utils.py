@@ -1,16 +1,16 @@
+import contextlib
 import io
 import os
-import zipfile
-import json
-import contextlib
-import tempfile
 import re
 import shutil
+import subprocess
 import sys
 import tarfile
-import subprocess
+import tempfile
+import zipfile
 
 import click
+import yaml
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
 from typing import Optional, Union  # noqa
 from typing import MutableMapping  # noqa
@@ -48,20 +48,21 @@ def to_cfn_resource_name(name):
 
 def remove_stage_from_deployed_values(key, filename):
     # type: (str, str) -> None
-    """Delete a top level key from the deployed JSON file."""
+    """Delete a top level key from the deployed yaml file."""
     final_values = {}  # type: Dict[str, Any]
+    f = None  # type: Optional[IO[Any]]
     try:
         with open(filename, 'r') as f:
-            final_values = json.load(f)
+            final_values = yaml.load(f)
     except IOError:
         # If there is no file to delete from, then this funciton is a noop.
         return
 
     try:
         del final_values[key]
-        with open(filename, 'wb') as f:
-            data = serialize_to_json(final_values)
-            f.write(data.encode('utf-8'))
+        with io.open(filename, 'wb') as f:
+            data = serialize_to_yaml(final_values)
+            f.write(data)
     except KeyError:
         # If they key didn't exist then there is nothing to remove.
         pass
@@ -69,31 +70,43 @@ def remove_stage_from_deployed_values(key, filename):
 
 def record_deployed_values(deployed_values, filename):
     # type: (Dict[str, Any], str) -> None
-    """Record deployed values to a JSON file.
+    """Record deployed values to a yaml file.
 
     This allows subsequent deploys to lookup previously deployed values.
 
     """
     final_values = {}  # type: Dict[str, Any]
+    f = None  # type: Optional[IO[Any]]
     if os.path.isfile(filename):
-        with open(filename, 'r') as f:
-            final_values = json.load(f)
+        with io.open(filename, 'r', encoding='utf-8') as f:
+            final_values = yaml.load(f)
     final_values.update(deployed_values)
     with open(filename, 'wb') as f:
-        data = serialize_to_json(final_values)
-        f.write(data.encode('utf-8'))
+        data = serialize_to_yaml(final_values)
+        f.write(data)
 
 
-def serialize_to_json(data):
-    # type: (Any) -> str
-    """Serialize to pretty printed JSON.
+def io_buffer():
+    # type: () -> Tuple[Any, Any]
+    from io import BytesIO
+    from io import TextIOWrapper
+    b = BytesIO()
+    return b, TextIOWrapper(b, encoding='utf-8')
+
+
+def serialize_to_yaml(data):
+    # type: (Any) -> bytes
+    """Serialize to pretty printed yaml.
 
     This includes using 2 space indentation, no trailing whitespace, and
-    including a newline at the end of the JSON document.  Useful when you want
-    to serialize JSON to disk.
+    including a newline at the end of the yaml document.  Useful when you want
+    to serialize yaml  to disk.
 
     """
-    return json.dumps(data, indent=2, separators=(',', ': ')) + '\n'
+    b, wrapper = io_buffer()
+    wrapper.write(u'---\n')
+    yaml.dump(data, indent=2, stream=wrapper, default_flow_style=False)
+    return b.getvalue()
 
 
 def create_zip_file(source_dir, outfile):
@@ -157,6 +170,19 @@ class OSUtils(object):
             mode = 'r'
         with io.open(filename, mode, encoding=encoding) as f:
             return f.read()
+
+    def get_buffered_contents(self, filename, binary=True, encoding='utf-8'):
+        # type: (str, bool, Any) -> IO[Any]
+        # It looks like the type definition for io.open is wrong.
+        # the encoding arg is unicode, but the actual type is
+        # Optional[Text].  For now we have to use Any to keep mypy happy.
+        if binary:
+            mode = 'rb'
+            # In binary mode the encoding is not used and most be None.
+            encoding = None
+        else:
+            mode = 'r'
+        return io.open(filename, mode, encoding=encoding)
 
     def set_file_contents(self, filename, contents, binary=True):
         # type: (str, str, bool) -> None
@@ -302,3 +328,14 @@ class PipeReader(object):
         if not self._stream.isatty():
             return self._stream.read()
         return None
+
+
+def replace_yaml_extension(yaml_filename):
+    # type: (str) -> str
+    """
+    Replace yaml suffixes with json suffixes.
+
+    This allows the newer version of chalice that is looking for
+    yaml files to work nicely with legacy .json files.
+    """
+    return re.sub(r'\.ya?ml$', '.json', yaml_filename)

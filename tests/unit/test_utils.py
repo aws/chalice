@@ -60,12 +60,8 @@ class TestPipeReader(object):
         assert value is None
 
 
-def test_serialize_json():
-    assert utils.serialize_to_json({'foo': 'bar'}) == (
-        '{\n'
-        '  "foo": "bar"\n'
-        '}\n'
-    )
+def test_serialize_yaml():
+    assert utils.serialize_to_yaml({'foo': 'bar'}) == b'---\nfoo: bar\n'
 
 
 @pytest.mark.parametrize('name,cfn_name', [
@@ -100,3 +96,12 @@ def test_to_cfn_resource_name_properties(name):
         pass
     else:
         assert re.search('[^A-Za-z0-9]', result) is None
+
+
+@pytest.mark.parametrize('yaml_filename,result', [
+    ('foo.yml', 'foo.json'),
+    ('foo.yaml', 'foo.json'),
+    ('foo.txt', 'foo.txt'),
+])
+def test_json_filename(yaml_filename, result):
+    assert utils.replace_yaml_extension(yaml_filename) == result
