@@ -221,3 +221,5 @@ htmlhelp_basename = 'Chalicedoc'
 
 
 primary_domain = 'py'
+
+linkcheck_retries = 5
