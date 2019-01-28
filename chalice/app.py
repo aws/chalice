@@ -688,6 +688,10 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         if env is None:
             env = os.environ
         self._initialize(env)
+        self.experimental_feature_flags = set()
+        # This is marked as internal but is intended to be used by
+        # any code within Chalice.
+        self._features_used = set()
 
     def _initialize(self, env):
         if self.configure_logs:
@@ -735,6 +739,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self.log.setLevel(level)
 
     def register_blueprint(self, blueprint, name_prefix=None, url_prefix=None):
+        self._features_used.add('BLUEPRINTS')
         blueprint.register(self, options={'name_prefix': name_prefix,
                                           'url_prefix': url_prefix})
 
