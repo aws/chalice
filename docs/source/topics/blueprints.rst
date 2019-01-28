@@ -2,11 +2,26 @@ Blueprints
 ==========
 
 
+.. warning::
+
+  Blueprints are considered an experimental API.  You'll need to opt-in
+  to this feature using the ``BLUEPRINTS`` feature flag:
+
+  .. code-block:: python
+
+    app = Chalice('myapp')
+    app.experimental_feature_flags.extend([
+        'BLUEPRINTS'
+    ])
+
+  See :doc:`experimental` for more information.
+
+
 Chalice blueprints are used to organize your application into logical
 components.  Using a blueprint, you define your resources and decorators in
 modules outside of your ``app.py``.  You then register a blueprint in your main
-``app.py`` file.  Any decorator supported on an application object is also
-supported in a blueprint.
+``app.py`` file.  Blueprints support any decorator available on an application
+object.
 
 
 .. note::
@@ -15,14 +30,14 @@ supported in a blueprint.
   <http://flask.pocoo.org/docs/latest/blueprints/>`__ in Flask.  Flask
   blueprints allow you to define a set of URL routes separately from the main
   ``Flask`` object.  This concept is extended to all resources in Chalice.  A
-  Chalice blueprint can have Lambda functions, event handlers, built in
+  Chalice blueprint can have Lambda functions, event handlers, built-in
   authorizers, etc. in addition to a collection of routes.
 
 
 Example
 -------
 
-In this example we'll create a blueprint with part of our routes defined in a
+In this example, we'll create a blueprint with part of our routes defined in a
 separate file.  First, let's create an application::
 
     $ chalice new-project blueprint-demo
@@ -46,10 +61,11 @@ Next, we'll oen the ``chalicelib/blueprints.py`` file:
         return {'foo': 'bar'}
 
 
-The ``__name__`` is used to denote the import path of the blueprint.  This must
-match the import name of the module so the function can be properly imported
-when running in Lambda.  We'll now import this module in our ``app.py`` and
-register this blueprint.  We'll also add a route in our ``app.py`` directly:
+The ``__name__`` is used to denote the import path of the blueprint.  This name
+must match the import name of the module so the function can be properly
+imported when running in Lambda.  We'll now import this module in our
+``app.py`` and register this blueprint.  We'll also add a route in our
+``app.py`` directly:
 
 .. code-block:: python
 
@@ -64,7 +80,7 @@ register this blueprint.  We'll also add a route in our ``app.py`` directly:
     def index():
         return {'hello': 'world'}
 
-At this point we've defined two routes.  One route, ``/``, is directly defined
+At this point, we've defined two routes.  One route, ``/``, is directly defined
 in our ``app.py`` file.  The other route, ``/foo`` is defined in
 ``chalicelib/blueprints.py``.  It was added to our Chalice app when we
 registered it via ``app.register_blueprint(extra_routes)``.
@@ -124,7 +140,7 @@ Blueprint Registration
 The ``app.register_blueprint`` function accepts two optional arguments,
 ``name_prefix`` and ``url_prefix``.  This allows you to register the resources
 in your blueprint at a certain url and name prefix.  If you specify
-``url_prefix`` any routes defined in your blueprint will have the
+``url_prefix``, any routes defined in your blueprint will have the
 ``url_prefix`` prepended to it.  If you specify the ``name_prefix``, any Lambda
 functions created will have the ``name_prefix`` prepended to the resource name.
 
