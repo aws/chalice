@@ -16,6 +16,8 @@ from chalice import app
 from chalice import NotFoundError
 from chalice.app import APIGateway, Request, Response, handle_decimals
 from chalice import __version__ as chalice_version
+from chalice.deploy.validate import ExperimentalFeatureError
+from chalice.deploy.validate import validate_feature_flags
 
 
 # These are used to generate sample data for hypothesis tests.
@@ -85,6 +87,21 @@ def assert_response_body_is(response, body):
 
 def json_response_body(response):
     return json.loads(response['body'])
+
+
+def assert_requires_opt_in(app, flag):
+    with pytest.raises(ExperimentalFeatureError):
+        validate_feature_flags(app)
+    # Now ensure if we opt in to the feature, we don't
+    # raise an exception.
+    app.experimental_feature_flags.add(flag)
+    try:
+        validate_feature_flags(app)
+    except ExperimentalFeatureError:
+        raise AssertionError(
+            "Opting in to feature %s still raises an "
+            "ExperimentalFeatureError." % flag
+        )
 
 
 @fixture
@@ -1800,3 +1817,16 @@ def test_every_decorator_added_to_blueprint():
     ]
     for method_name, _ in public_api:
         assert method_name in blueprint_api
+
+
+def test_blueprint_gated_behind_feature_flag():
+    # Blueprints won't validate unless you enable their feature flag.
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/')
+    def index():
+        pass
+
+    myapp.register_blueprint(bp)
+    assert_requires_opt_in(myapp, flag='BLUEPRINTS')

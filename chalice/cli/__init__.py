@@ -26,6 +26,7 @@ from chalice.config import Config  # noqa
 from chalice.logs import display_logs
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
+from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.utils import getting_started_prompt, UI, serialize_to_json
 from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -465,6 +466,9 @@ def main():
                    "Either export the AWS_DEFAULT_REGION "
                    "environment variable or set the "
                    "region value in our ~/.aws/config file.", err=True)
+        return 2
+    except ExperimentalFeatureError as e:
+        click.echo(str(e))
         return 2
     except Exception:
         click.echo(traceback.format_exc(), err=True)
