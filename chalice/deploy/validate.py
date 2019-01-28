@@ -15,8 +15,10 @@ class ExperimentalFeatureError(Exception):
         'If you still like to use these '
         'experimental features, you can opt in by adding this to your '
         'app.py file:\n\n%s\n\n'
-        'See https://doclink/ for more details.'
+        'See https://chalice.readthedocs.io/en/latest/topics/experimental.rst'
+        ' for more details.'
     )
+
     def __init__(self, features_missing_opt_in):
         # type: (Set[str]) -> None
         self.features_missing_opt_in = features_missing_opt_in
@@ -55,6 +57,7 @@ def validate_configuration(config):
 def validate_feature_flags(chalice_app):
     # type: (app.Chalice) -> None
     missing_opt_in = set()
+    # pylint: disable=protected-access
     for feature in chalice_app._features_used:
         if feature not in chalice_app.experimental_feature_flags:
             missing_opt_in.add(feature)

@@ -65,6 +65,7 @@ Topics
    topics/purelambda
    topics/blueprints
    topics/cd
+   topics/experimental
 
 
 API Reference
