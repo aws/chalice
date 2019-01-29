@@ -229,7 +229,6 @@ details.
 """
 
 
-
 SQS_EVENT_SOURCE_POLICY = {
     "Effect": "Allow",
     "Action": [
