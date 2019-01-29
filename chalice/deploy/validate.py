@@ -15,7 +15,7 @@ class ExperimentalFeatureError(Exception):
         'If you still like to use these '
         'experimental features, you can opt in by adding this to your '
         'app.py file:\n\n%s\n\n'
-        'See https://chalice.readthedocs.io/en/latest/topics/experimental.rst'
+        'See https://chalice.readthedocs.io/en/latest/topics/experimental.html'
         ' for more details.'
     )
 
