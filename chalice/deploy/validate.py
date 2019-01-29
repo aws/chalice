@@ -5,20 +5,10 @@ from typing import Dict, List, Set, Iterator, Optional  # noqa
 
 from chalice import app  # noqa
 from chalice.config import Config  # noqa
+from chalice.constants import EXPERIMENTAL_ERROR_MSG
 
 
 class ExperimentalFeatureError(Exception):
-    _ERROR_MSG = (
-        'You are using experimental features without explicitly opting in.\n'
-        'Experimental features do not guarantee backwards compatibility '
-        'and may be removed in the future.\n'
-        'If you still like to use these '
-        'experimental features, you can opt in by adding this to your '
-        'app.py file:\n\n%s\n\n'
-        'See https://chalice.readthedocs.io/en/latest/topics/experimental.html'
-        ' for more details.'
-    )
-
     def __init__(self, features_missing_opt_in):
         # type: (Set[str]) -> None
         self.features_missing_opt_in = features_missing_opt_in
@@ -29,10 +19,10 @@ class ExperimentalFeatureError(Exception):
         # type: (Set[str]) -> str
         opt_in_line = (
             'app.experimental_feature_flags.update([\n'
-            '    %s\n'
-            '])\n' % ', '.join(["'%s'" % feature
-                                for feature in missing_features]))
-        return self._ERROR_MSG % opt_in_line
+            '%s\n'
+            '])\n' % ',\n'.join(["    '%s'" % feature
+                                 for feature in missing_features]))
+        return EXPERIMENTAL_ERROR_MSG % opt_in_line
 
 
 def validate_configuration(config):
