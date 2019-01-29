@@ -217,6 +217,19 @@ http://chalice.readthedocs.io/en/latest/topics/packaging.html
 """
 
 
+EXPERIMENTAL_ERROR_MSG = """
+
+You are using experimental features without explicitly opting in.
+Experimental features do not guarantee backwards compatibility and may be
+removed in the future.  If you'd still like to use these experimental features,
+you can opt in by adding this to your app.py file:\n\n%s
+
+See https://chalice.readthedocs.io/en/latest/topics/experimental.html for more
+details.
+"""
+
+
+
 SQS_EVENT_SOURCE_POLICY = {
     "Effect": "Allow",
     "Action": [
