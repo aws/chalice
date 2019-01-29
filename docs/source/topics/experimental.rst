@@ -57,7 +57,7 @@ checks for experimental features once your application is deployed.
 
 
 List of Experimental APIs
-=========================
+-------------------------
 
 In the table below, the "Feature Flag Name" column is the value you
 must add to the ``app.experimental_feature_flags`` attribute.
@@ -77,10 +77,13 @@ The status of an experimental API can be:
     - Feature Flag Name
     - Version Added
     - Status
+    - GitHub Issue(s)
   * - :doc:`blueprints`
     - ``BLUEPRINTS``
     - 1.7.0
     - Trial
+    - `#1023 <https://github.com/aws/chalice/pull/1023>`__,
+      `#651 <https://github.com/aws/chalice/pull/651>`__
 
 
 See the `original discussion <https://github.com/aws/chalice/issues/1019>`__
