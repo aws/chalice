@@ -9,6 +9,10 @@ Next Release (TBD)
   (`#1047 <https://github.com/aws/chalice/pull/1047>`__)
 * Add support for passing SNS ARNs to ``on_sns_message``
   (`#1048 <https://github.com/aws/chalice/pull/1048>`__)
+* Add support for Blueprints
+  (`#1023 <https://github.com/aws/chalice/pull/1023>`__)
+* Add support for opting-in to experimental features
+  (`#1053 <https://github.com/aws/chalice/pull/1053>`__)
 
 
 1.6.2
