@@ -25,4 +25,4 @@ hypothesis==3.56.3
 # the top level requirements.
 pluggy<0.7
 
-mypy==0.590; python_version >= '3.6'
+mypy==0.660; python_version >= '3.6'
