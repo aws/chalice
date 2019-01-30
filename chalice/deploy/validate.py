@@ -5,6 +5,24 @@ from typing import Dict, List, Set, Iterator, Optional  # noqa
 
 from chalice import app  # noqa
 from chalice.config import Config  # noqa
+from chalice.constants import EXPERIMENTAL_ERROR_MSG
+
+
+class ExperimentalFeatureError(Exception):
+    def __init__(self, features_missing_opt_in):
+        # type: (Set[str]) -> None
+        self.features_missing_opt_in = features_missing_opt_in
+        msg = self._generate_msg(features_missing_opt_in)
+        super(ExperimentalFeatureError, self).__init__(msg)
+
+    def _generate_msg(self, missing_features):
+        # type: (Set[str]) -> str
+        opt_in_line = (
+            'app.experimental_feature_flags.update([\n'
+            '%s\n'
+            '])\n' % ',\n'.join(["    '%s'" % feature
+                                 for feature in missing_features]))
+        return EXPERIMENTAL_ERROR_MSG % opt_in_line
 
 
 def validate_configuration(config):
@@ -23,6 +41,18 @@ def validate_configuration(config):
     _validate_manage_iam_role(config)
     validate_python_version(config)
     validate_unique_function_names(config)
+    validate_feature_flags(config.chalice_app)
+
+
+def validate_feature_flags(chalice_app):
+    # type: (app.Chalice) -> None
+    missing_opt_in = set()
+    # pylint: disable=protected-access
+    for feature in chalice_app._features_used:
+        if feature not in chalice_app.experimental_feature_flags:
+            missing_opt_in.add(feature)
+    if missing_opt_in:
+        raise ExperimentalFeatureError(missing_opt_in)
 
 
 def validate_routes(routes):

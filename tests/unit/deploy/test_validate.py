@@ -6,7 +6,8 @@ from chalice.config import Config
 from chalice import CORSConfig
 from chalice.deploy.validate import validate_configuration, validate_routes, \
     validate_python_version, validate_route_content_types, \
-    validate_unique_function_names
+    validate_unique_function_names, validate_feature_flags, \
+    ExperimentalFeatureError
 
 
 def test_trailing_slash_routes_result_in_error():
@@ -225,3 +226,19 @@ def test_can_validate_updated_custom_binary_types(sample_app):
 
     assert validate_route_content_types(sample_app.routes,
                                         sample_app.api.binary_types) is None
+
+
+def test_can_validate_feature_flags(sample_app):
+    # The _features_used is marked internal because we don't want
+    # chalice users to access it, but this attribute is intended to be
+    # accessed by anything within the chalice codebase.
+    sample_app._features_used.add('SOME_NEW_FEATURE')
+    with pytest.raises(ExperimentalFeatureError):
+        validate_feature_flags(sample_app)
+    # Now if we opt in, validation is fine.
+    sample_app.experimental_feature_flags.add('SOME_NEW_FEATURE')
+    try:
+        validate_feature_flags(sample_app)
+    except ExperimentalFeatureError:
+        raise AssertionError("App was not suppose to raise an error when "
+                             "opting in to features via a feature flag.")

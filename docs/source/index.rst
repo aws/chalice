@@ -63,7 +63,9 @@ Topics
    topics/authorizers
    topics/events
    topics/purelambda
+   topics/blueprints
    topics/cd
+   topics/experimental
 
 
 API Reference

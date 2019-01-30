@@ -19,6 +19,7 @@ from chalice.logs import LogRetriever
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import UnhandledLambdaError
 from chalice.awsclient import ReadTimeout
+from chalice.deploy.validate import ExperimentalFeatureError
 
 
 class FakeConfig(object):
@@ -460,3 +461,24 @@ def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
                                   cli_factory=mock_cli_factory)
         assert result.exit_code == 2
         assert 'foo' in result.output
+
+
+def test_error_message_displayed_when_missing_feature_opt_in(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        sys.modules.pop('app', None)
+        with open(os.path.join('testproject', 'app.py'), 'w') as f:
+            # Rather than pick an existing experimental feature, we're
+            # manually injecting a feature flag into our app.  This ensures
+            # we don't have to update this test if a feature graduates
+            # from trial to accepted.  The '_features_used' is a "package
+            # private" var for chalice code.
+            f.write(
+                'from chalice import Chalice\n'
+                'app = Chalice("myapp")\n'
+                'app._features_used.add("MYTESTFEATURE")\n'
+            )
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.package, ['out'])
+        assert isinstance(result.exception, ExperimentalFeatureError)
+        assert 'MYTESTFEATURE' in str(result.exception)

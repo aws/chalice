@@ -24,6 +24,7 @@ from chalice import local
 from chalice.utils import UI  # noqa
 from chalice.utils import PipeReader  # noqa
 from chalice.deploy import deployer  # noqa
+from chalice.deploy import validate
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import LambdaInvoker
 from chalice.invoke import LambdaResponseFormatter
@@ -222,8 +223,11 @@ class CLIFactory(object):
 
         return handler
 
-    def load_chalice_app(self, environment_variables=None):
-        # type: (Optional[MutableMapping]) -> Chalice
+    def load_chalice_app(self, environment_variables=None,
+                         validate_feature_flags=True):
+        # type: (Optional[MutableMapping], Optional[bool]) -> Chalice
+        # validate_features indicates that we should validate that
+        # any expiremental features used have the appropriate feature flags.
         if self.project_dir not in sys.path:
             sys.path.insert(0, self.project_dir)
         # The vendor directory has its contents copied up to the top level of
@@ -258,6 +262,8 @@ class CLIFactory(object):
                 'SyntaxError: %s'
             ) % (getattr(e, 'filename'), e.lineno, e.text, e.msg)
             raise RuntimeError(message)
+        if validate_feature_flags:
+            validate.validate_feature_flags(chalice_app)
         return chalice_app
 
     def load_project_config(self):
