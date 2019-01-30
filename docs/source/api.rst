@@ -338,7 +338,8 @@ Request
 
   .. attribute:: query_params
 
-     A dict of the query params for the request.
+     A dict of the query params for the request.  This value is ``None`` if
+     no query params were provided in the request.
 
   .. attribute:: headers
 
@@ -346,7 +347,8 @@ Request
 
   .. attribute:: uri_params
 
-     A dict of the captured URI params.
+     A dict of the captured URI params.  This value is ``None`` if no
+     URI params were provided in the request.
 
   .. attribute:: method
 
