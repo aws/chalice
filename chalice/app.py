@@ -1126,7 +1126,7 @@ class EventSourceHandler(object):
         self.event_class = event_class
 
     def __call__(self, event, context):
-        event_obj = self.event_class(event)
+        event_obj = self.event_class(event, context)
         return self.func(event_obj)
 
 
@@ -1135,8 +1135,9 @@ class EventSourceHandler(object):
 # part of Chalice's public API and must be backwards compatible.
 
 class BaseLambdaEvent(object):
-    def __init__(self, event_dict):
+    def __init__(self, event_dict, context):
         self._event_dict = event_dict
+        self.context = context
         self._extract_attributes(event_dict)
 
     def _extract_attributes(self, event_dict):
@@ -1181,7 +1182,7 @@ class SQSEvent(BaseLambdaEvent):
 
     def __iter__(self):
         for record in self._event_dict['Records']:
-            yield SQSRecord(record)
+            yield SQSRecord(record, self.context)
 
 
 class SQSRecord(BaseLambdaEvent):
