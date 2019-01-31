@@ -340,6 +340,7 @@ def create_function_resource(name):
         role=models.PreCreatedIAMRole(role_arn='role:arn'),
         security_group_ids=[],
         subnet_ids=[],
+        layers=[]
     )
 
 
@@ -403,7 +404,7 @@ class TestApplicationGraphBuilder(object):
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
                       autogen_policy=False, security_group_ids=None,
-                      subnet_ids=None, reserved_concurrency=None):
+                      subnet_ids=None, reserved_concurrency=None, layers=None):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
@@ -429,6 +430,7 @@ class TestApplicationGraphBuilder(object):
             kwargs['subnet_ids'] = subnet_ids
         if reserved_concurrency is not None:
             kwargs['reserved_concurrency'] = reserved_concurrency
+        kwargs['layers'] = layers
         config = Config.create(**kwargs)
         return config
 
@@ -454,6 +456,36 @@ class TestApplicationGraphBuilder(object):
             role=models.PreCreatedIAMRole('role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
+            reserved_concurrency=None,
+        )
+
+    def test_can_build_lambda_function_with_layers(self, lambda_app):
+        # This is the simplest configuration we can get.
+        builder = ApplicationGraphBuilder()
+        layers = ['arn:aws:lambda:us-east-1:111:layer:test_layer:1']
+        config = self.create_config(lambda_app,
+                                    iam_role_arn='role:arn',
+                                    layers=layers)
+        application = builder.build(config, stage_name='dev')
+        # The top level resource is always an Application.
+        assert isinstance(application, models.Application)
+        assert len(application.resources) == 1
+        assert application.resources[0] == models.LambdaFunction(
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
+            environment_variables={},
+            runtime=config.lambda_python_version,
+            handler='app.foo',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
+            layers=layers,
             reserved_concurrency=None,
         )
 
@@ -483,6 +515,7 @@ class TestApplicationGraphBuilder(object):
             role=models.PreCreatedIAMRole('role:arn'),
             security_group_ids=['sg1', 'sg2'],
             subnet_ids=['sn1', 'sn2'],
+            layers=[],
             reserved_concurrency=None,
         )
 
@@ -543,6 +576,7 @@ class TestApplicationGraphBuilder(object):
             role=models.PreCreatedIAMRole('role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
             reserved_concurrency=5,
         )
 
@@ -913,6 +947,7 @@ class TestDefaultsInjector(object):
             role=None,
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
             reserved_concurrency=None,
         )
         config = Config.create()
@@ -941,6 +976,7 @@ class TestDefaultsInjector(object):
             role=None,
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
             reserved_concurrency=None,
         )
         config = Config.create()

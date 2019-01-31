@@ -84,6 +84,7 @@ class TestSAMTemplate(object):
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
             reserved_concurrency=None,
         )
 
@@ -136,6 +137,7 @@ class TestSAMTemplate(object):
             ),
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
             reserved_concurrency=None,
         )
         template = self.template_gen.generate_sam_template([function])
@@ -204,6 +206,7 @@ class TestSAMTemplate(object):
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
             security_group_ids=[],
             subnet_ids=[],
+            layers=[],
             reserved_concurrency=None,
         )
         template = self.template_gen.generate_sam_template([function])
