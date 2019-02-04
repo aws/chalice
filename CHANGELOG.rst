@@ -13,6 +13,8 @@ Next Release (TBD)
   (`#1023 <https://github.com/aws/chalice/pull/1023>`__)
 * Add support for opting-in to experimental features
   (`#1053 <https://github.com/aws/chalice/pull/1053>`__)
+* Provide Lambda context in event object
+  (`#856 <https://github.com/aws/chalice/issues/856>`__)
 
 
 1.6.2
