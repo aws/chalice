@@ -213,16 +213,14 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     # query the resources we've created in API gateway
     # and make sure requestParameters are present.
     rest_api_id = smoke_test_app.rest_api_id
-    resource_id = _get_resource_id(apig_client, rest_api_id, '/path/{name}')
-    method_config = apig_client.get_method(
-        restApiId=rest_api_id,
-        resourceId=resource_id,
-        httpMethod='GET'
-    )
-    assert 'requestParameters' in method_config
-    assert method_config['requestParameters'] == {
-        'method.request.path.name': True
-    }
+    response = apig_client.get_export(restApiId=rest_api_id,
+                                      stageName='api',
+                                      exportType='swagger')
+    swagger_doc = json.loads(response['body'].read())
+    route_config = swagger_doc['paths']['/path/{name}']['get']
+    assert route_config.get('parameters', {}) == [
+        {'name': 'name', 'in': 'path', 'required': True, 'type': 'string'},
+    ]
 
 
 def test_single_doc_mapped_in_api(smoke_test_app, apig_client):
