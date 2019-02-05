@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.7.0
+=====
 
 * Fix packaging multiple local directories as dependencies
   (`#1047 <https://github.com/aws/chalice/pull/1047>`__)
