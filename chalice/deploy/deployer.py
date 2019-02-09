@@ -745,7 +745,8 @@ class DeploymentPackager(BaseDeployStep):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
             zip_filename = self._packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version
+                config.project_dir, config.lambda_python_version,
+                files_blacklist=config.files_blacklist
             )
             resource.filename = zip_filename
 

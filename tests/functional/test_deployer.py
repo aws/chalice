@@ -145,10 +145,28 @@ def test_includes_app_and_chalicelib_dir(tmpdir, chalice_deployer):
                        b'{"test": "subconfig"}', f)
 
 
+@slow
+def test_excludes_blacklisted_files_from_chalicelib_dir(tmpdir,
+                                                        chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    # We're now also going to create additional files
+    chalicelib = appdir.mkdir('chalicelib')
+    chalicelib.join('mymodule.pyc').write('# Test module binary')
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7', files_blacklist=['*.pyc'])
+    with zipfile.ZipFile(name) as f:
+        _assert_not_in_zip('chalicelib/mymodule.pyc', f)
+
+
 def _assert_in_zip(path, contents, zip):
     allfiles = zip.namelist()
     assert path in allfiles
     assert zip.read(path) == contents
+
+
+def _assert_not_in_zip(path, zip):
+    allfiles = zip.namelist()
+    assert path not in allfiles
 
 
 @slow
@@ -211,6 +229,18 @@ def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
     second = chalice_deployer.deployment_package_filename(
         str(appdir), 'python3.6')
     assert first != second
+
+
+@slow
+def test_excludes_blacklisted_files_from_vendor_dir(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    vendor = appdir.mkdir('vendor')
+    extra_package = vendor.mkdir('mypackage')
+    extra_package.join('mymodule.pyc').write('# Test module binary')
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7', files_blacklist=['*.pyc'])
+    with zipfile.ZipFile(name) as f:
+        _assert_not_in_zip('mypackage/mymodule.pyc', f)
 
 
 @slow

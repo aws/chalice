@@ -9,6 +9,7 @@ import shutil
 import sys
 import tarfile
 import subprocess
+import fnmatch
 
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
@@ -113,6 +114,19 @@ def create_zip_file(source_dir, outfile):
                 full_name = os.path.join(root, filename)
                 archive_name = os.path.relpath(full_name, source_dir)
                 z.write(full_name, archive_name)
+
+
+def is_file_blacklisted(filename, blacklist):
+    # type: (str, List[str]) -> bool
+    """Verify if the filename is in the blacklist.
+
+    This method is based on the Unix filename pattern matching
+
+    """
+    for pattern in blacklist:
+        if fnmatch.fnmatch(filename, pattern):
+            return True
+    return False
 
 
 class OSUtils(object):
