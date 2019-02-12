@@ -13,6 +13,7 @@ As a side benefit, I can also add type annotations to
 this class to get improved type checking across chalice.
 
 """
+# pylint: disable=too-many-lines
 import os
 import time
 import tempfile
@@ -206,6 +207,11 @@ class TypedAWSClient(object):
         if re.search('role.*cannot be assumed', message):
             return True
         if re.search('role.*does not have permissions', message):
+            return True
+        # This message is also related to IAM roles, it happens when the grant
+        # used for the KMS key for encrypting env vars doesn't think the
+        # principal is valid yet.
+        if re.search('InvalidArnException.*valid principal', message):
             return True
         return False
 

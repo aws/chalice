@@ -541,6 +541,40 @@ class TestCreateLambdaFunction(object):
             'python2.7', 'app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
+    def test_create_function_retries_on_kms_errors(self, stubbed_session):
+        # You'll sometimes get this message when you first create a role.
+        # We want to ensure that we're trying when this happens.
+        error_code = 'InvalidParameterValueException'
+        error_message = (
+            'Lambda was unable to configure access to your '
+            'environment variables because the KMS key '
+            'is invalid for CreateGrant. Please '
+            'check your KMS key settings. '
+            'KMS Exception: InvalidArnException KMS Message: '
+            'ARN does not refer to a valid principal'
+        )
+        kwargs = {
+            'FunctionName': 'name',
+            'Runtime': 'python2.7',
+            'Code': {'ZipFile': b'foo'},
+            'Handler': 'app.app',
+            'Role': 'myarn',
+        }
+        client = stubbed_session.stub('lambda')
+        client.create_function(**kwargs).raises_error(
+            error_code=error_code,
+            message=error_message
+        )
+        client.create_function(**kwargs).returns(
+            {'FunctionArn': 'arn:12345:name'}
+        )
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
     def test_retry_happens_on_insufficient_permissions(self, stubbed_session):
         # This can happen if we deploy a lambda in a VPC.  Instead of the role
         # not being able to be assumed, we can instead not have permissions
