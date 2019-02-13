@@ -648,6 +648,8 @@ class PlanStage(object):
             models.APICall(
                 method_name='add_permission_for_apigateway_v2',
                 params={'function_name': function_name,
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
                         'api_id': Variable('websocket_api_id')},
             ),
             models.RecordResourceVariable(
@@ -681,7 +683,6 @@ class PlanStage(object):
                 models.APICall(
                     method_name='create_integration',
                     params={
-                        'integration_name': 'lambda-integration',
                         'api_id': Variable('websocket_api_id'),
                         'lambda_function': Variable(
                             'websocket-integration-lambda-path'),

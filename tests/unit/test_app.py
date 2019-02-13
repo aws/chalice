@@ -21,6 +21,8 @@ from chalice.app import (
     handle_extra_types,
     MultiDict,
     WebsocketEvent,
+    BadRequestError,
+    WebsocketDisconnectedError,
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -79,11 +81,17 @@ class FakeLambdaContext(object):
 
 
 class FakeClient(object):
-    def __init__(self):
+    def __init__(self, errors=None):
+        if errors is None:
+            errors = []
+        self._errors = errors
         self.calls = []
 
     def post_to_connection(self, ConnectionId, Data):
         self.calls.append((ConnectionId, Data))
+        if self._errors:
+            error = self._errors.pop()
+            raise error
 
 
 class FakeSession(object):
@@ -2164,7 +2172,26 @@ def test_can_configure_client_on_disconnect(sample_websocket_app,
 def test_can_configure_client_on_message(sample_websocket_app,
                                          create_websocket_event):
     demo, calls = sample_websocket_app
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$default', body='foo bar')
+
+    demo(event, context=None)
+
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.us-west-2.amazonaws.com/api'),
+    ]
+
+
+def test_does_only_configure_client_once(sample_websocket_app,
+                                         create_websocket_event):
+    demo, calls = sample_websocket_app
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+    event = create_websocket_event('$default', body='foo bar')
+
+    demo(event, context=None)
     demo(event, context=None)
 
     assert demo.websocket_api.session.calls == [
@@ -2204,3 +2231,161 @@ def test_can_send_websocket_message(create_websocket_event):
     connection_id, message = call
     assert connection_id == 'connection_id'
     assert message == 'foo bar'
+
+
+def test_does_raise_on_send_to_bad_websocket(create_websocket_event):
+    demo = app.Chalice('app-name')
+    fake_410_error = Exception()
+    fake_410_error.response = {'ResponseMetadata': {'HTTPStatusCode': 410}}
+    client = FakeClient(errors=[fake_410_error])
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        with pytest.raises(WebsocketDisconnectedError) as e:
+            demo.websocket_api.send('connection_id', event.body)
+        assert e.value.connection_id == 'connection_id'
+
+    event = create_websocket_event('$default', body='foo bar')
+    demo(event, context=None)
+
+    demo = app.Chalice('app-name')
+    fake_410_error = Exception()
+    fake_410_error.response = {'ResponseMetadata': {'HTTPStatusCode': 410}}
+    client = FakeClient(errors=[fake_410_error])
+    demo.websocket_api.session = FakeSession(client)
+
+
+def test_does_raise_on_bad_websocket_route_key(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_connect()
+    def connect(event):
+        pass
+
+    event = create_websocket_event('$default', body='foo bar')
+    with pytest.raises(RuntimeError) as e:
+        demo(event, context=None)
+    assert str(e.value) == (
+        'Could not find handler for routeKey $default in $connect.'
+    )
+
+
+def test_does_reraise_on_other_send_exception(create_websocket_event):
+    demo = app.Chalice('app-name')
+    fake_500_error = Exception()
+    fake_500_error.response = {'ResponseMetadata': {'HTTPStatusCode': 500}}
+    fake_500_error.key = 'foo'
+    client = FakeClient(errors=[fake_500_error])
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        with pytest.raises(Exception) as e:
+            demo.websocket_api.send('connection_id', event.body)
+        assert e.value.key == 'foo'
+
+    event = create_websocket_event('$default', body='foo bar')
+    demo(event, context=None)
+
+
+def test_cannot_send_message_on_unconfigured_app():
+    demo = app.Chalice('app-name')
+    demo.websocket_api.session = None
+
+    with pytest.raises(ValueError) as e:
+        demo.websocket_api.send('connection_id', 'body')
+
+    assert str(e.value) == (
+        'WebsocketAPI needs to be configured before sending messages.'
+    )
+
+
+def test_cannot_re_register_websocket_handlers(create_websocket_event):
+    demo = app.Chalice('app-name')
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        pass
+
+    with pytest.raises(ValueError) as e:
+        @demo.on_ws_message()
+        def message_handler_2(event):
+            pass
+
+    assert str(e.value) == (
+        "Duplicate websocket handler: '$default'. There can only be one "
+        "handler for a particular routeKey."
+    )
+
+    @demo.on_ws_connect()
+    def connect_handler(event):
+        pass
+
+    with pytest.raises(ValueError) as e:
+        @demo.on_ws_connect()
+        def conncet_handler_2(event):
+            pass
+
+    assert str(e.value) == (
+        "Duplicate websocket handler: '$connect'. There can only be one "
+        "handler for a particular routeKey."
+    )
+
+    @demo.on_ws_disconnect()
+    def disconnect_handler(event):
+        pass
+
+    with pytest.raises(ValueError) as e:
+        @demo.on_ws_disconnect()
+        def disconncet_handler_2(event):
+            pass
+
+    assert str(e.value) == (
+        "Duplicate websocket handler: '$disconnect'. There can only be one "
+        "handler for a particular routeKey."
+    )
+
+
+def test_can_parse_json_websocket_body(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message(event):
+        assert event.json_body == {'foo': 'bar'}
+
+    event = create_websocket_event('$default', body='{"foo": "bar"}')
+    demo(event, context=None)
+
+
+def test_can_access_websocket_json_body_twice(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message(event):
+        assert event.json_body == {'foo': 'bar'}
+        assert event.json_body == {'foo': 'bar'}
+
+    event = create_websocket_event('$default', body='{"foo": "bar"}')
+    demo(event, context=None)
+
+
+def test_does_raise_on_invalid_json_wbsocket_body(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message(event):
+        with pytest.raises(BadRequestError) as e:
+            event.json_body
+        assert 'Error Parsing JSON' in str(e.value)
+
+    event = create_websocket_event('$default', body='foo bar')
+    demo(event, context=None)

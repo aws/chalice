@@ -917,9 +917,10 @@ class ResultsRecorder(object):
 
 
 class DeploymentReporter(object):
-    # We want the Rest API to be displayed last.
+    # We want the API URLs to be displayed last.
     _SORT_ORDER = {
         'rest_api': 100,
+        'websocket_api': 100,
     }
     # The default is chosen to sort before the rest_api
     _DEFAULT_ORDERING = 50

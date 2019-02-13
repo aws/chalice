@@ -541,7 +541,6 @@ class TestPlanWebsocketAPI(BasePlannerTests):
             models.APICall(
                 method_name='create_integration',
                 params={
-                    'integration_name': 'lambda-integration',
                     'api_id': Variable('websocket_api_id'),
                     'lambda_function': Variable(
                         'websocket-integration-lambda-path'),
@@ -604,6 +603,8 @@ class TestPlanWebsocketAPI(BasePlannerTests):
             models.APICall(
                 method_name='add_permission_for_apigateway_v2',
                 params={'function_name': 'appname-dev-function_name',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
                         'api_id': Variable('websocket_api_id')},
             ),
             models.RecordResourceVariable(
@@ -696,6 +697,8 @@ class TestPlanWebsocketAPI(BasePlannerTests):
             models.APICall(
                 method_name='add_permission_for_apigateway_v2',
                 params={'function_name': 'appname-dev-function_name',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
                         'api_id': Variable('websocket_api_id')},
             ),
             models.RecordResourceVariable(
@@ -1230,6 +1233,16 @@ class TestRemoteState(object):
         )
         return rest_api
 
+    def create_websocket_api_model(self):
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-stage-websocket-api',
+            api_gateway_stage='api',
+            routes=[],
+            lambda_function=None,
+        )
+        return websocket_api
+
     def test_role_exists(self):
         self.client.get_role_arn_for_name.return_value = 'role:arn'
         role = models.ManagedIAMRole('my_role',
@@ -1279,7 +1292,7 @@ class TestRemoteState(object):
         assert not remote_state.resource_exists(rest_api)
         assert not self.client.rest_api_exists.called
 
-    def test_api_exists_with_existing_deploy(self):
+    def test_rest_api_exists_with_existing_deploy(self):
         rest_api = self.create_rest_api_model()
         deployed_resources = {
             'resources': [{
@@ -1308,6 +1321,45 @@ class TestRemoteState(object):
             self.client, DeployedResources(deployed_resources))
         assert not remote_state.resource_exists(rest_api)
         self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+
+    def test_websocket_api_exists_no_deploy(self, no_deployed_values):
+        rest_api = self.create_websocket_api_model()
+        remote_state = RemoteState(
+            self.client, no_deployed_values)
+        assert not remote_state.resource_exists(rest_api)
+        assert not self.client.websocket_api_exists.called
+
+    def test_websocket_api_exists_with_existing_deploy(self):
+        websocket_api = self.create_websocket_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'websocket_api',
+                'resource_type': 'websocket_api',
+                'websocket_api_id': 'my_websocket_api_id',
+            }]
+        }
+        self.client.websocket_api_exists.return_value = True
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert remote_state.resource_exists(websocket_api)
+        self.client.websocket_api_exists.assert_called_with(
+            'my_websocket_api_id')
+
+    def test_websocket_api_not_exists_with_preexisting_deploy(self):
+        websocket_api = self.create_websocket_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'websocket_api',
+                'resource_type': 'websocket_api',
+                'websocket_api_id': 'my_websocket_api_id',
+            }]
+        }
+        self.client.websocket_api_exists.return_value = False
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert not remote_state.resource_exists(websocket_api)
+        self.client.websocket_api_exists.assert_called_with(
+            'my_websocket_api_id')
 
     def test_can_get_deployed_values(self):
         remote_state = RemoteState(
@@ -1643,6 +1695,24 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             models.APICall(
                 method_name='delete_rest_api',
                 params={'rest_api_id': 'my_rest_api_id'},
+            )
+        ]
+
+    def test_can_delete_websocket_api(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'websocket_api',
+                'websocket_api_id': 'my_websocket_api_id',
+                'resource_type': 'websocket_api',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='delete_websocket_api',
+                params={'api_id': 'my_websocket_api_id'},
             )
         ]
 

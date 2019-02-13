@@ -521,15 +521,16 @@ class TypedAWSClient(object):
         )
 
     def add_permission_for_apigateway_v2(self, function_name,
+                                         region_name, account_id,
                                          api_id, random_id=None):
-        # type: (str, str, Optional[str]) -> None
+        # type: (str, str, str, str, Optional[str]) -> None
         """Authorize API gateway v2 to invoke a lambda function."""
-        random_id = self._random_id()
-        self._client('lambda').add_permission(
-            Action='lambda:InvokeFunction',
-            FunctionName=function_name,
-            StatementId=random_id,
-            Principal='apigateway.amazonaws.com',
+        source_arn = self._build_source_arn_str(region_name, account_id,
+                                                api_id)
+        self._add_lambda_permission_if_needed(
+            source_arn=source_arn,
+            function_arn=function_name,
+            service_name='apigateway'
         )
 
     def get_function_policy(self, function_name):
@@ -1038,11 +1039,10 @@ class TypedAWSClient(object):
 
     def create_integration(
             self,
-            integration_name,
             api_id,
             lambda_function,
     ):
-        # type: (str, str, str) -> str
+        # type: (str, str) -> str
         client = self._client('apigatewayv2')
         return client.create_integration(
             ApiId=api_id,
@@ -1051,19 +1051,6 @@ class TypedAWSClient(object):
             IntegrationType='AWS_PROXY',
             IntegrationUri=lambda_function,
         )['IntegrationId']
-
-    def create_integration_response(
-            self,
-            api_id,
-            integration_id,
-    ):
-        # type: (str, str) -> str
-        client = self._client('apigatewayv2')
-        return client.create_integration_response(
-            ApiId=api_id,
-            IntegrationId=integration_id,
-            IntegrationResponseKey='$default',
-        )
 
     def create_route(self, api_id, route_key, integration_id):
         # type: (str, str, str) -> None

@@ -144,9 +144,13 @@ class ResourceSweeper(object):
                     )
                 ])
             elif resource_values['resource_type'] == 'websocket_api':
-                plan.extend([
+                plan.append(
                     models.APICall(
                         method_name='delete_websocket_api',
                         params={'api_id': resource_values['websocket_api_id']},
                     )
-                ])
+                )
+                messages[id(plan[-1])] = (
+                    "Deleting Websocket API: %s\n" %
+                    resource_values['websocket_api_id']
+                )

@@ -1230,6 +1230,357 @@ class TestAddPermissionsForAPIGateway(object):
         stubbed_session.verify_stubs()
 
 
+class TestAddPermissionsForAPIGatewayV2(object):
+    def should_call_add_permission(self, lambda_stub,
+                                   statement_id=stub.ANY):
+        lambda_stub.add_permission(
+            Action='lambda:InvokeFunction',
+            FunctionName='name',
+            StatementId=statement_id,
+            Principal='apigateway.amazonaws.com',
+            SourceArn='arn:aws:execute-api:us-west-2:123:websocket-api-id/*',
+        ).returns({})
+
+    def test_can_add_permission_for_apigateway_v2_needed(self,
+                                                         stubbed_session):
+        # An empty policy means we need to add permissions.
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
+        self.should_call_add_permission(lambda_stub)
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway_v2(
+            'name', 'us-west-2', '123', 'websocket-api-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_random_id_optional(self, stubbed_session):
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').returns({'Policy': '{}'})
+        self.should_call_add_permission(lambda_stub)
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway_v2(
+            'name', 'us-west-2', '123', 'websocket-api-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_for_apigateway_v2_not_needed(self,
+                                                             stubbed_session):
+        source_arn = 'arn:aws:execute-api:us-west-2:123:websocket-api-id/*'
+        wrong_action = {
+            'Action': 'lambda:NotInvoke',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': source_arn,
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 'apigateway.amazonaws.com'},
+            'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+            'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b',
+        }
+        wrong_service_name = {
+            'Action': 'lambda:Invoke',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': source_arn,
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 'NOT-apigateway.amazonaws.com'},
+            'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+            'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b',
+        }
+        correct_statement = {
+            'Action': 'lambda:InvokeFunction',
+            'Condition': {
+                'ArnLike': {
+                    'AWS:SourceArn': source_arn,
+                }
+            },
+            'Effect': 'Allow',
+            'Principal': {'Service': 'apigateway.amazonaws.com'},
+            'Resource': 'arn:aws:lambda:us-west-2:account_id:function:name',
+            'Sid': 'e4755709-067e-4254-b6ec-e7f9639e6f7b',
+        }
+        policy = {
+            'Id': 'default',
+            'Statement': [
+                wrong_action,
+                wrong_service_name,
+                correct_statement,
+            ],
+            'Version': '2012-10-17'
+        }
+        stubbed_session.stub('lambda').get_policy(
+            FunctionName='name').returns({'Policy': json.dumps(policy)})
+
+        # Because the policy above indicates that API gateway already has the
+        # necessary permissions, we should not call add_permission.
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway(
+            'name', 'us-west-2', '123', 'websocket-api-id')
+        stubbed_session.verify_stubs()
+
+    def test_can_add_permission_when_policy_does_not_exist(self,
+                                                           stubbed_session):
+        # It's also possible to receive a ResourceNotFoundException
+        # if you call get_policy() on a lambda function with no policy.
+        lambda_stub = stubbed_session.stub('lambda')
+        lambda_stub.get_policy(FunctionName='name').raises_error(
+            error_code='ResourceNotFoundException', message='Does not exist.')
+        self.should_call_add_permission(lambda_stub)
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.add_permission_for_apigateway_v2(
+            'name', 'us-west-2', '123', 'websocket-api-id', 'random-id')
+        stubbed_session.verify_stubs()
+
+
+class TestWebsocketAPI(object):
+    def test_can_create_websocket_api(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').create_api(
+            Name='name',
+            ProtocolType='WEBSOCKET',
+            RouteSelectionExpression='$request.body.action',
+        ).returns({'ApiId': 'id'})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        api_id = client.create_websocket_api('name')
+        stubbed_session.verify_stubs()
+        assert api_id == 'id'
+
+    def test_can_get_websocket_api(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_apis(
+        ).returns({
+            'Items': [
+                {'Name': 'some-other-api',
+                 'ApiId': 'foo bar',
+                 'RouteSelectionExpression': 'unused',
+                 'ProtocolType': 'WEBSOCKET'},
+                {'Name': 'target-api',
+                 'ApiId': 'id',
+                 'RouteSelectionExpression': 'unused',
+                 'ProtocolType': 'WEBSOCKET'},
+            ],
+        })
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        api_id = client.get_websocket_api_id('target-api')
+        stubbed_session.verify_stubs()
+        assert api_id == 'id'
+
+    def test_does_return_none_on_websocket_api_missing(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_apis(
+        ).returns({
+            'Items': [],
+        })
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        api_id = client.get_websocket_api_id('target-api')
+        stubbed_session.verify_stubs()
+        assert api_id is None
+
+    def test_can_check_get_websocket_api_exists(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_api(
+            ApiId='api-id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        exists = client.websocket_api_exists('api-id')
+        stubbed_session.verify_stubs()
+        assert exists is True
+
+    def test_can_check_get_websocket_api_not_exists(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_api(
+            ApiId='api-id',
+        ).raises_error(
+            error_code='NotFoundException',
+            message='Does not exists.',
+        )
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        exists = client.websocket_api_exists('api-id')
+        stubbed_session.verify_stubs()
+        assert exists is False
+
+    def test_can_delete_websocket_api(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').delete_api(
+            ApiId='id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.delete_websocket_api('id')
+        stubbed_session.verify_stubs()
+
+    def test_rest_api_delete_already_deleted(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2')\
+                       .delete_api(ApiId='name')\
+                       .raises_error(error_code='NotFoundException',
+                                     message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            assert awsclient.delete_websocket_api('name')
+
+    def test_can_create_integration(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').create_integration(
+            ApiId='api-id',
+            ConnectionType='INTERNET',
+            ContentHandlingStrategy='CONVERT_TO_TEXT',
+            IntegrationType='AWS_PROXY',
+            IntegrationUri='arn:aws:lambda',
+        ).returns({'IntegrationId': 'integration-id'})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        integration_id = client.create_integration(
+            api_id='api-id',
+            lambda_function='arn:aws:lambda',
+        )
+        stubbed_session.verify_stubs()
+        assert integration_id == 'integration-id'
+
+    def test_can_create_route(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').create_route(
+            ApiId='api-id',
+            RouteKey='route-key',
+            RouteResponseSelectionExpression='$default',
+            Target='integrations/integration-id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.create_route(
+            api_id='api-id',
+            route_key='route-key',
+            integration_id='integration-id',
+        )
+        stubbed_session.verify_stubs()
+
+    def test_can_create_route_if_needed(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').create_route(
+            ApiId='api-id',
+            RouteKey='route-key',
+            RouteResponseSelectionExpression='$default',
+            Target='integrations/integration-id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.create_route_if_needed(
+            api_id='api-id',
+            route_key='route-key',
+            integration_id='integration-id',
+            existing_routes={},
+        )
+        stubbed_session.verify_stubs()
+
+    def test_does_not_call_create_route_if_not_needed(self, stubbed_session):
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.create_route_if_needed(
+            api_id='api-id',
+            route_key='route-key',
+            integration_id='integration-id',
+            existing_routes={'route-key': 'route-id'},
+        )
+        stubbed_session.verify_stubs()
+
+    def test_can_elete_unused_routes(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').delete_route(
+            ApiId='api-id',
+            RouteId='old-route-id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.delete_unused_routes(
+            api_id='api-id',
+            existing_routes={
+                'route-key': 'route-id',
+                'old-route-key': 'old-route-id',
+            },
+            current_routes={'route-key', 'route-id'},
+        )
+        stubbed_session.verify_stubs()
+
+    def test_can_deploy_websocket_api(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').create_deployment(
+            ApiId='api-id',
+        ).returns({'DeploymentId': 'deployment-id'})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        deployment_id = client.deploy_websocket_api(
+            api_id='api-id',
+        )
+        stubbed_session.verify_stubs()
+        assert deployment_id == 'deployment-id'
+
+    def test_can_get_routes(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_routes(
+            ApiId='api-id',
+        ).returns(
+            {
+                'Items': [
+                    {'RouteKey': 'route-key-foo',
+                     'RouteId': 'route-id-foo'},
+                    {'RouteKey': 'route-key-bar',
+                     'RouteId': 'route-id-bar'},
+                ],
+            }
+        )
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        routes = client.get_routes(
+            api_id='api-id',
+        )
+        stubbed_session.verify_stubs()
+        assert routes == {
+            'route-key-foo': 'route-id-foo',
+            'route-key-bar': 'route-id-bar',
+        }
+
+    def test_can_get_integration(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_integrations(
+            ApiId='api-id',
+        ).returns({'Items': [{'IntegrationId': 'integration-id'}]})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        integration_id = client.get_integration(
+            api_id='api-id',
+        )
+        stubbed_session.verify_stubs()
+        assert integration_id == 'integration-id'
+
+    def test_does_raise_on_multiple_integrations(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').get_integrations(
+            ApiId='api-id',
+        ).returns({'Items': [
+            {'IntegrationId': 'integration-id'},
+            {'IntegrationId': 'integration-id'},
+        ]})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        with pytest.raises(ValueError) as e:
+            client.get_integration(api_id='api-id',)
+        assert str(e.value) == (
+            'Expected Websocket API api-id to have one integration. Found 2.'
+        )
+
+    def test_can_create_stage(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').create_stage(
+            ApiId='api-id',
+            StageName='stage-name',
+            DeploymentId='deployment-id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.create_stage(
+            api_id='api-id',
+            stage_name='stage-name',
+            deployment_id='deployment-id',
+        )
+        stubbed_session.verify_stubs()
+
+
 class TestAddPermissionsForAuthorizer(object):
 
     FUNCTION_ARN = (

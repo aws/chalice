@@ -612,12 +612,6 @@ class DecoratorAPI(object):
         return self._create_registration_function(
             handler_type='lambda_function', name=name)
 
-    def websocket(self, **kwargs):
-        return self._create_registration_function(
-            handler_type='websocket',
-            name=kwargs.get('name'),
-        )
-
     def on_ws_connect(self, **kwargs):
         return self._create_registration_function(
             handler_type='websocket',
@@ -720,7 +714,7 @@ class _HandlerRegistration(object):
                                   user_handler=user_handler)
         if route_key in self.websocket_handlers:
             raise ValueError(
-                "Duplicate websocket handler: '%s'\nThere can only be one "
+                "Duplicate websocket handler: '%s'. There can only be one "
                 "handler for a particular routeKey." % route_key
             )
         self.websocket_handlers[route_key] = wrapper
@@ -913,7 +907,10 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             name, user_handler, handler_string, kwargs, **unused)
 
     def _handle_websocket(self, route_key, event, context):
-        handler = self.websocket_handlers.get(route_key, '$default')
+        handler = self.websocket_handlers.get(route_key)
+        if handler is None:
+            route_key = '$default'
+        handler = self.websocket_handlers.get(route_key)
         if handler is None:
             raise RuntimeError(
                 'Could not find handler for routeKey %s in %s.' % (

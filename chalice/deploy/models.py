@@ -204,18 +204,6 @@ class WebsocketAPI(ManagedModel):
 
 
 @attrs
-class WebsocketHandler(ManagedModel):
-    resource_type = 'websocket_handler'
-    integration_name = attrib()     # type: str
-    lambda_function = attrib()      # type: LambdaFunction
-    websocket_api = attrib()        # type: str
-
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.lambda_function]
-
-
-@attrs
 class S3BucketNotification(ManagedModel):
     resource_type = 's3_event'
     bucket = attrib()           # type: str
