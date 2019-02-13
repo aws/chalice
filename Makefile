@@ -44,7 +44,7 @@ doccheck:
 	#
 	# TODO: Remove doc8
 	##
-	doc8 docs/source --ignore-path docs/source/topics/multifile.rst --ignore-path docs/source/topics/websockets.rst
+	doc8 docs/source --ignore-path docs/source/topics/multifile.rst --ignore-path docs/source/tutorials/websockets.rst
 	#
 	#
 	# Verify we have no broken external links

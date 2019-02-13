@@ -16,95 +16,81 @@ Websockets
   See :doc:`experimental` for more information.
 
 
-Echo Server Example
-===================
+Chalice supports websockets through integration with an API Gateway Websocket
+API. If any of the decorators are present in a Chalice app, then an API
+Gateway Websocket API will be deployed and wired to Lambda Functions.
 
-Below is an example of a simple echo server written with Chalice.
 
-.. code-block:: text
-   :caption: requirements.txt
+Responding to websocket events
+------------------------------
 
-    boto3>=1.9.91
+In a Chalice app the websocket API is accessed through the three decorators
+``on_ws_connect``, ``on_ws_message``, ``on_ws_disconnect``. These handle a new
+websocket connection, an incoming message on an existing connection, and a
+connection being cleaned up respectively.
 
+A decorated websocket handler function takes one argument ``event`` with the
+type :ref:`WebsocketEvent <websocket-api>`. This class allows easy access to
+information about the API Gateway Websocket API, and information about the
+particular socket the handler is being invoked to serve.
+
+Below is a simple working example application that prints to CloudWatch Logs
+for each of the events.
 
 .. code-block:: python
-   :caption: app.py
-   :linenos:
 
     from boto3.session import Session
-
     from chalice import Chalice
-    from chalice import WebsocketDisconnectedError
 
-    app = Chalice(app_name="echo-server")
-    app.websocket_api.session = Session()
+    app = Chalice(app_name='test-websockets')
     app.experimental_feature_flags.update([
-        'WEBSOCKETS'
+        'WEBSOCKETS',
     ])
+    app.websocket_api.session = Session()
+
+
+    @app.on_ws_connect()
+    def connect(event):
+        print('New connection: %s' % event.connection_id)
 
 
     @app.on_ws_message()
     def message(event):
-    try:
-        app.websocket_api.send(
-        connection_id=event.connection_id,
-        message=event.body,
-        )
-    except WebsocketDisconnectedError as e:
-        pass  # Disconnected so we can't send the message back.
+        print('%s: %s' % (event.connection_id, event.body))
 
 
-Stepping through this app line by line, the first thing to note is that we
-need to import and instantiate a boto3 session. This session is manually
-assigned to ``app.websocket_api.session`` property on line 7. This is needed
-because in order to send websocket responses to API Gateway we need to
-construct a boto3 client. Chalice does not take a direct dependency on boto3
-or botocore, so we need to provide the Session ourselves.
-
-Next we enable the experimental feature ``WEBSOCKETS`` on line 8-10. As noted
-at the top of this file, websockets are an experimental feature and are
-subject to API changes.
-
-To acutally register a websocket handler, and cause Chalice to deploy an
-API Gateway Websocket API we use the ``app.on_ws_message()`` decorator on
-line 13. The event parameter here is a wrapper object with some convenience
-parameters attached. The most useful are ``event.connection_id`` and
-``event.body``. The ``connection_id`` is an API Gateway specific identifier
-that allows you to refer to the connection that sent the message. The ``body``
-is the content of the message.
-
-Since this is an echo server, the content of the message handler simply returns
-the message it received on the socket, back to the same socket. To send a
-message to a socket we call ``app.websocket_api.send(connection_id, message)``
-on line 16-20. In this case, we just use the same ``connection_id`` we got the
-message from, and use the ``body`` we got from the event as the ``message`` to
-send.
-
-Finally, we catch the exception ``WebsocketDisconnectError`` which is raised
-by ``app.websocket_api.send`` if the provided ``connetion_id`` is not connected
-anymore. In our case this doesn't really matter since we don't have anything
-tracking our connections.
-
-To test out the echo server you can install ``websocket-client`` from pypi::
-
-  pip install websocket-client
+    @app.on_ws_disconnect()
+    def disconnect(event):
+        print('%s disconnected' % event.connection_id)
 
 
-After deploying the Chalice app the output will contain a URL for connecting
-to the websocket API labeled: ``- Websocket API URL:``. The
-``websocket-client`` package installs a command line tool called ``wsdump.py``
-which can be used to test websocket echo server pretty easily::
+Sending a message over a websocket
+----------------------------------
 
-  $ wsdump.py wss://{websocket_api_id}.execute-api.us-west-2.amazonaws.com/api/
-  Press Ctrl+C to quit
-  > foo
-  < foo
-  > bar
-  < bar
-  > foo bar baz
-  < foo bar baz
-  >
+To send a message to a websocket client Chalice, use the
+:ref:`app.websocket_api.send() <websocket-send>` method. This method will work in any
+of the decorated functions outlined in the above section.
+
+Two pieces of information are needed to send a message. The identifier of the
+websocket, and the contents for the message. Below is a simple example that when
+it receives a message, it sends back the message ``"I got your message!"`` over
+the same socket.
+
+.. code-block:: python
+
+    from boto3.session import Session
+    from chalice import Chalice
+
+    app = Chalice(app_name='test-websockets')
+    app.experimental_feature_flags.update([
+        'WEBSOCKETS',
+    ])
+    app.websocket_api.session = Session()
 
 
-Every message sent to the server (lines that start with ``>``) result in a
-message sent to us (lines that start with ``<``) with the same content.
+    @app.on_ws_message()
+    def message(event):
+        app.websocket_api.send(event.connection_id, 'I got your message!')
+
+
+See :ref:`websocket-tutorial` for completely worked example applications.

@@ -78,6 +78,14 @@ API Reference
    api
 
 
+Tutorials
+---------
+
+.. toctree::
+   :maxdepth: 2
+
+   tutorials/websockets
+
 Upgrade Notes
 -------------
 

@@ -48,6 +48,11 @@ Chalice
          app = Chalice(app_name="appname")
          app.debug = True
 
+   .. attribute:: websocket_api
+
+      An object of type :class:`WebsocketAPI`. This attribute can be used to
+      send messages to websocket clients connected through API Gateway.
+
    .. method:: route(path, \*\*options)
 
       Register a view function for a particular URI path.  This method
@@ -320,6 +325,37 @@ Chalice
         routes defined the Blueprint.  This allows you to set the root mount
         point for all URLs in a Blueprint.
 
+   .. method:: on_ws_connect(event)
+
+      Create a Websocket API connect event handler.
+
+      :param event: The :class:`WebsocketEvent` received to indicate a new
+         connection has been registered with API Gateway. The identifier of this
+         connection is under the :attr:`WebsocketEvent.connection_id` attribute.
+
+      see :doc:`topics/websockets` for more information.
+
+   .. method:: on_ws_message(event)
+
+      Create a Websocket API message event handler.
+
+      :param event: The :class:`WebsocketEvent` received to indicate API Gateway
+         received a message from a connected client. The identifier of the
+         client that sent the message is under the
+         :attr:`WebsocketEvent.connection_id` attribute. The content of the
+         message is available in the :attr:`WebsocketEvent.body` attribute.
+
+      see :doc:`topics/websockets` for more information.
+
+   .. method:: on_ws_disconnect(event)
+
+      Create a Websocket API disconnect event handler.
+
+      :param event: The :class:`WebsocketEvent` received to indicate an existing
+         connection has been disconnected from API Gateway. The identifier of this
+         connection is under the :attr:`WebsocketEvent.connection_id` attribute.
+
+      see :doc:`topics/websockets` for more information.
 
 Request
 =======
@@ -620,6 +656,64 @@ APIGateway
       event up to ``6mb``, which means even if your binary data was not quite
       at that limit, with the base64 encoding it may exceed that limit. This
       will manifest as a ``502`` Bad Gateway error.
+
+
+WebsocketAPI
+============
+
+.. class:: WebsocketAPI
+
+   This class is used to send messages to websocket clients connected to an API
+   Gateway Websocket API.
+
+   .. attribute:: session
+
+      A boto3 Session that will be used to send websocket messages to
+      clients. Any custom configuration can be set through a botocore
+      ``session``. This **must** be manually set before websocket features can
+      be used.
+
+      .. code-block:: python
+
+         import botocore
+         from boto3.session import Session
+         from chalice import Chalice
+
+         app = Chalice('example')
+         session = botocore.session.Session()
+         session.set_config_variable('retries', {'max_attempts': 0})
+         app.websocket_api.session = Session(botocore_session=session)
+
+   .. method:: configure(domain_name, stage)
+
+      Configure prepares the :class:`WebsocketAPI` to call the :meth:`send`
+      method. Without first calling this method calls to :meth:`send` will fail
+      with the message ``WebsocketAPI needs to be configured before sending
+      messages.``. This is because a boto3 ``apigatewaymanagmentapi`` client
+      must be created from the :attr:`session` with a custom endpoint in order
+      to properly communicate with our API Gateway WebsocketAPI. This method is
+      called on your behalf before each of the websocket handlers:
+      ``on_ws_connect``, ``on_ws_message``, ``on_ws_disconnect``. This ensures
+      that the :meth:`send` method is available in each of those handlers.
+
+.. _websocket-send:
+
+   .. method:: send(connection_id, message)
+
+      Method to send a message to a client. The ``connection_id`` is the unique
+      identifier of the socket to send the ``message`` to. The ``message`` must
+      be a utf-8 string.
+
+      If the socket is disconnected it raises a :class:`WebsocketDisconnectedError`
+      error.
+
+.. class:: WebsocketDisconnectedError
+
+   An exception raised when a message is sent to a websocket that has disconnected.
+
+   .. attribute:: connection_id
+
+      The unique identifier of the websocket that was disconnected.
 
 
 CORS
@@ -1049,6 +1143,7 @@ Blueprints
 
 Websockets
 ==========
+.. _websocket-api:
 
 .. class:: WebsocketEvent()
 
@@ -1077,3 +1172,5 @@ Websockets
 
      The parsed JSON body (``json.loads(body)``) of the message. If the body is
      not JSON parsable then using this attribute will raise a ``ValueError``.
+
+  See :doc:`topics/websockets` for more information.

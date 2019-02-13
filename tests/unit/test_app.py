@@ -2086,6 +2086,7 @@ def test_multidict_str():
     assert "'buz': ['qux']" in rep
 
 
+
 def test_can_configure_websockets(sample_websocket_app):
     demo, _ = sample_websocket_app
 
