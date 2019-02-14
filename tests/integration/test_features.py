@@ -8,6 +8,7 @@ import uuid
 import botocore.session
 import pytest
 import requests
+import websocket
 
 from chalice.cli.factory import CLIFactory
 from chalice.utils import OSUtils, UI
@@ -18,7 +19,7 @@ from chalice.config import DeployedResources
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
 APP_FILE = os.path.join(PROJECT_DIR, 'app.py')
-RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())
+RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())[:13]
 
 
 def retry(max_attempts, delay):
@@ -66,6 +67,22 @@ class SmokeTestApplication(object):
     def rest_api_id(self):
         return self._deployed_resources.resource_values(
             'rest_api')['rest_api_id']
+
+    @property
+    def websocket_api_id(self):
+        return self._deployed_resources.resource_values(
+            'websocket_api')['websocket_api_id']
+
+    @property
+    def websocket_connect_url(self):
+        return (
+            "wss://{websocket_api_id}.execute-api.{region}.amazonaws.com/"
+            "{api_gateway_stage}".format(
+                websocket_api_id=self.websocket_api_id,
+                region=self._region,
+                api_gateway_stage='api',
+            )
+        )
 
     def get_json(self, url):
         if not url.startswith('/'):
@@ -497,6 +514,27 @@ def test_empty_raw_body(smoke_test_app):
     response = requests.post(url)
     response.raise_for_status()
     assert response.json() == {'repr-raw-body': ''}
+
+
+def test_websocket_lifecycle(smoke_test_app):
+    ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
+    ws.send("Hello, World 1")
+    first_response = json.loads(ws.recv())
+    ws.close()
+    ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
+    ws.send("Hello, World 2")
+    second_response = json.loads(ws.recv())
+    ws.close()
+    first_connection_id = first_response['connect'][0]
+    second_connection_id = second_response['connect'][1]
+
+    expected_second_response = {
+        'connect': [first_connection_id, second_connection_id],
+        'message': [[first_connection_id, 'Hello, World 1'],
+                    [second_connection_id, 'Hello, World 2']],
+        'disconnect': [first_connection_id],
+    }
+    assert expected_second_response == second_response
 
 
 @pytest.mark.on_redeploy

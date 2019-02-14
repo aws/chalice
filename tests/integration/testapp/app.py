@@ -1,10 +1,12 @@
 import os
+import json
 try:
     from urllib.parse import parse_qs
 except ImportError:
     from urlparse import parse_qs
 
 
+import boto3.session
 from chalice import Chalice, BadRequestError, NotFoundError, Response,\
     CORSConfig, UnauthorizedError, AuthResponse, AuthRoute
 
@@ -14,6 +16,10 @@ from chalice import Chalice, BadRequestError, NotFoundError, Response,\
 # and helps prevent regressions.
 
 app = Chalice(app_name=os.environ['APP_NAME'])
+app.websocket_api.session = boto3.session.Session()
+app.experimental_feature_flags.update([
+    'WEBSOCKETS'
+])
 app.api.binary_types.append('application/binary')
 
 
@@ -213,3 +219,26 @@ def fake_profile_post():
 @app.route('/repr-raw-body', methods=['POST'])
 def repr_raw_body():
     return {'repr-raw-body': app.current_request.raw_body.decode('utf-8')}
+
+
+SOCKET_MESSAGES = {
+    'connect': [],
+    'message': [],
+    'disconnect': [],
+}
+
+
+@app.on_ws_connect()
+def connect(event):
+    SOCKET_MESSAGES['connect'].append(event.connection_id)
+
+
+@app.on_ws_message()
+def message(event):
+    SOCKET_MESSAGES['message'].append((event.connection_id, event.body))
+    app.websocket_api.send(event.connection_id, json.dumps(SOCKET_MESSAGES))
+
+
+@app.on_ws_disconnect()
+def disconnect(event):
+    SOCKET_MESSAGES['disconnect'].append(event.connection_id)
