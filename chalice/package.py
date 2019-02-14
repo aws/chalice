@@ -252,6 +252,17 @@ class SAMTemplateGenerator(object):
     # noop methods to indicate we've accounted for these
     # resources.
 
+    def _generate_websocketapi(self, resource, template):
+        # type: (models.WebsocketAPI, Dict[str, Any]) -> None
+        message = (
+            "Unable to package chalice apps that use any websocket "
+            "decorators. @app.on_ws_connect, @app.on_ws_disconnect, "
+            "@app.on_ws_message. CloudFormation does not support "
+            "API Gateway Websocket APIs."
+            "You can deploy this app using `chalice deploy`."
+        )
+        raise NotImplementedError(message)
+
     def _generate_managediamrole(self, resource, template):
         # type: (models.ManagedIAMRole, Dict[str, Any]) -> None
         role_cfn_name = self._register_cfn_resource_name(

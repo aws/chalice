@@ -415,6 +415,23 @@ class TestSAMTemplate(object):
         # Should mention you can use `chalice deploy`.
         assert 'chalice deploy' in str(excinfo.value)
 
+    def test_helpful_error_message_on_websocket_event(self, sample_app):
+        @sample_app.on_ws_message()
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        with pytest.raises(NotImplementedError) as excinfo:
+            self.generate_template(config, 'dev')
+        # Should mention the decorator name.
+        assert '@app.on_ws_connect' in str(excinfo.value)
+        assert '@app.on_ws_disconnect' in str(excinfo.value)
+        assert '@app.on_ws_message' in str(excinfo.value)
+        # Should mention you can use `chalice deploy`.
+        assert 'chalice deploy' in str(excinfo.value)
+
     def test_can_package_sns_handler(self, sample_app):
         @sample_app.on_sns_message(topic='foo')
         def handler(event):

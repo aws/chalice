@@ -38,7 +38,7 @@ from chalice.deploy.sweeper import ResourceSweeper
 from chalice.deploy.models import APICall
 from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
-from chalice.constants import POST_TO_WEBSOCKET_CONNETION_POLICY
+from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy.deployer import ChaliceBuildError
 from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
 from chalice.deploy.deployer import WebsocketPolicyInjector
@@ -1422,7 +1422,7 @@ class TestWebsocketPolicyInjector(object):
         injector = WebsocketPolicyInjector()
         injector.handle(config, event_source)
         assert role.policy.document == {
-            'Statement': [POST_TO_WEBSOCKET_CONNETION_POLICY.copy()],
+            'Statement': [POST_TO_WEBSOCKET_CONNECTION_POLICY.copy()],
         }
 
     def test_no_inject_if_not_autogen_policy(self, websocket_app):

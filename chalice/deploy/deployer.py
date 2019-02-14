@@ -108,6 +108,7 @@ from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
+from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy import models
 from chalice.deploy.executor import Executor
 from chalice.deploy.packager import PipRunner
@@ -851,7 +852,7 @@ class WebsocketPolicyInjector(BaseDeployStep):
                            models.Placeholder)):
             self._inject_policy(
                 role.policy.document,
-                POST_TO_WEBSOCKET_CONNETION_POLICY.copy())
+                POST_TO_WEBSOCKET_CONNECTION_POLICY.copy())
             self._policy_injected = True
 
     def _inject_policy(self, document, policy):

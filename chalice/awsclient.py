@@ -1065,14 +1065,8 @@ class TypedAWSClient(object):
     def create_route_if_needed(self, api_id, route_key, integration_id,
                                existing_routes):
         # type: (str, str, str, Dict[str, str]) -> None
-        client = self._client('apigatewayv2')
         if route_key not in existing_routes:
-            client.create_route(
-                ApiId=api_id,
-                RouteKey=route_key,
-                RouteResponseSelectionExpression='$default',
-                Target='integrations/%s' % integration_id,
-            )
+            self.create_route(api_id, route_key, integration_id)
 
     def delete_unused_routes(self, api_id, existing_routes, current_routes):
         # type: (str, Dict[str, str], Dict[str, str]) -> None

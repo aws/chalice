@@ -620,15 +620,12 @@ class PlanStage(object):
             models.JPSearch('region',
                             input_var='parsed_lambda_arn',
                             output_var='region_name'),
-            # The swagger doc uses the 'api_handler_lambda_arn'
-            # var name so we need to make sure we populate this variable
-            # before importing the rest API.
             models.CopyVariable(from_var=varname,
                                 to_var='api_handler_lambda_arn'),
         ]  # type: List[InstructionMsg]
 
         # There's also a set of instructions that are needed
-        # at the end of deploying a rest API that apply to both
+        # at the end of deploying a websocket API that apply to both
         # the update and create case.
         shared_plan_epilogue = [
             models.StoreValue(
