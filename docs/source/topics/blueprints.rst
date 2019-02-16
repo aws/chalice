@@ -46,7 +46,7 @@ separate file.  First, let's create an application::
     $ touch chalicelib/__init__.py
     $ touch chalicelib/blueprints.py
 
-Next, we'll oen the ``chalicelib/blueprints.py`` file:
+Next, we'll open the ``chalicelib/blueprints.py`` file:
 
 .. code-block:: python
 

@@ -210,7 +210,7 @@ If we add the appropriate authorization header, we'll see the call succeed::
 The low level API for API Gateway's custom authorizer feature requires
 that an IAM policy must be returned.  The :class:`AuthResponse` class we're
 using is a wrapper over building the IAM policy ourself.  If you want
-low level control and would prefer to contruct the IAM policy yourself
+low level control and would prefer to construct the IAM policy yourself
 you can return a dictionary of the IAM policy instead of an instance of
 :class:`AuthResponse`.  If you do that, the dictionary is returned
 without modification back to API Gateway.
