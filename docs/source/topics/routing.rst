@@ -1,7 +1,7 @@
 Routing
 =======
 
-The :meth:`Chalice.route` method is used to contruct which routes
+The :meth:`Chalice.route` method is used to construct which routes
 you want to create for your API.  The concept is the same
 mechanism used by `Flask <http://flask.pocoo.org/>`__ and
 `bottle <http://bottlepy.org/docs/dev/index.html>`__.
