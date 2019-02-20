@@ -247,21 +247,182 @@ class SAMTemplateGenerator(object):
             }
         }
 
+    def _add_websocket_lambda_integration(
+            self, api_ref, websocket_handler, resources):
+        # type: (Dict[str, Any], str, Dict[str, Any]) -> None
+        resources['%sAPIIntegration' % websocket_handler] = {
+            'Type': 'AWS::ApiGatewayV2::Integration',
+            'Properties': {
+                'ApiId': api_ref,
+                'ConnectionType': 'INTERNET',
+                'ContentHandlingStrategy': 'CONVERT_TO_TEXT',
+                'IntegrationType': 'AWS_PROXY',
+                'IntegrationUri': {
+                    'Fn::Sub': [
+                        (
+                            'arn:aws:apigateway:${AWS::Region}:lambda:path/'
+                            '2015-03-31/functions/arn:aws:lambda:'
+                            '${AWS::Region}:' '${AWS::AccountId}:function:'
+                            '${WebsocketHandler}/invocations'
+                        ),
+                        {'WebsocketHandler': {'Ref': websocket_handler}}
+                    ],
+                }
+            }
+        }
+
+    def _add_websocket_lambda_invoke_permission(
+            self, api_ref, websocket_handler, resources):
+        # type: (Dict[str, str], str, Dict[str, Any]) -> None
+        resources['%sInvokePermission' % websocket_handler] = {
+            'Type': 'AWS::Lambda::Permission',
+            'Properties': {
+                'FunctionName': {'Ref': websocket_handler},
+                'Action': 'lambda:InvokeFunction',
+                'Principal': 'apigateway.amazonaws.com',
+                'SourceArn': {
+                    'Fn::Sub': [
+                        ('arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}'
+                         ':${WebsocketAPIId}/*'),
+                        {'WebsocketAPIId': api_ref},
+                    ]
+                },
+            }
+        }
+
+    def _add_websocket_lambda_integrations(self, api_ref, resources):
+        # type: (Dict[str, str], Dict[str, Any]) -> None
+        websocket_handlers = [
+            'WebsocketConnect',
+            'WebsocketMessage',
+            'WebsocketDisconnect',
+        ]
+        for handler in websocket_handlers:
+            if handler in resources:
+                self._add_websocket_lambda_integration(
+                    api_ref, handler, resources)
+                self._add_websocket_lambda_invoke_permission(
+                    api_ref, handler, resources)
+
+    def _create_route_for_key(self, route_key, api_ref):
+        # type: (str, Dict[str, str]) -> Dict[str, Any]
+        integration_ref = {
+            '$connect': 'WebsocketConnectAPIIntegration',
+            '$disconnect': 'WebsocketDisconnectAPIIntegration',
+        }.get(route_key, 'WebsocketMessageAPIIntegration')
+
+        return {
+            'Type': 'AWS::ApiGatewayV2::Route',
+            'Properties': {
+                'ApiId': api_ref,
+                'RouteKey': route_key,
+                'Target': {
+                    'Fn::Join': [
+                        '/',
+                        [
+                            'integrations',
+                            {'Ref': integration_ref},
+                        ]
+                    ]
+                },
+            },
+        }
+
+    def _generate_websocketapi(self, resource, template):
+        # type: (models.WebsocketAPI, Dict[str, Any]) -> None
+        resources = template['Resources']
+        api_ref = {'Ref': 'WebsocketAPI'}
+        resources['WebsocketAPI'] = {
+            'Type': 'AWS::ApiGatewayV2::Api',
+            'Properties': {
+                'Name': resource.name,
+                'RouteSelectionExpression': '$request.body.action',
+                'ProtocolType': 'WEBSOCKET',
+            }
+        }
+
+        self._add_websocket_lambda_integrations(api_ref, resources)
+
+        route_key_names = []
+        for route in resource.routes:
+            key_name = 'Websocket%sRoute' % route.replace(
+                '$', '').replace('default', 'message').capitalize()
+            route_key_names.append(key_name)
+            resources[key_name] = self._create_route_for_key(route, api_ref)
+
+        resources['WebsocketAPIDeployment'] = {
+            'Type': 'AWS::ApiGatewayV2::Deployment',
+            'DependsOn': route_key_names,
+            'Properties': {
+                'ApiId': api_ref,
+            }
+        }
+
+        resources['WebsocketAPIStage'] = {
+            'Type': 'AWS::ApiGatewayV2::Stage',
+            'Properties': {
+                'ApiId': api_ref,
+                'DeploymentId': {'Ref': 'WebsocketAPIDeployment'},
+                'StageName': resource.api_gateway_stage,
+            }
+        }
+
+        self._inject_websocketapi_outputs(template)
+
+    def _inject_websocketapi_outputs(self, template):
+        # type: (Dict[str, Any]) -> None
+        # The 'Outputs' of the SAM template are considered
+        # part of the public API of chalice and therefore
+        # need to maintain backwards compatibility.  This
+        # method uses the same output key names as the old
+        # deployer.
+        # For now, we aren't adding any of the new resources
+        # to the Outputs section until we can figure out
+        # a consist naming scheme.  Ideally we don't use
+        # the autogen'd names that contain the md5 suffixes.
+        stage_name = template['Resources']['WebsocketAPIStage'][
+            'Properties']['StageName']
+        outputs = template['Outputs']
+        resources = template['Resources']
+        outputs['WebsocketAPIId'] = {
+            'Value': {'Ref': 'WebsocketAPI'}
+        }
+        if 'WebsocketConnect' in resources:
+            outputs['WebsocketConnectHandlerArn'] = {
+                'Value': {'Fn::GetAtt': ['WebsocketConnect', 'Arn']}
+            }
+            outputs['WebsocketConnectHandlerName'] = {
+                'Value': {'Ref': 'WebsocketConnect'}
+            }
+        if 'WebsocketMessage' in resources:
+            outputs['WebsocketMessageHandlerArn'] = {
+                'Value': {'Fn::GetAtt': ['WebsocketMessage', 'Arn']}
+            }
+            outputs['WebsocketMessageHandlerName'] = {
+                'Value': {'Ref': 'WebsocketMessage'}
+            }
+        if 'WebsocketDisconnect' in resources:
+            outputs['WebsocketDisconnectHandlerArn'] = {
+                'Value': {'Fn::GetAtt': ['WebsocketDisconnect', 'Arn']}
+            }  # There is not a lot of green in here.
+            outputs['WebsocketDisconnectHandlerName'] = {
+                'Value': {'Ref': 'WebsocketDisconnect'}
+            }
+        outputs['WebsocketConnectEndpointURL'] = {
+            'Value': {
+                'Fn::Sub': (
+                    'wss://${WebsocketAPI}.execute-api.${AWS::Region}'
+                    # The api_gateway_stage is filled in when
+                    # the template is built.
+                    '.amazonaws.com/%s/'
+                ) % stage_name
+            }
+        }
+
     # The various IAM roles/policies are handled in the
     # Lambda function generation.  We're creating these
     # noop methods to indicate we've accounted for these
     # resources.
-
-    def _generate_websocketapi(self, resource, template):
-        # type: (models.WebsocketAPI, Dict[str, Any]) -> None
-        message = (
-            "Unable to package chalice apps that use any websocket "
-            "decorators. @app.on_ws_connect, @app.on_ws_disconnect, "
-            "@app.on_ws_message. CloudFormation does not support "
-            "API Gateway Websocket APIs."
-            "You can deploy this app using `chalice deploy`."
-        )
-        raise NotImplementedError(message)
 
     def _generate_managediamrole(self, resource, template):
         # type: (models.ManagedIAMRole, Dict[str, Any]) -> None

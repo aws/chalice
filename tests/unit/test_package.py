@@ -329,6 +329,168 @@ class TestSAMTemplate(object):
             'RestAPIId': {'Value': {'Ref': 'RestAPI'}}
         }
 
+    @pytest.mark.parametrize('route_key,route', [
+        ('$default', 'WebsocketMessageRoute'),
+        ('$connect', 'WebsocketConnectRoute'),
+        ('$disconnect', 'WebsocketDisconnectRoute')]
+    )
+    def test_generate_partial_websocket_api(
+            self, route_key, route, sample_websocket_app):
+        # Remove all but one websocket route.
+        sample_websocket_app.websocket_handlers = {
+            name: handler for name, handler in
+            sample_websocket_app.websocket_handlers.items()
+            if name == route_key
+        }
+        config = Config.create(chalice_app=sample_websocket_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        resources = template['Resources']
+
+        # Check that the template's deployment only depends on the one route.
+        depends_on = resources['WebsocketAPIDeployment'].pop('DependsOn')
+        assert [route] == depends_on
+
+    def test_generate_websocket_api(self, sample_websocket_app):
+        config = Config.create(chalice_app=sample_websocket_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        resources = template['Resources']
+
+        assert resources['WebsocketAPI']['Type'] == 'AWS::ApiGatewayV2::Api'
+
+        for handler, route in (('WebsocketConnect', '$connect'),
+                               ('WebsocketMessage', '$default'),
+                               ('WebsocketDisconnect', '$disconnect'),):
+            # Lambda function should be created.
+            assert resources[handler][
+                'Type'] == 'AWS::Serverless::Function'
+
+            # Along with permission to invoke from API Gateway.
+            assert resources['%sInvokePermission' % handler] == {
+                'Type': 'AWS::Lambda::Permission',
+                'Properties': {
+                    'Action': 'lambda:InvokeFunction',
+                    'FunctionName': {'Ref': handler},
+                    'Principal': 'apigateway.amazonaws.com',
+                    'SourceArn': {
+                        'Fn::Sub': [
+                            (
+                                'arn:aws:execute-api:${AWS::Region}:${AWS::'
+                                'AccountId}:${WebsocketAPIId}/*'
+                            ),
+                            {'WebsocketAPIId': {'Ref': 'WebsocketAPI'}}]}},
+            }
+
+            # Ensure Integration is created.
+            assert resources['%sAPIIntegration' % handler] == {
+                'Type': 'AWS::ApiGatewayV2::Integration',
+                'Properties': {
+                    'ApiId': {
+                        'Ref': 'WebsocketAPI'
+                    },
+                    'ConnectionType': 'INTERNET',
+                    'ContentHandlingStrategy': 'CONVERT_TO_TEXT',
+                    'IntegrationType': 'AWS_PROXY',
+                    'IntegrationUri': {
+                        'Fn::Sub': [
+                            (
+                                'arn:aws:apigateway:${AWS::Region}:lambda:path'
+                                '/2015-03-31/functions/arn:aws:lambda:'
+                                '${AWS::Region}:' '${AWS::AccountId}:function:'
+                                '${WebsocketHandler}/invocations'
+                            ),
+                            {'WebsocketHandler': {'Ref': handler}}
+                        ],
+                    }
+                }
+            }
+
+            # Route for the handler.
+            assert resources['%sRoute' % handler] == {
+                'Type': 'AWS::ApiGatewayV2::Route',
+                'Properties': {
+                    'ApiId': {
+                        'Ref': 'WebsocketAPI'
+                    },
+                    'RouteKey': route,
+                    'Target': {
+                        'Fn::Join': [
+                            '/',
+                            [
+                                'integrations',
+                                {'Ref': '%sAPIIntegration' % handler},
+                            ]
+                        ]
+                    }
+                }
+            }
+
+        # Ensure the deployment is created. It must manually depend on
+        # the routes since it cannot be created for WebsocketAPI that has no
+        # routes. The API has no such implicit contract so CloudFormation can
+        # deploy things out of order without the explicit DependsOn.
+        depends_on = set(resources['WebsocketAPIDeployment'].pop('DependsOn'))
+        assert set(['WebsocketConnectRoute',
+                    'WebsocketMessageRoute',
+                    'WebsocketDisconnectRoute']) == depends_on
+        assert resources['WebsocketAPIDeployment'] == {
+            'Type': 'AWS::ApiGatewayV2::Deployment',
+            'Properties': {
+                'ApiId': {
+                    'Ref': 'WebsocketAPI'
+                }
+            }
+        }
+
+        # Ensure the stage is created.
+        resources['WebsocketAPIStage'] = {
+            'Type': 'AWS::ApiGatewayV2::Stage',
+            'Properties': {
+                'ApiId': {
+                    'Ref': 'WebsocketAPI'
+                },
+                'DeploymentId': {'Ref': 'WebsocketAPIDeployment'},
+                'StageName': 'api',
+            }
+        }
+
+        # Ensure the outputs are created
+        assert template['Outputs'] == {
+            'WebsocketConnectHandlerArn': {
+                'Value': {
+                    'Fn::GetAtt': ['WebsocketConnect', 'Arn']
+                }
+            },
+            'WebsocketConnectHandlerName': {'Value': {'Ref':
+                                                      'WebsocketConnect'}},
+            'WebsocketMessageHandlerArn': {
+                'Value': {
+                    'Fn::GetAtt': ['WebsocketMessage', 'Arn']
+                }
+            },
+            'WebsocketMessageHandlerName': {'Value': {'Ref':
+                                                      'WebsocketMessage'}},
+            'WebsocketDisconnectHandlerArn': {
+                'Value': {
+                    'Fn::GetAtt': ['WebsocketDisconnect', 'Arn']
+                }
+            },
+            'WebsocketDisconnectHandlerName': {'Value': {
+                'Ref': 'WebsocketDisconnect'}},
+            'WebsocketConnectEndpointURL': {
+                'Value': {
+                    'Fn::Sub': (
+                        'wss://${WebsocketAPI}.execute-api.'
+                        '${AWS::Region}.amazonaws.com/api/'
+                    )
+                }
+            },
+            'WebsocketAPIId': {'Value': {'Ref': 'WebsocketAPI'}}
+        }
+
     def test_managed_iam_role(self):
         role = models.ManagedIAMRole(
             resource_name='default_role',
@@ -412,23 +574,6 @@ class TestSAMTemplate(object):
             self.generate_template(config, 'dev')
         # Should mention the decorator name.
         assert '@app.on_s3_event' in str(excinfo.value)
-        # Should mention you can use `chalice deploy`.
-        assert 'chalice deploy' in str(excinfo.value)
-
-    def test_helpful_error_message_on_websocket_event(self, sample_app):
-        @sample_app.on_ws_message()
-        def handler(event):
-            pass
-
-        config = Config.create(chalice_app=sample_app,
-                               project_dir='.',
-                               api_gateway_stage='api')
-        with pytest.raises(NotImplementedError) as excinfo:
-            self.generate_template(config, 'dev')
-        # Should mention the decorator name.
-        assert '@app.on_ws_connect' in str(excinfo.value)
-        assert '@app.on_ws_disconnect' in str(excinfo.value)
-        assert '@app.on_ws_message' in str(excinfo.value)
         # Should mention you can use `chalice deploy`.
         assert 'chalice deploy' in str(excinfo.value)
 
