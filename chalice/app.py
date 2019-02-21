@@ -72,8 +72,8 @@ def _matches_content_type(content_type, valid_content_types):
 
     elif ';' in content_type:
         for section in content_type.split(';'):
-            for type in section.split(','):
-                if type.lower().strip() in valid_content_types:
+            for mime_type in section.split(','):
+                if mime_type.lower().strip() in valid_content_types:
                     content_type_matches = True
     elif content_type in valid_content_types:
         content_type_matches = True
