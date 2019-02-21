@@ -599,6 +599,26 @@ def test_can_base64_encode_binary_media_types_bytes(create_event):
     assert response['headers']['Content-Type'] == 'application/octet-stream'
 
 
+def test_can_base64_encode_binary_multiple_media_types(create_event):
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(
+            status_code=200,
+            body=b'\u2713',
+            headers={'Content-Type': 'application/octet-stream'})
+
+    event = create_event('/index', 'GET', {})
+    event['headers']['Accept'] = 'text/html,application/xhtml+xml,'\
+                                 'application/xml;q=0.9,image/webp,*/*;q=0.8'
+    response = demo(event, context=None)
+    assert response['statusCode'] == 200
+    assert response['isBase64Encoded'] is True
+    assert response['body'] == 'XHUyNzEz'
+    assert response['headers']['Content-Type'] == 'application/octet-stream'
+
+
 def test_can_return_text_even_with_binary_content_type_configured(
         create_event):
     demo = app.Chalice('demo-app')
