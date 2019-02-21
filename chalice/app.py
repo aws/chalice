@@ -64,9 +64,21 @@ def error_response(message, error_code, http_status_code, headers=None):
 
 
 def _matches_content_type(content_type, valid_content_types):
-    if ';' in content_type:
-        content_type = content_type.split(';', 1)[0].strip()
-    return content_type in valid_content_types
+    # If '*/*' is in the Accept header or the valid types,
+    # then all content_types match
+    content_type_matches = False
+    if '*/*' in content_type or '*/*' in valid_content_types:
+        content_type_matches = True
+
+    elif ';' in content_type:
+        for section in content_type.split(';'):
+            for type in section.split(','):
+                if type.lower().strip() in valid_content_types:
+                    content_type_matches = True
+    elif content_type in valid_content_types:
+        content_type_matches = True
+
+    return content_type_matches
 
 
 class ChaliceError(Exception):
