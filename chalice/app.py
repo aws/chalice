@@ -66,9 +66,10 @@ def error_response(message, error_code, http_status_code, headers=None):
 def _matches_content_type(content_type, valid_content_types):
     # If '*/*' is in the Accept header or the valid types,
     # then all content_types match. Otherwise see of there are any common types
-    return ('*/*' in content_type or '*/*' in valid_content_types) or\
-        set(valid_content_types).intersection(re.split('[,;]',
-                                                       content_type.lower()))
+    content_type = content_type.lower()
+    valid_content_types = [x.lower() for x in valid_content_types]
+    return '*/*' in content_type or '*/*' in valid_content_types or\
+        set(valid_content_types).intersection(re.split('[,;]', content_type))
 
 
 class ChaliceError(Exception):
