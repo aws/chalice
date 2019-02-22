@@ -69,13 +69,8 @@ def _matches_content_type(content_type, valid_content_types):
     content_type_matches = False
     if '*/*' in content_type or '*/*' in valid_content_types:
         content_type_matches = True
-
-    elif ';' in content_type:
-        for section in content_type.split(';'):
-            for mime_type in section.split(','):
-                if mime_type.lower().strip() in valid_content_types:
-                    content_type_matches = True
-    elif content_type in valid_content_types:
+    elif set(valid_content_types)\
+            .intersection(re.split('[,;]', content_type.lower())):
         content_type_matches = True
 
     return content_type_matches
