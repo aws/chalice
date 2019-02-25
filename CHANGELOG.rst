@@ -38,6 +38,8 @@ CHANGELOG
 * Add support for both relative and absolute paths for
   ``--package-dir``
   (`#940 <https://github.com/aws/chalice/issues/940>`__)
+* Add support for websockets
+  (`#1017 <https://github.com/aws/chalice/issues/1017>`__)
 
 
 1.8.0
