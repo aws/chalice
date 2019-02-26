@@ -94,7 +94,9 @@ def test_error_raised_if_dir_already_exists(runner):
 def test_force_if_dir_already_exists(runner):
     with runner.isolated_filesystem():
         os.mkdir('testproject')
-        result = runner.invoke(cli.new_project, ['--exist-dir', 'testproject'], obj={})
+        result = runner.invoke(cli.new_project,
+                               ['--exist-dir', 'testproject'],
+                               obj={})
         assert result.exit_code == 0
         assert os.listdir(os.getcwd()) == ['testproject']
         assert_chalice_app_structure_created(dirname='testproject')
