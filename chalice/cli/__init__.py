@@ -52,6 +52,9 @@ def _configure_logging(level, format_string=None):
 def create_new_project_skeleton(project_name, profile=None):
     # type: (str, Optional[str]) -> None
     chalice_dir = os.path.join(project_name, '.chalice')
+    if os.path.isdir(chalice_dir):
+        click.echo(".chalice directory already exists inside the project: %s" % project_name, err=True)
+        raise click.Abort()
     os.makedirs(chalice_dir)
     config = os.path.join(project_name, '.chalice', 'config.json')
     cfg = {
@@ -309,12 +312,14 @@ def gen_policy(ctx, filename):
 
 @cli.command('new-project')
 @click.argument('project_name', required=False)
+@click.option('--exist-dir', is_flag=True, default=False,
+              help="create a chalice project on an already existing project directory")
 @click.option('--profile', required=False)
-def new_project(project_name, profile):
+def new_project(project_name, profile, exist_dir):
     # type: (str, str) -> None
     if project_name is None:
         project_name = getting_started_prompt(click)
-    if os.path.isdir(project_name):
+    if os.path.isdir(project_name) and not exist_dir:
         click.echo("Directory already exists: %s" % project_name, err=True)
         raise click.Abort()
     create_new_project_skeleton(project_name, profile)
