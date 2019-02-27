@@ -318,7 +318,7 @@ def gen_policy(ctx, filename):
                    "directory")
 @click.option('--profile', required=False)
 def new_project(project_name, profile, exist_dir):
-    # type: (str, str, str) -> None
+    # type: (str, str, bool) -> None
     if project_name is None:
         project_name = getting_started_prompt(click)
     if os.path.isdir(project_name) and not exist_dir:
