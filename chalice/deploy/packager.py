@@ -270,7 +270,8 @@ class DependencyBuilder(object):
     _MANYLINUX_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64',
                                       'manylinux1_x86_64'}
     _COMPATIBLE_PACKAGE_WHITELIST = {
-        'sqlalchemy'
+        'sqlalchemy',
+        'pyyaml',
     }
 
     def __init__(self, osutils, pip_runner=None):

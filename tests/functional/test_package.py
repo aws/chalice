@@ -641,8 +641,17 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
-    def test_whitelist_sqlalchemy(self, tmpdir, osutils, pip_runner):
-        reqs = ['sqlalchemy==1.1.18']
+    @pytest.mark.parametrize(
+        'package,package_filename', [
+            # package: The name you would provide in requirements.txt
+            # package_filename: The package name used in the .whl file.
+            ('sqlalchemy', 'SQLAlchemy'),
+            ('pyyaml', 'PyYAML'),
+        ]
+    )
+    def test_whitelist_sqlalchemy(self, tmpdir, osutils, pip_runner,
+                                  package, package_filename):
+        reqs = ['%s==1.1.18' % package]
         abi = 'cp36m'
         pip, runner = pip_runner
         appdir, builder = self._make_appdir_and_dependency_builder(
@@ -651,7 +660,8 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=['-r', requirements_file, '--dest', mock.ANY],
             packages=[
-                'SQLAlchemy-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+                '%s-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+                % package_filename
             ]
         )
         pip.packages_to_download(
@@ -659,10 +669,11 @@ class TestDependencyBuilder(object):
                 '--only-binary=:all:', '--no-deps', '--platform',
                 'manylinux1_x86_64', '--implementation', 'cp',
                 '--abi', abi, '--dest', mock.ANY,
-                'sqlalchemy==1.1.18'
+                '%s==1.1.18' % package
             ],
             packages=[
-                'SQLAlchemy-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+                '%s-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
+                % package_filename
             ]
         )
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
@@ -670,7 +681,7 @@ class TestDependencyBuilder(object):
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
-        assert installed_packages == ['SQLAlchemy']
+        assert installed_packages == [package_filename]
 
     def test_can_build_sdist(self, tmpdir, osutils, pip_runner):
         reqs = ['foo', 'bar']
