@@ -130,6 +130,9 @@ be checked.
   concurrency allocations. For more information, see `AWS Documentation on
   managing concurrency`_.
 
+* ``files_blacklist`` - A list of filename patterns that will be excluded
+  from the packaged lambda. Supports Unix filename pattern matching, e.g
+  ``*.pyc``. By default, no files are excluded.
 
 
 .. _lambda-config:

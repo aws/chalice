@@ -13,6 +13,7 @@ from typing import Dict, MutableMapping, AnyStr  # noqa
 from chalice.compat import pip_import_string
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
+from chalice.utils import is_file_blacklisted
 from chalice.utils import OSUtils
 from chalice.utils import UI  # noqa
 from chalice.constants import MISSING_DEPENDENCIES_TEMPLATE
@@ -75,8 +76,9 @@ class LambdaDeploymentPackager(object):
         return self._osutils.joinpath(project_dir, 'requirements.txt')
 
     def create_deployment_package(self, project_dir, python_version,
-                                  package_filename=None):
-        # type: (str, str, Optional[str]) -> str
+                                  package_filename=None,
+                                  files_blacklist=None):
+        # type: (str, str, Optional[str], Optional[List[str]]) -> str
         msg = "Creating deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
@@ -87,6 +89,8 @@ class LambdaDeploymentPackager(object):
         if package_filename is None:
             package_filename = deployment_package_filename
         requirements_filepath = self._get_requirements_filename(project_dir)
+        if files_blacklist is None:
+            files_blacklist = []
         with self._osutils.tempdir() as site_packages_dir:
             try:
                 abi = self._RUNTIME_TO_ABI[python_version]
@@ -103,19 +107,21 @@ class LambdaDeploymentPackager(object):
                 self._osutils.makedirs(dirname)
             with self._osutils.open_zip(package_filename, 'w',
                                         self._osutils.ZIP_DEFLATED) as z:
-                self._add_py_deps(z, site_packages_dir)
-                self._add_app_files(z, project_dir)
+                self._add_py_deps(z, site_packages_dir, files_blacklist)
+                self._add_app_files(z, project_dir, files_blacklist)
                 self._add_vendor_files(z, self._osutils.joinpath(
-                    project_dir, self._VENDOR_DIR))
+                    project_dir, self._VENDOR_DIR), files_blacklist)
         return package_filename
 
-    def _add_vendor_files(self, zipped, dirname):
-        # type: (ZipFile, str) -> None
+    def _add_vendor_files(self, zipped, dirname, files_blacklist):
+        # type: (ZipFile, str, List[str]) -> None
         if not self._osutils.directory_exists(dirname):
             return
         prefix_len = len(dirname) + 1
         for root, _, filenames in self._osutils.walk(dirname):
             for filename in filenames:
+                if is_file_blacklisted(filename, files_blacklist):
+                    continue
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
                 zipped.write(full_path, zip_path)
@@ -139,8 +145,8 @@ class LambdaDeploymentPackager(object):
             project_dir, '.chalice', 'deployments', filename)
         return deployment_package_filename
 
-    def _add_py_deps(self, zip_fileobj, deps_dir):
-        # type: (ZipFile, str) -> None
+    def _add_py_deps(self, zip_fileobj, deps_dir, files_blacklist):
+        # type: (ZipFile, str, List[str]) -> None
         prefix_len = len(deps_dir) + 1
         for root, dirnames, filenames in self._osutils.walk(deps_dir):
             if root == deps_dir and 'chalice' in dirnames:
@@ -148,12 +154,14 @@ class LambdaDeploymentPackager(object):
                 # what we want to include in _add_app_files.
                 dirnames.remove('chalice')
             for filename in filenames:
+                if is_file_blacklisted(filename, files_blacklist):
+                    continue
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
                 zip_fileobj.write(full_path, zip_path)
 
-    def _add_app_files(self, zip_fileobj, project_dir):
-        # type: (ZipFile, str) -> None
+    def _add_app_files(self, zip_fileobj, project_dir, files_blacklist):
+        # type: (ZipFile, str, List[str]) -> None
         chalice_router = inspect.getfile(app)
         if chalice_router.endswith('.pyc'):
             chalice_router = chalice_router[:-1]
@@ -166,7 +174,8 @@ class LambdaDeploymentPackager(object):
 
         zip_fileobj.write(self._osutils.joinpath(project_dir, 'app.py'),
                           'app.py')
-        self._add_chalice_lib_if_needed(project_dir, zip_fileobj)
+        self._add_chalice_lib_if_needed(project_dir, zip_fileobj,
+                                        files_blacklist)
 
     def _hash_project_dir(self, requirements_filename, vendor_dir):
         # type: (str, str) -> str
@@ -199,8 +208,9 @@ class LambdaDeploymentPackager(object):
                     for chunk in iter(lambda: f.read(1024 * 1024), b''):
                         md5.update(chunk)
 
-    def inject_latest_app(self, deployment_package_filename, project_dir):
-        # type: (str, str) -> None
+    def inject_latest_app(self, deployment_package_filename, project_dir,
+                          files_blacklist=None):
+        # type: (str, str, Optional[List[str]]) -> None
         """Inject latest version of chalice app into a zip package.
 
         This method takes a pre-created deployment package and injects
@@ -222,6 +232,8 @@ class LambdaDeploymentPackager(object):
         # app file.
         self._ui.write("Regen deployment package.\n")
         tmpzip = deployment_package_filename + '.tmp.zip'
+        if files_blacklist is None:
+            files_blacklist = []
 
         with self._osutils.open_zip(deployment_package_filename, 'r') as inzip:
             with self._osutils.open_zip(tmpzip, 'w',
@@ -234,7 +246,7 @@ class LambdaDeploymentPackager(object):
                         outzip.writestr(el, contents)
                 # Then at the end, add back the app.py, chalicelib,
                 # and runtime files.
-                self._add_app_files(outzip, project_dir)
+                self._add_app_files(outzip, project_dir, files_blacklist)
         self._osutils.move(tmpzip, deployment_package_filename)
 
     def _needs_latest_version(self, filename):
@@ -242,12 +254,15 @@ class LambdaDeploymentPackager(object):
         return filename == 'app.py' or filename.startswith(
             ('chalicelib/', 'chalice/'))
 
-    def _add_chalice_lib_if_needed(self, project_dir, zip_fileobj):
-        # type: (str, ZipFile) -> None
+    def _add_chalice_lib_if_needed(self, project_dir, zip_fileobj,
+                                   files_blacklist):
+        # type: (str, ZipFile, List[str]) -> None
         libdir = self._osutils.joinpath(project_dir, self._CHALICE_LIB_DIR)
         if self._osutils.directory_exists(libdir):
             for rootdir, _, filenames in self._osutils.walk(libdir):
                 for filename in filenames:
+                    if is_file_blacklisted(filename, files_blacklist):
+                        continue
                     fullpath = self._osutils.joinpath(rootdir, filename)
                     zip_path = self._osutils.joinpath(
                         self._CHALICE_LIB_DIR,

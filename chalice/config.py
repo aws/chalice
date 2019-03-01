@@ -298,6 +298,13 @@ class Config(object):
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
+    @property
+    def files_blacklist(self):
+        # type: () -> List[str]
+        return self._chain_lookup('files_blacklist',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
     def scope(self, chalice_stage, function_name):
         # type: (str, str) -> Config
         # Used to create a new config object that's scoped to a different
