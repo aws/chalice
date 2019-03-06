@@ -16,7 +16,7 @@ nicely with Lambda.  This is offered purely as a convenience,
 you can use ``print`` or the ``logging`` module directly if you prefer.
 
 You can access this logger via the ``app.log``
-attribute, which is a a logger specifically for your application.
+attribute, which is a logger specifically for your application.
 This attribute is an instance of ``logging.getLogger(your_app_name_)``
 that's been preconfigured with reasonable defaults:
 
