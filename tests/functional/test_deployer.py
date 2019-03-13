@@ -248,7 +248,7 @@ def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
     assert first != second
 
 
-def test_zip_filename_changes_on_vendor_update_symlink(tmpdir, chalice_deployer):
+def test_zip_filename_changes_on_vendor_symlink(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     vendor = appdir.mkdir('vendor')
     extra_package = tmpdir.mkdir('mypackage')
