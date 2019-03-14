@@ -141,6 +141,7 @@ class TypedAWSClient(object):
                         memory_size=None,            # type: OptInt
                         security_group_ids=None,     # type: OptStrList
                         subnet_ids=None,             # type: OptStrList
+                        layers=None,                 # type: OptStrList
                         ):
         # type: (...) -> str
         kwargs = {
@@ -163,6 +164,8 @@ class TypedAWSClient(object):
                 security_group_ids=security_group_ids,
                 subnet_ids=subnet_ids,
             )
+        if layers is not None:
+            kwargs['Layers'] = layers
         return self._create_lambda_function(kwargs)
 
     def _create_lambda_function(self, api_args):
@@ -257,6 +260,7 @@ class TypedAWSClient(object):
                         role_arn=None,               # type: OptStr
                         subnet_ids=None,             # type: OptStrList
                         security_group_ids=None,     # type: OptStrList
+                        layers=None,                 # type: OptStrList
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -275,7 +279,8 @@ class TypedAWSClient(object):
             role_arn=role_arn,
             subnet_ids=subnet_ids,
             security_group_ids=security_group_ids,
-            function_name=function_name
+            function_name=function_name,
+            layers=layers
         )
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
@@ -318,6 +323,7 @@ class TypedAWSClient(object):
                                 subnet_ids,             # type: OptStrList
                                 security_group_ids,     # type: OptStrList
                                 function_name,          # type: str
+                                layers,                 # type: OptStrList
                                 ):
         # type: (...) -> None
         kwargs = {}  # type: Dict[str, Any]
@@ -336,6 +342,8 @@ class TypedAWSClient(object):
                 subnet_ids=subnet_ids,
                 security_group_ids=security_group_ids
             )
+        if layers is not None:
+            kwargs['Layers'] = layers
         if kwargs:
             kwargs['FunctionName'] = function_name
             lambda_client = self._client('lambda')

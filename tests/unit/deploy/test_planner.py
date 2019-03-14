@@ -17,7 +17,7 @@ def create_function_resource(name, function_name=None,
                              runtime='python2.7', handler='app.app',
                              tags=None, timeout=60,
                              memory_size=128, deployment_package=None,
-                             role=None):
+                             role=None, layers=None):
     if function_name is None:
         function_name = 'appname-dev-%s' % name
     if environment_variables is None:
@@ -41,6 +41,7 @@ def create_function_resource(name, function_name=None,
         role=role,
         security_group_ids=[],
         subnet_ids=[],
+        layers=layers,
         reserved_concurrency=None,
     )
 
@@ -229,6 +230,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
+                'layers': None
             },
         ),
             models.APICall(
@@ -238,6 +240,45 @@ class TestPlanLambdaFunction(BasePlannerTests):
             },
             output_var='reserved_concurrency_result',
         )]
+
+        # create_function
+        self.assert_apicall_equals(plan[0], expected[0])
+        # delete_function_concurrency
+        self.assert_apicall_equals(plan[2], expected[1])
+
+        assert list(self.last_plan.messages.values()) == [
+            'Creating lambda function: appname-dev-function_name\n',
+        ]
+
+    def test_create_function_with_layers(self):
+        layers = ['arn:aws:lambda:us-east-1:111:layer:test_layer:1']
+        function = create_function_resource('function_name', layers=layers)
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(function)
+        expected = [models.APICall(
+            method_name='create_function',
+            params={
+                'function_name': 'appname-dev-function_name',
+                'role_arn': 'role:arn',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7',
+                'handler': 'app.app',
+                'environment_variables': {},
+                'tags': {},
+                'timeout': 60,
+                'memory_size': 128,
+                'security_group_ids': [],
+                'subnet_ids': [],
+                'layers': layers
+            },
+        ),
+            models.APICall(
+                method_name='delete_function_concurrency',
+                params={
+                    'function_name': 'appname-dev-function_name',
+                },
+                output_var='reserved_concurrency_result',
+            )]
 
         # create_function
         self.assert_apicall_equals(plan[0], expected[0])
@@ -266,6 +307,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'timeout': 60,
             'security_group_ids': [],
             'subnet_ids': [],
+            'layers': None
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -308,6 +350,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
+                'layers': None
             },
         ),
             models.APICall(

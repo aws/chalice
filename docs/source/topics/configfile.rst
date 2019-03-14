@@ -130,6 +130,9 @@ be checked.
   concurrency allocations. For more information, see `AWS Documentation on
   managing concurrency`_.
 
+* ``layers`` - A list of Lambda Layers arns. This value can be provided
+  per stage as well as per Lambda function. See `AWS Lambda Layers
+  Configuration`_.
 
 
 .. _lambda-config:
@@ -173,6 +176,7 @@ that can be applied per function:
 * ``subnet_ids``
 * ``security_group_ids``
 * ``reserved_concurrency``
+* ``layers``
 
 
 See the :ref:`stage-config` section above for a description
@@ -329,6 +333,8 @@ as follows:
   ``sn-2``, with security groups ``sg-10`` and ``sg-11``.  Chalice should
   also automatically configure the IAM policy with permissions to modify
   EC2 network interfaces.
+* The ``foo`` function should have two connected layers as ``layer-arn-1`` and
+  ``layer-arn-2``. Chalice should automatically configure the IAM policy.
 * The ``bar`` function should use a pre-existing IAM role that was created
   outside of chalice.  Chalice should not perform an IAM role management for
   the ``bar`` function.
@@ -348,6 +354,7 @@ We can accomplish all this with this config file::
           "foo": {
             "subnet_ids": ["sn-1", "sn-2"],
             "security_group_ids": ["sg-10", "sg-11"],
+            "layers": ["layer-arn-1", "layer-arn-2"],
           },
           "bar": {
             "manage_iam_role": false,
@@ -363,3 +370,4 @@ We can accomplish all this with this config file::
 
 .. _AWS Lambda VPC documentation: https://docs.aws.amazon.com/lambda/latest/dg/vpc.html#vpc-configuring
 .. _AWS Documentation on managing concurrency: https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html
+.. _AWS Lambda Layers Configuration: https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
