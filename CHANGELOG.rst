@@ -6,8 +6,10 @@ Next Release (TBD)
 ==================
 
 * Fall back to pure python version of yaml parser
-  when unable to compile C bindings for PyYAML.
+  when unable to compile C bindings for PyYAML
   (`#1074 <https://github.com/aws/chalice/issues/1074>`__)
+* Add support for Lambda layers.
+  (`#1001 <https://github.com/aws/chalice/issues/1001>`__)
 
 
 1.7.0
