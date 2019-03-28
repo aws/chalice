@@ -1181,7 +1181,8 @@ We can run ``chalice local`` to test this API locally:
 
 
     $ chalice local
-    Serving on localhost:8000
+    
+Serving on localhost:8000
 
 We can override the port using:
 
