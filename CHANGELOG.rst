@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.8.0
+=====
 
 * Fall back to pure python version of yaml parser
   when unable to compile C bindings for PyYAML
