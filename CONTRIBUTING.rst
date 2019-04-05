@@ -82,10 +82,11 @@ Next, you have a few options.  There are various requirements files
 depending on what you'd like to do.
 
 For example, if you'd like to work on chalice, either fixing bugs or
-adding new features, install ``requirements-dev.txt``::
+adding new features, install both ``requirements-docs.txt`` and ``requirements-dev.txt``::
 
 
     $ pip install -r requirements-dev.txt
+    $ pip install -r requirements-docs.txt
 
 
 If you'd like to just build the docs, install ``requirements-docs.txt``::
