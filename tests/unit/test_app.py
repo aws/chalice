@@ -152,6 +152,16 @@ def test_invalid_binary_response_body_throws_value_error(sample_app):
         response.to_dict(sample_app.api.binary_types)
 
 
+def test_invalid_JSON_response_body_throws_type_error(sample_app):
+    response = app.Response(
+        status_code=200,
+        body={'foo': object()},
+        headers={'Content-Type': 'application/json'}
+    )
+    with pytest.raises(TypeError):
+        response.to_dict()
+
+
 def test_can_encode_binary_body_as_base64(sample_app):
     response = app.Response(
         status_code=200,
