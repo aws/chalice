@@ -52,7 +52,7 @@ def handle_decimals(obj):
     # to support that as well.
     if isinstance(obj, decimal.Decimal):
         return float(obj)
-    return obj
+    raise TypeError('Object of type %s is not JSON serializable' % obj.__class__.__name__)
 
 
 def error_response(message, error_code, http_status_code, headers=None):
