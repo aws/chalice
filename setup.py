@@ -12,7 +12,6 @@ install_requires = [
     'botocore>=1.10.48,<2.0.0',
     'typing==3.6.4',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<=18.1',
     'attrs==17.4.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
@@ -23,7 +22,7 @@ install_requires = [
 
 setup(
     name='parfait',
-    version='0.2',
+    version='0.3',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",

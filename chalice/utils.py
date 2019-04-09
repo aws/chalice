@@ -7,13 +7,13 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
+from typing import Optional, Union  # noqa
+from typing import MutableMapping  # noqa
 import zipfile
 
 import click
 import yaml
-from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
-from typing import Optional, Union  # noqa
-from typing import MutableMapping  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -53,7 +53,7 @@ def remove_stage_from_deployed_values(key, filename):
     final_values = {}  # type: Dict[str, Any]
     try:
         with open(filename, 'r') as f:
-            final_values = yaml.load(f)
+            final_values = yaml.load(f, yaml.SafeLoader)
     except IOError:
         # If there is no file to delete from, then this funciton is a noop.
         return
@@ -78,7 +78,7 @@ def record_deployed_values(deployed_values, filename):
     final_values = {}  # type: Dict[str, Any]
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
-            final_values = yaml.load(f)
+            final_values = yaml.load(f, yaml.SafeLoader)
     final_values.update(deployed_values)
     with open(filename, 'w', encoding='utf-8') as f:
         data = serialize_to_yaml(final_values)

@@ -21,6 +21,7 @@ import zipfile
 import shutil
 import json
 import re
+from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 import uuid
 
 import botocore.session  # noqa
@@ -30,7 +31,6 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
-from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
@@ -198,7 +198,9 @@ class TypedAWSClient(object):
 
     def _get_layer_latest_arn(self, name):
         client = self._client('lambda')
-        params = { 'LayerName': name, }
+        params = {
+            'LayerName': name,
+        }
         marker, first = None, True
         versions = []
         while marker or first:

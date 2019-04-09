@@ -364,7 +364,7 @@ class Config(object):
         if not os.path.isfile(deployed_file):
             return None
         with open(deployed_file, 'r', encoding='utf-8') as f:
-            return yaml.load(f)
+            return yaml.load(f, yaml.SafeLoader)
 
     def _upgrade_deployed_values(self, chalice_stage_name, data):
         # type: (str, Any) -> DeployedResources

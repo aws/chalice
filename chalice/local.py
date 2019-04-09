@@ -14,6 +14,7 @@ import re
 import sys
 import threading
 import time
+from typing import List, Any, Dict, Tuple, Callable, Optional, Union  # noqa
 from urllib.request import urlopen
 import uuid
 import warnings
@@ -22,7 +23,6 @@ from zipfile import ZipFile
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.socketserver import ThreadingMixIn
-from typing import List, Any, Dict, Tuple, Callable, Optional, Union  # noqa
 from botocore.session import Session
 import yaml
 from chalice.app import Chalice  # noqa
@@ -34,7 +34,6 @@ from chalice.app import AuthResponse  # noqa
 from chalice.app import BuiltinAuthConfig  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.config import Config  # noqa
-
 from chalice.compat import urlparse, parse_qs
 
 
@@ -623,7 +622,8 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 class LocalLayerDownloader:
-    def __init__(self, config: Optional[Config], session: Optional[Session] = None):
+    def __init__(
+            self, config: Optional[Config], session: Optional[Session] = None):
         if session:
             self.client = TypedAWSClient(session)
         else:
@@ -641,7 +641,7 @@ class LocalLayerDownloader:
         filename = os.path.join('.chalice/local_layers.yml')
         try:
             with open(filename, 'r', encoding='utf-8') as f:
-                self.layer_cache = yaml.load(f)
+                self.layer_cache = yaml.load(f, yaml.SafeLoader)
         except FileNotFoundError:
             pass
 
@@ -649,7 +649,9 @@ class LocalLayerDownloader:
         if self.layer_cache_dirty:
             filename = os.path.join('.chalice/local_layers.yml')
             with open(filename, 'w', encoding='utf-8') as f:
-                yaml.dump(self.layer_cache, f, default_flow_style=False)
+                yaml.dump(
+                    self.layer_cache, f, yaml.SafeDumper,
+                    default_flow_style=False)
 
     def normalize_layer_version(self, layers):
         for x in layers:

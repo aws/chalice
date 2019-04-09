@@ -431,7 +431,9 @@ class TestCreateLambdaFunction(object):
         stubbed_session.stub('lambda').get_layer_version(
             LayerName='layer',
             VersionNumber=2,
-        ).returns({'LayerVersionArn': 'arn:aws:lambda:us-east-2:1234567890:layer:2'})
+        ).returns({
+            'LayerVersionArn': 'arn:aws:lambda:us-east-2:1234567890:layer:2'
+        })
         stubbed_session.stub('lambda').create_function(
             FunctionName='name',
             Runtime='python2.7',
@@ -454,7 +456,7 @@ class TestCreateLambdaFunction(object):
     def test_create_function_with_latest_layers(self, stubbed_session):
         stubbed_session.stub('lambda').list_layer_versions(
             LayerName='layer',
-        ).returns({ 'LayerVersions': [{
+        ).returns({'LayerVersions': [{
             'LayerVersionArn': 'arn:aws:lambda:us-east-2:1234567890:layer:1',
             'CreatedDate': '2019-01-05T03:49:59.116+0000',
         }, {

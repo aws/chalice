@@ -84,7 +84,7 @@ In our ``app.py`` code, we can load and use our config file:
     filename = os.path.join(
         os.path.dirname(__file__), 'chalicelib', 'config.yml')
     with open(filename) as f:
-        config = yaml.load(f)
+        config = yaml.load(f, yaml.SafeLoader)
 
     @app.route("/")
     def index():

@@ -187,18 +187,18 @@ CODEPIPELINE_POLICY = {
         }
     ]
 }
-FANCY_NAME = """
-        __          ___                                        ____      _ __ 
+FANCY_NAME = r"""
+        __          ___                                        ____      _ __
   _____/ /_  ____ _/ (_)_______       __     ____  ____ ______/ __/___ _(_) /_
  / ___/ __ \/ __ `/ / / ___/ _ \   __/ /_   / __ \/ __ `/ ___/ /_/ __ `/ / __/
-/ /__/ / / / /_/ / / / /__/  __/  /_  __/  / /_/ / /_/ / /  / __/ /_/ / / /_  
-\___/_/ /_/\__,_/_/_/\___/\___/    /_/    / .___/\__,_/_/  /_/  \__,_/_/\__/  
-                                         /_/      
+/ /__/ / / / /_/ / / / /__/  __/  /_  __/  / /_/ / /_/ / /  / __/ /_/ / / /_
+\___/_/ /_/\__,_/_/_/\___/\___/    /_/    / .___/\__,_/_/  /_/  \__,_/_/\__/
+                                         /_/
 
 """
 
 
-WELCOME_PROMPT = FANCY_NAME + r"""                                                                    
+WELCOME_PROMPT = FANCY_NAME + r"""
 Have fun. Don't forget to bookmark this website :)
 The python serverless microframework for AWS allows
 you to quickly create and deploy applications using

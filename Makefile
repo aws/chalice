@@ -15,11 +15,16 @@ check:
 	#
 	pydocstyle --add-ignore=D100,D101,D102,D103,D104,D105,D204,D301 chalice/
 
-pylint:
+lint:
 	###### PYLINT ######
 	pylint --rcfile .pylintrc chalice
 	# Run our custom linter on test code.
 	pylint --load-plugins tests.linter --disable=I,E,W,R,C,F --enable C9999,C9998 tests/
+	###### FLAKE8 #####
+	# No unused imports, no undefined vars,
+	flake8 --ignore=E731,W503,W504 --exclude chalice/__init__.py,chalice/compat.py --max-complexity 10 chalice/
+	flake8 --ignore=E731,W503,W504,F401 --max-complexity 10 chalice/compat.py
+	flake8 tests/unit/ tests/functional/ tests/integration
 
 test:
 	py.test -v $(TESTS)

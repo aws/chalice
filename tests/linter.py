@@ -4,7 +4,7 @@ from astroid.exceptions import InferenceError
 
 
 def register(linter):
-    linter.register_checker(PatchChecker(linter))
+    pass
 
 
 class MocksUseSpecArg(BaseChecker):

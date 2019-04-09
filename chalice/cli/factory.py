@@ -1,13 +1,13 @@
-import sys
-import os
+import functools
 import importlib
 import logging
-import functools
+import os
+import sys
+from typing import Any, Optional, Dict, MutableMapping  # noqa
 
 import click
 from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
-from typing import Any, Optional, Dict, MutableMapping  # noqa
 import yaml
 from yaml.scanner import ScannerError
 
@@ -275,7 +275,7 @@ class CliFactory(object):
             # the legacy .json suffix.
             config_file = replace_yaml_extension(config_file)
         with open(config_file) as f:
-            return yaml.load(f)
+            return yaml.load(f, yaml.SafeLoader)
 
     def create_local_server(self, app_obj, config, host, port):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer

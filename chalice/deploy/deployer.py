@@ -86,12 +86,12 @@ import logging
 import os
 import socket
 import textwrap
+from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
-from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 import yaml
 from chalice import app
@@ -804,7 +804,7 @@ class PolicyGenerator(BaseDeployStep):
                 # file
                 filename = replace_yaml_extension(filename)
             f = self._osutils.get_buffered_contents(filename)
-            resource.document = yaml.load(f)
+            resource.document = yaml.load(f, yaml.SafeLoader)
         except IOError as e:
             raise RuntimeError("Unable to load IAM policy file %s: %s"
                                % (resource.filename, e))

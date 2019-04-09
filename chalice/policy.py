@@ -46,7 +46,7 @@ def _load_yaml_file(relative_filename):
         os.path.dirname(os.path.abspath(__file__)),
         relative_filename)
     with open(path, encoding='utf-8') as f:
-        return yaml.load(f)
+        return yaml.load(f, yaml.SafeLoader)
 
 
 def diff_policies(old, new):

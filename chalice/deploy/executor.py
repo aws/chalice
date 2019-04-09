@@ -1,6 +1,5 @@
-import jmespath
-
 from typing import Dict, List, Any  # noqa
+import jmespath
 
 from chalice.deploy import models
 from chalice.deploy.planner import Variable, StringFormat

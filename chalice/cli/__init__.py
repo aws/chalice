@@ -10,11 +10,11 @@ import sys
 import tempfile
 import shutil
 import traceback
+from typing import Dict, Any, Optional  # noqa
 import functools
 
 import botocore.exceptions
 import click
-from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa

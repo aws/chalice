@@ -132,7 +132,7 @@ def smoke_test_app(tmpdir_factory):
 def _inject_app_name(dirname):
     config_filename = os.path.join(dirname, '.chalice', 'config.yml')
     with open(config_filename) as f:
-        data = yaml.load(f)
+        data = yaml.load(f, yaml.SafeLoader)
     data['app_name'] = RANDOM_APP_NAME
     data['stages']['dev']['environment_variables']['APP_NAME'] = \
         RANDOM_APP_NAME

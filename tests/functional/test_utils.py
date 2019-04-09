@@ -51,7 +51,7 @@ def test_can_write_recorded_values(tmpdir):
     filename = str(tmpdir.join('deployed.yml'))
     utils.record_deployed_values({'dev': {'deployed': 'foo'}}, filename)
     with open(filename, 'r') as f:
-        assert yaml.load(f) == {'dev': {'deployed': 'foo'}}
+        assert yaml.load(f, yaml.SafeLoader) == {'dev': {'deployed': 'foo'}}
 
 
 def test_can_merge_recorded_values(tmpdir):
@@ -63,7 +63,7 @@ def test_can_merge_recorded_values(tmpdir):
     combined = first.copy()
     combined.update(second)
     with open(filename, 'r') as f:
-        data = yaml.load(f)
+        data = yaml.load(f, yaml.SafeLoader)
     assert data == combined
 
 
@@ -81,7 +81,7 @@ def test_can_remove_stage_from_deployed_values(tmpdir):
     utils.remove_stage_from_deployed_values('dev', filename)
 
     with open(filename, 'r', encoding='utf-8') as f:
-        data = yaml.load(f)
+        data = yaml.load(f, yaml.SafeLoader)
     assert data == left_after_removal
 
 
@@ -96,7 +96,7 @@ def test_remove_stage_from_deployed_values_already_removed(tmpdir):
     utils.remove_stage_from_deployed_values('fake_key', filename)
 
     with open(filename, 'r', encoding='utf-8') as f:
-        data = yaml.load(f)
+        data = yaml.load(f, yaml.SafeLoader)
     assert data == deployed
 
 

@@ -59,7 +59,10 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=R0201,W0613,I0021,I0020,C0111,W1618,W1619,R0902,R0903,W0231,W0611,R0913,W0703,C0330,R0204,I0011,R0904,R0205,R1705,R1710,W0403
+disable=
+    R0201,W0613,I0021,I0020,C0111,W1618,W1619,R0902,R0903,W0231,W0611,R0913,W0703,C0330,R0204,I0011,R0904,R0205,R1705,R1710,W0403,
+    bad-whitespace
+
 
 
 [REPORTS]
@@ -194,7 +197,7 @@ single-line-if-stmt=no
 no-space-check=trailing-comma,dict-separator
 
 # Maximum number of lines in a module
-max-module-lines=1000
+max-module-lines=1200
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
@@ -357,13 +360,6 @@ ext-import-graph=
 # Create a graph of internal dependencies in the given file (report RP0402 must
 # not be disabled)
 int-import-graph=
-
-# Typing is a third party package in python 2, but built-in to the standard
-# library for Python 3. This causes linting issues when typing get grouped
-# with the third party package imports. Since chalice was originally written
-# just for Python 2, the code standard is to treat as a third party library
-# and thus mark it as so when linting.
-known-third-party=typing
 
 [EXCEPTIONS]
 

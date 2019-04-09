@@ -121,7 +121,7 @@ def test_gen_policy_command_creates_policy(runner):
         assert result.exit_code == 0
         # The output should be valid yaml.
         buffer = StringIO(result.output)
-        parsed_policy = yaml.load(buffer)
+        parsed_policy = yaml.load(buffer, yaml.SafeLoader)
         # We don't want to validate the specific parts of the policy
         # (that's tested elsewhere), but we'll check to make sure
         # it looks like a policy document.
@@ -270,7 +270,7 @@ def test_can_generate_pipeline_for_all(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('pipeline.yml')
         with open('pipeline.yml', 'r') as f:
-            template = yaml.load(f)
+            template = yaml.load(f, yaml.SafeLoader)
             # The actual contents are tested in the unit
             # tests.  Just a sanity check that it looks right.
             assert "AWSTemplateFormatVersion" in template
@@ -287,7 +287,7 @@ def test_no_errors_if_override_codebuild_image(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('pipeline.yml')
         with open('pipeline.yml', 'r') as f:
-            template = yaml.load(f)
+            template = yaml.load(f, yaml.SafeLoader)
             # The actual contents are tested in the unit
             # tests.  Just a sanity check that it looks right.
             image = template['Parameters']['CodeBuildImage']['Default']
@@ -306,7 +306,7 @@ def test_can_configure_github(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('pipeline.yml')
         with open('pipeline.yml', 'r') as f:
-            template = yaml.load(f)
+            template = yaml.load(f, yaml.SafeLoader)
             # The template is already tested in the unit tests
             # for template generation.  We just want a basic
             # sanity check to make sure things are mapped
