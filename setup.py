@@ -23,7 +23,7 @@ install_requires = [
 
 setup(
     name='parfait',
-    version='0.1',
+    version='0.2',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",

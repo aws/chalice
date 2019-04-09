@@ -4,20 +4,27 @@ This is intended only for local development purposes.
 
 """
 from __future__ import print_function
+import base64
+from collections import namedtuple
+from datetime import datetime
+import functools
+from io import BytesIO
+import os
 import re
+import sys
 import threading
 import time
+from urllib.request import urlopen
 import uuid
-import base64
-import functools
 import warnings
-from collections import namedtuple
+from zipfile import ZipFile
 
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.socketserver import ThreadingMixIn
 from typing import List, Any, Dict, Tuple, Callable, Optional, Union  # noqa
-
+from botocore.session import Session
+import yaml
 from chalice.app import Chalice  # noqa
 from chalice.app import CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer  # noqa
@@ -25,6 +32,7 @@ from chalice.app import RouteEntry  # noqa
 from chalice.app import Request  # noqa
 from chalice.app import AuthResponse  # noqa
 from chalice.app import BuiltinAuthConfig  # noqa
+from chalice.awsclient import TypedAWSClient
 from chalice.config import Config  # noqa
 
 from chalice.compat import urlparse, parse_qs
@@ -43,11 +51,6 @@ class Clock(object):
     def time(self):
         # type: () -> float
         return time.time()
-
-
-def create_local_server(app_obj, config, host, port):
-    # type: (Chalice, Config, str, int) -> LocalDevServer
-    return LocalDevServer(app_obj, config, host, port)
 
 
 class LocalARNBuilder(object):
@@ -619,11 +622,85 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
 
+class LocalLayerDownloader:
+    def __init__(self, config: Optional[Config], session: Optional[Session] = None):
+        if session:
+            self.client = TypedAWSClient(session)
+        else:
+            self.client = None
+        self.layer_cache = {}
+        self.layer_cache_dirty = False
+        if config:
+            self.load_layer_cache()
+            self.download_layers(config.layers)
+            self.write_layer_cache()
+            if config.layers and os.path.exists('.opt/python'):
+                sys.path.append('.opt/python')
+
+    def load_layer_cache(self):
+        filename = os.path.join('.chalice/local_layers.yml')
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                self.layer_cache = yaml.load(f)
+        except FileNotFoundError:
+            pass
+
+    def write_layer_cache(self):
+        if self.layer_cache_dirty:
+            filename = os.path.join('.chalice/local_layers.yml')
+            with open(filename, 'w', encoding='utf-8') as f:
+                yaml.dump(self.layer_cache, f, default_flow_style=False)
+
+    def normalize_layer_version(self, layers):
+        for x in layers:
+            name = x['name']
+            version = x.get('version')
+            if not version:
+                x = self.client.get_latest_version(name)
+                version = x['Version']
+            yield name, version
+
+    def layer_cache_key(self, name, version):
+        return f'{name}:{version}'
+
+    def is_layer_stale(self, name, version, response):
+        key = self.layer_cache_key(name, version)
+        created_date = datetime.strptime(
+            response['CreatedDate'][:19],
+            '%Y-%m-%dT%H:%M:%S')
+        last_downloaded = self.layer_cache.get(key)
+        return not last_downloaded or created_date > last_downloaded
+
+    def add_layer_to_cache(self, name, version):
+        key = self.layer_cache_key(name, version)
+        self.layer_cache[key] = datetime.utcnow()
+        self.layer_cache_dirty = True
+
+    def download_layers(self, layers):
+        if not layers:
+            return
+        for name, version in self.normalize_layer_version(layers):
+            x = self.client.get_layer_version(name, version)
+            if self.is_layer_stale(name, version, x):
+                url = x['Content']['Location']
+                print(f'downloading layer {name}:{version}')
+                self.download_layer(url)
+                self.add_layer_to_cache(name, version)
+
+    def download_layer(self, url):
+        os.makedirs('.opt', mode=0o755, exist_ok=True)
+        with urlopen(url) as f:
+            zip_file = ZipFile(BytesIO(f.read()))
+        for x in zip_file.namelist():
+            if x.startswith('python'):
+                zip_file.extract(x, '.opt')
+
+
 class LocalDevServer(object):
-    def __init__(self, app_object, config, host, port,
-                 handler_cls=ChaliceRequestHandler,
-                 server_cls=ThreadedHTTPServer):
-        # type: (Chalice, Config, str, int, HandlerCls, ServerCls) -> None
+    def __init__(self, app_object: Chalice, config: Optional[Config],
+                 host: str, port: int,
+                 handler_cls: HandlerCls = ChaliceRequestHandler,
+                 server_cls: ServerCls = ThreadedHTTPServer):
         self.app_object = app_object
         self.host = host
         self.port = port
@@ -671,3 +748,10 @@ class HTTPServerThread(threading.Thread):
         # type: () -> None
         if self._server is not None:
             self._server.shutdown()
+
+
+def create_local_server(
+        app_obj: Chalice, config: Optional[Config],
+        host: str, port: int
+) -> LocalDevServer:
+    return LocalDevServer(app_obj, config, host, port)
