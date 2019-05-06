@@ -68,8 +68,20 @@ def _matches_content_type(content_type, valid_content_types):
     # then all content_types match. Otherwise see of there are any common types
     content_type = content_type.lower()
     valid_content_types = [x.lower() for x in valid_content_types]
-    return '*/*' in content_type or '*/*' in valid_content_types or\
-        set(valid_content_types).intersection(re.split('[,;]', content_type))
+    return '*/*' in content_type or \
+        '*/*' in valid_content_types or \
+        _content_type_header_contains(content_type, valid_content_types)
+
+
+def _content_type_header_contains(content_type_header, valid_content_types):
+    content_type_header_parts = [
+        p.strip() for p in
+        re.split('[,;]', content_type_header)
+    ]
+    valid_parts = set(valid_content_types).intersection(
+        content_type_header_parts
+    )
+    return len(valid_parts) > 0
 
 
 class ChaliceError(Exception):
