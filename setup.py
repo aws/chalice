@@ -11,7 +11,7 @@ install_requires = [
     'botocore>=1.12.86,<2.0.0',
     'typing==3.6.4;python_version<"3.7"',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<=18.1',
+    'pip>=9,<=19.2',
     'attrs==17.4.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
