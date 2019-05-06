@@ -6,6 +6,20 @@ from typing import Dict, Any  # noqa
 
 from six import StringIO
 
+
+def pip_import_string():
+    # type: () -> str
+    import pip
+    pip_major_version = pip.__version__.split('.')[0]
+    # Pip moved its internals to an _internal module in version 10.
+    # In order to be compatible with version 9 which has it at at the
+    # top level we need to figure out the correct import path here.
+    if pip_major_version == '9':
+        return 'from pip import main'
+    else:
+        return 'from pip._internal import main'
+
+
 if os.name == 'nt':
     # windows
     # This is the actual patch used on windows to prevent distutils from
@@ -97,14 +111,12 @@ else:
 
 if six.PY3:
     from urllib.parse import urlparse, parse_qs
-    lambda_abi = 'cp36m'
 
     def is_broken_pipe_error(error):
         # type: (Exception) -> bool
         return isinstance(error, BrokenPipeError)  # noqa
 else:
     from urlparse import urlparse, parse_qs
-    lambda_abi = 'cp27mu'
 
     def is_broken_pipe_error(error):
         # type: (Exception) -> bool

@@ -26,7 +26,7 @@ Chalice
 
       A Lambda context object that is passed to the invoked view by AWS
       Lambda. You can find out more about this object by reading the
-      `lambda context object documentation <http://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
+      `lambda context object documentation <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
 
    .. attribute:: debug
 
@@ -131,7 +131,7 @@ Chalice
       function.  It will also schedule the lambda function to be invoked
       with a scheduled CloudWatch Event.
 
-      See :doc:`topics/events` for more information.
+      See :ref:`scheduled-events` for more information.
 
       .. code-block:: python
 
@@ -157,8 +157,132 @@ Chalice
         instance of type ``ScheduleExpression``, which is either a
         :class:`Cron` or :class:`Rate` object.  If a string value is
         provided, it will be provided directly as the ``ScheduleExpression``
-        value in the `PutRule <http://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax>`__ API
+        value in the `PutRule <https://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax>`__ API
         call.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
+   .. method:: on_s3_event(bucket, events=None, prefix=None, suffix=None, name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever an event happens on an S3 bucket.
+
+      .. warning::
+
+          You can't use the ``chalice package`` command when using the
+          ``on_s3_event`` decorator.  This is because CFN does not support
+          configuring an existing S3 bucket.
+
+      See :ref:`s3-events` for more information.
+
+      This example shows how you could implement an image resizer that's
+      triggered whenever an object is uploaded to the ``images/`` prefix
+      of an S3 bucket (e.g ``s3://mybucket/images/house.jpg``).
+
+      .. code-block:: python
+
+          @app.on_s3_event('mybucket', events=['s3:ObjectCreated:Put'],
+                           prefix='images/', suffix='.jpg')
+          def resize_image(event):
+              with tempfile.NamedTemporaryFile('w') as f:
+                  s3.download_file(event.bucket, event.key, f.name)
+                  resize_image(f.name)
+                  s3.upload_file(event.bucket, 'resized/%s' % event.key, f.name)
+
+
+      :param bucket: The name of the S3 bucket.  This bucket must already exist.
+
+      :param events: A list of strings indicating the events that should trigger
+        the lambda function.  See `Supported Event Types <https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html#supported-notification-event-types>`__
+        for the full list of strings you can provide.  If this option is not
+        provided, a default of ``['s3:ObjectCreated:*']`` is used, which will
+        configure the lambda function to be invoked whenever a new object
+        is created in the S3 bucket.
+
+      :param prefix: An optional key prefix.  This specifies that
+        the lambda function should only be invoked if the key matches
+        this prefix (e.g. ``prefix='images/'``).
+
+      :param suffix: An optional key suffix.  This specifies that the
+        lambda function should only be invoked if the key name ends with
+        this suffix (e.g. ``suffix='.jpg'``).
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
+   .. method:: on_sns_message(topic, name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever an SNS message is published to the specified topic.
+
+      See :ref:`sns-events` for more information.
+
+      This example prints the subject and the contents of the message whenever
+      something publishes to the sns topic of ``mytopic``.  In this example,
+      the input parameter is of type :class:`SNSEvent`.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_sns_message(topic='mytopic')
+          def handler(event):
+              app.log.info("SNS subject: %s", event.subject)
+              app.log.info("SNS message: %s", event.message)
+
+      :param topic: The name or ARN of the SNS topic you want to subscribe to.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
+   .. method:: on_sqs_message(queue, batch_size=1, name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever a message is published to the specified SQS queue.
+
+      The lambda function must accept a single parameter which
+      is of type :class:`SQSEvent`.
+
+      If the decorated function returns without raising any exceptions
+      then Lambda will automatically delete the SQS messages associated
+      with the :class:`SQSEvent`.  You don't need to manually delete
+      messages.  If any exception is raised, Lambda won't delete any messages,
+      and the messages will become available once the visibility timeout
+      has been reached.  Note that for batch sizes of more than one, either
+      the entire batch succeeds and all the messages in the batch are
+      deleted by Lambda, or the entire batch fails.  The default batch size
+      is 1.  See the
+      `Using AWS Lambda with Amazon SQS <https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html>`__
+      for more information on how Lambda integrates with SQS.
+
+      See the :ref:`sqs-events` topic guide for more information on using SQS
+      in Chalice.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_sqs_message(queue='myqueue')
+          def handler(event):
+              app.log.info("Event: %s", event.to_dict())
+              for record in event:
+                  app.log.info("Message body: %s", record.body)
+
+      :param queue: The name of the SQS queue you want to subscribe to.
+        This is the name of the queue, not the ARN or Queue URL.
+
+      :param batch_size: The maximum number of messages to retrieve
+        when polling for SQS messages.  The event parameter can have
+        multiple SQS messages associated with it.  This is why the
+        event parameter passed to the lambda function is iterable.  The
+        batch size controls how many messages can be in a single event.
 
       :param name: The name of the function to use.  This name is combined
         with the chalice app name as well as the stage name to create the
@@ -175,6 +299,20 @@ Chalice
         with the chalice app name as well as the stage name to create the
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
+
+   .. method:: register_blueprint(blueprint, name_prefix=None, url_prefix=None)
+
+      Register a :class:`Blueprint` to a Chalice app.
+      See :doc:`topics/blueprints` for more information.
+
+      :param blueprint: The :class:`Blueprint` to register to the app.
+
+      :param name_prefix: An optional name prefix that's added to all the
+        resources specified in the blueprint.
+
+      :param url_prefix: An optional url prefix that's added to all the
+        routes defined the Blueprint.  This allows you to set the root mount
+        point for all URLs in a Blueprint.
 
 
 Request
@@ -200,7 +338,8 @@ Request
 
   .. attribute:: query_params
 
-     A dict of the query params for the request.
+     A dict of the query params for the request.  This value is ``None`` if
+     no query params were provided in the request.
 
   .. attribute:: headers
 
@@ -208,7 +347,8 @@ Request
 
   .. attribute:: uri_params
 
-     A dict of the captured URI params.
+     A dict of the captured URI params.  This value is ``None`` if no
+     URI params were provided in the request.
 
   .. attribute:: method
 
@@ -329,7 +469,7 @@ for an ``@app.route(authorizer=...)`` call:
 
      The URI of the lambda function to use for the custom authorizer.  This
      usually has the form
-     ``arn:aws:apigateway:{region}:lambda:path/2015-03-01/functions/{lambda_arn}/invocations``.
+     ``arn:aws:apigateway:{region}:lambda:path/2015-03-31/functions/{lambda_arn}/invocations``.
 
   .. attribute:: ttl_seconds
 
@@ -418,40 +558,62 @@ APIGateway
    .. attribute:: default_binary_types
 
       The value of ``default_binary_types`` are the ``Content-Types`` that are
-      considered binary by default. This value should not be changed, instead you
-      should modify the ``binary_types`` list to change the behavior of a content
-      type. Its value is: ``application/octet-stream``, ``application/x-tar``,
-      ``application/zip``, ``audio/basic``, ``audio/ogg``, ``audio/mp4``,
-      ``audio/mpeg``, ``audio/wav``, ``audio/webm``, ``image/png``,
-      ``image/jpg``, ``image/gif``, ``video/ogg``, ``video/mpeg``,
-      ``video/webm``.
+      considered binary by default. This value should not be changed, instead
+      you should modify the ``binary_types`` list to change the behavior of a
+      content type. Its value is: ``application/octet-stream``,
+      ``application/x-tar``, ``application/zip``, ``audio/basic``,
+      ``audio/ogg``, ``audio/mp4``, ``audio/mpeg``, ``audio/wav``,
+      ``audio/webm``, ``image/png``, ``image/jpg``, ``image/jpeg``,
+      ``image/gif``, ``video/ogg``, ``video/mpeg``, ``video/webm``.
 
 
    .. attribute:: binary_types
 
-      The value of ``binary_types`` controls how API Gateway interprets requests
-      and responses as detailed below.
+      The value of ``binary_types`` controls how API Gateway interprets
+      requests and responses as detailed below.
 
-      If an incoming request has a ``Content-Type`` header value that is present
-      in the ``binary_types`` list it will be assumed that its body is a sequence
-      of raw bytes. You can access these bytes by accessing the
+      If an incoming request has a ``Content-Type`` header value that is
+      present in the ``binary_types`` list it will be assumed that its body is
+      a sequence of raw bytes. You can access these bytes by accessing the
       ``app.current_request.raw_body`` property.
 
-      If an outgoing response from ``Chalice`` has a header ``Content-Type`` that
-      matches one of the ``binary_types`` its body must be a ``bytes`` type object.
-      It is important to note that originating request must have the ``Accept``
-      header for the same type as the ``Content-Type`` on the response. Otherwise
-      a ``400`` error will be returned.
+      If an outgoing response from ``Chalice`` has a header ``Content-Type``
+      that matches one of the ``binary_types`` its body must be a ``bytes``
+      type object. It is important to note that originating request must have
+      the ``Accept`` header for the same type as the ``Content-Type`` on the
+      response. Otherwise a ``400`` error will be returned.
 
-      Implementation note: API Gateway and Lambda communicate through a JSON event
-      which is encoded using ``UTF-8``. The raw bytes are temporarily encoded
-      using
+      This value can be modified to change what types API Gateway treats as
+      binary. The easiest way to do this is to simply append new types to
+      the list.
 
-      base64 when being passed between API Gateway and Lambda. In the worst case
-      this encoding can cause the binary body to be inflated up to ``4/3`` its
-      original size. Lambda only accepts an event up to ``6mb``, which means even
-      if your binary data was not quite at that limit, with the base64 encoding it
-      may exceed that limit. This will manifest as a ``502`` Bad Gateway error.
+      .. code-block:: python
+
+          app.api.binary_types.append('application/my-binary-data')
+
+
+      Keep in mind that there can only be a total of 25 binary types at a time
+      and Chalice by default has a list of 16 types. It is recommended if you
+      are going to make extensive use of binary types to reset the list to
+      the exact set of content types you will be using. This can easily be
+      done by reassigning the whole list.
+
+      .. code-block:: python
+
+          app.api.binary_types = [
+              'application/octet-stream',
+              'application/my-binary-data',
+          ]
+
+
+      **Implementation Note**: API Gateway and Lambda communicate through a
+      JSON event which is encoded using ``UTF-8``. The raw bytes are
+      temporarily encoded using base64 when being passed between API Gateway
+      and Lambda. In the worst case this encoding can cause the binary body
+      to be inflated up to ``4/3`` its original size. Lambda only accepts an
+      event up to ``6mb``, which means even if your binary data was not quite
+      at that limit, with the base64 encoding it may exceed that limit. This
+      will manifest as a ``502`` Bad Gateway error.
 
 
 CORS
@@ -510,8 +672,8 @@ CORS
      ``Access-Control-Allow-Credentials``.
 
 
-Scheduled Events
-================
+Event Sources
+=============
 
 .. versionadded:: 1.0.0b1
 
@@ -572,7 +734,7 @@ Scheduled Events
     supported.
 
   For more information, see the API
-  `docs page <http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions>`__.
+  `docs page <https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions>`__.
 
   Examples:
 
@@ -665,6 +827,12 @@ Scheduled Events
       For scheduled events, this will include the ARN of the CloudWatch
       rule that triggered this event.
 
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
    .. method:: to_dict()
 
       Return the original event dictionary provided
@@ -683,3 +851,191 @@ Scheduled Events
            'source': 'aws.events',
            'time': '2017-06-30T23:28:38Z',
            'version': '0'}
+
+
+.. class:: S3Event()
+
+   This is the input argument for an S3 event.
+
+   .. code-block:: python
+
+      @app.on_s3_event(bucket='mybucket')
+      def event_handler(event: S3Event):
+          app.log.info("Event received for bucket: %s, key %s",
+                       event.bucket, event.key)
+
+   In the code example above, the ``event`` argument is of
+   type ``S3Event``, which will have the following
+   attributes.
+
+   .. attribute:: bucket
+
+      The S3 bucket associated with the event.
+
+   .. attribute:: key
+
+      The S3 key name associated with the event.
+      The original key name in the S3 event payload
+      is URL encoded.  However, this ``key`` attribute automatically
+      URL decodes the key name for you.  If you need
+      access to the original URL encoded key name, you can
+      access it through the ``to_dict()`` method.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``S3Event``
+      object.  Note that this event is not modified in any way.
+      This means that the key name of the S3 object is URL
+      encoded, which is the way that S3 sends this value
+      to Lambda.
+
+
+.. class:: SNSEvent()
+
+   This is the input argument for an SNS event handler.
+
+   .. code-block:: python
+
+      @app.on_sns_message(topic='mytopic')
+      def event_handler(event: SNSEvent):
+          app.log.info("Message received with subject: %s, message: %s",
+                       event.subject, event.message)
+
+   In the code example above, the ``event`` argument is of
+   type ``SNSEvent``, which will have the following
+   attributes.
+
+   .. attribute:: subject
+
+      The subject of the SNS message that was published.
+
+   .. attribute:: message
+
+      The string value of the SNS message that was published.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``SNSEvent``
+      object.
+
+
+.. class:: SQSEvent()
+
+   This is the input argument for an SQS event handler.
+
+   .. code-block:: python
+
+      @app.on_sqs_message(queue='myqueue')
+      def event_handler(event: SQSEvent):
+          app.log.info("Event: %s", event.to_dict())
+
+   In the code example above, the ``event`` argument is of
+   type ``SQSEvent``.  An ``SQSEvent`` can have multiple
+   sqs messages associated with it.  To access the multiple
+   messages, you can iterate over the ``SQSEvent``.
+
+   .. method:: __iter__()
+
+      Iterate over individual SQS messages associated with
+      the event.  Each element in the iterable is of type
+      :class:`SQSRecord`.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``SQSEvent``
+      object.
+
+.. class:: SQSRecord()
+
+   Represents a single SQS record within an :class:`SQSEvent`.
+
+   .. attribute:: body
+
+      The body of the SQS message.
+
+   .. attribute:: receipt_handle
+
+      The receipt handle associated with the message.  This is useful
+      if you need to manually delete an SQS message to account for
+      partial failures.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda.
+
+   .. method:: to_dict()
+
+      Return the original dictionary associated with the given
+      message. This is useful if you need direct
+      access to the lambda event.
+
+
+Blueprints
+==========
+
+.. class:: Blueprint(import_name)
+
+  An object used for grouping related handlers together.
+  This is primarily used as a mechanism for organizing your lambda
+  handlers.  Any decorator methods defined in the :class:`Chalice`
+  object are also defined on a ``Blueprint`` object.  You can register
+  a blueprint to a Chalice app using the :meth:`Chalice.register_blueprint`
+  method.
+
+  The ``import_name`` is the module in which the Blueprint is defined.
+  It is used to construct the appropriate handler string when creating
+  the Lambda functions associated with a Blueprint.  This is typically
+  the `__name__` attribute:``mybp = Blueprint(__name__)``.
+
+  See :doc:`topics/blueprints` for more information.
+
+  .. code-block:: python
+
+      # In ./app.py
+
+      from chalice import Chalice
+      from chalicelib import myblueprint
+
+      app = Chalice(app_name='blueprints')
+      app.register_blueprint(myblueprint)
+
+      # In chalicelib/myblueprint.py
+
+      from chalice import Blueprint
+
+      myblueprint = Blueprint(__name__)
+
+      @myblueprint.route('/')
+      def index():
+          return {'hello': 'world'}

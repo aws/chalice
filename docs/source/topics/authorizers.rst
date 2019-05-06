@@ -40,7 +40,7 @@ To associate an IAM authorizer with a route in chalice, you use the
 
 
 See the `API Gateway documentation
-<http://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html>`__
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html>`__
 for more information on controlling access to API Gateway with IAM permissions.
 
 Amazon Cognito User Pools
@@ -69,7 +69,7 @@ cognito user pool configured.
 
 For more information about using Cognito user pools with API Gateway,
 see the `Use Amazon Cognito User Pools documentation
-<http://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html>`__.
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html>`__.
 
 
 Custom Authorizers
@@ -89,7 +89,7 @@ you use the ``CustomAuthorizer`` class:
 
     authorizer = CustomAuthorizer(
         'MyCustomAuth', header='Authorization',
-        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-01'
+        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-31'
                         '/functions/arn:aws:lambda:region:account-id:'
                         'function:FunctionName/invocations'))
 
@@ -210,17 +210,17 @@ If we add the appropriate authorization header, we'll see the call succeed::
 The low level API for API Gateway's custom authorizer feature requires
 that an IAM policy must be returned.  The :class:`AuthResponse` class we're
 using is a wrapper over building the IAM policy ourself.  If you want
-low level control and would prefer to contruct the IAM policy yourself
+low level control and would prefer to construct the IAM policy yourself
 you can return a dictionary of the IAM policy instead of an instance of
 :class:`AuthResponse`.  If you do that, the dictionary is returned
 without modification back to API Gateway.
 
 For more information on custom authorizers, see the
 `Use API Gateway Custom Authorizers
-<http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html>`__
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html>`__
 page in the API Gateway user guide.
 
 
-.. _IAM permissions: http://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html
-.. _Cognito User Pools: http://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
-.. _API Gateway documentation: http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html#api-gateway-custom-authorizer-lambda-function-create
+.. _IAM permissions: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html
+.. _Cognito User Pools: https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
+.. _API Gateway documentation: https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html

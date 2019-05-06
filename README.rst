@@ -15,20 +15,18 @@ Python Serverless Microframework for AWS
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
-Chalice is a python serverless microframework for AWS. It allows you to quickly
-create and deploy applications that use Amazon API Gateway and AWS Lambda.
-It provides:
+Chalice is a microframework for writing serverless apps in python. It allows
+you to quickly create and deploy applications that use AWS Lambda.  It provides:
 
 * A command line tool for creating, deploying, and managing your app
-* A familiar and easy to use API for declaring views in python code
+* A decorator based API for integrating with Amazon API Gateway, Amazon S3,
+  Amazon SNS, Amazon SQS, and other AWS services.
 * Automatic IAM policy generation
 
 
-::
+You can create Rest APIs:
 
-    $ pip install chalice
-    $ chalice new-project helloworld && cd helloworld
-    $ cat app.py
+.. code-block:: python
 
     from chalice import Chalice
 
@@ -38,6 +36,60 @@ It provides:
     def index():
         return {"hello": "world"}
 
+Tasks that run on a periodic basis:
+
+.. code-block:: python
+
+    from chalice import Chalice, Rate
+
+    app = Chalice(app_name="helloworld")
+
+    # Automatically runs every 5 minutes
+    @app.schedule(Rate(5, unit=Rate.MINUTES))
+    def periodic_task(event):
+        return {"hello": "world"}
+
+
+You can connect a lambda function to an S3 event:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    # Whenever an object is uploaded to 'mybucket'
+    # this lambda function will be invoked.
+
+    @app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        print("Object uploaded for bucket: %s, key: %s"
+              % (event.bucket, event.key))
+
+As well as an SQS queue:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name="helloworld")
+
+    # Invoke this lambda function whenever a message
+    # is sent to the ``my-queue-name`` SQS queue.
+
+    @app.on_sqs_message(queue='my-queue-name')
+    def handler(event):
+        for record in event:
+            print("Message body: %s" % record.body)
+
+
+And several other AWS resources.
+
+Once you've written your code, you just run ``chalice deploy``
+and Chalice takes care of deploying your app.
+
+::
+
     $ chalice deploy
     ...
     https://endpoint/dev
@@ -46,7 +98,6 @@ It provides:
     {"hello": "world"}
 
 Up and running in less than 30 seconds.
-
 Give this project a try and share your feedback with us here on Github.
 
 The documentation is available
@@ -66,17 +117,16 @@ is recommended::
     $ virtualenv ~/.virtualenvs/chalice-demo
     $ source ~/.virtualenvs/chalice-demo/bin/activate
 
-Note: **make sure you are using python2.7 or python3.6**.  The ``chalice`` CLI
-as well as the ``chalice`` python package will support the versions of python
-supported by AWS Lambda.  Currently, AWS Lambda supports python2.7 and
-python3.6, so that's what this project supports.  You can ensure you're
-creating a virtualenv with python3.6 by running::
+Note: **make sure you are using python2.7, python3.6, or python3.7**.
+These are the only python versions currently supported by AWS Lambda so they
+are also the only versions supported by the ``chalice`` CLI and ``chalice``
+python package. You can find the latest versions of python on the
+`Python download page <https://www.python.org/downloads/>`_. You can check
+the version of python in your virtualenv by
+running::
 
-    # Double check you have python3.6
-    $ which python3.6
-    /usr/local/bin/python3.6
-    $ virtualenv --python $(which python3.6) ~/.virtualenvs/chalice-demo
-    $ source ~/.virtualenvs/chalice-demo/bin/activate
+    # Double check you have a supported python version in your virtualenv
+    $ python -V
 
 Next, in your virtualenv, install ``chalice``::
 
@@ -378,6 +428,7 @@ There are a few additional exceptions you can raise from your python code::
 * ForbiddenError - return a status code of 403
 * NotFoundError - return a status code of 404
 * ConflictError - return a status code of 409
+* UnprocessableEntityError - return a status code of 422
 * TooManyRequestsError - return a status code of 429
 * ChaliceViewError - return a status code of 500
 
@@ -724,6 +775,45 @@ This will result in a plain text response body::
     hello world!
 
 
+Tutorial: GZIP compression for json
+===================================
+The return value from a chalice view function is serialized as JSON as the
+response body returned back to the caller.  This makes it easy to create
+rest APIs that return JSON response bodies.
+
+Chalice allows you to control this behavior by returning an instance of
+a chalice specific ``Response`` class.  This behavior allows you to:
+
+* Add ``application/json`` to binary_types
+* Specify the status code to return
+* Specify custom header ``Content-Type: application/json``
+* Specify custom header ``Content-Encoding: gzip``
+
+Here's an example of this:
+
+.. code-block:: python
+
+    import json
+    import gzip
+    from chalice import Chalice, Response
+
+    app = Chalice(app_name='compress-response')
+    app.api.binary_types.append('application/json')
+
+    @app.route('/')
+    def index():
+        blob = json.dumps({'hello': 'world'}).encode('utf-8')
+        payload = gzip.compress(blob)
+        custom_headers = {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip'
+        }
+        return Response(body=payload,
+                        status_code=200,
+                        headers=custom_headers)
+
+
+
 Tutorial: CORS Support
 ======================
 
@@ -800,6 +890,40 @@ There's a couple of things to keep in mind when enabling cors for a view:
   requests and matches the ``Origin`` header against a whitelist of origins.
   If the match is successful then return just their ``Origin`` back to them
   in the ``Access-Control-Allow-Origin`` header.
+
+  Example:
+
+.. code-block:: python
+
+    from chalice import Chalice, Response
+
+    app = Chalice(app_name='multipleorigincors')
+
+    _ALLOWED_ORIGINS = set([
+	'http://allowed1.example.com',
+	'http://allowed2.example.com',
+    ])
+
+
+    @app.route('/cors_multiple_origins', methods=['GET', 'OPTIONS'])
+    def supports_cors_multiple_origins():
+	method = app.current_request.method
+	if method == 'OPTIONS':
+	    headers = {
+		'Access-Control-Allow-Method': 'GET,OPTIONS',
+		'Access-Control-Allow-Origin': ','.join(_ALLOWED_ORIGINS),
+		'Access-Control-Allow-Headers': 'X-Some-Header',
+	    }
+	    origin = app.current_request.headers.get('origin', '')
+	    if origin in _ALLOWED_ORIGINS:
+		headers.update({'Access-Control-Allow-Origin': origin})
+	    return Response(
+		body=None,
+		headers=headers,
+	    )
+	elif method == 'GET':
+	    return 'Foo'
+
 * Every view function must explicitly enable CORS support.
 
 The last point will change in the future.  See
@@ -1023,7 +1147,7 @@ to the URI of your lambda function.
 
     authorizer = CustomAuthorizer(
         'MyCustomAuth', header='Authorization',
-        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-01'
+        authorizer_uri=('arn:aws:apigateway:region:lambda:path/2015-03-31'
                         '/functions/arn:aws:lambda:region:account-id:'
                         'function:FunctionName/invocations'))
 
@@ -1091,10 +1215,9 @@ Similar to the ``chalice deploy`` command, you can specify which
 chalice stage to delete.  By default it will delete the ``dev`` stage::
 
     $ chalice delete --stage dev
-    Deleting rest API duvw4kwyl3
-    Deleting lambda function helloworld-dev
-    Delete the role helloworld-dev? [y/N]: y
-    Deleting role name helloworld-dev
+    Deleting Rest API: duvw4kwyl3
+    Deleting function aws:arn:lambda:region:123456789:helloworld-dev
+    Deleting IAM Role helloworld-dev
 
 .. quick-start-end
 

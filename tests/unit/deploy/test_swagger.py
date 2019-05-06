@@ -41,6 +41,96 @@ def test_can_produce_doc_for_method(sample_app, swagger_gen):
     # Same for x-amazon-apigateway-integration.
 
 
+def test_can_produce_doc_for_no_docstring(sample_app, swagger_gen):
+    @sample_app.route('/method')
+    def method():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    view_config = doc['paths']['/method']['get']
+    assert 'summary' not in view_config
+    assert 'description' not in view_config
+
+
+def test_can_produce_doc_for_single_docstring(sample_app, swagger_gen):
+    @sample_app.route('/method1')
+    def method1():
+        """Single line method summary"""
+        pass
+
+    @sample_app.route('/method2')
+    def method2():
+        '''Single line method summary'''
+        pass
+
+    @sample_app.route('/method3')
+    def method3():
+        """
+        Single line method summary
+        """
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    for method in [1, 2, 3]:
+        view_config = doc['paths']['/method' + str(method)]['get']
+        assert 'summary' in view_config
+        assert 'description' not in view_config
+        assert view_config['summary'] == 'Single line method summary'
+
+
+def test_can_produce_doc_for_multi_docstring(sample_app, swagger_gen):
+    @sample_app.route('/method1')
+    def method1():
+        """Multiline method summary
+
+        And here is a more detailed description that can span multiple
+        lines. It can also handle indenting for things like method
+        arguments like so:
+            param1 - description
+            param2 - description
+        """
+        pass
+
+    @sample_app.route('/method2')
+    def method2():
+        """Multiline method summary
+
+            And here is a more detailed description that can span multiple
+            lines. It can also handle indenting for things like method
+            arguments like so:
+                param1 - description
+                param2 - description
+        """
+        pass
+
+    @sample_app.route('/method3')
+    def method3():
+        """Multiline method summary
+        And here is a more detailed description that can span multiple
+        lines. It can also handle indenting for things like method
+        arguments like so:
+            param1 - description
+            param2 - description
+
+
+        """
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    for method in [1, 2, 3]:
+        view_config = doc['paths']['/method' + str(method)]['get']
+        assert 'summary' in view_config
+        assert 'description' in view_config
+        assert view_config['summary'] == 'Multiline method summary'
+        assert view_config['description'] == (
+            'And here is a more detailed description that can span multiple\n'
+            'lines. It can also handle indenting for things like method\n'
+            'arguments like so:\n'
+            '    param1 - description\n'
+            '    param2 - description'
+        )
+
+
 def test_apigateway_integration_generation(sample_app, swagger_gen):
     doc = swagger_gen.generate_swagger(sample_app)
     single_method = doc['paths']['/']['get']
@@ -476,10 +566,7 @@ def test_will_default_to_function_name_for_auth(sample_app):
 
 
 def test_will_custom_auth_with_cfn(sample_app):
-    swagger_gen = CFNSwaggerGenerator(
-        region='us-west-2',
-        deployed_resources={}
-    )
+    swagger_gen = CFNSwaggerGenerator()
 
     # No "name=" kwarg provided should default
     # to a name of "auth".
@@ -505,7 +592,7 @@ def test_will_custom_auth_with_cfn(sample_app):
             'authorizerUri': {
                 'Fn::Sub': (
                     'arn:aws:apigateway:${AWS::Region}:lambda:path'
-                    '/2015-03-31/functions/${authfa53.Arn}/invocations'
+                    '/2015-03-31/functions/${Auth.Arn}/invocations'
                 )
             }
         }

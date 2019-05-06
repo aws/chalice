@@ -1,4 +1,3 @@
-import sys
 import pytest
 from collections import namedtuple
 
@@ -7,6 +6,7 @@ from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.deploy.packager import Package
 from chalice.deploy.packager import PipRunner
+from chalice.deploy.packager import SubprocessPip
 from chalice.deploy.packager import InvalidSourceDistributionNameError
 from chalice.deploy.packager import NoSuchPackageError
 from chalice.deploy.packager import PackageDownloadError
@@ -24,8 +24,8 @@ class FakePip(object):
         self._calls.append(FakePipCall(args, env_vars, shim))
         if self._returns:
             return self._returns.pop(0)
-        # Return an rc of 0 and an empty stderr
-        return 0, b''
+        # Return an rc of 0 and an empty stderr and stdout
+        return 0, b'', b''
 
     def add_return(self, return_pair):
         self._returns.append(return_pair)
@@ -55,6 +55,26 @@ class CustomEnv(OSUtils):
 @pytest.fixture
 def osutils():
     return OSUtils()
+
+
+class FakePopen(object):
+    def __init__(self, rc, out, err):
+        self.returncode = 0
+        self._out = out
+        self._err = err
+
+    def communicate(self):
+        return self._out, self._err
+
+
+class FakePopenOSUtils(OSUtils):
+    def __init__(self, processes):
+        self.popens = []
+        self._processes = processes
+
+    def popen(self, *args, **kwargs):
+        self.popens.append((args, kwargs))
+        return self._processes.pop()
 
 
 class TestPackage(object):
@@ -172,11 +192,8 @@ class TestPipRunner(object):
         # for getting lambda compatible wheels.
         pip, runner = pip_factory()
         packages = ['foo', 'bar', 'baz']
-        runner.download_manylinux_wheels(packages, 'directory')
-        if sys.version_info[0] == 2:
-            abi = 'cp27mu'
-        else:
-            abi = 'cp36m'
+        abi = 'cp37m'
+        runner.download_manylinux_wheels(abi, packages, 'directory')
         expected_prefix = ['download', '--only-binary=:all:', '--no-deps',
                            '--platform', 'manylinux1_x86_64',
                            '--implementation', 'cp', '--abi', abi,
@@ -188,13 +205,44 @@ class TestPipRunner(object):
 
     def test_download_wheels_no_wheels(self, pip_factory):
         pip, runner = pip_factory()
-        runner.download_manylinux_wheels([], 'directory')
+        runner.download_manylinux_wheels('cp36m', [], 'directory')
         assert len(pip.calls) == 0
+
+    def test_does_find_local_directory(self, pip_factory):
+        pip, runner = pip_factory()
+        pip.add_return((0,
+                        (b"Processing ../local-dir\n"
+                         b"  Link is a directory,"
+                         b" ignoring download_dir"),
+                        b''))
+        runner.download_all_dependencies('requirements.txt', 'directory')
+        assert len(pip.calls) == 2
+        assert pip.calls[1].args == ['wheel', '--no-deps', '--wheel-dir',
+                                     'directory', '../local-dir']
+
+    def test_does_find_multiple_local_directories(self, pip_factory):
+        pip, runner = pip_factory()
+        pip.add_return((0,
+                        (b"Processing ../local-dir-1\n"
+                         b"  Link is a directory,"
+                         b" ignoring download_dir"
+                         b"\nsome pip output...\n"
+                         b"Processing ../local-dir-2\n"
+                         b"  Link is a directory,"
+                         b" ignoring download_dir"),
+                        b''))
+        runner.download_all_dependencies('requirements.txt', 'directory')
+        assert len(pip.calls) == 3
+        assert pip.calls[1].args == ['wheel', '--no-deps', '--wheel-dir',
+                                     'directory', '../local-dir-1']
+        assert pip.calls[2].args == ['wheel', '--no-deps', '--wheel-dir',
+                                     'directory', '../local-dir-2']
 
     def test_raise_no_such_package_error(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, (b'Could not find a version that satisfies the '
-                            b'requirement BadPackageName ')))
+        pip.add_return((1, b'',
+                        (b'Could not find a version that satisfies the '
+                         b'requirement BadPackageName ')))
         with pytest.raises(NoSuchPackageError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == ('Could not satisfy the requirement: '
@@ -202,14 +250,27 @@ class TestPipRunner(object):
 
     def test_raise_other_unknown_error_during_downloads(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, b'SomeNetworkingError: Details here.'))
+        pip.add_return((1, b'', b'SomeNetworkingError: Details here.'))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'SomeNetworkingError: Details here.'
 
     def test_inject_unknown_error_if_no_stderr(self, pip_factory):
         pip, runner = pip_factory()
-        pip.add_return((1, None))
+        pip.add_return((1, None, None))
         with pytest.raises(PackageDownloadError) as einfo:
             runner.download_all_dependencies('requirements.txt', 'directory')
         assert str(einfo.value) == 'Unknown error'
+
+
+class TestSubprocessPip(object):
+    def test_does_use_custom_pip_import_string(self):
+        fake_osutils = FakePopenOSUtils([FakePopen(0, '', '')])
+        expected_import_statement = 'foobarbaz'
+        pip = SubprocessPip(osutils=fake_osutils,
+                            import_string=expected_import_statement)
+        pip.main(['--version'])
+
+        pip_execution_string = fake_osutils.popens[0][0][0][2]
+        import_statement = pip_execution_string.split(';')[1].strip()
+        assert import_statement == expected_import_statement

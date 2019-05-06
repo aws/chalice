@@ -13,9 +13,12 @@ import uuid
 from typing import Any, List, Dict, Set  # noqa
 import botocore.session
 
-from chalice.constants import CLOUDWATCH_LOGS
+from chalice.constants import CLOUDWATCH_LOGS, VPC_ATTACH_POLICY
 from chalice.utils import OSUtils  # noqa
 from chalice.config import Config  # noqa
+
+APIPolicyT = Dict[str, Dict[str, str]]
+CustomPolicyT = Dict[str, Dict[str, List[str]]]
 
 
 def policy_from_source_code(source_code):
@@ -27,12 +30,21 @@ def policy_from_source_code(source_code):
     return policy
 
 
-def load_policy_actions():
-    # type: () -> Dict[str, str]
+def load_api_policy_actions():
+    # type: () -> APIPolicyT
+    return _load_json_file('policies.json')
+
+
+def load_custom_policy_actions():
+    # type: () -> CustomPolicyT
+    return _load_json_file('policies-extra.json')
+
+
+def _load_json_file(relative_filename):
+    # type: (str) -> Dict[str, Any]
     policy_json = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        'policies.json')
-    assert os.path.isfile(policy_json), policy_json
+        relative_filename)
     with open(policy_json) as f:
         return json.loads(f.read())
 
@@ -79,20 +91,33 @@ class AppPolicyGenerator(object):
         app_source = self._osutils.get_file_contents(app_py, binary=False)
         app_policy = policy_from_source_code(app_source)
         app_policy['Statement'].append(CLOUDWATCH_LOGS)
+        if config.subnet_ids and config.security_group_ids:
+            app_policy['Statement'].append(VPC_ATTACH_POLICY)
         return app_policy
 
 
 class PolicyBuilder(object):
     VERSION = '2012-10-17'
 
-    def __init__(self, session=None, policy_actions=None):
-        # type: (Any, Dict[str, str]) -> None
+    def __init__(self, session=None, api_policy_actions=None,
+                 custom_policy_actions=None):
+        # type: (Any, APIPolicyT, CustomPolicyT) -> None
         if session is None:
             session = botocore.session.get_session()
-        if policy_actions is None:
-            policy_actions = load_policy_actions()
+        # The difference between api_policy_actions and custom_policy_actions
+        # is that api_policy_actions correspond to the 1-1 method to API calls
+        # exposed in boto3/botocore clients whereas custom_policy_actions
+        # correspond to method names that represent high level abstractions
+        # that are typically hand written (e.g s3.download_file()).  These
+        # are kept as separate files because we manage these files
+        # separately.
+        if api_policy_actions is None:
+            api_policy_actions = load_api_policy_actions()
+        if custom_policy_actions is None:
+            custom_policy_actions = load_custom_policy_actions()
         self._session = session
-        self._policy_actions = policy_actions
+        self._api_policy_actions = api_policy_actions
+        self._custom_policy_actions = custom_policy_actions
 
     def build_policy_from_api_calls(self, client_calls):
         # type: (Dict[str, Set[str]]) -> Dict[str, Any]
@@ -108,21 +133,11 @@ class PolicyBuilder(object):
         statements = []
         # client_calls = service_name -> set([method_calls])
         for service in sorted(client_calls):
-            if service not in self._policy_actions:
-                print("Unsupported service: %s" % service)
-                continue
-            service_actions = self._policy_actions[service]
-            method_calls = client_calls[service]
-            # Next thing we need to do is convert the method_name to
-            # MethodName.  To this reliable we're going to use
-            # botocore clients.
-            client = self._session.create_client(service,
-                                                 region_name='us-east-1')
-            mapping = client.meta.method_to_api_mapping
-            actions = [service_actions[mapping[method_name]] for
-                       method_name in method_calls
-                       if mapping.get(method_name) in service_actions]
-            actions.sort()
+            api_actions = self._get_actions_from_api_calls(
+                service, client_calls)
+            custom_actions = self._get_actions_from_high_level_calls(
+                service, client_calls)
+            actions = api_actions + custom_actions
             if actions:
                 statements.append({
                     'Effect': 'Allow',
@@ -134,3 +149,40 @@ class PolicyBuilder(object):
                     'Sid': str(uuid.uuid4()).replace('-', ''),
                 })
         return statements
+
+    def _get_actions_from_api_calls(self, service, client_calls):
+        # type: (str, Dict[str, Set[str]]) -> List[str]
+        if service not in self._api_policy_actions:
+            print("Unsupported service for auto policy generation: %s"
+                  % service)
+            return []
+        service_actions = self._api_policy_actions[service]
+        method_calls = client_calls[service]
+        # Next thing we need to do is convert the method_name to
+        # MethodName.  To do this reliably we're going to use
+        # botocore clients.
+        client = self._session.create_client(service,
+                                             region_name='us-east-1')
+        mapping = client.meta.method_to_api_mapping
+        actions = [service_actions[mapping[method_name]]
+                   for method_name in method_calls
+                   if mapping.get(method_name) in service_actions]
+        actions.sort()
+        return actions
+
+    def _get_actions_from_high_level_calls(self, service, client_calls):
+        # type: (str, Dict[str, Set[str]]) -> List[str]
+        # This gets any actions associated with high level abstractions
+        # e.g s3.download_file(), s3.upload_file(), etc.
+        if service not in self._custom_policy_actions:
+            # We don't warn the user in this case but it's unlikely there
+            # are high level abstractions for a service, this only applies
+            # to s3, dynamodb, and a few other services.
+            return []
+        service_actions = self._custom_policy_actions[service]
+        method_calls = client_calls[service]
+        actions = set()  # type: Set[str]
+        for method_name in method_calls:
+            if method_name in service_actions:
+                actions.update(service_actions[method_name])
+        return list(sorted(actions))

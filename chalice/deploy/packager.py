@@ -3,13 +3,14 @@ import hashlib
 import inspect
 import re
 import subprocess
+import logging
 from email.parser import FeedParser
 from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
 
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
-from typing import Dict, MutableMapping  # noqa
-from chalice.compat import lambda_abi
+from typing import Dict, MutableMapping, AnyStr  # noqa
+from chalice.compat import pip_import_string
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
 from chalice.utils import OSUtils
@@ -25,6 +26,8 @@ OptStrMap = Optional[StrMap]
 EnvVars = MutableMapping
 OptStr = Optional[str]
 OptBytes = Optional[bytes]
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidSourceDistributionNameError(Exception):
@@ -48,12 +51,17 @@ class NoSuchPackageError(Exception):
 
 class PackageDownloadError(Exception):
     """Generic networking error during a package download."""
-    pass
 
 
 class LambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
     _VENDOR_DIR = 'vendor'
+
+    _RUNTIME_TO_ABI = {
+        'python2.7': 'cp27mu',
+        'python3.6': 'cp36m',
+        'python3.7': 'cp37m',
+    }
 
     def __init__(self, osutils, dependency_builder, ui):
         # type: (OSUtils, DependencyBuilder, UI) -> None
@@ -69,7 +77,9 @@ class LambdaDeploymentPackager(object):
     def create_deployment_package(self, project_dir, python_version,
                                   package_filename=None):
         # type: (str, str, Optional[str]) -> str
-        self._ui.write("Creating deployment package.\n")
+        msg = "Creating deployment package."
+        self._ui.write("%s\n" % msg)
+        logger.debug(msg)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
         deployment_package_filename = self.deployment_package_filename(
@@ -79,8 +89,9 @@ class LambdaDeploymentPackager(object):
         requirements_filepath = self._get_requirements_filename(project_dir)
         with self._osutils.tempdir() as site_packages_dir:
             try:
+                abi = self._RUNTIME_TO_ABI[python_version]
                 self._dependency_builder.build_site_packages(
-                    requirements_filepath, site_packages_dir)
+                    abi, requirements_filepath, site_packages_dir)
             except MissingDependencyError as e:
                 missing_packages = '\n'.join([p.identifier for p
                                               in e.missing])
@@ -227,7 +238,7 @@ class LambdaDeploymentPackager(object):
         self._osutils.move(tmpzip, deployment_package_filename)
 
     def _needs_latest_version(self, filename):
-        # type: (str) -> bool
+        # type: (AnyStr) -> bool
         return filename == 'app.py' or filename.startswith(
             ('chalicelib/', 'chalice/'))
 
@@ -258,6 +269,10 @@ class DependencyBuilder(object):
     """
     _MANYLINUX_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64',
                                       'manylinux1_x86_64'}
+    _COMPATIBLE_PACKAGE_WHITELIST = {
+        'sqlalchemy',
+        'pyyaml',
+    }
 
     def __init__(self, osutils, pip_runner=None):
         # type: (OSUtils, Optional[PipRunner]) -> None
@@ -266,8 +281,8 @@ class DependencyBuilder(object):
             pip_runner = PipRunner(SubprocessPip(osutils))
         self._pip = pip_runner
 
-    def _is_compatible_wheel_filename(self, filename):
-        # type: (str) -> bool
+    def _is_compatible_wheel_filename(self, expected_abi, filename):
+        # type: (str, str) -> bool
         wheel = filename[:-4]
         implementation, abi, platform = wheel.split('-')[-3:]
         # Verify platform is compatible
@@ -279,14 +294,13 @@ class DependencyBuilder(object):
         if abi == 'none':
             return True
         prefix_version = implementation[:3]
+        expected_abis = [expected_abi]
         if prefix_version == 'cp3':
-            # Deploying python 3 function which means we need cp36m abi
-            return abi == 'cp36m'
-        elif prefix_version == 'cp2':
-            # Deploying to python 2 function which means we need cp27mu abi
-            return abi == 'cp27mu'
-        # Don't know what we have but it didn't pass compatibility tests.
-        return False
+            # Deploying python 3 function which means we can accept the version
+            # specific abi, or we can accept the CPython 3 stable ABI of
+            # 'abi3'.
+            expected_abis.append('abi3')
+        return abi in expected_abis
 
     def _has_at_least_one_package(self, filename):
         # type: (str) -> bool
@@ -304,7 +318,7 @@ class DependencyBuilder(object):
         return False
 
     def _download_all_dependencies(self, requirements_filename, directory):
-        # type: (str, str) -> set[Package]
+        # type: (str, str) -> Set[Package]
         # Download dependencies prefering wheel files but falling back to
         # raw source dependences to get the transitive closure over
         # the dependency graph. Return the set of all package objects
@@ -313,43 +327,46 @@ class DependencyBuilder(object):
         self._pip.download_all_dependencies(requirements_filename, directory)
         deps = {Package(directory, filename) for filename
                 in self._osutils.get_directory_contents(directory)}
+        logger.debug("Full dependency closure: %s", deps)
         return deps
 
-    def _download_binary_wheels(self, packages, directory):
-        # type: (set[Package], str) -> None
+    def _download_binary_wheels(self, abi, packages, directory):
+        # type: (str, Set[Package], str) -> None
         # Try to get binary wheels for each package that isn't compatible.
+        logger.debug("Downloading missing wheels: %s", packages)
         self._pip.download_manylinux_wheels(
-            [pkg.identifier for pkg in packages], directory)
+            abi, [pkg.identifier for pkg in packages], directory)
 
     def _build_sdists(self, sdists, directory, compile_c=True):
-        # type: (set[Package], str, bool) -> None
+        # type: (Set[Package], str, bool) -> None
+        logger.debug("Build missing wheels from sdists "
+                     "(C compiling %s): %s", compile_c, sdists)
         for sdist in sdists:
             path_to_sdist = self._osutils.joinpath(directory, sdist.filename)
             self._pip.build_wheel(path_to_sdist, directory, compile_c)
 
-    def _categorize_wheel_files(self, directory):
-        # type: (str) -> Tuple[Set[Package], Set[Package]]
+    def _categorize_wheel_files(self, abi, directory):
+        # type: (str, str) -> Tuple[Set[Package], Set[Package]]
         final_wheels = [Package(directory, filename) for filename
                         in self._osutils.get_directory_contents(directory)
                         if filename.endswith('.whl')]
 
         compatible_wheels, incompatible_wheels = set(), set()
         for wheel in final_wheels:
-            if self._is_compatible_wheel_filename(wheel.filename):
+            if self._is_compatible_wheel_filename(abi, wheel.filename):
                 compatible_wheels.add(wheel)
             else:
                 incompatible_wheels.add(wheel)
         return compatible_wheels, incompatible_wheels
 
-    def _download_dependencies(self, directory, requirements_filename):
-        # type: (str, str) -> Tuple[Set[Package], Set[Package]]
+    def _download_dependencies(self, abi, directory, requirements_filename):
+        # type: (str, str, str) -> Tuple[Set[Package], Set[Package]]
         # Download all dependencies we can, letting pip choose what to
         # download.
         # deps should represent the best effort we can make to gather all the
         # dependencies.
         deps = self._download_all_dependencies(
             requirements_filename, directory)
-
         # Sort the downloaded packages into three categories:
         # - sdists (Pip could not get a wheel so it gave us an sdist)
         # - lambda compatible wheel files
@@ -368,24 +385,30 @@ class DependencyBuilder(object):
             if package.dist_type == 'sdist':
                 sdists.add(package)
             else:
-                if self._is_compatible_wheel_filename(package.filename):
+                if self._is_compatible_wheel_filename(abi, package.filename):
                     compatible_wheels.add(package)
                 else:
                     incompatible_wheels.add(package)
+        logger.debug("initial compatible: %s", compatible_wheels)
+        logger.debug("initial incompatible: %s", incompatible_wheels | sdists)
 
         # Next we need to go through the downloaded packages and pick out any
         # dependencies that do not have a compatible wheel file downloaded.
         # For these packages we need to explicitly try to download a
         # compatible wheel file.
         missing_wheels = sdists | incompatible_wheels
-        self._download_binary_wheels(missing_wheels, directory)
+        self._download_binary_wheels(abi, missing_wheels, directory)
 
         # Re-count the wheel files after the second download pass. Anything
         # that has an sdist but not a valid wheel file is still not going to
         # work on lambda and we must now try and build the sdist into a wheel
         # file ourselves.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            directory)
+            abi, directory)
+        logger.debug(
+            "compatible wheels after second download pass: %s",
+            compatible_wheels
+        )
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=True)
 
@@ -398,7 +421,11 @@ class DependencyBuilder(object):
         # building the package and trying to sever its ability to find a C
         # compiler.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            directory)
+            abi, directory)
+        logger.debug(
+            "compatible after building wheels (C compiling): %s",
+            compatible_wheels
+        )
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=False)
 
@@ -406,9 +433,39 @@ class DependencyBuilder(object):
         # any unmet dependencies left over. At this point there is nothing we
         # can do about any missing wheel files. We tried downloading a
         # compatible version directly and building from source.
-        compatible_wheels, _ = self._categorize_wheel_files(directory)
+        compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
+            abi, directory)
+        logger.debug(
+            "compatible after building wheels (no C compiling): %s",
+            compatible_wheels
+        )
+
+        # Now there is still the case left over where the setup.py has been
+        # made in such a way to be incompatible with python's setup tools,
+        # causing it to lie about its compatibility. To fix this we have a
+        # manually curated whitelist of packages that will work, despite
+        # claiming otherwise.
+        compatible_wheels, incompatible_wheels = self._apply_wheel_whitelist(
+            compatible_wheels, incompatible_wheels)
         missing_wheels = deps - compatible_wheels
+        logger.debug("Final compatible: %s", compatible_wheels)
+        logger.debug("Final incompatible: %s", incompatible_wheels)
+        logger.debug("Final missing wheels: %s", missing_wheels)
         return compatible_wheels, missing_wheels
+
+    def _apply_wheel_whitelist(self,
+                               compatible_wheels,   # type: Set[Package]
+                               incompatible_wheels  # type: Set[Package]
+                               ):
+        # type: (...) -> Tuple[Set[Package], Set[Package]]
+        compatible_wheels = set(compatible_wheels)
+        actual_incompatible_wheels = set()
+        for missing_package in incompatible_wheels:
+            if missing_package.name in self._COMPATIBLE_PACKAGE_WHITELIST:
+                compatible_wheels.add(missing_package)
+            else:
+                actual_incompatible_wheels.add(missing_package)
+        return compatible_wheels, actual_incompatible_wheels
 
     def _install_purelib_and_platlib(self, wheel, root):
         # type: (Package, str) -> None
@@ -440,12 +497,13 @@ class DependencyBuilder(object):
             self._osutils.extract_zipfile(zipfile_path, dst_dir)
             self._install_purelib_and_platlib(wheel, dst_dir)
 
-    def build_site_packages(self, requirements_filepath, target_directory):
-        # type: (str, str) -> None
+    def build_site_packages(self, abi, requirements_filepath,
+                            target_directory):
+        # type: (str, str, str) -> None
         if self._has_at_least_one_package(requirements_filepath):
             with self._osutils.tempdir() as tempdir:
                 wheels, packages_without_wheels = self._download_dependencies(
-                    tempdir, requirements_filepath)
+                    abi, tempdir, requirements_filepath)
                 self._install_wheels(tempdir, target_directory, wheels)
             if packages_without_wheels:
                 raise MissingDependencyError(packages_without_wheels)
@@ -462,6 +520,11 @@ class Package(object):
             osutils = OSUtils()
         self._osutils = osutils
         self._name, self._version = self._calculate_name_and_version()
+
+    @property
+    def name(self):
+        # type: () -> str
+        return self._name
 
     @property
     def data_dir(self):
@@ -504,13 +567,13 @@ class Package(object):
             # {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-
             # {platform tag}.whl
             name, version = self.filename.split('-')[:2]
-            name = self._normalize_name(name)
         else:
             info_fetcher = SDistMetadataFetcher(osutils=self._osutils)
             sdist_path = self._osutils.joinpath(self._directory, self.filename)
             name, version = info_fetcher.get_package_name_and_version(
                 sdist_path)
-        return name, version
+        normalized_name = self._normalize_name(name)
+        return normalized_name, version
 
 
 class SDistMetadataFetcher(object):
@@ -561,7 +624,7 @@ class SDistMetadataFetcher(object):
         # type: (str, str) -> str
         if sdist_path.endswith('.zip'):
             self._osutils.extract_zipfile(sdist_path, unpack_dir)
-        elif sdist_path.endswith('.tar.gz'):
+        elif sdist_path.endswith(('.tar.gz', '.tar.bz2')):
             self._osutils.extract_tarfile(sdist_path, unpack_dir)
         else:
             raise InvalidSourceDistributionNameError(sdist_path)
@@ -582,32 +645,47 @@ class SDistMetadataFetcher(object):
 
 class SubprocessPip(object):
     """Wrapper around calling pip through a subprocess."""
-    def __init__(self, osutils=None):
-        # type: (Optional[OSUtils]) -> None
+    def __init__(self, osutils=None, import_string=None):
+        # type: (Optional[OSUtils], OptStr) -> None
         if osutils is None:
             osutils = OSUtils()
         self._osutils = osutils
+        if import_string is None:
+            import_string = pip_import_string()
+        self._import_string = import_string
 
-    def main(self, args, env_vars=None, shim=None):
-        # type: (List[str], EnvVars, OptStr) -> Tuple[int, Optional[bytes]]
+    def main(self,
+             args,           # type: List[str]
+             env_vars=None,  # type: EnvVars
+             shim=None       # type: OptStr
+             ):
+        # type: (...) -> Tuple[int, bytes, bytes]
         if env_vars is None:
             env_vars = self._osutils.environ()
         if shim is None:
             shim = ''
         python_exe = sys.executable
-        run_pip = 'import pip, sys; sys.exit(pip.main(%s))' % args
+        run_pip = (
+            'import sys; %s; sys.exit(main(%s))'
+        ) % (self._import_string, args)
         exec_string = '%s%s' % (shim, run_pip)
         invoke_pip = [python_exe, '-c', exec_string]
-        p = subprocess.Popen(invoke_pip,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             env=env_vars)
-        _, err = p.communicate()
+        p = self._osutils.popen(invoke_pip,
+                                stdout=self._osutils.pipe,
+                                stderr=self._osutils.pipe,
+                                env=env_vars)
+        out, err = p.communicate()
         rc = p.returncode
-        return rc, err
+        return rc, out, err
 
 
 class PipRunner(object):
     """Wrapper around pip calls used by chalice."""
+
+    _LINK_IS_DIR_PATTERN = ("Processing (.+?)\n"
+                            "  Link is a directory,"
+                            " ignoring download_dir")
+
     def __init__(self, pip, osutils=None):
         # type: (SubprocessPip, Optional[OSUtils]) -> None
         if osutils is None:
@@ -615,13 +693,19 @@ class PipRunner(object):
         self._wrapped_pip = pip
         self._osutils = osutils
 
-    def _execute(self, command, args, env_vars=None, shim=None):
-        # type: (str, List[str], EnvVars, OptStr) -> Tuple[int, OptBytes]
+    def _execute(self,
+                 command,        # type: str
+                 args,           # type: List[str]
+                 env_vars=None,  # type: EnvVars
+                 shim=None       # type: OptStr
+                 ):
+        # type: (...) -> Tuple[int, bytes, bytes]
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
-        rc, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
-                                         shim=shim)
-        return rc, err
+        logger.debug("calling pip %s", ' '.join(main_args))
+        rc, out, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
+                                              shim=shim)
+        return rc, out, err
 
     def build_wheel(self, wheel, directory, compile_c=True):
         # type: (str, str, bool) -> None
@@ -642,7 +726,7 @@ class PipRunner(object):
         # type: (str, str) -> None
         """Download all dependencies as sdist or wheel."""
         arguments = ['-r', requirements_filename, '--dest', directory]
-        rc, err = self._execute('download', arguments)
+        rc, out, err = self._execute('download', arguments)
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
         # what to download. If a package is not found it is likely because it
@@ -659,9 +743,22 @@ class PipRunner(object):
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
             raise PackageDownloadError(error)
+        stdout = out.decode()
+        matches = re.finditer(self._LINK_IS_DIR_PATTERN, stdout)
+        for match in matches:
+            wheel_package_path = str(match.group(1))
+            # Looks odd we do not check on the error status of building the
+            # wheel here. We can assume this is a valid package path since
+            # we already passed the pip download stage. This stage would have
+            # thrown a PackageDownloadError if any of the listed packages were
+            # not valid.
+            # If it fails the actual build step, it will have the same behavior
+            # as any other package we fail to build a valid wheel for, and
+            # complain at deployment time.
+            self.build_wheel(wheel_package_path, directory)
 
-    def download_manylinux_wheels(self, packages, directory):
-        # type: (List[str], str) -> None
+    def download_manylinux_wheels(self, abi, packages, directory):
+        # type: (str, List[str], str) -> None
         """Download wheel files for manylinux for all the given packages."""
         # If any one of these dependencies fails pip will bail out. Since we
         # are only interested in all the ones we can download, we need to feed
@@ -674,5 +771,5 @@ class PipRunner(object):
         for package in packages:
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
                          'manylinux1_x86_64', '--implementation', 'cp',
-                         '--abi', lambda_abi, '--dest', directory, package]
+                         '--abi', abi, '--dest', directory, package]
             self._execute('download', arguments)

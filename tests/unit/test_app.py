@@ -2,6 +2,8 @@ import sys
 import base64
 import logging
 import json
+import gzip
+import inspect
 
 import pytest
 from pytest import fixture
@@ -14,6 +16,8 @@ from chalice import app
 from chalice import NotFoundError
 from chalice.app import APIGateway, Request, Response, handle_decimals
 from chalice import __version__ as chalice_version
+from chalice.deploy.validate import ExperimentalFeatureError
+from chalice.deploy.validate import validate_feature_flags
 
 
 # These are used to generate sample data for hypothesis tests.
@@ -85,6 +89,21 @@ def json_response_body(response):
     return json.loads(response['body'])
 
 
+def assert_requires_opt_in(app, flag):
+    with pytest.raises(ExperimentalFeatureError):
+        validate_feature_flags(app)
+    # Now ensure if we opt in to the feature, we don't
+    # raise an exception.
+    app.experimental_feature_flags.add(flag)
+    try:
+        validate_feature_flags(app)
+    except ExperimentalFeatureError:
+        raise AssertionError(
+            "Opting in to feature %s still raises an "
+            "ExperimentalFeatureError." % flag
+        )
+
+
 @fixture
 def sample_app():
     demo = app.Chalice('demo-app')
@@ -101,6 +120,18 @@ def sample_app():
 
 
 @fixture
+def sample_app_with_cors():
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/image', methods=['POST'], cors=True,
+                content_types=['image/gif'])
+    def image():
+        return {'image': True}
+
+    return demo
+
+
+@fixture
 def auth_request():
     method_arn = (
         "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth")
@@ -110,7 +141,7 @@ def auth_request():
 
 @pytest.mark.skipif(sys.version[0] == '2',
                     reason=('Test is irrelevant under python 2, since str and '
-                            'bytes are interchangable.'))
+                            'bytes are interchangeable.'))
 def test_invalid_binary_response_body_throws_value_error(sample_app):
     response = app.Response(
         status_code=200,
@@ -159,7 +190,7 @@ def test_can_encode_binary_json(sample_app):
         headers={'Content-Type': 'application/json'}
     )
     encoded_response = response.to_dict(sample_app.api.binary_types)
-    assert encoded_response['body'] == 'eyJmb28iOiAiYmFyIn0='
+    assert encoded_response['body'] == 'eyJmb28iOiJiYXIifQ=='
 
 
 def test_can_parse_route_view_args():
@@ -258,6 +289,13 @@ def test_error_on_unsupported_method_gives_feedback_on_method(sample_app,
     event = create_event('/name/{name}', method, {'name': 'james'})
     raw_response = sample_app(event, context=None)
     assert 'POST' in json_response_body(raw_response)['Message']
+
+
+def test_error_contains_cors_headers(sample_app_with_cors, create_event):
+    event = create_event('/image', 'POST', {'not': 'image'})
+    raw_response = sample_app_with_cors(event, context=None)
+    assert raw_response['statusCode'] == 415
+    assert 'Access-Control-Allow-Origin' in raw_response['headers']
 
 
 def test_no_view_function_found(sample_app, create_event):
@@ -365,6 +403,21 @@ def test_json_body_available_with_right_content_type(create_event):
     result = demo(event, context=None)
     result = json_response_body(result)
     assert result == {'foo': 'bar'}
+
+
+def test_json_body_none_with_malformed_json(create_event):
+    demo = app.Chalice('demo-app')
+
+    @demo.route('/', methods=['POST'])
+    def index():
+        return demo.current_request.json_body
+
+    event = create_event('/', 'POST', {})
+    event['body'] = '{"foo": "bar"'
+
+    result = demo(event, context=None)
+    assert result['statusCode'] == 400
+    assert json_response_body(result)['Code'] == 'BadRequestError'
 
 
 def test_cant_access_json_body_with_wrong_content_type(create_event):
@@ -476,7 +529,7 @@ def test_can_return_response_object(create_event):
 
     event = create_event('/index', 'GET', {})
     response = demo(event, context=None)
-    assert response == {'statusCode': 200, 'body': '{"foo": "bar"}',
+    assert response == {'statusCode': 200, 'body': '{"foo":"bar"}',
                         'headers': {'Content-Type': 'application/json'}}
 
 
@@ -817,7 +870,7 @@ class TestCORSConfig(object):
     def test_not_eq_different_type(self):
         cors_config = app.CORSConfig()
         different_type_obj = object()
-        assert cors_config != different_type_obj
+        assert not cors_config == different_type_obj
 
     def test_not_eq_differing_configurations(self):
         cors_config = app.CORSConfig()
@@ -859,7 +912,6 @@ def test_can_handle_builtin_auth():
     assert isinstance(authorizer, app.BuiltinAuthConfig)
     assert authorizer.name == 'my_auth'
     assert authorizer.handler_string == 'app.my_auth'
-    assert my_auth.name == 'my_auth'
 
 
 def test_builtin_auth_can_transform_event():
@@ -1280,6 +1332,21 @@ def test_debug_mode_changes_log_level():
     assert test_app.log.getEffectiveLevel() == logging.DEBUG
 
 
+def test_internal_exception_debug_false(capsys, create_event):
+    test_app = app.Chalice('logger-test-5', debug=False)
+
+    @test_app.route('/error')
+    def error():
+        raise Exception('Something bad happened')
+
+    event = create_event('/error', 'GET', {})
+    test_app(event, context=None)
+    out, err = capsys.readouterr()
+    assert 'logger-test-5' in out
+    assert 'Internal Error' in out
+    assert 'Something bad happened' in out
+
+
 def test_raw_body_is_none_if_body_is_none():
     misc_kwargs = {
         'query_params': {},
@@ -1339,3 +1406,431 @@ def test_handles_binary_responses(body, content_type):
     assert serialized['isBase64Encoded']
     assert isinstance(serialized['body'], six.string_types)
     assert isinstance(base64.b64decode(serialized['body']), bytes)
+
+
+def test_can_create_s3_event_handler(sample_app):
+    @sample_app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'handler'
+    assert event.bucket == 'mybucket'
+    assert event.events == ['s3:ObjectCreated:*']
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_to_s3_event_object(sample_app):
+    @sample_app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        return event
+
+    s3_event = {
+        'Records': [
+            {'awsRegion': 'us-west-2',
+             'eventName': 'ObjectCreated:Put',
+             'eventSource': 'aws:s3',
+             'eventTime': '2018-05-22T04:41:23.823Z',
+             'eventVersion': '2.0',
+             'requestParameters': {'sourceIPAddress': '174.127.235.55'},
+             'responseElements': {
+                'x-amz-id-2': 'request-id-2',
+                'x-amz-request-id': 'request-id-1'},
+             's3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                     'ownerIdentity': {
+                         'principalId': 'ABCD'
+                     }
+                 },
+                 'configurationId': 'config-id',
+                 'object': {
+                     'eTag': 'd41d8cd98f00b204e9800998ecf8427e',
+                     'key': 'hello-world.txt',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+                 's3SchemaVersion': '1.0'
+             },
+             'userIdentity': {'principalId': 'AWS:XYZ'}
+             }
+        ]
+    }
+    actual_event = handler(s3_event, context=None)
+    assert actual_event.bucket == 'mybucket'
+    assert actual_event.key == 'hello-world.txt'
+    assert actual_event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     'key': 'file+with+spaces',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event, FakeLambdaContext())
+    # We should urldecode the key name.
+    assert event.key == 'file with spaces'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event
+
+
+def test_s3_event_urldecodes_unicode_keys():
+    s3_event = {
+        'Records': [
+            {'s3': {
+                 'bucket': {
+                     'arn': 'arn:aws:s3:::mybucket',
+                     'name': 'mybucket',
+                 },
+                 'object': {
+                     # This is u'\u2713'
+                     'key': '%E2%9C%93',
+                     'sequencer': '005B039F73C627CE8B',
+                     'size': 0
+                 },
+            }},
+        ]
+    }
+    event = app.S3Event(s3_event, FakeLambdaContext())
+    # We should urldecode the key name.
+    assert event.key == u'\u2713'
+    assert event.bucket == u'mybucket'
+    # But the key should remain unchanged in to_dict().
+    assert event.to_dict() == s3_event
+
+
+def test_can_create_sns_handler(sample_app):
+    @sample_app.on_sns_message(topic='MyTopic')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'handler'
+    assert event.topic == 'MyTopic'
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_sns_event(sample_app):
+    @sample_app.on_sns_message(topic='MyTopic')
+    def handler(event):
+        return event
+
+    sns_event = {'Records': [{
+        'EventSource': 'aws:sns',
+        'EventSubscriptionArn': 'arn:subscription-arn',
+        'EventVersion': '1.0',
+        'Sns': {
+            'Message': 'This is a raw message',
+            'MessageAttributes': {
+                'AttributeKey': {
+                    'Type': 'String',
+                    'Value': 'AttributeValue'
+                }
+            },
+            'MessageId': 'abcdefgh-51e4-5ae2-9964-b296c8d65d1a',
+            'Signature': 'signature',
+            'SignatureVersion': '1',
+            'SigningCertUrl': 'https://sns.us-west-2.amazonaws.com/cert.pen',
+            'Subject': 'ThisIsTheSubject',
+            'Timestamp': '2018-06-26T19:41:38.695Z',
+            'TopicArn': 'arn:aws:sns:us-west-2:12345:ConsoleTestTopic',
+            'Type': 'Notification',
+            'UnsubscribeUrl': 'https://unsubscribe-url/'}}]}
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(sns_event, context=lambda_context)
+    assert actual_event.message == 'This is a raw message'
+    assert actual_event.subject == 'ThisIsTheSubject'
+    assert actual_event.to_dict() == sns_event
+    assert actual_event.context == lambda_context
+
+
+def test_can_create_sqs_handler(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', batch_size=200)
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.queue == 'MyQueue'
+    assert event.batch_size == 200
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_set_sqs_handler_name(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', name='sqs_handler')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'sqs_handler'
+
+
+def test_can_map_sqs_event(sample_app):
+    @sample_app.on_sqs_message(queue='queue-name')
+    def handler(event):
+        return event
+
+    sqs_event = {'Records': [{
+        'attributes': {
+            'ApproximateFirstReceiveTimestamp': '1530576251596',
+            'ApproximateReceiveCount': '1',
+            'SenderId': 'sender-id',
+            'SentTimestamp': '1530576251595'
+        },
+        'awsRegion': 'us-west-2',
+        'body': 'queue message body',
+        'eventSource': 'aws:sqs',
+        'eventSourceARN': 'arn:aws:sqs:us-west-2:12345:queue-name',
+        'md5OfBody': '754ac2f7a12df38320e0c5eafd060145',
+        'messageAttributes': {},
+        'messageId': 'message-id',
+        'receiptHandle': 'receipt-handle'
+    }]}
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(sqs_event, context=lambda_context)
+    records = list(actual_event)
+    assert len(records) == 1
+    first_record = records[0]
+    assert first_record.body == 'queue message body'
+    assert first_record.receipt_handle == 'receipt-handle'
+    assert first_record.to_dict() == sqs_event['Records'][0]
+    assert actual_event.to_dict() == sqs_event
+    assert actual_event.context == lambda_context
+
+
+def test_bytes_when_binary_type_is_application_json():
+    demo = app.Chalice('demo-app')
+    demo.api.binary_types.append('application/json')
+
+    @demo.route('/compress_response')
+    def index():
+        blob = json.dumps({'hello': 'world'}).encode('utf-8')
+        payload = gzip.compress(blob)
+        custom_headers = {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip'
+        }
+        return Response(body=payload, status_code=200, headers=custom_headers)
+
+    return demo
+
+
+def test_can_register_blueprint_on_app():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+
+    @foo.route('/foo')
+    def first():
+        pass
+
+    myapp.register_blueprint(foo)
+    assert sorted(list(myapp.routes.keys())) == ['/foo']
+
+
+def test_can_combine_multiple_blueprints_in_single_app():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+    bar = app.Blueprint('bar')
+
+    @foo.route('/foo')
+    def myfoo():
+        pass
+
+    @bar.route('/bar')
+    def mybar():
+        pass
+
+    myapp.register_blueprint(foo)
+    myapp.register_blueprint(bar)
+
+    assert sorted(list(myapp.routes)) == ['/bar', '/foo']
+
+
+def test_can_mount_apis_at_url_prefix():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+
+    @foo.route('/foo')
+    def myfoo():
+        pass
+
+    @foo.route('/bar')
+    def mybar():
+        pass
+
+    myapp.register_blueprint(foo, url_prefix='/myprefix')
+    assert list(sorted(myapp.routes)) == ['/myprefix/bar', '/myprefix/foo']
+
+
+def test_can_combine_lambda_functions_and_routes_in_blueprints():
+    myapp = app.Chalice('myapp')
+
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.route('/foo')
+    def myfoo():
+        pass
+
+    @foo.lambda_function()
+    def myfunction(event, context):
+        pass
+
+    myapp.register_blueprint(foo)
+    assert len(myapp.pure_lambda_functions) == 1
+    lambda_function = myapp.pure_lambda_functions[0]
+    assert lambda_function.name == 'myfunction'
+    assert lambda_function.handler_string == (
+        'app.chalicelib.blueprints.foo.myfunction')
+
+    assert list(myapp.routes) == ['/foo']
+
+
+def test_can_mount_lambda_functions_with_name_prefix():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.lambda_function()
+    def myfunction(event, context):
+        return event, context
+
+    myapp.register_blueprint(foo, name_prefix='myprefix_')
+    assert len(myapp.pure_lambda_functions) == 1
+    lambda_function = myapp.pure_lambda_functions[0]
+    assert lambda_function.name == 'myprefix_myfunction'
+    assert lambda_function.handler_string == (
+        'app.chalicelib.blueprints.foo.myfunction')
+
+    assert myfunction('foo', 'bar') == ('foo', 'bar')
+
+
+def test_can_mount_event_sources_with_blueprint():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.schedule('rate(5 minutes)')
+    def myfunction(event):
+        return event
+
+    myapp.register_blueprint(foo, name_prefix='myprefix_')
+    assert len(myapp.event_sources) == 1
+    event_source = myapp.event_sources[0]
+    assert event_source.name == 'myprefix_myfunction'
+    assert event_source.schedule_expression == 'rate(5 minutes)'
+    assert event_source.handler_string == (
+        'app.chalicelib.blueprints.foo.myfunction')
+
+
+def test_can_mount_all_decorators_in_blueprint():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.route('/foo')
+    def routefoo():
+        pass
+
+    @foo.lambda_function(name='mylambdafunction')
+    def mylambda(event, context):
+        pass
+
+    @foo.schedule('rate(5 minutes)')
+    def bar(event):
+        pass
+
+    @foo.on_s3_event('MyBucket')
+    def on_s3(event):
+        pass
+
+    @foo.on_sns_message('MyTopic')
+    def on_sns(event):
+        pass
+
+    @foo.on_sqs_message('MyQueue')
+    def on_sqs(event):
+        pass
+
+    myapp.register_blueprint(foo, name_prefix='myprefix_', url_prefix='/bar')
+    event_sources = myapp.event_sources
+    assert len(event_sources) == 4
+    lambda_functions = myapp.pure_lambda_functions
+    assert len(lambda_functions) == 1
+    # Handles the name prefix and the name='' override in the decorator.
+    assert lambda_functions[0].name == 'myprefix_mylambdafunction'
+    assert list(myapp.routes) == ['/bar/foo']
+
+
+def test_can_call_current_request_on_blueprint_when_mounted(create_event):
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/todict')
+    def todict():
+        return bp.current_request.to_dict()
+
+    myapp.register_blueprint(bp)
+    event = create_event('/todict', 'GET', {})
+    response = json_response_body(myapp(event, context=None))
+    assert isinstance(response, dict)
+    assert response['method'] == 'GET'
+
+
+def test_can_call_lambda_context_on_blueprint_when_mounted(create_event):
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/context')
+    def context():
+        return bp.lambda_context
+
+    myapp.register_blueprint(bp)
+    event = create_event('/context', 'GET', {})
+    response = json_response_body(myapp(event, context={'context': 'foo'}))
+    assert response == {'context': 'foo'}
+
+
+def test_runtime_error_if_current_request_access_on_non_registered_blueprint():
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+    with pytest.raises(RuntimeError):
+        bp.current_request
+
+
+def test_every_decorator_added_to_blueprint():
+    def is_public_method(obj):
+        return inspect.isfunction(obj) and not obj.__name__.startswith('_')
+    public_api = inspect.getmembers(
+        app.DecoratorAPI,
+        predicate=is_public_method
+    )
+    blueprint_api = [
+        i[0] for i in
+        inspect.getmembers(app.Blueprint, predicate=is_public_method)
+    ]
+    for method_name, _ in public_api:
+        assert method_name in blueprint_api
+
+
+def test_blueprint_gated_behind_feature_flag():
+    # Blueprints won't validate unless you enable their feature flag.
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/')
+    def index():
+        pass
+
+    myapp.register_blueprint(bp)
+    assert_requires_opt_in(myapp, flag='BLUEPRINTS')

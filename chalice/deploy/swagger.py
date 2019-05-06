@@ -1,9 +1,11 @@
 import copy
+import inspect
 
 from typing import Any, List, Dict, Optional  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
+from chalice.deploy.planner import StringFormat
 from chalice.utils import to_cfn_resource_name
 
 
@@ -128,6 +130,12 @@ class SwaggerGenerator(object):
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
+        docstring = inspect.getdoc(view.view_function)
+        if docstring:
+            doc_lines = docstring.splitlines()
+            current['summary'] = doc_lines[0]
+            if len(doc_lines) > 1:
+                current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
         if view.api_key_required:
             # When this happens we also have to add the relevant portions
             # to the security definitions.  We have to someone indicate
@@ -226,9 +234,12 @@ class SwaggerGenerator(object):
 
 
 class CFNSwaggerGenerator(SwaggerGenerator):
+    def __init__(self):
+        # type: () -> None
+        pass
+
     def _uri(self, lambda_arn=None):
         # type: (Optional[str]) -> Any
-        # TODO: Does this have to be return type Any?
         return {
             'Fn::Sub': (
                 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31'
@@ -245,3 +256,26 @@ class CFNSwaggerGenerator(SwaggerGenerator):
                     authorizer.name)
             )
         }
+
+
+class TemplatedSwaggerGenerator(SwaggerGenerator):
+    def __init__(self):
+        # type: () -> None
+        pass
+
+    def _uri(self, lambda_arn=None):
+        # type: (Optional[str]) -> Any
+        return StringFormat(
+            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
+            '/functions/{api_handler_lambda_arn}/invocations',
+            ['region_name', 'api_handler_lambda_arn'],
+        )
+
+    def _auth_uri(self, authorizer):
+        # type: (ChaliceAuthorizer) -> Any
+        varname = '%s_lambda_arn' % authorizer.name
+        return StringFormat(
+            'arn:aws:apigateway:{region_name}:lambda:path/2015-03-31'
+            '/functions/{%s}/invocations' % varname,
+            ['region_name', varname],
+        )

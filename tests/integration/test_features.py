@@ -10,8 +10,9 @@ import pytest
 import requests
 
 from chalice.cli.factory import CLIFactory
-from chalice.utils import record_deployed_values, OSUtils
+from chalice.utils import OSUtils, UI
 from chalice.deploy.deployer import ChaliceDeploymentError
+from chalice.config import DeployedResources
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -42,29 +43,29 @@ class SmokeTestApplication(object):
     # Seconds to wait between poll attempts after redeploy.
     _POLLING_DELAY = 5
 
-    def __init__(self, url, deployed_values, stage_name, app_name,
-                 app_dir):
-        if url.endswith('/'):
-            url = url[:-1]
-        self.url = url
-        self._deployed_values = deployed_values
+    def __init__(self, deployed_values, stage_name, app_name,
+                 app_dir, region):
+        self._deployed_resources = DeployedResources(deployed_values)
         self.stage_name = stage_name
         self.app_name = app_name
         # The name of the tmpdir where the app is copied.
         self.app_dir = app_dir
         self._has_redeployed = False
+        self._region = region
+
+    @property
+    def url(self):
+        return (
+            "https://{rest_api_id}.execute-api.{region}.amazonaws.com/"
+            "{api_gateway_stage}".format(rest_api_id=self.rest_api_id,
+                                         region=self._region,
+                                         api_gateway_stage='api')
+        )
 
     @property
     def rest_api_id(self):
-        return self._deployed_values['rest_api_id']
-
-    @property
-    def region_name(self):
-        return self._deployed_values['region_name']
-
-    @property
-    def api_handler_arn(self):
-        return self._deployed_values['api_handler_arn']
+        return self._deployed_resources.resource_values(
+            'rest_api')['rest_api_id']
 
     def get_json(self, url):
         if not url.startswith('/'):
@@ -123,7 +124,7 @@ def smoke_test_app(tmpdir_factory):
     _inject_app_name(tmpdir)
     application = _deploy_app(tmpdir)
     yield application
-    _delete_app(application)
+    _delete_app(application, tmpdir)
     os.environ.pop('APP_NAME')
 
 
@@ -144,23 +145,16 @@ def _deploy_app(temp_dirname):
         chalice_stage_name='dev',
         autogen_policy=True
     )
-    d = factory.create_default_deployer(
-        factory.create_botocore_session(), None)
-    deployed_stages = _deploy_with_retries(d, config)
-    deployed = deployed_stages['dev']
-    url = (
-        "https://{rest_api_id}.execute-api.{region}.amazonaws.com/"
-        "{api_gateway_stage}/".format(**deployed))
+    session = factory.create_botocore_session()
+    d = factory.create_default_deployer(session, config, UI())
+    region = session.get_config_variable('region')
+    deployed = _deploy_with_retries(d, config)
     application = SmokeTestApplication(
-        url=url,
+        region=region,
         deployed_values=deployed,
         stage_name='dev',
         app_name=RANDOM_APP_NAME,
         app_dir=temp_dirname,
-    )
-    record_deployed_values(
-        deployed_stages,
-        os.path.join(temp_dirname, '.chalice', 'deployed.json')
     )
     return application
 
@@ -168,7 +162,7 @@ def _deploy_app(temp_dirname):
 @retry(max_attempts=10, delay=20)
 def _deploy_with_retries(deployer, config):
     try:
-        deployed_stages = deployer.deploy(config)
+        deployed_stages = deployer.deploy(config, 'dev')
         return deployed_stages
     except ChaliceDeploymentError as e:
         # API Gateway aggressively throttles deployments.
@@ -186,22 +180,15 @@ def _get_error_code_from_exception(exception):
     return error_response.get('Error', {}).get('Code')
 
 
-def _delete_app(application):
-    s = botocore.session.get_session()
-    lambda_client = s.create_client('lambda')
-    # You can use either the function name of the function ARN
-    # for this argument, despite the name being FunctionName.
-    lambda_client.delete_function(FunctionName=application.api_handler_arn)
-
-    iam = s.create_client('iam')
-    role_name = application.app_name + '-' + application.stage_name
-    policies = iam.list_role_policies(RoleName=role_name)
-    for name in policies['PolicyNames']:
-        iam.delete_role_policy(RoleName=role_name, PolicyName=name)
-    iam.delete_role(RoleName=role_name)
-
-    apig = s.create_client('apigateway')
-    apig.delete_rest_api(restApiId=application.rest_api_id)
+def _delete_app(application, temp_dirname):
+    factory = CLIFactory(temp_dirname)
+    config = factory.create_config_obj(
+        chalice_stage_name='dev',
+        autogen_policy=True
+    )
+    session = factory.create_botocore_session()
+    d = factory.create_deletion_deployer(session, UI())
+    _deploy_with_retries(d, config)
 
 
 def test_returns_simple_response(smoke_test_app):
@@ -226,27 +213,56 @@ def test_path_params_mapped_in_api(smoke_test_app, apig_client):
     # query the resources we've created in API gateway
     # and make sure requestParameters are present.
     rest_api_id = smoke_test_app.rest_api_id
-    resource_id = _get_resource_id(apig_client, rest_api_id)
-    method_config = apig_client.get_method(
+    response = apig_client.get_export(restApiId=rest_api_id,
+                                      stageName='api',
+                                      exportType='swagger')
+    swagger_doc = json.loads(response['body'].read())
+    route_config = swagger_doc['paths']['/path/{name}']['get']
+    assert route_config.get('parameters', {}) == [
+        {'name': 'name', 'in': 'path', 'required': True, 'type': 'string'},
+    ]
+
+
+def test_single_doc_mapped_in_api(smoke_test_app, apig_client):
+    # We'll use the same API Gateway technique as in
+    # test_path_params_mapped_in_api()
+    rest_api_id = smoke_test_app.rest_api_id
+    doc_parts = apig_client.get_documentation_parts(
         restApiId=rest_api_id,
-        resourceId=resource_id,
-        httpMethod='GET'
+        type='METHOD',
+        path='/singledoc'
     )
-    assert 'requestParameters' in method_config
-    assert method_config['requestParameters'] == {
-        'method.request.path.name': True
-    }
+    doc_props = json.loads(doc_parts['items'][0]['properties'])
+    assert 'summary' in doc_props
+    assert 'description' not in doc_props
+    assert doc_props['summary'] == 'Single line docstring.'
+
+
+def test_multi_doc_mapped_in_api(smoke_test_app, apig_client):
+    # We'll use the same API Gateway technique as in
+    # test_path_params_mapped_in_api()
+    rest_api_id = smoke_test_app.rest_api_id
+    doc_parts = apig_client.get_documentation_parts(
+        restApiId=rest_api_id,
+        type='METHOD',
+        path='/multidoc'
+    )
+    doc_props = json.loads(doc_parts['items'][0]['properties'])
+    assert 'summary' in doc_props
+    assert 'description' in doc_props
+    assert doc_props['summary'] == 'Multi-line docstring.'
+    assert doc_props['description'] == 'And here is another line.'
 
 
 @retry(max_attempts=18, delay=10)
-def _get_resource_id(apig_client, rest_api_id):
+def _get_resource_id(apig_client, rest_api_id, path):
     # This is the resource id for the '/path/{name}'
     # route.  As far as I know this is the best way to get
     # this id.
     matches = [
         resource for resource in
         apig_client.get_resources(restApiId=rest_api_id)['items']
-        if resource['path'] == '/path/{name}'
+        if resource['path'] == path
     ]
     if matches:
         return matches[0]['id']
@@ -403,7 +419,7 @@ def test_to_dict_is_also_json_serializable(smoke_test_app):
     assert 'headers' in smoke_test_app.get_json('/todict')
 
 
-def test_multfile_support(smoke_test_app):
+def test_multifile_support(smoke_test_app):
     response = smoke_test_app.get_json('/multifile')
     assert response == {'message': 'success'}
 

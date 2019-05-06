@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional  # noqa
 
 from chalice.config import Config  # noqa
 from chalice import constants
+from chalice import __version__ as chalice_version
 
 
 class InvalidCodeBuildPythonVersion(Exception):
@@ -16,18 +17,31 @@ class InvalidCodeBuildPythonVersion(Exception):
 
 class PipelineParameters(object):
     def __init__(self, app_name, lambda_python_version,
-                 codebuild_image=None, code_source='codecommit'):
-        # type: (str, str, Optional[str], str) -> None
+                 codebuild_image=None, code_source='codecommit',
+                 chalice_version_range=None):
+        # type: (str, str, Optional[str], str, Optional[str]) -> None
         self.app_name = app_name
         self.lambda_python_version = lambda_python_version
         self.codebuild_image = codebuild_image
         self.code_source = code_source
+        if chalice_version_range is None:
+            chalice_version_range = self._lock_to_minor_version()
+        self.chalice_version_range = chalice_version_range
+
+    def _lock_to_minor_version(self):
+        # type: () -> str
+        parts = [int(p) for p in chalice_version.split('.')]
+        min_version = '%s.%s.%s' % (parts[0], parts[1], 0)
+        max_version = '%s.%s.%s' % (parts[0], parts[1] + 1, 0)
+        return '>=%s,<%s' % (min_version, max_version)
 
 
 class CreatePipelineTemplate(object):
 
     _CODEBUILD_IMAGE = {
         'python2.7': 'python:2.7.12',
+        'python3.6': 'python:3.6.5',
+        'python3.7': 'python:3.7.1',
     }
 
     _BASE_TEMPLATE = {
@@ -138,10 +152,10 @@ class CodeBuild(BaseResource):
         self._add_s3_bucket(resources, outputs)
         self._add_codebuild_role(resources, outputs)
         self._add_codebuild_policy(resources)
-        self._add_package_build(resources)
+        self._add_package_build(resources, pipeline_params)
 
-    def _add_package_build(self, resources):
-        # type: (Dict[str, Any]) -> None
+    def _add_package_build(self, resources, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         resources['AppPackageBuild'] = {
             "Type": "AWS::CodeBuild::Project",
             "Properties": {
@@ -171,28 +185,32 @@ class CodeBuild(BaseResource):
                 },
                 "Source": {
                     "Type": "CODEPIPELINE",
-                    "BuildSpec": (
-                        "version: 0.1\n"
-                        "phases:\n"
-                        "  install:\n"
-                        "    commands:\n"
-                        "      - sudo pip install --upgrade awscli\n"
-                        "      - aws --version\n"
-                        "      - sudo pip install chalice\n"
-                        "      - sudo pip install -r requirements.txt\n"
-                        "      - chalice package /tmp/packaged\n"
-                        "      - aws cloudformation package"
-                        " --template-file /tmp/packaged/sam.json"
-                        " --s3-bucket ${APP_S3_BUCKET}"
-                        " --output-template-file transformed.yaml\n"
-                        "artifacts:\n"
-                        "  type: zip\n"
-                        "  files:\n"
-                        "    - transformed.yaml\n"
-                    )
+                    "BuildSpec": self._get_default_buildspec(pipeline_params),
                 }
             }
         }
+
+    def _get_default_buildspec(self, pipeline_params):
+        # type: (PipelineParameters) -> str
+        return (
+            "version: 0.1\n"
+            "phases:\n"
+            "  install:\n"
+            "    commands:\n"
+            "      - sudo pip install --upgrade awscli\n"
+            "      - aws --version\n"
+            "      - sudo pip install 'chalice%s'\n"
+            "      - sudo pip install -r requirements.txt\n"
+            "      - chalice package /tmp/packaged\n"
+            "      - aws cloudformation package"
+            " --template-file /tmp/packaged/sam.json"
+            " --s3-bucket ${APP_S3_BUCKET}"
+            " --output-template-file transformed.yaml\n"
+            "artifacts:\n"
+            "  type: zip\n"
+            "  files:\n"
+            "    - transformed.yaml\n"
+        ) % pipeline_params.chalice_version_range
 
     def _add_s3_bucket(self, resources, outputs):
         # type: (Dict[str, Any], Dict[str, Any]) -> None

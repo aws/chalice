@@ -1,3 +1,6 @@
+import sys
+import pytest
+
 from textwrap import dedent
 
 from chalice import analyzer
@@ -616,6 +619,96 @@ def test_can_handle_dict_comp_ifs():
          for y in d.update_table()\
          if d.list_tables()}
     """) == {'dynamodb': set(['list_tables', 'create_table', 'update_table'])}
+
+
+@pytest.mark.skipif(sys.version[0] == '2', reason=(
+    'Async await syntax is not in Python 2'
+))
+def test_can_handle_async_await():
+    assert aws_calls("""\
+        import boto3
+        import asyncio
+        async def test():
+            d = boto3.client('dynamodb')
+            d.list_tables()
+            await asyncio.sleep(1)
+        test()
+    """) == {'dynamodb': set(['list_tables'])}
+
+
+def test_can_analyze_custom_auth():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        ec2 = boto3.client('ec2')
+        app = Chalice(app_name='custom-auth')
+
+        @app.authorizer()
+        def index(auth_request):
+            ec2.describe_instances()
+            return {}
+    """) == {'ec2': set(['describe_instances'])}
+
+
+def test_can_analyze_s3_events():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='s3-event')
+
+        @app.on_s3_event(bucket='mybucket')
+        def index(event):
+            s3.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_analyze_sns_events():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='sns-event')
+
+        @app.on_sns_message(topic='mytopic')
+        def index(event):
+            s3.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_analyze_sqs_events():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='sqs-event')
+
+        @app.on_sqs_message(queue='myqueue')
+        def index(event):
+            s3.list_buckets()
+            return {}
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_analyze_transfer_manager_methods():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        s3 = boto3.client('s3')
+        app = Chalice(app_name='sqs-event')
+
+        @app.on_s3_event(bucket='mybucket')
+        def index(event):
+            s3.download_file(event.bucket, event.key, 'foo')
+            return {}
+    """) == {'s3': set(['download_file'])}
 
 
 # def test_tuple_assignment():

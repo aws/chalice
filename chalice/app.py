@@ -1,4 +1,5 @@
 """Chalice app and routing code."""
+# pylint: disable=too-many-lines,ungrouped-imports
 import re
 import sys
 import os
@@ -7,27 +8,43 @@ import json
 import traceback
 import decimal
 import base64
-from collections import defaultdict, Mapping
+from collections import defaultdict
 
-__version__ = '1.1.0'
+
+__version__ = '1.8.0'
+_PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
 # on other parts of chalice so it can stay small and lightweight, with minimal
-# startup overhead.
-
-
-_PARAMS = re.compile(r'{\w+}')
-
+# startup overhead.  This also means we need to handle py2/py3 compat issues
+# directly in this file instead of copying over compat.py
 try:
-    # In python 2 there is a base class for the string types that
-    # we can check for. It was removed in python 3 so it will cause
-    # a name error.
-    _ANY_STRING = (basestring, bytes)
-except NameError:
+    from urllib.parse import unquote_plus
+    from collections.abc import Mapping
+
+    unquote_str = unquote_plus
+
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
+except ImportError:
+    from urllib import unquote_plus
+    from collections import Mapping
+
+    # This is borrowed from botocore/compat.py
+    def unquote_str(value, encoding='utf-8'):
+        # In python2, unquote() gives us a string back that has the urldecoded
+        # bits, but not the unicode parts.  We need to decode this manually.
+        # unquote has special logic in which if it receives a unicode object it
+        # will decode it to latin1.  This is hard coded.  To avoid this, we'll
+        # encode the string with the passed in encoding before trying to
+        # unquote it.
+        byte_string = value.encode(encoding)
+        return unquote_plus(byte_string).decode(encoding)
+    # In python 2 there is a base class for the string types that we can check
+    # for. It was removed in python 3 so it will cause a name error.
+    _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
 
 
 def handle_decimals(obj):
@@ -38,9 +55,11 @@ def handle_decimals(obj):
     return obj
 
 
-def error_response(message, error_code, http_status_code):
+def error_response(message, error_code, http_status_code, headers=None):
     body = {'Code': error_code, 'Message': message}
-    response = Response(body=body, status_code=http_status_code)
+    response = Response(body=body, status_code=http_status_code,
+                        headers=headers)
+
     return response.to_dict()
 
 
@@ -104,6 +123,7 @@ ALL_ERRORS = [
     NotFoundError,
     UnauthorizedError,
     ForbiddenError,
+    MethodNotAllowedError,
     RequestTimeoutError,
     ConflictError,
     UnprocessableEntityError,
@@ -258,6 +278,7 @@ class CORSConfig(object):
         if isinstance(other, self.__class__):
             return self.get_access_control_headers() == \
                 other.get_access_control_headers()
+        return False
 
 
 class Request(object):
@@ -300,7 +321,10 @@ class Request(object):
     def json_body(self):
         if self.headers.get('content-type', '').startswith('application/json'):
             if self._json_body is None:
-                self._json_body = json.loads(self.raw_body)
+                try:
+                    self._json_body = json.loads(self.raw_body)
+                except ValueError:
+                    raise BadRequestError('Error Parsing JSON')
             return self._json_body
 
     def to_dict(self):
@@ -324,7 +348,8 @@ class Response(object):
     def to_dict(self, binary_types=None):
         body = self.body
         if not isinstance(body, _ANY_STRING):
-            body = json.dumps(body, default=handle_decimals)
+            body = json.dumps(body, separators=(',', ':'),
+                              default=handle_decimals)
         response = {
             'headers': self.headers,
             'statusCode': self.status_code,
@@ -346,7 +371,8 @@ class Response(object):
                 # json serialization results in a string type, but for binary
                 # content types we need a type bytes().  So we need to special
                 # case this scenario and encode the JSON body to bytes().
-                body = body.encode('utf-8')
+                body = body if isinstance(body, bytes) \
+                    else body.encode('utf-8')
             body = self._base64encode(body)
             response_dict['isBase64Encoded'] = True
         response_dict['body'] = body
@@ -401,21 +427,10 @@ class RouteEntry(object):
 class APIGateway(object):
 
     _DEFAULT_BINARY_TYPES = [
-        'application/octet-stream',
-        'application/x-tar',
-        'application/zip',
-        'audio/basic',
-        'audio/ogg',
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/wav',
-        'audio/webm',
-        'image/png',
-        'image/jpg',
-        'image/gif',
-        'video/ogg',
-        'video/mpeg',
-        'video/webm',
+        'application/octet-stream', 'application/x-tar', 'application/zip',
+        'audio/basic', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
+        'audio/webm', 'image/png', 'image/jpg', 'image/jpeg', 'image/gif',
+        'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
     def __init__(self):
@@ -426,25 +441,257 @@ class APIGateway(object):
         return list(self._DEFAULT_BINARY_TYPES)
 
 
-class Chalice(object):
+class DecoratorAPI(object):
+    def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
+        return self._create_registration_function(
+            handler_type='authorizer',
+            name=name,
+            registration_kwargs={
+                'ttl_seconds': ttl_seconds, 'execution_role': execution_role,
+            }
+        )
+
+    def on_s3_event(self, bucket, events=None,
+                    prefix=None, suffix=None, name=None):
+        return self._create_registration_function(
+            handler_type='on_s3_event',
+            name=name,
+            registration_kwargs={
+                'bucket': bucket, 'events': events,
+                'prefix': prefix, 'suffix': suffix,
+            }
+        )
+
+    def on_sns_message(self, topic, name=None):
+        return self._create_registration_function(
+            handler_type='on_sns_message',
+            name=name,
+            registration_kwargs={'topic': topic}
+        )
+
+    def on_sqs_message(self, queue, batch_size=1, name=None):
+        return self._create_registration_function(
+            handler_type='on_sqs_message',
+            name=name,
+            registration_kwargs={'queue': queue, 'batch_size': batch_size}
+        )
+
+    def schedule(self, expression, name=None):
+        return self._create_registration_function(
+            handler_type='schedule',
+            name=name,
+            registration_kwargs={'expression': expression},
+        )
+
+    def route(self, path, **kwargs):
+        return self._create_registration_function(
+            handler_type='route',
+            name=kwargs.get('name'),
+            # This looks a little weird taking kwargs as a key,
+            # but we want to preserve keep the **kwargs signature
+            # in the route decorator.
+            registration_kwargs={'path': path, 'kwargs': kwargs},
+        )
+
+    def lambda_function(self, name=None):
+        return self._create_registration_function(
+            handler_type='lambda_function', name=name)
+
+    def _create_registration_function(self, handler_type, name=None,
+                                      registration_kwargs=None):
+        def _register_handler(user_handler):
+            handler_name = name
+            if handler_name is None:
+                handler_name = user_handler.__name__
+            if registration_kwargs is not None:
+                kwargs = registration_kwargs
+            else:
+                kwargs = {}
+            wrapped = self._wrap_handler(handler_type, handler_name,
+                                         user_handler)
+            self._register_handler(handler_type, handler_name,
+                                   user_handler, wrapped, kwargs)
+            return wrapped
+        return _register_handler
+
+    def _wrap_handler(self, handler_type, handler_name, user_handler):
+        event_classes = {
+            'on_s3_event': S3Event,
+            'on_sns_message': SNSEvent,
+            'on_sqs_message': SQSEvent,
+            'schedule': CloudWatchEvent,
+        }
+        if handler_type in event_classes:
+            return EventSourceHandler(
+                user_handler, event_classes[handler_type])
+        if handler_type == 'authorizer':
+            # Authorizer is special cased and doesn't quite fit the
+            # EventSourceHandler pattern.
+            return ChaliceAuthorizer(handler_name, user_handler)
+        return user_handler
+
+    def _register_handler(self, handler_type, name,
+                          user_handler, wrapped_handler, kwargs, options=None):
+        raise NotImplementedError("_register_handler")
+
+
+class _HandlerRegistration(object):
+
+    def __init__(self):
+        self.routes = defaultdict(dict)
+        self.builtin_auth_handlers = []
+        self.event_sources = []
+        self.pure_lambda_functions = []
+
+    def _do_register_handler(self, handler_type, name, user_handler,
+                             wrapped_handler, kwargs, options=None):
+        url_prefix = None
+        name_prefix = None
+        module_name = 'app'
+        if options is not None:
+            name_prefix = options.get('name_prefix')
+            if name_prefix is not None:
+                name = name_prefix + name
+            url_prefix = options.get('url_prefix')
+            if url_prefix is not None:
+                # Move url_prefix into kwargs so only the
+                # route() handler gets a url_prefix kwarg.
+                kwargs['url_prefix'] = url_prefix
+            # module_name is always provided if options is not None.
+            module_name = options['module_name']
+        handler_string = '%s.%s' % (module_name, user_handler.__name__)
+        getattr(self, '_register_%s' % handler_type)(
+            name=name,
+            user_handler=user_handler,
+            handler_string=handler_string,
+            wrapped_handler=wrapped_handler,
+            kwargs=kwargs,
+        )
+
+    def _register_lambda_function(self, name, user_handler,
+                                  handler_string, **unused):
+        wrapper = LambdaFunction(
+            user_handler, name=name,
+            handler_string=handler_string,
+        )
+        self.pure_lambda_functions.append(wrapper)
+
+    def _register_on_s3_event(self, name, handler_string, kwargs, **unused):
+        events = kwargs['events']
+        if events is None:
+            events = ['s3:ObjectCreated:*']
+        s3_event = S3EventConfig(
+            name=name,
+            bucket=kwargs['bucket'],
+            events=events,
+            prefix=kwargs['prefix'],
+            suffix=kwargs['suffix'],
+            handler_string=handler_string,
+        )
+        self.event_sources.append(s3_event)
+
+    def _register_on_sns_message(self, name, handler_string, kwargs, **unused):
+        sns_config = SNSEventConfig(
+            name=name,
+            handler_string=handler_string,
+            topic=kwargs['topic'],
+        )
+        self.event_sources.append(sns_config)
+
+    def _register_on_sqs_message(self, name, handler_string, kwargs, **unused):
+        sqs_config = SQSEventConfig(
+            name=name,
+            handler_string=handler_string,
+            queue=kwargs['queue'],
+            batch_size=kwargs['batch_size'],
+        )
+        self.event_sources.append(sqs_config)
+
+    def _register_schedule(self, name, handler_string, kwargs, **unused):
+        event_source = CloudWatchEventConfig(
+            name=name,
+            schedule_expression=kwargs['expression'],
+            handler_string=handler_string,
+        )
+        self.event_sources.append(event_source)
+
+    def _register_authorizer(self, name, handler_string, wrapped_handler,
+                             kwargs, **unused):
+        actual_kwargs = kwargs.copy()
+        ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
+        execution_role = actual_kwargs.pop('execution_role', None)
+        if actual_kwargs:
+            raise TypeError(
+                'TypeError: authorizer() got unexpected keyword '
+                'arguments: %s' % ', '.join(list(actual_kwargs)))
+        auth_config = BuiltinAuthConfig(
+            name=name,
+            handler_string=handler_string,
+            ttl_seconds=ttl_seconds,
+            execution_role=execution_role,
+        )
+        wrapped_handler.config = auth_config
+        self.builtin_auth_handlers.append(auth_config)
+
+    def _register_route(self, name, user_handler, kwargs, **unused):
+        actual_kwargs = kwargs['kwargs']
+        path = kwargs['path']
+        url_prefix = kwargs.pop('url_prefix', None)
+        if url_prefix is not None:
+            path = '/'.join([url_prefix.rstrip('/'),
+                             path.strip('/')])
+        methods = actual_kwargs.pop('methods', ['GET'])
+        route_kwargs = {
+            'authorizer': actual_kwargs.pop('authorizer', None),
+            'api_key_required': actual_kwargs.pop('api_key_required', None),
+            'content_types': actual_kwargs.pop('content_types',
+                                               ['application/json']),
+            'cors': actual_kwargs.pop('cors', False),
+        }
+        if not isinstance(route_kwargs['content_types'], list):
+            raise ValueError(
+                'In view function "%s", the content_types '
+                'value must be a list, not %s: %s' % (
+                    name, type(route_kwargs['content_types']),
+                    route_kwargs['content_types']))
+        if actual_kwargs:
+            raise TypeError('TypeError: route() got unexpected keyword '
+                            'arguments: %s' % ', '.join(list(actual_kwargs)))
+        for method in methods:
+            if method in self.routes[path]:
+                raise ValueError(
+                    "Duplicate method: '%s' detected for route: '%s'\n"
+                    "between view functions: \"%s\" and \"%s\". A specific "
+                    "method may only be specified once for "
+                    "a particular path." % (
+                        method, path, self.routes[path][method].view_name,
+                        name)
+                )
+            entry = RouteEntry(user_handler, name, path, method,
+                               **route_kwargs)
+            self.routes[path][method] = entry
+
+
+class Chalice(_HandlerRegistration, DecoratorAPI):
 
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
     def __init__(self, app_name, debug=False, configure_logs=True, env=None):
+        super(Chalice, self).__init__()
         self.app_name = app_name
         self.api = APIGateway()
-        self.routes = defaultdict(dict)
         self.current_request = None
         self.lambda_context = None
         self._debug = debug
         self.configure_logs = configure_logs
         self.log = logging.getLogger(self.app_name)
-        self.builtin_auth_handlers = []
-        self.event_sources = []
-        self.pure_lambda_functions = []
         if env is None:
             env = os.environ
         self._initialize(env)
+        self.experimental_feature_flags = set()
+        # This is marked as internal but is intended to be used by
+        # any code within Chalice.
+        self._features_used = set()
 
     def _initialize(self, env):
         if self.configure_logs:
@@ -491,86 +738,15 @@ class Chalice(object):
             level = logging.ERROR
         self.log.setLevel(level)
 
-    def authorizer(self, name=None, **kwargs):
-        def _register_authorizer(auth_func):
-            auth_name = name
-            if auth_name is None:
-                auth_name = auth_func.__name__
-            ttl_seconds = kwargs.pop('ttl_seconds', None)
-            execution_role = kwargs.pop('execution_role', None)
-            if kwargs:
-                raise TypeError(
-                    'TypeError: authorizer() got unexpected keyword '
-                    'arguments: %s' % ', '.join(list(kwargs)))
-            auth_config = BuiltinAuthConfig(
-                name=auth_name,
-                handler_string='app.%s' % auth_func.__name__,
-                ttl_seconds=ttl_seconds,
-                execution_role=execution_role,
-            )
-            self.builtin_auth_handlers.append(auth_config)
-            return ChaliceAuthorizer(auth_name, auth_func, auth_config)
-        return _register_authorizer
+    def register_blueprint(self, blueprint, name_prefix=None, url_prefix=None):
+        self._features_used.add('BLUEPRINTS')
+        blueprint.register(self, options={'name_prefix': name_prefix,
+                                          'url_prefix': url_prefix})
 
-    def schedule(self, expression, name=None):
-        def _register_schedule(event_func):
-            handler_name = name
-            if handler_name is None:
-                handler_name = event_func.__name__
-            event_source = CloudWatchEventSource(
-                name=handler_name,
-                schedule_expression=expression,
-                handler_string='app.%s' % event_func.__name__)
-            self.event_sources.append(event_source)
-            return ScheduledEventHandler(event_func)
-        return _register_schedule
-
-    def lambda_function(self, name=None):
-        def _register_lambda_function(lambda_func):
-            handler_name = name
-            if handler_name is None:
-                handler_name = lambda_func.__name__
-            wrapper = LambdaFunction(
-                lambda_func, name=handler_name,
-                handler_string='app.%s' % lambda_func.__name__)
-            self.pure_lambda_functions.append(wrapper)
-            return wrapper
-        return _register_lambda_function
-
-    def route(self, path, **kwargs):
-        def _register_view(view_func):
-            self._add_route(path, view_func, **kwargs)
-            return view_func
-        return _register_view
-
-    def _add_route(self, path, view_func, **kwargs):
-        name = kwargs.pop('name', view_func.__name__)
-        methods = kwargs.pop('methods', ['GET'])
-        authorizer = kwargs.pop('authorizer', None)
-        api_key_required = kwargs.pop('api_key_required', None)
-        content_types = kwargs.pop('content_types', ['application/json'])
-        cors = kwargs.pop('cors', False)
-        if not isinstance(content_types, list):
-            raise ValueError('In view function "%s", the content_types '
-                             'value must be a list, not %s: %s'
-                             % (name, type(content_types), content_types))
-        if kwargs:
-            raise TypeError('TypeError: route() got unexpected keyword '
-                            'arguments: %s' % ', '.join(list(kwargs)))
-        for method in methods:
-            if method in self.routes[path]:
-                raise ValueError(
-                    "Duplicate method: '%s' detected for route: '%s'\n"
-                    "between view functions: \"%s\" and \"%s\". A specific "
-                    "method may only be specified once for "
-                    "a particular path." % (
-                        method, path, self.routes[path][method].view_name,
-                        name)
-                )
-            entry = RouteEntry(view_func, name, path, method,
-                               api_key_required, content_types,
-                               cors, authorizer)
-            self.routes[path][method] = entry
+    def _register_handler(self, handler_type, name, user_handler,
+                          wrapped_handler, kwargs, options=None):
+        self._do_register_handler(handler_type, name, user_handler,
+                                  wrapped_handler, kwargs, options)
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
@@ -603,6 +779,11 @@ class Chalice(object):
                                        event['requestContext'],
                                        event['stageVariables'],
                                        event.get('isBase64Encoded', False))
+        # We're getting the CORS headers before validation to be able to
+        # output desired headers with
+        cors_headers = None
+        if self._cors_enabled_for_route(route_entry):
+            cors_headers = self._get_cors_headers(route_entry.cors)
         # We're doing the header validation after creating the request
         # so can leverage the case insensitive dict that the Request class
         # uses for headers.
@@ -615,11 +796,12 @@ class Chalice(object):
                     error_code='UnsupportedMediaType',
                     message='Unsupported media type: %s' % content_type,
                     http_status_code=415,
+                    headers=cors_headers
                 )
         response = self._get_view_function_response(view_function,
                                                     function_args)
-        if self._cors_enabled_for_route(route_entry):
-            self._add_cors_headers(response, route_entry.cors)
+        if cors_headers is not None:
+            self._add_cors_headers(response, cors_headers)
 
         response_headers = CaseInsensitiveMapping(response.headers)
         if not self._validate_binary_response(
@@ -632,7 +814,8 @@ class Chalice(object):
                          'response has a binary Content-Type then the request '
                          'must specify an Accept header that matches.'
                          % (content_type, content_type)),
-                http_status_code=400
+                http_status_code=400,
+                headers=cors_headers
             )
         response = response.to_dict(self.api.binary_types)
         return response
@@ -666,7 +849,7 @@ class Chalice(object):
             response = Response(body={'Code': e.__class__.__name__,
                                       'Message': str(e)},
                                 status_code=e.STATUS_CODE)
-        except Exception as e:
+        except Exception:
             headers = {}
             if self.debug:
                 # If the user has turned on debug mode,
@@ -678,6 +861,8 @@ class Chalice(object):
                 body = stack_trace
                 headers['Content-Type'] = 'text/plain'
             else:
+                self.log.error("Internal Error for %s", view_function,
+                               exc_info=True)
                 body = {'Code': 'InternalServerError',
                         'Message': 'An internal server error occurred.'}
             response = Response(body=body, headers=headers, status_code=500)
@@ -692,8 +877,11 @@ class Chalice(object):
     def _cors_enabled_for_route(self, route_entry):
         return route_entry.cors is not None
 
-    def _add_cors_headers(self, response, cors):
-        for name, value in cors.get_access_control_headers().items():
+    def _get_cors_headers(self, cors):
+        return cors.get_access_control_headers()
+
+    def _add_cors_headers(self, response, cors_headers):
+        for name, value in cors_headers.items():
             if name not in response.headers:
                 response.headers[name] = value
 
@@ -708,13 +896,36 @@ class BuiltinAuthConfig(object):
         self.execution_role = execution_role
 
 
+# ChaliceAuthorizer is unique in that the runtime component (the thing
+# that wraps the decorated function) also needs a reference to the config
+# object (the object the describes how to create the resource).  In
+# most event sources these are separate and don't need to know about
+# each other, but ChaliceAuthorizer does.  This is because the way
+# you associate a builtin authorizer with a view function is by passing
+# a direct reference:
+#
+# @app.authorizer(...)
+# def my_auth_function(...): pass
+#
+# @app.route('/', auth=my_auth_function)
+#
+# The 'route' part needs to know about the auth function for two reasons:
+#
+# 1. We use ``view.authorizer`` to figure out how to deploy the app
+# 2. We need a reference to the runtime handler for the auth in order
+#    to support local mode testing.
+# I *think* we can refactor things to handle both of those issues but
+# we would need more research to know for sure.  For now, this is a
+# special cased runtime class that knows about its config.
 class ChaliceAuthorizer(object):
-    def __init__(self, name, func, config):
+    def __init__(self, name, func):
         self.name = name
         self.func = func
-        self.config = config
+        # This is filled in during the @app.authorizer()
+        # processing.
+        self.config = None
 
-    def __call__(self, event, content):
+    def __call__(self, event, context):
         auth_request = self._transform_event(event)
         result = self.func(auth_request)
         if isinstance(result, AuthResponse):
@@ -805,7 +1016,7 @@ class AuthResponse(object):
         # '/'.join(...)'d properly.
         base.extend([method, route[1:]])
         last_arn_segment = '/'.join(base)
-        if route == '/' or route == '*':
+        if route in ['/', '*']:
             # We have to special case the '/' case.  For whatever
             # reason, API gateway adds an extra '/' to the method_arn
             # of the auth request, so we need to do the same thing.
@@ -821,15 +1032,25 @@ class AuthRoute(object):
         self.methods = methods
 
 
-class EventSource(object):
+class LambdaFunction(object):
+    def __init__(self, func, name, handler_string):
+        self.func = func
+        self.name = name
+        self.handler_string = handler_string
+
+    def __call__(self, event, context):
+        return self.func(event, context)
+
+
+class BaseEventSourceConfig(object):
     def __init__(self, name, handler_string):
         self.name = name
         self.handler_string = handler_string
 
 
-class CloudWatchEventSource(EventSource):
+class CloudWatchEventConfig(BaseEventSourceConfig):
     def __init__(self, name, handler_string, schedule_expression):
-        super(CloudWatchEventSource, self).__init__(name, handler_string)
+        super(CloudWatchEventConfig, self).__init__(name, handler_string)
         self.schedule_expression = schedule_expression
 
 
@@ -876,20 +1097,58 @@ class Cron(ScheduleExpression):
         )
 
 
-class ScheduledEventHandler(object):
-    def __init__(self, func):
+class S3EventConfig(BaseEventSourceConfig):
+    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
+        super(S3EventConfig, self).__init__(name, handler_string)
+        self.bucket = bucket
+        self.events = events
+        self.prefix = prefix
+        self.suffix = suffix
+
+
+class SNSEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, topic):
+        super(SNSEventConfig, self).__init__(name, handler_string)
+        self.topic = topic
+
+
+class SQSEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, queue, batch_size):
+        super(SQSEventConfig, self).__init__(name, handler_string)
+        self.queue = queue
+        self.batch_size = batch_size
+
+
+class EventSourceHandler(object):
+
+    def __init__(self, func, event_class):
         self.func = func
+        self.event_class = event_class
 
     def __call__(self, event, context):
-        event_obj = self._convert_to_obj(event)
+        event_obj = self.event_class(event, context)
         return self.func(event_obj)
 
-    def _convert_to_obj(self, event_dict):
-        return CloudWatchEvent(event_dict)
+
+# These classes contain all the event types that are passed
+# in as arguments in the lambda event handlers.  These are
+# part of Chalice's public API and must be backwards compatible.
+
+class BaseLambdaEvent(object):
+    def __init__(self, event_dict, context):
+        self._event_dict = event_dict
+        self.context = context
+        self._extract_attributes(event_dict)
+
+    def _extract_attributes(self, event_dict):
+        raise NotImplementedError("_extract_attributes")
+
+    def to_dict(self):
+        return self._event_dict
 
 
-class CloudWatchEvent(object):
-    def __init__(self, event_dict):
+class CloudWatchEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
         self.version = event_dict['version']
         self.account = event_dict['account']
         self.region = event_dict['region']
@@ -899,17 +1158,81 @@ class CloudWatchEvent(object):
         self.time = event_dict['time']
         self.event_id = event_dict['id']
         self.resources = event_dict['resources']
-        self._event_dict = event_dict
-
-    def to_dict(self):
-        return self._event_dict
 
 
-class LambdaFunction(object):
-    def __init__(self, func, name, handler_string):
-        self.func = func
-        self.name = name
-        self.handler_string = handler_string
+class SNSEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        first_record = event_dict['Records'][0]
+        self.message = first_record['Sns']['Message']
+        self.subject = first_record['Sns']['Subject']
 
-    def __call__(self, event, context):
-        return self.func(event, context)
+
+class S3Event(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        s3 = event_dict['Records'][0]['s3']
+        self.bucket = s3['bucket']['name']
+        self.key = unquote_str(s3['object']['key'])
+
+
+class SQSEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        # We don't extract anything off the top level
+        # event.
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield SQSRecord(record, self.context)
+
+
+class SQSRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        self.body = event_dict['body']
+        self.receipt_handle = event_dict['receiptHandle']
+
+
+class Blueprint(DecoratorAPI):
+    def __init__(self, import_name):
+        self._import_name = import_name
+        self._deferred_registrations = []
+        self._current_app = None
+        self._lambda_context = None
+
+    @property
+    def current_request(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.current_request if it's registered "
+                "to an app."
+            )
+        return self._current_app.current_request
+
+    @property
+    def lambda_context(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.lambda_context if it's registered "
+                "to an app."
+            )
+        return self._current_app.lambda_context
+
+    def register(self, app, options):
+        self._current_app = app
+        all_options = options.copy()
+        all_options['module_name'] = self._import_name
+        for function in self._deferred_registrations:
+            function(app, all_options)
+
+    def _register_handler(self, handler_type, name, user_handler,
+                          wrapped_handler, kwargs, options=None):
+        # If we go through the public API (app.route, app.schedule, etc) then
+        # we have to duplicate either the methods or the params in this
+        # class.  We're using _register_handler as a tradeoff for cutting
+        # down on the duplication.
+        self._deferred_registrations.append(
+            # pylint: disable=protected-access
+            lambda app, options: app._register_handler(
+                handler_type, name, user_handler, wrapped_handler,
+                kwargs, options
+            )
+        )

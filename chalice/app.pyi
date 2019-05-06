@@ -1,4 +1,5 @@
-from typing import Dict, List, Any, Callable, Union, Optional
+from typing import Dict, List, Any, Callable, Union, Optional, Set
+import logging
 from chalice.local import LambdaContext
 
 __version__ = ... # type: str
@@ -12,6 +13,7 @@ class UnauthorizedError(ChaliceViewError): ...
 class ForbiddenError(ChaliceViewError): ...
 class NotFoundError(ChaliceViewError): ...
 class ConflictError(ChaliceViewError): ...
+class UnprocessableEntityError(ChaliceViewError): ...
 class TooManyRequestsError(ChaliceViewError): ...
 
 
@@ -33,9 +35,14 @@ class CustomAuthorizer(Authorizer): ...
 
 
 class CORSConfig:
+    _REQUIRED_HEADERS = ... # type: List[str]
     allow_origin = ... # type: str
     allow_headers = ... # type: str
     get_access_control_headers = ... # type: Callable[..., Dict[str, str]]
+
+    def __init__(self, allow_origin: str='*', allow_headers: Set[str]=None,
+                 expose_headers: Set[str]=None, max_age: Optional[int]=None,
+                 allow_credentials: Optional[bool]=None) -> None: ...
 
     def __eq__(self, other: object) -> bool: ...
 
@@ -70,14 +77,14 @@ class Response:
 
     def __init__(self,
                  body: Any,
-                 headers: Dict[str, str],
-                 status_code: int) -> None: ...
+                 headers: Dict[str, str]=None,
+                 status_code: int=200) -> None: ...
 
-    def to_dict(self) -> Dict[str, Any]: ...
+    def to_dict(self,
+                binary_types: Optional[List[str]]=None) -> Dict[str, Any]: ...
 
 
 class RouteEntry(object):
-    # TODO: How so I specify *args, where args is a tuple of strings.
     view_function = ... # type: Callable[..., Any]
     view_name = ... # type: str
     method = ... # type: str
@@ -89,11 +96,15 @@ class RouteEntry(object):
     view_args = ... # type: List[str]
     cors = ... # type: CORSConfig
 
-    def __init__(self, view_function: Callable[..., Any],
-                 view_name: str, path: str, methods: List[str],
-                 authorizer_name: str=None,
-                 api_key_required: bool=None,
-                 content_types: List[str]=None,
+    def __init__(self,
+                 view_function: Callable[..., Any],
+                 view_name: str,
+                 path: str,
+                 method: str,
+                 api_key_required: Optional[bool]=None,
+                 content_types: Optional[List[str]]=None,
+                 authorizer: Optional[Union[Authorizer,
+                                            ChaliceAuthorizer]]=None,
                  cors: Union[bool, CORSConfig]=False) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
@@ -105,26 +116,62 @@ class APIGateway(object):
     binary_types = ... # type: List[str]
 
 
-class Chalice(object):
+class DecoratorAPI(object):
+    def authorizer(self,
+                   ttl_seconds: Optional[int]=None,
+                   execution_role: Optional[str]=None,
+                   name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def on_s3_event(self,
+                    bucket: str,
+                    events: Optional[List[str]]=None,
+                    prefix: Optional[str]=None,
+                    suffix: Optional[str]=None,
+                    name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def on_sns_message(self,
+                      topic: str,
+                      name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def on_sqs_message(self,
+                       queue: str,
+                       batch_size: int=1,
+                       name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def schedule(self,
+                 expression: str,
+                 name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
+
+    def lambda_function(self, name: Optional[str]=None) -> Callable[..., Any]: ...
+
+
+class Chalice(DecoratorAPI):
     app_name = ... # type: str
     api = ... # type: APIGateway
     routes = ... # type: Dict[str, Dict[str, RouteEntry]]
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
     debug = ... # type: bool
+    configure_logs = ... # type: bool
+    log = ... # type: logging.Logger
     authorizers = ... # type: Dict[str, Dict[str, Any]]
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
-    event_sources = ... # type: List[CloudWatchEventSource]
+    event_sources = ... # type: List[BaseEventSourceConfig]
     pure_lambda_functions = ... # type: List[LambdaFunction]
+    # Used for feature flag validation
+    _features_used = ... # type: Set[str]
+    experimental_feature_flags = ... # type: Set[str]
 
-    def __init__(self, app_name: str) -> None: ...
+    def __init__(self, app_name: str, debug: bool=False,
+                 configure_logs: bool=True,
+                 env: Optional[Dict[str, str]]=None) -> None: ...
 
-    def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
-    def _add_route(self, path: str, view_func: Callable[..., Any], **kwargs: Any) -> None: ...
     def __call__(self, event: Any, context: Any) -> Any: ...
     def _get_view_function_response(self,
                                     view_function: Callable[..., Any],
-                                    function_args: List[Any]) -> Response: ...
+                                    function_args: Dict[str, Any]) -> Response: ...
 
 
 class ChaliceAuthorizer(object):
@@ -156,22 +203,13 @@ class AuthResponse(object):
     context = ... # type: Optional[Dict[str, str]]
 
 
-class EventSource(object):
-    name = ...  # type: str
-    handler_string = ...  # type: str
-
-
-class CloudWatchEventSource(EventSource):
-    schedule_expression = ...  # type: Union[str, ScheduleExpression]
-
-
 class ScheduleExpression(object):
     def to_string(self) -> str: ...
 
 
 class Rate(ScheduleExpression):
-    unit = ... # type: int
-    value = ... # type: str
+    value = ... # type: int
+    unit = ... # type: str
 
     def to_string(self) -> str: ...
 
@@ -191,3 +229,33 @@ class LambdaFunction(object):
     name = ... # type: str
     handler_string = ... # type: str
     func = ... # type: Callable[..., Any]
+
+
+class BaseEventSourceConfig(object):
+    name = ... # type: str
+    handler_string = ... # type: str
+
+
+class S3EventConfig(BaseEventSourceConfig):
+    bucket = ... # type: str
+    events = ... # type: List[str]
+    prefix = ... # type: str
+    suffix = ... # type: str
+
+
+class SNSEventConfig(BaseEventSourceConfig):
+    topic = ... # type: str
+
+
+class SQSEventConfig(BaseEventSourceConfig):
+    queue = ... # type: str
+    batch_size = ... # type: int
+
+
+class CloudWatchEventConfig(BaseEventSourceConfig):
+    schedule_expression = ...  # type: Union[str, ScheduleExpression]
+
+
+class Blueprint(DecoratorAPI):
+    current_request = ... # type: Request
+    lambda_context = ... # type: LambdaContext

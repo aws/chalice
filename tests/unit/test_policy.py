@@ -1,11 +1,44 @@
-from chalice.policy import PolicyBuilder
+from chalice.config import Config
+from chalice.policy import PolicyBuilder, AppPolicyGenerator
 from chalice.policy import diff_policies
+from chalice.utils import OSUtils  # noqa
+
+
+class OsUtilsMock(OSUtils):
+    def file_exists(self, *args, **kwargs):
+        return True
+
+    def get_file_contents(selfs, *args, **kwargs):
+        return ''
 
 
 def iam_policy(client_calls):
     builder = PolicyBuilder()
     policy = builder.build_policy_from_api_calls(client_calls)
     return policy
+
+
+def test_app_policy_generator_vpc_policy():
+    config = Config.create(
+        subnet_ids=['sn1', 'sn2'],
+        security_group_ids=['sg1', 'sg2'],
+        project_dir='.'
+    )
+    generator = AppPolicyGenerator(OsUtilsMock())
+    policy = generator.generate_policy(config)
+    assert policy == {'Statement': [
+        {'Action': ['logs:CreateLogGroup',
+                    'logs:CreateLogStream',
+                    'logs:PutLogEvents'],
+         'Effect': 'Allow',
+         'Resource': 'arn:aws:logs:*:*:*'},
+        {'Action': ['ec2:CreateNetworkInterface',
+                    'ec2:DescribeNetworkInterfaces',
+                    'ec2:DetachNetworkInterface',
+                    'ec2:DeleteNetworkInterface'],
+         'Effect': 'Allow',
+         'Resource': '*'},
+    ], 'Version': '2012-10-17'}
 
 
 def assert_policy_is(actual, expected):
@@ -125,3 +158,24 @@ def test_no_changes():
     first = iam_policy({'s3': {'list_buckets', 'list_objects'}})
     second = iam_policy({'s3': {'list_buckets', 'list_objects'}})
     assert diff_policies(first, second) == {}
+
+
+def test_can_handle_high_level_abstractions():
+    policy = iam_policy({
+        's3': set(['download_file', 'upload_file', 'copy'])
+    })
+    assert_policy_is(policy, [{
+        'Effect': 'Allow',
+        'Action': [
+            's3:AbortMultipartUpload',
+            's3:GetObject',
+            's3:PutObject',
+        ],
+        'Resource': [
+            '*',
+        ]
+    }])
+
+
+def test_noop_for_unknown_methods():
+    assert_policy_is(iam_policy({'s3': set(['unknown_method'])}), [])

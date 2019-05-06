@@ -1,14 +1,17 @@
 import os
 import zipfile
+import json
 import mock
 
-import botocore.session
 from pytest import fixture
 import pytest
 
+import chalice.deploy.deployer
 import chalice.deploy.packager
+from chalice.awsclient import TypedAWSClient
 import chalice.utils
-from chalice.deploy import deployer
+from chalice.config import Config
+from chalice import Chalice
 from chalice.deploy.packager import MissingDependencyError
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.packager import DependencyBuilder
@@ -78,7 +81,7 @@ def test_app_injection_still_compresses_file(tmpdir, chalice_deployer):
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Test app v1')
     name = chalice_deployer.create_deployment_package(
-        str(appdir), 'python 2.7')
+        str(appdir), 'python2.7')
     original_size = os.path.getsize(name)
     appdir.join('app.py').write('# Test app v2')
     chalice_deployer.inject_latest_app(name, str(appdir))
@@ -100,12 +103,6 @@ def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
         str(appdir), 'python2.7')
     out, err = capfd.readouterr()
     assert err.strip() == ''
-
-
-def test_can_create_deployer_from_factory_function():
-    session = botocore.session.get_session()
-    d = deployer.create_default_deployer(session)
-    assert isinstance(d, deployer.Deployer)
 
 
 def test_osutils_proxies_os_functions(tmpdir):
@@ -268,3 +265,64 @@ def _remove_runtime_from_deployment_package(filename):
                 z.writestr(item, contents)
     os.remove(filename)
     os.rename(new_filename, filename)
+
+
+def test_can_delete_app(tmpdir):
+    # This is just a sanity check that deletions are working
+    # as expected now that there's no separate interface
+    # for deletion at the deployer layer.
+    appdir = _create_app_structure(tmpdir)
+    appdir.join('app.py').write(
+        'from chalice import Chalice\n'
+        'app = Chalice("testapp")'
+    )
+    deployed_json = {
+        'schema_version': '2.0',
+        'backend': 'api',
+        'resources': [
+            {'name': 'role-index',
+                'resource_type': 'iam_role',
+                'role_name': 'testapp-dev-index',
+                'role_arn': 'arn:aws:iam::1:role/testapp-dev-index'},
+            {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-index',
+                'name': 'index', 'resource_type': 'lambda_function'},
+            {'name': 'role-james', 'resource_type': 'iam_role',
+                'role_name': 'testapp-dev-foo',
+                'role_arn': 'arn:aws:iam::1:role/testapp-dev-foo'},
+            {'lambda_arn': 'arn:aws:lambda:r:1:f:testapp-dev-foo',
+                'name': 'james', 'resource_type': 'lambda_function'}
+        ]
+    }
+    deployed_dir = appdir.join('.chalice', 'deployed')
+    deployed_dir.mkdir()
+    deployed_dir.join('dev.json').write(
+        json.dumps(deployed_json))
+    mock_client = mock.Mock(spec=TypedAWSClient)
+    ui = mock.Mock(spec=chalice.utils.UI)
+    d = chalice.deploy.deployer.create_deletion_deployer(mock_client, ui)
+
+    config = Config(
+        chalice_stage='dev',
+        user_provided_params={
+            'chalice_app': Chalice('testapp'),
+            'project_dir': str(appdir),
+        },
+        config_from_disk={},
+        default_params={}
+    )
+    returned_values = d.deploy(config, 'dev')
+    assert returned_values == {
+        'schema_version': '2.0',
+        'backend': 'api',
+        'resources': [],
+    }
+    call = mock.call
+    expected_calls = [
+        call.delete_function(
+            function_name=u'arn:aws:lambda:r:1:f:testapp-dev-foo'),
+        call.delete_role(name=u'testapp-dev-foo'),
+        call.delete_function(
+            function_name=u'arn:aws:lambda:r:1:f:testapp-dev-index'),
+        call.delete_role(name=u'testapp-dev-index')
+    ]
+    assert expected_calls == mock_client.method_calls

@@ -1,8 +1,8 @@
-========================================
-Python Serverless Microframework for AWS
-========================================
+===========
+AWS Chalice
+===========
 
-The python serverless microframework for AWS allows you to quickly create and
+AWS Chalice allows you to quickly create and
 deploy applications that use Amazon API Gateway and AWS Lambda.
 It provides:
 
@@ -63,7 +63,9 @@ Topics
    topics/authorizers
    topics/events
    topics/purelambda
+   topics/blueprints
    topics/cd
+   topics/experimental
 
 
 API Reference

@@ -5,6 +5,7 @@ This is intended only for local development purposes.
 """
 from __future__ import print_function
 import re
+import threading
 import time
 import uuid
 import base64
@@ -123,7 +124,8 @@ class RouteMatcher(object):
         """
         # Otherwise we need to check for param substitution
         parsed_url = urlparse(url)
-        query_params = {k: v[0] for k, v in parse_qs(parsed_url.query).items()}
+        parsed_qs = parse_qs(parsed_url.query, keep_blank_values=True)
+        query_params = {k: v[-1] for k, v in parsed_qs.items()}
         path = parsed_url.path
         # API Gateway removes the trailing slash if the route is not the root
         # path. We do the same here so our route matching works the same way.
@@ -171,6 +173,7 @@ class LambdaEventConverter(object):
                 'identity': {
                     'sourceIp': self.LOCAL_SOURCE_IP
                 },
+                'path': path.split('?')[0],
             },
             'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,
@@ -414,7 +417,7 @@ class LocalGateway(object):
         )
 
     def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, str) -> EventType
+        # type: (str, str, HeaderType, Optional[str]) -> EventType
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
             body=body,
@@ -427,7 +430,7 @@ class LocalGateway(object):
         return 'OPTIONS' in self._app_object.routes[route_key]
 
     def handle_request(self, method, path, headers, body):
-        # type: (str, str, HeaderType, str) -> ResponseType
+        # type: (str, str, HeaderType, Optional[str]) -> ResponseType
         lambda_context = self._generate_lambda_context()
         try:
             lambda_event = self._generate_lambda_event(
@@ -529,7 +532,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             self, request, client_address, server)  # type: ignore
 
     def _parse_payload(self):
-        # type: () -> Tuple[HeaderType, str]
+        # type: () -> Tuple[HeaderType, Optional[str]]
         body = None
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:
@@ -573,6 +576,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
     def _send_http_response_with_body(self, code, headers, body):
         # type: (int, HeaderType, Union[str,bytes]) -> None
         self.send_response(code)
+        if not isinstance(body, bytes):
+            body = body.encode('utf-8')
         self.send_header('Content-Length', str(len(body)))
         content_type = headers.pop(
             'Content-Type', 'application/json')
@@ -580,8 +585,6 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         for header_name, header_value in headers.items():
             self.send_header(header_name, header_value)
         self.end_headers()
-        if not isinstance(body, bytes):
-            body = body.encode('utf-8')
         self.wfile.write(body)
 
     do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = do_PATCH = do_OPTIONS = \
@@ -606,6 +609,8 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     the browswer will simply open another one and sit on it.
     """
 
+    daemon_threads = True
+
 
 class LocalDevServer(object):
     def __init__(self, app_object, config, host, port,
@@ -625,5 +630,37 @@ class LocalDevServer(object):
 
     def serve_forever(self):
         # type: () -> None
-        print("Serving on %s:%s" % (self.host, self.port))
+        print("Serving on http://%s:%s" % (self.host, self.port))
         self.server.serve_forever()
+
+    def shutdown(self):
+        # type: () -> None
+        # This must be called from another thread of else it
+        # will deadlock.
+        self.server.shutdown()
+
+
+class HTTPServerThread(threading.Thread):
+    """Thread that manages starting/stopping local HTTP server.
+
+    This is a small wrapper around a normal threading.Thread except
+    that it adds shutdown capability of the HTTP server, which is
+    not part of the normal threading.Thread interface.
+
+    """
+    def __init__(self, server_factory):
+        # type: (Callable[[], LocalDevServer]) -> None
+        threading.Thread.__init__(self)
+        self._server_factory = server_factory
+        self._server = None  # type: Optional[LocalDevServer]
+        self.daemon = True
+
+    def run(self):
+        # type: () -> None
+        self._server = self._server_factory()
+        self._server.serve_forever()
+
+    def shutdown(self):
+        # type: () -> None
+        if self._server is not None:
+            self._server.shutdown()
