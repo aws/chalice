@@ -10,6 +10,9 @@ Next Release (TBD)
 * Fix handling of more complex Accept headers for binary
   content types
   (`#1078 <https://github.com/aws/chalice/issues/1078>`__)
+* Raise TypeError when trying to serialize an unserializable
+  type
+  (`#1100 <https://github.com/aws/chalice/issues/1100>`__)
 
 
 1.8.0

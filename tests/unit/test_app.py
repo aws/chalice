@@ -14,7 +14,7 @@ import six
 
 from chalice import app
 from chalice import NotFoundError
-from chalice.app import APIGateway, Request, Response, handle_decimals
+from chalice.app import APIGateway, Request, Response, handle_extra_types
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -150,6 +150,16 @@ def test_invalid_binary_response_body_throws_value_error(sample_app):
     )
     with pytest.raises(ValueError):
         response.to_dict(sample_app.api.binary_types)
+
+
+def test_invalid_JSON_response_body_throws_type_error(sample_app):
+    response = app.Response(
+        status_code=200,
+        body={'foo': object()},
+        headers={'Content-Type': 'application/json'}
+    )
+    with pytest.raises(TypeError):
+        response.to_dict()
 
 
 def test_can_encode_binary_body_as_base64(sample_app):
@@ -1399,7 +1409,7 @@ def test_http_request_to_dict_is_json_serializable(http_request_kwargs):
     request_dict = request.to_dict()
     # We should always be able to dump the request dict
     # to JSON.
-    assert json.dumps(request_dict, default=handle_decimals)
+    assert json.dumps(request_dict, default=handle_extra_types)
 
 
 @given(body=st.text(), headers=STR_MAP,

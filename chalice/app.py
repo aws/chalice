@@ -47,12 +47,13 @@ except ImportError:
     _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
 
 
-def handle_decimals(obj):
+def handle_extra_types(obj):
     # Lambda will automatically serialize decimals so we need
     # to support that as well.
     if isinstance(obj, decimal.Decimal):
         return float(obj)
-    return obj
+    raise TypeError('Object of type %s is not JSON serializable'
+                    % obj.__class__.__name__)
 
 
 def error_response(message, error_code, http_status_code, headers=None):
@@ -364,7 +365,7 @@ class Response(object):
         body = self.body
         if not isinstance(body, _ANY_STRING):
             body = json.dumps(body, separators=(',', ':'),
-                              default=handle_decimals)
+                              default=handle_extra_types)
         response = {
             'headers': self.headers,
             'statusCode': self.status_code,
