@@ -14,7 +14,7 @@ import six
 
 from chalice import app
 from chalice import NotFoundError
-from chalice.app import APIGateway, Request, Response, handle_decimals
+from chalice.app import APIGateway, Request, Response, handle_extra_types
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -1409,7 +1409,7 @@ def test_http_request_to_dict_is_json_serializable(http_request_kwargs):
     request_dict = request.to_dict()
     # We should always be able to dump the request dict
     # to JSON.
-    assert json.dumps(request_dict, default=handle_decimals)
+    assert json.dumps(request_dict, default=handle_extra_types)
 
 
 @given(body=st.text(), headers=STR_MAP,
