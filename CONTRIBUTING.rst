@@ -63,8 +63,8 @@ Development Environment Setup
 
 First, create a virtual environment for chalice::
 
-    $ virtualenv venv-chalice
-    $ source venv-chalice/bin/activate
+    $ virtualenv venv
+    $ source venv/bin/activate
 
 Keep in mind that chalice is designed to work with AWS Lambda,
 so you should ensure your virtual environment is created with
