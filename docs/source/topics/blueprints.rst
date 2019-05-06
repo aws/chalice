@@ -10,7 +10,7 @@ Blueprints
   .. code-block:: python
 
     app = Chalice('myapp')
-    app.experimental_feature_flags.extend([
+    app.experimental_feature_flags.update([
         'BLUEPRINTS'
     ])
 
@@ -73,6 +73,9 @@ imported when running in Lambda.  We'll now import this module in our
     from chalicelib.blueprints import extra_routes
 
     app = Chalice(app_name='blueprint-demo')
+    app.experimental_feature_flags.update([
+        'BLUEPRINTS'
+    ])
     app.register_blueprint(extra_routes)
 
 
@@ -206,6 +209,9 @@ In our ``app.py`` we'll register these blueprints:
     from chalicelib.api import myapi
 
     app = Chalice(app_name='blueprint-demo')
+    app.experimental_feature_flags.update([
+        'BLUEPRINTS'
+    ])
     app.register_blueprint(myevents)
     app.register_blueprint(myapi)
 
