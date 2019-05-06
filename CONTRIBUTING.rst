@@ -74,7 +74,8 @@ AWS Lambda.
 Next, you'll need to install chalice.  The easiest way to configure this
 is to  use::
 
-    $ pip install -e .
+    $ pip install -e ".[event-file-poller]"
+
 
 Run this command the root directory of the chalice repo.
 
