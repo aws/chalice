@@ -1177,13 +1177,13 @@ For example, if we have the following ``app.py`` file:
         return {'hello': 'world'}
 
 
-We can run ``chalice local`` to test this API locally:
+We can run ``chalice local`` to test this API locally::
 
 
     $ chalice local
     Serving on localhost:8000
 
-We can override the port using:
+We can override the port using::
 
     $ chalice local --port=8080
 
