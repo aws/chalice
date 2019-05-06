@@ -580,7 +580,23 @@ def test_no_content_type_is_still_allowed(create_event):
     assert json_response == {'success': True}
 
 
-def test_can_base64_encode_binary_media_types_bytes(create_event):
+@pytest.mark.parametrize('content_type,accept', [
+    ('application/octet-stream', 'application/octet-stream'),
+    (
+        'application/octet-stream', (
+            'text/html,application/xhtml+xml,application/xml'
+            ';q=0.9,image/webp,*/*;q=0.8'
+        )
+    ),
+    ('image/gif', 'text/html,image/gif'),
+    ('image/gif', 'text/html ,image/gif'),
+    ('image/gif', 'text/html, image/gif'),
+    ('image/gif', 'text/html;q=0.8, image/gif ;q=0.5'),
+    ('image/gif', 'text/html,image/png'),
+    ('image/png', 'text/html,image/gif'),
+])
+def test_can_base64_encode_binary_multiple_media_types(
+        create_event, content_type, accept):
     demo = app.Chalice('demo-app')
 
     @demo.route('/index')
@@ -588,15 +604,15 @@ def test_can_base64_encode_binary_media_types_bytes(create_event):
         return app.Response(
             status_code=200,
             body=b'\u2713',
-            headers={'Content-Type': 'application/octet-stream'})
+            headers={'Content-Type': content_type})
 
     event = create_event('/index', 'GET', {})
-    event['headers']['Accept'] = 'application/octet-stream'
+    event['headers']['Accept'] = accept
     response = demo(event, context=None)
     assert response['statusCode'] == 200
     assert response['isBase64Encoded'] is True
     assert response['body'] == 'XHUyNzEz'
-    assert response['headers']['Content-Type'] == 'application/octet-stream'
+    assert response['headers']['Content-Type'] == content_type
 
 
 def test_can_return_text_even_with_binary_content_type_configured(

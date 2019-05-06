@@ -369,6 +369,17 @@ def test_can_round_trip_binary_custom_content_type(smoke_test_app):
     assert response.content == bin_data
 
 
+def test_can_return_default_binary_data_to_a_browser(smoke_test_app):
+    base64encoded_response = b'3q2+7w=='
+    accept = 'text/html,application/xhtml+xml;q=0.9,image/webp,*/*;q=0.8'
+    response = requests.get(smoke_test_app.url + '/get-binary',
+                            headers={
+                                'Accept': accept,
+                             })
+    response.raise_for_status()
+    assert response.content == base64encoded_response
+
+
 def _assert_contains_access_control_allow_methods(headers, methods):
     actual_methods = headers['Access-Control-Allow-Methods'].split(',')
     assert sorted(methods) == sorted(actual_methods), (

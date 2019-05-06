@@ -7,6 +7,9 @@ Next Release (TBD)
 
 * Update PIP to support up to 19.1.x
   (`#1104 <https://github.com/aws/chalice/issues/1104>`__)
+* Fix handling of more complex Accept headers for binary
+  content types
+  (`#1078 <https://github.com/aws/chalice/issues/1078>`__)
 
 
 1.8.0

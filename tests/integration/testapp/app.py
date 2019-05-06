@@ -171,6 +171,16 @@ def custom_binary_round_trip():
         status_code=200)
 
 
+@app.route('/get-binary', methods=['GET'])
+def binary_response():
+    return Response(
+        body=b'\xDE\xAD\xBE\xEF',
+        headers={
+            'Content-Type': 'application/octet-stream'
+        },
+        status_code=200)
+
+
 @app.route('/shared', methods=['GET'])
 def shared_get():
     return {'method': 'GET'}
