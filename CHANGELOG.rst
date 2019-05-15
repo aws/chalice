@@ -13,6 +13,8 @@ Next Release (TBD)
 * Raise TypeError when trying to serialize an unserializable
   type
   (`#1100 <https://github.com/aws/chalice/issues/1100>`__)
+* Add support for ``chalice package --force`` option to ignore use of
+  ``@app.on_s3_event`` and other unsupported situations.
 
 
 1.8.0

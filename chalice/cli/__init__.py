@@ -374,22 +374,26 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
                     "this argument is specified, a single "
                     "zip file will be created instead."))
 @click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('--force', is_flag=True, default=False,
+              help=("Ignore unsupported situations "
+                    "(use of @on_s3_event) and package "
+                    "anyway."))
 @click.argument('out')
 @click.pass_context
-def package(ctx, single_file, stage, out):
-    # type: (click.Context, bool, str, str) -> None
+def package(ctx, single_file, stage, force, out):
+    # type: (click.Context, bool, str, bool, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
     packager = factory.create_app_packager(config)
     if single_file:
         dirname = tempfile.mkdtemp()
         try:
-            packager.package_app(config, dirname, stage)
+            packager.package_app(config, dirname, stage, force)
             create_zip_file(source_dir=dirname, outfile=out)
         finally:
             shutil.rmtree(dirname)
     else:
-        packager.package_app(config, out, stage)
+        packager.package_app(config, out, stage, force)
 
 
 @cli.command('generate-pipeline')
