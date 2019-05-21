@@ -92,7 +92,7 @@ import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
-from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
+from typing import Optional, Dict, List, Any, Set, Tuple, Type, cast  # noqa
 
 from chalice import app
 from chalice.config import Config  # noqa
@@ -110,7 +110,9 @@ from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy import models
+from chalice.deploy.executor import BaseExecutor  # noqa
 from chalice.deploy.executor import Executor
+from chalice.deploy.executor import DisplayOnlyExecutor
 from chalice.deploy.packager import PipRunner
 from chalice.deploy.packager import SubprocessPip
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
@@ -248,8 +250,24 @@ class ChaliceBuildError(Exception):
     pass
 
 
+def create_plan_only_deployer(session, config, ui):
+    # type: (Session, Config, UI) -> Deployer
+    return _create_deployer(session, config, ui, DisplayOnlyExecutor,
+                            NoopResultsRecorder)
+
+
 def create_default_deployer(session, config, ui):
     # type: (Session, Config, UI) -> Deployer
+    return _create_deployer(session, config, ui, Executor, ResultsRecorder)
+
+
+def _create_deployer(session,       # type: Session
+                     config,        # type: Config
+                     ui,            # type: UI
+                     executor_cls,  # type: Type[BaseExecutor]
+                     recorder_cls,  # type: Type[ResultsRecorder]
+                     ):
+    # type: (...) -> Deployer
     client = TypedAWSClient(session)
     osutils = OSUtils()
     return Deployer(
@@ -263,8 +281,8 @@ def create_default_deployer(session, config, ui):
                 client, config.deployed_resources(config.chalice_stage)),
         ),
         sweeper=ResourceSweeper(),
-        executor=Executor(client, ui),
-        recorder=ResultsRecorder(osutils=osutils),
+        executor=executor_cls(client, ui),
+        recorder=recorder_cls(osutils=osutils),
     )
 
 
@@ -324,7 +342,7 @@ class Deployer(object):
                  build_stage,          # type: BuildStage
                  plan_stage,           # type: PlanStage
                  sweeper,              # type: ResourceSweeper
-                 executor,             # type: Executor
+                 executor,             # type: BaseExecutor
                  recorder,             # type: ResultsRecorder
                  ):
         # type: (...) -> None
@@ -1014,6 +1032,12 @@ class ResultsRecorder(object):
             contents=serialized,
             binary=False
         )
+
+
+class NoopResultsRecorder(ResultsRecorder):
+    def record_results(self, results, chalice_stage_name, project_dir):
+        # type: (Any, str, str) -> None
+        return None
 
 
 class DeploymentReporter(object):
