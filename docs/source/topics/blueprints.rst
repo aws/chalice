@@ -147,6 +147,12 @@ in your blueprint at a certain url and name prefix.  If you specify
 ``url_prefix`` prepended to it.  If you specify the ``name_prefix``, any Lambda
 functions created will have the ``name_prefix`` prepended to the resource name.
 
+.. note::
+
+  The ``name_prefix`` parameter does not apply to the Lambda function
+  associated with API Gateway, which is anything decorated with
+  ``@app.route()``.
+
 
 Advanced Example
 ----------------
