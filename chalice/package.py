@@ -73,14 +73,19 @@ class SAMTemplateGenerator(object):
         # type: () -> None
         self._seen_names = set([])  # type: Set[str]
 
-    def generate_sam_template(self, resources):
-        # type: (List[models.Model]) -> Dict[str, Any]
+    def generate_sam_template(self, resources, force=False):
+        # type: (List[models.Model], bool) -> Dict[str, Any]
         template = copy.deepcopy(self._BASE_TEMPLATE)
         self._seen_names.clear()
         for resource in resources:
             name = '_generate_%s' % resource.__class__.__name__.lower()
             handler = getattr(self, name, self._default)
-            handler(resource, template)
+            try:
+                handler(resource, template)
+            except NotImplementedError:
+                # Ignore unsupported situations if being forced:
+                if not force:
+                    raise
         return template
 
     def _generate_scheduledevent(self, resource, template):
@@ -363,15 +368,15 @@ class AppPackager(object):
         # type: (Any) -> str
         return serialize_to_json(doc)
 
-    def package_app(self, config, outdir, chalice_stage_name):
-        # type: (Config, str, str) -> None
+    def package_app(self, config, outdir, chalice_stage_name, force=False):
+        # type: (Config, str, str, bool) -> None
         # Deployment package
         resources = self._resource_builder.construct_resources(
             config, chalice_stage_name)
 
         # SAM template
         sam_template = self._sam_templater.generate_sam_template(
-            resources)
+            resources, force)
         if not self._osutils.directory_exists(outdir):
             self._osutils.makedirs(outdir)
         self._template_post_processor.process(
