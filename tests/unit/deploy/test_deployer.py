@@ -277,6 +277,17 @@ def scheduled_event_app():
 
 
 @fixture
+def cloud_watch_event_app():
+    app = Chalice('cloud-watch-event')
+
+    @app.on_cw_event({'source': {'source': ['aws.ec2']}})
+    def foo(event):
+        return event
+
+    return app
+
+
+@fixture
 def rest_api_app():
     app = Chalice('rest-api')
 
@@ -691,6 +702,20 @@ class TestApplicationGraphBuilder(object):
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
         )
+
+    def test_cloud_watch_event_models(self, cloud_watch_event_app):
+        config = self.create_config(cloud_watch_event_app,
+                                    app_name='cloud-watch-event',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        event = application.resources[0]
+        assert isinstance(event, models.CloudWatchEvent)
+        assert event.resource_name == 'foo-event'
+        assert event.rule_name == 'cloud-watch-event-dev-foo-event'
+        assert isinstance(event.lambda_function, models.LambdaFunction)
+        assert event.lambda_function.resource_name == 'foo'
 
     def test_scheduled_event_models(self, scheduled_event_app):
         config = self.create_config(scheduled_event_app,

@@ -1362,7 +1362,7 @@ def test_cron_expression_converts_to_str(minutes, hours, day_of_month, month,
     ).to_string() == expected
 
 
-def test_can_map_event_dict_to_object(sample_app):
+def test_can_map_schedule_event_dict_to_object(sample_app):
 
     @sample_app.schedule('rate(1 hour)')
     def handler(event):
@@ -1399,6 +1399,52 @@ def test_can_map_event_dict_to_object(sample_app):
     # This is meant as a fall back in case you need access to
     # the raw lambda event dict.
     assert event_object.to_dict() == lambda_event
+
+
+def test_can_create_cwe_event_handler(sample_app):
+
+    @sample_app.on_cw_event({'source': ['aws.ec2']})
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.name == 'handler'
+    assert event.event_pattern == {'source': ['aws.ec2']}
+    assert event.handler_string == 'app.handler'
+
+
+def test_can_map_cwe_event_dict_to_object(sample_app):
+
+    @sample_app.on_cw_event({'source': ['aws.ec2']})
+    def handler(event):
+        return event
+
+    lambda_event = {
+        "version": 0,
+        "id": "7bf73129-1428-4cd3-a780-95db273d1602",
+        "detail-type": "EC2 Instance State-change Notification",
+        "source": "aws.ec2",
+        "account": "123456789012",
+        "time": "2015-11-11T21:29:54Z",
+        "region": "us-east-1",
+        "resources": [
+            "arn:aws:ec2:us-east-1:123456789012:instance/i-abcd1111"
+        ],
+        "detail": {
+            "instance-id": "i-abcd1111",
+            "state": "pending"
+        }
+    }
+
+    event_object = handler(lambda_event, context=None)
+    assert event_object.detail_type == "EC2 Instance State-change Notification"
+    assert event_object.account == '123456789012'
+    assert event_object.region == 'us-east-1'
+    assert event_object.detail == {
+        'instance-id': 'i-abcd1111',
+        'state': 'pending'
+    }
 
 
 def test_pure_lambda_function_direct_mapping(sample_app):
@@ -1503,7 +1549,7 @@ def test_raw_body_is_none_if_body_is_none():
 
 @given(http_request_kwargs=HTTP_REQUEST)
 def test_http_request_to_dict_is_json_serializable(http_request_kwargs):
-    # We have to do some slight pre-preocessing here
+    # We have to do some slight pre-preprocessing here
     # to maintain preconditions.  If the
     # is_base64_encoded arg is True, we'll
     # base64 encode the body.  We assume API Gateway

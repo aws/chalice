@@ -729,6 +729,33 @@ class TestSAMTemplate(TemplateTestBase):
             },
         }
 
+    def test_can_generate_cloud_watch_event(self):
+        function = self.lambda_function()
+        event = models.CloudWatchEvent(
+            resource_name='foo-event',
+            rule_name='myrule',
+            event_pattern='{"source": ["aws.ec2"]}',
+            lambda_function=function,
+        )
+        template = self.template_gen.generate(
+            [function, event]
+        )
+        resources = template['Resources']
+        assert len(resources) == 1
+        cfn_resource = list(resources.values())[0]
+        assert cfn_resource['Properties']['Events'] == {
+            'FooEvent': {
+                'Type': 'CloudWatchEvent',
+                'Properties': {
+                    'Pattern': {
+                        'source': [
+                            'aws.ec2'
+                        ]
+                    }
+                },
+            },
+        }
+
     def test_can_generate_scheduled_event(self):
         function = self.lambda_function()
         event = models.ScheduledEvent(

@@ -561,6 +561,41 @@ class PlanStage(object):
             ),
         ]
 
+    def _plan_cloudwatchevent(self, resource):
+        # type: (models.CloudWatchEvent) -> Sequence[InstructionMsg]
+
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+
+        plan = [
+            models.APICall(
+                method_name='get_or_create_rule_arn',
+                params={'rule_name': resource.rule_name,
+                        'event_pattern': resource.event_pattern},
+                output_var='rule-arn',
+            ),
+            models.APICall(
+                method_name='connect_rule_to_lambda',
+                params={'rule_name': resource.rule_name,
+                        'function_arn': function_arn}
+            ),
+            models.APICall(
+                method_name='add_permission_for_cloud_watch_event',
+                params={'rule_arn': Variable('rule-arn'),
+                        'function_arn': function_arn},
+            ),
+            # You need to remove targets (which have IDs)
+            # before you can delete a rule.
+            models.RecordResourceValue(
+                resource_type='cloudwatch_event',
+                resource_name=resource.resource_name,
+                name='rule_name',
+                value=resource.rule_name,
+            )
+        ]
+        return plan
+
     def _plan_scheduledevent(self, resource):
         # type: (models.ScheduledEvent) -> Sequence[InstructionMsg]
         function_arn = Variable(
@@ -584,11 +619,11 @@ class PlanStage(object):
                         'function_arn': function_arn}
             ),
             models.APICall(
-                method_name='add_permission_for_scheduled_event',
+                method_name='add_permission_for_cloud_watch_event',
                 params={'rule_arn': Variable('rule-arn'),
                         'function_arn': function_arn},
             ),
-            # You need to remote targets (which have IDs)
+            # You need to remove targets (which have IDs)
             # before you can delete a rule.
             models.RecordResourceValue(
                 resource_type='cloudwatch_event',
