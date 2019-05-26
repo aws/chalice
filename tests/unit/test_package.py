@@ -189,7 +189,10 @@ class TestSAMTemplate(object):
         function.layers = ['arn:aws:layer1', 'arn:aws:layer2']
         template = self.template_gen.generate_sam_template([function])
         cfn_resource = list(template['Resources'].values())[0]
-        assert cfn_resource['Properties']['Layers'] == ['arn:aws:layer1', 'arn:aws:layer2']
+        assert cfn_resource['Properties']['Layers'] == [
+            'arn:aws:layer1',
+            'arn:aws:layer2'
+            ]
 
     def test_duplicate_resource_name_raises_error(self):
         one = self.lambda_function()
