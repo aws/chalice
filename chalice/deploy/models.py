@@ -47,6 +47,13 @@ class CopyVariable(Instruction):
 
 
 @attrs(frozen=True)
+class CopyVariableFromDict(Instruction):
+    from_var = attrib()  # type: str
+    key = attrib()       # type: str
+    to_var = attrib()    # type: str
+
+
+@attrs(frozen=True)
 class RecordResource(Instruction):
     resource_type = attrib()  # type: str
     resource_name = attrib()  # type: str
@@ -196,11 +203,20 @@ class WebsocketAPI(ManagedModel):
     name = attrib()                  # type: str
     api_gateway_stage = attrib()     # type: str
     routes = attrib()                # type: List[str]
-    lambda_function = attrib()       # type: LambdaFunction
+    connect_function = attrib()      # type: Optional[LambdaFunction]
+    message_function = attrib()      # type: Optional[LambdaFunction]
+    disconnect_function = attrib()   # type: Optional[LambdaFunction]
 
     def dependencies(self):
         # type: () -> List[Model]
-        return [self.lambda_function]
+        functions = []  # type: List[Model]
+        if self.connect_function is not None:
+            functions.append(self.connect_function)
+        if self.message_function is not None:
+            functions.append(self.message_function)
+        if self.disconnect_function is not None:
+            functions.append(self.disconnect_function)
+        return functions
 
 
 @attrs

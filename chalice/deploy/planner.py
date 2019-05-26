@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 from typing import Sequence  # noqa
 
@@ -596,14 +598,84 @@ class PlanStage(object):
         ]
         return plan
 
+    def _create_websocket_function_configs(self, resource):
+        # type: (models.WebsocketAPI) -> Dict[str, Dict[str, Any]]
+        configs = OrderedDict()  # type: Dict[str, Dict[str, Any]]
+        if resource.connect_function is not None:
+            configs['connect'] = self._create_websocket_function_config(
+                resource.connect_function)
+        if resource.message_function is not None:
+            configs['message'] = self._create_websocket_function_config(
+                resource.message_function)
+        if resource.disconnect_function is not None:
+            configs['disconnect'] = self._create_websocket_function_config(
+                resource.disconnect_function)
+        return configs
+
+    def _create_websocket_function_config(self, function):
+        # type: (models.LambdaFunction) -> Dict[str, Any]
+        varname = '%s_lambda_arn' % function.resource_name
+        return {
+            'function': function,
+            'name': function.function_name,
+            'varname': varname,
+            'lambda_arn_var': Variable(varname),
+        }
+
+    def _inject_websocket_integrations(self, configs):
+        # type: (Dict[str, Any]) -> Sequence[InstructionMsg]
+        instructions = []  # type: List[InstructionMsg]
+        for key, config in configs.items():
+            instructions.append(
+                models.StoreValue(
+                    name='websocket-%s-integration-lambda-path' % key,
+                    value=StringFormat(
+                        'arn:aws:apigateway:{region_name}:lambda:path/'
+                        '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                        '{account_id}:function:%s/'
+                        'invocations' % config['name'],
+                        ['region_name', 'account_id'],
+                    ),
+                ),
+            )
+            instructions.append(
+                models.APICall(
+                    method_name='create_integration',
+                    params={
+                        'api_id': Variable('websocket_api_id'),
+                        'lambda_function': Variable(
+                            'websocket-%s-integration-lambda-path' % key),
+                        'handler_type': key,
+                    },
+                    output_var='%s-integration-id' % key,
+                ),
+            )
+        return instructions
+
+    def _create_route_for_key(self, route_key):
+        # type: (str) -> models.APICall
+        integration_id = {
+            '$connect': 'connect-integration-id',
+            '$disconnect': 'disconnect-integration-id',
+        }.get(route_key, 'message-integration-id')
+        return models.APICall(
+            method_name='create_route_if_needed',
+            params={
+                'api_id': Variable('websocket_api_id'),
+                'route_key': route_key,
+                'integration_id': Variable(integration_id),
+                'existing_routes': Variable('routes'),
+            },
+        )
+
     def _plan_websocketapi(self, resource):
         # type: (models.WebsocketAPI) -> Sequence[InstructionMsg]
-        function = resource.lambda_function
-        function_name = function.function_name
-        varname = '%s_lambda_arn' % function.resource_name
-        lambda_arn_var = Variable(varname)
+        configs = self._create_websocket_function_configs(resource)
         routes = resource.routes
 
+        # Which lambda function we use here does not matter. We are only using
+        # it to find the account id and the region.
+        lambda_arn_var = list(configs.values())[0]['lambda_arn_var']
         shared_plan_preamble = [
             # The various API gateway API calls need
             # to know the region name and account id so
@@ -620,8 +692,6 @@ class PlanStage(object):
             models.JPSearch('region',
                             input_var='parsed_lambda_arn',
                             output_var='region_name'),
-            models.CopyVariable(from_var=varname,
-                                to_var='api_handler_lambda_arn'),
         ]  # type: List[InstructionMsg]
 
         # There's also a set of instructions that are needed
@@ -642,13 +712,6 @@ class PlanStage(object):
                 name='websocket_api_url',
                 variable_name='websocket_api_url',
             ),
-            models.APICall(
-                method_name='add_permission_for_apigateway_v2',
-                params={'function_name': function_name,
-                        'region_name': Variable('region_name'),
-                        'account_id': Variable('account_id'),
-                        'api_id': Variable('websocket_api_id')},
-            ),
             models.RecordResourceVariable(
                 resource_type='websocket_api',
                 resource_name=resource.resource_name,
@@ -656,6 +719,16 @@ class PlanStage(object):
                 variable_name='websocket_api_id',
             ),
         ]  # type: List[InstructionMsg]
+
+        shared_plan_epilogue += [
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': function_config['name'],
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'api_id': Variable('websocket_api_id')},
+            ) for function_config in configs.values()
+        ]
 
         main_plan = []  # type: List[InstructionMsg]
         if not self._remote_state.resource_exists(resource):
@@ -667,37 +740,14 @@ class PlanStage(object):
                     output_var='websocket_api_id',
                 ), "Creating websocket api: %s\n" % resource.name),
                 models.StoreValue(
-                    name='websocket-integration-lambda-path',
-                    value=StringFormat(
-                        'arn:aws:apigateway:{region_name}:lambda:path/'
-                        '2015-03-31/functions/arn:aws:lambda:{region_name}:'
-                        '{account_id}:function:%s/'
-                        'invocations' %
-                        resource.lambda_function.function_name,
-                        ['region_name', 'account_id'],
-                    ),
-                ),
-                models.APICall(
-                    method_name='create_integration',
-                    params={
-                        'api_id': Variable('websocket_api_id'),
-                        'lambda_function': Variable(
-                            'websocket-integration-lambda-path'),
-                    },
-                    output_var='integration-id',
+                    name='routes',
+                    value=[],
                 ),
             ]
+            main_plan += self._inject_websocket_integrations(configs)
+
             for route_key in routes:
-                main_plan.append(
-                    models.APICall(
-                        method_name='create_route',
-                        params={
-                            'api_id': Variable('websocket_api_id'),
-                            'route_key': route_key,
-                            'integration_id': Variable('integration-id'),
-                        },
-                    )
-                )
+                main_plan += [self._create_route_for_key(route_key)]
             main_plan += [
                 models.APICall(
                     method_name='deploy_websocket_api',
@@ -729,9 +779,24 @@ class PlanStage(object):
                     output_var='routes',
                 ),
                 models.APICall(
-                    method_name='get_integration',
+                    method_name='get_integrations',
                     params={'api_id': Variable('websocket_api_id')},
-                    output_var='integration-id',
+                    output_var='integrations',
+                ),
+                models.CopyVariableFromDict(
+                    from_var='integrations',
+                    key='connect',
+                    to_var='connect-integration-id',
+                ),
+                models.CopyVariableFromDict(
+                    from_var='integrations',
+                    key='message',
+                    to_var='message-integration-id',
+                ),
+                models.CopyVariableFromDict(
+                    from_var='integrations',
+                    key='disconnect',
+                    to_var='disconnect-integration-id',
                 ),
                 models.APICall(
                     method_name='delete_unused_routes',
@@ -743,17 +808,18 @@ class PlanStage(object):
                 ),
             ]
             for route_key in routes:
-                main_plan.append(
-                    models.APICall(
-                        method_name='create_route_if_needed',
-                        params={
-                            'api_id': Variable('websocket_api_id'),
-                            'route_key': route_key,
-                            'integration_id': Variable('integration-id'),
-                            'existing_routes': Variable('routes'),
-                        },
-                    )
-                )
+                main_plan += [self._create_route_for_key(route_key)]
+                # main_plan.append(
+                #     models.APICall(
+                #         method_name='create_route_if_needed',
+                #         params={
+                #             'api_id': Variable('websocket_api_id'),
+                #             'route_key': route_key,
+                #             'integration_id': Variable('integration-id'),
+                #             'existing_routes': Variable('routes'),
+                #         },
+                #     )
+                # )
 
         return shared_plan_preamble + main_plan + shared_plan_epilogue
 

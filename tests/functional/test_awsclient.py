@@ -1429,6 +1429,7 @@ class TestWebsocketAPI(object):
             ApiId='api-id',
             ConnectionType='INTERNET',
             ContentHandlingStrategy='CONVERT_TO_TEXT',
+            Description='connect',
             IntegrationType='AWS_PROXY',
             IntegrationUri='arn:aws:lambda',
         ).returns({'IntegrationId': 'integration-id'})
@@ -1437,6 +1438,7 @@ class TestWebsocketAPI(object):
         integration_id = client.create_integration(
             api_id='api-id',
             lambda_function='arn:aws:lambda',
+            handler_type='connect',
         )
         stubbed_session.verify_stubs()
         assert integration_id == 'integration-id'
@@ -1538,32 +1540,38 @@ class TestWebsocketAPI(object):
             'route-key-bar': 'route-id-bar',
         }
 
-    def test_can_get_integration(self, stubbed_session):
+    def test_can_get_integrations(self, stubbed_session):
         stubbed_session.stub('apigatewayv2').get_integrations(
             ApiId='api-id',
-        ).returns({'Items': [{'IntegrationId': 'integration-id'}]})
+        ).returns(
+            {
+                'Items': [
+                    {
+                        'Description': 'connect',
+                        'IntegrationId': 'connect-integration-id'
+                    },
+                    {
+                        'Description': 'message',
+                        'IntegrationId': 'message-integration-id'
+                    },
+                    {
+                        'Description': 'disconnect',
+                        'IntegrationId': 'disconnect-integration-id'
+                    },
+                ]
+            }
+        )
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        integration_id = client.get_integration(
+        integration_ids = client.get_integrations(
             api_id='api-id',
         )
         stubbed_session.verify_stubs()
-        assert integration_id == 'integration-id'
-
-    def test_does_raise_on_multiple_integrations(self, stubbed_session):
-        stubbed_session.stub('apigatewayv2').get_integrations(
-            ApiId='api-id',
-        ).returns({'Items': [
-            {'IntegrationId': 'integration-id'},
-            {'IntegrationId': 'integration-id'},
-        ]})
-        stubbed_session.activate_stubs()
-        client = TypedAWSClient(stubbed_session)
-        with pytest.raises(ValueError) as e:
-            client.get_integration(api_id='api-id',)
-        assert str(e.value) == (
-            'Expected Websocket API api-id to have one integration. Found 2.'
-        )
+        assert integration_ids == {
+            'connect': 'connect-integration-id',
+            'message': 'message-integration-id',
+            'disconnect': 'disconnect-integration-id',
+        }
 
     def test_can_create_stage(self, stubbed_session):
         stubbed_session.stub('apigatewayv2').create_stage(

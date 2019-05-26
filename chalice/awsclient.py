@@ -1041,13 +1041,15 @@ class TypedAWSClient(object):
             self,
             api_id,
             lambda_function,
+            handler_type,
     ):
-        # type: (str, str) -> str
+        # type: (str, str, str) -> str
         client = self._client('apigatewayv2')
         return client.create_integration(
             ApiId=api_id,
             ConnectionType='INTERNET',
             ContentHandlingStrategy='CONVERT_TO_TEXT',
+            Description=handler_type,
             IntegrationType='AWS_PROXY',
             IntegrationUri=lambda_function,
         )['IntegrationId']
@@ -1092,19 +1094,18 @@ class TypedAWSClient(object):
             ApiId=api_id,
         )['Items']}
 
-    def get_integration(self, api_id):
-        # type: (str) -> str
+    def get_integrations(self, api_id):
+        # type: (str) -> Dict[str, str]
         client = self._client('apigatewayv2')
         items = client.get_integrations(
             ApiId=api_id,
         )['Items']
-        integration_count = len(items)
-        if integration_count != 1:
-            raise ValueError(
-                'Expected Websocket API %s to have one integration. Found %s.'
-                % (api_id, integration_count)
-            )
-        return items[0]['IntegrationId']
+        integrations = {
+            item['Description']: item['IntegrationId']
+            for item in items
+            if 'Description' in item
+        }
+        return integrations
 
     def create_stage(self, api_id, stage_name, deployment_id):
         # type: (str, str, str) -> None

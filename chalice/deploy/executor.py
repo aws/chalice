@@ -50,6 +50,13 @@ class Executor(object):
         from_var = instruction.from_var
         self.variables[to_var] = self.variables[from_var]
 
+    def _do_copyvariablefromdict(self, instruction):
+        # type: (models.CopyVariableFromDict) -> None
+        to_var = instruction.to_var
+        key = instruction.key
+        from_var = instruction.from_var
+        self.variables[to_var] = self.variables[from_var][key]
+
     def _do_storevalue(self, instruction):
         # type: (models.StoreValue) -> None
         result = self._variable_resolver.resolve_variables(

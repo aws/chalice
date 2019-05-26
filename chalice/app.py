@@ -614,21 +614,21 @@ class DecoratorAPI(object):
 
     def on_ws_connect(self, **kwargs):
         return self._create_registration_function(
-            handler_type='websocket',
+            handler_type='websocket_connect',
             name=kwargs.get('name'),
             registration_kwargs={'route_key': '$connect'},
         )
 
     def on_ws_disconnect(self, **kwargs):
         return self._create_registration_function(
-            handler_type='websocket',
+            handler_type='websocket_disconnect',
             name=kwargs.get('name'),
             registration_kwargs={'route_key': '$disconnect'},
         )
 
     def on_ws_message(self, **kwargs):
         return self._create_registration_function(
-            handler_type='websocket',
+            handler_type='websocket_message',
             name=kwargs.get('name'),
             registration_kwargs={'route_key': '$default'},
         )
@@ -705,19 +705,55 @@ class _HandlerRegistration(object):
             kwargs=kwargs,
         )
 
-    def _register_websocket(self, name, user_handler, handler_string,
-                            kwargs, **unused):
-        route_key = kwargs['route_key']
-        wrapper = WebsocketConfig(name=name,
-                                  route_key_handled=route_key,
-                                  handler_string=handler_string,
-                                  user_handler=user_handler)
+    def _attach_websocket_handler(self, handler):
+        route_key = handler.route_key_handled
         if route_key in self.websocket_handlers:
             raise ValueError(
                 "Duplicate websocket handler: '%s'. There can only be one "
                 "handler for a particular routeKey." % route_key
             )
+        self.websocket_handlers[route_key] = handler
+
+    def _format_handler_error_message(self, route_key):
+        renames = {
+            '$connect': '@on_ws_connect()',
+            '$disconnect': '@on_ws_disconnect()',
+        }
+        decorator_string = renames.get(
+            route_key,
+            '@on_ws_message(route="%s")' % route_key
+        )
+        return "Duplicate websocket handler: '%s'" % decorator_string
+
+    def _register_websocket_connect(self, name, user_handler, handler_string,
+                                    kwargs, **unused):
+        wrapper = WebsocketConnectConfig(
+            name=name,
+            handler_string=handler_string,
+            user_handler=user_handler,
+        )
+        self._attach_websocket_handler(wrapper)
+
+    def _register_websocket_message(self, name, user_handler, handler_string,
+                                    kwargs, **unused):
+        route_key = kwargs['route_key']
+        wrapper = WebsocketMessageConfig(
+            name=name,
+            route_key_handled=route_key,
+            handler_string=handler_string,
+            user_handler=user_handler,
+        )
+        self._attach_websocket_handler(wrapper)
         self.websocket_handlers[route_key] = wrapper
+
+    def _register_websocket_disconnect(self, name, user_handler,
+                                       handler_string, kwargs, **unused):
+        wrapper = WebsocketDisconnectConfig(
+            name=name,
+            handler_string=handler_string,
+            user_handler=user_handler,
+        )
+        self._attach_websocket_handler(wrapper)
 
     def _register_lambda_function(self, name, user_handler,
                                   handler_string, **unused):
@@ -900,10 +936,16 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
-    def _register_websocket(self, name, user_handler, handler_string,
-                            kwargs, **unused):
+    def _register_websocket_connect(self, name, user_handler, handler_string,
+                                    kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
-        super(Chalice, self)._register_websocket(
+        super(Chalice, self)._register_websocket_connect(
+            name, user_handler, handler_string, kwargs, **unused)
+
+    def _register_websocket_disconnect(self, name, user_handler,
+                                       handler_string, kwargs, **unused):
+        self._features_used.add('WEBSOCKETS')
+        super(Chalice, self)._register_websocket_disconnect(
             name, user_handler, handler_string, kwargs, **unused)
 
     def _handle_websocket(self, route_key, event, context):
@@ -1306,10 +1348,28 @@ class SQSEventConfig(BaseEventSourceConfig):
         self.batch_size = batch_size
 
 
-class WebsocketConfig(BaseEventSourceConfig):
+class WebsocketConnectConfig(BaseEventSourceConfig):
+    CONNECT_ROUTE = '$connect'
+
+    def __init__(self, name, handler_string, user_handler):
+        super(WebsocketConnectConfig, self).__init__(name, handler_string)
+        self.route_key_handled = self.CONNECT_ROUTE
+        self.handler_function = user_handler
+
+
+class WebsocketMessageConfig(BaseEventSourceConfig):
     def __init__(self, name, route_key_handled, handler_string, user_handler):
-        super(WebsocketConfig, self).__init__(name, handler_string)
+        super(WebsocketMessageConfig, self).__init__(name, handler_string)
         self.route_key_handled = route_key_handled
+        self.handler_function = user_handler
+
+
+class WebsocketDisconnectConfig(BaseEventSourceConfig):
+    DISCONNECT_ROUTE = '$disconnect'
+
+    def __init__(self, name, handler_string, user_handler):
+        super(WebsocketDisconnectConfig, self).__init__(name, handler_string)
+        self.route_key_handled = self.DISCONNECT_ROUTE
         self.handler_function = user_handler
 
 

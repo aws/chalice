@@ -477,14 +477,38 @@ class ApplicationGraphBuilder(object):
             stage_name,  # type: str
     ):
         # type: (...) -> models.WebsocketAPI
-        lambda_function = self._create_lambda_model(
-            config=config, deployment=deployment, name='websocket_handler',
-            handler_name='app.app', stage_name=stage_name
-        )
+        connect_handler = None     # type: Optional[models.LambdaFunction]
+        message_handler = None     # type: Optional[models.LambdaFunction]
+        disconnect_handler = None  # type: Optional[models.LambdaFunction]
+
+        routes = [h.route_key_handled for h
+                  in config.chalice_app.websocket_handlers.values()]
+        if '$connect' in routes:
+            connect_handler = self._create_lambda_model(
+                config=config, deployment=deployment, name='websocket_connect',
+                handler_name='app.app', stage_name=stage_name
+            )
+            routes.remove('$connect')
+        if '$disconnect' in routes:
+            disconnect_handler = self._create_lambda_model(
+                config=config, deployment=deployment,
+                name='websocket_disconnect',
+                handler_name='app.app', stage_name=stage_name
+            )
+            routes.remove('$disconnect')
+        if routes:
+            # If there are left over routes they are message handlers.
+            message_handler = self._create_lambda_model(
+                config=config, deployment=deployment, name='websocket_message',
+                handler_name='app.app', stage_name=stage_name
+            )
+
         return models.WebsocketAPI(
             name='%s-%s-websocket-api' % (config.app_name, stage_name),
             resource_name='websocket_api',
-            lambda_function=lambda_function,
+            connect_function=connect_handler,
+            message_function=message_handler,
+            disconnect_function=disconnect_handler,
             routes=[h.route_key_handled for h
                     in config.chalice_app.websocket_handlers.values()],
             api_gateway_stage=config.api_gateway_stage,
@@ -843,8 +867,18 @@ class WebsocketPolicyInjector(BaseDeployStep):
         self._policy_injected = False
 
     def handle_websocketapi(self, config, resource):
-        # type: (Config, models.SQSEventSource) -> None
-        role = resource.lambda_function.role
+        # type: (Config, models.WebsocketAPI) -> None
+        self._inject_into_function(config, resource.connect_function)
+        self._inject_into_function(config, resource.message_function)
+        self._inject_into_function(config, resource.disconnect_function)
+
+    def _inject_into_function(self, config, lambda_function):
+        # type: (Config, Optional[models.LambdaFunction]) -> None
+        if lambda_function is None:
+            return
+        role = lambda_function.role
+        if role is None:
+            return
         if (not self._policy_injected and
             isinstance(role, models.ManagedIAMRole) and
             isinstance(role.policy, models.AutoGenIAMPolicy) and
@@ -853,7 +887,7 @@ class WebsocketPolicyInjector(BaseDeployStep):
             self._inject_policy(
                 role.policy.document,
                 POST_TO_WEBSOCKET_CONNECTION_POLICY.copy())
-            self._policy_injected = True
+        self._policy_injected = True
 
     def _inject_policy(self, document, policy):
         # type: (Dict[str, Any], Dict[str, Any]) -> None
