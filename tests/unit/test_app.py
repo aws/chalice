@@ -22,11 +22,15 @@ from chalice.deploy.validate import validate_feature_flags
 
 # These are used to generate sample data for hypothesis tests.
 STR_MAP = st.dictionaries(st.text(), st.text())
+STR_TO_LIST_MAP = st.dictionaries(
+    st.text(),
+    st.lists(elements=st.text(), min_size=1, max_size=5)
+)
 HTTP_METHOD = st.sampled_from(['GET', 'POST', 'PUT', 'PATCH',
                                'OPTIONS', 'HEAD', 'DELETE'])
 HTTP_BODY = st.none() | st.text()
 HTTP_REQUEST = st.fixed_dictionaries({
-    'query_params': STR_MAP,
+    'query_params': STR_TO_LIST_MAP,
     'headers': STR_MAP,
     'uri_params': STR_MAP,
     'method': HTTP_METHOD,

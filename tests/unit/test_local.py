@@ -549,7 +549,7 @@ def test_can_create_lambda_event():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': None,
+        'multiValueQueryStringParameters': None,
         'body': None,
         'stageVariables': {},
     }
@@ -574,7 +574,7 @@ def test_parse_query_string():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': {'a': '1', 'b': '', 'c': '3'},
+        'multiValueQueryStringParameters': {'a': ['1'], 'b': [''], 'c': ['3']},
         'body': None,
         'stageVariables': {},
     }
@@ -600,7 +600,7 @@ def test_can_create_lambda_event_for_put_request():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': None,
+        'multiValueQueryStringParameters': None,
         'body': '{"foo": "bar"}',
         'stageVariables': {},
     }
@@ -627,7 +627,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         },
         'headers': {'content-type': 'application/x-www-form-urlencoded'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': None,
+        'multiValueQueryStringParameters': None,
         'body': form_body,
         'stageVariables': {},
     }

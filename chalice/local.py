@@ -124,8 +124,7 @@ class RouteMatcher(object):
         """
         # Otherwise we need to check for param substitution
         parsed_url = urlparse(url)
-        parsed_qs = parse_qs(parsed_url.query, keep_blank_values=True)
-        query_params = {k: v[-1] for k, v in parsed_qs.items()}
+        query_params = parse_qs(parsed_url.query, keep_blank_values=True)
         path = parsed_url.path
         # API Gateway removes the trailing slash if the route is not the root
         # path. We do the same here so our route matching works the same way.
@@ -180,11 +179,11 @@ class LambdaEventConverter(object):
             'stageVariables': {},
         }
         if view_route.query_params:
-            event['queryStringParameters'] = view_route.query_params
+            event['multiValueQueryStringParameters'] = view_route.query_params
         else:
             # If no query parameters are provided, API gateway maps
             # this to None so we're doing this for parity.
-            event['queryStringParameters'] = None
+            event['multiValueQueryStringParameters'] = None
         if self._is_binary(headers) and body is not None:
             event['body'] = base64.b64encode(body).decode('ascii')
             event['isBase64Encoded'] = True
