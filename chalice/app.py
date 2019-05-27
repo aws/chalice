@@ -172,7 +172,7 @@ class MultiDict(Mapping):
     def getlist(self, k):
         return list(self._dict[k])
 
-    def __len__(self) -> int:
+    def __len__(self):
         return len(self._dict)
 
     def __iter__(self):
