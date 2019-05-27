@@ -4,6 +4,7 @@ import logging
 import json
 import gzip
 import inspect
+from copy import deepcopy
 
 import pytest
 from pytest import fixture
@@ -14,7 +15,13 @@ import six
 
 from chalice import app
 from chalice import NotFoundError
-from chalice.app import APIGateway, Request, Response, handle_extra_types
+from chalice.app import (
+    APIGateway,
+    Request,
+    Response,
+    handle_extra_types,
+    MultiDict
+)
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -1864,3 +1871,64 @@ def test_blueprint_gated_behind_feature_flag():
 
     myapp.register_blueprint(bp)
     assert_requires_opt_in(myapp, flag='BLUEPRINTS')
+
+
+@pytest.mark.parametrize('input_dict', [
+    {},
+    {'key': []}
+])
+def test_multidict_raises_keyerror(input_dict):
+    d = MultiDict(input_dict)
+    with pytest.raises(KeyError):
+        val = d['key']
+        assert val is val
+
+
+@pytest.mark.parametrize('input_dict', [
+    {},
+    {'key': []}
+])
+def test_multidict_returns_emptylist(input_dict):
+    d = MultiDict(input_dict)
+    assert d.getlist('key') == []
+
+
+@pytest.mark.parametrize('input_dict', [
+    {'key': ['value']},
+    {'key': ['']},
+    {'key': ['value1', 'value2', 'value3']},
+    {'key': ['value1', 'value2', None]}
+])
+def test_multidict_returns_lastvalue(input_dict):
+    d = MultiDict(input_dict)
+    assert d['key'] == input_dict['key'][-1]
+
+
+@pytest.mark.parametrize('input_dict', [
+    {'key': ['value']},
+    {'key': ['']},
+    {'key': ['value1', 'value2', 'value3']},
+    {'key': ['value1', 'value2', None]}
+])
+def test_multidict_returns_all_values(input_dict):
+    d = MultiDict(input_dict)
+    assert d.getlist('key') == input_dict['key']
+
+
+@pytest.mark.parametrize('input_dict', [
+    {'key': ['value']},
+    {'key': ['']},
+    {'key': ['value1', 'value2', 'value3']},
+    {'key': ['value1', 'value2', None]}
+])
+def test_multidict_list_wont_change_source(input_dict):
+    d = MultiDict(input_dict)
+    dict_copy = deepcopy(input_dict)
+    d.getlist('key')[0] = 'othervalue'
+    assert d.getlist('key') == dict_copy['key']
+
+
+def test_multidict_is_readonly():
+    d = MultiDict(None)
+    with pytest.raises(TypeError):
+        d['key'] = 'value'

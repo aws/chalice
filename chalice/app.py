@@ -170,7 +170,7 @@ class MultiDict(Mapping):
             raise KeyError(k)
 
     def getlist(self, k):
-        return list(self._dict[k])
+        return list(self._dict.get(k, []))
 
     def __len__(self):
         return len(self._dict)
