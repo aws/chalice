@@ -127,6 +127,12 @@ def sample_app():
     def query_string():
         return demo.current_request.query_params
 
+    @demo.route('/query-string-multi')
+    def query_string_multi():
+        params = demo.current_request.query_params
+        keys = {k: params.getlist(k) for k in params}
+        return keys
+
     @demo.route('/custom-response')
     def custom_response():
         return Response(body='text',
@@ -460,6 +466,22 @@ def test_querystring_is_mapped(handler):
     set_current_request(handler, method='GET', path='/query-string?a=b&c=d')
     handler.do_GET()
     assert _get_body_from_response_stream(handler) == {'a': 'b', 'c': 'd'}
+
+
+def test_empty_querystring_is_none(handler):
+    set_current_request(handler, method='GET', path='/query-string')
+    handler.do_GET()
+    assert _get_body_from_response_stream(handler) is None
+
+
+def test_querystring_list_is_mapped(handler):
+    set_current_request(
+        handler,
+        method='GET', path='/query-string-multi?a=b&c=d&a=c&e='
+    )
+    handler.do_GET()
+    expected = {'a': ['b', 'c'], 'c': ['d'], 'e': ['']}
+    assert _get_body_from_response_stream(handler) == expected
 
 
 def test_querystring_undefined_is_mapped_consistent_with_apigateway(handler):
