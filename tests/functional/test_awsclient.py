@@ -1435,29 +1435,13 @@ class TestWebsocketAPI(object):
         ).returns({'IntegrationId': 'integration-id'})
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        integration_id = client.create_integration(
+        integration_id = client.create_websocket_integration(
             api_id='api-id',
             lambda_function='arn:aws:lambda',
             handler_type='connect',
         )
         stubbed_session.verify_stubs()
         assert integration_id == 'integration-id'
-
-    def test_can_create_route(self, stubbed_session):
-        stubbed_session.stub('apigatewayv2').create_route(
-            ApiId='api-id',
-            RouteKey='route-key',
-            RouteResponseSelectionExpression='$default',
-            Target='integrations/integration-id',
-        ).returns({})
-        stubbed_session.activate_stubs()
-        client = TypedAWSClient(stubbed_session)
-        client.create_route(
-            api_id='api-id',
-            route_key='route-key',
-            integration_id='integration-id',
-        )
-        stubbed_session.verify_stubs()
 
     def test_can_create_route_if_needed(self, stubbed_session):
         stubbed_session.stub('apigatewayv2').create_route(
@@ -1468,7 +1452,7 @@ class TestWebsocketAPI(object):
         ).returns({})
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.create_route_if_needed(
+        client.create_websocket_route_if_needed(
             api_id='api-id',
             route_key='route-key',
             integration_id='integration-id',
@@ -1479,7 +1463,7 @@ class TestWebsocketAPI(object):
     def test_does_not_call_create_route_if_not_needed(self, stubbed_session):
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.create_route_if_needed(
+        client.create_websocket_route_if_needed(
             api_id='api-id',
             route_key='route-key',
             integration_id='integration-id',
@@ -1563,7 +1547,7 @@ class TestWebsocketAPI(object):
         )
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        integration_ids = client.get_integrations(
+        integration_ids = client.get_websocket_integrations(
             api_id='api-id',
         )
         stubbed_session.verify_stubs()

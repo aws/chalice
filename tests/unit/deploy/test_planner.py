@@ -546,7 +546,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 ),
             ),
             models.APICall(
-                method_name='create_integration',
+                method_name='create_websocket_integration',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'lambda_function': Variable(
@@ -566,7 +566,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 ),
             ),
             models.APICall(
-                method_name='create_integration',
+                method_name='create_websocket_integration',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'lambda_function': Variable(
@@ -586,7 +586,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 ),
             ),
             models.APICall(
-                method_name='create_integration',
+                method_name='create_websocket_integration',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'lambda_function': Variable(
@@ -596,7 +596,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 output_var='disconnect-integration-id',
             ),
             models.APICall(
-                method_name='create_route_if_needed',
+                method_name='create_websocket_route_if_needed',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$connect',
@@ -605,7 +605,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='create_route_if_needed',
+                method_name='create_websocket_route_if_needed',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$default',
@@ -614,7 +614,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='create_route_if_needed',
+                method_name='create_websocket_route_if_needed',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$disconnect',
@@ -714,7 +714,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 output_var='routes',
             ),
             models.APICall(
-                method_name='get_integrations',
+                method_name='get_websocket_integrations',
                 params={'api_id': Variable('websocket_api_id')},
                 output_var='integrations',
             ),
@@ -742,7 +742,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='create_route_if_needed',
+                method_name='create_websocket_route_if_needed',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$connect',
@@ -751,7 +751,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='create_route_if_needed',
+                method_name='create_websocket_route_if_needed',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$default',
@@ -760,7 +760,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='create_route_if_needed',
+                method_name='create_websocket_route_if_needed',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$disconnect',

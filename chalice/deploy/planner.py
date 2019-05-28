@@ -640,7 +640,7 @@ class PlanStage(object):
             )
             instructions.append(
                 models.APICall(
-                    method_name='create_integration',
+                    method_name='create_websocket_integration',
                     params={
                         'api_id': Variable('websocket_api_id'),
                         'lambda_function': Variable(
@@ -659,7 +659,7 @@ class PlanStage(object):
             '$disconnect': 'disconnect-integration-id',
         }.get(route_key, 'message-integration-id')
         return models.APICall(
-            method_name='create_route_if_needed',
+            method_name='create_websocket_route_if_needed',
             params={
                 'api_id': Variable('websocket_api_id'),
                 'route_key': route_key,
@@ -779,7 +779,7 @@ class PlanStage(object):
                     output_var='routes',
                 ),
                 models.APICall(
-                    method_name='get_integrations',
+                    method_name='get_websocket_integrations',
                     params={'api_id': Variable('websocket_api_id')},
                     output_var='integrations',
                 ),

@@ -1037,7 +1037,7 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             raise ResourceDoesNotExistError(api_id)
 
-    def create_integration(
+    def create_websocket_integration(
             self,
             api_id,
             lambda_function,
@@ -1054,21 +1054,17 @@ class TypedAWSClient(object):
             IntegrationUri=lambda_function,
         )['IntegrationId']
 
-    def create_route(self, api_id, route_key, integration_id):
-        # type: (str, str, str) -> None
-        client = self._client('apigatewayv2')
-        client.create_route(
-            ApiId=api_id,
-            RouteKey=route_key,
-            RouteResponseSelectionExpression='$default',
-            Target='integrations/%s' % integration_id,
-        )
-
-    def create_route_if_needed(self, api_id, route_key, integration_id,
-                               existing_routes):
+    def create_websocket_route_if_needed(self, api_id, route_key,
+                                         integration_id, existing_routes):
         # type: (str, str, str, Dict[str, str]) -> None
         if route_key not in existing_routes:
-            self.create_route(api_id, route_key, integration_id)
+            client = self._client('apigatewayv2')
+            client.create_route(
+                ApiId=api_id,
+                RouteKey=route_key,
+                RouteResponseSelectionExpression='$default',
+                Target='integrations/%s' % integration_id,
+            )
 
     def delete_unused_routes(self, api_id, existing_routes, current_routes):
         # type: (str, Dict[str, str], Dict[str, str]) -> None
@@ -1094,7 +1090,7 @@ class TypedAWSClient(object):
             ApiId=api_id,
         )['Items']}
 
-    def get_integrations(self, api_id):
+    def get_websocket_integrations(self, api_id):
         # type: (str) -> Dict[str, str]
         client = self._client('apigatewayv2')
         items = client.get_integrations(

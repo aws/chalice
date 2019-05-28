@@ -86,7 +86,7 @@ The status of an experimental API can be:
       `#651 <https://github.com/aws/chalice/pull/651>`__
   * - :doc:`websockets`
     - ``WEBSOCKETS``
-    - 1.7.1
+    - 1.9.0
     - Trial
     - `#1041 <https://github.com/aws/chalice/pull/1041>`__,
       `#1017 <https://github.com/aws/chalice/issues/1017>`__
