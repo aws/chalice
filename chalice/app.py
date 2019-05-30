@@ -492,11 +492,11 @@ class DecoratorAPI(object):
             registration_kwargs={'queue': queue, 'batch_size': batch_size}
         )
 
-    def schedule(self, expression, name=None):
+    def schedule(self, expression, event_rule=None, name=None):
         return self._create_registration_function(
             handler_type='schedule',
             name=name,
-            registration_kwargs={'expression': expression},
+            registration_kwargs={'expression': expression, 'event_rule': event_rule},
         )
 
     def route(self, path, **kwargs):
@@ -592,42 +592,47 @@ class _HandlerRegistration(object):
         )
         self.pure_lambda_functions.append(wrapper)
 
-    def _register_on_s3_event(self, name, handler_string, kwargs, **unused):
+    def _register_on_s3_event(self, name, handler_string, user_handler, kwargs, **unused):
         events = kwargs['events']
         if events is None:
             events = ['s3:ObjectCreated:*']
         s3_event = S3EventConfig(
             name=name,
+            handler_string=handler_string,
+            handler=user_handler,
             bucket=kwargs['bucket'],
             events=events,
             prefix=kwargs['prefix'],
             suffix=kwargs['suffix'],
-            handler_string=handler_string,
         )
         self.event_sources.append(s3_event)
 
-    def _register_on_sns_message(self, name, handler_string, kwargs, **unused):
+    def _register_on_sns_message(self, name, handler_string, user_handler, kwargs, **unused):
         sns_config = SNSEventConfig(
             name=name,
             handler_string=handler_string,
+            handler=user_handler,
             topic=kwargs['topic'],
         )
         self.event_sources.append(sns_config)
 
-    def _register_on_sqs_message(self, name, handler_string, kwargs, **unused):
+    def _register_on_sqs_message(self, name, handler_string, user_handler, kwargs, **unused):
         sqs_config = SQSEventConfig(
             name=name,
             handler_string=handler_string,
+            handler=user_handler,
             queue=kwargs['queue'],
             batch_size=kwargs['batch_size'],
         )
         self.event_sources.append(sqs_config)
 
-    def _register_schedule(self, name, handler_string, kwargs, **unused):
+    def _register_schedule(self, name, handler_string, user_handler, kwargs, **unused):
         event_source = CloudWatchEventConfig(
             name=name,
-            schedule_expression=kwargs['expression'],
             handler_string=handler_string,
+            handler=user_handler,
+            schedule_expression=kwargs['expression'],
+            event_rule=kwargs['event_rule'],
         )
         self.event_sources.append(event_source)
 
@@ -764,16 +769,69 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
+    def _parse_events(self, event_dict, context):
+        if not isinstance(event_dict, dict):
+            raise TypeError(f'Unexpected Lambda event type: {event_dict!r}')
+
+        if 'source' in event_dict and event_dict['source'] == 'aws.events':
+            yield CloudWatchEvent(event_dict, context)
+
+        elif 'Records' in event_dict:
+            # Multi-record event.
+            for record_dict in event_dict['Records']:
+                if not isinstance(record_dict, dict):
+                    raise TypeError(f'Unexpected event record type: {record_dict!r}')
+
+                event_source = record_dict.get('eventSource', record_dict.get('EventSource', None))
+
+                if event_source == 'aws:s3':
+                    yield S3Event(event_dict, context)
+                    # S3Event assumes there is never more than one record.
+                    break
+
+                elif event_source == 'aws:sqs':
+                    yield SQSEvent(event_dict, context)
+                    # SQSEvent does its own record enumeration.
+                    break
+
+                elif event_source == 'aws:sns':
+                    yield SNSEvent(event_dict, context)
+                    # SNSEvent assumes there is never more than one record.
+                    break
+
+                else:
+                    raise ValueError(f'Unrecognized or missing event source {event_source!r}: {record_dict!r}')
+
+        else:
+            raise ValueError(f'Unrecognized Lambda event: {event_dict!r}')
+
+    def _dispatch_event(self, event):
+        # Identify relevant event config(s):
+        result = None
+        for event_config in self.event_sources:
+            if event_config.match(event):
+                result = event_config.handler(event)
+                break
+        return result
+
     def __call__(self, event, context):
         # This is what's invoked via lambda.
-        # Sometimes the event can be something that's not
-        # what we specified in our request_template mapping.
-        # When that happens, we want to give a better error message here.
+
+        # Unless it's an HTTP event with a path that's specified in our
+        # request_template mapping, attempt to dispatch per event config(s)
+        # or give a better error message here:
         resource_path = event.get('requestContext', {}).get('resourcePath')
         if resource_path is None:
-            return error_response(error_code='InternalServerError',
-                                  message='Unknown request.',
-                                  http_status_code=500)
+            try:
+                results = []
+                for event in self._parse_events(event_dict, context):
+                    result = self._dispatch_event(event)
+                    results.append(result)
+                return results[0]
+            except TypeError, ValueError:
+                return error_response(error_code='InternalServerError',
+                                      message='Unknown request.',
+                                      http_status_code=500)
         http_method = event['requestContext']['httpMethod']
         if resource_path not in self.routes:
             raise ChaliceError("No view function for: %s" % resource_path)
@@ -782,6 +840,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                 error_code='MethodNotAllowedError',
                 message='Unsupported method: %s' % http_method,
                 http_status_code=405)
+
         route_entry = self.routes[resource_path][http_method]
         view_function = route_entry.view_function
         function_args = {name: event['pathParameters'][name]
@@ -1059,15 +1118,20 @@ class LambdaFunction(object):
 
 
 class BaseEventSourceConfig(object):
-    def __init__(self, name, handler_string):
+    def __init__(self, name, handler_string, handler):
         self.name = name
         self.handler_string = handler_string
+        self.handler = handler
 
 
 class CloudWatchEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, schedule_expression):
-        super(CloudWatchEventConfig, self).__init__(name, handler_string)
+    def __init__(self, name, handler_string, handler, schedule_expression, event_rule):
+        super(CloudWatchEventConfig, self).__init__(name, handler_string, handler)
         self.schedule_expression = schedule_expression
+        self.event_rule = event_rule
+
+    def match(self, event):
+        return isinstance(event, CloudWatchEvent) and event.event_rule == self.event_rule
 
 
 class ScheduleExpression(object):
@@ -1114,25 +1178,46 @@ class Cron(ScheduleExpression):
 
 
 class S3EventConfig(BaseEventSourceConfig):
-    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
-        super(S3EventConfig, self).__init__(name, handler_string)
+    def __init__(self, name, handler_string, handler, bucket, events, prefix, suffix):
+        super(S3EventConfig, self).__init__(name, handler_string, handler)
         self.bucket = bucket
         self.events = events
         self.prefix = prefix
         self.suffix = suffix
 
+    def _match_event_type(self, pattern, event_type):
+        # Assume AWS service (`s3`) is a given ...
+        _, major_pattern, minor_pattern = pattern.split(':', 2)
+        _, major, minor = event_type.split(':', 2)
+        return major_pattern == major and (minor_pattern == '*' or minor_pattern == minor)
+
+    def match(self, event):
+        return (
+            isinstance(event, S3Event)
+            and event.bucket == self.bucket
+            and any(self._match_event_type(pattern, event.event_type) for pattern in self.events)
+            and (self.prefix is None or event.key.startswith(self.prefix))
+            and (self.suffix is None or event.key.endswith(self.suffix))
+        )
+
 
 class SNSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, topic):
-        super(SNSEventConfig, self).__init__(name, handler_string)
+    def __init__(self, name, handler_string, handler, topic):
+        super(SNSEventConfig, self).__init__(name, handler_string, handler)
         self.topic = topic
+
+    def match(self, event):
+        return isinstance(event, SNSEvent) and event.topic == self.topic
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, queue, batch_size):
-        super(SQSEventConfig, self).__init__(name, handler_string)
+    def __init__(self, name, handler_string, handler, queue, batch_size):
+        super(SQSEventConfig, self).__init__(name, handler_string, handler)
         self.queue = queue
         self.batch_size = batch_size
+
+    def match(self, event):
+        return isinstance(event, SQSEvent) and event.queue == self.queue
 
 
 class EventSourceHandler(object):
@@ -1164,6 +1249,8 @@ class BaseLambdaEvent(object):
 
 
 class CloudWatchEvent(BaseLambdaEvent):
+    EVENT_RULE_RESOURCE_RE = re.compile(r'^arn:aws:events:.*:rule/([\w-]+)$')
+
     def _extract_attributes(self, event_dict):
         self.version = event_dict['version']
         self.account = event_dict['account']
@@ -1174,13 +1261,22 @@ class CloudWatchEvent(BaseLambdaEvent):
         self.time = event_dict['time']
         self.event_id = event_dict['id']
         self.resources = event_dict['resources']
+        # Extract event rule:
+        first_resource = self.resources[0]
+        match = self.EVENT_RULE_RESOURCE_RE.search(first_resource)
+        self.event_rule = match.group(1) if match else None
 
 
 class SNSEvent(BaseLambdaEvent):
+    TOPIC_ARN_RE = re.compile(r'^arn:aws:sns:.*:([\w-]+)$')
+
     def _extract_attributes(self, event_dict):
         first_record = event_dict['Records'][0]
         self.message = first_record['Sns']['Message']
         self.subject = first_record['Sns']['Subject']
+        # Extract SNS topic:
+        match = self.TOPIC_ARN_RE.search(first_record['Sns']['TopicArn'])
+        self.topic = match.group(1) if match else None
 
 
 class S3Event(BaseLambdaEvent):
@@ -1188,13 +1284,19 @@ class S3Event(BaseLambdaEvent):
         s3 = event_dict['Records'][0]['s3']
         self.bucket = s3['bucket']['name']
         self.key = unquote_str(s3['object']['key'])
+        # Extract S3 event type (`eventName`):
+        first_record = event_dict['Records'][0]
+        self.event_type = f"s3:{first_record['eventName']}"
 
 
 class SQSEvent(BaseLambdaEvent):
+    EVENT_SOURCE_ARN_RE = re.compile(r'^arn:aws:sqs:.*:([\w-]+)$')
+
     def _extract_attributes(self, event_dict):
-        # We don't extract anything off the top level
-        # event.
-        pass
+        # Extract queue name:
+        first_record = event_dict['Records'][0]
+        match = self.EVENT_SOURCE_ARN_RE.search(first_record['eventSourceARN'])
+        self.queue = match.group(1) if match else None
 
     def __iter__(self):
         for record in self._event_dict['Records']:

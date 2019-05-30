@@ -13,6 +13,9 @@ Next Release (TBD)
 * Raise TypeError when trying to serialize an unserializable
   type
   (`#1100 <https://github.com/aws/chalice/issues/1100>`__)
+* Implement multi-dispatch: handle all event types through a single
+  entry point (``app.app``)
+  (`#1134 <https://github.com/aws/chalice/pull/1134>`__)
 
 
 1.8.0
