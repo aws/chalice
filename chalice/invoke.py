@@ -83,8 +83,8 @@ class LambdaResponseFormatter(object):
         error_type = loaded_error.get('errorType')
         stack_trace = loaded_error.get('stackTrace')
 
-        if stack_trace is not None:
-            self._format_stacktrace(formatted, stack_trace)
+        for line in stack_trace:
+            formatted.write(line)
 
         if error_type is not None:
             formatted.write('{}: {}\n'.format(error_type, error_message))
