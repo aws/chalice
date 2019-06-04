@@ -13,6 +13,8 @@ Next Release (TBD)
 * Raise TypeError when trying to serialize an unserializable
   type
   (`#1100 <https://github.com/aws/chalice/issues/1100>`__)
+* Update ``policies.json`` file
+  (`#1110 <https://github.com/aws/chalice/issues/1110>`__)
 
 
 1.8.0
