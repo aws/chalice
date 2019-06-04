@@ -160,13 +160,13 @@ class TestLambdaResponseFormatter(object):
         })
         assert 'foobarbaz\n' == formatted
 
-    def test_formatter_can_format_stack_trace(self):
+    def test_formatter_can_format_list_stack_trace(self):
         error = {
             "errorMessage": "Something bad happened",
             "errorType": "Error",
             "stackTrace": [
                 ["/path/file.py", 123, "main", "foo(bar)"],
-                ["/path/other_file.py", 456, "function", "bar = baz"]
+                ["/path/more.py", 456, "func", "bar = baz"]
             ]
         }
         serialized_error = json.dumps(error).encode('utf-8')
@@ -182,7 +182,34 @@ class TestLambdaResponseFormatter(object):
             'Traceback (most recent call last):\n'
             '  File "/path/file.py", line 123, in main\n'
             '    foo(bar)\n'
-            '  File "/path/other_file.py", line 456, in function\n'
+            '  File "/path/more.py", line 456, in func\n'
+            '    bar = baz\n'
+            'Error: Something bad happened\n'
+        ) == formatted
+
+    def test_formatter_can_format_string_stack_trace(self):
+        error = {
+            "errorMessage": "Something bad happened",
+            "errorType": "Error",
+            "stackTrace": [
+                '  File "/path/file.py", line 123, in main\n    foo(bar)\n',
+                '  File "/path/more.py", line 456, in func\n    bar = baz\n',
+            ]
+        }
+        serialized_error = json.dumps(error).encode('utf-8')
+        formatter = LambdaResponseFormatter()
+        formatted = formatter.format_response({
+            'StatusCode': 200,
+            'FunctionError': 'Unhandled',
+            'ExecutedVersion': '$LATEST',
+            'Payload': FakeStreamingBody(serialized_error)
+        })
+
+        assert (
+            'Traceback (most recent call last):\n'
+            '  File "/path/file.py", line 123, in main\n'
+            '    foo(bar)\n'
+            '  File "/path/more.py", line 456, in func\n'
             '    bar = baz\n'
             'Error: Something bad happened\n'
         ) == formatted

@@ -98,12 +98,21 @@ class LambdaResponseFormatter(object):
             self._format_frame(formatted, frame)
 
     def _format_frame(self, formatted, frame):
-        # type: (StringIO, List[Union[str, int]]) -> None
-        path, lineno, function, code = frame
-        formatted.write(
-            '  File "{}", line {}, in {}\n'.format(path, lineno, function))
-        formatted.write(
-            '    {}\n'.format(code))
+        # type: (StringIO, Union[str, List[Union[str, int]]]) -> None
+        if isinstance(frame, list):
+            # If the output is a list, it came from a 4-tuple as a result of
+            # an extract_tb call. This is the behavior up to and including
+            # python 3.6.
+            path, lineno, function, code = frame
+            formatted.write(
+                '  File "{}", line {}, in {}\n'.format(path, lineno, function))
+            formatted.write(
+                '    {}\n'.format(code))
+        else:
+            # If it is not a list, its a string. This is because the 4-tuple
+            # was replaced with a FrameSummary object which is serialized as
+            # a string by Lambda. In this case we can just print it directly.
+            formatted.write(frame)
 
     def _format_success(self, formatted, payload):
         # type: (StringIO, bytes) -> None
