@@ -28,6 +28,12 @@ Chalice
       Lambda. You can find out more about this object by reading the
       `lambda context object documentation <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
 
+      .. note::
+
+       This is only set on ``@app.route`` handlers. For other handlers it
+       will be ``None``. Instead the event parameter will have a ``context``
+       property. For example :attr:`S3Event.context`.
+
    .. attribute:: debug
 
       A boolean value that enables debugging.  By default, this value is
