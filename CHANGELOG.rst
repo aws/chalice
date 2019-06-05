@@ -17,6 +17,8 @@ Next Release (TBD)
   (`#1110 <https://github.com/aws/chalice/issues/1110>`__)
 * Support repeating values in the query string
   (`#1131 <https://github.com/aws/chalice/issues/1131>`__)
+* Add layer support to chalice package
+  (`#1130 <https://github.com/aws/chalice/issues/1130>`__)
 
 
 1.8.0
