@@ -184,6 +184,16 @@ class TestSAMTemplate(object):
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['ReservedConcurrentExecutions'] == 5
 
+    def test_adds_layers_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.layers = ['arn:aws:layer1', 'arn:aws:layer2']
+        template = self.template_gen.generate_sam_template([function])
+        cfn_resource = list(template['Resources'].values())[0]
+        assert cfn_resource['Properties']['Layers'] == [
+            'arn:aws:layer1',
+            'arn:aws:layer2'
+            ]
+
     def test_duplicate_resource_name_raises_error(self):
         one = self.lambda_function()
         two = self.lambda_function()
