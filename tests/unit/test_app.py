@@ -20,7 +20,7 @@ from chalice.app import (
     Request,
     Response,
     handle_extra_types,
-    MultiDict
+    MultiDict,
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -273,6 +273,31 @@ def test_can_call_to_dict_on_current_request(sample_app, create_event):
     # The dict can change over time so we'll just pick
     # out a few keys as a basic sanity test.
     assert response['method'] == 'GET'
+    # We also want to verify that to_dict() is always
+    # JSON serializable so we check we can roundtrip
+    # the data to/from JSON.
+    assert isinstance(json.loads(json.dumps(response)), dict)
+
+
+def test_can_call_to_dict_on_request_with_querystring(sample_app,
+                                                      create_event):
+    @sample_app.route('/todict')
+    def todict():
+        return sample_app.current_request.to_dict()
+
+    event = create_event('/todict', 'GET', {})
+    event['multiValueQueryStringParameters'] = {
+        'key': ['val1', 'val2'],
+        'key2': ['val']
+    }
+    response = json_response_body(sample_app(event, context=None))
+    assert isinstance(response, dict)
+    # The dict can change over time so we'll just pick
+    # out a few keys as a basic sanity test.
+    assert response['method'] == 'GET'
+    assert response['query_params'] is not None
+    assert response['query_params']['key'] == 'val2'
+    assert response['query_params']['key2'] == 'val'
     # We also want to verify that to_dict() is always
     # JSON serializable so we check we can roundtrip
     # the data to/from JSON.

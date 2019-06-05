@@ -52,8 +52,6 @@ def handle_extra_types(obj):
     # to support that as well.
     if isinstance(obj, decimal.Decimal):
         return float(obj)
-    # MultiDict is an object used to represent query parameters,
-    # which used to be a dict.
     # This is added for backwards compatibility.
     # It will keep only the last value for every key as it used to.
     if isinstance(obj, MultiDict):
@@ -160,12 +158,16 @@ class MultiDict(Mapping):
     """
 
     def __init__(self, mapping):
-        self._dict = mapping or {}
+        if mapping is None:
+            mapping = {}
+
+        self._dict = mapping
 
     def __getitem__(self, k):
-        lst = self._dict[k]
+        values_list = self._dict[k]
+
         try:
-            return lst[-1]
+            return values_list[-1]
         except IndexError:
             raise KeyError(k)
 
@@ -177,9 +179,6 @@ class MultiDict(Mapping):
 
     def __iter__(self):
         return iter(self._dict)
-
-    def __repr__(self):
-        return 'MultiDict(%s)' % repr(self._dict)
 
 
 class CaseInsensitiveMapping(Mapping):

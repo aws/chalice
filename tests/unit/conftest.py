@@ -89,7 +89,7 @@ def create_event():
                 'Content-Type': content_type,
             },
             'pathParameters': path,
-            'multiValueQueryStringParameters': {},
+            'multiValueQueryStringParameters': None,
             'body': "",
             'stageVariables': {},
         }
@@ -107,7 +107,7 @@ def create_empty_header_event():
             },
             'headers': None,
             'pathParameters': path,
-            'multiValueQueryStringParameters': {},
+            'multiValueQueryStringParameters': None,
             'body': "",
             'stageVariables': {},
         }
