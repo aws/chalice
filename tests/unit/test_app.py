@@ -4,6 +4,7 @@ import logging
 import json
 import gzip
 import inspect
+from copy import deepcopy
 
 import pytest
 from pytest import fixture
@@ -14,7 +15,13 @@ import six
 
 from chalice import app
 from chalice import NotFoundError
-from chalice.app import APIGateway, Request, Response, handle_extra_types
+from chalice.app import (
+    APIGateway,
+    Request,
+    Response,
+    handle_extra_types,
+    MultiDict,
+)
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -22,11 +29,15 @@ from chalice.deploy.validate import validate_feature_flags
 
 # These are used to generate sample data for hypothesis tests.
 STR_MAP = st.dictionaries(st.text(), st.text())
+STR_TO_LIST_MAP = st.dictionaries(
+    st.text(),
+    st.lists(elements=st.text(), min_size=1, max_size=5)
+)
 HTTP_METHOD = st.sampled_from(['GET', 'POST', 'PUT', 'PATCH',
                                'OPTIONS', 'HEAD', 'DELETE'])
 HTTP_BODY = st.none() | st.text()
 HTTP_REQUEST = st.fixed_dictionaries({
-    'query_params': STR_MAP,
+    'query_params': STR_TO_LIST_MAP,
     'headers': STR_MAP,
     'uri_params': STR_MAP,
     'method': HTTP_METHOD,
@@ -262,6 +273,31 @@ def test_can_call_to_dict_on_current_request(sample_app, create_event):
     # The dict can change over time so we'll just pick
     # out a few keys as a basic sanity test.
     assert response['method'] == 'GET'
+    # We also want to verify that to_dict() is always
+    # JSON serializable so we check we can roundtrip
+    # the data to/from JSON.
+    assert isinstance(json.loads(json.dumps(response)), dict)
+
+
+def test_can_call_to_dict_on_request_with_querystring(sample_app,
+                                                      create_event):
+    @sample_app.route('/todict')
+    def todict():
+        return sample_app.current_request.to_dict()
+
+    event = create_event('/todict', 'GET', {})
+    event['multiValueQueryStringParameters'] = {
+        'key': ['val1', 'val2'],
+        'key2': ['val']
+    }
+    response = json_response_body(sample_app(event, context=None))
+    assert isinstance(response, dict)
+    # The dict can change over time so we'll just pick
+    # out a few keys as a basic sanity test.
+    assert response['method'] == 'GET'
+    assert response['query_params'] is not None
+    assert response['query_params']['key'] == 'val2'
+    assert response['query_params']['key2'] == 'val'
     # We also want to verify that to_dict() is always
     # JSON serializable so we check we can roundtrip
     # the data to/from JSON.
@@ -1860,3 +1896,64 @@ def test_blueprint_gated_behind_feature_flag():
 
     myapp.register_blueprint(bp)
     assert_requires_opt_in(myapp, flag='BLUEPRINTS')
+
+
+@pytest.mark.parametrize('input_dict', [
+    {},
+    {'key': []}
+])
+def test_multidict_raises_keyerror(input_dict):
+    d = MultiDict(input_dict)
+    with pytest.raises(KeyError):
+        val = d['key']
+        assert val is val
+
+
+@pytest.mark.parametrize('input_dict', [
+    {},
+    {'key': []}
+])
+def test_multidict_returns_emptylist(input_dict):
+    d = MultiDict(input_dict)
+    assert d.getlist('key') == []
+
+
+@pytest.mark.parametrize('input_dict', [
+    {'key': ['value']},
+    {'key': ['']},
+    {'key': ['value1', 'value2', 'value3']},
+    {'key': ['value1', 'value2', None]}
+])
+def test_multidict_returns_lastvalue(input_dict):
+    d = MultiDict(input_dict)
+    assert d['key'] == input_dict['key'][-1]
+
+
+@pytest.mark.parametrize('input_dict', [
+    {'key': ['value']},
+    {'key': ['']},
+    {'key': ['value1', 'value2', 'value3']},
+    {'key': ['value1', 'value2', None]}
+])
+def test_multidict_returns_all_values(input_dict):
+    d = MultiDict(input_dict)
+    assert d.getlist('key') == input_dict['key']
+
+
+@pytest.mark.parametrize('input_dict', [
+    {'key': ['value']},
+    {'key': ['']},
+    {'key': ['value1', 'value2', 'value3']},
+    {'key': ['value1', 'value2', None]}
+])
+def test_multidict_list_wont_change_source(input_dict):
+    d = MultiDict(input_dict)
+    dict_copy = deepcopy(input_dict)
+    d.getlist('key')[0] = 'othervalue'
+    assert d.getlist('key') == dict_copy['key']
+
+
+def test_multidict_is_readonly():
+    d = MultiDict(None)
+    with pytest.raises(TypeError):
+        d['key'] = 'value'

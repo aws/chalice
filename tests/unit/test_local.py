@@ -127,6 +127,12 @@ def sample_app():
     def query_string():
         return demo.current_request.query_params
 
+    @demo.route('/query-string-multi')
+    def query_string_multi():
+        params = demo.current_request.query_params
+        keys = {k: params.getlist(k) for k in params}
+        return keys
+
     @demo.route('/custom-response')
     def custom_response():
         return Response(body='text',
@@ -462,6 +468,22 @@ def test_querystring_is_mapped(handler):
     assert _get_body_from_response_stream(handler) == {'a': 'b', 'c': 'd'}
 
 
+def test_empty_querystring_is_none(handler):
+    set_current_request(handler, method='GET', path='/query-string')
+    handler.do_GET()
+    assert _get_body_from_response_stream(handler) is None
+
+
+def test_querystring_list_is_mapped(handler):
+    set_current_request(
+        handler,
+        method='GET', path='/query-string-multi?a=b&c=d&a=c&e='
+    )
+    handler.do_GET()
+    expected = {'a': ['b', 'c'], 'c': ['d'], 'e': ['']}
+    assert _get_body_from_response_stream(handler) == expected
+
+
 def test_querystring_undefined_is_mapped_consistent_with_apigateway(handler):
     # API Gateway picks up the last element of duplicate keys in a
     # querystring
@@ -549,7 +571,7 @@ def test_can_create_lambda_event():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': None,
+        'multiValueQueryStringParameters': None,
         'body': None,
         'stageVariables': {},
     }
@@ -574,7 +596,7 @@ def test_parse_query_string():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': {'a': '1', 'b': '', 'c': '3'},
+        'multiValueQueryStringParameters': {'a': ['1'], 'b': [''], 'c': ['3']},
         'body': None,
         'stageVariables': {},
     }
@@ -600,7 +622,7 @@ def test_can_create_lambda_event_for_put_request():
         },
         'headers': {'content-type': 'application/json'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': None,
+        'multiValueQueryStringParameters': None,
         'body': '{"foo": "bar"}',
         'stageVariables': {},
     }
@@ -627,7 +649,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
         },
         'headers': {'content-type': 'application/x-www-form-urlencoded'},
         'pathParameters': {'capture': 'other'},
-        'queryStringParameters': None,
+        'multiValueQueryStringParameters': None,
         'body': form_body,
         'stageVariables': {},
     }

@@ -52,6 +52,10 @@ def handle_extra_types(obj):
     # to support that as well.
     if isinstance(obj, decimal.Decimal):
         return float(obj)
+    # This is added for backwards compatibility.
+    # It will keep only the last value for every key as it used to.
+    if isinstance(obj, MultiDict):
+        return dict(obj)
     raise TypeError('Object of type %s is not JSON serializable'
                     % obj.__class__.__name__)
 
@@ -144,6 +148,37 @@ ALL_ERRORS = [
     ConflictError,
     UnprocessableEntityError,
     TooManyRequestsError]
+
+
+class MultiDict(Mapping):
+    """A read only mapping of key to list of values.
+
+    Accessing it in the usual way will return the last value in the list.
+    Calling getlist will return a list of values with the same key.
+    """
+
+    def __init__(self, mapping):
+        if mapping is None:
+            mapping = {}
+
+        self._dict = mapping
+
+    def __getitem__(self, k):
+        values_list = self._dict[k]
+
+        try:
+            return values_list[-1]
+        except IndexError:
+            raise KeyError(k)
+
+    def getlist(self, k):
+        return list(self._dict.get(k, []))
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __iter__(self):
+        return iter(self._dict)
 
 
 class CaseInsensitiveMapping(Mapping):
@@ -302,7 +337,8 @@ class Request(object):
 
     def __init__(self, query_params, headers, uri_params, method, body,
                  context, stage_vars, is_base64_encoded):
-        self.query_params = query_params
+        self.query_params = None if query_params is None \
+            else MultiDict(query_params)
         self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
@@ -350,6 +386,8 @@ class Request(object):
         # We want the output of `to_dict()` to be
         # JSON serializable, so we need to remove the CaseInsensitive dict.
         copied['headers'] = dict(copied['headers'])
+        if copied['query_params'] is not None:
+            copied['query_params'] = dict(copied['query_params'])
         return copied
 
 
@@ -787,14 +825,16 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         function_args = {name: event['pathParameters'][name]
                          for name in route_entry.view_args}
         self.lambda_context = context
-        self.current_request = Request(event['queryStringParameters'],
-                                       event['headers'],
-                                       event['pathParameters'],
-                                       event['requestContext']['httpMethod'],
-                                       event['body'],
-                                       event['requestContext'],
-                                       event['stageVariables'],
-                                       event.get('isBase64Encoded', False))
+        self.current_request = Request(
+            event['multiValueQueryStringParameters'],
+            event['headers'],
+            event['pathParameters'],
+            event['requestContext']['httpMethod'],
+            event['body'],
+            event['requestContext'],
+            event['stageVariables'],
+            event.get('isBase64Encoded', False)
+        )
         # We're getting the CORS headers before validation to be able to
         # output desired headers with
         cors_headers = None
