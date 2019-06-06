@@ -789,6 +789,15 @@ def test_unknown_kwargs_raise_error(sample_app, create_event):
             pass
 
 
+def test_name_kwargs_does_not_raise_error(sample_app, create_event):
+    try:
+        @sample_app.route('/foo', name='foo')
+        def name_kwarg():
+            pass
+    except TypeError:
+        pytest.fail('route name kwarg should not raise TypeError.')
+
+
 def test_default_logging_handlers_created():
     handlers_before = logging.getLogger('log_app').handlers[:]
     # configure_logs = True is the default, but we're

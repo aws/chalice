@@ -19,6 +19,8 @@ Next Release (TBD)
   (`#1131 <https://github.com/aws/chalice/issues/1131>`__)
 * Add layer support to chalice package
   (`#1130 <https://github.com/aws/chalice/issues/1130>`__)
+* Fix bug with route ``name`` kwarg raising a ``TypeError``
+  (`#1112 <https://github.com/aws/chalice/issues/1112>`__)
 
 
 1.8.0
