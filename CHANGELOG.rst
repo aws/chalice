@@ -23,6 +23,9 @@ Next Release (TBD)
   (`#1112 <https://github.com/aws/chalice/issues/1112>`__)
 * Change exceptions to always be logged at the ERROR level
   (`#969 <https://github.com/aws/chalice/issues/969>`__)
+* Fix bug handling exceptions during ``chalice invoke`` on
+  Python 3.7
+  (`#1139 <https://github.com/aws/chalice/issues/1139>`__)
 
 
 1.8.0
