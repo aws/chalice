@@ -21,6 +21,8 @@ Next Release (TBD)
   (`#1130 <https://github.com/aws/chalice/issues/1130>`__)
 * Fix bug with route ``name`` kwarg raising a ``TypeError``
   (`#1112 <https://github.com/aws/chalice/issues/1112>`__)
+* Change exceptions to always be logged at the ERROR level
+  (`#969 <https://github.com/aws/chalice/issues/969>`__)
 
 
 1.8.0
