@@ -338,6 +338,42 @@ def test_can_load_python_version():
     assert c.lambda_python_version == expected_runtime
 
 
+class TestConfigureMinimumCompressionSize(object):
+    def test_not_set(self):
+        c = Config('dev', config_from_disk={})
+        assert c.minimum_compression_size is None
+
+    def test_set_minimum_compression_size_global(self):
+        config_from_disk = {
+            'minimum_compression_size': 5000
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.minimum_compression_size == 5000
+
+    def test_set_minimum_compression_size_stage(self):
+        config_from_disk = {
+            'stages': {
+                'dev': {
+                    'minimum_compression_size': 5000
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.minimum_compression_size == 5000
+
+    def test_set_minimum_compression_size_override(self):
+        config_from_disk = {
+            'minimum_compression_size': 0,
+            'stages': {
+                'dev': {
+                    'minimum_compression_size': 5000
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.minimum_compression_size == 5000
+
+
 class TestConfigureLambdaMemorySize(object):
     def test_not_set(self):
         c = Config('dev', config_from_disk={})

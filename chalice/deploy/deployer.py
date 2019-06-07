@@ -96,23 +96,35 @@ from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 from chalice import app
 from chalice.config import Config  # noqa
+from chalice.config import DeployedResources  # noqa
 from chalice.compat import is_broken_pipe_error
-from chalice.awsclient import DeploymentPackageTooLargeError, TypedAWSClient
-from chalice.awsclient import LambdaClientError, AWSClientError
-from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE, VPC_ATTACH_POLICY, \
-    DEFAULT_LAMBDA_TIMEOUT, DEFAULT_LAMBDA_MEMORY_SIZE, LAMBDA_TRUST_POLICY, \
-    SQS_EVENT_SOURCE_POLICY
+from chalice.awsclient import DeploymentPackageTooLargeError
+from chalice.awsclient import LambdaClientError
+from chalice.awsclient import AWSClientError
+from chalice.awsclient import TypedAWSClient
+from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
+from chalice.constants import VPC_ATTACH_POLICY
+from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
+from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
+from chalice.constants import LAMBDA_TRUST_POLICY
+from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.deploy import models
 from chalice.deploy.executor import Executor
-from chalice.deploy.packager import PipRunner, SubprocessPip, \
-    DependencyBuilder as PipDependencyBuilder, LambdaDeploymentPackager
-from chalice.deploy.planner import PlanStage, RemoteState, \
-    ResourceSweeper, NoopPlanner
+from chalice.deploy.packager import PipRunner
+from chalice.deploy.packager import SubprocessPip
+from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
+from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.planner import PlanStage
+from chalice.deploy.planner import RemoteState
+from chalice.deploy.planner import ResourceSweeper
+from chalice.deploy.planner import NoopPlanner
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
-from chalice.policy import AppPolicyGenerator
-from chalice.utils import OSUtils, UI, serialize_to_json
 from chalice.deploy.validate import validate_configuration
+from chalice.policy import AppPolicyGenerator
+from chalice.utils import OSUtils
+from chalice.utils import UI
+from chalice.utils import serialize_to_json
 
 
 OptStr = Optional[str]
@@ -432,6 +444,10 @@ class ApplicationGraphBuilder(object):
         # it's just <app>-<stage>.
         function_name = '%s-%s' % (config.app_name, config.chalice_stage)
         lambda_function.function_name = function_name
+        if config.minimum_compression_size is None:
+            minimum_compression = ''
+        else:
+            minimum_compression = str(config.minimum_compression_size)
         authorizers = []
         for auth in config.chalice_app.builtin_auth_handlers:
             auth_lambda = self._create_lambda_model(
@@ -442,6 +458,7 @@ class ApplicationGraphBuilder(object):
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
+            minimum_compression=minimum_compression,
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
