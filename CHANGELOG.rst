@@ -28,6 +28,9 @@ Next Release (TBD)
   (`#1139 <https://github.com/aws/chalice/issues/1139>`__)
 * Add support for API Gateway compression
   (`#672 <https://github.com/aws/chalice/issues/672>`__)
+* Add support for both relative and absolute paths for
+  ``--package-dir``
+  (`#940 <https://github.com/aws/chalice/issues/940>`__)
 
 
 1.8.0

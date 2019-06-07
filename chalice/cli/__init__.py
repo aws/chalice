@@ -91,7 +91,8 @@ def get_system_info():
                       message='%(prog)s %(version)s, {}'
                       .format(get_system_info()))
 @click.option('--project-dir',
-              help='The project directory.  Defaults to CWD')
+              help='The project directory path (absolute or relative).'
+                   'Defaults to CWD')
 @click.option('--debug/--no-debug',
               default=False,
               help='Print debug logs to stderr.')
@@ -100,6 +101,8 @@ def cli(ctx, project_dir, debug=False):
     # type: (click.Context, str, bool) -> None
     if project_dir is None:
         project_dir = os.getcwd()
+    elif not os.path.isabs(project_dir):
+        project_dir = os.path.abspath(project_dir)
     if debug is True:
         _configure_logging(logging.DEBUG)
     ctx.obj['project_dir'] = project_dir

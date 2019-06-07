@@ -482,3 +482,24 @@ def test_error_message_displayed_when_missing_feature_opt_in(runner):
         result = _run_cli_command(runner, cli.package, ['out'])
         assert isinstance(result.exception, ExperimentalFeatureError)
         assert 'MYTESTFEATURE' in str(result.exception)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        None,
+        '.',
+        os.getcwd,
+    ],
+)
+def test_cli_with_absolute_path(runner, path):
+    with runner.isolated_filesystem():
+        if callable(path):
+            path = path()
+        result = runner.invoke(
+            cli.cli,
+            ['--project-dir', path, 'new-project', 'testproject'],
+            obj={})
+        assert result.exit_code == 0
+        assert os.listdir(os.getcwd()) == ['testproject']
+        assert_chalice_app_structure_created(dirname='testproject')
