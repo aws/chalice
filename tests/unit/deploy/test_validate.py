@@ -4,10 +4,15 @@ import mock
 from chalice.app import Chalice
 from chalice.config import Config
 from chalice import CORSConfig
-from chalice.deploy.validate import validate_configuration, validate_routes, \
-    validate_python_version, validate_route_content_types, \
-    validate_unique_function_names, validate_feature_flags, \
-    ExperimentalFeatureError
+from chalice.constants import MIN_COMPRESSION_SIZE
+from chalice.constants import MAX_COMPRESSION_SIZE
+from chalice.deploy.validate import validate_configuration
+from chalice.deploy.validate import validate_routes
+from chalice.deploy.validate import validate_python_version
+from chalice.deploy.validate import validate_route_content_types
+from chalice.deploy.validate import validate_unique_function_names
+from chalice.deploy.validate import validate_feature_flags
+from chalice.deploy.validate import ExperimentalFeatureError
 
 
 def test_trailing_slash_routes_result_in_error():
@@ -242,3 +247,28 @@ def test_can_validate_feature_flags(sample_app):
     except ExperimentalFeatureError:
         raise AssertionError("App was not suppose to raise an error when "
                              "opting in to features via a feature flag.")
+
+
+def test_validation_error_if_minimum_compression_size_not_int(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           minimum_compression_size='not int')
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
+def test_validation_error_if_minimum_compression_size_invalid_int(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           minimum_compression_size=MIN_COMPRESSION_SIZE-1)
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+    config = Config.create(chalice_app=sample_app,
+                           minimum_compression_size=MAX_COMPRESSION_SIZE+1)
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
+def test_valid_minimum_compression_size(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           minimum_compression_size=1)
+    assert validate_configuration(config) is None

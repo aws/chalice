@@ -6,6 +6,8 @@ from typing import Dict, List, Set, Iterator, Optional  # noqa
 from chalice import app  # noqa
 from chalice.config import Config  # noqa
 from chalice.constants import EXPERIMENTAL_ERROR_MSG
+from chalice.constants import MIN_COMPRESSION_SIZE
+from chalice.constants import MAX_COMPRESSION_SIZE
 
 
 class ExperimentalFeatureError(Exception):
@@ -154,7 +156,7 @@ def validate_minimum_compression_size(config):
             raise ValueError("'minimum_compression_size' must be an int.")
         elif config.minimum_compression_size < MIN_COMPRESSION_SIZE \
                 or config.minimum_compression_size > MAX_COMPRESSION_SIZE:
-            raise ValueError("'minimum_compression_size' must be equal to or"
+            raise ValueError("'minimum_compression_size' must be equal to or "
                              "greater than %s and less than or equal to %s."
                              % (MIN_COMPRESSION_SIZE, MAX_COMPRESSION_SIZE))
 

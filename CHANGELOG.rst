@@ -26,6 +26,8 @@ Next Release (TBD)
 * Fix bug handling exceptions during ``chalice invoke`` on
   Python 3.7
   (`#1139 <https://github.com/aws/chalice/issues/1139>`__)
+* Add support for API Gateway compression
+  (`#672 <https://github.com/aws/chalice/issues/672>`__)
 
 
 1.8.0

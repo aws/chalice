@@ -516,6 +516,7 @@ class TestPlanRestAPI(BasePlannerTests):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
+            minimum_compression='100',
             api_gateway_stage='api',
             lambda_function=function,
         )
@@ -536,6 +537,17 @@ class TestPlanRestAPI(BasePlannerTests):
             models.APICall(method_name='deploy_rest_api',
                            params={'rest_api_id': Variable('rest_api_id'),
                                    'api_gateway_stage': 'api'}),
+            models.APICall(
+                method_name='update_rest_api',
+                params={
+                    'rest_api_id': Variable('rest_api_id'),
+                    'patch_operations': [{
+                        'op': 'replace',
+                        'path': '/minimumCompressionSize',
+                        'value': '100',
+                    }],
+                },
+            ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
                 params={
@@ -569,6 +581,7 @@ class TestPlanRestAPI(BasePlannerTests):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
             api_gateway_stage='api',
             lambda_function=function,
         )
@@ -604,6 +617,17 @@ class TestPlanRestAPI(BasePlannerTests):
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
+            ),
+            models.APICall(
+                method_name='update_rest_api',
+                params={
+                    'rest_api_id': Variable('rest_api_id'),
+                    'patch_operations': [{
+                        'op': 'replace',
+                        'path': '/minimumCompressionSize',
+                        'value': '',
+                    }],
+                },
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
@@ -983,6 +1007,7 @@ class TestRemoteState(object):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
             api_gateway_stage='api',
             lambda_function=None,
         )

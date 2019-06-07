@@ -180,6 +180,7 @@ class ScheduledEvent(ManagedModel):
 class RestAPI(ManagedModel):
     resource_type = 'rest_api'
     swagger_doc = attrib()                       # type: DV[Dict[str, Any]]
+    minimum_compression = attrib()               # type: str
     api_gateway_stage = attrib()                 # type: str
     lambda_function = attrib()                   # type: LambdaFunction
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
