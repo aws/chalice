@@ -151,14 +151,15 @@ def _validate_cors_for_route(route_url, route_methods):
 
 def validate_minimum_compression_size(config):
     # type: (Config) -> None
-    if config.minimum_compression_size is not None:
-        if not isinstance(config.minimum_compression_size, int):
-            raise ValueError("'minimum_compression_size' must be an int.")
-        elif config.minimum_compression_size < MIN_COMPRESSION_SIZE \
-                or config.minimum_compression_size > MAX_COMPRESSION_SIZE:
-            raise ValueError("'minimum_compression_size' must be equal to or "
-                             "greater than %s and less than or equal to %s."
-                             % (MIN_COMPRESSION_SIZE, MAX_COMPRESSION_SIZE))
+    if config.minimum_compression_size is None:
+        return
+    if not isinstance(config.minimum_compression_size, int):
+        raise ValueError("'minimum_compression_size' must be an int.")
+    elif config.minimum_compression_size < MIN_COMPRESSION_SIZE \
+            or config.minimum_compression_size > MAX_COMPRESSION_SIZE:
+        raise ValueError("'minimum_compression_size' must be equal to or "
+                         "greater than %s and less than or equal to %s."
+                         % (MIN_COMPRESSION_SIZE, MAX_COMPRESSION_SIZE))
 
 
 def _validate_manage_iam_role(config):
