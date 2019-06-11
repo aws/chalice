@@ -725,7 +725,9 @@ class PipRunner(object):
     def download_all_dependencies(self, requirements_filename, directory):
         # type: (str, str) -> None
         """Download all dependencies as sdist or wheel."""
-        arguments = ['--no-deps', '-r', requirements_filename, '--dest', directory]
+        arguments = [
+            '--no-deps', '-r', requirements_filename, '--dest', directory
+        ]
         rc, out, err = self._execute('download', arguments)
         # When downloading all dependencies we expect to get an rc of 0 back
         # since we are casting a wide net here letting pip have options about
