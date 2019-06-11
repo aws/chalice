@@ -258,7 +258,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl',
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
@@ -280,7 +282,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp33-abi3-manylinux1_x86_64.whl',
                 'bar-1.2-cp34-abi3-manylinux1_x86_64.whl',
@@ -304,7 +308,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -326,7 +332,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -350,7 +358,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -377,7 +387,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -405,7 +417,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -433,7 +447,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -462,7 +478,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
@@ -488,7 +506,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.0-cp36-none-any.whl',
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl',
@@ -511,7 +531,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.0-cp27-none-any.whl',
                 'bar-1.2-cp27-none-manylinux1_x86_64.whl',
@@ -564,7 +586,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'baz-1.5-cp27-cp27m-linux_x86_64.whl'
             ]
@@ -589,7 +613,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'baz-1.5-cp14-cp14m-linux_x86_64.whl'
             ]
@@ -614,7 +640,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.0-cp36-none-any.whl',
                 'bar-1.2-cp36-cp36m-macosx_10_6_intel.whl'
@@ -658,7 +686,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 '%s-1.1.18-cp36-cp36m-macosx_10_11_x86_64.whl'
                 % package_filename
@@ -690,7 +720,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2.zip',
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
@@ -721,7 +753,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2.zip',
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
@@ -763,7 +797,9 @@ class TestDependencyBuilder(object):
         # at all, and optional c speedups. The initial download will yield an
         # sdist since there were no wheels.
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=['foo-1.2.zip']
         )
 
@@ -815,7 +851,9 @@ class TestDependencyBuilder(object):
             reqs, tmpdir, runner)
         requirements_file = os.path.join(appdir, 'requirements.txt')
         pip.packages_to_download(
-            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            expected_args=[
+                '--no-deps', '-r', requirements_file, '--dest', mock.ANY
+            ],
             packages=[
                 'foo-1.2.zip',
                 'bar-1.2-cp36-cp36m-manylinux1_x86_64.whl'
