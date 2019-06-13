@@ -117,10 +117,10 @@ from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
 from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.deploy.planner import PlanStage
 from chalice.deploy.planner import RemoteState
-from chalice.deploy.planner import ResourceSweeper
 from chalice.deploy.planner import NoopPlanner
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.swagger import SwaggerGenerator  # noqa
+from chalice.deploy.sweeper import ResourceSweeper
 from chalice.deploy.validate import validate_configuration
 from chalice.policy import AppPolicyGenerator
 from chalice.utils import OSUtils

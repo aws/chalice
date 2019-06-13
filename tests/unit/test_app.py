@@ -177,14 +177,17 @@ def sample_websocket_app():
 
     @demo.on_ws_connect()
     def connect(event):
+        demo.websocket_api.send(event.connection_id, 'connected')
         calls.append(('connect', event))
 
     @demo.on_ws_disconnect()
     def disconnect(event):
+        demo.websocket_api.send(event.connection_id, 'message')
         calls.append(('disconnect', event))
 
     @demo.on_ws_message()
     def message(event):
+        demo.websocket_api.send(event.connection_id, 'disconnected')
         calls.append(('default', event))
 
     return demo, calls
@@ -2095,7 +2098,8 @@ def test_can_configure_websockets(sample_websocket_app):
 def test_can_route_websocket_connect_message(sample_websocket_app,
                                              create_websocket_event):
     demo, calls = sample_websocket_app
-
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$connect')
     response = demo(event, context=None)
 
@@ -2112,7 +2116,8 @@ def test_can_route_websocket_connect_message(sample_websocket_app,
 def test_can_route_websocket_disconnect_message(sample_websocket_app,
                                                 create_websocket_event):
     demo, calls = sample_websocket_app
-
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$disconnect')
     response = demo(event, context=None)
 
@@ -2129,6 +2134,8 @@ def test_can_route_websocket_disconnect_message(sample_websocket_app,
 def test_can_route_websocket_default_message(sample_websocket_app,
                                              create_websocket_event):
     demo, calls = sample_websocket_app
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$default', body='foo bar')
     response = demo(event, context=None)
 
@@ -2146,7 +2153,8 @@ def test_can_route_websocket_default_message(sample_websocket_app,
 def test_can_configure_client_on_connect(sample_websocket_app,
                                          create_websocket_event):
     demo, calls = sample_websocket_app
-
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$connect')
     demo(event, context=None)
 
@@ -2159,7 +2167,8 @@ def test_can_configure_client_on_connect(sample_websocket_app,
 def test_can_configure_client_on_disconnect(sample_websocket_app,
                                             create_websocket_event):
     demo, calls = sample_websocket_app
-
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$disconnect')
     demo(event, context=None)
 
@@ -2299,7 +2308,8 @@ def test_cannot_send_message_on_unconfigured_app():
         demo.websocket_api.send('connection_id', 'body')
 
     assert str(e.value) == (
-        'WebsocketAPI needs to be configured before sending messages.'
+        'Assign app.websocket_api.session to a boto3 session before '
+        'using the WebsocketAPI'
     )
 
 

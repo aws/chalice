@@ -518,29 +518,32 @@ class WebsocketAPI(object):
 
     def __init__(self):
         self.session = None
+        self._endpoint = None
         self._client = None
 
     def configure(self, domain_name, stage):
+        if self._endpoint is not None:
+            return
+        self._endpoint = self._WEBSOCKET_ENDPOINT_TEMPLATE.format(
+            domain_name=domain_name,
+            stage=stage,
+        )
+
+    def send(self, connection_id, message):
         if self.session is None:
             raise ValueError(
                 'Assign app.websocket_api.session to a boto3 session before '
                 'using the WebsocketAPI'
             )
-        if self._client is not None:
-            return
-        endpoint = self._WEBSOCKET_ENDPOINT_TEMPLATE.format(
-            domain_name=domain_name,
-            stage=stage,
-        )
-        self._client = self.session.client(
-            'apigatewaymanagementapi',
-            endpoint_url=endpoint,
-        )
-
-    def send(self, connection_id, message):
-        if self._client is None:
+        if self._endpoint is None:
             raise ValueError(
-                'WebsocketAPI needs to be configured before sending messages.'
+                'WebsocketAPI.configure must be called before using the '
+                'WebsocketAPI'
+            )
+        if self._client is None:
+            self._client = self.session.client(
+                'apigatewaymanagementapi',
+                endpoint_url=self._endpoint,
             )
         try:
             self._client.post_to_connection(
