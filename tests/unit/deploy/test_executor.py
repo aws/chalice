@@ -7,7 +7,7 @@ from chalice.deploy.executor import Executor, UnresolvedValueError, \
     VariableResolver
 from chalice.deploy.models import APICall, RecordResourceVariable, \
     RecordResourceValue, StoreValue, JPSearch, BuiltinFunction, Instruction, \
-    CopyVariable, CopyVariableFromDict
+    CopyVariable
 from chalice.deploy.planner import Variable, StringFormat
 from chalice.utils import UI
 
@@ -176,13 +176,6 @@ class TestExecutor(object):
             CopyVariable(from_var='foo', to_var='baz'),
         ])
         assert self.executor.variables['baz'] == 'bar'
-
-    def test_can_copy_variable_from_dict(self):
-        self.execute([
-            StoreValue(name='foo', value={'bar': 'baz'}),
-            CopyVariableFromDict(from_var='foo', key='bar', to_var='buz'),
-        ])
-        assert self.executor.variables['buz'] == 'baz'
 
     def test_can_call_builtin_function(self):
         self.execute([

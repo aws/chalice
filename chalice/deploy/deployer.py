@@ -190,7 +190,6 @@ class ChaliceDeploymentError(Exception):
         # )
         message = connection_error.args[0].args[0]
         underlying_error = connection_error.args[0].args[1]
-
         if is_broken_pipe_error(underlying_error):
             message += (
                 ' Lambda closed the connection before chalice finished '
@@ -317,7 +316,6 @@ def create_deletion_deployer(client, ui):
 
 
 class Deployer(object):
-
     BACKEND_NAME = 'api'
 
     def __init__(self,
@@ -786,7 +784,6 @@ class DependencyBuilder(object):
 
 
 class BaseDeployStep(object):
-
     def handle(self, config, resource):
         # type: (Config, models.Model) -> None
         name = 'handle_%s' % resource.__class__.__name__.lower()
@@ -819,8 +816,7 @@ class DeploymentPackager(BaseDeployStep):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
             zip_filename = self._packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version
-            )
+                config.project_dir, config.lambda_python_version)
             resource.filename = zip_filename
 
 
@@ -981,21 +977,16 @@ class DeploymentReporter(object):
 
     def _report_rest_api(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None
-        report.append(
-            '  - Rest API URL: %s' % resource['rest_api_url']
-        )
+        report.append('  - Rest API URL: %s' % resource['rest_api_url'])
 
     def _report_websocket_api(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None
         report.append(
-            '  - Websocket API URL: %s' % resource['websocket_api_url']
-        )
+            '  - Websocket API URL: %s' % resource['websocket_api_url'])
 
     def _report_lambda_function(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None
-        report.append(
-            '  - Lambda ARN: %s' % resource['lambda_arn']
-        )
+        report.append('  - Lambda ARN: %s' % resource['lambda_arn'])
 
     def _default_report(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None

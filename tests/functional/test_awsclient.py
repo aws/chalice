@@ -1443,7 +1443,7 @@ class TestWebsocketAPI(object):
         stubbed_session.verify_stubs()
         assert integration_id == 'integration-id'
 
-    def test_can_create_route_if_needed(self, stubbed_session):
+    def test_can_create_route(self, stubbed_session):
         stubbed_session.stub('apigatewayv2').create_route(
             ApiId='api-id',
             RouteKey='route-key',
@@ -1452,39 +1452,50 @@ class TestWebsocketAPI(object):
         ).returns({})
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.create_websocket_route_if_needed(
+        client.create_websocket_route(
             api_id='api-id',
             route_key='route-key',
             integration_id='integration-id',
-            existing_routes={},
         )
         stubbed_session.verify_stubs()
 
-    def test_does_not_call_create_route_if_not_needed(self, stubbed_session):
-        stubbed_session.activate_stubs()
-        client = TypedAWSClient(stubbed_session)
-        client.create_websocket_route_if_needed(
-            api_id='api-id',
-            route_key='route-key',
-            integration_id='integration-id',
-            existing_routes={'route-key': 'route-id'},
-        )
-        stubbed_session.verify_stubs()
-
-    def test_can_elete_unused_routes(self, stubbed_session):
+    def test_can_delete_all_websocket_routes(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').delete_route(
+            ApiId='api-id',
+            RouteId='route-id',
+        ).returns({})
         stubbed_session.stub('apigatewayv2').delete_route(
             ApiId='api-id',
             RouteId='old-route-id',
         ).returns({})
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.delete_unused_routes(
+        client.delete_all_websocket_routes(
             api_id='api-id',
-            existing_routes={
+            routes={
                 'route-key': 'route-id',
                 'old-route-key': 'old-route-id',
             },
-            current_routes={'route-key', 'route-id'},
+        )
+        stubbed_session.verify_stubs()
+
+    def test_can_delete_all_websocket_integrations(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2').delete_integration(
+            ApiId='api-id',
+            IntegrationId='integration-id',
+        ).returns({})
+        stubbed_session.stub('apigatewayv2').delete_integration(
+            ApiId='api-id',
+            IntegrationId='old-integration-id',
+        ).returns({})
+        stubbed_session.activate_stubs()
+        client = TypedAWSClient(stubbed_session)
+        client.delete_all_websocket_integrations(
+            api_id='api-id',
+            integrations={
+                'integration-key': 'integration-id',
+                'old-integration-key': 'old-integration-id',
+            },
         )
         stubbed_session.verify_stubs()
 

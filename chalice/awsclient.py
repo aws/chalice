@@ -1054,27 +1054,33 @@ class TypedAWSClient(object):
             IntegrationUri=lambda_function,
         )['IntegrationId']
 
-    def create_websocket_route_if_needed(self, api_id, route_key,
-                                         integration_id, existing_routes):
-        # type: (str, str, str, Dict[str, str]) -> None
-        if route_key not in existing_routes:
-            client = self._client('apigatewayv2')
-            client.create_route(
+    def create_websocket_route(self, api_id, route_key, integration_id):
+        # type: (str, str, str, ) -> None
+        client = self._client('apigatewayv2')
+        client.create_route(
+            ApiId=api_id,
+            RouteKey=route_key,
+            RouteResponseSelectionExpression='$default',
+            Target='integrations/%s' % integration_id,
+        )
+
+    def delete_all_websocket_routes(self, api_id, routes):
+        # type: (str, Dict[str, str]) -> None
+        client = self._client('apigatewayv2')
+        for route_id in routes.values():
+            client.delete_route(
                 ApiId=api_id,
-                RouteKey=route_key,
-                RouteResponseSelectionExpression='$default',
-                Target='integrations/%s' % integration_id,
+                RouteId=route_id,
             )
 
-    def delete_unused_routes(self, api_id, existing_routes, current_routes):
-        # type: (str, Dict[str, str], Dict[str, str]) -> None
+    def delete_all_websocket_integrations(self, api_id, integrations):
+        # type: (str, Dict[str, str]) -> None
         client = self._client('apigatewayv2')
-        for route_key, route_id in existing_routes.items():
-            if route_key not in current_routes:
-                client.delete_route(
-                    ApiId=api_id,
-                    RouteId=route_id,
-                )
+        for integration_id in integrations.values():
+            client.delete_integration(
+                ApiId=api_id,
+                IntegrationId=integration_id,
+            )
 
     def deploy_websocket_api(self, api_id):
         # type: (str) -> str

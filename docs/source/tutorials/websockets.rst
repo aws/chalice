@@ -71,9 +71,11 @@ on boto3 or botocore, so we need to provide the Session ourselves.
    app.websocket_api.session = Session()
 
 
-Next we enable the experimental feature ``WEBSOCKETS``. As noted at the top
-of this section, websockets are an experimental feature and are subject to
-API changes.
+Next we enable the experimental feature ``WEBSOCKETS``. Websockets are an
+experimental feature and are subject to API changes. This includes all aspects
+of the Websocket API exposted in Chalice. Including any public members of
+``app.websocket_api``, and the three decorators ``on_ws_connect``,
+``on_ws_message``, and ``on_ws_disconnect``.
 
 .. code-block:: python
 
@@ -158,6 +160,14 @@ which can be used to test websocket echo server::
 Every message sent to the server (lines that start with ``>``) result in a
 message sent to us (lines that start with ``<``) with the same content.
 
+If something goes wrong, you can check the chalice error logs using the
+following command::
+
+  $ chalice logs -n websocket_message
+
+.. note::
+   If you encounter an Internal Server Error here it is likely that you forgot
+   to include ``boto3>=1.9.91`` in the ``requirements.txt`` file.
 
 To tear down the example. Just run::
 

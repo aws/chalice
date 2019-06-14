@@ -596,30 +596,27 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 output_var='disconnect-integration-id',
             ),
             models.APICall(
-                method_name='create_websocket_route_if_needed',
+                method_name='create_websocket_route',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$connect',
                     'integration_id': Variable('connect-integration-id'),
-                    'existing_routes': Variable('routes'),
                 },
             ),
             models.APICall(
-                method_name='create_websocket_route_if_needed',
+                method_name='create_websocket_route',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$default',
                     'integration_id': Variable('message-integration-id'),
-                    'existing_routes': Variable('routes'),
                 },
             ),
             models.APICall(
-                method_name='create_websocket_route_if_needed',
+                method_name='create_websocket_route',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$disconnect',
                     'integration_id': Variable('disconnect-integration-id'),
-                    'existing_routes': Variable('routes'),
                 },
             ),
             models.APICall(
@@ -714,58 +711,102 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 output_var='routes',
             ),
             models.APICall(
+                method_name='delete_all_websocket_routes',
+                params={'api_id': Variable('websocket_api_id'),
+                        'routes': Variable('routes')},
+            ),
+            models.APICall(
                 method_name='get_websocket_integrations',
                 params={'api_id': Variable('websocket_api_id')},
                 output_var='integrations',
             ),
-            models.CopyVariableFromDict(
-                from_var='integrations',
-                key='connect',
-                to_var='connect-integration-id',
+            models.APICall(
+                method_name='delete_all_websocket_integrations',
+                params={'api_id': Variable('websocket_api_id'),
+                        'integrations': Variable('integrations')},
             ),
-            models.CopyVariableFromDict(
-                from_var='integrations',
-                key='message',
-                to_var='message-integration-id',
-            ),
-            models.CopyVariableFromDict(
-                from_var='integrations',
-                key='disconnect',
-                to_var='disconnect-integration-id',
+            models.StoreValue(
+                name='websocket-connect-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_connect',
+                    ['region_name', 'account_id'],
+                ),
             ),
             models.APICall(
-                method_name='delete_unused_routes',
+                method_name='create_websocket_integration',
                 params={
                     'api_id': Variable('websocket_api_id'),
-                    'existing_routes': Variable('routes'),
-                    'current_routes': ['$connect', '$default', '$disconnect'],
+                    'lambda_function': Variable(
+                        'websocket-connect-integration-lambda-path'),
+                    'handler_type': 'connect',
                 },
+                output_var='connect-integration-id',
+            ),
+            models.StoreValue(
+                name='websocket-message-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_message',
+                    ['region_name', 'account_id'],
+                ),
             ),
             models.APICall(
-                method_name='create_websocket_route_if_needed',
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-message-integration-lambda-path'),
+                    'handler_type': 'message',
+                },
+                output_var='message-integration-id',
+            ),
+            models.StoreValue(
+                name='websocket-disconnect-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_disconnect',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-disconnect-integration-lambda-path'),
+                    'handler_type': 'disconnect',
+                },
+                output_var='disconnect-integration-id',
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$connect',
                     'integration_id': Variable('connect-integration-id'),
-                    'existing_routes': Variable('routes'),
                 },
             ),
             models.APICall(
-                method_name='create_websocket_route_if_needed',
+                method_name='create_websocket_route',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$default',
                     'integration_id': Variable('message-integration-id'),
-                    'existing_routes': Variable('routes'),
                 },
             ),
             models.APICall(
-                method_name='create_websocket_route_if_needed',
+                method_name='create_websocket_route',
                 params={
                     'api_id': Variable('websocket_api_id'),
                     'route_key': '$disconnect',
                     'integration_id': Variable('disconnect-integration-id'),
-                    'existing_routes': Variable('routes'),
                 },
             ),
             models.StoreValue(

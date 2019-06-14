@@ -659,12 +659,11 @@ class PlanStage(object):
             '$disconnect': 'disconnect-integration-id',
         }.get(route_key, 'message-integration-id')
         return models.APICall(
-            method_name='create_websocket_route_if_needed',
+            method_name='create_websocket_route',
             params={
                 'api_id': Variable('websocket_api_id'),
                 'route_key': route_key,
                 'integration_id': Variable(integration_id),
-                'existing_routes': Variable('routes'),
             },
         )
 
@@ -779,48 +778,30 @@ class PlanStage(object):
                     output_var='routes',
                 ),
                 models.APICall(
-                    method_name='get_websocket_integrations',
-                    params={'api_id': Variable('websocket_api_id')},
-                    output_var='integrations',
-                ),
-                models.CopyVariableFromDict(
-                    from_var='integrations',
-                    key='connect',
-                    to_var='connect-integration-id',
-                ),
-                models.CopyVariableFromDict(
-                    from_var='integrations',
-                    key='message',
-                    to_var='message-integration-id',
-                ),
-                models.CopyVariableFromDict(
-                    from_var='integrations',
-                    key='disconnect',
-                    to_var='disconnect-integration-id',
-                ),
-                models.APICall(
-                    method_name='delete_unused_routes',
+                    method_name='delete_all_websocket_routes',
                     params={
                         'api_id': Variable('websocket_api_id'),
-                        'existing_routes': Variable('routes'),
-                        'current_routes': routes,
+                        'routes': Variable('routes'),
                     },
                 ),
+                models.APICall(
+                    method_name='get_websocket_integrations',
+                    params={
+                        'api_id': Variable('websocket_api_id'),
+                    },
+                    output_var='integrations'
+                ),
+                models.APICall(
+                    method_name='delete_all_websocket_integrations',
+                    params={
+                        'api_id': Variable('websocket_api_id'),
+                        'integrations': Variable('integrations'),
+                    }
+                )
             ]
+            main_plan += self._inject_websocket_integrations(configs)
             for route_key in routes:
                 main_plan += [self._create_route_for_key(route_key)]
-                # main_plan.append(
-                #     models.APICall(
-                #         method_name='create_route_if_needed',
-                #         params={
-                #             'api_id': Variable('websocket_api_id'),
-                #             'route_key': route_key,
-                #             'integration_id': Variable('integration-id'),
-                #             'existing_routes': Variable('routes'),
-                #         },
-                #     )
-                # )
-
         return shared_plan_preamble + main_plan + shared_plan_epilogue
 
     def _plan_restapi(self, resource):

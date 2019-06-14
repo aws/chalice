@@ -945,6 +945,12 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         super(Chalice, self)._register_websocket_connect(
             name, user_handler, handler_string, kwargs, **unused)
 
+    def _register_websocket_message(self, name, user_handler, handler_string,
+                                    kwargs, **unused):
+        self._features_used.add('WEBSOCKETS')
+        super(Chalice, self)._register_websocket_message(
+            name, user_handler, handler_string, kwargs, **unused)
+
     def _register_websocket_disconnect(self, name, user_handler,
                                        handler_string, kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
