@@ -23,6 +23,7 @@ from chalice.app import (
     WebsocketEvent,
     BadRequestError,
     WebsocketDisconnectedError,
+    WebsocketEventSourceHandler,
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -139,6 +140,13 @@ def assert_requires_opt_in(app, flag):
             "Opting in to feature %s still raises an "
             "ExperimentalFeatureError." % flag
         )
+
+
+def websocket_handler_for_route(route, app):
+    fn = app.websocket_handlers[route].handler_function
+    handler = WebsocketEventSourceHandler(
+        fn, WebsocketEvent, app.websocket_api)
+    return handler
 
 
 @fixture
@@ -2086,7 +2094,6 @@ def test_multidict_str():
     assert "'buz': ['qux']" in rep
 
 
-
 def test_can_configure_websockets(sample_websocket_app):
     demo, _ = sample_websocket_app
 
@@ -2096,13 +2103,51 @@ def test_can_configure_websockets(sample_websocket_app):
     assert '$default' in demo.websocket_handlers, demo.websocket_handlers
 
 
+def test_websocket_event_json_body_available(sample_websocket_app,
+                                             create_websocket_event):
+    demo = app.Chalice('demo-app')
+    called = {'wascalled': False}
+
+    @demo.on_ws_message()
+    def message(event):
+        called['wascalled'] = True
+        assert event.json_body == {'foo': 'bar'}
+        # Second access hits the cache. Test that that works as well.
+        assert event.json_body == {'foo': 'bar'}
+
+    event = create_websocket_event('$default', body='{"foo": "bar"}')
+    handler = websocket_handler_for_route('$default', demo)
+
+    handler(event, context=None)
+    assert called['wascalled'] is True
+
+
+def test_websocket_event_json_body_can_raise_error(sample_websocket_app,
+                                                   create_websocket_event):
+    demo = app.Chalice('demo-app')
+    called = {'wascalled': False}
+
+    @demo.on_ws_message()
+    def message(event):
+        called['wascalled'] = True
+        with pytest.raises(BadRequestError):
+            event.json_body
+
+    event = create_websocket_event('$default', body='{"foo": "bar"')
+    handler = websocket_handler_for_route('$default', demo)
+
+    handler(event, context=None)
+    assert called['wascalled'] is True
+
+
 def test_can_route_websocket_connect_message(sample_websocket_app,
                                              create_websocket_event):
     demo, calls = sample_websocket_app
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$connect')
-    response = demo(event, context=None)
+    handler = websocket_handler_for_route('$connect', demo)
+    response = handler(event, context=None)
 
     assert response == {'statusCode': 200}
     assert len(calls) == 1
@@ -2120,7 +2165,8 @@ def test_can_route_websocket_disconnect_message(sample_websocket_app,
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$disconnect')
-    response = demo(event, context=None)
+    handler = websocket_handler_for_route('$disconnect', demo)
+    response = handler(event, context=None)
 
     assert response == {'statusCode': 200}
     assert len(calls) == 1
@@ -2138,7 +2184,8 @@ def test_can_route_websocket_default_message(sample_websocket_app,
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$default', body='foo bar')
-    response = demo(event, context=None)
+    handler = websocket_handler_for_route('$default', demo)
+    response = handler(event, context=None)
 
     assert response == {'statusCode': 200}
     assert len(calls) == 1
@@ -2157,7 +2204,8 @@ def test_can_configure_client_on_connect(sample_websocket_app,
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$connect')
-    demo(event, context=None)
+    handler = websocket_handler_for_route('$connect', demo)
+    handler(event, context=None)
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
@@ -2171,7 +2219,8 @@ def test_can_configure_client_on_disconnect(sample_websocket_app,
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$disconnect')
-    demo(event, context=None)
+    handler = websocket_handler_for_route('$disconnect', demo)
+    handler(event, context=None)
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
@@ -2185,8 +2234,9 @@ def test_can_configure_client_on_message(sample_websocket_app,
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
 
-    demo(event, context=None)
+    handler(event, context=None)
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
@@ -2200,9 +2250,10 @@ def test_does_only_configure_client_once(sample_websocket_app,
     client = FakeClient()
     demo.websocket_api.session = FakeSession(client)
     event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
 
-    demo(event, context=None)
-    demo(event, context=None)
+    handler(event, context=None)
+    handler(event, context=None)
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
@@ -2215,12 +2266,33 @@ def test_cannot_configure_client_without_session(sample_websocket_app,
     demo, calls = sample_websocket_app
     demo.websocket_api.session = None
     event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
     with pytest.raises(ValueError) as e:
-        demo(event, context=None)
+        handler(event, context=None)
 
     assert str(e.value) == (
         'Assign app.websocket_api.session to a boto3 session before using '
         'the WebsocketAPI'
+    )
+
+
+def test_cannot_send_websocket_message_without_configure(
+        sample_websocket_app, create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        demo.websocket_api.send('connection_id', event.body)
+
+    event = create_websocket_event('$default', body='foo bar')
+    event_obj = WebsocketEvent(event, None)
+    handler = demo.websocket_handlers['$default'].handler_function
+    with pytest.raises(ValueError) as e:
+        handler(event_obj)
+    assert str(e.value) == (
+        'WebsocketAPI.configure must be called before using the WebsocketAPI'
     )
 
 
@@ -2234,7 +2306,8 @@ def test_can_send_websocket_message(create_websocket_event):
         demo.websocket_api.send('connection_id', event.body)
 
     event = create_websocket_event('$default', body='foo bar')
-    demo(event, context=None)
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
 
     assert len(client.calls) == 1
     call = client.calls[0]
@@ -2257,30 +2330,28 @@ def test_does_raise_on_send_to_bad_websocket(create_websocket_event):
         assert e.value.connection_id == 'connection_id'
 
     event = create_websocket_event('$default', body='foo bar')
-    demo(event, context=None)
-
-    demo = app.Chalice('app-name')
-    fake_410_error = Exception()
-    fake_410_error.response = {'ResponseMetadata': {'HTTPStatusCode': 410}}
-    client = FakeClient(errors=[fake_410_error])
-    demo.websocket_api.session = FakeSession(client)
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
 
 
-def test_does_raise_on_bad_websocket_route_key(create_websocket_event):
-    demo = app.Chalice('app-name')
-    client = FakeClient()
-    demo.websocket_api.session = FakeSession(client)
-
-    @demo.on_ws_connect()
-    def connect(event):
+def test_does_reraise_on_websocket_send_error(create_websocket_event):
+    class SomeOtherError(Exception):
         pass
 
+    demo = app.Chalice('app-name')
+    fake_418_error = SomeOtherError()
+    fake_418_error.response = {'ResponseMetadata': {'HTTPStatusCode': 418}}
+    client = FakeClient(errors=[fake_418_error])
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        with pytest.raises(SomeOtherError):
+            demo.websocket_api.send('connection_id', event.body)
+
     event = create_websocket_event('$default', body='foo bar')
-    with pytest.raises(RuntimeError) as e:
-        demo(event, context=None)
-    assert str(e.value) == (
-        'Could not find handler for routeKey $default in $connect.'
-    )
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
 
 
 def test_does_reraise_on_other_send_exception(create_websocket_event):

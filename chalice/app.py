@@ -615,24 +615,24 @@ class DecoratorAPI(object):
         return self._create_registration_function(
             handler_type='lambda_function', name=name)
 
-    def on_ws_connect(self, **kwargs):
+    def on_ws_connect(self, name=None):
         return self._create_registration_function(
-            handler_type='websocket_connect',
-            name=kwargs.get('name'),
+            handler_type='on_ws_connect',
+            name=name,
             registration_kwargs={'route_key': '$connect'},
         )
 
-    def on_ws_disconnect(self, **kwargs):
+    def on_ws_disconnect(self, name=None):
         return self._create_registration_function(
-            handler_type='websocket_disconnect',
-            name=kwargs.get('name'),
+            handler_type='on_ws_disconnect',
+            name=name,
             registration_kwargs={'route_key': '$disconnect'},
         )
 
-    def on_ws_message(self, **kwargs):
+    def on_ws_message(self, name=None):
         return self._create_registration_function(
-            handler_type='websocket_message',
-            name=kwargs.get('name'),
+            handler_type='on_ws_message',
+            name=name,
             registration_kwargs={'route_key': '$default'},
         )
 
@@ -663,6 +663,17 @@ class DecoratorAPI(object):
         if handler_type in event_classes:
             return EventSourceHandler(
                 user_handler, event_classes[handler_type])
+
+        websocket_event_classes = {
+            'on_ws_connect': WebsocketEvent,
+            'on_ws_message': WebsocketEvent,
+            'on_ws_disconnect': WebsocketEvent,
+        }
+        if handler_type in websocket_event_classes:
+            return WebsocketEventSourceHandler(
+                user_handler, websocket_event_classes[handler_type],
+                self.websocket_api  # pylint: disable=no-member
+            )
         if handler_type == 'authorizer':
             # Authorizer is special cased and doesn't quite fit the
             # EventSourceHandler pattern.
@@ -717,19 +728,8 @@ class _HandlerRegistration(object):
             )
         self.websocket_handlers[route_key] = handler
 
-    def _format_handler_error_message(self, route_key):
-        renames = {
-            '$connect': '@on_ws_connect()',
-            '$disconnect': '@on_ws_disconnect()',
-        }
-        decorator_string = renames.get(
-            route_key,
-            '@on_ws_message(route="%s")' % route_key
-        )
-        return "Duplicate websocket handler: '%s'" % decorator_string
-
-    def _register_websocket_connect(self, name, user_handler, handler_string,
-                                    kwargs, **unused):
+    def _register_on_ws_connect(self, name, user_handler, handler_string,
+                                kwargs, **unused):
         wrapper = WebsocketConnectConfig(
             name=name,
             handler_string=handler_string,
@@ -737,8 +737,8 @@ class _HandlerRegistration(object):
         )
         self._attach_websocket_handler(wrapper)
 
-    def _register_websocket_message(self, name, user_handler, handler_string,
-                                    kwargs, **unused):
+    def _register_on_ws_message(self, name, user_handler, handler_string,
+                                kwargs, **unused):
         route_key = kwargs['route_key']
         wrapper = WebsocketMessageConfig(
             name=name,
@@ -749,8 +749,8 @@ class _HandlerRegistration(object):
         self._attach_websocket_handler(wrapper)
         self.websocket_handlers[route_key] = wrapper
 
-    def _register_websocket_disconnect(self, name, user_handler,
-                                       handler_string, kwargs, **unused):
+    def _register_on_ws_disconnect(self, name, user_handler,
+                                   handler_string, kwargs, **unused):
         wrapper = WebsocketDisconnectConfig(
             name=name,
             handler_string=handler_string,
@@ -939,45 +939,34 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
-    def _register_websocket_connect(self, name, user_handler, handler_string,
-                                    kwargs, **unused):
+    def _register_on_ws_connect(self, name, user_handler, handler_string,
+                                kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
-        super(Chalice, self)._register_websocket_connect(
+        super(Chalice, self)._register_on_ws_connect(
             name, user_handler, handler_string, kwargs, **unused)
 
-    def _register_websocket_message(self, name, user_handler, handler_string,
-                                    kwargs, **unused):
+    def _register_on_ws_message(self, name, user_handler, handler_string,
+                                kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
-        super(Chalice, self)._register_websocket_message(
+        super(Chalice, self)._register_on_ws_message(
             name, user_handler, handler_string, kwargs, **unused)
 
-    def _register_websocket_disconnect(self, name, user_handler,
-                                       handler_string, kwargs, **unused):
+    def _register_on_ws_disconnect(self, name, user_handler,
+                                   handler_string, kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
-        super(Chalice, self)._register_websocket_disconnect(
+        super(Chalice, self)._register_on_ws_disconnect(
             name, user_handler, handler_string, kwargs, **unused)
 
-    def _handle_websocket(self, route_key, event, context):
-        handler = self.websocket_handlers.get(route_key)
-        if handler is None:
-            route_key = '$default'
-        handler = self.websocket_handlers.get(route_key)
-        if handler is None:
-            raise RuntimeError(
-                'Could not find handler for routeKey %s in %s.' % (
-                    route_key,
-                    ', '.join(self.websocket_handlers.keys())
-                )
-            )
-        websocket_event = WebsocketEvent(event, context)
-        self.websocket_api.configure(
-            websocket_event.domain_name,
-            websocket_event.stage,
-        )
-        handler.handler_function(websocket_event)
-        return {'statusCode': 200}
-
-    def _handle_api_call(self, resource_path, event, context):
+    def __call__(self, event, context):
+        # This is what's invoked via lambda.
+        # Sometimes the event can be something that's not
+        # what we specified in our request_template mapping.
+        # When that happens, we want to give a better error message here.
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        if resource_path is None:
+            return error_response(error_code='InternalServerError',
+                                  message='Unknown request.',
+                                  http_status_code=500)
         http_method = event['requestContext']['httpMethod']
         if resource_path not in self.routes:
             raise ChaliceError("No view function for: %s" % resource_path)
@@ -1041,22 +1030,6 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             )
         response = response.to_dict(self.api.binary_types)
         return response
-
-    def __call__(self, event, context):
-        # This is what's invoked via lambda.
-        # Sometimes the event can be something that's not
-        # what we specified in our request_template mapping.
-        # When that happens, we want to give a better error message here.
-        route_key = event.get('requestContext', {}).get('routeKey')
-        resource_path = event.get('requestContext', {}).get('resourcePath')
-        if route_key is not None:
-            return self._handle_websocket(route_key, event, context)
-        elif resource_path is not None:
-            return self._handle_api_call(resource_path, event, context)
-        else:
-            return error_response(error_code='InternalServerError',
-                                  message='Unknown request.',
-                                  http_status_code=500)
 
     def _validate_binary_response(self, request_headers, response_headers):
         # Validates that a response is valid given the request. If the response
@@ -1391,6 +1364,22 @@ class EventSourceHandler(object):
     def __call__(self, event, context):
         event_obj = self.event_class(event, context)
         return self.func(event_obj)
+
+
+class WebsocketEventSourceHandler(object):
+    def __init__(self, func, event_class, websocket_api):
+        self.func = func
+        self.event_class = event_class
+        self.websocket_api = websocket_api
+
+    def __call__(self, event, context):
+        event_obj = self.event_class(event, context)
+        self.websocket_api.configure(
+            event_obj.domain_name,
+            event_obj.stage,
+        )
+        self.func(event_obj)
+        return {'statusCode': 200}
 
 
 # These classes contain all the event types that are passed

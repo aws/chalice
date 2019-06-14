@@ -221,24 +221,20 @@ def repr_raw_body():
     return {'repr-raw-body': app.current_request.raw_body.decode('utf-8')}
 
 
-SOCKET_MESSAGES = {
-    'connect': [],
-    'message': [],
-    'disconnect': [],
-}
+SOCKET_MESSAGES = []
 
 
 @app.on_ws_connect()
 def connect(event):
-    SOCKET_MESSAGES['connect'].append(event.connection_id)
+    pass
 
 
 @app.on_ws_message()
 def message(event):
-    SOCKET_MESSAGES['message'].append((event.connection_id, event.body))
+    SOCKET_MESSAGES.append((event.connection_id, event.body))
     app.websocket_api.send(event.connection_id, json.dumps(SOCKET_MESSAGES))
 
 
 @app.on_ws_disconnect()
 def disconnect(event):
-    SOCKET_MESSAGES['disconnect'].append(event.connection_id)
+    pass

@@ -1470,12 +1470,9 @@ class TestWebsocketAPI(object):
         ).returns({})
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.delete_all_websocket_routes(
+        client.delete_websocket_routes(
             api_id='api-id',
-            routes={
-                'route-key': 'route-id',
-                'old-route-key': 'old-route-id',
-            },
+            routes=['route-id', 'old-route-id'],
         )
         stubbed_session.verify_stubs()
 
@@ -1490,12 +1487,9 @@ class TestWebsocketAPI(object):
         ).returns({})
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        client.delete_all_websocket_integrations(
+        client.delete_websocket_integrations(
             api_id='api-id',
-            integrations={
-                'integration-key': 'integration-id',
-                'old-integration-key': 'old-integration-id',
-            },
+            integrations=['integration-id', 'old-integration-id'],
         )
         stubbed_session.verify_stubs()
 
@@ -1526,14 +1520,11 @@ class TestWebsocketAPI(object):
         )
         stubbed_session.activate_stubs()
         client = TypedAWSClient(stubbed_session)
-        routes = client.get_routes(
+        routes = client.get_websocket_routes(
             api_id='api-id',
         )
         stubbed_session.verify_stubs()
-        assert routes == {
-            'route-key-foo': 'route-id-foo',
-            'route-key-bar': 'route-id-bar',
-        }
+        assert routes == ['route-id-foo', 'route-id-bar']
 
     def test_can_get_integrations(self, stubbed_session):
         stubbed_session.stub('apigatewayv2').get_integrations(
@@ -1562,11 +1553,11 @@ class TestWebsocketAPI(object):
             api_id='api-id',
         )
         stubbed_session.verify_stubs()
-        assert integration_ids == {
-            'connect': 'connect-integration-id',
-            'message': 'message-integration-id',
-            'disconnect': 'disconnect-integration-id',
-        }
+        assert integration_ids == [
+            'connect-integration-id',
+            'message-integration-id',
+            'disconnect-integration-id',
+        ]
 
     def test_can_create_stage(self, stubbed_session):
         stubbed_session.stub('apigatewayv2').create_stage(

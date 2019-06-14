@@ -479,26 +479,25 @@ class ApplicationGraphBuilder(object):
         message_handler = None     # type: Optional[models.LambdaFunction]
         disconnect_handler = None  # type: Optional[models.LambdaFunction]
 
-        routes = [h.route_key_handled for h
-                  in config.chalice_app.websocket_handlers.values()]
+        routes = {h.route_key_handled: h.handler_string for h
+                  in config.chalice_app.websocket_handlers.values()}
         if '$connect' in routes:
             connect_handler = self._create_lambda_model(
                 config=config, deployment=deployment, name='websocket_connect',
-                handler_name='app.app', stage_name=stage_name
-            )
-            routes.remove('$connect')
+                handler_name=routes['$connect'], stage_name=stage_name)
+            routes.pop('$connect')
         if '$disconnect' in routes:
             disconnect_handler = self._create_lambda_model(
                 config=config, deployment=deployment,
                 name='websocket_disconnect',
-                handler_name='app.app', stage_name=stage_name
-            )
-            routes.remove('$disconnect')
+                handler_name=routes['$disconnect'], stage_name=stage_name)
+            routes.pop('$disconnect')
         if routes:
             # If there are left over routes they are message handlers.
+            handler_string = list(routes.values())[0]
             message_handler = self._create_lambda_model(
                 config=config, deployment=deployment, name='websocket_message',
-                handler_name='app.app', stage_name=stage_name
+                handler_name=handler_string, stage_name=stage_name
             )
 
         return models.WebsocketAPI(

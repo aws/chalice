@@ -5,6 +5,7 @@ import time
 import shutil
 import uuid
 
+import mock
 import botocore.session
 import pytest
 import requests
@@ -519,22 +520,19 @@ def test_empty_raw_body(smoke_test_app):
 def test_websocket_lifecycle(smoke_test_app):
     ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
     ws.send("Hello, World 1")
-    first_response = json.loads(ws.recv())
+    ws.recv()
     ws.close()
     ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
     ws.send("Hello, World 2")
     second_response = json.loads(ws.recv())
     ws.close()
-    first_connection_id = first_response['connect'][0]
-    second_connection_id = second_response['connect'][1]
 
-    expected_second_response = {
-        'connect': [first_connection_id, second_connection_id],
-        'message': [[first_connection_id, 'Hello, World 1'],
-                    [second_connection_id, 'Hello, World 2']],
-        'disconnect': [first_connection_id],
-    }
+    expected_second_response = [
+        [mock.ANY, 'Hello, World 1'],
+        [mock.ANY, 'Hello, World 2']
+    ]
     assert expected_second_response == second_response
+    assert second_response[0][0] != second_response[1][0]
 
 
 @pytest.mark.on_redeploy

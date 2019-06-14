@@ -1064,19 +1064,19 @@ class TypedAWSClient(object):
             Target='integrations/%s' % integration_id,
         )
 
-    def delete_all_websocket_routes(self, api_id, routes):
-        # type: (str, Dict[str, str]) -> None
+    def delete_websocket_routes(self, api_id, routes):
+        # type: (str, List[str]) -> None
         client = self._client('apigatewayv2')
-        for route_id in routes.values():
+        for route_id in routes:
             client.delete_route(
                 ApiId=api_id,
                 RouteId=route_id,
             )
 
-    def delete_all_websocket_integrations(self, api_id, integrations):
+    def delete_websocket_integrations(self, api_id, integrations):
         # type: (str, Dict[str, str]) -> None
         client = self._client('apigatewayv2')
-        for integration_id in integrations.values():
+        for integration_id in integrations:
             client.delete_integration(
                 ApiId=api_id,
                 IntegrationId=integration_id,
@@ -1089,25 +1089,17 @@ class TypedAWSClient(object):
             ApiId=api_id,
         )['DeploymentId']
 
-    def get_routes(self, api_id):
-        # type: (str) -> Dict[str, str]
+    def get_websocket_routes(self, api_id):
+        # type: (str) -> List[str]
         client = self._client('apigatewayv2')
-        return {i['RouteKey']: i['RouteId'] for i in client.get_routes(
-            ApiId=api_id,
-        )['Items']}
+        return [i['RouteId']
+                for i in client.get_routes(ApiId=api_id,)['Items']]
 
     def get_websocket_integrations(self, api_id):
-        # type: (str) -> Dict[str, str]
+        # type: (str) -> List[str]
         client = self._client('apigatewayv2')
-        items = client.get_integrations(
-            ApiId=api_id,
-        )['Items']
-        integrations = {
-            item['Description']: item['IntegrationId']
-            for item in items
-            if 'Description' in item
-        }
-        return integrations
+        return [item['IntegrationId']
+                for item in client.get_integrations(ApiId=api_id)['Items']]
 
     def create_stage(self, api_id, stage_name, deployment_id):
         # type: (str, str, str) -> None

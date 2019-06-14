@@ -797,15 +797,15 @@ class TestApplicationGraphBuilder(object):
 
         connect_function = websocket_api.connect_function
         assert connect_function.resource_name == 'websocket_connect'
-        assert connect_function.handler == 'app.app'
+        assert connect_function.handler == 'app.connect'
 
         message_function = websocket_api.message_function
         assert message_function.resource_name == 'websocket_message'
-        assert message_function.handler == 'app.app'
+        assert message_function.handler == 'app.message'
 
         disconnect_function = websocket_api.disconnect_function
         assert disconnect_function.resource_name == 'websocket_disconnect'
-        assert disconnect_function.handler == 'app.app'
+        assert disconnect_function.handler == 'app.disconnect'
 
     def test_can_create_websocket_app_missing_connect(
             self, websocket_app_without_connect):
@@ -827,11 +827,11 @@ class TestApplicationGraphBuilder(object):
 
         message_function = websocket_api.message_function
         assert message_function.resource_name == 'websocket_message'
-        assert message_function.handler == 'app.app'
+        assert message_function.handler == 'app.message'
 
         disconnect_function = websocket_api.disconnect_function
         assert disconnect_function.resource_name == 'websocket_disconnect'
-        assert disconnect_function.handler == 'app.app'
+        assert disconnect_function.handler == 'app.disconnect'
 
     def test_can_create_websocket_app_missing_message(
             self, websocket_app_without_message):
@@ -850,11 +850,11 @@ class TestApplicationGraphBuilder(object):
 
         connect_function = websocket_api.connect_function
         assert connect_function.resource_name == 'websocket_connect'
-        assert connect_function.handler == 'app.app'
+        assert connect_function.handler == 'app.connect'
 
         disconnect_function = websocket_api.disconnect_function
         assert disconnect_function.resource_name == 'websocket_disconnect'
-        assert disconnect_function.handler == 'app.app'
+        assert disconnect_function.handler == 'app.disconnect'
 
     def test_can_create_websocket_app_missing_disconnect(
             self, websocket_app_without_disconnect):
@@ -873,11 +873,11 @@ class TestApplicationGraphBuilder(object):
 
         connect_function = websocket_api.connect_function
         assert connect_function.resource_name == 'websocket_connect'
-        assert connect_function.handler == 'app.app'
+        assert connect_function.handler == 'app.connect'
 
         message_function = websocket_api.message_function
         assert message_function.resource_name == 'websocket_message'
-        assert message_function.handler == 'app.app'
+        assert message_function.handler == 'app.message'
 
 
 class RoleTestCase(object):

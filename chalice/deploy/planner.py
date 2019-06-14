@@ -773,12 +773,12 @@ class PlanStage(object):
                     value=deployed['websocket_api_id']
                 ),
                 models.APICall(
-                    method_name='get_routes',
+                    method_name='get_websocket_routes',
                     params={'api_id': Variable('websocket_api_id')},
                     output_var='routes',
                 ),
                 models.APICall(
-                    method_name='delete_all_websocket_routes',
+                    method_name='delete_websocket_routes',
                     params={
                         'api_id': Variable('websocket_api_id'),
                         'routes': Variable('routes'),
@@ -792,7 +792,7 @@ class PlanStage(object):
                     output_var='integrations'
                 ),
                 models.APICall(
-                    method_name='delete_all_websocket_integrations',
+                    method_name='delete_websocket_integrations',
                     params={
                         'api_id': Variable('websocket_api_id'),
                         'integrations': Variable('integrations'),

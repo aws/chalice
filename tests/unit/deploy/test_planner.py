@@ -9,6 +9,7 @@ from chalice.config import DeployedResources
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.deploy.planner import StringFormat
+from chalice.deploy.models import APICall
 from chalice.deploy.sweeper import ResourceSweeper
 
 
@@ -706,12 +707,12 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 value='my_websocket_api_id',
             ),
             models.APICall(
-                method_name='get_routes',
+                method_name='get_websocket_routes',
                 params={'api_id': Variable('websocket_api_id')},
                 output_var='routes',
             ),
             models.APICall(
-                method_name='delete_all_websocket_routes',
+                method_name='delete_websocket_routes',
                 params={'api_id': Variable('websocket_api_id'),
                         'routes': Variable('routes')},
             ),
@@ -721,7 +722,7 @@ class TestPlanWebsocketAPI(BasePlannerTests):
                 output_var='integrations',
             ),
             models.APICall(
-                method_name='delete_all_websocket_integrations',
+                method_name='delete_websocket_integrations',
                 params={'api_id': Variable('websocket_api_id'),
                         'integrations': Variable('integrations')},
             ),
@@ -1358,6 +1359,41 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 value='arn:lambda'
             )
         ]
+
+    @pytest.mark.parametrize('functions,integration_injected', [
+        (
+            (create_function_resource('connect'), None, None),
+            'connect'
+        ),
+        (
+            (None, create_function_resource('message'), None),
+            'message'
+        ),
+        (
+            (None, None, create_function_resource('disconnect')),
+            'disconnect'
+        ),
+    ])
+    def test_websocket_api_plan_omits_unused_lambdas(
+            self, functions, integration_injected):
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-dev-websocket-api',
+            api_gateway_stage='api',
+            routes=['$connect', '$default', '$disconnect'],
+            connect_function=functions[0],
+            message_function=functions[1],
+            disconnect_function=functions[2],
+        )
+        plan = self.determine_plan(websocket_api)
+        integrations = [
+            code.params['handler_type'] for code in plan
+            if isinstance(code, APICall)
+            and code.method_name == 'create_websocket_integration'
+        ]
+
+        assert len(integrations) == 1
+        assert integrations[0] == integration_injected
 
 
 class TestRemoteState(object):
