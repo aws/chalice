@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.9.0
+=====
 
 * Update PIP to support up to 19.1.x
   (`#1104 <https://github.com/aws/chalice/issues/1104>`__)
