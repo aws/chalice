@@ -1740,13 +1740,18 @@ def test_can_get_or_create_rule_arn(stubbed_session):
     events = stubbed_session.stub('events')
     events.put_rule(
         Name='rule-name',
+        Description='rule-description',
         ScheduleExpression='rate(1 hour)').returns({
             'RuleArn': 'rule-arn',
         })
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    result = awsclient.get_or_create_rule_arn('rule-name', 'rate(1 hour)')
+    result = awsclient.get_or_create_rule_arn(
+        'rule-name',
+        schedule_expression='rate(1 hour)',
+        rule_description='rule-description'
+    )
     stubbed_session.verify_stubs()
     assert result == 'rule-arn'
 

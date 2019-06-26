@@ -498,6 +498,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
         event = models.ScheduledEvent(
             resource_name='bar',
             rule_name='myrulename',
+            rule_description="my rule description",
             schedule_expression='rate(5 minutes)',
             lambda_function=function,
         )
@@ -509,6 +510,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
                 method_name='get_or_create_rule_arn',
                 params={
                     'rule_name': 'myrulename',
+                    'rule_description': 'my rule description',
                     'schedule_expression': 'rate(5 minutes)',
                 },
                 output_var='rule-arn',
@@ -537,6 +539,27 @@ class TestPlanScheduledEvent(BasePlannerTests):
             resource_name='bar',
             name='rule_name',
             value='myrulename',
+        )
+
+    def test_can_plan_scheduled_event_can_omit_description(self):
+        function = create_function_resource('function_name')
+        event = models.ScheduledEvent(
+            resource_name='bar',
+            rule_name='myrulename',
+            schedule_expression='rate(5 minutes)',
+            lambda_function=function,
+        )
+        plan = self.determine_plan(event)
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='get_or_create_rule_arn',
+                params={
+                    'rule_name': 'myrulename',
+                    'schedule_expression': 'rate(5 minutes)',
+                },
+                output_var='rule-arn',
+            )
         )
 
 

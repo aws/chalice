@@ -196,6 +196,7 @@ class CloudWatchEvent(CloudWatchEventBase):
 class ScheduledEvent(CloudWatchEventBase):
     resource_type = 'scheduled_event'
     schedule_expression = attrib()  # type: str
+    rule_description = attrib(default=None)     # type: str
 
 
 @attrs

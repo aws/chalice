@@ -572,6 +572,8 @@ class PlanStage(object):
         if isinstance(resource, models.ScheduledEvent):
             resource = cast(models.ScheduledEvent, resource)
             params['schedule_expression'] = resource.schedule_expression
+            if resource.rule_description is not None:
+                params['rule_description'] = resource.rule_description
         else:
             resource = cast(models.CloudWatchEvent, resource)
             params['event_pattern'] = resource.event_pattern

@@ -785,6 +785,7 @@ class TestSAMTemplate(TemplateTestBase):
         event = models.ScheduledEvent(
             resource_name='foo-event',
             rule_name='myrule',
+            rule_description="my rule description",
             schedule_expression='rate(5 minutes)',
             lambda_function=function,
         )

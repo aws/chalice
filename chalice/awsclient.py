@@ -730,8 +730,9 @@ class TypedAWSClient(object):
         )
 
     def get_or_create_rule_arn(
-            self, rule_name, schedule_expression=None, event_pattern=None):
-        # type: (str, str, str) -> str
+            self, rule_name, schedule_expression=None, event_pattern=None,
+            rule_description=None):
+        # type: (str, str, str, str) -> str
         events = self._client('events')
         # put_rule is idempotent so we can safely call it even if it already
         # exists.
@@ -743,6 +744,8 @@ class TypedAWSClient(object):
         else:
             raise ValueError(
                 "schedule_expression or event_pattern required")
+        if rule_description is not None:
+            params['Description'] = rule_description
         rule_arn = events.put_rule(**params)
         return rule_arn['RuleArn']
 
