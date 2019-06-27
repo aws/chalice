@@ -100,7 +100,7 @@ was instantiated.  For example:
     from chalice import Chalice
     from chalice import BadRequestError
 
-    app = Chalice(app_name="badrequset")
+    app = Chalice(app_name="badrequest")
 
     @app.route('/badrequest')
     def badrequest():
