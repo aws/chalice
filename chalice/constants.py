@@ -94,6 +94,14 @@ VPC_ATTACH_POLICY = {
     "Resource": "*"
 }
 
+XRAY_POLICY = {
+    'Effect': 'Allow',
+    'Action': [
+        'xray:PutTraceSegments',
+        'xray:PutTelemetryRecords',
+    ],
+    'Resource': '*'
+}
 
 CODEBUILD_POLICY = {
     "Version": "2012-10-17",

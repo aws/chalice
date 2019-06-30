@@ -278,6 +278,7 @@ def create_function_resource(name):
         deployment_package=models.DeploymentPackage(
             models.Placeholder.BUILD_STAGE
         ),
+        xray=False,
         role=models.PreCreatedIAMRole(role_arn='role:arn'),
         security_group_ids=[],
         subnet_ids=[],
@@ -571,6 +572,7 @@ class TestDefaultsInjector(object):
             runtime='python2.7',
             handler='app.app',
             tags={},
+            xray=None,
             deployment_package=None,
             role=None,
             security_group_ids=[],
@@ -600,6 +602,7 @@ class TestDefaultsInjector(object):
             runtime='python2.7',
             handler='app.app',
             tags={},
+            xray=None,
             deployment_package=None,
             role=None,
             security_group_ids=[],
@@ -708,6 +711,7 @@ class TestSwaggerBuilder(object):
             endpoint_type='EDGE',
             api_gateway_stage='api',
             lambda_function=None,
+            xray=False,
         )
         app = Chalice(app_name='foo')
         config = Config.create(chalice_app=app)

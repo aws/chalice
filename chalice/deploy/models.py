@@ -194,6 +194,7 @@ class LambdaFunction(ManagedModel):
     function_name = attrib()          # type: str
     deployment_package = attrib()     # type: DeploymentPackage
     environment_variables = attrib()  # type: StrMap
+    xray = attrib()                   # type: bool
     runtime = attrib()                # type: str
     handler = attrib()                # type: str
     tags = attrib()                   # type: StrMap
@@ -274,6 +275,7 @@ class RestAPI(ManagedModel):
     api_gateway_stage = attrib()                 # type: str
     endpoint_type = attrib()                     # type: str
     lambda_function = attrib()                   # type: LambdaFunction
+    xray = attrib(default=False)                 # type: bool
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
     domain_name = attrib(default=None)    # type: Opt[DomainName]

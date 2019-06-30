@@ -244,6 +244,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Handler': resource.handler,
                 'CodeUri': resource.deployment_package.filename,
                 'Tags': resource.tags,
+                'Tracing': resource.xray and 'Active' or 'PassThrough',
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
             },

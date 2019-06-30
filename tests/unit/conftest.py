@@ -221,4 +221,5 @@ def lambda_function():
         subnet_ids=[],
         layers=[],
         reserved_concurrency=None,
+        xray=None,
     )
