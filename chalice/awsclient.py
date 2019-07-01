@@ -460,11 +460,12 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             return False
 
-    def import_rest_api(self, swagger_document):
-        # type: (Dict[str, Any]) -> str
+    def import_rest_api(self, swagger_document, endpoint_type):
+        # type: (Dict[str, Any], str) -> str
         client = self._client('apigateway')
         response = client.import_rest_api(
-            body=json.dumps(swagger_document, indent=2)
+            body=json.dumps(swagger_document, indent=2),
+            parameters={'endpointConfigurationTypes': endpoint_type}
         )
         rest_api_id = response['id']
         return rest_api_id

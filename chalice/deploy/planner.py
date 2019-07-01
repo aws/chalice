@@ -3,6 +3,7 @@ from collections import OrderedDict
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 from typing import Sequence  # noqa
 
+from chalice.constants import DEFAULT_ENDPOINT_TYPE
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.utils import OSUtils  # noqa
 from chalice.deploy import models
@@ -843,17 +844,17 @@ class PlanStage(object):
         # There's also a set of instructions that are needed
         # at the end of deploying a rest API that apply to both
         # the update and create case.
+        shared_plan_patch_ops = [{
+            'op': 'replace',
+            'path': '/minimumCompressionSize',
+            'value': resource.minimum_compression}]
         shared_plan_epilogue = [
             models.APICall(
                 method_name='update_rest_api',
                 params={
                     'rest_api_id': Variable('rest_api_id'),
-                    'patch_operations': [{
-                        'op': 'replace',
-                        'path': '/minimumCompressionSize',
-                        'value': resource.minimum_compression,
-                    }],
-                },
+                    'patch_operations': shared_plan_patch_ops
+                }
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
@@ -876,6 +877,12 @@ class PlanStage(object):
                 name='rest_api_url',
                 variable_name='rest_api_url',
             ),
+            models.RecordResourceValue(
+                resource_type='rest_api',
+                resource_name=resource.resource_name,
+                name='endpoint_type',
+                value=resource.endpoint_type
+            ),
         ]  # type: List[InstructionMsg]
         for auth in resource.authorizers:
             shared_plan_epilogue.append(
@@ -891,7 +898,8 @@ class PlanStage(object):
             plan = shared_plan_preamble + [
                 (models.APICall(
                     method_name='import_rest_api',
-                    params={'swagger_document': resource.swagger_doc},
+                    params={'swagger_document': resource.swagger_doc,
+                            'endpoint_type': resource.endpoint_type},
                     output_var='rest_api_id',
                 ), "Creating Rest API\n"),
                 models.RecordResourceVariable(
@@ -908,6 +916,14 @@ class PlanStage(object):
             ] + shared_plan_epilogue
         else:
             deployed = self._remote_state.resource_deployed_values(resource)
+            if deployed.get('endpoint_type',
+                            DEFAULT_ENDPOINT_TYPE) != resource.endpoint_type:
+                shared_plan_patch_ops.append({
+                    'op': 'replace',
+                    'path': '/endpointConfiguration/types/{}'.format(
+                        deployed.get('endpoint_type', DEFAULT_ENDPOINT_TYPE)),
+                    'value': resource.endpoint_type
+                })
             plan = shared_plan_preamble + [
                 models.StoreValue(
                     name='rest_api_id',

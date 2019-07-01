@@ -462,6 +462,7 @@ class ApplicationGraphBuilder(object):
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
+            endpoint_type=config.api_gateway_endpoint_type,
             minimum_compression=minimum_compression,
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,

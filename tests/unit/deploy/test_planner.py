@@ -882,16 +882,19 @@ class TestPlanRestAPI(BasePlannerTests):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
+            endpoint_type='EDGE',
             minimum_compression='100',
             api_gateway_stage='api',
             lambda_function=function,
         )
         plan = self.determine_plan(rest_api)
         self.assert_loads_needed_variables(plan)
+
         assert plan[4:] == [
             models.APICall(
                 method_name='import_rest_api',
-                params={'swagger_document': {'swagger': '2.0'}},
+                params={'swagger_document': {'swagger': '2.0'},
+                        'endpoint_type': 'EDGE'},
                 output_var='rest_api_id',
             ),
             models.RecordResourceVariable(
@@ -937,10 +940,49 @@ class TestPlanRestAPI(BasePlannerTests):
                 name='rest_api_url',
                 variable_name='rest_api_url'
             ),
+            models.RecordResourceValue(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='endpoint_type',
+                value=rest_api.endpoint_type
+            ),
         ]
         assert list(self.last_plan.messages.values()) == [
             'Creating Rest API\n'
         ]
+
+    def test_update_no_op_endpoint(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
+            api_gateway_stage='api',
+            endpoint_type='EDGE',
+            lambda_function=function,
+        )
+        self.remote_state.declare_resource_exists(rest_api)
+        self.remote_state.deployed_values['rest_api'] = {
+            'rest_api_id': 'my_rest_api_id',
+        }
+        plan = self.determine_plan(rest_api)
+
+        update = [
+            p for p in plan
+            if isinstance(p, models.APICall)
+            and p.method_name == 'update_rest_api']
+
+        assert update == [
+            models.APICall(
+                method_name='update_rest_api',
+                params={
+                    'rest_api_id': Variable('rest_api_id'),
+                    'patch_operations': [{
+                        'op': 'replace',
+                        'path': '/minimumCompressionSize',
+                        'value': ''},
+                    ],
+                })]
 
     def test_can_update_rest_api(self):
         function = create_function_resource('function_name')
@@ -949,6 +991,7 @@ class TestPlanRestAPI(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
+            endpoint_type='REGIONAL',
             lambda_function=function,
         )
         self.remote_state.declare_resource_exists(rest_api)
@@ -991,8 +1034,11 @@ class TestPlanRestAPI(BasePlannerTests):
                     'patch_operations': [{
                         'op': 'replace',
                         'path': '/minimumCompressionSize',
-                        'value': '',
-                    }],
+                        'value': ''},
+                        {'op': 'replace',
+                         'path': '/endpointConfiguration/types/EDGE',
+                         'value': 'REGIONAL'}
+                    ],
                 },
             ),
             models.APICall(
@@ -1015,6 +1061,12 @@ class TestPlanRestAPI(BasePlannerTests):
                 resource_name='rest_api',
                 name='rest_api_url',
                 variable_name='rest_api_url'
+            ),
+            models.RecordResourceValue(
+                resource_type='rest_api',
+                resource_name='rest_api',
+                name='endpoint_type',
+                value=rest_api.endpoint_type
             ),
         ]
 
@@ -1409,6 +1461,7 @@ class TestRemoteState(object):
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
+            endpoint_type='EDGE',
             api_gateway_stage='api',
             lambda_function=None,
         )

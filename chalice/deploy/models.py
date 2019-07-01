@@ -189,6 +189,7 @@ class RestAPI(ManagedModel):
     swagger_doc = attrib()                       # type: DV[Dict[str, Any]]
     minimum_compression = attrib()               # type: str
     api_gateway_stage = attrib()                 # type: str
+    endpoint_type = attrib()                     # type: str
     lambda_function = attrib()                   # type: LambdaFunction
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
 

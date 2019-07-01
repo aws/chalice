@@ -45,6 +45,19 @@ def validate_configuration(config):
     validate_python_version(config)
     validate_unique_function_names(config)
     validate_feature_flags(config.chalice_app)
+    validate_endpoint_type(config)
+
+
+def validate_endpoint_type(config):
+    # type: (app.Chalice) -> None
+
+    if not config.api_gateway_endpoint_type:
+        return
+    valid_types = ('EDGE', 'REGIONAL')
+    if config.api_gateway_endpoint_type not in valid_types:
+        raise ValueError(
+            "api gateway endpoint type must be one of %s" % (
+                ", ".join(valid_types)))
 
 
 def validate_feature_flags(chalice_app):

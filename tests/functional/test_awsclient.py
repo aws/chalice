@@ -1670,12 +1670,13 @@ def test_import_rest_api(stubbed_session):
     apig = stubbed_session.stub('apigateway')
     swagger_doc = {'swagger': 'doc'}
     apig.import_rest_api(
+        parameters={'endpointConfigurationTypes': 'EDGE'},
         body=json.dumps(swagger_doc, indent=2)).returns(
             {'id': 'rest_api_id'})
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    rest_api_id = awsclient.import_rest_api(swagger_doc)
+    rest_api_id = awsclient.import_rest_api(swagger_doc, 'EDGE')
     stubbed_session.verify_stubs()
     assert rest_api_id == 'rest_api_id'
 
