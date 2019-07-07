@@ -173,15 +173,22 @@ class Config(object):
                       varies_per_function=False):
         # type: (str, bool, bool) -> Any
         search_dicts = [self._user_provided_params]
-        if varies_per_function:
-            search_dicts.append(
-                self._config_from_disk.get('stages', {}).get(
-                    self.chalice_stage, {}).get('lambda_functions', {}).get(
-                        self.function_name, {}))
         if varies_per_chalice_stage:
             search_dicts.append(
                 self._config_from_disk.get('stages', {}).get(
                     self.chalice_stage, {}))
+        if varies_per_function:
+            # search order:
+            # config['stages']['lambda_functions']
+            # config['stages']
+            # config['lambda_functions']
+            search_dicts.insert(
+                0, self._config_from_disk.get('stages', {}).get(
+                    self.chalice_stage, {}).get('lambda_functions', {}).get(
+                        self.function_name, {}))
+            search_dicts.append(
+                self._config_from_disk.get('lambda_functions', {}).get(
+                    self.function_name, {}))
         search_dicts.extend([self._config_from_disk, self._default_params])
         for cfg_dict in search_dicts:
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
