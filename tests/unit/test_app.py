@@ -1918,13 +1918,16 @@ def test_multidict_raises_keyerror(input_dict):
         assert val is val
 
 
-@pytest.mark.parametrize('input_dict', [
-    {},
-    {'key': []}
-])
-def test_multidict_returns_emptylist(input_dict):
-    d = MultiDict(input_dict)
-    assert d.getlist('key') == []
+def test_multidict_pop_raises_del_error():
+    d = MultiDict({})
+    with pytest.raises(KeyError):
+        del d['key']
+
+
+def test_multidict_getlist_does_raise_keyerror():
+    d = MultiDict({})
+    with pytest.raises(KeyError):
+        d.getlist('key')
 
 
 @pytest.mark.parametrize('input_dict', [
@@ -1962,7 +1965,71 @@ def test_multidict_list_wont_change_source(input_dict):
     assert d.getlist('key') == dict_copy['key']
 
 
-def test_multidict_is_readonly():
-    d = MultiDict(None)
-    with pytest.raises(TypeError):
-        d['key'] = 'value'
+@pytest.mark.parametrize('input_dict,key,popped,leftover', [
+    (
+        {'key': ['value'], 'key2': [[]]},
+        'key',
+        'value',
+        {'key2': []},
+    ),
+    (
+        {'key': [''], 'key2': [[]]},
+        'key',
+        '',
+        {'key2': []},
+    ),
+    (
+        {'key': ['value1', 'value2', 'value3'],
+         'key2': [[]]},
+        'key',
+        'value3',
+        {'key2': []},
+    ),
+])
+def test_multidict_list_can_pop_value(input_dict, key, popped, leftover):
+    d = MultiDict(input_dict)
+    pop_result = d.pop(key)
+    assert popped == pop_result
+    assert leftover == {key: d[key] for key in d}
+
+
+def test_multidict_assignment():
+    d = MultiDict({})
+    d['key'] = 'value'
+    assert d['key'] == 'value'
+
+
+def test_multidict_get_reassigned_value():
+    d = MultiDict({})
+    d['key'] = 'value'
+    assert d['key'] == 'value'
+    assert d.get('key') == 'value'
+    assert d.getlist('key') == ['value']
+
+
+def test_multidict_get_list_wraps_key():
+    d = MultiDict({})
+    d['key'] = ['value']
+    assert d.getlist('key') == [['value']]
+
+
+def test_multidict_repr():
+    d = MultiDict({
+        'foo': ['bar', 'baz'],
+        'buz': ['qux'],
+    })
+    rep = repr(d)
+    assert rep.startswith('MultiDict({')
+    assert "'foo': ['bar', 'baz']" in rep
+    assert "'buz': ['qux']" in rep
+
+
+def test_multidict_str():
+    d = MultiDict({
+        'foo': ['bar', 'baz'],
+        'buz': ['qux'],
+    })
+    rep = str(d)
+    assert rep.startswith('MultiDict({')
+    assert "'foo': ['bar', 'baz']" in rep
+    assert "'buz': ['qux']" in rep
