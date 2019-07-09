@@ -885,6 +885,13 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             'content-type', 'application/json')
         response_is_binary = _matches_content_type(response_content_type,
                                                    self.api.binary_types)
+
+        # if wildcard is included as binary type
+        # but no request accept header exists
+        # default to the wildcard accept header
+        if "*/*" in self.api.binary_types and request_accept_header is None:
+            request_accept_header = "*/*"
+
         expects_binary_response = False
         if request_accept_header is not None:
             expects_binary_response = _matches_content_type(
