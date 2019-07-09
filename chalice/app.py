@@ -22,6 +22,7 @@ _PARAMS = re.compile(r'{\w+}')
 try:
     from urllib.parse import unquote_plus
     from collections.abc import Mapping
+    from collections.abc import MutableMapping
 
     unquote_str = unquote_plus
 
@@ -31,6 +32,7 @@ try:
 except ImportError:
     from urllib import unquote_plus
     from collections import Mapping
+    from collections import MutableMapping
 
     # This is borrowed from botocore/compat.py
     def unquote_str(value, encoding='utf-8'):
@@ -150,11 +152,12 @@ ALL_ERRORS = [
     TooManyRequestsError]
 
 
-class MultiDict(Mapping):
-    """A read only mapping of key to list of values.
+class MultiDict(MutableMapping):  # pylint: disable=too-many-ancestors
+    """A mapping of key to list of values.
 
     Accessing it in the usual way will return the last value in the list.
-    Calling getlist will return a list of values with the same key.
+    Calling getlist will return a list of all the values associated with
+    the same key.
     """
 
     def __init__(self, mapping):
@@ -164,21 +167,31 @@ class MultiDict(Mapping):
         self._dict = mapping
 
     def __getitem__(self, k):
-        values_list = self._dict[k]
-
         try:
-            return values_list[-1]
+            return self._dict[k][-1]
         except IndexError:
             raise KeyError(k)
 
+    def __setitem__(self, k, v):
+        self._dict[k] = [v]
+
+    def __delitem__(self, k):
+        del self._dict[k]
+
     def getlist(self, k):
-        return list(self._dict.get(k, []))
+        return list(self._dict[k])
 
     def __len__(self):
         return len(self._dict)
 
     def __iter__(self):
         return iter(self._dict)
+
+    def __repr__(self):
+        return 'MultiDict(%s)' % self._dict
+
+    def __str__(self):
+        return repr(self)
 
 
 class CaseInsensitiveMapping(Mapping):

@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Make MultiDict mutable
+  (`#1158 <https://github.com/aws/chalice/issues/1158>`__)
+
+
 1.9.0
 =====
 
