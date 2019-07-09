@@ -680,6 +680,25 @@ def test_can_return_text_even_with_binary_content_type_configured(
     assert response['headers']['Content-Type'] == 'text/plain'
 
 
+def test_will_return_binary_if_wildcard_type_without_accept(create_event):
+    demo = app.Chalice('demo-app')
+    demo.api.binary_types.append('*/*')
+
+    @demo.route('/index')
+    def index_view():
+        return app.Response(
+            status_code=200,
+            body=b'ABCDEFG',
+            headers={'Content-Type': 'text/plain'})
+
+    event = create_event('/index', 'GET', {})
+    # event['headers']['Accept'] = 'application/octet-stream'
+    response = demo(event, context=None)
+    assert response['statusCode'] == 200
+    assert response['body'] == 'QUJDREVGRw=='
+    assert response['headers']['Content-Type'] == 'text/plain'
+
+
 def test_route_equality(view_function):
     a = app.RouteEntry(
         view_function,
