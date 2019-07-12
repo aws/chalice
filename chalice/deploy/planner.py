@@ -760,17 +760,6 @@ class PlanStage(object):
         # the update and create case.
         shared_plan_epilogue = [
             models.APICall(
-                method_name='update_rest_api',
-                params={
-                    'rest_api_id': Variable('rest_api_id'),
-                    'patch_operations': [{
-                        'op': 'replace',
-                        'path': '/minimumCompressionSize',
-                        'value': resource.minimum_compression,
-                    }],
-                },
-            ),
-            models.APICall(
                 method_name='add_permission_for_apigateway',
                 params={'function_name': function_name,
                         'region_name': Variable('region_name'),
@@ -816,6 +805,17 @@ class PlanStage(object):
                     variable_name='rest_api_id',
                 ),
                 models.APICall(
+                    method_name='update_rest_api',
+                    params={
+                        'rest_api_id': Variable('rest_api_id'),
+                        'patch_operations': [{
+                            'op': 'replace',
+                            'path': '/minimumCompressionSize',
+                            'value': resource.minimum_compression,
+                        }],
+                    },
+                ),
+                models.APICall(
                     method_name='deploy_rest_api',
                     params={'rest_api_id': Variable('rest_api_id'),
                             'api_gateway_stage': resource.api_gateway_stage},
@@ -840,6 +840,17 @@ class PlanStage(object):
                         'swagger_document': resource.swagger_doc,
                     },
                 ), "Updating rest API\n"),
+                models.APICall(
+                    method_name='update_rest_api',
+                    params={
+                        'rest_api_id': Variable('rest_api_id'),
+                        'patch_operations': [{
+                            'op': 'replace',
+                            'path': '/minimumCompressionSize',
+                            'value': resource.minimum_compression,
+                        }],
+                    },
+                ),
                 models.APICall(
                     method_name='deploy_rest_api',
                     params={'rest_api_id': Variable('rest_api_id'),

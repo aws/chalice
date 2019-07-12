@@ -534,9 +534,6 @@ class TestPlanRestAPI(BasePlannerTests):
                 name='rest_api_id',
                 variable_name='rest_api_id',
             ),
-            models.APICall(method_name='deploy_rest_api',
-                           params={'rest_api_id': Variable('rest_api_id'),
-                                   'api_gateway_stage': 'api'}),
             models.APICall(
                 method_name='update_rest_api',
                 params={
@@ -548,6 +545,9 @@ class TestPlanRestAPI(BasePlannerTests):
                     }],
                 },
             ),
+            models.APICall(method_name='deploy_rest_api',
+                           params={'rest_api_id': Variable('rest_api_id'),
+                                   'api_gateway_stage': 'api'}),
             models.APICall(
                 method_name='add_permission_for_apigateway',
                 params={
@@ -607,6 +607,17 @@ class TestPlanRestAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
+                method_name='update_rest_api',
+                params={
+                    'rest_api_id': Variable('rest_api_id'),
+                    'patch_operations': [{
+                        'op': 'replace',
+                        'path': '/minimumCompressionSize',
+                        'value': '',
+                    }],
+                },
+            ),
+            models.APICall(
                 method_name='deploy_rest_api',
                 params={'rest_api_id': Variable('rest_api_id'),
                         'api_gateway_stage': 'api'},
@@ -617,17 +628,6 @@ class TestPlanRestAPI(BasePlannerTests):
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
-            ),
-            models.APICall(
-                method_name='update_rest_api',
-                params={
-                    'rest_api_id': Variable('rest_api_id'),
-                    'patch_operations': [{
-                        'op': 'replace',
-                        'path': '/minimumCompressionSize',
-                        'value': '',
-                    }],
-                },
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
