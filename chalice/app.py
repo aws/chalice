@@ -550,13 +550,8 @@ class WebsocketAPI(object):
                 ConnectionId=connection_id,
                 Data=message,
             )
-        except Exception as e:
-            response = getattr(e, 'response', {})
-            metadata = response.get('ResponseMetadata', {})
-            status_code = metadata.get('HTTPStatusCode')
-            if status_code == 410:
-                raise WebsocketDisconnectedError(connection_id)
-            raise
+        except self._client.exceptions.GoneException:
+            raise WebsocketDisconnectedError(connection_id)
 
 
 class DecoratorAPI(object):
@@ -664,14 +659,14 @@ class DecoratorAPI(object):
             return EventSourceHandler(
                 user_handler, event_classes[handler_type])
 
-        websocket_event_classes = {
-            'on_ws_connect': WebsocketEvent,
-            'on_ws_message': WebsocketEvent,
-            'on_ws_disconnect': WebsocketEvent,
-        }
+        websocket_event_classes = [
+            'on_ws_connect',
+            'on_ws_message',
+            'on_ws_disconnect',
+        ]
         if handler_type in websocket_event_classes:
             return WebsocketEventSourceHandler(
-                user_handler, websocket_event_classes[handler_type],
+                user_handler, WebsocketEvent,
                 self.websocket_api  # pylint: disable=no-member
             )
         if handler_type == 'authorizer':
@@ -721,10 +716,15 @@ class _HandlerRegistration(object):
 
     def _attach_websocket_handler(self, handler):
         route_key = handler.route_key_handled
+        decorator_name = {
+            '$default': 'on_ws_message',
+            '$connect': 'on_ws_connect',
+            '$disconnect': 'on_ws_disconnect',
+        }.get(route_key)
         if route_key in self.websocket_handlers:
             raise ValueError(
                 "Duplicate websocket handler: '%s'. There can only be one "
-                "handler for a particular routeKey." % route_key
+                "handler for each websocket decorator." % decorator_name
             )
         self.websocket_handlers[route_key] = handler
 

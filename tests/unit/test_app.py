@@ -81,12 +81,22 @@ class FakeLambdaContext(object):
         return serialized
 
 
+class FakeGoneException(Exception):
+    pass
+
+
+class FakeExceptionFactory(object):
+    def __init__(self):
+        self.GoneException = FakeGoneException
+
+
 class FakeClient(object):
     def __init__(self, errors=None):
         if errors is None:
             errors = []
         self._errors = errors
         self.calls = []
+        self.exceptions = FakeExceptionFactory()
 
     def post_to_connection(self, ConnectionId, Data):
         self.calls.append((ConnectionId, Data))
@@ -2318,9 +2328,7 @@ def test_can_send_websocket_message(create_websocket_event):
 
 def test_does_raise_on_send_to_bad_websocket(create_websocket_event):
     demo = app.Chalice('app-name')
-    fake_410_error = Exception()
-    fake_410_error.response = {'ResponseMetadata': {'HTTPStatusCode': 410}}
-    client = FakeClient(errors=[fake_410_error])
+    client = FakeClient(errors=[FakeGoneException])
     demo.websocket_api.session = FakeSession(client)
 
     @demo.on_ws_message()
@@ -2398,8 +2406,8 @@ def test_cannot_re_register_websocket_handlers(create_websocket_event):
             pass
 
     assert str(e.value) == (
-        "Duplicate websocket handler: '$default'. There can only be one "
-        "handler for a particular routeKey."
+        "Duplicate websocket handler: 'on_ws_message'. There can only be one "
+        "handler for each websocket decorator."
     )
 
     @demo.on_ws_connect()
@@ -2412,8 +2420,8 @@ def test_cannot_re_register_websocket_handlers(create_websocket_event):
             pass
 
     assert str(e.value) == (
-        "Duplicate websocket handler: '$connect'. There can only be one "
-        "handler for a particular routeKey."
+        "Duplicate websocket handler: 'on_ws_connect'. There can only be one "
+        "handler for each websocket decorator."
     )
 
     @demo.on_ws_disconnect()
@@ -2426,8 +2434,8 @@ def test_cannot_re_register_websocket_handlers(create_websocket_event):
             pass
 
     assert str(e.value) == (
-        "Duplicate websocket handler: '$disconnect'. There can only be one "
-        "handler for a particular routeKey."
+        "Duplicate websocket handler: 'on_ws_disconnect'. There can only be "
+        "one handler for each websocket decorator."
     )
 
 

@@ -765,7 +765,12 @@ class PlanStage(object):
                 ),
             ]
         else:
-            # Already exists. Need to sync up the routes
+            # Already exists. Need to sync up the routes, the easiest way to do
+            # this is to delete them and their integrations and re-create them.
+            # They will not work if the lambda function changes from under
+            # them, and the logic for detecting that and making just the needed
+            # changes is complex. There is an integration test to ensure there
+            # no dropped messages during a redeployment.
             deployed = self._remote_state.resource_deployed_values(resource)
             main_plan += [
                 models.StoreValue(
