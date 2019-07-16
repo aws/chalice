@@ -95,6 +95,11 @@ class ChaliceError(Exception):
     pass
 
 
+class WebsocketDisconnectedError(ChaliceError):
+    def __init__(self, connection_id):
+        self.connection_id = connection_id
+
+
 class ChaliceViewError(ChaliceError):
     STATUS_CODE = 500
 
@@ -508,6 +513,47 @@ class APIGateway(object):
         return list(self._DEFAULT_BINARY_TYPES)
 
 
+class WebsocketAPI(object):
+    _WEBSOCKET_ENDPOINT_TEMPLATE = 'https://{domain_name}/{stage}'
+
+    def __init__(self):
+        self.session = None
+        self._endpoint = None
+        self._client = None
+
+    def configure(self, domain_name, stage):
+        if self._endpoint is not None:
+            return
+        self._endpoint = self._WEBSOCKET_ENDPOINT_TEMPLATE.format(
+            domain_name=domain_name,
+            stage=stage,
+        )
+
+    def send(self, connection_id, message):
+        if self.session is None:
+            raise ValueError(
+                'Assign app.websocket_api.session to a boto3 session before '
+                'using the WebsocketAPI'
+            )
+        if self._endpoint is None:
+            raise ValueError(
+                'WebsocketAPI.configure must be called before using the '
+                'WebsocketAPI'
+            )
+        if self._client is None:
+            self._client = self.session.client(
+                'apigatewaymanagementapi',
+                endpoint_url=self._endpoint,
+            )
+        try:
+            self._client.post_to_connection(
+                ConnectionId=connection_id,
+                Data=message,
+            )
+        except self._client.exceptions.GoneException:
+            raise WebsocketDisconnectedError(connection_id)
+
+
 class DecoratorAPI(object):
     def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
         return self._create_registration_function(
@@ -564,6 +610,27 @@ class DecoratorAPI(object):
         return self._create_registration_function(
             handler_type='lambda_function', name=name)
 
+    def on_ws_connect(self, name=None):
+        return self._create_registration_function(
+            handler_type='on_ws_connect',
+            name=name,
+            registration_kwargs={'route_key': '$connect'},
+        )
+
+    def on_ws_disconnect(self, name=None):
+        return self._create_registration_function(
+            handler_type='on_ws_disconnect',
+            name=name,
+            registration_kwargs={'route_key': '$disconnect'},
+        )
+
+    def on_ws_message(self, name=None):
+        return self._create_registration_function(
+            handler_type='on_ws_message',
+            name=name,
+            registration_kwargs={'route_key': '$default'},
+        )
+
     def _create_registration_function(self, handler_type, name=None,
                                       registration_kwargs=None):
         def _register_handler(user_handler):
@@ -591,6 +658,17 @@ class DecoratorAPI(object):
         if handler_type in event_classes:
             return EventSourceHandler(
                 user_handler, event_classes[handler_type])
+
+        websocket_event_classes = [
+            'on_ws_connect',
+            'on_ws_message',
+            'on_ws_disconnect',
+        ]
+        if handler_type in websocket_event_classes:
+            return WebsocketEventSourceHandler(
+                user_handler, WebsocketEvent,
+                self.websocket_api  # pylint: disable=no-member
+            )
         if handler_type == 'authorizer':
             # Authorizer is special cased and doesn't quite fit the
             # EventSourceHandler pattern.
@@ -606,6 +684,7 @@ class _HandlerRegistration(object):
 
     def __init__(self):
         self.routes = defaultdict(dict)
+        self.websocket_handlers = {}
         self.builtin_auth_handlers = []
         self.event_sources = []
         self.pure_lambda_functions = []
@@ -634,6 +713,50 @@ class _HandlerRegistration(object):
             wrapped_handler=wrapped_handler,
             kwargs=kwargs,
         )
+
+    def _attach_websocket_handler(self, handler):
+        route_key = handler.route_key_handled
+        decorator_name = {
+            '$default': 'on_ws_message',
+            '$connect': 'on_ws_connect',
+            '$disconnect': 'on_ws_disconnect',
+        }.get(route_key)
+        if route_key in self.websocket_handlers:
+            raise ValueError(
+                "Duplicate websocket handler: '%s'. There can only be one "
+                "handler for each websocket decorator." % decorator_name
+            )
+        self.websocket_handlers[route_key] = handler
+
+    def _register_on_ws_connect(self, name, user_handler, handler_string,
+                                kwargs, **unused):
+        wrapper = WebsocketConnectConfig(
+            name=name,
+            handler_string=handler_string,
+            user_handler=user_handler,
+        )
+        self._attach_websocket_handler(wrapper)
+
+    def _register_on_ws_message(self, name, user_handler, handler_string,
+                                kwargs, **unused):
+        route_key = kwargs['route_key']
+        wrapper = WebsocketMessageConfig(
+            name=name,
+            route_key_handled=route_key,
+            handler_string=handler_string,
+            user_handler=user_handler,
+        )
+        self._attach_websocket_handler(wrapper)
+        self.websocket_handlers[route_key] = wrapper
+
+    def _register_on_ws_disconnect(self, name, user_handler,
+                                   handler_string, kwargs, **unused):
+        wrapper = WebsocketDisconnectConfig(
+            name=name,
+            handler_string=handler_string,
+            user_handler=user_handler,
+        )
+        self._attach_websocket_handler(wrapper)
 
     def _register_lambda_function(self, name, user_handler,
                                   handler_string, **unused):
@@ -747,6 +870,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         super(Chalice, self).__init__()
         self.app_name = app_name
         self.api = APIGateway()
+        self.websocket_api = WebsocketAPI()
         self.current_request = None
         self.lambda_context = None
         self._debug = debug
@@ -814,6 +938,24 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                           wrapped_handler, kwargs, options=None):
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
+
+    def _register_on_ws_connect(self, name, user_handler, handler_string,
+                                kwargs, **unused):
+        self._features_used.add('WEBSOCKETS')
+        super(Chalice, self)._register_on_ws_connect(
+            name, user_handler, handler_string, kwargs, **unused)
+
+    def _register_on_ws_message(self, name, user_handler, handler_string,
+                                kwargs, **unused):
+        self._features_used.add('WEBSOCKETS')
+        super(Chalice, self)._register_on_ws_message(
+            name, user_handler, handler_string, kwargs, **unused)
+
+    def _register_on_ws_disconnect(self, name, user_handler,
+                                   handler_string, kwargs, **unused):
+        self._features_used.add('WEBSOCKETS')
+        super(Chalice, self)._register_on_ws_disconnect(
+            name, user_handler, handler_string, kwargs, **unused)
 
     def __call__(self, event, context):
         # This is what's invoked via lambda.
@@ -1188,6 +1330,31 @@ class SQSEventConfig(BaseEventSourceConfig):
         self.batch_size = batch_size
 
 
+class WebsocketConnectConfig(BaseEventSourceConfig):
+    CONNECT_ROUTE = '$connect'
+
+    def __init__(self, name, handler_string, user_handler):
+        super(WebsocketConnectConfig, self).__init__(name, handler_string)
+        self.route_key_handled = self.CONNECT_ROUTE
+        self.handler_function = user_handler
+
+
+class WebsocketMessageConfig(BaseEventSourceConfig):
+    def __init__(self, name, route_key_handled, handler_string, user_handler):
+        super(WebsocketMessageConfig, self).__init__(name, handler_string)
+        self.route_key_handled = route_key_handled
+        self.handler_function = user_handler
+
+
+class WebsocketDisconnectConfig(BaseEventSourceConfig):
+    DISCONNECT_ROUTE = '$disconnect'
+
+    def __init__(self, name, handler_string, user_handler):
+        super(WebsocketDisconnectConfig, self).__init__(name, handler_string)
+        self.route_key_handled = self.DISCONNECT_ROUTE
+        self.handler_function = user_handler
+
+
 class EventSourceHandler(object):
 
     def __init__(self, func, event_class):
@@ -1197,6 +1364,22 @@ class EventSourceHandler(object):
     def __call__(self, event, context):
         event_obj = self.event_class(event, context)
         return self.func(event_obj)
+
+
+class WebsocketEventSourceHandler(object):
+    def __init__(self, func, event_class, websocket_api):
+        self.func = func
+        self.event_class = event_class
+        self.websocket_api = websocket_api
+
+    def __call__(self, event, context):
+        event_obj = self.event_class(event, context)
+        self.websocket_api.configure(
+            event_obj.domain_name,
+            event_obj.stage,
+        )
+        self.func(event_obj)
+        return {'statusCode': 200}
 
 
 # These classes contain all the event types that are passed
@@ -1227,6 +1410,28 @@ class CloudWatchEvent(BaseLambdaEvent):
         self.time = event_dict['time']
         self.event_id = event_dict['id']
         self.resources = event_dict['resources']
+
+
+class WebsocketEvent(BaseLambdaEvent):
+    def __init__(self, event_dict, context):
+        super(WebsocketEvent, self).__init__(event_dict, context)
+        self._json_body = None
+
+    def _extract_attributes(self, event_dict):
+        request_context = event_dict['requestContext']
+        self.domain_name = request_context['domainName']
+        self.stage = request_context['stage']
+        self.connection_id = request_context['connectionId']
+        self.body = event_dict.get('body')
+
+    @property
+    def json_body(self):
+        if self._json_body is None:
+            try:
+                self._json_body = json.loads(self.body)
+            except ValueError:
+                raise BadRequestError('Error Parsing JSON')
+        return self._json_body
 
 
 class SNSEvent(BaseLambdaEvent):

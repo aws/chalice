@@ -58,3 +58,42 @@ def test_can_add_authorizers_to_dependencies(lambda_function):
         authorizers=[auth1, auth2],
     )
     assert rest_api.dependencies() == [lambda_function, auth1, auth2]
+
+
+def test_can_add_connect_to_dependencies(lambda_function):
+    api = models.WebsocketAPI(
+        resource_name='websocket_api',
+        name='name',
+        api_gateway_stage='api',
+        routes=['$connect'],
+        connect_function=lambda_function,
+        message_function=None,
+        disconnect_function=None,
+    )
+    assert api.dependencies() == [lambda_function]
+
+
+def test_can_add_message_to_dependencies(lambda_function):
+    api = models.WebsocketAPI(
+        resource_name='websocket_api',
+        name='name',
+        api_gateway_stage='api',
+        routes=['$default'],
+        connect_function=None,
+        message_function=lambda_function,
+        disconnect_function=None,
+    )
+    assert api.dependencies() == [lambda_function]
+
+
+def test_can_add_disconnect_to_dependencies(lambda_function):
+    api = models.WebsocketAPI(
+        resource_name='websocket_api',
+        name='name',
+        api_gateway_stage='api',
+        routes=['$disconnect'],
+        connect_function=None,
+        message_function=None,
+        disconnect_function=lambda_function,
+    )
+    assert api.dependencies() == [lambda_function]

@@ -97,6 +97,21 @@ def create_event():
 
 
 @fixture
+def create_websocket_event():
+    def create_event_inner(route_key, body=''):
+        return {
+            'requestContext': {
+                'routeKey': route_key,
+                'domainName': 'abcd1234.us-west-2.amazonaws.com',
+                'stage': 'api',
+                'connectionId': 'ABCD1234=',
+            },
+            'body': body,
+        }
+    return create_event_inner
+
+
+@fixture
 def create_empty_header_event():
     def create_empty_header_event_inner(uri, method, path,
                                         content_type='application/json'):

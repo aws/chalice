@@ -9,7 +9,8 @@ from chalice.config import DeployedResources
 from chalice.utils import OSUtils
 from chalice.deploy.planner import PlanStage, Variable, RemoteState
 from chalice.deploy.planner import StringFormat
-from chalice.deploy.planner import ResourceSweeper
+from chalice.deploy.models import APICall
+from chalice.deploy.sweeper import ResourceSweeper
 
 
 def create_function_resource(name, function_name=None,
@@ -488,6 +489,371 @@ class TestPlanScheduledEvent(BasePlannerTests):
             name='rule_name',
             value='myrulename',
         )
+
+
+class TestPlanWebsocketAPI(BasePlannerTests):
+    def assert_loads_needed_variables(self, plan):
+        # Parse arn and store region/account id for future
+        # API calls.
+        assert plan[0:3] == [
+            models.BuiltinFunction(
+                'parse_arn', [Variable('function_name_connect_lambda_arn')],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+        ]
+
+    def test_can_plan_websocket_api(self):
+        connect_function = create_function_resource(
+            'function_name_connect')
+        message_function = create_function_resource(
+            'function_name_message')
+        disconnect_function = create_function_resource(
+            'function_name_disconnect')
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-dev-websocket-api',
+            api_gateway_stage='api',
+            routes=['$connect', '$default', '$disconnect'],
+            connect_function=connect_function,
+            message_function=message_function,
+            disconnect_function=disconnect_function,
+        )
+        plan = self.determine_plan(websocket_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[3:] == [
+            models.APICall(
+                method_name='create_websocket_api',
+                params={'name': 'app-dev-websocket-api'},
+                output_var='websocket_api_id',
+            ),
+            models.StoreValue(
+                name='routes',
+                value=[],
+            ),
+            models.StoreValue(
+                name='websocket-connect-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_connect',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-connect-integration-lambda-path'),
+                    'handler_type': 'connect',
+                },
+                output_var='connect-integration-id',
+            ),
+            models.StoreValue(
+                name='websocket-message-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_message',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-message-integration-lambda-path'),
+                    'handler_type': 'message',
+                },
+                output_var='message-integration-id',
+            ),
+            models.StoreValue(
+                name='websocket-disconnect-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_disconnect',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-disconnect-integration-lambda-path'),
+                    'handler_type': 'disconnect',
+                },
+                output_var='disconnect-integration-id',
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$connect',
+                    'integration_id': Variable('connect-integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$default',
+                    'integration_id': Variable('message-integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$disconnect',
+                    'integration_id': Variable('disconnect-integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='deploy_websocket_api',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                },
+                output_var='deployment-id',
+            ),
+            models.APICall(
+                method_name='create_stage',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'stage_name': 'api',
+                    'deployment_id': Variable('deployment-id'),
+                }
+            ),
+            models.StoreValue(
+                name='websocket_api_url',
+                value=StringFormat(
+                    'wss://{websocket_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/%s/' % 'api',
+                    ['websocket_api_id', 'region_name'],
+                ),
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_url',
+                variable_name='websocket_api_url',
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_id',
+                variable_name='websocket_api_id',
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': 'appname-dev-function_name_connect',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': 'appname-dev-function_name_message',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={
+                    'function_name': 'appname-dev-function_name_disconnect',
+                    'region_name': Variable('region_name'),
+                    'account_id': Variable('account_id'),
+                    'api_id': Variable('websocket_api_id')},
+            ),
+        ]
+
+    def test_can_update_websocket_api(self):
+        connect_function = create_function_resource(
+            'function_name_connect')
+        message_function = create_function_resource(
+            'function_name_message')
+        disconnect_function = create_function_resource(
+            'function_name_disconnect')
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-dev-websocket-api',
+            api_gateway_stage='api',
+            routes=['$connect', '$default', '$disconnect'],
+            connect_function=connect_function,
+            message_function=message_function,
+            disconnect_function=disconnect_function,
+        )
+        self.remote_state.declare_resource_exists(websocket_api)
+        self.remote_state.deployed_values['websocket_api'] = {
+            'websocket_api_id': 'my_websocket_api_id',
+        }
+        plan = self.determine_plan(websocket_api)
+        self.assert_loads_needed_variables(plan)
+        assert plan[3:] == [
+            models.StoreValue(
+                name='websocket_api_id',
+                value='my_websocket_api_id',
+            ),
+            models.APICall(
+                method_name='get_websocket_routes',
+                params={'api_id': Variable('websocket_api_id')},
+                output_var='routes',
+            ),
+            models.APICall(
+                method_name='delete_websocket_routes',
+                params={'api_id': Variable('websocket_api_id'),
+                        'routes': Variable('routes')},
+            ),
+            models.APICall(
+                method_name='get_websocket_integrations',
+                params={'api_id': Variable('websocket_api_id')},
+                output_var='integrations',
+            ),
+            models.APICall(
+                method_name='delete_websocket_integrations',
+                params={'api_id': Variable('websocket_api_id'),
+                        'integrations': Variable('integrations')},
+            ),
+            models.StoreValue(
+                name='websocket-connect-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_connect',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-connect-integration-lambda-path'),
+                    'handler_type': 'connect',
+                },
+                output_var='connect-integration-id',
+            ),
+            models.StoreValue(
+                name='websocket-message-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_message',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-message-integration-lambda-path'),
+                    'handler_type': 'message',
+                },
+                output_var='message-integration-id',
+            ),
+            models.StoreValue(
+                name='websocket-disconnect-integration-lambda-path',
+                value=StringFormat(
+                    'arn:aws:apigateway:{region_name}:lambda:path/'
+                    '2015-03-31/functions/arn:aws:lambda:{region_name}:'
+                    '{account_id}:function:%s/'
+                    'invocations' % 'appname-dev-function_name_disconnect',
+                    ['region_name', 'account_id'],
+                ),
+            ),
+            models.APICall(
+                method_name='create_websocket_integration',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'lambda_function': Variable(
+                        'websocket-disconnect-integration-lambda-path'),
+                    'handler_type': 'disconnect',
+                },
+                output_var='disconnect-integration-id',
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$connect',
+                    'integration_id': Variable('connect-integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$default',
+                    'integration_id': Variable('message-integration-id'),
+                },
+            ),
+            models.APICall(
+                method_name='create_websocket_route',
+                params={
+                    'api_id': Variable('websocket_api_id'),
+                    'route_key': '$disconnect',
+                    'integration_id': Variable('disconnect-integration-id'),
+                },
+            ),
+            models.StoreValue(
+                name='websocket_api_url',
+                value=StringFormat(
+                    'wss://{websocket_api_id}.execute-api.{region_name}'
+                    '.amazonaws.com/%s/' % 'api',
+                    ['websocket_api_id', 'region_name'],
+                ),
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_url',
+                variable_name='websocket_api_url',
+            ),
+            models.RecordResourceVariable(
+                resource_type='websocket_api',
+                resource_name='websocket_api',
+                name='websocket_api_id',
+                variable_name='websocket_api_id',
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': 'appname-dev-function_name_connect',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={'function_name': 'appname-dev-function_name_message',
+                        'region_name': Variable('region_name'),
+                        'account_id': Variable('account_id'),
+                        'api_id': Variable('websocket_api_id')},
+            ),
+            models.APICall(
+                method_name='add_permission_for_apigateway_v2',
+                params={
+                    'function_name': 'appname-dev-function_name_disconnect',
+                    'region_name': Variable('region_name'),
+                    'account_id': Variable('account_id'),
+                    'api_id': Variable('websocket_api_id'),
+                },
+            ),
+        ]
 
 
 class TestPlanRestAPI(BasePlannerTests):
@@ -994,6 +1360,41 @@ class TestPlanSQSSubscription(BasePlannerTests):
             )
         ]
 
+    @pytest.mark.parametrize('functions,integration_injected', [
+        (
+            (create_function_resource('connect'), None, None),
+            'connect'
+        ),
+        (
+            (None, create_function_resource('message'), None),
+            'message'
+        ),
+        (
+            (None, None, create_function_resource('disconnect')),
+            'disconnect'
+        ),
+    ])
+    def test_websocket_api_plan_omits_unused_lambdas(
+            self, functions, integration_injected):
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-dev-websocket-api',
+            api_gateway_stage='api',
+            routes=['$connect', '$default', '$disconnect'],
+            connect_function=functions[0],
+            message_function=functions[1],
+            disconnect_function=functions[2],
+        )
+        plan = self.determine_plan(websocket_api)
+        integrations = [
+            code.params['handler_type'] for code in plan
+            if isinstance(code, APICall)
+            and code.method_name == 'create_websocket_integration'
+        ]
+
+        assert len(integrations) == 1
+        assert integrations[0] == integration_injected
+
 
 class TestRemoteState(object):
     def setup_method(self):
@@ -1012,6 +1413,18 @@ class TestRemoteState(object):
             lambda_function=None,
         )
         return rest_api
+
+    def create_websocket_api_model(self):
+        websocket_api = models.WebsocketAPI(
+            resource_name='websocket_api',
+            name='app-stage-websocket-api',
+            api_gateway_stage='api',
+            routes=[],
+            connect_function=None,
+            message_function=None,
+            disconnect_function=None,
+        )
+        return websocket_api
 
     def test_role_exists(self):
         self.client.get_role_arn_for_name.return_value = 'role:arn'
@@ -1062,7 +1475,7 @@ class TestRemoteState(object):
         assert not remote_state.resource_exists(rest_api)
         assert not self.client.rest_api_exists.called
 
-    def test_api_exists_with_existing_deploy(self):
+    def test_rest_api_exists_with_existing_deploy(self):
         rest_api = self.create_rest_api_model()
         deployed_resources = {
             'resources': [{
@@ -1091,6 +1504,45 @@ class TestRemoteState(object):
             self.client, DeployedResources(deployed_resources))
         assert not remote_state.resource_exists(rest_api)
         self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+
+    def test_websocket_api_exists_no_deploy(self, no_deployed_values):
+        rest_api = self.create_websocket_api_model()
+        remote_state = RemoteState(
+            self.client, no_deployed_values)
+        assert not remote_state.resource_exists(rest_api)
+        assert not self.client.websocket_api_exists.called
+
+    def test_websocket_api_exists_with_existing_deploy(self):
+        websocket_api = self.create_websocket_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'websocket_api',
+                'resource_type': 'websocket_api',
+                'websocket_api_id': 'my_websocket_api_id',
+            }]
+        }
+        self.client.websocket_api_exists.return_value = True
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert remote_state.resource_exists(websocket_api)
+        self.client.websocket_api_exists.assert_called_with(
+            'my_websocket_api_id')
+
+    def test_websocket_api_not_exists_with_preexisting_deploy(self):
+        websocket_api = self.create_websocket_api_model()
+        deployed_resources = {
+            'resources': [{
+                'name': 'websocket_api',
+                'resource_type': 'websocket_api',
+                'websocket_api_id': 'my_websocket_api_id',
+            }]
+        }
+        self.client.websocket_api_exists.return_value = False
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert not remote_state.resource_exists(websocket_api)
+        self.client.websocket_api_exists.assert_called_with(
+            'my_websocket_api_id')
 
     def test_can_get_deployed_values(self):
         remote_state = RemoteState(
@@ -1426,6 +1878,24 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             models.APICall(
                 method_name='delete_rest_api',
                 params={'rest_api_id': 'my_rest_api_id'},
+            )
+        ]
+
+    def test_can_delete_websocket_api(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'websocket_api',
+                'websocket_api_id': 'my_websocket_api_id',
+                'resource_type': 'websocket_api',
+            }]
+        }
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='delete_websocket_api',
+                params={'api_id': 'my_websocket_api_id'},
             )
         ]
 

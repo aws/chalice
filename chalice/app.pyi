@@ -5,6 +5,7 @@ from chalice.local import LambdaContext
 __version__ = ... # type: str
 
 class ChaliceError(Exception): ...
+class WebsocketDisconnectedError(Exception): ...
 class ChaliceViewError(ChaliceError):
     __name__ = ... # type: str
     STATUS_CODE = ... # type: int
@@ -116,6 +117,18 @@ class APIGateway(object):
     binary_types = ... # type: List[str]
 
 
+class WebsocketAPI(object):
+    session = ... # type: Optional[Any]
+
+    def configure(self,
+                  domain_name: str,
+                  stage: str) -> None: ...
+
+    def send(self,
+             connection_id: str,
+             message: str) -> None: ...
+
+
 class DecoratorAPI(object):
     def authorizer(self,
                    ttl_seconds: Optional[int]=None,
@@ -151,6 +164,8 @@ class Chalice(DecoratorAPI):
     app_name = ... # type: str
     api = ... # type: APIGateway
     routes = ... # type: Dict[str, Dict[str, RouteEntry]]
+    websocket_api = ... # type: WebsocketAPI
+    websocket_handlers = ... # type: Dict[str, Any]
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
     debug = ... # type: bool

@@ -1,6 +1,7 @@
-import botocore.session
 import os
+
 import socket
+import botocore.session
 
 import pytest
 import mock
@@ -33,12 +34,15 @@ from chalice.deploy.deployer import create_default_deployer, \
 from chalice.deploy.executor import Executor
 from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanStage
-from chalice.deploy.planner import ResourceSweeper, StringFormat
+from chalice.deploy.planner import StringFormat
+from chalice.deploy.sweeper import ResourceSweeper
 from chalice.deploy.models import APICall
 from chalice.constants import LAMBDA_TRUST_POLICY, VPC_ATTACH_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
+from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy.deployer import ChaliceBuildError
 from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
+from chalice.deploy.deployer import WebsocketPolicyInjector
 
 
 _SESSION = None
@@ -311,6 +315,70 @@ def sqs_event_app():
 
     @app.on_sqs_message(queue='myqueue')
     def handler(event):
+        pass
+
+    return app
+
+
+@fixture
+def websocket_app():
+    app = Chalice('websocket-event')
+
+    @app.on_ws_connect()
+    def connect(event):
+        pass
+
+    @app.on_ws_message()
+    def message(event):
+        pass
+
+    @app.on_ws_disconnect()
+    def disconnect(event):
+        pass
+
+    return app
+
+
+@fixture
+def websocket_app_without_connect():
+    app = Chalice('websocket-event-no-connect')
+
+    @app.on_ws_message()
+    def message(event):
+        pass
+
+    @app.on_ws_disconnect()
+    def disconnect(event):
+        pass
+
+    return app
+
+
+@fixture
+def websocket_app_without_message():
+    app = Chalice('websocket-event-no-message')
+
+    @app.on_ws_connect()
+    def connect(event):
+        pass
+
+    @app.on_ws_disconnect()
+    def disconnect(event):
+        pass
+
+    return app
+
+
+@fixture
+def websocket_app_without_disconnect():
+    app = Chalice('websocket-event-no-disconnect')
+
+    @app.on_ws_connect()
+    def connect(event):
+        pass
+
+    @app.on_ws_message()
+    def message(event):
         pass
 
     return app
@@ -712,6 +780,104 @@ class TestApplicationGraphBuilder(object):
         lambda_function = sqs_event.lambda_function
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_websocket_event_handler(self, websocket_app):
+        config = self.create_config(websocket_app,
+                                    app_name='websocket-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        websocket_api = application.resources[0]
+        assert isinstance(websocket_api, models.WebsocketAPI)
+        assert websocket_api.resource_name == 'websocket_api'
+        assert sorted(websocket_api.routes) == sorted(
+            ['$connect', '$default', '$disconnect'])
+        assert websocket_api.api_gateway_stage == 'api'
+
+        connect_function = websocket_api.connect_function
+        assert connect_function.resource_name == 'websocket_connect'
+        assert connect_function.handler == 'app.connect'
+
+        message_function = websocket_api.message_function
+        assert message_function.resource_name == 'websocket_message'
+        assert message_function.handler == 'app.message'
+
+        disconnect_function = websocket_api.disconnect_function
+        assert disconnect_function.resource_name == 'websocket_disconnect'
+        assert disconnect_function.handler == 'app.disconnect'
+
+    def test_can_create_websocket_app_missing_connect(
+            self, websocket_app_without_connect):
+        config = self.create_config(websocket_app_without_connect,
+                                    app_name='websocket-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        websocket_api = application.resources[0]
+        assert isinstance(websocket_api, models.WebsocketAPI)
+        assert websocket_api.resource_name == 'websocket_api'
+        assert sorted(websocket_api.routes) == sorted(
+            ['$default', '$disconnect'])
+        assert websocket_api.api_gateway_stage == 'api'
+
+        connect_function = websocket_api.connect_function
+        assert connect_function is None
+
+        message_function = websocket_api.message_function
+        assert message_function.resource_name == 'websocket_message'
+        assert message_function.handler == 'app.message'
+
+        disconnect_function = websocket_api.disconnect_function
+        assert disconnect_function.resource_name == 'websocket_disconnect'
+        assert disconnect_function.handler == 'app.disconnect'
+
+    def test_can_create_websocket_app_missing_message(
+            self, websocket_app_without_message):
+        config = self.create_config(websocket_app_without_message,
+                                    app_name='websocket-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        websocket_api = application.resources[0]
+        assert isinstance(websocket_api, models.WebsocketAPI)
+        assert websocket_api.resource_name == 'websocket_api'
+        assert sorted(websocket_api.routes) == sorted(
+            ['$connect', '$disconnect'])
+        assert websocket_api.api_gateway_stage == 'api'
+
+        connect_function = websocket_api.connect_function
+        assert connect_function.resource_name == 'websocket_connect'
+        assert connect_function.handler == 'app.connect'
+
+        disconnect_function = websocket_api.disconnect_function
+        assert disconnect_function.resource_name == 'websocket_disconnect'
+        assert disconnect_function.handler == 'app.disconnect'
+
+    def test_can_create_websocket_app_missing_disconnect(
+            self, websocket_app_without_disconnect):
+        config = self.create_config(websocket_app_without_disconnect,
+                                    app_name='websocket-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        websocket_api = application.resources[0]
+        assert isinstance(websocket_api, models.WebsocketAPI)
+        assert websocket_api.resource_name == 'websocket_api'
+        assert sorted(websocket_api.routes) == sorted(
+            ['$connect', '$default'])
+        assert websocket_api.api_gateway_stage == 'api'
+
+        connect_function = websocket_api.connect_function
+        assert connect_function.resource_name == 'websocket_connect'
+        assert connect_function.handler == 'app.connect'
+
+        message_function = websocket_api.message_function
+        assert message_function.resource_name == 'websocket_message'
+        assert message_function.handler == 'app.message'
 
 
 class RoleTestCase(object):
@@ -1291,6 +1457,10 @@ class TestDeploymentReporter(object):
                  "rest_api_id": "rest_api_id",
                  "rest_api_url": "https://host/api",
                  "resource_type": "rest_api"},
+                {"name": "websocket_api",
+                 "websocket_api_id": "websocket_api_id",
+                 "websocket_api_url": "wss://host/api",
+                 "resource_type": "websocket_api"},
             ],
         }
         report = self.reporter.generate_report(deployed_values)
@@ -1299,6 +1469,7 @@ class TestDeploymentReporter(object):
             "  - Lambda ARN: lambda-arn-foo\n"
             "  - Lambda ARN: lambda-arn-dev\n"
             "  - Rest API URL: https://host/api\n"
+            "  - Websocket API URL: wss://host/api\n"
         )
 
     def test_can_display_report(self):
@@ -1360,3 +1531,34 @@ class TestLambdaEventSourcePolicyInjector(object):
         assert role.policy.document == {
             'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
         }
+
+
+class TestWebsocketPolicyInjector(object):
+    def create_model_from_app(self, app, config):
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        return application.resources[0]
+
+    def test_can_inject_policy(self, websocket_app):
+        config = Config.create(chalice_app=websocket_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(websocket_app, config)
+        role = event_source.connect_function.role
+        role.policy.document = {'Statement': []}
+        injector = WebsocketPolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [POST_TO_WEBSOCKET_CONNECTION_POLICY.copy()],
+        }
+
+    def test_no_inject_if_not_autogen_policy(self, websocket_app):
+        config = Config.create(chalice_app=websocket_app,
+                               autogen_policy=False,
+                               project_dir='.')
+        event_source = self.create_model_from_app(websocket_app, config)
+        role = event_source.connect_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {'Statement': []}

@@ -64,6 +64,7 @@ Topics
    topics/events
    topics/purelambda
    topics/blueprints
+   topics/websockets
    topics/cd
    topics/experimental
 
@@ -76,6 +77,14 @@ API Reference
 
    api
 
+
+Tutorials
+---------
+
+.. toctree::
+   :maxdepth: 2
+
+   tutorials/websockets
 
 Upgrade Notes
 -------------

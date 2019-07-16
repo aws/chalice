@@ -520,6 +520,19 @@ class TypedAWSClient(object):
             service_name='apigateway',
         )
 
+    def add_permission_for_apigateway_v2(self, function_name,
+                                         region_name, account_id,
+                                         api_id, random_id=None):
+        # type: (str, str, str, str, Optional[str]) -> None
+        """Authorize API gateway v2 to invoke a lambda function."""
+        source_arn = self._build_source_arn_str(region_name, account_id,
+                                                api_id)
+        self._add_lambda_permission_if_needed(
+            source_arn=source_arn,
+            function_arn=function_name,
+            service_name='apigateway'
+        )
+
     def get_function_policy(self, function_name):
         # type: (str) -> Dict[str, Any]
         """Return the function policy for a lambda function.
@@ -983,6 +996,119 @@ class TypedAWSClient(object):
             )
         except client.exceptions.ResourceNotFoundException:
             return False
+
+    def create_websocket_api(self, name):
+        # type: (str) -> str
+        client = self._client('apigatewayv2')
+        return self._call_client_method_with_retries(
+            client.create_api,
+            kwargs={
+                'Name': name,
+                'ProtocolType': 'WEBSOCKET',
+                'RouteSelectionExpression': '$request.body.action',
+            },
+            max_attempts=10,
+            should_retry=self._is_settling_error,
+        )['ApiId']
+
+    def get_websocket_api_id(self, name):
+        # type: (str) -> Optional[str]
+        apis = self._client('apigatewayv2').get_apis()['Items']
+        for api in apis:
+            if api['Name'] == name:
+                return api['ApiId']
+        return None
+
+    def websocket_api_exists(self, api_id):
+        # type: (str) -> bool
+        """Check if an API Gateway WEBSOCKET API exists."""
+        client = self._client('apigatewayv2')
+        try:
+            client.get_api(ApiId=api_id)
+            return True
+        except client.exceptions.NotFoundException:
+            return False
+
+    def delete_websocket_api(self, api_id):
+        # type: (str) -> None
+        client = self._client('apigatewayv2')
+        try:
+            client.delete_api(ApiId=api_id)
+        except client.exceptions.NotFoundException:
+            raise ResourceDoesNotExistError(api_id)
+
+    def create_websocket_integration(
+            self,
+            api_id,
+            lambda_function,
+            handler_type,
+    ):
+        # type: (str, str, str) -> str
+        client = self._client('apigatewayv2')
+        return client.create_integration(
+            ApiId=api_id,
+            ConnectionType='INTERNET',
+            ContentHandlingStrategy='CONVERT_TO_TEXT',
+            Description=handler_type,
+            IntegrationType='AWS_PROXY',
+            IntegrationUri=lambda_function,
+        )['IntegrationId']
+
+    def create_websocket_route(self, api_id, route_key, integration_id):
+        # type: (str, str, str, ) -> None
+        client = self._client('apigatewayv2')
+        client.create_route(
+            ApiId=api_id,
+            RouteKey=route_key,
+            RouteResponseSelectionExpression='$default',
+            Target='integrations/%s' % integration_id,
+        )
+
+    def delete_websocket_routes(self, api_id, routes):
+        # type: (str, List[str]) -> None
+        client = self._client('apigatewayv2')
+        for route_id in routes:
+            client.delete_route(
+                ApiId=api_id,
+                RouteId=route_id,
+            )
+
+    def delete_websocket_integrations(self, api_id, integrations):
+        # type: (str, Dict[str, str]) -> None
+        client = self._client('apigatewayv2')
+        for integration_id in integrations:
+            client.delete_integration(
+                ApiId=api_id,
+                IntegrationId=integration_id,
+            )
+
+    def deploy_websocket_api(self, api_id):
+        # type: (str) -> str
+        client = self._client('apigatewayv2')
+        return client.create_deployment(
+            ApiId=api_id,
+        )['DeploymentId']
+
+    def get_websocket_routes(self, api_id):
+        # type: (str) -> List[str]
+        client = self._client('apigatewayv2')
+        return [i['RouteId']
+                for i in client.get_routes(ApiId=api_id,)['Items']]
+
+    def get_websocket_integrations(self, api_id):
+        # type: (str) -> List[str]
+        client = self._client('apigatewayv2')
+        return [item['IntegrationId']
+                for item in client.get_integrations(ApiId=api_id)['Items']]
+
+    def create_stage(self, api_id, stage_name, deployment_id):
+        # type: (str, str, str) -> None
+        client = self._client('apigatewayv2')
+        client.create_stage(
+            ApiId=api_id,
+            StageName=stage_name,
+            DeploymentId=deployment_id,
+        )
 
     def _call_client_method_with_retries(
         self,

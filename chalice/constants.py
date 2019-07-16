@@ -240,3 +240,12 @@ SQS_EVENT_SOURCE_POLICY = {
     ],
     "Resource": "*",
 }
+
+
+POST_TO_WEBSOCKET_CONNECTION_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "execute-api:ManageConnections"
+    ],
+    "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
+}

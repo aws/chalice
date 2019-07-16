@@ -5,9 +5,11 @@ import time
 import shutil
 import uuid
 
+import mock
 import botocore.session
 import pytest
 import requests
+import websocket
 
 from chalice.cli.factory import CLIFactory
 from chalice.utils import OSUtils, UI
@@ -18,7 +20,7 @@ from chalice.config import DeployedResources
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
 APP_FILE = os.path.join(PROJECT_DIR, 'app.py')
-RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())
+RANDOM_APP_NAME = 'smoketest-%s' % str(uuid.uuid4())[:13]
 
 
 def retry(max_attempts, delay):
@@ -66,6 +68,22 @@ class SmokeTestApplication(object):
     def rest_api_id(self):
         return self._deployed_resources.resource_values(
             'rest_api')['rest_api_id']
+
+    @property
+    def websocket_api_id(self):
+        return self._deployed_resources.resource_values(
+            'websocket_api')['websocket_api_id']
+
+    @property
+    def websocket_connect_url(self):
+        return (
+            "wss://{websocket_api_id}.execute-api.{region}.amazonaws.com/"
+            "{api_gateway_stage}".format(
+                websocket_api_id=self.websocket_api_id,
+                region=self._region,
+                api_gateway_stage='api',
+            )
+        )
 
     def get_json(self, url):
         if not url.startswith('/'):
@@ -497,6 +515,24 @@ def test_empty_raw_body(smoke_test_app):
     response = requests.post(url)
     response.raise_for_status()
     assert response.json() == {'repr-raw-body': ''}
+
+
+def test_websocket_lifecycle(smoke_test_app):
+    ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
+    ws.send("Hello, World 1")
+    ws.recv()
+    ws.close()
+    ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
+    ws.send("Hello, World 2")
+    second_response = json.loads(ws.recv())
+    ws.close()
+
+    expected_second_response = [
+        [mock.ANY, 'Hello, World 1'],
+        [mock.ANY, 'Hello, World 2']
+    ]
+    assert expected_second_response == second_response
+    assert second_response[0][0] != second_response[1][0]
 
 
 @pytest.mark.on_redeploy
