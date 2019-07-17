@@ -1,6 +1,7 @@
 import re
 import mock
 import sys
+
 import click
 import pytest
 from six import StringIO
@@ -40,6 +41,22 @@ class TestUI(object):
         ui = utils.UI(self.out, self.err, confirm)
         return_value = ui.confirm("Confirm?")
         assert return_value == 'foo'
+
+
+class TestChaliceZip(object):
+
+    def test_chalice_zip_file(self, tmpdir):
+        tmpdir.mkdir('foo').join('app.py').write('# Test app')
+        zip_path = tmpdir.join('app.zip')
+
+        with utils.ChaliceZipFile(str(zip_path), 'w') as f:
+            f.write(str(tmpdir.join('foo', 'app.py')))
+
+        with utils.ChaliceZipFile(str(zip_path)) as f:
+            assert len(f.infolist()) == 1
+            info = f.getinfo(tmpdir.join('foo', 'app.py'))
+            assert info.date_time == (1980, 1, 1, 0, 0, 0)
+            assert info.external_attr == 27525120
 
 
 class TestPipeReader(object):

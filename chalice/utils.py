@@ -11,7 +11,7 @@ import tarfile
 import subprocess
 
 import click
-from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO  # noqa
+from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO, Text  # noqa
 from typing import Optional, Union  # noqa
 from typing import MutableMapping  # noqa
 
@@ -96,6 +96,29 @@ def serialize_to_json(data):
     return json.dumps(data, indent=2, separators=(',', ': ')) + '\n'
 
 
+class ChaliceZipFile(zipfile.ZipFile):
+    """Support deterministic zipfile generation.
+
+    Normalizes datetime and permissions.
+    """
+
+    compression = 0  # try to make mypy happy
+
+    # pylint: disable=W0221
+    def write(self, filename, arcname=None, compress_type=None):
+        # type: (Text, Optional[Text], Optional[int]) -> None
+        # Only supports files, py2.7 and 3 have different signatures
+
+        info = zipfile.ZipInfo(arcname or filename)
+        # Grant other users permissions to read,
+        # else lambda blows up with mysterious error.
+        # http://unix.stackexchange.com/questions/14705/
+        info.external_attr = 0o644 << 16
+        info.compress_type = compress_type or self.compression
+        with open(filename, 'rb') as fh:
+            self.writestr(info, fh.read())
+
+
 def create_zip_file(source_dir, outfile):
     # type: (str, str) -> None
     """Create a zip file from a source input directory.
@@ -106,8 +129,8 @@ def create_zip_file(source_dir, outfile):
     specified by the `outfile` argument.
 
     """
-    with zipfile.ZipFile(outfile, 'w',
-                         compression=zipfile.ZIP_DEFLATED) as z:
+    with ChaliceZipFile(outfile, 'w',
+                        compression=zipfile.ZIP_DEFLATED) as z:
         for root, _, filenames in os.walk(source_dir):
             for filename in filenames:
                 full_name = os.path.join(root, filename)
