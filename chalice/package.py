@@ -72,6 +72,7 @@ class SAMTemplateGenerator(object):
     def __init__(self):
         # type: () -> None
         self._seen_names = set([])  # type: Set[str]
+        self._chalice_layer = ""
 
     def generate_sam_template(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
@@ -82,6 +83,20 @@ class SAMTemplateGenerator(object):
             handler = getattr(self, name, self._default)
             handler(resource, template)
         return template
+
+    def _generate_lambdalayer(self, resource, template):
+        # type: (models.LambdaLayer, Dict[str, Any]) -> None
+        layer = to_cfn_resource_name(
+            resource.resource_name)
+        template['Resources'][layer] = {
+            "Type": "AWS::Serverless::LayerVersion",
+            "Properties": {
+                "CompatibleRuntimes": [resource.runtime],
+                "ContentUri": resource.deployment_package.filename,
+                "LayerName": resource.layer_name
+            }
+        }
+        self._chalice_layer = resource.layer_name
 
     def _generate_scheduledevent(self, resource, template):
         # type: (models.ScheduledEvent, Dict[str, Any]) -> None
@@ -136,10 +151,15 @@ class SAMTemplateGenerator(object):
             }
             lambdafunction_definition['Properties'].update(
                 reserved_concurrency_config)
-        if resource.layers:
+
+        layers = resource.layers or []  # type: List[Any]
+        if self._chalice_layer:
+            layers.append({'Ref': self._chalice_layer})
+
+        if layers:
             layers_config = {
-                'Layers': resource.layers
-            }  # type: Dict[str, List[str]]
+                'Layers': layers
+            }  # type: Dict[str, Any]
             lambdafunction_definition['Properties'].update(layers_config)
 
         resources[cfn_name] = lambdafunction_definition
@@ -585,11 +605,14 @@ class TemplatePostProcessor(object):
         # somehow, which isn't currently possible.
         copied = False
         for resource in template['Resources'].values():
-            if resource['Type'] != 'AWS::Serverless::Function':
-                continue
-            original_location = resource['Properties']['CodeUri']
-            new_location = os.path.join(outdir, 'deployment.zip')
-            if not copied:
+            if resource['Type'] == 'AWS::Serverless::Function':
+                original_location = resource['Properties']['CodeUri']
+                new_location = os.path.join(outdir, 'deployment.zip')
+                if not copied:
+                    self._osutils.copy(original_location, new_location)
+                    copied = True
+                resource['Properties']['CodeUri'] = './deployment.zip'
+            elif resource['Type'] == 'AWS::Serverless::LayerVersion':
+                original_location = resource['Properties']['ContentUri']
+                new_location = os.path.join(outdir, 'layer-deployment.zip')
                 self._osutils.copy(original_location, new_location)
-                copied = True
-            resource['Properties']['CodeUri'] = './deployment.zip'

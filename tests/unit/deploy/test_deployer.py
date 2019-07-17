@@ -509,8 +509,8 @@ class TestApplicationGraphBuilder(object):
         application = builder.build(config, stage_name='dev')
         # The top level resource is always an Application.
         assert isinstance(application, models.Application)
-        assert len(application.resources) == 1
-        assert application.resources[0] == models.LambdaFunction(
+        assert len(application.resources) == 2
+        assert application.resources[1] == models.LambdaFunction(
             resource_name='foo',
             function_name='lambda-only-dev-foo',
             environment_variables={},
@@ -538,8 +538,8 @@ class TestApplicationGraphBuilder(object):
         application = builder.build(config, stage_name='dev')
         # The top level resource is always an Application.
         assert isinstance(application, models.Application)
-        assert len(application.resources) == 1
-        assert application.resources[0] == models.LambdaFunction(
+        assert len(application.resources) == 2
+        assert application.resources[1] == models.LambdaFunction(
             resource_name='foo',
             function_name='lambda-only-dev-foo',
             environment_variables={},
@@ -569,7 +569,7 @@ class TestApplicationGraphBuilder(object):
                                     subnet_ids=['sn1', 'sn2'])
         application = builder.build(config, stage_name='dev')
 
-        assert application.resources[0] == models.LambdaFunction(
+        assert application.resources[1] == models.LambdaFunction(
             resource_name='foo',
             function_name='lambda-only-dev-foo',
             environment_variables={},
@@ -599,7 +599,7 @@ class TestApplicationGraphBuilder(object):
                                     subnet_ids=['sn1', 'sn2'])
         application = builder.build(config, stage_name='dev')
 
-        policy = application.resources[0].role.policy
+        policy = application.resources[1].role.policy
         assert policy == models.AutoGenIAMPolicy(
             document=models.Placeholder.BUILD_STAGE,
             traits=set([models.RoleTraits.VPC_NEEDED]),
@@ -629,8 +629,16 @@ class TestApplicationGraphBuilder(object):
         application = builder.build(config, stage_name='dev')
         # The top level resource is always an Application.
         assert isinstance(application, models.Application)
-        assert len(application.resources) == 1
-        assert application.resources[0] == models.LambdaFunction(
+        assert len(application.resources) == 2
+        assert application.resources[0] == models.LambdaLayer(
+            resource_name='layer',
+            layer_name='lambda-only-dev-layer',
+            deployment_package=models.DeploymentPackage(
+                filename=models.Placeholder.BUILD_STAGE),
+            runtime=config.lambda_python_version
+        )
+
+        assert application.resources[1] == models.LambdaFunction(
             resource_name='foo',
             function_name='lambda-only-dev-foo',
             environment_variables={},
@@ -658,14 +666,14 @@ class TestApplicationGraphBuilder(object):
         builder = ApplicationGraphBuilder()
         config = self.create_config(lambda_app, iam_role_arn='role:arn')
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 2
+        assert len(application.resources) == 3
         # The lambda functions by default share the same role
-        assert application.resources[0].role == application.resources[1].role
+        assert application.resources[1].role == application.resources[1].role
         # Not just in equality but the exact same role objects.
-        assert application.resources[0].role is application.resources[1].role
+        assert application.resources[2].role is application.resources[1].role
         # And all lambda functions share the same deployment package.
-        assert (application.resources[0].deployment_package ==
-                application.resources[1].deployment_package)
+        assert (application.resources[1].deployment_package ==
+                application.resources[2].deployment_package)
 
     def test_autogen_policy_for_function(self, lambda_app):
         # This test is just a sanity test that verifies all the params
@@ -674,7 +682,7 @@ class TestApplicationGraphBuilder(object):
         config = self.create_config(lambda_app, autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        function = application.resources[0]
+        function = application.resources[1]
         role = function.role
         # We should have linked a ManagedIAMRole
         assert isinstance(role, models.ManagedIAMRole)
@@ -691,8 +699,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        event = application.resources[0]
+        assert len(application.resources) == 2
+        event = application.resources[1]
         assert isinstance(event, models.ScheduledEvent)
         assert event.resource_name == 'foo-event'
         assert event.rule_name == 'scheduled-event-dev-foo-event'
@@ -705,8 +713,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        rest_api = application.resources[0]
+        assert len(application.resources) == 2
+        rest_api = application.resources[1]
         assert isinstance(rest_api, models.RestAPI)
         assert rest_api.resource_name == 'rest_api'
         assert rest_api.api_gateway_stage == 'api'
@@ -730,7 +738,7 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        rest_api = application.resources[0]
+        rest_api = application.resources[1]
         assert len(rest_api.authorizers) == 1
         assert isinstance(rest_api.authorizers[0], models.LambdaFunction)
 
@@ -741,8 +749,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        s3_event = application.resources[0]
+        assert len(application.resources) == 2
+        s3_event = application.resources[1]
         assert isinstance(s3_event, models.S3BucketNotification)
         assert s3_event.resource_name == 'handler-s3event'
         assert s3_event.bucket == 'mybucket'
@@ -757,8 +765,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        sns_event = application.resources[0]
+        assert len(application.resources) == 2
+        sns_event = application.resources[1]
         assert isinstance(sns_event, models.SNSLambdaSubscription)
         assert sns_event.resource_name == 'handler-sns-subscription'
         assert sns_event.topic == 'mytopic'
@@ -772,8 +780,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        sqs_event = application.resources[0]
+        assert len(application.resources) == 2
+        sqs_event = application.resources[1]
         assert isinstance(sqs_event, models.SQSEventSource)
         assert sqs_event.resource_name == 'handler-sqs-event-source'
         assert sqs_event.queue == 'myqueue'
@@ -787,8 +795,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        websocket_api = application.resources[0]
+        assert len(application.resources) == 2
+        websocket_api = application.resources[1]
         assert isinstance(websocket_api, models.WebsocketAPI)
         assert websocket_api.resource_name == 'websocket_api'
         assert sorted(websocket_api.routes) == sorted(
@@ -814,8 +822,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        websocket_api = application.resources[0]
+        assert len(application.resources) == 2
+        websocket_api = application.resources[1]
         assert isinstance(websocket_api, models.WebsocketAPI)
         assert websocket_api.resource_name == 'websocket_api'
         assert sorted(websocket_api.routes) == sorted(
@@ -840,8 +848,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        websocket_api = application.resources[0]
+        assert len(application.resources) == 2
+        websocket_api = application.resources[1]
         assert isinstance(websocket_api, models.WebsocketAPI)
         assert websocket_api.resource_name == 'websocket_api'
         assert sorted(websocket_api.routes) == sorted(
@@ -863,8 +871,8 @@ class TestApplicationGraphBuilder(object):
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        assert len(application.resources) == 1
-        websocket_api = application.resources[0]
+        assert len(application.resources) == 2
+        websocket_api = application.resources[1]
         assert isinstance(websocket_api, models.WebsocketAPI)
         assert websocket_api.resource_name == 'websocket_api'
         assert sorted(websocket_api.routes) == sorted(
@@ -917,8 +925,10 @@ class RoleTestCase(object):
 
     def assert_required_roles_created(self, application):
         resources = application.resources
-        assert len(resources) == len(self.given)
-        functions_by_name = {f.function_name: f for f in resources}
+        assert len(resources) == len(self.given) + 1
+        functions_by_name = {
+            f.function_name: f for f in resources
+            if isinstance(f, models.LambdaFunction)}
         # Roles that have the same name/arn should be the same
         # object.  If we encounter a role that's already in
         # roles_by_identifier, we'll verify that it's the exact same object.
@@ -1484,7 +1494,7 @@ class TestLambdaEventSourcePolicyInjector(object):
     def create_model_from_app(self, app, config):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        return application.resources[0]
+        return application.resources[1]
 
     def test_can_inject_policy(self, sqs_event_app):
         config = Config.create(chalice_app=sqs_event_app,
@@ -1521,7 +1531,7 @@ class TestLambdaEventSourcePolicyInjector(object):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
         event_sources = application.resources
-        role = event_sources[0].lambda_function.role
+        role = event_sources[1].lambda_function.role
         role.policy.document = {'Statement': []}
         injector = LambdaEventSourcePolicyInjector()
         injector.handle(config, event_sources[0])
@@ -1537,7 +1547,7 @@ class TestWebsocketPolicyInjector(object):
     def create_model_from_app(self, app, config):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        return application.resources[0]
+        return application.resources[1]
 
     def test_can_inject_policy(self, websocket_app):
         config = Config.create(chalice_app=websocket_app,

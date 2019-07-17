@@ -213,6 +213,25 @@ class TestPlanManagedRole(BasePlannerTests):
 
 
 class TestPlanLambdaFunction(BasePlannerTests):
+
+    def test_can_create_layer(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        plan = self.determine_plan(layer)
+        expected = [models.APICall(
+            method_name='publish_lambda_layer',
+            params={
+                'layer_name': 'bar',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7'})
+        ]
+        self.assert_apicall_equals(plan[0], expected[0])
+
     def test_can_create_function(self):
         function = create_function_resource('function_name')
         self.remote_state.declare_no_resources_exists()
@@ -231,7 +250,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': None
+                'layers': [Variable('layer_version_arn')]
             },
         ),
             models.APICall(
@@ -270,7 +289,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': layers
+                'layers': [Variable('layer_version_arn')] + layers
             },
         ),
             models.APICall(
@@ -308,7 +327,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'timeout': 60,
             'security_group_ids': [],
             'subnet_ids': [],
-            'layers': None
+            'layers': [Variable('layer_version_arn')]
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -351,7 +370,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': None
+                'layers': [Variable('layer_version_arn')]
             },
         ),
             models.APICall(

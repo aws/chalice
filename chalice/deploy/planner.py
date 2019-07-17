@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 from collections import OrderedDict
 
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
@@ -157,6 +158,19 @@ class PlanStage(object):
     # per-resource classes so the PlanStage object doesn't need
     # to know about every type of resource.
 
+    def _plan_lambdalayer(self, resource):
+        # type: (models.LambdaLayer) -> Sequence[InstructionMsg]
+        filename = cast(str, resource.deployment_package.filename)
+        return [
+            models.APICall(
+                method_name='publish_lambda_layer',
+                params={'layer_name': resource.layer_name,
+                        'zip_contents': self._osutils.get_file_contents(
+                            filename, binary=True),
+                        'runtime': resource.runtime},
+                output_var='layer_version_arn'
+            )]
+
     def _plan_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> Sequence[InstructionMsg]
         role_arn = self._get_role_arn(resource.role)
@@ -172,7 +186,9 @@ class PlanStage(object):
         if resource.reserved_concurrency is None:
             concurrency_api_call = models.APICall(
                 method_name='delete_function_concurrency',
-                params={'function_name': resource.function_name},
+                params={
+                    'function_name': resource.function_name,
+                },
                 output_var='reserved_concurrency_result'
             )
         else:
@@ -189,6 +205,10 @@ class PlanStage(object):
                 % resource.function_name
             )
 
+        layers = [Variable('layer_version_arn')]  # type: List[Any]
+        if resource.layers:
+            layers.extend(resource.layers)
+
         api_calls = []  # type: List[InstructionMsg]
         if not self._remote_state.resource_exists(resource):
             params = {
@@ -204,8 +224,9 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
-                'layers': resource.layers
+                'layers': layers
             }
+
             api_calls.extend([
                 (models.APICall(
                     method_name='create_function',
@@ -234,7 +255,7 @@ class PlanStage(object):
                 'memory_size': resource.memory_size,
                 'security_group_ids': resource.security_group_ids,
                 'subnet_ids': resource.subnet_ids,
-                'layers': resource.layers
+                'layers': layers
             }
             api_calls.extend([
                 (models.APICall(

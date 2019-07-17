@@ -99,7 +99,7 @@ def test_no_error_message_printed_on_empty_reqs_file(tmpdir,
     appdir = _create_app_structure(tmpdir)
     appdir.join('app.py').write('# Foo')
     appdir.join('requirements.txt').write('\n')
-    chalice_deployer.create_deployment_package(
+    chalice_deployer.create_layer_package(
         str(appdir), 'python2.7')
     out, err = capfd.readouterr()
     assert err.strip() == ''
@@ -178,10 +178,10 @@ def test_vendor_dir_included(tmpdir, chalice_deployer):
     vendor = appdir.mkdir('vendor')
     extra_package = vendor.mkdir('mypackage')
     extra_package.join('__init__.py').write('# Test package')
-    name = chalice_deployer.create_deployment_package(
+    name = chalice_deployer.create_layer_package(
         str(appdir), 'python2.7')
     with zipfile.ZipFile(name) as f:
-        _assert_in_zip('mypackage/__init__.py', b'# Test package', f)
+        _assert_in_zip('python/mypackage/__init__.py', b'# Test package', f)
 
 
 @slow
@@ -190,14 +190,14 @@ def test_subsequent_deploy_replaces_vendor_dir(tmpdir, chalice_deployer):
     vendor = appdir.mkdir('vendor')
     extra_package = vendor.mkdir('mypackage')
     extra_package.join('__init__.py').write('# v1')
-    name = chalice_deployer.create_deployment_package(
+    name = chalice_deployer.create_layer_package(
         str(appdir), 'python2.7')
     # Now we update a package in vendor/ with a new version.
     extra_package.join('__init__.py').write('# v2')
-    name = chalice_deployer.create_deployment_package(
+    name = chalice_deployer.create_layer_package(
         str(appdir), 'python2.7')
     with zipfile.ZipFile(name) as f:
-        _assert_in_zip('mypackage/__init__.py', b'# v2', f)
+        _assert_in_zip('python/mypackage/__init__.py', b'# v2', f)
 
 
 def test_zip_filename_changes_on_vendor_update(tmpdir, chalice_deployer):
@@ -233,6 +233,33 @@ def test_chalice_runtime_injected_on_change(tmpdir, chalice_deployer):
         assert 'chalice/app.py' in z.namelist()
 
 
+@slow
+def test_layer_dep_bundling(tmpdir):
+    appdir = _create_app_structure(tmpdir)
+    builder = mock.Mock(spec=DependencyBuilder)
+    fake_package = mock.Mock(spec=Package)
+    fake_package.identifier = 'foo==1.2'
+
+    def build_site_packages(abi, requirements_filepath, site_packages_dir):
+        pkgdir = os.path.join(site_packages_dir, 'foo')
+        os.mkdir(pkgdir)
+        with open(os.path.join(pkgdir, '__init__.py'), 'w') as fh:
+            fh.write('# test lib')
+
+    builder.build_site_packages.side_effect = build_site_packages
+    ui = mock.Mock(spec=chalice.utils.UI)
+    osutils = chalice.utils.OSUtils()
+    packager = LambdaDeploymentPackager(
+        osutils=osutils,
+        dependency_builder=builder,
+        ui=ui,
+    )
+
+    name = packager.create_layer_package(str(appdir), 'python2.7')
+    with zipfile.ZipFile(name) as f:
+        _assert_in_zip('python/foo/__init__.py', b'# test lib', f)
+
+
 def test_does_handle_missing_dependency_error(tmpdir):
     appdir = _create_app_structure(tmpdir)
     builder = mock.Mock(spec=DependencyBuilder)
@@ -247,7 +274,7 @@ def test_does_handle_missing_dependency_error(tmpdir):
         dependency_builder=builder,
         ui=ui,
     )
-    packager.create_deployment_package(str(appdir), 'python2.7')
+    packager.create_layer_package(str(appdir), 'python2.7')
 
     output = ''.join([call[0][0] for call in ui.write.call_args_list])
     assert 'Could not install dependencies:\nfoo==1.2' in output

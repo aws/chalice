@@ -8,6 +8,8 @@ Next Release (TBD)
 * Add experimental support for websockets
   (`#1017 <https://github.com/aws/chalice/issues/1017>`__)
 
+* Automatic layer support for dependencies
+  (`#1179 <https://github.com/aws/chalice/pull/1179>`)
 
 1.9.1
 =====

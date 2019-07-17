@@ -131,6 +131,38 @@ def test_can_iterate_logs(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+class TestLayerPublish(object):
+
+    def test_publish_layer_propagate_error(self, stubbed_session):
+        stubbed_session.stub('lambda').publish_layer_version(
+            LayerName='name',
+            CompatibleRuntimes=['python2.7'],
+            Content={'ZipFile': b'foo'},
+        ).raises_error(error_code='UnexpectedError',
+                       message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(LambdaClientError) as excinfo:
+            awsclient.publish_layer(
+                'name', b'foo', 'python2.7') == 'arn:12345:name'
+        assert isinstance(
+            excinfo.value.original_error, botocore.exceptions.ClientError)
+        stubbed_session.verify_stubs()
+
+    def test_can_publish_layer(self, stubbed_session):
+        stubbed_session.stub('lambda').publish_layer_version(
+            LayerName='name',
+            CompatibleRuntimes=['python2.7'],
+            Content={'ZipFile': b'foo'},
+        ).returns({'LayerVersionArn': 'arn:12345:name'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.publish_layer(
+            'name', b'foo', 'python2.7') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+
 class TestLambdaFunctionExists(object):
 
     def test_can_query_lambda_function_exists(self, stubbed_session):
