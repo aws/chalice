@@ -75,18 +75,15 @@ class LambdaDeploymentPackager(object):
         # Gets the path to a requirements.txt file out of a project dir path
         return self._osutils.joinpath(project_dir, 'requirements.txt')
 
-    def create_deployment_package(self, project_dir, python_version,
-                                  package_filename=None):
-        # type: (str, str, Optional[str]) -> str
-        msg = "Creating deployment package."
+    def create_layer_package(self, project_dir, python_version):
+        # type: (str, str) -> str
+        msg = "Creating layer package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
         # Now we need to create a zip file and add in the site-packages
         # dir first, followed by the app_dir contents next.
-        deployment_package_filename = self.deployment_package_filename(
-            project_dir, python_version)
-        if package_filename is None:
-            package_filename = deployment_package_filename
+        package_filename = self.deployment_package_filename(
+            project_dir, python_version, 'layer-')
         requirements_filepath = self._get_requirements_filename(project_dir)
         with self._osutils.tempdir() as site_packages_dir:
             try:
@@ -105,9 +102,27 @@ class LambdaDeploymentPackager(object):
             with self._osutils.open_zip(package_filename, 'w',
                                         self._osutils.ZIP_DEFLATED) as z:
                 self._add_py_deps(z, site_packages_dir)
-                self._add_app_files(z, project_dir)
                 self._add_vendor_files(z, self._osutils.joinpath(
                     project_dir, self._VENDOR_DIR))
+        return package_filename
+
+    def create_deployment_package(self, project_dir, python_version,
+                                  package_filename=None):
+        # type: (str, str, Optional[str]) -> str
+        msg = "Creating deployment package."
+        self._ui.write("%s\n" % msg)
+        logger.debug(msg)
+        # Now we need to create a zip file and add in the site-packages
+        # dir first, followed by the app_dir contents next.
+        package_filename = self.deployment_package_filename(
+            project_dir, python_version)
+        dirname = self._osutils.dirname(
+            self._osutils.abspath(package_filename))
+        if not self._osutils.directory_exists(dirname):
+            self._osutils.makedirs(dirname)
+        with self._osutils.open_zip(package_filename, 'w',
+                                    self._osutils.ZIP_DEFLATED) as z:
+            self._add_app_files(z, project_dir)
         return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
@@ -119,11 +134,12 @@ class LambdaDeploymentPackager(object):
                                                      followlinks=True):
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
-                zip_path = full_path[prefix_len:]
+                zip_path = 'python/%s' % full_path[prefix_len:]
                 zipped.write(full_path, zip_path)
 
-    def deployment_package_filename(self, project_dir, python_version):
-        # type: (str, str) -> str
+    def deployment_package_filename(
+            self, project_dir, python_version, prefix=""):
+        # type: (str, str, str) -> str
         # Computes the name of the deployment package zipfile
         # based on a hash of the requirements file.
         # This is done so that we only "pip install -r requirements.txt"
@@ -136,7 +152,7 @@ class LambdaDeploymentPackager(object):
         hash_contents = self._hash_project_dir(
             requirements_filename, self._osutils.joinpath(project_dir,
                                                           self._VENDOR_DIR))
-        filename = '%s-%s.zip' % (hash_contents, python_version)
+        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
         deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', filename)
         return deployment_package_filename
@@ -151,7 +167,7 @@ class LambdaDeploymentPackager(object):
                 dirnames.remove('chalice')
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
-                zip_path = full_path[prefix_len:]
+                zip_path = 'python/%s' % full_path[prefix_len:]
                 zip_fileobj.write(full_path, zip_path)
 
     def _add_app_files(self, zip_fileobj, project_dir):

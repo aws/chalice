@@ -61,6 +61,7 @@ class TestApplicationGraphBuilder(object):
                       api_gateway_stage='api',
                       autogen_policy=False, security_group_ids=None,
                       subnet_ids=None, reserved_concurrency=None, layers=None,
+                      automatic_layer=None,
                       api_gateway_endpoint_type=None,
                       api_gateway_endpoint_vpce=None,
                       api_gateway_policy_file=None,
@@ -71,6 +72,7 @@ class TestApplicationGraphBuilder(object):
             'chalice_app': app,
             'app_name': app_name,
             'project_dir': project_dir,
+            'automatic_layer': automatic_layer,
             'api_gateway_stage': api_gateway_stage,
             'api_gateway_policy_file': api_gateway_policy_file,
             'api_gateway_endpoint_type': api_gateway_endpoint_type,
@@ -101,22 +103,48 @@ class TestApplicationGraphBuilder(object):
         config = Config.create(**kwargs)
         return config
 
-    def test_can_build_single_lambda_function_app(self,
-                                                  sample_app_lambda_only):
+    def test_can_build_single_lambda_function_app(self, lambda_app):
         # This is the simplest configuration we can get.
         builder = ApplicationGraphBuilder()
-        config = self.create_config(sample_app_lambda_only,
-                                    iam_role_arn='role:arn')
+        config = self.create_config(lambda_app, iam_role_arn='role:arn')
+        application = builder.build(config, stage_name='dev')
+        # The top level resource is always an Application.
+        assert isinstance(application, models.Application)
+        assert len(application.resources) == 2
+        assert application.resources[1] == models.LambdaFunction(
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
+            environment_variables={},
+            runtime=config.lambda_python_version,
+            handler='app.foo',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
+            layers=[],
+            reserved_concurrency=None,
+        )
+
+    def test_can_build_single_lambda_function_app_with_no_layer(
+            self, lambda_app):
+        # This is the simplest configuration we can get.
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(
+            lambda_app, iam_role_arn='role:arn', automatic_layer=False)
         application = builder.build(config, stage_name='dev')
         # The top level resource is always an Application.
         assert isinstance(application, models.Application)
         assert len(application.resources) == 1
         assert application.resources[0] == models.LambdaFunction(
-            resource_name='myfunction',
-            function_name='lambda-only-dev-myfunction',
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
             environment_variables={},
             runtime=config.lambda_python_version,
-            handler='app.myfunction',
+            handler='app.foo',
             tags=config.tags,
             timeout=None,
             memory_size=None,

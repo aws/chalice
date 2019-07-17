@@ -135,6 +135,15 @@ seconds.
 A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See `AWS Lambda Layers Configuration`_.
 
+
+``automatic_layers``
+~~~~~~~~~~~~~~~~~~~~
+
+Indicates whether chalice will automatically construct a single
+stage layer for all Lambda functions with requirements.txt libraries and
+vendored libraries.  Boolean value defaults to ``false`` if not specified.
+
+
 .. _custom-domain-config-options:
 
 ``api_gateway_custom_domain``

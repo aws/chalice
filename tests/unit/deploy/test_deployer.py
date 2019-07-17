@@ -373,8 +373,10 @@ class RoleTestCase(object):
 
     def assert_required_roles_created(self, application):
         resources = application.resources
-        assert len(resources) == len(self.given)
-        functions_by_name = {f.function_name: f for f in resources}
+        assert len(resources) == len(self.given) + 1
+        functions_by_name = {
+            f.function_name: f for f in resources
+            if isinstance(f, models.LambdaFunction)}
         # Roles that have the same name/arn should be the same
         # object.  If we encounter a role that's already in
         # roles_by_identifier, we'll verify that it's the exact same object.
@@ -712,6 +714,43 @@ class TestSwaggerBuilder(object):
 
 
 class TestDeploymentPackager(object):
+    def test_can_generate_layer_package(self):
+        generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
+        generator.create_layer_package.return_value = 'package.zip'
+
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='name',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE)
+        )
+        config = Config.create()
+
+        p = DeploymentPackager(generator)
+        p.handle(config, layer)
+
+        assert layer.deployment_package.filename == 'package.zip'
+
+    def test_layer_package_not_generated_if_filename_populated(self):
+        generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
+        generator.create_layer_package.return_value = 'newpackage.zip'
+
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='name',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='origin.zip')
+        )
+        config = Config.create()
+
+        p = DeploymentPackager(generator)
+        p.handle(config, layer)
+
+        assert layer.deployment_package.filename == 'origin.zip'
+        assert not generator.create_layer_package.called
+
     def test_can_generate_package(self):
         generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
         generator.create_deployment_package.return_value = 'package.zip'
@@ -914,6 +953,9 @@ class TestDeploymentReporter(object):
                  "role_arn": "my-role-arn",
                  "name": "default-role",
                  "resource_type": "iam_role"},
+                {"resource_type": "lambda_layer",
+                 "name": "layer",
+                 "layer_version_arn": "arn:layer:4"},
                 {"lambda_arn": "lambda-arn-foo",
                  "name": "foo",
                  "resource_type": "lambda_function"},
@@ -945,6 +987,7 @@ class TestDeploymentReporter(object):
         report = self.reporter.generate_report(deployed_values)
         assert report == (
             "Resources deployed:\n"
+            "  - Lambda Layer ARN: arn:layer:4\n"
             "  - Lambda ARN: lambda-arn-foo\n"
             "  - Lambda ARN: lambda-arn-dev\n"
             "  - Rest API URL: https://host/api\n"
@@ -966,7 +1009,7 @@ class TestLambdaEventSourcePolicyInjector(object):
     def create_model_from_app(self, app, config):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        return application.resources[0]
+        return application.resources[1]
 
     def test_can_inject_policy(self, sample_sqs_event_app):
         config = Config.create(chalice_app=sample_sqs_event_app,
@@ -1003,7 +1046,7 @@ class TestLambdaEventSourcePolicyInjector(object):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
         event_sources = application.resources
-        role = event_sources[0].lambda_function.role
+        role = event_sources[1].lambda_function.role
         role.policy.document = {'Statement': []}
         injector = LambdaEventSourcePolicyInjector()
         injector.handle(config, event_sources[0])
@@ -1019,7 +1062,7 @@ class TestWebsocketPolicyInjector(object):
     def create_model_from_app(self, app, config):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
-        return application.resources[0]
+        return application.resources[1]
 
     def test_can_inject_policy(self, sample_websocket_app):
         config = Config.create(chalice_app=sample_websocket_app,

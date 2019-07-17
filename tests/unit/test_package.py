@@ -776,11 +776,13 @@ class TestSAMTemplate(TemplateTestBase):
         assert 'Outputs' in template
         assert 'Resources' in template
         assert list(sorted(template['Resources'])) == [
-            'APIHandler', 'APIHandlerInvokePermission',
+            'APIHandler',
+            'APIHandlerInvokePermission',
             # This casing on the ApiHandlerRole name is unfortunate, but the 3
             # other resources in this list are hardcoded from the old deployer.
             'ApiHandlerRole',
-            'RestAPI',
+            'Layer',
+            'RestAPI'
         ]
 
     def test_supports_precreated_role(self):

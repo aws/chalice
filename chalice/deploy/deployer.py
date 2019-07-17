@@ -422,6 +422,14 @@ class DeploymentPackager(BaseDeployStep):
         # type: (LambdaDeploymentPackager) -> None
         self._packager = packager
 
+    def handle_lambdalayer(self, config, resource):
+        # type: (Config, models.LambdaLayer) -> None
+        if isinstance(resource.deployment_package.filename,
+                      models.Placeholder):
+            zip_filename = self._packager.create_layer_package(
+                config.project_dir, config.lambda_python_version)
+            resource.deployment_package.filename = zip_filename
+
     def handle_deploymentpackage(self, config, resource):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
@@ -624,6 +632,11 @@ class DeploymentReporter(object):
     def _report_lambda_function(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None
         report.append('  - Lambda ARN: %s' % resource['lambda_arn'])
+
+    def _report_lambda_layer(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append('  - Lambda Layer ARN: %s' % (
+            resource['layer_version_arn']))
 
     def _default_report(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None

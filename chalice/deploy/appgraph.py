@@ -27,6 +27,16 @@ class ApplicationGraphBuilder(object):
         # type: (Config, str) -> models.Application
         resources = []  # type: List[models.Model]
         deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
+        if config.automatic_layer:
+            resources.append(
+                models.LambdaLayer(
+                    resource_name='layer',
+                    layer_name='%s-%s-%s' % (
+                        config.app_name or 'chalice',
+                        config.chalice_stage, 'layer'),
+                    runtime=config.lambda_python_version,
+                    deployment_package=models.DeploymentPackage(
+                        models.Placeholder.BUILD_STAGE)))
         for function in config.chalice_app.pure_lambda_functions:
             resource = self._create_lambda_model(
                 config=config, deployment=deployment,

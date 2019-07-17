@@ -253,6 +253,66 @@ def test_rule_arn_requires_expression_or_pattern(stubbed_session):
         client.get_or_create_rule_arn("foo")
 
 
+class TestLambdaLayer(object):
+
+    def test_layer_exists(self, stubbed_session):
+        stubbed_session.stub('lambda').get_layer_version_by_arn(
+            Arn='arn:xyz').returns(
+                {'LayerVersionArn': 'arn:xyz'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_layer_version('arn:xyz') == {
+            'LayerVersionArn': 'arn:xyz'}
+
+    def test_layer_exists_not_found_error(self, stubbed_session):
+        stubbed_session.stub('lambda').get_layer_version_by_arn(
+            Arn='arn:xyz').raises_error(
+                error_code='ResourceNotFoundException',
+                message='Not Found')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_layer_version('arn:xyz') == {}
+
+    def test_layer_delete_not_found_error(self, stubbed_session):
+        stubbed_session.stub('lambda').delete_layer_version(
+            LayerName='xyz',
+            VersionNumber=4).raises_error(
+                error_code='ResourceNotFoundException',
+                message='Not Found')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.delete_layer_version('arn:xyz:4') is None
+
+    def test_publish_layer_propagate_error(self, stubbed_session):
+        stubbed_session.stub('lambda').publish_layer_version(
+            LayerName='name',
+            CompatibleRuntimes=['python2.7'],
+            Content={'ZipFile': b'foo'},
+        ).raises_error(error_code='UnexpectedError',
+                       message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(LambdaClientError) as excinfo:
+            awsclient.publish_layer(
+                'name', b'foo', 'python2.7') == 'arn:12345:name'
+        assert isinstance(
+            excinfo.value.original_error, botocore.exceptions.ClientError)
+        stubbed_session.verify_stubs()
+
+    def test_can_publish_layer(self, stubbed_session):
+        stubbed_session.stub('lambda').publish_layer_version(
+            LayerName='name',
+            CompatibleRuntimes=['python2.7'],
+            Content={'ZipFile': b'foo'},
+        ).returns({'LayerVersionArn': 'arn:12345:name:3'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.publish_layer(
+            'name', b'foo', 'python2.7') == 'arn:12345:name:3'
+        stubbed_session.verify_stubs()
+
+
 class TestLambdaFunctionExists(object):
 
     def test_can_query_lambda_function_exists(self, stubbed_session):

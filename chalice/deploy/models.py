@@ -176,6 +176,14 @@ class ManagedIAMRole(IAMRole, ManagedModel):
 
 
 @attrs
+class LambdaLayer(ManagedModel):
+    resource_type = 'lambda_layer'
+    layer_name = attrib()             # type: str
+    runtime = attrib()                # type: str
+    deployment_package = attrib()     # type: DeploymentPackage
+
+
+@attrs
 class LambdaFunction(ManagedModel):
     resource_type = 'lambda_function'
     function_name = attrib()          # type: str
