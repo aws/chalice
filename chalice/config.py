@@ -226,7 +226,8 @@ class Config(object):
     @property
     def api_gateway_endpoint_type(self):
         # type: () -> str
-        return self._chain_lookup('api_gateway_endpoint_type')
+        return self._chain_lookup('api_gateway_endpoint_type',
+                                  varies_per_chalice_stage=True)
 
     @property
     def minimum_compression_size(self):

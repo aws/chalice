@@ -1,9 +1,9 @@
+# pylint: disable=too-many-lines
 from collections import OrderedDict
 
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 from typing import Sequence  # noqa
 
-from chalice.constants import DEFAULT_ENDPOINT_TYPE
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.utils import OSUtils  # noqa
 from chalice.deploy import models
@@ -108,7 +108,7 @@ class RemoteState(object):
         except ValueError:
             return False
         rest_api_id = deployed_values['rest_api_id']
-        return self._client.rest_api_exists(rest_api_id)
+        return bool(self._client.get_rest_api(rest_api_id))
 
     def _resource_exists_websocketapi(self, resource):
         # type: (models.WebsocketAPI) -> bool
@@ -847,7 +847,9 @@ class PlanStage(object):
         shared_plan_patch_ops = [{
             'op': 'replace',
             'path': '/minimumCompressionSize',
-            'value': resource.minimum_compression}]
+            'value': resource.minimum_compression}
+        ]  # type: List[Dict]
+
         shared_plan_epilogue = [
             models.APICall(
                 method_name='update_rest_api',
@@ -876,12 +878,6 @@ class PlanStage(object):
                 resource_name=resource.resource_name,
                 name='rest_api_url',
                 variable_name='rest_api_url',
-            ),
-            models.RecordResourceValue(
-                resource_type='rest_api',
-                resource_name=resource.resource_name,
-                name='endpoint_type',
-                value=resource.endpoint_type
             ),
         ]  # type: List[InstructionMsg]
         for auth in resource.authorizers:
@@ -916,14 +912,21 @@ class PlanStage(object):
             ] + shared_plan_epilogue
         else:
             deployed = self._remote_state.resource_deployed_values(resource)
-            if deployed.get('endpoint_type',
-                            DEFAULT_ENDPOINT_TYPE) != resource.endpoint_type:
-                shared_plan_patch_ops.append({
-                    'op': 'replace',
-                    'path': '/endpointConfiguration/types/{}'.format(
-                        deployed.get('endpoint_type', DEFAULT_ENDPOINT_TYPE)),
-                    'value': resource.endpoint_type
-                })
+            shared_plan_epilogue.insert(
+                0,
+                models.APICall(
+                    method_name='get_rest_api',
+                    params={'rest_api_id': Variable('rest_api_id')},
+                    output_var='rest_api')
+            )
+            shared_plan_patch_ops.append({
+                'op': 'replace',
+                'path': StringFormat(
+                    '/endpointConfiguration/types/%s' % (
+                        '{rest_api[endpointConfiguration][types][0]}'),
+                    ['rest_api']),
+                'value': resource.endpoint_type}
+            )
             plan = shared_plan_preamble + [
                 models.StoreValue(
                     name='rest_api_id',

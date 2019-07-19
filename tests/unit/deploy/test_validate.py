@@ -246,7 +246,8 @@ def test_can_validate_endpoint_type(sample_app):
 
     config = Config.create(
         chalice_app=sample_app, api_gateway_endpoint_type='PRIVATE')
-    validate_endpoint_type(config)
+    with pytest.raises(ValueError):
+        validate_endpoint_type(config)
 
 
 def test_can_validate_feature_flags(sample_app):

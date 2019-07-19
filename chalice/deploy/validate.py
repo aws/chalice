@@ -49,8 +49,7 @@ def validate_configuration(config):
 
 
 def validate_endpoint_type(config):
-    # type: (app.Chalice) -> None
-
+    # type: (Config) -> None
     if not config.api_gateway_endpoint_type:
         return
     valid_types = ('EDGE', 'REGIONAL')

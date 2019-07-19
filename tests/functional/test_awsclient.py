@@ -64,11 +64,11 @@ def test_put_role_policy(stubbed_session):
 
 def test_rest_api_exists(stubbed_session):
     stubbed_session.stub('apigateway').get_rest_api(
-        restApiId='api').returns({})
+        restApiId='api').returns({'id': 'api'})
     stubbed_session.activate_stubs()
 
     awsclient = TypedAWSClient(stubbed_session)
-    assert awsclient.rest_api_exists('api')
+    assert awsclient.get_rest_api('api')
 
     stubbed_session.verify_stubs()
 
@@ -81,7 +81,7 @@ def test_rest_api_not_exists(stubbed_session):
     stubbed_session.activate_stubs()
 
     awsclient = TypedAWSClient(stubbed_session)
-    assert not awsclient.rest_api_exists('api')
+    assert not awsclient.get_rest_api('api')
 
     stubbed_session.verify_stubs()
 

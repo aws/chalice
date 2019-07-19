@@ -450,15 +450,16 @@ class TypedAWSClient(object):
                 return api['id']
         return None
 
-    def rest_api_exists(self, rest_api_id):
-        # type: (str) -> bool
+    def get_rest_api(self, rest_api_id):
+        # type: (str) -> Dict[str, Any]
         """Check if an an API Gateway REST API exists."""
         client = self._client('apigateway')
         try:
-            client.get_rest_api(restApiId=rest_api_id)
-            return True
+            result = client.get_rest_api(restApiId=rest_api_id)
+            result.pop('ResponseMetadata', None)
+            return result
         except client.exceptions.NotFoundException:
-            return False
+            return {}
 
     def import_rest_api(self, swagger_document, endpoint_type):
         # type: (Dict[str, Any], str) -> str

@@ -34,12 +34,6 @@ information about chalice stages.
   key will automatically be created for you.  See the examples
   section below for some stage specific configurations.
 
-* ``api_gateway_endpoint_type`` - The endpoint configuration of the
-  deployed API Gateway which determines how the API will be accessed,
-  can be EDGE, REGIONAL, PRIVATE. Note this value can only be set as a
-  top level key and defaults to EDGE. For more information see
-  https://amzn.to/2LofApt
-
 The following config values can either be specified per stage config
 or as a top level key which is not tied to a specific key.  Whenever
 a stage specific configuration value is needed, the ``stages`` mapping
@@ -49,6 +43,12 @@ be checked.
 * ``api_gateway_stage`` - The name of the API gateway stage.  This
   will also be the URL prefix for your API
   (``https://endpoint/prefix/your-api``).
+
+* ``api_gateway_endpoint_type`` - The endpoint configuration of the
+  deployed API Gateway which determines how the API will be accessed,
+  can be EDGE, REGIONAL. Note this value can only be set as a
+  top level key and defaults to EDGE. For more information see
+  https://amzn.to/2LofApt
 
 * ``minimum_compression_size`` - An integer value that indicates
   the minimum compression size to apply to the API gateway. If
