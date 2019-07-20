@@ -1,11 +1,13 @@
 import copy
+import json
 import inspect
 
-from typing import Any, List, Dict, Optional  # noqa
+from typing import Any, List, Dict, Optional, Union  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
 from chalice.deploy.planner import StringFormat
+from chalice.deploy.models import RestAPI  # noqa
 from chalice.utils import to_cfn_resource_name
 
 
@@ -32,8 +34,8 @@ class SwaggerGenerator(object):
         self._region = region
         self._deployed_resources = deployed_resources
 
-    def generate_swagger(self, app):
-        # type: (Chalice) -> Dict[str, Any]
+    def generate_swagger(self, app, rest_api=None):
+        # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
         self._add_binary_types(api, app)
@@ -237,6 +239,50 @@ class CFNSwaggerGenerator(SwaggerGenerator):
     def __init__(self):
         # type: () -> None
         pass
+
+    def generate_swagger(self, app, rest_api=None):
+        # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
+        api = super(CFNSwaggerGenerator, self).generate_swagger(app, rest_api)
+        if rest_api and rest_api.policy and rest_api.policy != 'null':
+            self._add_resource_policy(rest_api, api)
+        return api
+
+    def _add_resource_policy(self, rest_api, api):
+        # type: (RestAPI, Dict[str, Any]) -> None
+        policy = json.loads(str(rest_api.policy))
+        self._insert_fn_sub_list(policy['Statement'])
+        api['x-amazon-apigateway-policy'] = policy
+
+    def _insert_fn_sub_list(self, p):
+        # type: (List) -> None
+        key_map = dict(
+            region_name='${AWS::Region}',
+            rest_api_id='*',
+            account_id='${AWS:AccoundId}')
+        for idx, v in enumerate(list(p)):
+            if isinstance(v, dict):
+                return self._insert_fn_sub_dict(v)
+            for k in key_map:
+                if "{%s}" % k in v:
+                    p[idx] = {'Fn:Sub': v.format(**key_map)}
+                    break
+
+    def _insert_fn_sub_dict(self, p):
+        # type: (Dict) -> None
+        key_map = dict(
+            region_name='${AWS::Region}',
+            rest_api_id='*',
+            account_id='${AWS:AccoundId}')
+
+        for k, v in list(p.items()):
+            if isinstance(v, list):
+                return self._insert_fn_sub_list(v)
+            if isinstance(v, dict):
+                return self._insert_fn_sub_dict(v)
+            for r in key_map:
+                if "{%s}" % r in v:
+                    p[k] = {'Fn:Sub': v.format(**key_map)}
+                    break
 
     def _uri(self, lambda_arn=None):
         # type: (Optional[str]) -> Any

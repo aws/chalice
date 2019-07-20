@@ -719,18 +719,13 @@ class TestApplicationGraphBuilder(object):
                 {'Action': 'execute-api:Invoke',
                  'Effect': 'Allow',
                  'Principal': '*',
-                 'Resource': [
-                     ('arn:aws:execute-api:{region_name}:'
-                      '{account_id}:{rest_api_id}/*')]},
-                {'Action': 'execute-api:Invoke',
-                 'Condition': {
-                     'StringNotEquals': {
-                         'aws:SourceVpce': 'vpce-abc123'}},
-                 'Effect': 'Deny',
-                 'Principal': '*',
-                 'Resource': [(
+                 'Resource': (
                      'arn:aws:execute-api:{region_name}:'
-                     '{account_id}:{rest_api_id}/*')]}],
+                     '{account_id}:{rest_api_id}/*'),
+                 'Condition': {
+                     'StringEquals': {
+                         'aws:SourceVpce': 'vpce-abc123'}}},
+            ]
         }
 
     def test_can_build_rest_api(self, rest_api_app):
@@ -1271,7 +1266,7 @@ class TestSwaggerBuilder(object):
         p = SwaggerBuilder(generator)
         p.handle(config, rest_api)
         assert rest_api.swagger_doc == {'swagger': '2.0'}
-        generator.generate_swagger.assert_called_with(app)
+        generator.generate_swagger.assert_called_with(app, rest_api)
 
 
 class TestDeploymentPackager(object):

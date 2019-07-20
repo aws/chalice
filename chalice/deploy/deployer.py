@@ -480,23 +480,15 @@ class ApplicationGraphBuilder(object):
             "Effect": "Allow",
             "Principal": "*",
             "Action": "execute-api:Invoke",
-            "Resource": [
-                ("arn:aws:execute-api:{region_name}:"
-                 "{account_id}:{rest_api_id}/*")
-            ]},
-            {"Effect": "Deny",
-             "Principal": "*",
-             "Action": "execute-api:Invoke",
-             "Resource": [
-                 ("arn:aws:execute-api:{region_name}:"
-                  "{account_id}:{rest_api_id}/*")
-             ],
-             "Condition": {
-                 "StringNotEquals": {
-                     "aws:SourceVpce": config.api_gateway_endpoint_vpce
-                 }
-             }}]
-
+            "Resource": (
+                "arn:aws:execute-api:{region_name}:"
+                "{account_id}:{rest_api_id}/*"),
+            "Condition": {
+                "StringEquals": {
+                    "aws:SourceVpce": config.api_gateway_endpoint_vpce
+                }
+            }
+        }]
         return {"Version": "2012-10-17", "Statement": statements}
 
     def _create_websocket_api_model(
@@ -858,7 +850,7 @@ class SwaggerBuilder(BaseDeployStep):
     def handle_restapi(self, config, resource):
         # type: (Config, models.RestAPI) -> None
         swagger_doc = self._swagger_generator.generate_swagger(
-            config.chalice_app)
+            config.chalice_app, resource)
         resource.swagger_doc = swagger_doc
 
 
