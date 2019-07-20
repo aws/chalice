@@ -877,6 +877,35 @@ class TestPlanRestAPI(BasePlannerTests):
                 to_var='api_handler_lambda_arn'),
         ]
 
+    def test_can_plan_private_rest_api(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            endpoint_type='PRIVATE',
+            policy="{'Statement': []}",
+            minimum_compression='100',
+            api_gateway_stage='api',
+            lambda_function=function,
+        )
+        plan = self.determine_plan(rest_api)
+        self.assert_loads_needed_variables(plan)
+
+        assert plan[6].params == {
+            'rest_api_id': Variable("rest_api_id"),
+            'patch_operations': [
+                {'op': 'replace',
+                 'path': '/minimumCompressionSize',
+                 'value': '100'},
+                {'op': 'replace',
+                 'path': '/policy',
+                 'value': StringFormat(
+                     "{'Statement': []}",
+                     ['region_name', 'account_id', 'rest_api_id'])
+                 }
+            ]
+        }
+
     def test_can_plan_rest_api(self):
         function = create_function_resource('function_name')
         rest_api = models.RestAPI(
@@ -903,9 +932,6 @@ class TestPlanRestAPI(BasePlannerTests):
                 name='rest_api_id',
                 variable_name='rest_api_id',
             ),
-            models.APICall(method_name='deploy_rest_api',
-                           params={'rest_api_id': Variable('rest_api_id'),
-                                   'api_gateway_stage': 'api'}),
             models.APICall(
                 method_name='update_rest_api',
                 params={
@@ -915,7 +941,7 @@ class TestPlanRestAPI(BasePlannerTests):
                         'path': '/minimumCompressionSize',
                         'value': '100',
                     }],
-                },
+                }
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
@@ -926,6 +952,9 @@ class TestPlanRestAPI(BasePlannerTests):
                     'rest_api_id': Variable('rest_api_id'),
                 }
             ),
+            models.APICall(method_name='deploy_rest_api',
+                           params={'rest_api_id': Variable('rest_api_id'),
+                                   'api_gateway_stage': 'api'}),
             models.StoreValue(
                 name='rest_api_url',
                 value=StringFormat(
@@ -944,6 +973,43 @@ class TestPlanRestAPI(BasePlannerTests):
         assert list(self.last_plan.messages.values()) == [
             'Creating Rest API\n'
         ]
+
+    def test_can_update_rest_api_with_policy(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
+            api_gateway_stage='api',
+            endpoint_type='EDGE',
+            policy="{'Statement': []}",
+            lambda_function=function,
+        )
+        self.remote_state.declare_resource_exists(rest_api)
+        self.remote_state.deployed_values['rest_api'] = {
+            'rest_api_id': 'my_rest_api_id',
+        }
+        plan = self.determine_plan(rest_api)
+
+        assert plan[8].params == {
+            'patch_operations': [
+                {'op': 'replace',
+                 'path': '/minimumCompressionSize',
+                 'value': ''},
+                {'op': 'replace',
+                 'path': StringFormat(
+                     ("/endpointConfiguration/types/"
+                      "{rest_api[endpointConfiguration][types][0]}"),
+                     ['rest_api']),
+                 'value': 'EDGE'},
+                {'op': 'replace',
+                 'path': '/policy',
+                 'value': StringFormat(
+                     "{'Statement': []}",
+                     ['region_name', 'account_id', 'rest_api_id'])
+                 }],
+            'rest_api_id': Variable("rest_api_id")
+        }
 
     def test_can_update_rest_api(self):
         function = create_function_resource('function_name')
@@ -978,18 +1044,6 @@ class TestPlanRestAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='deploy_rest_api',
-                params={'rest_api_id': Variable('rest_api_id'),
-                        'api_gateway_stage': 'api'},
-            ),
-            models.APICall(
-                method_name='add_permission_for_apigateway',
-                params={'function_name': 'appname-dev-function_name',
-                        'region_name': Variable('region_name'),
-                        'account_id': Variable('account_id'),
-                        'rest_api_id': Variable('rest_api_id')},
-            ),
-            models.APICall(
                 method_name='get_rest_api',
                 params={'rest_api_id': Variable('rest_api_id')},
                 output_var='rest_api'
@@ -1007,7 +1061,8 @@ class TestPlanRestAPI(BasePlannerTests):
                          'path': StringFormat(
                              '/endpointConfiguration/types/%s' % (
                                 '{rest_api[endpointConfiguration][types][0]}'),
-                             ['rest_api'])}
+                             ['rest_api'])},
+                        {'op': 'remove', 'path': '/policy'}
                     ],
                 },
             ),
@@ -1018,6 +1073,11 @@ class TestPlanRestAPI(BasePlannerTests):
                         'account_id': Variable("account_id"),
                         'function_name': 'appname-dev-function_name'},
                 output_var=None),
+            models.APICall(
+                method_name='deploy_rest_api',
+                params={'rest_api_id': Variable('rest_api_id'),
+                        'api_gateway_stage': 'api'},
+            ),
             models.StoreValue(
                 name='rest_api_url',
                 value=StringFormat(

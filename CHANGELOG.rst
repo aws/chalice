@@ -8,7 +8,7 @@ Next Release (TBD)
 * Add experimental support for websockets
   (`#1017 <https://github.com/aws/chalice/issues/1017>`__)
 
-* API Gateway Endpoint Type Configuration (Regional and Edge)
+* API Gateway Endpoint Type Configuration
   (`#1160 https://github.com/aws/chalice/pull/1160`__)
 
 

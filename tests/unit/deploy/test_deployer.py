@@ -1,3 +1,4 @@
+import json
 import os
 
 import socket
@@ -472,12 +473,16 @@ class TestApplicationGraphBuilder(object):
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
                       autogen_policy=False, security_group_ids=None,
-                      subnet_ids=None, reserved_concurrency=None, layers=None):
+                      subnet_ids=None, reserved_concurrency=None, layers=None,
+                      api_gateway_endpoint_type=None,
+                      api_gateway_endpoint_vpce=None):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
             'project_dir': '.',
             'api_gateway_stage': api_gateway_stage,
+            'api_gateway_endpoint_type': api_gateway_endpoint_type,
+            'api_gateway_endpoint_vpce': api_gateway_endpoint_vpce
         }
         if iam_role_arn is not None:
             # We want to use an existing role.
@@ -698,6 +703,35 @@ class TestApplicationGraphBuilder(object):
         assert event.rule_name == 'scheduled-event-dev-foo-event'
         assert isinstance(event.lambda_function, models.LambdaFunction)
         assert event.lambda_function.resource_name == 'foo'
+
+    def test_can_build_private_rest_api(self, rest_api_app):
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    api_gateway_endpoint_type='PRIVATE',
+                                    api_gateway_endpoint_vpce='vpce-abc123')
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        assert isinstance(rest_api, models.RestAPI)
+        assert json.loads(rest_api.policy) == {
+            'Version': '2012-10-17',
+            'Statement': [
+                {'Action': 'execute-api:Invoke',
+                 'Effect': 'Allow',
+                 'Principal': '*',
+                 'Resource': [
+                     ('arn:aws:execute-api:{region_name}:'
+                      '{account_id}:{rest_api_id}/*')]},
+                {'Action': 'execute-api:Invoke',
+                 'Condition': {
+                     'StringNotEquals': {
+                         'aws:SourceVpce': 'vpce-abc123'}},
+                 'Effect': 'Deny',
+                 'Principal': '*',
+                 'Resource': [(
+                     'arn:aws:execute-api:{region_name}:'
+                     '{account_id}:{rest_api_id}/*')]}],
+        }
 
     def test_can_build_rest_api(self, rest_api_app):
         config = self.create_config(rest_api_app,

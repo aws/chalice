@@ -865,6 +865,11 @@ class PlanStage(object):
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
             ),
+            models.APICall(
+                method_name='deploy_rest_api',
+                params={'rest_api_id': Variable('rest_api_id'),
+                        'api_gateway_stage': resource.api_gateway_stage},
+            ),
             models.StoreValue(
                 name='rest_api_url',
                 value=StringFormat(
@@ -904,12 +909,7 @@ class PlanStage(object):
                     name='rest_api_id',
                     variable_name='rest_api_id',
                 ),
-                models.APICall(
-                    method_name='deploy_rest_api',
-                    params={'rest_api_id': Variable('rest_api_id'),
-                            'api_gateway_stage': resource.api_gateway_stage},
-                ),
-            ] + shared_plan_epilogue
+            ]
         else:
             deployed = self._remote_state.resource_deployed_values(resource)
             shared_plan_epilogue.insert(
@@ -944,19 +944,23 @@ class PlanStage(object):
                         'swagger_document': resource.swagger_doc,
                     },
                 ), "Updating rest API\n"),
-                models.APICall(
-                    method_name='deploy_rest_api',
-                    params={'rest_api_id': Variable('rest_api_id'),
-                            'api_gateway_stage': resource.api_gateway_stage},
-                ),
-                models.APICall(
-                    method_name='add_permission_for_apigateway',
-                    params={'function_name': function_name,
-                            'region_name': Variable('region_name'),
-                            'account_id': Variable('account_id'),
-                            'rest_api_id': Variable('rest_api_id')},
-                ),
-            ] + shared_plan_epilogue
+            ]
+
+            if not resource.policy:
+                shared_plan_patch_ops.append({
+                    'op': 'remove',
+                    'path': '/policy'})
+
+        if resource.policy:
+            shared_plan_patch_ops.append({
+                'op': 'replace',
+                'path': '/policy',
+                'value': StringFormat(
+                    resource.policy,
+                    ['region_name', 'account_id', 'rest_api_id'])
+            })
+
+        plan.extend(shared_plan_epilogue)
         return plan
 
     def _get_role_arn(self, resource):

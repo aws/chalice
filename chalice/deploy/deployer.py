@@ -81,7 +81,7 @@ is used as the key in the ``deployed.json`` dictionary.
 
 
 """
-
+# pylint: disable=too-many-lines
 import json
 import os
 import textwrap
@@ -459,6 +459,10 @@ class ApplicationGraphBuilder(object):
                 handler_name=auth.handler_string, stage_name=stage_name,
             )
             authorizers.append(auth_lambda)
+        policy = config.api_gateway_policy
+        if (config.api_gateway_endpoint_type == 'PRIVATE' and not policy):
+            policy = self._get_default_private_api_policy(config)
+
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
@@ -467,7 +471,33 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
+            policy=json.dumps(policy)
         )
+
+    def _get_default_private_api_policy(self, config):
+        # type: (Config) -> Dict[str, Any]
+        statements = [{
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "execute-api:Invoke",
+            "Resource": [
+                ("arn:aws:execute-api:{region_name}:"
+                 "{account_id}:{rest_api_id}/*")
+            ]},
+            {"Effect": "Deny",
+             "Principal": "*",
+             "Action": "execute-api:Invoke",
+             "Resource": [
+                 ("arn:aws:execute-api:{region_name}:"
+                  "{account_id}:{rest_api_id}/*")
+             ],
+             "Condition": {
+                 "StringNotEquals": {
+                     "aws:SourceVpce": config.api_gateway_endpoint_vpce
+                 }
+             }}]
+
+        return {"Version": "2012-10-17", "Statement": statements}
 
     def _create_websocket_api_model(
             self,

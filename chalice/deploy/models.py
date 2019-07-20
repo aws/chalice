@@ -191,6 +191,7 @@ class RestAPI(ManagedModel):
     api_gateway_stage = attrib()                 # type: str
     endpoint_type = attrib()                     # type: str
     lambda_function = attrib()                   # type: LambdaFunction
+    policy = attrib(default=None)                # type: Optional[str]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
 
     def dependencies(self):

@@ -46,9 +46,17 @@ be checked.
 
 * ``api_gateway_endpoint_type`` - The endpoint configuration of the
   deployed API Gateway which determines how the API will be accessed,
-  can be EDGE, REGIONAL. Note this value can only be set as a
+  can be EDGE, REGIONAL, PRIVATE. Note this value can only be set as a
   top level key and defaults to EDGE. For more information see
   https://amzn.to/2LofApt
+
+* ``api_gateway_endpoint_vpce`` - When configuring a Private API a VPC
+  Endpoint must be specified to configure a default resource policy on
+  the API if an explicit policy is not specified.
+
+* ``api_gateway_policy`` - The IAM resource policy for the REST API.
+  Note this should be a dictionary, and several variables are
+  interpolated in strings {account_id}, {region_name}, {rest_api_id}.
 
 * ``minimum_compression_size`` - An integer value that indicates
   the minimum compression size to apply to the API gateway. If
