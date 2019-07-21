@@ -4,6 +4,7 @@ flake8==3.6.0
 tox==3.0.0
 wheel==0.26.0
 doc8==0.8.0
+docutils==0.14.0
 # The latest version of pylint only works on python3.
 pylint==2.2.2 ; python_version >= '3.6'
 astroid==2.1.0 ; python_version >= '3.6'
