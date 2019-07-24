@@ -51,12 +51,14 @@ be checked.
   https://amzn.to/2LofApt
 
 * ``api_gateway_endpoint_vpce`` - When configuring a Private API a VPC
-  Endpoint must be specified to configure a default resource policy on
-  the API if an explicit policy is not specified.
+  Endpoint id must be specified to configure a default resource policy on
+  the API if an explicit policy is not specified. This value can be a
+  list or a string of endpoint ids.
 
-* ``api_gateway_policy`` - The IAM resource policy for the REST API.
-  Note this should be a dictionary, and several variables are
-  interpolated in strings {account_id}, {region_name}, {rest_api_id}.
+* ``api_gateway_policy_file`` - A file pointing to an IAM resource
+  policy for the REST API. If not specified chalice will autogenerate
+  this policy when endpoint_type is PRIVATE. This filename is relative
+  to the ``.chalice`` directory.
 
 * ``minimum_compression_size`` - An integer value that indicates
   the minimum compression size to apply to the API gateway. If

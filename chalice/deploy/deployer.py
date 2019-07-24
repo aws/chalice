@@ -459,9 +459,17 @@ class ApplicationGraphBuilder(object):
                 handler_name=auth.handler_string, stage_name=stage_name,
             )
             authorizers.append(auth_lambda)
-        policy = config.api_gateway_policy
-        if (config.api_gateway_endpoint_type == 'PRIVATE' and not policy):
-            policy = self._get_default_private_api_policy(config)
+
+        policy = None
+        policy_path = config.api_gateway_policy_file
+        if (config.api_gateway_endpoint_type == 'PRIVATE' and not policy_path):
+            policy = models.IAMPolicy(
+                document=self._get_default_private_api_policy(config))
+        elif policy_path:
+            policy = models.FileBasedIAMPolicy(
+                document=models.Placeholder.BUILD_STAGE,
+                filename=os.path.join(
+                    config.project_dir, '.chalice', policy_path))
 
         return models.RestAPI(
             resource_name='rest_api',

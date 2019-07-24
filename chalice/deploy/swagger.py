@@ -45,7 +45,7 @@ class SwaggerGenerator(object):
     def _add_resource_policy(self, api, rest_api):
         # type: (Dict[str, Any], Optional[RestAPI]) -> None
         if rest_api and rest_api.policy:
-            api['x-amazon-apigateway-policy'] = rest_api.policy
+            api['x-amazon-apigateway-policy'] = rest_api.policy.document
 
     def _add_binary_types(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None

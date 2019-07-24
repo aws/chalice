@@ -2,7 +2,7 @@ from chalice.deploy.swagger import SwaggerGenerator, CFNSwaggerGenerator
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
-from chalice.deploy.models import RestAPI
+from chalice.deploy.models import RestAPI, IAMPolicy
 import mock
 from pytest import fixture
 
@@ -574,7 +574,7 @@ def test_can_custom_resource_policy_with_cfn(sample_app):
         minimum_compression="",
         api_gateway_stage="xyz",
         endpoint_type="PRIVATE",
-        policy={
+        policy=IAMPolicy({
             'Statement': [{
                 "Effect": "Allow",
                 "Principal": "*",
@@ -589,7 +589,7 @@ def test_can_custom_resource_policy_with_cfn(sample_app):
                     }
                 }
             }]
-        }
+        })
     )
 
     doc = swagger_gen.generate_swagger(sample_app, rest_api)
@@ -616,7 +616,7 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
         minimum_compression="",
         api_gateway_stage="xyz",
         endpoint_type="PRIVATE",
-        policy={
+        policy=IAMPolicy({
             'Statement': [{
                 "Effect": "Allow",
                 "Principal": "*",
@@ -628,7 +628,7 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
                     }
                 }
             }]
-        }
+        })
     )
 
     doc = swagger_gen.generate_swagger(sample_app, rest_api)

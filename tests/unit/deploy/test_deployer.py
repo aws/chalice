@@ -474,12 +474,15 @@ class TestApplicationGraphBuilder(object):
                       autogen_policy=False, security_group_ids=None,
                       subnet_ids=None, reserved_concurrency=None, layers=None,
                       api_gateway_endpoint_type=None,
-                      api_gateway_endpoint_vpce=None):
+                      api_gateway_endpoint_vpce=None,
+                      api_gateway_policy_file=None,
+                      project_dir='.'):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
-            'project_dir': '.',
+            'project_dir': project_dir,
             'api_gateway_stage': api_gateway_stage,
+            'api_gateway_policy_file': api_gateway_policy_file,
             'api_gateway_endpoint_type': api_gateway_endpoint_type,
             'api_gateway_endpoint_vpce': api_gateway_endpoint_vpce
         }
@@ -712,7 +715,7 @@ class TestApplicationGraphBuilder(object):
         application = builder.build(config, stage_name='dev')
         rest_api = application.resources[0]
         assert isinstance(rest_api, models.RestAPI)
-        assert rest_api.policy == {
+        assert rest_api.policy.document == {
             'Version': '2012-10-17',
             'Statement': [
                 {'Action': 'execute-api:Invoke',
@@ -724,6 +727,23 @@ class TestApplicationGraphBuilder(object):
                          'aws:SourceVpce': 'vpce-abc123'}}},
             ]
         }
+
+    def test_can_build_private_rest_api_custom_policy(
+            self, tmpdir, rest_api_app):
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    api_gateway_policy_file='foo.json',
+                                    api_gateway_endpoint_type='PRIVATE',
+                                    project_dir=str(tmpdir))
+        tmpdir.mkdir('.chalice').join('foo.json').write(
+            serialize_to_json({'Version': '2012-10-17', 'Statement': []}))
+
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        rest_api.policy.document == {
+                'Version': '2012-10-17', 'Statement': []
+            }
 
     def test_can_build_rest_api(self, rest_api_app):
         config = self.create_config(rest_api_app,

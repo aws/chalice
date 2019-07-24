@@ -58,15 +58,15 @@ def validate_resource_policy(config):
             "specified for PRIVATE api_gateway_endpoint_type")
     if config.api_gateway_endpoint_type != 'PRIVATE':
         return
-    if config.api_gateway_policy and config.api_gateway_endpoint_vpce:
+    if config.api_gateway_policy_file and config.api_gateway_endpoint_vpce:
         raise ValueError(
-            "Can only specify one of api_gateway_policy and "
+            "Can only specify one of api_gateway_policy_file and "
             "api_gateway_endpoint_vpce")
-    if config.api_gateway_policy:
+    if config.api_gateway_policy_file:
         return
     if not config.api_gateway_endpoint_vpce:
         raise ValueError(
-            ("Private Endpoints require api_gateway_policy or "
+            ("Private Endpoints require api_gateway_policy_file or "
              "api_gateway_endpoint_vpce specified"))
 
 

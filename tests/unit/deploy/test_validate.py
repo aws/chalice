@@ -256,14 +256,14 @@ def test_can_validate_resource_policy(sample_app):
 
     config = Config.create(
         chalice_app=sample_app,
-        api_gateway_policy={'Statement': []},
+        api_gateway_policy_file='xyz.json',
         api_gateway_endpoint_type='PRIVATE')
     validate_resource_policy(config)
 
     config = Config.create(
         chalice_app=sample_app,
         api_gateway_endpoint_vpce=['vpce-abc123', 'vpce-bdef'],
-        api_gateway_policy={'Statement': []},
+        api_gateway_policy_file='bar.json',
         api_gateway_endpoint_type='PRIVATE')
     with pytest.raises(ValueError):
         validate_resource_policy(config)

@@ -236,10 +236,10 @@ class Config(object):
                                   varies_per_chalice_stage=True)
 
     @property
-    def api_gateway_policy(self):
-        # type: () -> Dict
-        return self._chain_lookup('api_gateway_policy',
-                                  varies_per_chalice_stage=True) or {}
+    def api_gateway_policy_file(self):
+        # type: () -> str
+        return self._chain_lookup('api_gateway_policy_file',
+                                  varies_per_chalice_stage=True)
 
     @property
     def minimum_compression_size(self):

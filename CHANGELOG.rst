@@ -11,6 +11,8 @@ Next Release (TBD)
 * API Gateway Endpoint Type Configuration
   (`#1160 https://github.com/aws/chalice/pull/1160`__)
 
+* API Gateway Resource Policy Configuration
+  (`#1160 https://github.com/aws/chalice/pull/1160`__)
 
 1.9.1
 =====
