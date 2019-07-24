@@ -1,3 +1,4 @@
+# pylint: disable=line-too-long
 import enum
 from typing import List, Dict, Optional, Any, TypeVar, Union, Set  # noqa
 from typing import cast
@@ -191,7 +192,7 @@ class RestAPI(ManagedModel):
     api_gateway_stage = attrib()                 # type: str
     endpoint_type = attrib()                     # type: str
     lambda_function = attrib()                   # type: LambdaFunction
-    policy = attrib(default=None)                # type: Optional[str]
+    policy = attrib(default=Factory(dict))       # type: Dict[str, Any]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
 
     def dependencies(self):

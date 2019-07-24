@@ -877,35 +877,6 @@ class TestPlanRestAPI(BasePlannerTests):
                 to_var='api_handler_lambda_arn'),
         ]
 
-    def test_can_plan_private_rest_api(self):
-        function = create_function_resource('function_name')
-        rest_api = models.RestAPI(
-            resource_name='rest_api',
-            swagger_doc={'swagger': '2.0'},
-            endpoint_type='PRIVATE',
-            policy="{'Statement': []}",
-            minimum_compression='100',
-            api_gateway_stage='api',
-            lambda_function=function,
-        )
-        plan = self.determine_plan(rest_api)
-        self.assert_loads_needed_variables(plan)
-
-        assert plan[6].params == {
-            'rest_api_id': Variable("rest_api_id"),
-            'patch_operations': [
-                {'op': 'replace',
-                 'path': '/minimumCompressionSize',
-                 'value': '100'},
-                {'op': 'replace',
-                 'path': '/policy',
-                 'value': StringFormat(
-                     "{'Statement': []}",
-                     ['region_name', 'account_id', 'rest_api_id'])
-                 }
-            ]
-        }
-
     def test_can_plan_rest_api(self):
         function = create_function_resource('function_name')
         rest_api = models.RestAPI(
@@ -1001,13 +972,8 @@ class TestPlanRestAPI(BasePlannerTests):
                      ("/endpointConfiguration/types/"
                       "{rest_api[endpointConfiguration][types][0]}"),
                      ['rest_api']),
-                 'value': 'EDGE'},
-                {'op': 'replace',
-                 'path': '/policy',
-                 'value': StringFormat(
-                     "{'Statement': []}",
-                     ['region_name', 'account_id', 'rest_api_id'])
-                 }],
+                 'value': 'EDGE'}
+            ],
             'rest_api_id': Variable("rest_api_id")
         }
 
@@ -1062,7 +1028,6 @@ class TestPlanRestAPI(BasePlannerTests):
                              '/endpointConfiguration/types/%s' % (
                                 '{rest_api[endpointConfiguration][types][0]}'),
                              ['rest_api'])},
-                        {'op': 'remove', 'path': '/policy'}
                     ],
                 },
             ),

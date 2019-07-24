@@ -1,5 +1,3 @@
-import json
-
 from chalice.deploy.swagger import SwaggerGenerator, CFNSwaggerGenerator
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
@@ -576,14 +574,13 @@ def test_can_custom_resource_policy_with_cfn(sample_app):
         minimum_compression="",
         api_gateway_stage="xyz",
         endpoint_type="PRIVATE",
-        policy=json.dumps({
+        policy={
             'Statement': [{
                 "Effect": "Allow",
                 "Principal": "*",
                 "Action": "execute-api:Invoke",
-                "Resource": [(
-                    "arn:aws:execute-api:{region_name}:"
-                    "{account_id}:{rest_api_id}/*"),
+                "Resource": [
+                    "arn:aws:execute-api:*:*:*",
                     "arn:aws:exceute-api:*:*:*/*"
                 ],
                 "Condition": {
@@ -592,7 +589,7 @@ def test_can_custom_resource_policy_with_cfn(sample_app):
                     }
                 }
             }]
-        })
+        }
     )
 
     doc = swagger_gen.generate_swagger(sample_app, rest_api)
@@ -604,9 +601,7 @@ def test_can_custom_resource_policy_with_cfn(sample_app):
             'Effect': 'Allow',
             'Principal': '*',
             'Resource': [
-                {'Fn:Sub': (
-                    'arn:aws:execute-api:${AWS::Region}'
-                    ':${AWS:AccoundId}:*/*')},
+                'arn:aws:execute-api:*:*:*',
                 "arn:aws:exceute-api:*:*:*/*"]
             }]
     }
@@ -621,21 +616,19 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
         minimum_compression="",
         api_gateway_stage="xyz",
         endpoint_type="PRIVATE",
-        policy=json.dumps({
+        policy={
             'Statement': [{
                 "Effect": "Allow",
                 "Principal": "*",
                 "Action": "execute-api:Invoke",
-                "Resource": (
-                    "arn:aws:execute-api:{region_name}:"
-                    "{account_id}:{rest_api_id}/*"),
+                "Resource": "arn:aws:execute-api:*:*:*/*",
                 "Condition": {
                     "StringEquals": {
                         "aws:SourceVpce": "vpce-abc123"
                     }
                 }
             }]
-        })
+        }
     )
 
     doc = swagger_gen.generate_swagger(sample_app, rest_api)
@@ -646,8 +639,7 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
                 'aws:SourceVpce': 'vpce-abc123'}},
             'Effect': 'Allow',
             'Principal': '*',
-            'Resource': {'Fn:Sub': (
-                'arn:aws:execute-api:${AWS::Region}:${AWS:AccoundId}:*/*')}
+            'Resource': 'arn:aws:execute-api:*:*:*/*',
             }]
     }
 

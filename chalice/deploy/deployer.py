@@ -471,7 +471,7 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
-            policy=json.dumps(policy)
+            policy=policy
         )
 
     def _get_default_private_api_policy(self, config):
@@ -480,9 +480,7 @@ class ApplicationGraphBuilder(object):
             "Effect": "Allow",
             "Principal": "*",
             "Action": "execute-api:Invoke",
-            "Resource": (
-                "arn:aws:execute-api:{region_name}:"
-                "{account_id}:{rest_api_id}/*"),
+            "Resource": "arn:aws:execute-api:*:*:*",
             "Condition": {
                 "StringEquals": {
                     "aws:SourceVpce": config.api_gateway_endpoint_vpce

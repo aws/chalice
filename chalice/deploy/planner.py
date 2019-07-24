@@ -946,20 +946,6 @@ class PlanStage(object):
                 ), "Updating rest API\n"),
             ]
 
-            if not resource.policy:
-                shared_plan_patch_ops.append({
-                    'op': 'remove',
-                    'path': '/policy'})
-
-        if resource.policy:
-            shared_plan_patch_ops.append({
-                'op': 'replace',
-                'path': '/policy',
-                'value': StringFormat(
-                    resource.policy,
-                    ['region_name', 'account_id', 'rest_api_id'])
-            })
-
         plan.extend(shared_plan_epilogue)
         return plan
 

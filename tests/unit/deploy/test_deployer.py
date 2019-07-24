@@ -1,4 +1,3 @@
-import json
 import os
 
 import socket
@@ -713,15 +712,13 @@ class TestApplicationGraphBuilder(object):
         application = builder.build(config, stage_name='dev')
         rest_api = application.resources[0]
         assert isinstance(rest_api, models.RestAPI)
-        assert json.loads(rest_api.policy) == {
+        assert rest_api.policy == {
             'Version': '2012-10-17',
             'Statement': [
                 {'Action': 'execute-api:Invoke',
                  'Effect': 'Allow',
                  'Principal': '*',
-                 'Resource': (
-                     'arn:aws:execute-api:{region_name}:'
-                     '{account_id}:{rest_api_id}/*'),
+                 'Resource': 'arn:aws:execute-api:*:*:*',
                  'Condition': {
                      'StringEquals': {
                          'aws:SourceVpce': 'vpce-abc123'}}},

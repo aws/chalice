@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from typing import Dict, Any, Optional, List  # noqa
+from typing import Dict, Any, Optional, List, Union  # noqa
 from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
@@ -231,15 +231,15 @@ class Config(object):
 
     @property
     def api_gateway_endpoint_vpce(self):
-        # type: () -> str
+        # type: () -> Union[str, List[str]]
         return self._chain_lookup('api_gateway_endpoint_vpce',
                                   varies_per_chalice_stage=True)
 
     @property
     def api_gateway_policy(self):
-        # type: () -> Optional[Dict]
+        # type: () -> Dict
         return self._chain_lookup('api_gateway_policy',
-                                  varies_per_chalice_stage=True)
+                                  varies_per_chalice_stage=True) or {}
 
     @property
     def minimum_compression_size(self):
