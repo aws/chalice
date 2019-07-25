@@ -137,6 +137,10 @@ be checked.
   concurrency allocations. For more information, see `AWS Documentation on
   managing concurrency`_.
 
+* ``automatic_layers`` - Boolean default True, whether chalice will
+  automatically construct a single app stage layer for all lambda functions
+  with requirements.txt libraries and vendored libraries.
+
 * ``layers`` - A list of Lambda Layers arns. This value can be provided
   per stage as well as per Lambda function. See `AWS Lambda Layers
   Configuration`_.

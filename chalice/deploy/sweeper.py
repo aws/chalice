@@ -1,4 +1,4 @@
-from typing import List, Dict  # noqa
+from typing import List, Dict, Tuple  # noqa
 
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy import models
@@ -69,6 +69,98 @@ class ResourceSweeper(object):
                     instruction)
         return marked
 
+    def _handle_lambda_function(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        apicall = models.APICall(
+            method_name='delete_function',
+            params={'function_name': resource_values['lambda_arn']},)
+        return [apicall], {
+            id(apicall): (
+                "Deleting function: %s\n" % resource_values['lambda_arn'])}
+
+    def _handle_lambda_layer(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        apicall = models.APICall(
+            method_name='delete_layer_version',
+            params={'layer_version_arn': resource_values[
+                'layer_version_arn']})
+        return [apicall], {
+            id(apicall): "Deleting layer version: %s\n" % resource_values[
+                'layer_version_arn']}
+
+    def _handle_iam_role(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        apicall = models.APICall(
+            method_name='delete_role',
+            params={'name': resource_values['role_name']})
+        return [apicall], {id(apicall): (
+            "Deleting IAM role: %s\n" % resource_values['role_name'])}
+
+    def _handle_cloudwatch_event(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        apicall = models.APICall(
+            method_name='delete_rule',
+            params={'rule_name': resource_values['rule_name']})
+        return [apicall], {}
+
+    def _handle_rest_api(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        rest_api_id = resource_values['rest_api_id']
+        apicall = models.APICall(
+            method_name='delete_rest_api',
+            params={'rest_api_id': rest_api_id})
+        return [apicall], {id(apicall): (
+            "Deleting Rest API: %s\n" % resource_values['rest_api_id'])}
+
+    def _handle_s3_event(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        bucket = resource_values['bucket']
+        function_arn = resource_values['lambda_arn']
+        return [
+            models.APICall(
+                method_name='disconnect_s3_bucket_from_lambda',
+                params={'bucket': bucket, 'function_arn': function_arn}
+            ),
+            models.APICall(
+                method_name='remove_permission_for_s3_event',
+                params={'bucket': bucket, 'function_arn': function_arn}
+            )], {}
+
+    def _handle_sns_event(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        subscription_arn = resource_values['subscription_arn']
+        return [
+            models.APICall(
+                method_name='unsubscribe_from_topic',
+                params={'subscription_arn': subscription_arn},
+            ),
+            models.APICall(
+                method_name='remove_permission_for_sns_topic',
+                params={
+                    'topic_arn': resource_values['topic_arn'],
+                            'function_arn': resource_values['lambda_arn'],
+                },
+            )
+        ], {}
+
+    def _handle_sqs_event(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        return [
+            models.APICall(
+                method_name='remove_sqs_event_source',
+                params={'event_uuid': resource_values['event_uuid']},
+            )
+        ], {}
+
+    def _handle_websocket_api(self, resource_values):
+        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        apicall = models.APICall(
+            method_name='delete_websocket_api',
+            params={'api_id': resource_values['websocket_api_id']})
+        return [apicall], {id(apicall): (
+            "Deleting Websocket API: %s\n" % resource_values[
+                'websocket_api_id'])}
+
     def _plan_deletion(self,
                        plan,       # type: List[models.Instruction]
                        messages,   # type: Dict[int, str]
@@ -78,79 +170,8 @@ class ResourceSweeper(object):
         # type: (...) -> None
         for name in remaining:
             resource_values = deployed.resource_values(name)
-            if resource_values['resource_type'] == 'lambda_function':
-                apicall = models.APICall(
-                    method_name='delete_function',
-                    params={'function_name': resource_values['lambda_arn']},)
-                messages[id(apicall)] = (
-                    "Deleting function: %s\n" % resource_values['lambda_arn'])
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 'iam_role':
-                apicall = models.APICall(
-                    method_name='delete_role',
-                    params={'name': resource_values['role_name']},
-                )
-                messages[id(apicall)] = (
-                    "Deleting IAM role: %s\n" % resource_values['role_name'])
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 'cloudwatch_event':
-                apicall = models.APICall(
-                    method_name='delete_rule',
-                    params={'rule_name': resource_values['rule_name']},
-                )
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 'rest_api':
-                rest_api_id = resource_values['rest_api_id']
-                apicall = models.APICall(
-                    method_name='delete_rest_api',
-                    params={'rest_api_id': rest_api_id}
-                )
-                messages[id(apicall)] = (
-                    "Deleting Rest API: %s\n" % resource_values['rest_api_id'])
-                plan.append(apicall)
-            elif resource_values['resource_type'] == 's3_event':
-                bucket = resource_values['bucket']
-                function_arn = resource_values['lambda_arn']
-                plan.extend([
-                    models.APICall(
-                        method_name='disconnect_s3_bucket_from_lambda',
-                        params={'bucket': bucket, 'function_arn': function_arn}
-                    ),
-                    models.APICall(
-                        method_name='remove_permission_for_s3_event',
-                        params={'bucket': bucket, 'function_arn': function_arn}
-                    )
-                ])
-            elif resource_values['resource_type'] == 'sns_event':
-                subscription_arn = resource_values['subscription_arn']
-                plan.extend([
-                    models.APICall(
-                        method_name='unsubscribe_from_topic',
-                        params={'subscription_arn': subscription_arn},
-                    ),
-                    models.APICall(
-                        method_name='remove_permission_for_sns_topic',
-                        params={
-                            'topic_arn': resource_values['topic_arn'],
-                            'function_arn': resource_values['lambda_arn'],
-                        },
-                    )
-                ])
-            elif resource_values['resource_type'] == 'sqs_event':
-                plan.extend([
-                    models.APICall(
-                        method_name='remove_sqs_event_source',
-                        params={'event_uuid': resource_values['event_uuid']},
-                    )
-                ])
-            elif resource_values['resource_type'] == 'websocket_api':
-                plan.append(
-                    models.APICall(
-                        method_name='delete_websocket_api',
-                        params={'api_id': resource_values['websocket_api_id']},
-                    )
-                )
-                messages[id(plan[-1])] = (
-                    "Deleting Websocket API: %s\n" %
-                    resource_values['websocket_api_id']
-                )
+            handler = getattr(
+                self, '_handle_%s' % resource_values['resource_type'])
+            resource_calls, resource_messages = handler(resource_values)
+            plan.extend(resource_calls)
+            messages.update(resource_messages)

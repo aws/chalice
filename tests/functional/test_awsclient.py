@@ -131,7 +131,35 @@ def test_can_iterate_logs(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-class TestLayerPublish(object):
+class TestLambdaLayer(object):
+
+    def test_layer_exists(self, stubbed_session):
+        stubbed_session.stub('lambda').get_layer_version_by_arn(
+            Arn='arn:xyz').returns(
+                {'LayerVersionArn': 'arn:xyz'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_layer_version('arn:xyz') == {
+            'LayerVersionArn': 'arn:xyz'}
+
+    def test_layer_exists_not_found_error(self, stubbed_session):
+        stubbed_session.stub('lambda').get_layer_version_by_arn(
+            Arn='arn:xyz').raises_error(
+                error_code='ResourceNotFoundException',
+                message='Not Found')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.get_layer_version('arn:xyz') == {}
+
+    def test_layer_delete_not_found_error(self, stubbed_session):
+        stubbed_session.stub('lambda').delete_layer_version(
+            LayerName='xyz',
+            VersionNumber=4).raises_error(
+                error_code='ResourceNotFoundException',
+                message='Not Found')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.delete_layer_version('arn:xyz:4') is None
 
     def test_publish_layer_propagate_error(self, stubbed_session):
         stubbed_session.stub('lambda').publish_layer_version(
@@ -155,11 +183,11 @@ class TestLayerPublish(object):
             LayerName='name',
             CompatibleRuntimes=['python2.7'],
             Content={'ZipFile': b'foo'},
-        ).returns({'LayerVersionArn': 'arn:12345:name'})
+        ).returns({'LayerVersionArn': 'arn:12345:name:3'})
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.publish_layer(
-            'name', b'foo', 'python2.7') == 'arn:12345:name'
+            'name', b'foo', 'python2.7') == 'arn:12345:name:3'
         stubbed_session.verify_stubs()
 
 

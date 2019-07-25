@@ -156,10 +156,6 @@ class LambdaLayer(ManagedModel):
     runtime = attrib()                # type: str
     deployment_package = attrib()     # type: DeploymentPackage
 
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.deployment_package]
-
 
 @attrs
 class LambdaFunction(ManagedModel):

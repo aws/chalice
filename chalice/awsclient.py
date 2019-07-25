@@ -144,6 +144,27 @@ class TypedAWSClient(object):
             )
             raise self._get_lambda_code_deployment_error(e, context)
 
+    def delete_layer_version(self, layer_version_arn):
+        # type: (str) -> None
+        client = self._client('lambda')
+        _, layer_name, version_number = layer_version_arn.rsplit(":", 2)
+        try:
+            return client.delete_layer_version(
+                LayerName=layer_name,
+                VersionNumber=int(version_number))
+        except client.exceptions.ResourceNotFoundException:
+            pass
+
+    def get_layer_version(self, layer_version_arn):
+        # type: (str) -> Dict[str, Any]
+        client = self._client('lambda')
+        try:
+            return client.get_layer_version_by_arn(
+                Arn=layer_version_arn)
+        except client.exceptions.ResourceNotFoundException:
+            pass
+        return {}
+
     def create_function(self,
                         function_name,               # type: str
                         role_arn,                    # type: str

@@ -224,13 +224,55 @@ class TestPlanLambdaFunction(BasePlannerTests):
         )
         plan = self.determine_plan(layer)
         expected = [models.APICall(
-            method_name='publish_lambda_layer',
+            method_name='publish_layer',
             params={
                 'layer_name': 'bar',
                 'zip_contents': mock.ANY,
                 'runtime': 'python2.7'})
         ]
         self.assert_apicall_equals(plan[0], expected[0])
+        assert list(self.last_plan.messages.values()) == [
+            'Creating lambda layer: bar\n',
+        ]
+
+    def test_can_update_layer(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        copy_of_layer = attr.evolve(layer)
+        self.remote_state.declare_resource_exists(
+            copy_of_layer,
+            layer_version_arn='arn:bar:4'
+        )
+
+        plan = self.determine_plan(layer)
+        expected = [
+            models.APICall(
+                method_name='delete_layer_version',
+                params={'layer_version_arn': 'arn:bar:4'}),
+            models.APICall(
+                method_name='publish_layer',
+                params={
+                    'layer_name': 'bar',
+                    'zip_contents': mock.ANY,
+                    'runtime': 'python2.7'}),
+            models.RecordResourceVariable(
+                resource_type='lambda_layer',
+                resource_name='layer',
+                name='layer_version_arn',
+                variable_name='layer_version_arn')
+        ]
+        assert len(plan) == 3
+        assert plan[0] == expected[0]
+        assert plan[2] == expected[2]
+        self.assert_apicall_equals(plan[1], expected[1])
+        assert list(self.last_plan.messages.values()) == [
+            'Updating lambda layer: bar\n',
+        ]
 
     def test_can_create_function(self):
         function = create_function_resource('function_name')
@@ -1462,6 +1504,37 @@ class TestRemoteState(object):
         assert not self.remote_state.resource_exists(role)
         self.client.get_role_arn_for_name.assert_called_with('app-dev')
 
+    def test_lambda_layer_not_exists(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        assert not self.remote_state.resource_exists(layer)
+
+    def test_lambda_layer_exists(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        deployed_resources = {
+            'resources': [{
+                'name': 'layer',
+                'resource_type': 'lambda_layer',
+                'layer_version_arn': 'arn:layer:4'
+            }]
+        }
+        self.client.get_layer_version.return_value = {
+            'LayerVersionArn': 'arn:layer:4'}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert remote_state.resource_exists(layer)
+
     def test_lambda_function_exists(self):
         function = create_function_resource('function-name')
         self.client.lambda_function_exists.return_value = True
@@ -1840,6 +1913,20 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             {'name': 'myrole2'},
             {'name': 'myrole'},
         ]
+
+    def test_can_delete_lambda_layer(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'layer',
+                'resource_type': 'lambda_layer',
+                'layer_version_arn': 'arn'}]}
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='delete_layer_version',
+                params={'layer_version_arn': 'arn'})]
 
     def test_can_delete_scheduled_event(self):
         plan = []

@@ -382,15 +382,16 @@ class ApplicationGraphBuilder(object):
         # type: (Config, str) -> models.Application
         resources = []  # type: List[models.Model]
         deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
-        resources.append(
-            models.LambdaLayer(
-                resource_name='layer',
-                layer_name='%s-%s-%s' % (
-                    config.app_name or 'chalice',
-                    config.chalice_stage, 'layer'),
-                runtime=config.lambda_python_version,
-                deployment_package=models.DeploymentPackage(
-                    models.Placeholder.BUILD_STAGE)))
+        if config.automatic_layer:
+            resources.append(
+                models.LambdaLayer(
+                    resource_name='layer',
+                    layer_name='%s-%s-%s' % (
+                        config.app_name or 'chalice',
+                        config.chalice_stage, 'layer'),
+                    runtime=config.lambda_python_version,
+                    deployment_package=models.DeploymentPackage(
+                        models.Placeholder.BUILD_STAGE)))
 
         for function in config.chalice_app.pure_lambda_functions:
             resource = self._create_lambda_model(
@@ -821,6 +822,14 @@ class DeploymentPackager(BaseDeployStep):
         # type: (LambdaDeploymentPackager) -> None
         self._packager = packager
 
+    def handle_lambdalayer(self, config, resource):
+        # type: (Config, models.LambdaLayer) -> None
+        if isinstance(resource.deployment_package.filename,
+                      models.Placeholder):
+            zip_filename = self._packager.create_layer_package(
+                config.project_dir, config.lambda_python_version)
+            resource.deployment_package.filename = zip_filename
+
     def handle_deploymentpackage(self, config, resource):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
@@ -996,6 +1005,11 @@ class DeploymentReporter(object):
     def _report_lambda_function(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None
         report.append('  - Lambda ARN: %s' % resource['lambda_arn'])
+
+    def _report_lambda_layer(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append('  - Lambda Layer ARN: %s' % (
+            resource['layer_version_arn']))
 
     def _default_report(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None

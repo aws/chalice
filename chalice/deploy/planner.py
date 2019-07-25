@@ -88,6 +88,16 @@ class RemoteState(object):
             function_arn=deployed_values['lambda_arn'],
         )
 
+    def _resource_exists_lambdalayer(self, resource):
+        # type: (models.LambdaLayer) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        return bool(self._client.get_layer_version(
+            deployed_values['layer_version_arn']))
+
     def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
@@ -160,16 +170,40 @@ class PlanStage(object):
 
     def _plan_lambdalayer(self, resource):
         # type: (models.LambdaLayer) -> Sequence[InstructionMsg]
+
+        api_calls = []  # type: List[InstructionMsg]
         filename = cast(str, resource.deployment_package.filename)
-        return [
+
+        # Automatically clean up old layer versions.
+        # https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
+        msg = 'Creating'
+        if self._remote_state.resource_exists(resource):
+            state = self._remote_state.resource_deployed_values(resource)
+            api_calls.append(
+                models.APICall(
+                    method_name='delete_layer_version',
+                    params={'layer_version_arn': state['layer_version_arn']}
+                )
+            )
+            msg = 'Updating'
+
+        api_calls.extend([(
             models.APICall(
-                method_name='publish_lambda_layer',
+                method_name='publish_layer',
                 params={'layer_name': resource.layer_name,
                         'zip_contents': self._osutils.get_file_contents(
                             filename, binary=True),
                         'runtime': resource.runtime},
                 output_var='layer_version_arn'
-            )]
+            ), "%s lambda layer: %s\n" % (msg, resource.layer_name)),
+            models.RecordResourceVariable(
+                resource_type='lambda_layer',
+                resource_name=resource.resource_name,
+                name='layer_version_arn',
+                variable_name='layer_version_arn',
+        )])
+
+        return api_calls
 
     def _plan_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> Sequence[InstructionMsg]

@@ -471,12 +471,14 @@ class TestApplicationGraphBuilder(object):
     def create_config(self, app, app_name='lambda-only',
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
+                      automatic_layer=None,
                       autogen_policy=False, security_group_ids=None,
                       subnet_ids=None, reserved_concurrency=None, layers=None):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
             'project_dir': '.',
+            'automatic_layer': automatic_layer,
             'api_gateway_stage': api_gateway_stage,
         }
         if iam_role_arn is not None:
@@ -511,6 +513,34 @@ class TestApplicationGraphBuilder(object):
         assert isinstance(application, models.Application)
         assert len(application.resources) == 2
         assert application.resources[1] == models.LambdaFunction(
+            resource_name='foo',
+            function_name='lambda-only-dev-foo',
+            environment_variables={},
+            runtime=config.lambda_python_version,
+            handler='app.foo',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
+            layers=[],
+            reserved_concurrency=None,
+        )
+
+    def test_can_build_single_lambda_function_app_with_no_layer(
+            self, lambda_app):
+        # This is the simplest configuration we can get.
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(
+            lambda_app, iam_role_arn='role:arn', automatic_layer=False)
+        application = builder.build(config, stage_name='dev')
+        # The top level resource is always an Application.
+        assert isinstance(application, models.Application)
+        assert len(application.resources) == 1
+        assert application.resources[0] == models.LambdaFunction(
             resource_name='foo',
             function_name='lambda-only-dev-foo',
             environment_variables={},
@@ -1250,6 +1280,43 @@ class TestSwaggerBuilder(object):
 
 
 class TestDeploymentPackager(object):
+    def test_can_generate_layer_package(self):
+        generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
+        generator.create_layer_package.return_value = 'package.zip'
+
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='name',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE)
+        )
+        config = Config.create()
+
+        p = DeploymentPackager(generator)
+        p.handle(config, layer)
+
+        assert layer.deployment_package.filename == 'package.zip'
+
+    def test_layer_package_not_generated_if_filename_populated(self):
+        generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
+        generator.create_layer_package.return_value = 'newpackage.zip'
+
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='name',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='origin.zip')
+        )
+        config = Config.create()
+
+        p = DeploymentPackager(generator)
+        p.handle(config, layer)
+
+        assert layer.deployment_package.filename == 'origin.zip'
+        assert not generator.create_layer_package.called
+
     def test_can_generate_package(self):
         generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
         generator.create_deployment_package.return_value = 'package.zip'
@@ -1457,6 +1524,9 @@ class TestDeploymentReporter(object):
                  "role_arn": "my-role-arn",
                  "name": "default-role",
                  "resource_type": "iam_role"},
+                {"resource_type": "lambda_layer",
+                 "name": "layer",
+                 "layer_version_arn": "arn:layer:4"},
                 {"lambda_arn": "lambda-arn-foo",
                  "name": "foo",
                  "resource_type": "lambda_function"},
@@ -1476,6 +1546,7 @@ class TestDeploymentReporter(object):
         report = self.reporter.generate_report(deployed_values)
         assert report == (
             "Resources deployed:\n"
+            "  - Lambda Layer ARN: arn:layer:4\n"
             "  - Lambda ARN: lambda-arn-foo\n"
             "  - Lambda ARN: lambda-arn-dev\n"
             "  - Rest API URL: https://host/api\n"

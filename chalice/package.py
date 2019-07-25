@@ -154,7 +154,7 @@ class SAMTemplateGenerator(object):
 
         layers = resource.layers or []  # type: List[Any]
         if self._chalice_layer:
-            layers.append({'Ref': self._chalice_layer})
+            layers.insert(0, {'Ref': self._chalice_layer})
 
         if layers:
             layers_config = {
