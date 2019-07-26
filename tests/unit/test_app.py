@@ -523,7 +523,8 @@ def test_json_body_available_with_right_content_type(create_event):
 def test_json_body_available_with_csp_report_content_type(create_event):
     demo = app.Chalice("demo-app")
 
-    @demo.route("/", methods=["POST"])
+    @demo.route("/", methods=["POST"],
+                content_types=['application/csp-report', 'application/json'])
     def index():
         return demo.current_request.json_body
 

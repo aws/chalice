@@ -353,6 +353,11 @@ class CORSConfig(object):
 class Request(object):
     """The current request from API gateway."""
 
+    ACCEPTABLE_JSON_CONTENT_TYPES = (
+        'application/json',
+        'application/csp-report'
+    )
+
     def __init__(self, query_params, headers, uri_params, method, body,
                  context, stage_vars, is_base64_encoded):
         self.query_params = None if query_params is None \
@@ -389,7 +394,12 @@ class Request(object):
 
     @property
     def json_body(self):
-        if self.headers.get('content-type', '').startswith('application/json'):
+        content_type = self.headers.get('content-type', '')
+        acceptable = any([
+            True for acceptable_type
+            in self.ACCEPTABLE_JSON_CONTENT_TYPES
+            if content_type.startswith(acceptable_type)])
+        if acceptable:
             if self._json_body is None:
                 try:
                     self._json_body = json.loads(self.raw_body)
