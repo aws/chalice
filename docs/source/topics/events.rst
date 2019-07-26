@@ -94,6 +94,9 @@ In this example, we have a single lambda function that we subscribe to all
 events from the AWS Code Commit service. The first parameter to the decorator
 is the event pattern that will be used to filter the events sent to the function.
 
+See the Cloud Watch Event pattern docs for additional syntax and examples
+https://amzn.to/2OlqZso
+
 The function you decorate must accept a single argument,
 which will be of type :class:`CloudWatchEvent`.
 

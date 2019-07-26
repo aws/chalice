@@ -561,18 +561,25 @@ class PlanStage(object):
             ),
         ]
 
-    def _plan_cloudwatchevent(self, resource):
-        # type: (models.CloudWatchEvent) -> Sequence[InstructionMsg]
+    def _create_cloudwatchevent(self, resource):
+        # type: (models.CloudWatchEventBase) -> Sequence[InstructionMsg]
 
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
 
+        params = {'rule_name': resource.rule_name}
+        if isinstance(resource, models.ScheduledEvent):
+            resource = cast(models.ScheduledEvent, resource)
+            params['schedule_expression'] = resource.schedule_expression
+        else:
+            resource = cast(models.CloudWatchEvent, resource)
+            params['event_pattern'] = resource.event_pattern
+
         plan = [
             models.APICall(
                 method_name='get_or_create_rule_arn',
-                params={'rule_name': resource.rule_name,
-                        'event_pattern': resource.event_pattern},
+                params=params,
                 output_var='rule-arn',
             ),
             models.APICall(
@@ -595,44 +602,14 @@ class PlanStage(object):
             )
         ]
         return plan
+
+    def _plan_cloudwatchevent(self, resource):
+        # type: (models.CloudWatchEvent) -> Sequence[InstructionMsg]
+        return self._create_cloudwatchevent(resource)
 
     def _plan_scheduledevent(self, resource):
         # type: (models.ScheduledEvent) -> Sequence[InstructionMsg]
-        function_arn = Variable(
-            '%s_lambda_arn' % resource.lambda_function.resource_name
-        )
-        # Because the underlying API calls have PUT semantics,
-        # we don't have to check if the resource exists and have
-        # a separate code path for updates.  We could however
-        # check if the resource exists to avoid unnecessary API
-        # calls, but that's a later optimization.
-        plan = [
-            models.APICall(
-                method_name='get_or_create_rule_arn',
-                params={'rule_name': resource.rule_name,
-                        'schedule_expression': resource.schedule_expression},
-                output_var='rule-arn',
-            ),
-            models.APICall(
-                method_name='connect_rule_to_lambda',
-                params={'rule_name': resource.rule_name,
-                        'function_arn': function_arn}
-            ),
-            models.APICall(
-                method_name='add_permission_for_cloud_watch_event',
-                params={'rule_arn': Variable('rule-arn'),
-                        'function_arn': function_arn},
-            ),
-            # You need to remove targets (which have IDs)
-            # before you can delete a rule.
-            models.RecordResourceValue(
-                resource_type='cloudwatch_event',
-                resource_name=resource.resource_name,
-                name='rule_name',
-                value=resource.rule_name,
-            )
-        ]
-        return plan
+        return self._create_cloudwatchevent(resource)
 
     def _create_websocket_function_configs(self, resource):
         # type: (models.WebsocketAPI) -> Dict[str, Dict[str, Any]]

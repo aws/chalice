@@ -182,16 +182,19 @@ class FunctionEventSubscriber(ManagedModel):
 
 
 @attrs
-class CloudWatchEvent(FunctionEventSubscriber):
-    resource_type = 'cw_event'
+class CloudWatchEventBase(FunctionEventSubscriber):
     rule_name = attrib()        # type: str
+
+
+@attrs
+class CloudWatchEvent(CloudWatchEventBase):
+    resource_type = 'cloud_watch_event'
     event_pattern = attrib()    # type: str
 
 
 @attrs
-class ScheduledEvent(FunctionEventSubscriber):
+class ScheduledEvent(CloudWatchEventBase):
     resource_type = 'scheduled_event'
-    rule_name = attrib()            # type: str
     schedule_expression = attrib()  # type: str
 
 
