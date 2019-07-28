@@ -40,10 +40,25 @@ a stage specific configuration value is needed, the ``stages`` mapping
 is checked first.  If no value is found then the top level keys will
 be checked.
 
-
 * ``api_gateway_stage`` - The name of the API gateway stage.  This
   will also be the URL prefix for your API
   (``https://endpoint/prefix/your-api``).
+
+* ``api_gateway_endpoint_type`` - The endpoint configuration of the
+  deployed API Gateway which determines how the API will be accessed,
+  can be EDGE, REGIONAL, PRIVATE. Note this value can only be set as a
+  top level key and defaults to EDGE. For more information see
+  https://amzn.to/2LofApt
+
+* ``api_gateway_endpoint_vpce`` - When configuring a Private API a VPC
+  Endpoint id must be specified to configure a default resource policy on
+  the API if an explicit policy is not specified. This value can be a
+  list or a string of endpoint ids.
+
+* ``api_gateway_policy_file`` - A file pointing to an IAM resource
+  policy for the REST API. If not specified chalice will autogenerate
+  this policy when endpoint_type is PRIVATE. This filename is relative
+  to the ``.chalice`` directory.
 
 * ``minimum_compression_size`` - An integer value that indicates
   the minimum compression size to apply to the API gateway. If

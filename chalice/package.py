@@ -166,6 +166,7 @@ class SAMTemplateGenerator(object):
         resources['RestAPI'] = {
             'Type': 'AWS::Serverless::Api',
             'Properties': {
+                'EndpointConfiguration': resource.endpoint_type,
                 'StageName': resource.api_gateway_stage,
                 'DefinitionBody': resource.swagger_doc,
             }

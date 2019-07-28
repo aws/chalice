@@ -41,6 +41,7 @@ def test_can_default_to_no_auths_in_rest_api(lambda_function):
         swagger_doc={'swagger': '2.0'},
         minimum_compression='',
         api_gateway_stage='api',
+        endpoint_type='EDGE',
         lambda_function=lambda_function,
     )
     assert rest_api.dependencies() == [lambda_function]
@@ -54,6 +55,7 @@ def test_can_add_authorizers_to_dependencies(lambda_function):
         swagger_doc={'swagger': '2.0'},
         minimum_compression='',
         api_gateway_stage='api',
+        endpoint_type='EDGE',
         lambda_function=lambda_function,
         authorizers=[auth1, auth2],
     )

@@ -45,6 +45,40 @@ def validate_configuration(config):
     validate_python_version(config)
     validate_unique_function_names(config)
     validate_feature_flags(config.chalice_app)
+    validate_endpoint_type(config)
+    validate_resource_policy(config)
+
+
+def validate_resource_policy(config):
+    # type: (Config) -> None
+    if (config.api_gateway_endpoint_type != 'PRIVATE' and
+            config.api_gateway_endpoint_vpce):
+        raise ValueError(
+            "config.api_gateway_endpoint_vpce should only be "
+            "specified for PRIVATE api_gateway_endpoint_type")
+    if config.api_gateway_endpoint_type != 'PRIVATE':
+        return
+    if config.api_gateway_policy_file and config.api_gateway_endpoint_vpce:
+        raise ValueError(
+            "Can only specify one of api_gateway_policy_file and "
+            "api_gateway_endpoint_vpce")
+    if config.api_gateway_policy_file:
+        return
+    if not config.api_gateway_endpoint_vpce:
+        raise ValueError(
+            ("Private Endpoints require api_gateway_policy_file or "
+             "api_gateway_endpoint_vpce specified"))
+
+
+def validate_endpoint_type(config):
+    # type: (Config) -> None
+    if not config.api_gateway_endpoint_type:
+        return
+    valid_types = ('EDGE', 'REGIONAL', 'PRIVATE')
+    if config.api_gateway_endpoint_type not in valid_types:
+        raise ValueError(
+            "api gateway endpoint type must be one of %s" % (
+                ", ".join(valid_types)))
 
 
 def validate_feature_flags(chalice_app):

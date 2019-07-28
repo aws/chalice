@@ -2,7 +2,7 @@ from chalice.deploy.swagger import SwaggerGenerator, CFNSwaggerGenerator
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
-
+from chalice.deploy.models import RestAPI, IAMPolicy
 import mock
 from pytest import fixture
 
@@ -562,6 +562,85 @@ def test_will_default_to_function_name_for_auth(sample_app):
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
                               '/2015-03-31/functions/auth_arn/invocations'),
         }
+    }
+
+
+def test_can_custom_resource_policy_with_cfn(sample_app):
+    swagger_gen = CFNSwaggerGenerator()
+    rest_api = RestAPI(
+        resource_name='dev',
+        swagger_doc={},
+        lambda_function=None,
+        minimum_compression="",
+        api_gateway_stage="xyz",
+        endpoint_type="PRIVATE",
+        policy=IAMPolicy({
+            'Statement': [{
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "execute-api:Invoke",
+                "Resource": [
+                    "arn:aws:execute-api:*:*:*",
+                    "arn:aws:exceute-api:*:*:*/*"
+                ],
+                "Condition": {
+                    "StringEquals": {
+                        "aws:SourceVpce": "vpce-abc123"
+                    }
+                }
+            }]
+        })
+    )
+
+    doc = swagger_gen.generate_swagger(sample_app, rest_api)
+    assert doc['x-amazon-apigateway-policy'] == {
+        'Statement': [{
+            'Action': 'execute-api:Invoke',
+            'Condition': {'StringEquals': {
+                'aws:SourceVpce': 'vpce-abc123'}},
+            'Effect': 'Allow',
+            'Principal': '*',
+            'Resource': [
+                'arn:aws:execute-api:*:*:*',
+                "arn:aws:exceute-api:*:*:*/*"]
+            }]
+    }
+
+
+def test_can_auto_resource_policy_with_cfn(sample_app):
+    swagger_gen = CFNSwaggerGenerator()
+    rest_api = RestAPI(
+        resource_name='dev',
+        swagger_doc={},
+        lambda_function=None,
+        minimum_compression="",
+        api_gateway_stage="xyz",
+        endpoint_type="PRIVATE",
+        policy=IAMPolicy({
+            'Statement': [{
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "execute-api:Invoke",
+                "Resource": "arn:aws:execute-api:*:*:*/*",
+                "Condition": {
+                    "StringEquals": {
+                        "aws:SourceVpce": "vpce-abc123"
+                    }
+                }
+            }]
+        })
+    )
+
+    doc = swagger_gen.generate_swagger(sample_app, rest_api)
+    assert doc['x-amazon-apigateway-policy'] == {
+        'Statement': [{
+            'Action': 'execute-api:Invoke',
+            'Condition': {'StringEquals': {
+                'aws:SourceVpce': 'vpce-abc123'}},
+            'Effect': 'Allow',
+            'Principal': '*',
+            'Resource': 'arn:aws:execute-api:*:*:*/*',
+            }]
     }
 
 

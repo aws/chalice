@@ -472,12 +472,19 @@ class TestApplicationGraphBuilder(object):
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
                       autogen_policy=False, security_group_ids=None,
-                      subnet_ids=None, reserved_concurrency=None, layers=None):
+                      subnet_ids=None, reserved_concurrency=None, layers=None,
+                      api_gateway_endpoint_type=None,
+                      api_gateway_endpoint_vpce=None,
+                      api_gateway_policy_file=None,
+                      project_dir='.'):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
-            'project_dir': '.',
+            'project_dir': project_dir,
             'api_gateway_stage': api_gateway_stage,
+            'api_gateway_policy_file': api_gateway_policy_file,
+            'api_gateway_endpoint_type': api_gateway_endpoint_type,
+            'api_gateway_endpoint_vpce': api_gateway_endpoint_vpce
         }
         if iam_role_arn is not None:
             # We want to use an existing role.
@@ -698,6 +705,45 @@ class TestApplicationGraphBuilder(object):
         assert event.rule_name == 'scheduled-event-dev-foo-event'
         assert isinstance(event.lambda_function, models.LambdaFunction)
         assert event.lambda_function.resource_name == 'foo'
+
+    def test_can_build_private_rest_api(self, rest_api_app):
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    api_gateway_endpoint_type='PRIVATE',
+                                    api_gateway_endpoint_vpce='vpce-abc123')
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        assert isinstance(rest_api, models.RestAPI)
+        assert rest_api.policy.document == {
+            'Version': '2012-10-17',
+            'Statement': [
+                {'Action': 'execute-api:Invoke',
+                 'Effect': 'Allow',
+                 'Principal': '*',
+                 'Resource': 'arn:aws:execute-api:*:*:*',
+                 'Condition': {
+                     'StringEquals': {
+                         'aws:SourceVpce': 'vpce-abc123'}}},
+            ]
+        }
+
+    def test_can_build_private_rest_api_custom_policy(
+            self, tmpdir, rest_api_app):
+        config = self.create_config(rest_api_app,
+                                    app_name='rest-api-app',
+                                    api_gateway_policy_file='foo.json',
+                                    api_gateway_endpoint_type='PRIVATE',
+                                    project_dir=str(tmpdir))
+        tmpdir.mkdir('.chalice').join('foo.json').write(
+            serialize_to_json({'Version': '2012-10-17', 'Statement': []}))
+
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        rest_api.policy.document == {
+                'Version': '2012-10-17', 'Statement': []
+            }
 
     def test_can_build_rest_api(self, rest_api_app):
         config = self.create_config(rest_api_app,
@@ -1228,6 +1274,7 @@ class TestSwaggerBuilder(object):
             resource_name='foo',
             swagger_doc=models.Placeholder.BUILD_STAGE,
             minimum_compression='',
+            endpoint_type='EDGE',
             api_gateway_stage='api',
             lambda_function=None,
         )
@@ -1236,7 +1283,7 @@ class TestSwaggerBuilder(object):
         p = SwaggerBuilder(generator)
         p.handle(config, rest_api)
         assert rest_api.swagger_doc == {'swagger': '2.0'}
-        generator.generate_swagger.assert_called_with(app)
+        generator.generate_swagger.assert_called_with(app, rest_api)
 
 
 class TestDeploymentPackager(object):

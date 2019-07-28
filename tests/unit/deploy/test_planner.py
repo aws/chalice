@@ -882,16 +882,19 @@ class TestPlanRestAPI(BasePlannerTests):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
+            endpoint_type='EDGE',
             minimum_compression='100',
             api_gateway_stage='api',
             lambda_function=function,
         )
         plan = self.determine_plan(rest_api)
         self.assert_loads_needed_variables(plan)
+
         assert plan[4:] == [
             models.APICall(
                 method_name='import_rest_api',
-                params={'swagger_document': {'swagger': '2.0'}},
+                params={'swagger_document': {'swagger': '2.0'},
+                        'endpoint_type': 'EDGE'},
                 output_var='rest_api_id',
             ),
             models.RecordResourceVariable(
@@ -900,9 +903,6 @@ class TestPlanRestAPI(BasePlannerTests):
                 name='rest_api_id',
                 variable_name='rest_api_id',
             ),
-            models.APICall(method_name='deploy_rest_api',
-                           params={'rest_api_id': Variable('rest_api_id'),
-                                   'api_gateway_stage': 'api'}),
             models.APICall(
                 method_name='update_rest_api',
                 params={
@@ -912,7 +912,7 @@ class TestPlanRestAPI(BasePlannerTests):
                         'path': '/minimumCompressionSize',
                         'value': '100',
                     }],
-                },
+                }
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
@@ -923,6 +923,9 @@ class TestPlanRestAPI(BasePlannerTests):
                     'rest_api_id': Variable('rest_api_id'),
                 }
             ),
+            models.APICall(method_name='deploy_rest_api',
+                           params={'rest_api_id': Variable('rest_api_id'),
+                                   'api_gateway_stage': 'api'}),
             models.StoreValue(
                 name='rest_api_url',
                 value=StringFormat(
@@ -942,6 +945,38 @@ class TestPlanRestAPI(BasePlannerTests):
             'Creating Rest API\n'
         ]
 
+    def test_can_update_rest_api_with_policy(self):
+        function = create_function_resource('function_name')
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
+            api_gateway_stage='api',
+            endpoint_type='EDGE',
+            policy="{'Statement': []}",
+            lambda_function=function,
+        )
+        self.remote_state.declare_resource_exists(rest_api)
+        self.remote_state.deployed_values['rest_api'] = {
+            'rest_api_id': 'my_rest_api_id',
+        }
+        plan = self.determine_plan(rest_api)
+
+        assert plan[8].params == {
+            'patch_operations': [
+                {'op': 'replace',
+                 'path': '/minimumCompressionSize',
+                 'value': ''},
+                {'op': 'replace',
+                 'path': StringFormat(
+                     ("/endpointConfiguration/types/"
+                      "{rest_api[endpointConfiguration][types][0]}"),
+                     ['rest_api']),
+                 'value': 'EDGE'}
+            ],
+            'rest_api_id': Variable("rest_api_id")
+        }
+
     def test_can_update_rest_api(self):
         function = create_function_resource('function_name')
         rest_api = models.RestAPI(
@@ -949,6 +984,7 @@ class TestPlanRestAPI(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
+            endpoint_type='REGIONAL',
             lambda_function=function,
         )
         self.remote_state.declare_resource_exists(rest_api)
@@ -957,6 +993,7 @@ class TestPlanRestAPI(BasePlannerTests):
         }
         plan = self.determine_plan(rest_api)
         self.assert_loads_needed_variables(plan)
+
         assert plan[4:] == [
             models.StoreValue(name='rest_api_id', value='my_rest_api_id'),
             models.RecordResourceVariable(
@@ -973,16 +1010,9 @@ class TestPlanRestAPI(BasePlannerTests):
                 },
             ),
             models.APICall(
-                method_name='deploy_rest_api',
-                params={'rest_api_id': Variable('rest_api_id'),
-                        'api_gateway_stage': 'api'},
-            ),
-            models.APICall(
-                method_name='add_permission_for_apigateway',
-                params={'function_name': 'appname-dev-function_name',
-                        'region_name': Variable('region_name'),
-                        'account_id': Variable('account_id'),
-                        'rest_api_id': Variable('rest_api_id')},
+                method_name='get_rest_api',
+                params={'rest_api_id': Variable('rest_api_id')},
+                output_var='rest_api'
             ),
             models.APICall(
                 method_name='update_rest_api',
@@ -991,8 +1021,14 @@ class TestPlanRestAPI(BasePlannerTests):
                     'patch_operations': [{
                         'op': 'replace',
                         'path': '/minimumCompressionSize',
-                        'value': '',
-                    }],
+                        'value': ''},
+                        {'op': 'replace',
+                         'value': 'REGIONAL',
+                         'path': StringFormat(
+                             '/endpointConfiguration/types/%s' % (
+                                '{rest_api[endpointConfiguration][types][0]}'),
+                             ['rest_api'])},
+                    ],
                 },
             ),
             models.APICall(
@@ -1002,6 +1038,11 @@ class TestPlanRestAPI(BasePlannerTests):
                         'account_id': Variable("account_id"),
                         'function_name': 'appname-dev-function_name'},
                 output_var=None),
+            models.APICall(
+                method_name='deploy_rest_api',
+                params={'rest_api_id': Variable('rest_api_id'),
+                        'api_gateway_stage': 'api'},
+            ),
             models.StoreValue(
                 name='rest_api_url',
                 value=StringFormat(
@@ -1409,6 +1450,7 @@ class TestRemoteState(object):
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
+            endpoint_type='EDGE',
             api_gateway_stage='api',
             lambda_function=None,
         )
@@ -1473,7 +1515,7 @@ class TestRemoteState(object):
         remote_state = RemoteState(
             self.client, no_deployed_values)
         assert not remote_state.resource_exists(rest_api)
-        assert not self.client.rest_api_exists.called
+        assert not self.client.get_rest_api.called
 
     def test_rest_api_exists_with_existing_deploy(self):
         rest_api = self.create_rest_api_model()
@@ -1484,11 +1526,11 @@ class TestRemoteState(object):
                 'rest_api_id': 'my_rest_api_id',
             }]
         }
-        self.client.rest_api_exists.return_value = True
+        self.client.get_rest_api.return_value = {'apiId': 'my_rest_api_id'}
         remote_state = RemoteState(
             self.client, DeployedResources(deployed_resources))
         assert remote_state.resource_exists(rest_api)
-        self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+        self.client.get_rest_api.assert_called_with('my_rest_api_id')
 
     def test_rest_api_not_exists_with_preexisting_deploy(self):
         rest_api = self.create_rest_api_model()
@@ -1499,11 +1541,11 @@ class TestRemoteState(object):
                 'rest_api_id': 'my_rest_api_id',
             }]
         }
-        self.client.rest_api_exists.return_value = False
+        self.client.get_rest_api.return_value = {}
         remote_state = RemoteState(
             self.client, DeployedResources(deployed_resources))
         assert not remote_state.resource_exists(rest_api)
-        self.client.rest_api_exists.assert_called_with('my_rest_api_id')
+        self.client.get_rest_api.assert_called_with('my_rest_api_id')
 
     def test_websocket_api_exists_no_deploy(self, no_deployed_values):
         rest_api = self.create_websocket_api_model()

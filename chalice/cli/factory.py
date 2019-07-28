@@ -19,6 +19,7 @@ from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
+from chalice.constants import DEFAULT_ENDPOINT_TYPE
 from chalice.logs import LogRetriever
 from chalice import local
 from chalice.utils import UI  # noqa
@@ -142,6 +143,7 @@ class CLIFactory(object):
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
+                          'api_gateway_endpoint_type': DEFAULT_ENDPOINT_TYPE,
                           'autogen_policy': True}
         try:
             config_from_disk = self.load_project_config()

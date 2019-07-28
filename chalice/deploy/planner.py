@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 from collections import OrderedDict
 
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
@@ -107,7 +108,7 @@ class RemoteState(object):
         except ValueError:
             return False
         rest_api_id = deployed_values['rest_api_id']
-        return self._client.rest_api_exists(rest_api_id)
+        return bool(self._client.get_rest_api(rest_api_id))
 
     def _resource_exists_websocketapi(self, resource):
         # type: (models.WebsocketAPI) -> bool
@@ -843,17 +844,19 @@ class PlanStage(object):
         # There's also a set of instructions that are needed
         # at the end of deploying a rest API that apply to both
         # the update and create case.
+        shared_plan_patch_ops = [{
+            'op': 'replace',
+            'path': '/minimumCompressionSize',
+            'value': resource.minimum_compression}
+        ]  # type: List[Dict]
+
         shared_plan_epilogue = [
             models.APICall(
                 method_name='update_rest_api',
                 params={
                     'rest_api_id': Variable('rest_api_id'),
-                    'patch_operations': [{
-                        'op': 'replace',
-                        'path': '/minimumCompressionSize',
-                        'value': resource.minimum_compression,
-                    }],
-                },
+                    'patch_operations': shared_plan_patch_ops
+                }
             ),
             models.APICall(
                 method_name='add_permission_for_apigateway',
@@ -861,6 +864,11 @@ class PlanStage(object):
                         'region_name': Variable('region_name'),
                         'account_id': Variable('account_id'),
                         'rest_api_id': Variable('rest_api_id')},
+            ),
+            models.APICall(
+                method_name='deploy_rest_api',
+                params={'rest_api_id': Variable('rest_api_id'),
+                        'api_gateway_stage': resource.api_gateway_stage},
             ),
             models.StoreValue(
                 name='rest_api_url',
@@ -891,7 +899,8 @@ class PlanStage(object):
             plan = shared_plan_preamble + [
                 (models.APICall(
                     method_name='import_rest_api',
-                    params={'swagger_document': resource.swagger_doc},
+                    params={'swagger_document': resource.swagger_doc,
+                            'endpoint_type': resource.endpoint_type},
                     output_var='rest_api_id',
                 ), "Creating Rest API\n"),
                 models.RecordResourceVariable(
@@ -900,14 +909,24 @@ class PlanStage(object):
                     name='rest_api_id',
                     variable_name='rest_api_id',
                 ),
-                models.APICall(
-                    method_name='deploy_rest_api',
-                    params={'rest_api_id': Variable('rest_api_id'),
-                            'api_gateway_stage': resource.api_gateway_stage},
-                ),
-            ] + shared_plan_epilogue
+            ]
         else:
             deployed = self._remote_state.resource_deployed_values(resource)
+            shared_plan_epilogue.insert(
+                0,
+                models.APICall(
+                    method_name='get_rest_api',
+                    params={'rest_api_id': Variable('rest_api_id')},
+                    output_var='rest_api')
+            )
+            shared_plan_patch_ops.append({
+                'op': 'replace',
+                'path': StringFormat(
+                    '/endpointConfiguration/types/%s' % (
+                        '{rest_api[endpointConfiguration][types][0]}'),
+                    ['rest_api']),
+                'value': resource.endpoint_type}
+            )
             plan = shared_plan_preamble + [
                 models.StoreValue(
                     name='rest_api_id',
@@ -925,19 +944,9 @@ class PlanStage(object):
                         'swagger_document': resource.swagger_doc,
                     },
                 ), "Updating rest API\n"),
-                models.APICall(
-                    method_name='deploy_rest_api',
-                    params={'rest_api_id': Variable('rest_api_id'),
-                            'api_gateway_stage': resource.api_gateway_stage},
-                ),
-                models.APICall(
-                    method_name='add_permission_for_apigateway',
-                    params={'function_name': function_name,
-                            'region_name': Variable('region_name'),
-                            'account_id': Variable('account_id'),
-                            'rest_api_id': Variable('rest_api_id')},
-                ),
-            ] + shared_plan_epilogue
+            ]
+
+        plan.extend(shared_plan_epilogue)
         return plan
 
     def _get_role_arn(self, resource):

@@ -12,6 +12,8 @@ from chalice.deploy.validate import validate_python_version
 from chalice.deploy.validate import validate_route_content_types
 from chalice.deploy.validate import validate_unique_function_names
 from chalice.deploy.validate import validate_feature_flags
+from chalice.deploy.validate import validate_endpoint_type
+from chalice.deploy.validate import validate_resource_policy
 from chalice.deploy.validate import ExperimentalFeatureError
 
 
@@ -231,6 +233,51 @@ def test_can_validate_updated_custom_binary_types(sample_app):
 
     assert validate_route_content_types(sample_app.routes,
                                         sample_app.api.binary_types) is None
+
+
+def test_can_validate_resource_policy(sample_app):
+    config = Config.create(
+        chalice_app=sample_app, api_gateway_endpoint_type='PRIVATE')
+    with pytest.raises(ValueError):
+        validate_resource_policy(config)
+
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_endpoint_vpce='vpce-abc123',
+        api_gateway_endpoint_type='PRIVATE')
+    validate_resource_policy(config)
+
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_endpoint_vpce='vpce-abc123',
+        api_gateway_endpoint_type='REGIONAL')
+    with pytest.raises(ValueError):
+        validate_resource_policy(config)
+
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_policy_file='xyz.json',
+        api_gateway_endpoint_type='PRIVATE')
+    validate_resource_policy(config)
+
+    config = Config.create(
+        chalice_app=sample_app,
+        api_gateway_endpoint_vpce=['vpce-abc123', 'vpce-bdef'],
+        api_gateway_policy_file='bar.json',
+        api_gateway_endpoint_type='PRIVATE')
+    with pytest.raises(ValueError):
+        validate_resource_policy(config)
+
+
+def test_can_validate_endpoint_type(sample_app):
+    config = Config.create(
+        chalice_app=sample_app, api_gateway_endpoint_type='EDGE2')
+    with pytest.raises(ValueError):
+        validate_endpoint_type(config)
+
+    config = Config.create(
+        chalice_app=sample_app, api_gateway_endpoint_type='REGIONAL')
+    validate_endpoint_type(config)
 
 
 def test_can_validate_feature_flags(sample_app):

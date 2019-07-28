@@ -1,11 +1,12 @@
 import copy
 import inspect
 
-from typing import Any, List, Dict, Optional  # noqa
+from typing import Any, List, Dict, Optional, Union  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
 from chalice.deploy.planner import StringFormat
+from chalice.deploy.models import RestAPI  # noqa
 from chalice.utils import to_cfn_resource_name
 
 
@@ -32,13 +33,19 @@ class SwaggerGenerator(object):
         self._region = region
         self._deployed_resources = deployed_resources
 
-    def generate_swagger(self, app):
-        # type: (Chalice) -> Dict[str, Any]
+    def generate_swagger(self, app, rest_api=None):
+        # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
+        self._add_resource_policy(api, rest_api)
         return api
+
+    def _add_resource_policy(self, api, rest_api):
+        # type: (Dict[str, Any], Optional[RestAPI]) -> None
+        if rest_api and rest_api.policy:
+            api['x-amazon-apigateway-policy'] = rest_api.policy.document
 
     def _add_binary_types(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None

@@ -81,7 +81,7 @@ is used as the key in the ``deployed.json`` dictionary.
 
 
 """
-
+# pylint: disable=too-many-lines
 import json
 import os
 import textwrap
@@ -459,14 +459,43 @@ class ApplicationGraphBuilder(object):
                 handler_name=auth.handler_string, stage_name=stage_name,
             )
             authorizers.append(auth_lambda)
+
+        policy = None
+        policy_path = config.api_gateway_policy_file
+        if (config.api_gateway_endpoint_type == 'PRIVATE' and not policy_path):
+            policy = models.IAMPolicy(
+                document=self._get_default_private_api_policy(config))
+        elif policy_path:
+            policy = models.FileBasedIAMPolicy(
+                document=models.Placeholder.BUILD_STAGE,
+                filename=os.path.join(
+                    config.project_dir, '.chalice', policy_path))
+
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
+            endpoint_type=config.api_gateway_endpoint_type,
             minimum_compression=minimum_compression,
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
+            policy=policy
         )
+
+    def _get_default_private_api_policy(self, config):
+        # type: (Config) -> Dict[str, Any]
+        statements = [{
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "execute-api:Invoke",
+            "Resource": "arn:aws:execute-api:*:*:*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:SourceVpce": config.api_gateway_endpoint_vpce
+                }
+            }
+        }]
+        return {"Version": "2012-10-17", "Statement": statements}
 
     def _create_websocket_api_model(
             self,
@@ -827,7 +856,7 @@ class SwaggerBuilder(BaseDeployStep):
     def handle_restapi(self, config, resource):
         # type: (Config, models.RestAPI) -> None
         swagger_doc = self._swagger_generator.generate_swagger(
-            config.chalice_app)
+            config.chalice_app, resource)
         resource.swagger_doc = swagger_doc
 
 
