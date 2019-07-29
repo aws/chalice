@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any, Dict, Iterator, Union
-
 import pytest
 
 from chalice import Chalice
@@ -13,7 +11,13 @@ def sample_app():
     # type: () -> Iterator[Union[Iterator, Iterator[Chalice]]]
     app = Chalice(__name__)
 
-    @app.route('/', methods=('GET', 'HEAD', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'TRACE', 'PATCH', 'LINK', 'UNLINK'))
+    @app.route(
+        '/',
+        methods=(
+            'GET', 'HEAD', 'POST', 'OPTIONS', 'PUT',
+            'DELETE', 'TRACE', 'PATCH', 'LINK', 'UNLINK'
+        ),
+    )
     def index():
         # type: () -> Dict[str, str]
         return {'hello': 'world'}
@@ -40,7 +44,8 @@ def sample_client(sample_app):
 
 class TestRequestHandler:
     @pytest.mark.parametrize('method',  (
-        'get', 'head', 'post', 'put', 'delete', 'trace', 'patch', 'link', 'unlink',
+        'get', 'head', 'post', 'put',
+        'delete', 'trace', 'patch', 'link', 'unlink',
     ))
     def test_json_response(self, method, sample_client):
         response = getattr(sample_client, method)('/')

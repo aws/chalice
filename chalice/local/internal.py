@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 This is intended only for `pytest-chalice`.
-https://github.com/studio3104/pytest-chalice
 
+https://github.com/studio3104/pytest-chalice
 """
 
 import json
@@ -10,12 +10,8 @@ import re
 
 from logging import getLogger
 
-from chalice import Chalice
 from chalice.config import Config
 from chalice.local import LocalGateway
-
-from typing import Any, Callable, Dict
-
 
 logger = getLogger(__name__)
 
@@ -43,7 +39,8 @@ class InternalLocalGateway(LocalGateway):
 
     def _generate_lambda_event(self, *args, **kwargs):
         # type: (Any, Any) -> Dict[str, Any]
-        event = super(InternalLocalGateway, self)._generate_lambda_event(*args, **kwargs)
+        event = super(
+            InternalLocalGateway, self)._generate_lambda_event(*args, **kwargs)
         event['requestContext'].update(self.custom_context)
         return event
 
@@ -57,24 +54,31 @@ class ResponseHandler(object):
         self.values = {}  # type: Dict
 
         for key, value in values.items():
-            snake_key = re.sub(UPPERCASE_PATTERN, lambda x: '_' + x.group(1).lower(), key)
+            snake_key = re.sub(
+                UPPERCASE_PATTERN, lambda x: '_' + x.group(1).lower(), key)
             self.values[snake_key] = value
 
         try:
             self.values['json'] = json.loads(self.values['body'])
         except JSONDecodeError:  # type: ignore
-            logger.info('Response body is NOT JSON decodable: {}'.format(self.values['body']))
+            logger.info(
+                'Response body is NOT JSON decodable: {}'.format(
+                    self.values['body']))
 
     def __getattr__(self, key):
         # type: (str) -> Any
         try:
             return self.values[key]
         except KeyError:
-            raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__.__name__, key))
+            raise AttributeError(
+                "'{}' object has no attribute '{}'".format(
+                    self.__class__.__name__, key))
 
 
 class RequestHandler(object):
-    METHODS = ('get', 'head', 'post', 'options', 'put', 'delete', 'trace', 'patch', 'link', 'unlink')
+    METHODS = (
+        'get', 'head', 'post', 'options', 'put',
+        'delete', 'trace', 'patch', 'link', 'unlink')
 
     def __init__(self, app):
         # type: (Chalice) -> None
@@ -86,12 +90,15 @@ class RequestHandler(object):
         return self.local_gateway.custom_context
 
     # As of Chalice version 1.8.0,
-    # LocalGateway object doesn't handle Cognito's context like as the warning message below shows,
+    # LocalGateway object doesn't handle Cognito's context
+    # like as the warning message below shows,
     #
     # "UserWarning: CognitoUserPoolAuthorizer is not a supported in local mode.
-    # All requests made against a route will be authorized to allow local testing."
+    # All requests made against a route will be authorized
+    # to allow local testing."
     #
-    # Not only for this purpose, it's an interface provided to allow custom contexts in unit tests.
+    # Not only for this purpose,
+    # it's an interface provided to allow custom contexts in unit tests.
     @custom_context.setter
     def custom_context(self, context):
         # type: (Dict[str, Any]) -> None
