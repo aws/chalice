@@ -224,6 +224,12 @@ class Config(object):
                                   varies_per_chalice_stage=True)
 
     @property
+    def package_merge_template(self):
+        # type: () -> str
+        return self._chain_lookup('package_merge_template',
+                                  varies_per_chalice_stage=True)
+
+    @property
     def api_gateway_endpoint_type(self):
         # type: () -> str
         return self._chain_lookup('api_gateway_endpoint_type',

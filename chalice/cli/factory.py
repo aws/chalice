@@ -138,13 +138,15 @@ class CLIFactory(object):
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
-                          api_gateway_stage=None):
-        # type: (str, Optional[bool], str) -> Config
+                          api_gateway_stage=None,
+                          package_merge_template=None):
+        # type: (str, Optional[bool], str, Optional[str]) -> Config
         user_provided_params = {}  # type: Dict[str, Any]
         default_params = {'project_dir': self.project_dir,
                           'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
                           'api_gateway_endpoint_type': DEFAULT_ENDPOINT_TYPE,
-                          'autogen_policy': True}
+                          'autogen_policy': True,
+                          'package_merge_template': None}
         try:
             config_from_disk = self.load_project_config()
         except (OSError, IOError):
@@ -161,6 +163,9 @@ class CLIFactory(object):
             user_provided_params['profile'] = self.profile
         if api_gateway_stage is not None:
             user_provided_params['api_gateway_stage'] = api_gateway_stage
+        if package_merge_template is not None:
+            user_provided_params[
+                'package_merge_template'] = package_merge_template
         config = Config(chalice_stage=chalice_stage_name,
                         user_provided_params=user_provided_params,
                         config_from_disk=config_from_disk,

@@ -26,7 +26,7 @@ def test_can_create_app_packager():
 
 def test_template_post_processor_moves_files_once():
     mock_osutils = mock.Mock(spec=OSUtils)
-    p = package.TemplatePostProcessor(mock_osutils)
+    p = package.ReplaceCodeLocationPostProcessor(mock_osutils)
     template = {
         'Resources': {
             'foo': {
@@ -54,6 +54,116 @@ def test_template_post_processor_moves_files_once():
     assert template['Resources']['bar']['Properties']['CodeUri'] == (
         './deployment.zip'
     )
+
+
+class TestTempalteMergePostProcessor(object):
+    def test_can_call_merge(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        mock_osutils.get_file_contents.return_value = (
+            '{'
+            '  "Resources": {'
+            '    "foo": {'
+            '      "Properties": {'
+            '        "Environment": {'
+            '          "Variables": {"Name": "Foo"}'
+            '}}}}}'
+        )
+        p = package.TemplateMergePostProcessor(mock_osutils)
+        template = {
+            'Resources': {
+                'foo': {
+                    'Type': 'AWS::Serverless::Function',
+                    'Properties': {
+                        'CodeUri': 'old-dir.zip',
+                    }
+                },
+                'bar': {
+                    'Type': 'AWS::Serverless::Function',
+                    'Properties': {
+                        'CodeUri': 'old-dir.zip',
+                    }
+                },
+            }
+        }
+
+        config = mock.MagicMock(spec=Config)
+        type(config).package_merge_template = mock.PropertyMock(
+            return_value='extras.json'
+        )
+
+        p.process(
+            template, config=config, outdir='outdir', chalice_stage_name='dev')
+
+        assert template == {
+            'Resources': {
+                'foo': {
+                    'Type': 'AWS::Serverless::Function',
+                    'Properties': {
+                        'CodeUri': 'old-dir.zip',
+                        'Environment': {
+                            'Variables': {
+                                'Name': 'Foo',
+                            }
+                        }
+                    }
+                },
+                'bar': {
+                    'Type': 'AWS::Serverless::Function',
+                    'Properties': {
+                        'CodeUri': 'old-dir.zip',
+                    }
+                },
+            }
+        }
+        assert mock_osutils.file_exists.call_count == 1
+        assert mock_osutils.get_file_contents.call_count == 1
+
+    def test_raise_on_bad_json(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        mock_osutils.get_file_contents.return_value = (
+            '{'
+            '  "Resources": {'
+            '    "foo": {'
+            '      "Properties": {'
+            '        "Environment": {'
+            '          "Variables": {"Name": "Foo"}'
+            ''
+        )
+        p = package.TemplateMergePostProcessor(mock_osutils)
+        template = {}
+
+        config = mock.MagicMock(spec=Config)
+        type(config).package_merge_template = mock.PropertyMock(
+            return_value='extras.json'
+        )
+        with pytest.raises(RuntimeError) as e:
+            p.process(
+                template,
+                config=config,
+                outdir='outdir',
+                chalice_stage_name='dev',
+            )
+        assert str(e.value).startswith('Expected')
+        assert 'to be valid JSON template' in str(e.value)
+
+    def test_raise_if_file_does_not_exist(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        mock_osutils.file_exists.return_value = False
+        p = package.TemplateMergePostProcessor(mock_osutils)
+        template = {}
+
+        config = mock.MagicMock(spec=Config)
+        type(config).package_merge_template = mock.PropertyMock(
+            return_value='extras.json'
+        )
+        with pytest.raises(RuntimeError) as e:
+            p.process(
+                template,
+                config=config,
+                outdir='outdir',
+                chalice_stage_name='dev',
+            )
+        assert str(e.value).startswith('Cannot find template file:')
 
 
 class TestSAMTemplate(object):
@@ -643,4 +753,141 @@ class TestSAMTemplate(object):
                     'BatchSize': 5,
                 },
             }
+        }
+
+
+class TestTemplateDeepMerger(object):
+    def test_can_merge_without_changing_identity(self):
+        merger = package.TemplateDeepMerger()
+        src = {}
+        dst = {}
+
+        result = merger.merge(src, dst)
+        assert result is not src
+        assert result is not dst
+        assert src is not dst
+
+    def test_does_not_mutate(self):
+        merger = package.TemplateDeepMerger()
+        src = {'foo': 'bar'}
+        dst = {'baz': 'buz'}
+
+        merger.merge(src, dst)
+        assert src == {'foo': 'bar'}
+        assert dst == {'baz': 'buz'}
+
+    def test_can_add_element(self):
+        merger = package.TemplateDeepMerger()
+        src = {'foo': 'bar'}
+        dst = {'baz': 'buz'}
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'foo': 'bar',
+            'baz': 'buz',
+        }
+
+    def test_can_replace_element(self):
+        merger = package.TemplateDeepMerger()
+        src = {'foo': 'bar'}
+        dst = {'foo': 'buz'}
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'foo': 'bar',
+        }
+
+    def test_can_merge_list(self):
+        merger = package.TemplateDeepMerger()
+        src = {'foo': [1, 2, 3]}
+        dst = {}
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'foo': [1, 2, 3],
+        }
+
+    def test_can_merge_nested_elements(self):
+        merger = package.TemplateDeepMerger()
+        src = {
+            'foo': {
+                'bar': 'baz',
+            },
+        }
+        dst = {
+            'foo': {
+                'qux': 'quack',
+            },
+        }
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'foo': {
+                'bar': 'baz',
+                'qux': 'quack',
+            }
+        }
+
+    def test_can_merge_nested_list(self):
+        merger = package.TemplateDeepMerger()
+        src = {
+            'foo': {
+                'bar': 'baz',
+            },
+        }
+        dst = {
+            'foo': {
+                'qux': [1, 2, 3, 4],
+            },
+        }
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'foo': {
+                'bar': 'baz',
+                'qux': [1, 2, 3, 4],
+            }
+        }
+
+    def test_list_elements_are_replaced(self):
+        merger = package.TemplateDeepMerger()
+        src = {
+            'list': [{'foo': 'bar'}],
+        }
+        dst = {
+            'list': [{'foo': 'buz'}],
+        }
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'list': [{'foo': 'bar'}],
+        }
+
+    def test_merge_can_change_type(self):
+        merger = package.TemplateDeepMerger()
+        src = {
+            'key': 'foo',
+        }
+        dst = {
+            'key': 1,
+        }
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'key': 'foo'
+        }
+
+    def test_none_merge_does_remove_value(self):
+        merger = package.TemplateDeepMerger()
+        src = {
+            'baz': None,
+        }
+        dst = {
+            'foo': 'bar',
+            'baz': 'buz',
+        }
+
+        result = merger.merge(src, dst)
+        assert result == {
+            'foo': 'bar'
         }

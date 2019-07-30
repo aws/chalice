@@ -377,12 +377,20 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
                     "this argument is specified, a single "
                     "zip file will be created instead."))
 @click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('--merge-template',
+              help=('Specify a JSON template to be merged '
+                    'into the generated template. This is useful '
+                    'for adding resources to a Chalice template or '
+                    'modify values in the template.'))
 @click.argument('out')
 @click.pass_context
-def package(ctx, single_file, stage, out):
-    # type: (click.Context, bool, str, str) -> None
+def package(ctx, single_file, stage, merge_template, out):
+    # type: (click.Context, bool, str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    config = factory.create_config_obj(stage)
+    config = factory.create_config_obj(
+        chalice_stage_name=stage,
+        package_merge_template=merge_template,
+    )
     packager = factory.create_app_packager(config)
     if single_file:
         dirname = tempfile.mkdtemp()
