@@ -31,7 +31,6 @@ def test_config_create_method():
     # Otherwise attributes default to None meaning 'not set'.
     assert c.profile is None
     assert c.api_gateway_stage is None
-    assert c.package_merge_template is None
 
 
 def test_default_chalice_stage():

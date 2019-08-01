@@ -1,4 +1,5 @@
 import os
+import json
 import mock
 
 import pytest
@@ -56,19 +57,25 @@ def test_template_post_processor_moves_files_once():
     )
 
 
-class TestTempalteMergePostProcessor(object):
+class TestTemplateMergePostProcessor(object):
     def test_can_call_merge(self):
         mock_osutils = mock.Mock(spec=OSUtils)
-        mock_osutils.get_file_contents.return_value = (
-            '{'
-            '  "Resources": {'
-            '    "foo": {'
-            '      "Properties": {'
-            '        "Environment": {'
-            '          "Variables": {"Name": "Foo"}'
-            '}}}}}'
-        )
-        p = package.TemplateMergePostProcessor(mock_osutils)
+        file_template = {
+            "Resources": {
+                "foo": {
+                    "Properties": {
+                        "Environment": {
+                            "Variables": {"Name": "Foo"}
+                        }
+                    }
+                }
+            }
+        }
+        mock_osutils.get_file_contents.return_value = json.dumps(file_template)
+        mock_merger = mock.Mock(spec=package.TemplateMerger)
+        mock_merger.merge.return_value = {}
+        p = package.TemplateMergePostProcessor(
+            mock_osutils, mock_merger, merge_template='extras.json')
         template = {
             'Resources': {
                 'foo': {
@@ -87,36 +94,13 @@ class TestTempalteMergePostProcessor(object):
         }
 
         config = mock.MagicMock(spec=Config)
-        type(config).package_merge_template = mock.PropertyMock(
-            return_value='extras.json'
-        )
 
         p.process(
             template, config=config, outdir='outdir', chalice_stage_name='dev')
 
-        assert template == {
-            'Resources': {
-                'foo': {
-                    'Type': 'AWS::Serverless::Function',
-                    'Properties': {
-                        'CodeUri': 'old-dir.zip',
-                        'Environment': {
-                            'Variables': {
-                                'Name': 'Foo',
-                            }
-                        }
-                    }
-                },
-                'bar': {
-                    'Type': 'AWS::Serverless::Function',
-                    'Properties': {
-                        'CodeUri': 'old-dir.zip',
-                    }
-                },
-            }
-        }
         assert mock_osutils.file_exists.call_count == 1
         assert mock_osutils.get_file_contents.call_count == 1
+        mock_merger.merge.assert_called_once_with(file_template, template)
 
     def test_raise_on_bad_json(self):
         mock_osutils = mock.Mock(spec=OSUtils)
@@ -129,13 +113,12 @@ class TestTempalteMergePostProcessor(object):
             '          "Variables": {"Name": "Foo"}'
             ''
         )
-        p = package.TemplateMergePostProcessor(mock_osutils)
+        mock_merger = mock.Mock(spec=package.TemplateMerger)
+        p = package.TemplateMergePostProcessor(
+            mock_osutils, mock_merger, merge_template='extras.json')
         template = {}
 
         config = mock.MagicMock(spec=Config)
-        type(config).package_merge_template = mock.PropertyMock(
-            return_value='extras.json'
-        )
         with pytest.raises(RuntimeError) as e:
             p.process(
                 template,
@@ -145,17 +128,17 @@ class TestTempalteMergePostProcessor(object):
             )
         assert str(e.value).startswith('Expected')
         assert 'to be valid JSON template' in str(e.value)
+        assert mock_merger.merge.call_count == 0
 
     def test_raise_if_file_does_not_exist(self):
         mock_osutils = mock.Mock(spec=OSUtils)
         mock_osutils.file_exists.return_value = False
-        p = package.TemplateMergePostProcessor(mock_osutils)
+        mock_merger = mock.Mock(spec=package.TemplateMerger)
+        p = package.TemplateMergePostProcessor(
+            mock_osutils, mock_merger, merge_template='extras.json')
         template = {}
 
         config = mock.MagicMock(spec=Config)
-        type(config).package_merge_template = mock.PropertyMock(
-            return_value='extras.json'
-        )
         with pytest.raises(RuntimeError) as e:
             p.process(
                 template,
@@ -164,6 +147,31 @@ class TestTempalteMergePostProcessor(object):
                 chalice_stage_name='dev',
             )
         assert str(e.value).startswith('Cannot find template file:')
+        assert mock_merger.merge.call_count == 0
+
+
+class TestCompositePostProcessor(object):
+    def test_can_call_no_processors(self):
+        processor = package.CompositePostProcessor([])
+        template = {}
+        config = mock.MagicMock(spec=Config)
+        processor.process(template, config, 'out', 'dev')
+
+        assert template == {}
+
+    def test_does_call_processors_once(self):
+        mock_processor_a = mock.Mock(spec=package.TemplatePostProcessor)
+        mock_processor_b = mock.Mock(spec=package.TemplatePostProcessor)
+        processor = package.CompositePostProcessor(
+            [mock_processor_a, mock_processor_b])
+        template = {}
+        config = mock.MagicMock(spec=Config)
+        processor.process(template, config, 'out', 'dev')
+
+        mock_processor_a.process.assert_called_once_with(
+            template, config, 'out', 'dev')
+        mock_processor_b.process.assert_called_once_with(
+            template, config, 'out', 'dev')
 
 
 class TestSAMTemplate(object):
@@ -875,19 +883,4 @@ class TestTemplateDeepMerger(object):
         result = merger.merge(src, dst)
         assert result == {
             'key': 'foo'
-        }
-
-    def test_none_merge_does_remove_value(self):
-        merger = package.TemplateDeepMerger()
-        src = {
-            'baz': None,
-        }
-        dst = {
-            'foo': 'bar',
-            'baz': 'buz',
-        }
-
-        result = merger.merge(src, dst)
-        assert result == {
-            'foo': 'bar'
         }
