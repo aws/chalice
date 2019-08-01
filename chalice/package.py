@@ -2,7 +2,7 @@ import os
 import copy
 import json
 
-from typing import Any, Dict, List, Set, Union  # noqa
+from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
 
 from chalice.deploy.swagger import CFNSwaggerGenerator
@@ -15,8 +15,8 @@ from chalice.deploy.deployer import BuildStage  # noqa
 from chalice.deploy.deployer import create_build_stage
 
 
-def create_app_packager(config):
-    # type: (Config) -> AppPackager
+def create_app_packager(config, merge_template=None):
+    # type: (Config, Optional[str]) -> AppPackager
     osutils = OSUtils()
     ui = UI()
     application_builder = ApplicationGraphBuilder()
@@ -28,12 +28,16 @@ def create_app_packager(config):
                                        deps_builder, build_stage)
     processors = [
         ReplaceCodeLocationPostProcessor(osutils=osutils),
-        TemplateMergePostProcessor(osutils=osutils),
+        TemplateMergePostProcessor(
+            osutils=osutils,
+            merger=TemplateDeepMerger(),
+            merge_template=merge_template,
+        ),
     ]
     return AppPackager(
         SAMTemplateGenerator(),
         resource_builder,
-        processors,
+        CompositePostProcessor(processors),
         osutils,
     )
 
@@ -537,15 +541,15 @@ class SAMTemplateGenerator(object):
 
 class AppPackager(object):
     def __init__(self,
-                 sam_templater,      # type: SAMTemplateGenerator
-                 resource_builder,   # type: ResourceBuilder
-                 post_processors,    # type: List[TemplatePostProcessor]
-                 osutils,            # type: OSUtils
+                 sam_templater,     # type: SAMTemplateGenerator
+                 resource_builder,  # type: ResourceBuilder
+                 post_processor,    # type: TemplatePostProcessor
+                 osutils,           # type: OSUtils
                  ):
         # type: (...) -> None
         self._sam_templater = sam_templater
         self._resource_builder = resource_builder
-        self._template_post_processors = post_processors
+        self._template_post_processor = post_processor
         self._osutils = osutils
 
     def _to_json(self, doc):
@@ -563,8 +567,8 @@ class AppPackager(object):
             resources)
         if not self._osutils.directory_exists(outdir):
             self._osutils.makedirs(outdir)
-        for processor in self._template_post_processors:
-            processor.process(sam_template, config, outdir, chalice_stage_name)
+        self._template_post_processor.process(
+            sam_template, config, outdir, chalice_stage_name)
         self._osutils.set_file_contents(
             filename=os.path.join(outdir, 'sam.json'),
             contents=self._to_json(sam_template),
@@ -608,23 +612,25 @@ class ReplaceCodeLocationPostProcessor(TemplatePostProcessor):
 
 
 class TemplateMergePostProcessor(TemplatePostProcessor):
+    def __init__(self, osutils, merger, merge_template=None):
+        # type: (OSUtils, TemplateMerger, Optional[str]) -> None
+        super(TemplateMergePostProcessor, self).__init__(osutils)
+        self._merger = merger
+        self._merge_template = merge_template
+
     def process(self, template, config, outdir, chalice_stage_name):
         # type: (Dict[str, Any], Config, str, str) -> None
-        if not self._should_merge_template(config):
+        if self._merge_template is None:
             return
-        loaded_template = self._load_template_to_merge(config)
-        merger = TemplateDeepMerger()
-        merged = merger.merge(loaded_template, template)
+        loaded_template = self._load_template_to_merge()
+        merged = self._merger.merge(loaded_template, template)
         template.clear()
         template.update(merged)
 
-    def _should_merge_template(self, config):
-        # type: (Config) -> bool
-        return config.package_merge_template is not None
-
-    def _load_template_to_merge(self, config):
-        # type: (Config) -> Dict[str, Any]
-        filepath = os.path.abspath(config.package_merge_template)
+    def _load_template_to_merge(self):
+        # type: () -> Dict[str, Any]
+        template_name = cast(str, self._merge_template)
+        filepath = os.path.abspath(template_name)
         if not self._osutils.file_exists(filepath):
             raise RuntimeError('Cannot find template file: %s' % filepath)
         template_data = self._osutils.get_file_contents(filepath, binary=False)
@@ -636,36 +642,38 @@ class TemplateMergePostProcessor(TemplatePostProcessor):
         return loaded_template
 
 
-class TemplateDeepMerger(object):
-    def merge(self, src, dst):
-        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
-        return self._merge_dict(src, dst)
+class CompositePostProcessor(TemplatePostProcessor):
+    def __init__(self, processors):
+        # type: (List[TemplatePostProcessor]) -> None
+        self._processors = processors
 
-    def _merge(self, src, dst):
-        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
-        src_type = type(src).__name__
-        dst_type = type(dst).__name__
-        if src_type != dst_type:
-            name = '_merge_unknown'
-        else:
-            name = '_merge_%s' % src_type
-        return getattr(self, name, self._merge_replace)(src, dst)
+    def process(self, template, config, outdir, chalice_stage_name):
+        # type: (Dict[str, Any], Config, str, str) -> None
+        for processor in self._processors:
+            processor.process(template, config, outdir, chalice_stage_name)
 
-    def _merge_dict(self, src, dst):
-        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
-        result = dst.copy()
-        for key, value in src.items():
-            existing_value = dst.get(key)
-            if existing_value is None:
-                result[key] = value
-            else:
-                result[key] = self._merge(value, existing_value)
-            if result[key] is None:
-                del result[key]
-        return result
 
-    def _merge_replace(self, src, dst):
-        # type: (Any, Any) -> None
-        # Default merge behavior is to take the source value. This behaivor is
-        # also desired when the types do not match.
-        return src
+class TemplateMerger(object):
+    def merge(self, file_template, chalice_template):
+        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
+        raise NotImplementedError('merge')
+
+
+class TemplateDeepMerger(TemplateMerger):
+    def merge(self, file_template, chalice_template):
+        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
+        return self._merge(file_template, chalice_template)
+
+    def _merge(self, file_template, chalice_template):
+        # type: (Any, Any) -> Any
+        if isinstance(file_template, dict) and \
+           isinstance(chalice_template, dict):
+            return self._merge_dict(file_template, chalice_template)
+        return file_template
+
+    def _merge_dict(self, file_template, chalice_template):
+        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
+        merged = chalice_template.copy()
+        for key, value in file_template.items():
+            merged[key] = self._merge(value, chalice_template.get(key))
+        return merged

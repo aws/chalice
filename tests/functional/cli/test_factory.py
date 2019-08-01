@@ -146,12 +146,6 @@ def test_can_create_config_obj_with_default_api_gateway_stage(clifactory):
     assert config.api_gateway_stage == 'api'
 
 
-def test_can_create_config_obj_with_package_merge_template(clifactory):
-    config = clifactory.create_config_obj(
-        package_merge_template='base.json')
-    assert config.package_merge_template == 'base.json'
-
-
 def test_cant_load_config_obj_with_bad_project(clifactory):
     clifactory.project_dir = 'nowhere-asdfasdfasdfas'
     with pytest.raises(RuntimeError):

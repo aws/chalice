@@ -389,9 +389,8 @@ def package(ctx, single_file, stage, merge_template, out):
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(
         chalice_stage_name=stage,
-        package_merge_template=merge_template,
     )
-    packager = factory.create_app_packager(config)
+    packager = factory.create_app_packager(config, merge_template)
     if single_file:
         dirname = tempfile.mkdtemp()
         try:

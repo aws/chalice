@@ -7,12 +7,13 @@ Next Release (TBD)
 
 * Add experimental support for websockets
   (`#1017 <https://github.com/aws/chalice/issues/1017>`__)
-
 * API Gateway Endpoint Type Configuration
   (`#1160 https://github.com/aws/chalice/pull/1160`__)
-
 * API Gateway Resource Policy Configuration
   (`#1160 https://github.com/aws/chalice/pull/1160`__)
+* Add --merge-template option to package command
+  (`#1195 https://github.com/aws/chalice/pull/1195`__)
+
 
 1.9.1
 =====
