@@ -1483,7 +1483,7 @@ def test_internal_exception_debug_false(capsys, create_event):
     test_app(event, context=None)
     out, err = capsys.readouterr()
     assert 'logger-test-5' in out
-    assert 'Internal Error' in out
+    assert 'Caught exception' in out
     assert 'Something bad happened' in out
 
 
