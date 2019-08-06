@@ -60,6 +60,7 @@ Topics
    topics/packaging
    topics/pyversion
    topics/cfn
+   topics/tf
    topics/authorizers
    topics/events
    topics/purelambda

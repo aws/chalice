@@ -1,4 +1,5 @@
-from chalice.deploy.swagger import SwaggerGenerator, CFNSwaggerGenerator
+from chalice.deploy.swagger import (
+    SwaggerGenerator, CFNSwaggerGenerator, TerraformSwaggerGenerator)
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
@@ -565,8 +566,7 @@ def test_will_default_to_function_name_for_auth(sample_app):
     }
 
 
-def test_can_custom_resource_policy_with_cfn(sample_app):
-    swagger_gen = CFNSwaggerGenerator()
+def test_can_custom_resource_policy(sample_app, swagger_gen):
     rest_api = RestAPI(
         resource_name='dev',
         swagger_doc={},
@@ -674,5 +674,34 @@ def test_will_custom_auth_with_cfn(sample_app):
                     '/2015-03-31/functions/${Auth.Arn}/invocations'
                 )
             }
+        }
+    }
+
+
+def test_custom_auth_with_tf(sample_app):
+    swagger_gen = TerraformSwaggerGenerator()
+
+    # No "name=" kwarg provided should default
+    # to a name of "auth".
+    @sample_app.authorizer(ttl_seconds=10, execution_role='arn:role')
+    def auth(auth_request):
+        pass
+
+    @sample_app.route('/auth', authorizer=auth)
+    def foo():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions']['auth'] == {
+        'in': 'header',
+        'name': 'Authorization',
+        'type': 'apiKey',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'token',
+            'authorizerCredentials': 'arn:role',
+            'authorizerResultTtlInSeconds': 10,
+            'authorizerUri': '${aws_lambda_function.auth.invoke_arn}'
         }
     }
