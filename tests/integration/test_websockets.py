@@ -164,7 +164,8 @@ class SmokeTestApplication(object):
 
 
 @pytest.fixture(scope='module')
-def smoke_test_app(tmpdir_factory):
+def smoke_test_app_ws(tmpdir_factory):
+    sys.modules.pop('app', None)
     # We can't use the monkeypatch fixture here because this is a module scope
     # fixture and monkeypatch is a function scoped fixture.
     os.environ['APP_NAME'] = RANDOM_APP_NAME
@@ -292,7 +293,7 @@ def find_skips_in_seq(numbers):
     return skips
 
 
-def test_websocket_redployment_does_not_lose_messages(smoke_test_app):
+def test_websocket_redployment_does_not_lose_messages(smoke_test_app_ws):
     # This test is to check if one persistant connection is affected by an app
     # redeployment. A connetion is made to the app, and a sequence of numbers
     # is sent over the socket and written to a DynamoDB table. The app is
@@ -300,16 +301,16 @@ def test_websocket_redployment_does_not_lose_messages(smoke_test_app):
     # second to ensure more numbers have been sent. Finally we inspect the
     # DynamoDB table to ensure there are no gaps in the numbers we saw on the
     # server side, and that the first and last number we sent is also present.
-    ws = websocket.create_connection(smoke_test_app.websocket_connect_url)
+    ws = websocket.create_connection(smoke_test_app_ws.websocket_connect_url)
     counter_generator = counter()
     sender = CountingMessageSender(ws, counter_generator)
     ping_endpoint = Task(sender.send)
     ping_endpoint.start()
-    smoke_test_app.redeploy_once()
+    smoke_test_app_ws.redeploy_once()
     time.sleep(1)
     ping_endpoint.stop()
 
-    numbers = get_numbers_from_dynamodb(smoke_test_app.app_dir)
+    numbers = get_numbers_from_dynamodb(smoke_test_app_ws.app_dir)
     assert 1 in numbers
     assert sender.last_sent in numbers
     skips = find_skips_in_seq(numbers)
