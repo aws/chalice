@@ -21,3 +21,4 @@ def message(event):
             },
         },
     )
+    app.websocket_api.send(event.connection_id, event.body)
