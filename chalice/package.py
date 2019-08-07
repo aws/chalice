@@ -591,7 +591,7 @@ class TerraformGenerator(TemplateGenerator):
             'data': {
                 'aws_caller_identity': {'chalice': {}},
                 'aws_region': {'chalice': {}},
-                'null_data_provider': {
+                'null_data_source': {
                     'chalice': {
                         'inputs': {
                             'app': self._config.app_name,

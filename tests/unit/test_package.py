@@ -439,7 +439,7 @@ class TestTerraformTemplate(TemplateTestBase):
                                api_gateway_stage='dev')
 
         template = self.generate_template(config, 'dev')
-        assert template['data']['null_data_provider']['chalice']['inputs'] == {
+        assert template['data']['null_data_source']['chalice']['inputs'] == {
             'app': 'myfoo',
             'stage': 'dev'
         }
