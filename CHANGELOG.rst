@@ -13,6 +13,8 @@ Next Release (TBD)
   (`#1160 https://github.com/aws/chalice/pull/1160`__)
 * Add --merge-template option to package command
   (`#1195 https://github.com/aws/chalice/pull/1195`__)
+* Add support for packaging via terraform
+  (`#1129 https://github.com/aws/chalice/pull/1129`__)
 
 
 1.9.1

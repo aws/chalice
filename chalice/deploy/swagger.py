@@ -286,3 +286,18 @@ class TemplatedSwaggerGenerator(SwaggerGenerator):
             '/functions/{%s}/invocations' % varname,
             ['region_name', varname],
         )
+
+
+class TerraformSwaggerGenerator(SwaggerGenerator):
+
+    def __init__(self):
+        # type: () -> None
+        pass
+
+    def _uri(self, lambda_arn=None):
+        # type: (Optional[str]) -> Any
+        return '${aws_lambda_function.api_handler.invoke_arn}'
+
+    def _auth_uri(self, authorizer):
+        # type: (ChaliceAuthorizer) -> Any
+        return '${aws_lambda_function.%s.invoke_arn}' % (authorizer.name)

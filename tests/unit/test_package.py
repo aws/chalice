@@ -25,9 +25,15 @@ def test_can_create_app_packager():
     assert isinstance(packager, package.AppPackager)
 
 
+def test_can_create_terraform_app_packager():
+    config = Config()
+    packager = package.create_app_packager(config, 'terraform')
+    assert isinstance(packager, package.AppPackager)
+
+
 def test_template_post_processor_moves_files_once():
     mock_osutils = mock.Mock(spec=OSUtils)
-    p = package.ReplaceCodeLocationPostProcessor(mock_osutils)
+    p = package.SAMCodeLocationPostProcessor(mock_osutils)
     template = {
         'Resources': {
             'foo': {
@@ -55,6 +61,36 @@ def test_template_post_processor_moves_files_once():
     assert template['Resources']['bar']['Properties']['CodeUri'] == (
         './deployment.zip'
     )
+
+
+def test_terraform_post_processor_moves_files_once():
+    mock_osutils = mock.Mock(spec=OSUtils)
+    p = package.TerraformCodeLocationPostProcessor(mock_osutils)
+    template = {
+        'resource': {
+            'aws_lambda_function': {
+                'foo': {'filename': 'old-dir.zip'},
+                'bar': {'filename': 'old-dir.zip'},
+            }
+        }
+    }
+
+    p.process(template, config=None,
+              outdir='outdir', chalice_stage_name='dev')
+    mock_osutils.copy.assert_called_with(
+        'old-dir.zip', os.path.join('outdir', 'deployment.zip'))
+    assert mock_osutils.copy.call_count == 1
+    assert template['resource']['aws_lambda_function'][
+        'foo']['filename'] == ('./deployment.zip')
+    assert template['resource']['aws_lambda_function'][
+        'bar']['filename'] == ('./deployment.zip')
+
+
+def test_template_generator_default():
+    tgen = package.TemplateGenerator(Config())
+
+    with pytest.raises(package.UnsupportedFeatureError):
+        tgen.dispatch(models.Model(), {})
 
 
 class TestTemplateMergePostProcessor(object):
@@ -174,19 +210,22 @@ class TestCompositePostProcessor(object):
             template, config, 'out', 'dev')
 
 
-class TestSAMTemplate(object):
+class TemplateTestBase(object):
+
+    template_gen_factory = None
+
     def setup_method(self):
         self.resource_builder = package.ResourceBuilder(
             application_builder=ApplicationGraphBuilder(),
             deps_builder=DependencyBuilder(),
             build_stage=mock.Mock(spec=BuildStage)
         )
-        self.template_gen = package.SAMTemplateGenerator()
+        self.template_gen = self.template_gen_factory(Config())
 
     def generate_template(self, config, chalice_stage_name):
         resources = self.resource_builder.construct_resources(
             config, chalice_stage_name)
-        return self.template_gen.generate_sam_template(resources)
+        return self.template_gen_factory(config).generate(resources)
 
     def lambda_function(self):
         return models.LambdaFunction(
@@ -205,6 +244,344 @@ class TestSAMTemplate(object):
             layers=[],
             reserved_concurrency=None,
         )
+
+
+class TestTerraformTemplate(TemplateTestBase):
+
+    template_gen_factory = package.TerraformGenerator
+
+    EmptyPolicy = {
+        'Version': '2012-10-18',
+        'Statement': {
+            'Sid': '',
+            'Effect': 'Allow',
+            'Action': 'lambda:*'
+        }
+    }
+
+    def generate_template(self, config, chalice_stage_name):
+        resources = self.resource_builder.construct_resources(
+            config, 'dev')
+
+        # Patch up resources that have mocks (due to build stage)
+        # that we need to serialize to json.
+        for r in resources:
+            # For terraform rest api construction, we need a swagger
+            # doc on the api resource as we'll be serializing it to
+            # json.
+            if isinstance(r, models.RestAPI):
+                r.swagger_doc = {
+                    'info': {'title': 'some-app'},
+                    'x-amazon-apigateway-binary-media-types': []
+                }
+            if (isinstance(r, models.RestAPI) and
+                    config.api_gateway_endpoint_type == 'PRIVATE'):
+                r.swagger_doc['x-amazon-apigateway-policy'] = (
+                    r.policy.document)
+
+            # Same for iam policies on roles
+            elif isinstance(r, models.FileBasedIAMPolicy):
+                r.document = self.EmptyPolicy
+
+        return self.template_gen_factory(config).generate(resources)
+
+    def get_function(self, template):
+        functions = list(template['resource'][
+            'aws_lambda_function'].values())
+        assert len(functions) == 1
+        return functions[0]
+
+    def test_supports_precreated_role(self):
+        builder = DependencyBuilder()
+        resources = builder.build_dependencies(
+            models.Application(
+                stage='dev',
+                resources=[self.lambda_function()],
+            )
+        )
+        template = self.template_gen.generate(resources)
+        assert template['resource'][
+            'aws_lambda_function']['foo']['role'] == 'role:arn'
+
+    def test_adds_env_vars_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.environment_variables = {'foo': 'bar'}
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['environment'] == {
+            'variables': {
+                'foo': 'bar'
+            }
+        }
+
+    def test_adds_vpc_config_when_provided(self):
+        function = self.lambda_function()
+        function.security_group_ids = ['sg1', 'sg2']
+        function.subnet_ids = ['sn1', 'sn2']
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['vpc_config'] == {
+            'subnet_ids': ['sn1', 'sn2'],
+            'security_group_ids': ['sg1', 'sg2']}
+
+    def test_adds_layers_when_provided(self):
+        function = self.lambda_function()
+        function.layers = layers = ['arn://layer1', 'arn://layer2']
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['layers'] == layers
+
+    def test_adds_reserved_concurrency_when_provided(self, sample_app):
+        function = self.lambda_function()
+        function.reserved_concurrency = 5
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['reserved_concurrent_executions'] == 5
+
+    def test_can_generate_scheduled_event(self):
+        function = self.lambda_function()
+        event = models.ScheduledEvent(
+            resource_name='foo-event',
+            rule_name='myrule',
+            schedule_expression='rate(5 minutes)',
+            lambda_function=function,
+        )
+        template = self.template_gen.generate(
+            [function, event]
+        )
+        rule = template['resource'][
+            'aws_cloudwatch_event_rule'][event.resource_name]
+
+        assert rule == {
+            'name': event.resource_name,
+            'schedule_expression': 'rate(5 minutes)'}
+
+    def test_can_generate_rest_api(self, sample_app_with_auth):
+        config = Config.create(chalice_app=sample_app_with_auth,
+                               project_dir='.',
+                               minimum_compression_size=8192,
+                               api_gateway_endpoint_type='PRIVATE',
+                               api_gateway_endpoint_vpce='vpce-abc123',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+        resources = template['resource']
+        # Lambda function should be created.
+        assert resources['aws_lambda_function']
+        # Along with permission to invoke from API Gateway.
+        assert list(resources['aws_lambda_permission'].values())[0] == {
+            'function_name': 'sample_app-dev',
+            'action': 'lambda:InvokeFunction',
+            'principal': 'apigateway.amazonaws.com',
+            'source_arn': (
+                '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
+        }
+        assert resources['aws_api_gateway_rest_api']
+        assert resources['aws_api_gateway_rest_api'][
+            'rest_api']['policy']
+        assert resources['aws_api_gateway_rest_api'][
+            'rest_api']['minimum_compression_size'] == 8192
+        assert resources['aws_api_gateway_rest_api'][
+            'rest_api']['endpoint_configuration'] == {'types': ['PRIVATE']}
+
+        assert 'aws_api_gateway_stage' not in resources
+        assert resources['aws_api_gateway_deployment']['rest_api'] == {
+            'rest_api_id': '${aws_api_gateway_rest_api.rest_api.id}',
+            'stage_description': (
+                '${md5(data.template_file.chalice_api_swagger.rendered)}'),
+            'stage_name': 'api'
+        }
+
+        # We should also create the auth lambda function.
+        assert 'myauth' in resources['aws_lambda_function']
+
+        # Along with permission to invoke from API Gateway.
+        assert resources['aws_lambda_permission']['myauth_invoke'] == {
+            'action': 'lambda:InvokeFunction',
+            'function_name': 'sample_app-dev-myauth',
+            'principal': 'apigateway.amazonaws.com',
+            'source_arn': (
+                '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
+        }
+
+        # Also verify we add the expected outputs when using
+        # a Rest API.
+        assert template['output'] == {
+            'EndpointURL': {
+                'value': '${aws_api_gateway_deployment.rest_api.invoke_url}'}
+        }
+
+    def test_can_package_s3_event_handler_with_tf_ref(self, sample_app):
+        @sample_app.on_s3_event(
+            bucket='${aws_s3_bucket.my_data_bucket.id}')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+
+        template = self.generate_template(config, 'dev')
+        assert template['resource']['aws_s3_bucket_notification'][
+            'my_data_bucket_notify'] == {
+                'bucket': '${aws_s3_bucket.my_data_bucket.id}',
+                'lambda_function': [{
+                    'events': ['s3:ObjectCreated:*'],
+                    'lambda_function_arn': (
+                        '${aws_lambda_function.handler.arn}')
+                }]
+        }
+
+    def test_can_generate_chalice_terraform_static_data(self, sample_app):
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='myfoo',
+                               api_gateway_stage='dev')
+
+        template = self.generate_template(config, 'dev')
+        assert template['data']['null_data_provider']['chalice']['inputs'] == {
+            'app': 'myfoo',
+            'stage': 'dev'
+        }
+
+    def test_can_package_s3_event_handler_sans_filters(self, sample_app):
+        @sample_app.on_s3_event(bucket='foo')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+
+        template = self.generate_template(config, 'dev')
+        assert template['resource']['aws_s3_bucket_notification'][
+            'foo_notify'] == {
+                'bucket': 'foo',
+                'lambda_function': [{
+                    'events': ['s3:ObjectCreated:*'],
+                    'lambda_function_arn': (
+                        '${aws_lambda_function.handler.arn}')
+                }]
+        }
+
+    def test_can_package_s3_event_handler(self, sample_app):
+        @sample_app.on_s3_event(
+            bucket='foo', prefix='incoming', suffix='.csv')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+
+        template = self.generate_template(config, 'dev')
+        assert template['resource']['aws_lambda_permission'][
+            'handler-s3event'] == {
+                'action': 'lambda:InvokeFunction',
+                'function_name': 'sample_app-dev-handler',
+                'principal': 's3.amazonaws.com',
+                'source_arn': 'arn:aws:s3:::foo',
+                'statement_id': 'handler-s3event'
+        }
+
+        assert template['resource']['aws_s3_bucket_notification'][
+            'foo_notify'] == {
+                'bucket': 'foo',
+                'lambda_function': [{
+                    'events': ['s3:ObjectCreated:*'],
+                    'filter_prefix': 'incoming',
+                    'filter_suffix': '.csv',
+                    'lambda_function_arn': (
+                        '${aws_lambda_function.handler.arn}')
+                }]
+        }
+
+    def test_can_package_sns_handler(self, sample_app):
+        @sample_app.on_sns_message(topic='foo')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+
+        assert template['resource']['aws_sns_topic_subscription'][
+            'handler-sns-subscription'] == {
+                'topic_arn': (
+                    'arn:aws:sns:${data.aws_region.chalice.name}:'
+                    '${data.aws_caller_identity.chalice.account_id}:foo'),
+                'protocol': 'lambda',
+                'endpoint': '${aws_lambda_function.handler.arn}'
+        }
+
+    def test_can_package_sns_arn_handler(self, sample_app):
+        arn = 'arn:aws:sns:space-leo-1:1234567890:foo'
+
+        @sample_app.on_sns_message(topic=arn)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+
+        assert template['resource']['aws_sns_topic_subscription'][
+            'handler-sns-subscription'] == {
+                'topic_arn': arn,
+                'protocol': 'lambda',
+                'endpoint': '${aws_lambda_function.handler.arn}'
+        }
+
+        assert template['resource']['aws_lambda_permission'][
+            'handler-sns-subscription'] == {
+                'function_name': 'sample_app-dev-handler',
+                'action': 'lambda:InvokeFunction',
+                'principal': 'sns.amazonaws.com',
+                'source_arn': 'arn:aws:sns:space-leo-1:1234567890:foo'
+        }
+
+    def test_can_package_sqs_handler(self, sample_app):
+        @sample_app.on_sqs_message(queue='foo', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config, 'dev')
+
+        assert template['resource'][
+            'aws_lambda_event_source_mapping'][
+                'handler-sqs-event-source'] == {
+                    'event_source_arn': (
+                        'arn:aws:sqs:${data.aws_region.chalice.name}:'
+                        '${data.aws_caller_identity.chalice.account_id}:foo'),
+                    'function_name': 'sample_app-dev-handler',
+                    'batch_size': 5
+        }
+
+    def test_package_websocket_with_error_message(self, sample_websocket_app):
+        config = Config.create(chalice_app=sample_websocket_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        with pytest.raises(NotImplementedError) as excinfo:
+            self.generate_template(config, 'dev')
+
+        # Should mention the decorator name.
+        assert 'Websocket decorators' in str(excinfo.value)
+        # Should mention you can use `chalice deploy`.
+        assert 'chalice deploy' in str(excinfo.value)
+
+
+class TestSAMTemplate(TemplateTestBase):
+
+    template_gen_factory = package.SAMTemplateGenerator
 
     def test_sam_generates_sam_template_basic(self, sample_app):
         config = Config.create(chalice_app=sample_app,
@@ -233,7 +610,7 @@ class TestSAMTemplate(object):
                 resources=[self.lambda_function()],
             )
         )
-        template = self.template_gen.generate_sam_template(resources)
+        template = self.template_gen.generate(resources)
         assert template['Resources']['Foo']['Properties']['Role'] == 'role:arn'
 
     def test_sam_injects_policy(self, sample_app):
@@ -258,7 +635,7 @@ class TestSAMTemplate(object):
             layers=[],
             reserved_concurrency=None,
         )
-        template = self.template_gen.generate_sam_template([function])
+        template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
@@ -276,7 +653,7 @@ class TestSAMTemplate(object):
     def test_adds_env_vars_when_provided(self, sample_app):
         function = self.lambda_function()
         function.environment_variables = {'foo': 'bar'}
-        template = self.template_gen.generate_sam_template([function])
+        template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['Environment'] == {
             'Variables': {
@@ -288,7 +665,7 @@ class TestSAMTemplate(object):
         function = self.lambda_function()
         function.security_group_ids = ['sg1', 'sg2']
         function.subnet_ids = ['sn1', 'sn2']
-        template = self.template_gen.generate_sam_template([function])
+        template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['VpcConfig'] == {
             'SecurityGroupIds': ['sg1', 'sg2'],
@@ -298,14 +675,14 @@ class TestSAMTemplate(object):
     def test_adds_reserved_concurrency_when_provided(self, sample_app):
         function = self.lambda_function()
         function.reserved_concurrency = 5
-        template = self.template_gen.generate_sam_template([function])
+        template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['ReservedConcurrentExecutions'] == 5
 
     def test_adds_layers_when_provided(self, sample_app):
         function = self.lambda_function()
         function.layers = ['arn:aws:layer1', 'arn:aws:layer2']
-        template = self.template_gen.generate_sam_template([function])
+        template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['Layers'] == [
             'arn:aws:layer1',
@@ -318,7 +695,7 @@ class TestSAMTemplate(object):
         one.resource_name = 'foo_bar'
         two.resource_name = 'foo__bar'
         with pytest.raises(package.DuplicateResourceNameError):
-            self.template_gen.generate_sam_template([one, two])
+            self.template_gen.generate([one, two])
 
     def test_role_arn_inserted_when_necessary(self):
         function = models.LambdaFunction(
@@ -337,7 +714,7 @@ class TestSAMTemplate(object):
             layers=[],
             reserved_concurrency=None,
         )
-        template = self.template_gen.generate_sam_template([function])
+        template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
@@ -360,7 +737,7 @@ class TestSAMTemplate(object):
             schedule_expression='rate(5 minutes)',
             lambda_function=function,
         )
-        template = self.template_gen.generate_sam_template(
+        template = self.template_gen.generate(
             [function, event]
         )
         resources = template['Resources']
@@ -616,7 +993,7 @@ class TestSAMTemplate(object):
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=models.AutoGenIAMPolicy(document={'iam': 'policy'}),
         )
-        template = self.template_gen.generate_sam_template([role])
+        template = self.template_gen.generate([role])
         resources = template['Resources']
         assert len(resources) == 1
         cfn_role = resources['DefaultRole']

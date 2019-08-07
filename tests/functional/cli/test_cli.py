@@ -152,6 +152,23 @@ def test_can_package_with_single_file(runner):
             assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
 
 
+def test_package_terraform_err_with_single_file_or_merge(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.package, ['--pkg-format', 'terraform',
+                                  '--single-file', 'module'])
+        assert result.exit_code == 1, result.output
+        assert "Terraform format does not support" in result.output
+
+        result = _run_cli_command(
+            runner, cli.package, ['--pkg-format', 'terraform',
+                                  '--merge-template', 'foo.json', 'module'])
+        assert result.exit_code == 1, result.output
+        assert "Terraform format does not support" in result.output
+
+
 def test_debug_flag_enables_logging(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
