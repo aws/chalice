@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.10.0
+======
 
 * Add experimental support for websockets
   (`#1017 <https://github.com/aws/chalice/issues/1017>`__)
