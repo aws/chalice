@@ -134,6 +134,7 @@ def apig_client():
 
 @pytest.fixture(scope='module')
 def smoke_test_app(tmpdir_factory):
+    sys.modules.pop('app', None)
     # We can't use the monkeypatch fixture here because this is a module scope
     # fixture and monkeypatch is a function scoped fixture.
     os.environ['APP_NAME'] = RANDOM_APP_NAME
