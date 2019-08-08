@@ -2,19 +2,26 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Add support for stage independent lambda configuration
+  (#1162 <https://github.com/aws/chalice/pull/1162>`__)
+
+
 1.10.0
 ======
 
 * Add experimental support for websockets
   (`#1017 <https://github.com/aws/chalice/issues/1017>`__)
 * API Gateway Endpoint Type Configuration
-  (`#1160 https://github.com/aws/chalice/pull/1160`__)
+  (`#1160 <https://github.com/aws/chalice/pull/1160>`__)
 * API Gateway Resource Policy Configuration
-  (`#1160 https://github.com/aws/chalice/pull/1160`__)
+  (`#1160 <https://github.com/aws/chalice/pull/1160>`__)
 * Add --merge-template option to package command
-  (`#1195 https://github.com/aws/chalice/pull/1195`__)
+  (`#1195 <https://github.com/aws/chalice/pull/1195>`__)
 * Add support for packaging via terraform
-  (`#1129 https://github.com/aws/chalice/pull/1129`__)
+  (`#1129 <https://github.com/aws/chalice/pull/1129>`__)
 
 
 1.9.1
