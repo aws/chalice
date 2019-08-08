@@ -210,9 +210,13 @@ Lambda Specific Configuration
 
 In addition to a chalice stage, there are also some configuration values
 that can be specified per Lambda function.  A chalice app can have many
-stages, and a stage can have many Lambda functions.  To configure
-per lambda configuration, you add a ``lambda_functions`` key in your
-stage configuration::
+stages, and a stage can have many Lambda functions.
+
+You have the option to specify configuration for a lambda function across
+all your stages, or for a lambda function in a specific stage.
+
+To configure per lambda configuration for a specific stage, you add a
+``lambda_functions`` key in your stage configuration::
 
   {
     "version": "2.0",
@@ -227,6 +231,20 @@ stage configuration::
       }
     }
   }
+
+To specify per lambda configuration across all stages, you add
+a top level ``lambda_functions`` key::
+
+  {
+    "version": "2.0",
+    "app_name": "app",
+    "lambda_functions": {
+      "foo": {
+        "lamba_timeout": 120
+      }
+    }
+  }
+
 
 Each key in the ``lambda_functions`` dictionary is the name of a Lambda
 function in your app.  The value is a dictionary of configuration that
