@@ -250,6 +250,49 @@ that can be applied per function:
 See the :ref:`stage-config` section above for a description
 of these config options.
 
+In general, the name of your lambda function will correspond to
+the name of the function in your app.  For example:
+
+.. code-block:: python
+
+    @app.lambda_function()
+    def foo(event, context):
+        pass
+
+To specify configuration for this function, you would use the
+key of ``foo`` in the ``lambda_functions`` configuration.
+
+There is one exception to this, which is any python function
+decorated with the ``@app.route()`` decorator.  Chalice uses
+a single Lambda function for all requests from API gateway,
+and this name is ``api_handler``.  So if you have an app
+like this:
+
+.. code-block:: python
+
+    @app.route('/')
+    def index(): pass
+
+    @app.route('/foo/bar')
+    def other_handler(): pass
+
+Then to specify configuration values for the underlying
+lambda function, which ``index()`` and ``other_handler()`` share,
+you would specify:
+
+.. code-block:: json
+
+   {
+      "lambda_functions": {
+        "api_handler": {
+          "subnet_ids": ["sn-1", "sn-2"],
+          "security_group_ids": ["sg-10", "sg-11"],
+          "layers": ["layer-arn-1", "layer-arn-2"],
+        }
+      }
+    }
+
+
 Examples
 --------
 
