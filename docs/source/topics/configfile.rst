@@ -35,126 +35,172 @@ information about chalice stages.
   section below for some stage specific configurations.
 
 The following config values can either be specified per stage config
-or as a top level key which is not tied to a specific key.  Whenever
+or as a top level key which is not tied to a specific stage.  Whenever
 a stage specific configuration value is needed, the ``stages`` mapping
 is checked first.  If no value is found then the top level keys will
 be checked.
 
-* ``api_gateway_stage`` - The name of the API gateway stage.  This
-  will also be the URL prefix for your API
-  (``https://endpoint/prefix/your-api``).
 
-* ``api_gateway_endpoint_type`` - The endpoint configuration of the
-  deployed API Gateway which determines how the API will be accessed,
-  can be EDGE, REGIONAL, PRIVATE. Note this value can only be set as a
-  top level key and defaults to EDGE. For more information see
-  https://amzn.to/2LofApt
+``api_gateway_endpoint_type``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* ``api_gateway_endpoint_vpce`` - When configuring a Private API a VPC
-  Endpoint id must be specified to configure a default resource policy on
-  the API if an explicit policy is not specified. This value can be a
-  list or a string of endpoint ids.
+The endpoint configuration of the deployed API Gateway which determines how the
+API will be accessed, can be EDGE, REGIONAL, PRIVATE. Note this value can only
+be set as a top level key and defaults to EDGE. For more information see
+https://amzn.to/2LofApt
 
-* ``api_gateway_policy_file`` - A file pointing to an IAM resource
-  policy for the REST API. If not specified chalice will autogenerate
-  this policy when endpoint_type is PRIVATE. This filename is relative
-  to the ``.chalice`` directory.
 
-* ``minimum_compression_size`` - An integer value that indicates
-  the minimum compression size to apply to the API gateway. If
-  this key is specified in both a stage specific config option
-  as well as a top level key, the stage specific key will
-  override the top level key for the given stage. For more information
-  check out the `Service Docs <https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-gzip-compression-decompression.html>`__
+``api_gateway_endpoint_vpce``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* ``manage_iam_role`` - ``true``/``false``.  Indicates if you
-  want chalice to create and update the IAM role
-  used for your application.  By default, this value is ``true``.
-  However, if you have a pre-existing role you've created, you
-  can set this value to ``false`` and a role will not be created
-  or updated.
-  ``"manage_iam_role": false`` means that you are responsible for
-  managing the role and any associated policies associated with
-  that role.  If this value is ``false`` you must specify
-  an ``iam_role_arn``, otherwise an error is raised when you
-  try to run ``chalice deploy``.
+When configuring a Private API a VPC Endpoint id must be specified to configure
+a default resource policy on the API if an explicit policy is not specified.
+This value can be a list or a string of endpoint ids.
 
-* ``iam_role_arn`` - If ``manage_iam_role`` is ``false``, you
-  must specify this value that indicates which IAM role arn to
-  use when configuration your application.  This value is only
-  used if ``manage_iam_role`` is ``false``.
 
-* ``autogen_policy`` - A boolean value that indicates if chalice
-  should try to automatically generate an IAM policy based on
-  analyzing your application source code.  The default value is
-  ``true``.  If this value is ``false`` then chalice will load
-  try to a local file in ``.chalice/policy-<stage-name>.json``
-  instead of auto-generating a policy from source code analysis.
+``api_gateway_policy_file``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* ``iam_policy_file`` - When ``autogen_policy`` is false, chalice
-  will try to load an IAM policy from disk instead of auto-generating
-  one based on source code analysis.  The default location of this
-  file is ``.chalice/policy-<stage-name>.json``, e.g
-  ``.chalice/policy-dev.json``, ``.chalice/policy-prod.json``, etc.
-  You can change the filename by providing this ``iam_policy_file``
-  config option.  This filename is relative to the ``.chalice``
-  directory.
+A file pointing to an IAM resource policy for the REST API. If not specified
+chalice will autogenerate this policy when endpoint_type is PRIVATE. This
+filename is relative to the ``.chalice`` directory.
 
-* ``environment_variables`` - A mapping of key value pairs.  These
-  key value pairs will be set as environment variables in your
-  application.  All environment variables must be strings.
-  If this key is specified in both a stage specific config option
-  as well as a top level key, the stage specific environment
-  variables will be merged into the top level keys.  See the
-  examples section below for a concrete example.
 
-* ``lambda_timeout`` - An integer representing the function execution time,
-  in seconds, at which AWS Lambda should terminate the function. The
-  default ``lambda_timeout`` is ``60`` seconds.
+``api_gateway_stage``
+~~~~~~~~~~~~~~~~~~~~~
 
-* ``lambda_memory_size`` - An integer representing the amount of memory, in
-  MB, your Lambda function is given. AWS Lambda uses this memory size
-  to infer the amount of CPU allocated to your function. The default
-  ``lambda_memory_size`` value is ``128``. The value must be a multiple of
-  64 MB.
+The name of the API gateway stage.  This will also be the URL prefix for your
+API (``https://endpoint/prefix/your-api``).
 
-* ``tags`` - A mapping of key value pairs. These key value pairs will
-  be set as the tags on the resources running your deployed
-  application. All tag keys and values must be strings. Similar to
-  ``environment_variables``, if a key is specified in both a stage
-  specific config option as well as a top level key, the stage specific
-  tags will be merged into the top level keys. By default, all chalice
-  deployed resources are tagged with the key ``'aws-chalice'`` whose
-  value is ``'version={chalice-version}:stage={stage-name}:app={app-name}'``.
-  Currently only the following chalice deployed resources are tagged:
-  Lambda functions.
 
-* ``subnet_ids`` - A list of subnet ids for VPC configuration.  This
-  value can be provided per stage as well as per Lambda function.
-  In order for this value to take effect, you must also provide the
-  ``security_group_ids`` value.  When both values are provided and
-  ``autogen_policy`` is True, chalice will automatically update your
-  IAM role with the necessary permissions to create, describe, and delete
-  ENIs.  If you are managing the IAM role policy yourself, make sure
-  to update your permissions accordingly, as described in the
-  `AWS Lambda VPC documentation`_.
+``autogen_policy``
+~~~~~~~~~~~~~~~~~~
 
-* ``security_group_ids`` - A list of security groups for VPC configuration.
-  This value can be provided per stage as well as per Lambda function.
-  In order for this value to take effect, you must also provide the
-  ``subnet_ids`` value.
+A boolean value that indicates if chalice should try to automatically generate
+an IAM policy based on analyzing your application source code.  The default
+value is ``true``.  If this value is ``false`` then chalice will load try to a
+local file in ``.chalice/policy-<stage-name>.json`` instead of auto-generating
+a policy from source code analysis.
 
-* ``reserved_concurrency`` - An integer representing each function's reserved
-  concurrency.  This value can be provided per stage as well as per Lambda
-  function. AWS Lambda reserves this value of concurrency to each lambda
-  deployed in this stage. If the value is set to 0, invocations to this
-  function are blocked. If the value is unset, there will be no reserved
-  concurrency allocations. For more information, see `AWS Documentation on
-  managing concurrency`_.
 
-* ``layers`` - A list of Lambda Layers arns. This value can be provided
-  per stage as well as per Lambda function. See `AWS Lambda Layers
-  Configuration`_.
+``environment_variables``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A mapping of key value pairs.  These key value pairs will be set as environment
+variables in your application.  All environment variables must be strings.  If
+this key is specified in both a stage specific config option as well as a top
+level key, the stage specific environment variables will be merged into the top
+level keys.  See the examples section below for a concrete example.
+
+
+``iam_policy_file``
+~~~~~~~~~~~~~~~~~~~
+
+When ``autogen_policy`` is false, chalice will try to load an IAM policy from
+disk instead of auto-generating one based on source code analysis.  The default
+location of this file is ``.chalice/policy-<stage-name>.json``, e.g
+``.chalice/policy-dev.json``, ``.chalice/policy-prod.json``, etc.  You can
+change the filename by providing this ``iam_policy_file`` config option.  This
+filename is relative to the ``.chalice`` directory.
+
+
+``iam_role_arn``
+~~~~~~~~~~~~~~~~
+
+If ``manage_iam_role`` is ``false``, you must specify this value that indicates
+which IAM role arn to use when configuration your application.  This value is
+only used if ``manage_iam_role`` is ``false``.
+
+
+``lambda_memory_size``
+~~~~~~~~~~~~~~~~~~~~~~
+
+An integer representing the amount of memory, in MB, your Lambda function is
+given. AWS Lambda uses this memory size to infer the amount of CPU allocated to
+your function. The default ``lambda_memory_size`` value is ``128``. The value
+must be a multiple of 64 MB.
+
+
+``lambda_timeout``
+~~~~~~~~~~~~~~~~~~
+
+An integer representing the function execution time, in seconds, at which AWS
+Lambda should terminate the function. The default ``lambda_timeout`` is ``60``
+seconds.
+
+
+``layers``
+~~~~~~~~~~
+
+A list of Lambda Layers arns. This value can be provided per stage as well as
+per Lambda function. See `AWS Lambda Layers Configuration`_.
+
+
+``manage_iam_role``
+~~~~~~~~~~~~~~~~~~~
+
+``true``/``false``.  Indicates if you want chalice to create and update the IAM
+role used for your application.  By default, this value is ``true``.  However,
+if you have a pre-existing role you've created, you can set this value to
+``false`` and a role will not be created or updated.  ``"manage_iam_role":
+false`` means that you are responsible for managing the role and any associated
+policies associated with that role.  If this value is ``false`` you must
+specify an ``iam_role_arn``, otherwise an error is raised when you try to run
+``chalice deploy``.
+
+
+``minimum_compression_size``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An integer value that indicates the minimum compression size to apply to the
+API gateway. If this key is specified in both a stage specific config option as
+well as a top level key, the stage specific key will override the top level key
+for the given stage. For more information check out the `Service Docs
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-gzip-compression-decompression.html>`__
+
+
+``reserved_concurrency``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+An integer representing each function's reserved concurrency.  This value can
+be provided per stage as well as per Lambda function. AWS Lambda reserves this
+value of concurrency to each lambda deployed in this stage. If the value is set
+to 0, invocations to this function are blocked. If the value is unset, there
+will be no reserved concurrency allocations. For more information, see `AWS
+Documentation on managing concurrency`_.
+
+
+``subnet_ids``
+~~~~~~~~~~~~~~
+
+A list of subnet ids for VPC configuration.  This value can be provided per
+stage as well as per Lambda function.  In order for this value to take effect,
+you must also provide the ``security_group_ids`` value.  When both values are
+provided and ``autogen_policy`` is True, chalice will automatically update your
+IAM role with the necessary permissions to create, describe, and delete ENIs.
+If you are managing the IAM role policy yourself, make sure to update your
+permissions accordingly, as described in the `AWS Lambda VPC documentation`_.
+
+
+``security_group_ids``
+~~~~~~~~~~~~~~~~~~~~~~
+
+A list of security groups for VPC configuration.  This value can be provided
+per stage as well as per Lambda function.  In order for this value to take
+effect, you must also provide the ``subnet_ids`` value.
+
+
+``tags``
+~~~~~~~~
+
+A mapping of key value pairs. These key value pairs will be set as the tags on
+the resources running your deployed application. All tag keys and values must
+be strings. Similar to ``environment_variables``, if a key is specified in both
+a stage specific config option as well as a top level key, the stage specific
+tags will be merged into the top level keys. By default, all chalice deployed
+resources are tagged with the key ``'aws-chalice'`` whose value is
+``'version={chalice-version}:stage={stage-name}:app={app-name}'``.  Currently
+only the following chalice deployed resources are tagged: Lambda functions.
 
 
 .. _lambda-config:
@@ -187,18 +233,18 @@ function in your app.  The value is a dictionary of configuration that
 will be applied to that function.  These are the configuration options
 that can be applied per function:
 
-* ``iam_policy_file``
-* ``lambda_memory_size``
-* ``lambda_timeout``
-* ``iam_role_arn``
-* ``manage_iam_role``
 * ``autogen_policy``
 * ``environment_variables``
-* ``tags``
-* ``subnet_ids``
-* ``security_group_ids``
-* ``reserved_concurrency``
+* ``iam_policy_file``
+* ``iam_role_arn``
+* ``lambda_memory_size``
+* ``lambda_timeout``
 * ``layers``
+* ``manage_iam_role``
+* ``reserved_concurrency``
+* ``security_group_ids``
+* ``subnet_ids``
+* ``tags``
 
 
 See the :ref:`stage-config` section above for a description
