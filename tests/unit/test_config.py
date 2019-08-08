@@ -139,20 +139,58 @@ def test_can_chain_chalice_stage_values():
 def test_can_chain_function_values():
     disk_config = {
         'lambda_timeout': 10,
+        'lambda_functions': {
+            'api_handler': {
+                'lambda_timeout': 15,
+                }
+            },
         'stages': {
             'dev': {
                 'lambda_timeout': 20,
                 'lambda_functions': {
                     'api_handler': {
                         'lambda_timeout': 30,
+                        }
                     }
                 }
             }
         }
-    }
     c = Config(chalice_stage='dev',
                config_from_disk=disk_config)
     assert c.lambda_timeout == 30
+
+
+def test_can_set_stage_independent_function_values():
+    disk_config = {
+        'lambda_timeout': 10,
+        'lambda_functions': {
+            'api_handler': {
+                'lambda_timeout': 15,
+                }
+            }
+        }
+    c = Config(chalice_stage='dev',
+               config_from_disk=disk_config)
+    assert c.lambda_timeout == 15
+
+
+def test_stage_overrides_function_values():
+    disk_config = {
+        'lambda_timeout': 10,
+        'lambda_functions': {
+            'api_handler': {
+                'lambda_timeout': 15,
+                }
+            },
+        'stages': {
+            'dev': {
+                'lambda_timeout': 20,
+                }
+            }
+        }
+    c = Config(chalice_stage='dev',
+               config_from_disk=disk_config)
+    assert c.lambda_timeout == 20
 
 
 def test_can_create_scope_obj_with_new_function():
