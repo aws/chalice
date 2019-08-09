@@ -214,12 +214,16 @@ Chalice
         is created in the S3 bucket.
 
       :param prefix: An optional key prefix.  This specifies that
-        the lambda function should only be invoked if the key matches
-        this prefix (e.g. ``prefix='images/'``).
+        the lambda function should only be invoked if the key starts with
+        this prefix (e.g. ``prefix='images/'``).  Note that this value
+        is not a glob (e.g. ``images/*``), it is a literal string match
+        for the start of the key.
 
       :param suffix: An optional key suffix.  This specifies that the
         lambda function should only be invoked if the key name ends with
-        this suffix (e.g. ``suffix='.jpg'``).
+        this suffix (e.g. ``suffix='.jpg'``).  Note that this value is
+        not a glob (e.g. ``*.txt``), it is a literal string match for
+        the end of the key.
 
       :param name: The name of the function to use.  This name is combined
         with the chalice app name as well as the stage name to create the
