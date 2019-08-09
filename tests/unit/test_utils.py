@@ -1,3 +1,4 @@
+import os
 import re
 import mock
 import sys
@@ -48,15 +49,27 @@ class TestChaliceZip(object):
     def test_chalice_zip_file(self, tmpdir):
         tmpdir.mkdir('foo').join('app.py').write('# Test app')
         zip_path = tmpdir.join('app.zip')
+        app_filename = str(tmpdir.join('foo', 'app.py'))
+        # Add an executable file to test preserving permissions.
+        script_obj = tmpdir.join('foo', 'myscript.sh')
+        script_obj.write('echo foo')
+        script_file = str(script_obj)
+        os.chmod(script_file, 0o755)
 
-        with utils.ChaliceZipFile(str(zip_path), 'w') as f:
-            f.write(str(tmpdir.join('foo', 'app.py')))
+        with utils.ChaliceZipFile(str(zip_path), 'w') as z:
+            z.write(app_filename)
+            z.write(script_file)
 
-        with utils.ChaliceZipFile(str(zip_path)) as f:
-            assert len(f.infolist()) == 1
-            info = f.getinfo(tmpdir.join('foo', 'app.py'))
-            assert info.date_time == (1980, 1, 1, 0, 0, 0)
-            assert info.external_attr == 27525120
+        with utils.ChaliceZipFile(str(zip_path)) as z:
+            assert len(z.infolist()) == 2
+            # Remove the leading '/'.
+            app = z.getinfo(app_filename[1:])
+            assert app.date_time == (1980, 1, 1, 0, 0, 0)
+            assert app.external_attr >> 16 == os.stat(app_filename).st_mode
+            # Verify executable permission is preserved.
+            script = z.getinfo(script_file[1:])
+            assert script.date_time == (1980, 1, 1, 0, 0, 0)
+            assert script.external_attr >> 16 == os.stat(script_file).st_mode
 
 
 class TestPipeReader(object):

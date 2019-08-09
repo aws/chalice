@@ -2,6 +2,7 @@ import os
 import zipfile
 import json
 import mock
+import hashlib
 
 from pytest import fixture
 import pytest
@@ -72,6 +73,30 @@ def test_can_inject_latest_app(tmpdir, chalice_deployer):
     with zipfile.ZipFile(name) as f:
         contents = f.read('app.py')
         assert contents == b'# Test app NEW VERSION'
+
+
+@slow
+def test_zipfile_hash_only_based_on_contents(tmpdir, chalice_deployer):
+    appdir = _create_app_structure(tmpdir)
+    appdir.join('app.py').write('# Test app v1')
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
+    with open(name, 'rb') as f:
+        original_checksum = hashlib.md5(f.read()).hexdigest()
+
+    # Now we'll modify the file our app file with the same contents
+    # but it will change the mtime.
+    app_file = appdir.join('app.py')
+    app_file.write('# Test app v1')
+    # Set the mtime to something different (1990-1-1T00:00:00).
+    # This would normally result in the zipfile having a different
+    # checksum.
+    os.utime(str(app_file), (631152000.0, 631152000.0))
+    name = chalice_deployer.create_deployment_package(
+        str(appdir), 'python2.7')
+    with open(name, 'rb') as f:
+        new_checksum = hashlib.md5(f.read()).hexdigest()
+    assert new_checksum == original_checksum
 
 
 @slow

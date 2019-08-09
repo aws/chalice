@@ -14,6 +14,7 @@ import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO, Text  # noqa
 from typing import Optional, Union  # noqa
 from typing import MutableMapping  # noqa
+from typing import cast  # noqa
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -100,23 +101,49 @@ class ChaliceZipFile(zipfile.ZipFile):
     """Support deterministic zipfile generation.
 
     Normalizes datetime and permissions.
+
     """
 
-    compression = 0  # try to make mypy happy
+    compression = 0  # Try to make mypy happy.
+    _default_time_time = (1980, 1, 1, 0, 0, 0)
+
+    def __init__(self, *args, **kwargs):
+        # type: (Any, Any) -> None
+        self._osutils = cast(OSUtils, kwargs.pop('osutils', OSUtils()))
+        super(ChaliceZipFile, self).__init__(*args, **kwargs)
 
     # pylint: disable=W0221
     def write(self, filename, arcname=None, compress_type=None):
         # type: (Text, Optional[Text], Optional[int]) -> None
-        # Only supports files, py2.7 and 3 have different signatures
+        # Only supports files, py2.7 and 3 have different signatures.
+        # We know that in our packager code we never call write() on
+        # directories.
+        zinfo = self._create_zipinfo(filename, arcname, compress_type)
+        with open(filename, 'rb') as f:
+            self.writestr(zinfo, f.read())
 
-        info = zipfile.ZipInfo(arcname or filename)
-        # Grant other users permissions to read,
-        # else lambda blows up with mysterious error.
-        # http://unix.stackexchange.com/questions/14705/
-        info.external_attr = 0o644 << 16
-        info.compress_type = compress_type or self.compression
-        with open(filename, 'rb') as fh:
-            self.writestr(info, fh.read())
+    def _create_zipinfo(self, filename, arcname, compress_type):
+        # type: (Text, Optional[Text], Optional[int]) -> zipfile.ZipInfo
+        # The main thing that prevents deterministic zip file generation
+        # is that the mtime of the file is included in the zip metadata.
+        # We don't actually care what the mtime is when we run on lambda,
+        # so we always set it to the default value (which comes from
+        # zipfile.py).  This ensures that as long as the file contents don't
+        # change (or the permissions) then we'll always generate the exact
+        # same zip file bytes.
+        # We also can't use ZipInfo.from_file(), it's only in python3.
+        st = self._osutils.stat(str(filename))
+        if arcname is None:
+            arcname = filename
+        arcname = self._osutils.normalized_filename(str(arcname))
+        arcname = arcname.lstrip(os.sep)
+        zinfo = zipfile.ZipInfo(arcname, self._default_time_time)
+        # The external_attr needs the upper 16 bits to be the file mode
+        # so we have to shift it up to the right place.
+        zinfo.external_attr = (st.st_mode & 0xFFFF) << 16
+        zinfo.file_size = st.st_size
+        zinfo.compress_type = compress_type or self.compression
+        return zinfo
 
 
 def create_zip_file(source_dir, outfile):
@@ -130,7 +157,8 @@ def create_zip_file(source_dir, outfile):
 
     """
     with ChaliceZipFile(outfile, 'w',
-                        compression=zipfile.ZIP_DEFLATED) as z:
+                        compression=zipfile.ZIP_DEFLATED,
+                        osutils=OSUtils()) as z:
         for root, _, filenames in os.walk(source_dir):
             for filename in filenames:
                 full_name = os.path.join(root, filename)
@@ -151,7 +179,8 @@ class OSUtils(object):
 
     def open_zip(self, filename, mode, compression=ZIP_DEFLATED):
         # type: (str, str, int) -> zipfile.ZipFile
-        return zipfile.ZipFile(filename, mode, compression=compression)
+        return ChaliceZipFile(filename, mode, compression=compression,
+                              osutils=self)
 
     def remove_file(self, filename):
         # type: (str) -> None
@@ -270,6 +299,20 @@ class OSUtils(object):
     def mtime(self, path):
         # type: (str) -> int
         return os.stat(path).st_mtime
+
+    def stat(self, path):
+        # type: (str)  -> os.stat_result
+        return os.stat(path)
+
+    def normalized_filename(self, path):
+        # type: (str) -> str
+        """Normalize a path into a filename.
+
+        This will normalize a file and remove any 'drive' component
+        from the path on OSes that support drive specifications.
+
+        """
+        return os.path.normpath(os.path.splitdrive(path)[1])
 
     @property
     def pipe(self):
