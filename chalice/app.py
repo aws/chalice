@@ -1211,7 +1211,7 @@ class AuthResponse(object):
         return allowed_resources
 
     def _generate_arn(self, route, request, method='*'):
-        incoming_arn = request.method_arn
+        incoming_arn = request.method_arn.split('?')[0]
         parts = incoming_arn.rsplit(':', 1)
         # "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth"
         # Then we pull out the rest-api-id and stage, such that:
