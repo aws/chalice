@@ -460,6 +460,8 @@ def test_custom_response(smoke_test_app):
     response.raise_for_status()
     # Custom header
     assert response.headers['Content-Type'] == 'text/plain'
+    # Multi headers
+    assert response.headers['Set-Cookie'] == 'key=value, foo=bar'
     # Custom status code
     assert response.status_code == 204
 

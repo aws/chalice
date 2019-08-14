@@ -639,13 +639,22 @@ def test_can_return_response_object(create_event):
 
     @demo.route('/index')
     def index_view():
-        return app.Response(status_code=200, body={'foo': 'bar'},
-                            headers={'Content-Type': 'application/json'})
+        return app.Response(
+            status_code=200,
+            body={'foo': 'bar'},
+            headers={'Content-Type': 'application/json'},
+            multi_value_headers={'Set-Cookie': ['key=value', 'foo=bar']}
+        )
 
     event = create_event('/index', 'GET', {})
     response = demo(event, context=None)
-    assert response == {'statusCode': 200, 'body': '{"foo":"bar"}',
-                        'headers': {'Content-Type': 'application/json'}}
+    assert response == {
+        'statusCode': 200,
+        'body': '{"foo":"bar"}',
+
+        'headers': {'Content-Type': 'application/json'},
+        'multiValueHeaders': {'Set-Cookie': ['key=value', 'foo=bar']},
+    }
 
 
 def test_headers_have_basic_validation(create_event):

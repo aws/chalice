@@ -73,6 +73,7 @@ class Request:
 
 class Response:
     headers = ... # type: Dict[str, str]
+    multi_value_headers = ... # type: Dict[str, List[str]]
     body = ...  # type: Any
     status_code = ... # type: int
 

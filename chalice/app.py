@@ -410,11 +410,15 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200):
+    def __init__(self, body, headers=None, status_code=200,
+                 multi_value_headers=None):
         self.body = body
         if headers is None:
             headers = {}
         self.headers = headers
+        if multi_value_headers is None:
+            multi_value_headers = {}
+        self.multi_value_headers = multi_value_headers
         self.status_code = status_code
 
     def to_dict(self, binary_types=None):
@@ -424,6 +428,7 @@ class Response(object):
                               default=handle_extra_types)
         response = {
             'headers': self.headers,
+            'multiValueHeaders': self.multi_value_headers,
             'statusCode': self.status_code,
             'body': body
         }

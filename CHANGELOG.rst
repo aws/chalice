@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Fix mouting blueprints with root routes
   (`#1230 <https://github.com/aws/chalice/pull/1230>`__)
+* Add support for multi-value headers responses
+  (`#1205 <https://github.com/aws/chalice/pull/1205>`__)
 
 
 1.11.0
