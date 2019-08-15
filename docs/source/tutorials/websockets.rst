@@ -176,11 +176,11 @@ To tear down the example. Just run::
     Deleting function: arn:aws:lambda:us-west-2:0123456789:function:echo-server-dev-websocket_message
     Deleting IAM role: echo-server-dev
 
+
 Chat Server Example
 -------------------
 
-
-Note::
+.. note::
 
   This example is for illustration purposes and does not represent best
   practices.
@@ -210,211 +210,189 @@ next script will need it as well::
 
   $ pip install -r requirements.txt
 
-To set up the DynamoDB table use the following script. Create a new file
-in the root of the project called ``create-resources.py``.
+Unlike our previous example where we used ``chalice deploy``, we will use
+``chalice package`` to create a CloudFormation template. The AWS CLI will be
+used to deploy the template. To install the AWS CLI run the command::
 
+  $ pip install -U awscli
 
-.. code-block:: python
-   :caption: create-resources.py
+Starting in Chalice 1.10, the package command has a ``--merge-template``
+argument that allows us to merge in a custom JSON file to the generated
+CloudFormation template. Since Chalice does not have any built-in support for
+DynamoDB currently, we will make a ``resources.json`` file with the DynamoDB
+definition. The template file will set the environment variable TABLE in all
+our Lambda functions as a CloudFormatiion reference to the DynamoDB table.
+Finally, the template will also override our IAM policy with a custom one to
+allow all the DynamoDB operations our application will need.
 
-   import json
+Below is the JSON file that contains all of our custom Cloudformation.
 
-   import boto3
+.. code-block:: json
+   :caption: resources.json
 
-
-   def iam_policy(table_arn):
-       resources = [
-           table_arn,
-           '%s/index/ReverseLookup' % table_arn,
-       ]
-       return {
-           "Version": "2012-10-17",
-           "Statement": [
-               {
-                   "Effect": "Allow",
-                   "Action": [
-                       "dynamodb:DeleteItem",
-                       "dynamodb:PutItem",
-                       "dynamodb:GetItem",
-                       "dynamodb:UpdateItem",
-                       "dynamodb:Query",
-                       "dynamodb:Scan"
-                   ],
-                   "Resource": resources,
-               },
-               {
-                   "Effect": "Allow",
-                   "Action": [
-                       "logs:CreateLogGroup",
-                       "logs:CreateLogStream",
-                       "logs:PutLogEvents"
-                   ],
-                   "Resource": "arn:aws:logs:*:*:*"
-               },
-               {
-                   "Effect": "Allow",
-                   "Action": [
-                       "execute-api:ManageConnections"
-                   ],
-                   "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
-               }
-           ]
+   {
+     "Resources": {
+       "ChaliceChatTable": {
+	 "Type" : "AWS::DynamoDB::Table",
+	 "Properties" : {
+	   "AttributeDefinitions" : [
+	     {
+	       "AttributeName": "PK",
+	       "AttributeType": "S"
+	     },
+	     {
+	       "AttributeName": "SK",
+	       "AttributeType": "S"
+	     }
+	   ],
+	   "KeySchema" : [
+	     {
+	       "AttributeName" : "PK",
+	       "KeyType" : "HASH"
+	     },{
+	       "AttributeName" : "SK",
+	       "KeyType" : "RANGE"
+	     }
+	   ],
+	   "GlobalSecondaryIndexes": [
+	     {
+	       "IndexName" : "ReverseLookup",
+	       "KeySchema" : [
+		 {
+		   "AttributeName" : "SK",
+		   "KeyType" : "HASH"
+		 },
+		 {
+		   "AttributeName" : "PK",
+		   "KeyType" : "RANGE"
+		 }
+	       ],
+	       "Projection" : {
+		 "ProjectionType": "ALL"
+	       },
+	       "ProvisionedThroughput": {
+		 "ReadCapacityUnits": 1,
+		 "WriteCapacityUnits": 1
+	       }
+	     }
+	   ],
+	   "ProvisionedThroughput" : {
+	     "ReadCapacityUnits": 1,
+	     "WriteCapacityUnits": 1
+	   },
+	   "TableName": "ChaliceChat"
+	 }
+       },
+       "WebsocketConnect": {
+	 "Properties": {
+	   "Environment": {
+	     "Variables": {
+	       "TABLE": {"Ref": "ChaliceChatTable"}
+	     }
+	   }
+	 }
+       },
+       "WebsocketMessage": {
+	 "Properties": {
+	   "Environment": {
+	     "Variables": {
+	       "TABLE": {"Ref": "ChaliceChatTable"}
+	     }
+	   }
+	 }
+       },
+       "WebsocketDisconnect": {
+	 "Properties": {
+	   "Environment": {
+	     "Variables": {
+	       "TABLE": {"Ref": "ChaliceChatTable"}
+	     }
+	   }
+	 }
+       },
+       "DefaultRole": {
+	 "Type": "AWS::IAM::Role",
+	 "Properties": {
+	   "AssumeRolePolicyDocument": {
+	     "Version": "2012-10-17",
+	     "Statement": [
+	       {
+		 "Sid": "",
+		 "Effect": "Allow",
+		 "Principal": {
+		   "Service": "lambda.amazonaws.com"
+		 },
+		 "Action": "sts:AssumeRole"
+	       }
+	     ]
+	   },
+	   "Policies": [
+	     {
+	       "PolicyName": "DefaultRolePolicy",
+	       "PolicyDocument": {
+		 "Version": "2012-10-17",
+		 "Statement": [
+		   {
+		     "Effect": "Allow",
+		     "Action": [
+		       "logs:CreateLogGroup",
+		       "logs:CreateLogStream",
+		       "logs:PutLogEvents"
+		     ],
+		     "Resource": "arn:aws:logs:*:*:*"
+		   },
+		   {
+		     "Effect": "Allow",
+		     "Action": [
+		       "execute-api:ManageConnections"
+		     ],
+		     "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
+		   },
+		   {
+		     "Effect": "Allow",
+		     "Action": [
+		       "dynamodb:DeleteItem",
+		       "dynamodb:PutItem",
+		       "dynamodb:GetItem",
+		       "dynamodb:UpdateItem",
+		       "dynamodb:Query",
+		       "dynamodb:Scan"
+		     ],
+		     "Resource": [
+		       {
+			 "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}"
+		       },
+		       {
+			 "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup"
+		       }
+		     ]
+		   }
+		 ]
+	       }
+	     }
+	   ]
+	 }
        }
-
-
-   def main():
-       ddb = boto3.client('dynamodb')
-       result = ddb.create_table(
-           AttributeDefinitions=[
-               {
-                   'AttributeName': 'PK',
-                   'AttributeType': 'S',
-               },
-               {
-                   'AttributeName': 'SK',
-                   'AttributeType': 'S',
-               },
-           ],
-           TableName='ChaliceChatTable',
-           KeySchema=[
-               {
-                   'AttributeName': 'PK',
-                   'KeyType': 'HASH',
-               },
-               {
-                   'AttributeName': 'SK',
-                   'KeyType': 'RANGE',
-               },
-           ],
-           ProvisionedThroughput={
-               'ReadCapacityUnits': 5,
-               'WriteCapacityUnits': 5,
-           },
-           GlobalSecondaryIndexes=[
-               {
-                   'IndexName': 'ReverseLookup',
-                   'KeySchema': [
-                       {
-                           'AttributeName': 'SK',
-                           'KeyType': 'HASH',
-                       },
-                       {
-                           'AttributeName': 'PK',
-                           'KeyType': 'RANGE',
-                       },
-                   ],
-                   'Projection': {
-                       'ProjectionType': 'ALL',
-                   },
-                   'ProvisionedThroughput': {
-                       'ReadCapacityUnits': 1,
-                       'WriteCapacityUnits': 1,
-                   }
-               },
-           ],
-       )
-       table_arn = result['TableDescription']['TableArn']
-       with open('.chalice/config.json', 'r') as f:
-           config = json.loads(f.read())
-
-       config['stages']['dev']['environment_variables'] = {
-           'TABLE': 'ChaliceChatTable',
-       }
-       config['autogen_policy'] = False
-
-       with open('.chalice/config.json', 'w') as f:
-           f.write(json.dumps(config, indent=2))
-
-       with open('.chalice/policy-dev.json', 'w') as f:
-           f.write(json.dumps(iam_policy(table_arn), indent=2))
-
-
-   if __name__ == "__main__":
-        main()
+     }
+   }
 
 
 The current directory layout should now look like this::
 
- tree -a .
+ $ tree -a .
  .
  ├── .chalice
  │   └── config.json
  ├── .gitignore
  ├── app.py
- ├── create-resources.py
+ ├── resources.json
  └── requirements.txt
 
  1 directory, 5 files
 
-Run the python script we just created (``create-resources.py``), which will
-deploy our DynamoDB table, and setup the Chalice configuration to have an
-environment variable with the table name in it, as well as a policy that allows
-the Lambda function to access the table::
-
-  $ python create-resources.py
-
-
-You can verify the configuration is correct by checking config file looks
-correct::
-
-  $ cat .chalice/config.json
-  {
-    "version": "2.0",
-    "app_name": "chalice-chat-example",
-    "stages": {
-      "dev": {
-        "api_gateway_stage": "api",
-        "environment_variables": {
-          "TABLE": "ChaliceChatTable"
-        }
-      }
-    },
-    "autogen_policy": false
-  }
-
-And the policy file is correct::
-
-  $ cat .chalice/policy-dev.json
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": [
-          "dynamodb:DeleteItem",
-          "dynamodb:PutItem",
-          "dynamodb:GetItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:Query",
-          "dynamodb:Scan"
-        ],
-        "Resource": [
-          "arn:aws:dynamodb:{region}:{id}:table/ChaliceChatTable",
-          "arn:aws:dynamodb:{region}:{id}:table/ChaliceChatTable/index/ReverseLookup"
-        ]
-      },
-      {
-        "Effect": "Allow",
-        "Action": [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        "Resource": "arn:aws:logs:*:*:*"
-      },
-      {
-        "Effect": "Allow",
-        "Action": [
-          "execute-api:ManageConnections"
-        ],
-        "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
-      }
-    ]
-  }
-
 
 Next let's fill out the ``app.py`` file since it is pretty simple. Most of this
-example is contained in the ``chalicelib/`` directory.
+example code is contained in the ``chalicelib/`` directory.
 
 .. code-block:: python
    :caption: chalice-chat-example/app.py
@@ -457,11 +435,10 @@ Similar to the previous example. We need to use ``boto3`` to construct a
 Session and pass it to ``app.websocket_api.session``. We opt into the
 usage of the ``WEBSOCKET`` experimental feature. Most of the actual work is
 done in some classes that we import from ``chalicelib/``. These classes are
-detailed below, and the various parts are explained in comments and Doc
+detailed below, and the various parts are explained in comments and doc
 strings. In addition to the previous example, we register a handler for
 ``on_ws_connect`` and ``on_ws_disconnect`` to handle events from API gateway
 when a new socket is trying to connect, or an existing socket is disconnected.
-
 
 Finally before being able to deploy and test the app out, we need to fill out
 the chalicelib directory. This is the bulk of the app and it is explained
@@ -493,10 +470,14 @@ following file.
        def from_env(cls):
            """Create table from the environment.
 
-           The environment variable TABLE is assumed to be present
-           as it is set by the create-resources.py file.
+           The environment variable TABLE is present for a deployed application
+           since it is set in all of the Lambda functions by a CloudFormation
+	   reference. We default to '', which will happen when we run
+	   ``chalice package`` since it loads the application, and no
+	   environment variable has been set. For local testing, a value should
+	   be manually set in the environment if '' will not suffice.
            """
-           table_name = os.environ.get('TABLE')
+           table_name = os.environ.get('TABLE', '')
            table = boto3.resource('dynamodb').Table(table_name)
            return cls(table)
 
@@ -523,7 +504,7 @@ following file.
        def set_username(self, connection_id, old_name, username):
            """Set the username.
 
-           The SK entry that goes with this conneciton id that starts
+           The SK entry that goes with this connection id that starts
            with username_ is taken to be the username. The previous
            entry needs to be deleted, and a new entry needs to be
            written.
@@ -991,32 +972,48 @@ The final directory layout should be ::
     .
     ├── .chalice
     │   ├── config.json
-    │   └── policy-dev.json
     ├── .gitignore
     ├── app.py
     ├── chalicelib
     │   └── __init__.py
-    ├── create-resources.py
+    ├── resources.json
     └── requirements.txt
 
-    2 directories, 7 files
+    2 directories, 6 files
 
 
-To deploy the app run the following command::
+Deploying our app with CloudFormation requires 3 steps. First we use Chalice
+to package our app into a JSON CloudFormation template::
 
-   $ chalice deploy
-   Creating deployment package.
-   Creating IAM role: chalice-chat-example-dev-websocket_handler
-   Creating lambda function: chalice-chat-example-dev-websocket_handler
-   Creating websocket api: chalice-chat-example-dev-websocket-api
-   Resources deployed:
-     - Lambda ARN: arn:aws:lambda:::chalice-chat-example-dev-websocket_handler
-     - Websocket API URL: wss://{id}.execute-api.{region}.amazonaws.com/api/
+  $ chalice package --merge-template resources.json out
 
-Once deployed we can take the ``Websocket API URL`` and connect to it in the
-same way we did in the previous example using the ``wsdump.py`` command line
-tool. Below is a sample of two running clients, the first message sent to the
-server is used as the client's username.
+This will result in a new directory called ``out`` being created, inside which
+there is a ``sam.json`` file. This template contains our Chalice app as a
+CloudFormation template, merged with our ``resources.json`` template.
+
+Next we use the AWS CLI to package this template, and prepare it for
+deployment. In order for this to work you will need to replace ``$BUCKET``
+with the name of a bucket you control::
+
+  $ aws cloudformation package  --template-file out/sam.json --s3-bucket $BUCKET --output-template-file out/template.yml
+
+Once this is complete, a new template should be located at ``out/template.yml``
+this is the final CloudFormation template which is ready for deployment.
+Deploying it with the AWS CLI can be done with the following command::
+
+  $ aws cloudformation deploy --template-file out/template.yml --stack-name ChaliceChat --capabilities CAPABILITY_IAM
+
+This command should wait awhile, and once it exits the app should be ready. To
+get the websocket connection URL, we can use the AWS CLI again to check the
+stack output ``WebsocketConnectEndpointURL``::
+
+  $ aws cloudformation describe-stacks --stack-name ChaliceChat --query "Stacks[0].Outputs[?OutputKey=='WebsocketConnectEndpointURL'].OutputValue" --output text
+  wss://{id}.execute-api.{region}.amazonaws.com/api/
+
+
+Once deployed we can take the result of the previous command and connect to it
+using ``wsdump.py``. Below is a sample of two running clients, the first
+message sent to the server is used as the client's username.
 
 
 .. code-block:: bash
@@ -1057,7 +1054,7 @@ server is used as the client's username.
    < Left chat room "chalice"
    > /ls
    < chalice
-   > Ctrl-C
+   > Ctrl-D
 
 .. code-block:: bash
    :caption: client-2
@@ -1102,12 +1099,9 @@ server is used as the client's username.
    < chalice
    > /nick
    < Current nickname: JennyJones
-   > Ctrl-C
+   > Ctrl-D
 
 
-To delete the resources you can run chalice delete and use the AWS CLI
-to delete the DynamoDB table::
+To delete the resources you can run use the AWS CLI to delete the stack::
 
-  $ chalice delete
-  $ pip install -U awscli
-  $ aws dynamodb delete-table --table-name ChaliceChatTable
+  $ aws cloudformation delete-stack --stack-name ChaliceChat
