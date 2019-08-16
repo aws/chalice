@@ -25,7 +25,7 @@ from chalice.app import (
     BadRequestError,
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
-)
+    _get_multipart_upload_files)
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -51,6 +51,16 @@ HTTP_REQUEST = st.fixed_dictionaries({
     'is_base64_encoded': st.booleans(),
 })
 BINARY_TYPES = APIGateway().binary_types
+
+MULTIPART_REQUEST_BODY = b'--513716970da13ba7b3a9355eb790964e\r\n' \
+                         b'Content-Disposition: form-data; name="key"' \
+                         b'\r\n\r\nvalue\r\n' \
+                         b'--513716970da13ba7b3a9355eb790964e' \
+                         b'\r\nContent-Disposition: ' \
+                         b'form-data; name="file.txt"; ' \
+                         b'filename="file.txt"\r\n\r\n' \
+                         b'example file content\r\n' \
+                         b'--513716970da13ba7b3a9355eb790964e--\r\n'
 
 
 class FakeLambdaContextIdentity(object):
@@ -2704,3 +2714,71 @@ def test_does_raise_on_invalid_json_wbsocket_body(create_websocket_event):
 
     event = create_websocket_event('$default', body='foo bar')
     demo(event, context=None)
+
+
+def test_can_get_multipart_upload_files():
+    files = _get_multipart_upload_files(
+        MULTIPART_REQUEST_BODY,
+        "multipart/form-data; boundary=513716970da13ba7b3a9355eb790964e"
+    )
+    assert len(files) == 1
+    assert files[0].name == "file.txt"
+    assert files[0].content.read() == b'example file content\r\n--'
+    assert files[0].size == 24
+
+
+def test_does_raise_on_missing_boundary():
+    with pytest.raises(KeyError):
+        _get_multipart_upload_files(
+            MULTIPART_REQUEST_BODY, "multipart/form-data"
+        )
+
+
+def test_can_access_request_files():
+    request = app.Request(
+        {},
+        {'Content-Type': "multipart/form-data; "
+                         "boundary=513716970da13ba7b3a9355eb790964e"},
+        {}, 'POST', MULTIPART_REQUEST_BODY, {}, {}, False
+    )
+    assert len(request.files) == 1
+    assert isinstance(request.files[0], app.File)
+
+
+def test_request_files_does_raise_on_missing_boundary():
+    request = app.Request(
+        {}, {'Content-Type': "multipart/form-data"},
+        {}, 'POST', MULTIPART_REQUEST_BODY, {}, {}, False
+    )
+    with pytest.raises(BadRequestError) as exc:
+        request.files
+    assert str(exc.value) == "BadRequestError: Missing boundary"
+
+
+def test_request_files_wrong_content_type():
+    request = app.Request(
+        {}, {'Content-Type': "application/json"},
+        {}, 'POST', json.dumps({}), {}, {}, False
+    )
+
+    assert request.files is None
+
+
+def test_request_files_malformed_data():
+    request = app.Request(
+        {}, {'Content-Type': "multipart/form-data; "
+                             "boundary=513716970da13ba7b3a9355eb790964e"},
+        {}, 'POST', b'some malformed data', {}, {}, False
+    )
+
+    assert request.files == []
+
+
+def test_request_files_empty_body():
+    request = app.Request(
+        {}, {'Content-Type': "multipart/form-data; "
+                             "boundary=513716970da13ba7b3a9355eb790964e"},
+        {}, 'POST', b'', {}, {}, False
+    )
+
+    assert request.files == []
