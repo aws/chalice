@@ -6,6 +6,7 @@ Topics
 
    routing
    views
+   middleware
    configfile
    multifile
    logging

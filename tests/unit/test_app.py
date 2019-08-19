@@ -1,3 +1,4 @@
+import functools
 import sys
 import base64
 import logging
@@ -25,7 +26,7 @@ from chalice.app import (
     BadRequestError,
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
-)
+    Middleware)
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -2713,3 +2714,42 @@ def test_does_raise_on_invalid_json_wbsocket_body(create_websocket_event):
 
     event = create_websocket_event('$default', body='foo bar')
     demo(event, context=None)
+
+
+def test_middleware_can_call_view_function():
+    def view(arg):
+        return arg
+
+    middleware = Middleware(functools.partial(view, arg='foo bar'))
+
+    assert middleware() == 'foo bar'
+
+
+def test_get_middleware_chain_no_middlewares():
+    demo = app.Chalice('app-name')
+
+    @demo.route('/index')
+    def index_view(arg):
+        return arg
+
+    get_response = demo._get_middleware_chain(index_view, {'arg': 'foo bar'})
+
+    assert get_response().body == 'foo bar'
+
+
+def test_can_modify_request_in_middleware(create_event):
+    class JsonFooBarMiddleware(Middleware):
+        def __call__(self, *args, **kwargs):
+            demo.current_request._json_body = {'foo': 'bar'}
+            return super(JsonFooBarMiddleware, self).__call__(*args, **kwargs)
+
+    demo = app.Chalice('app-name')
+    demo.middlewares = [JsonFooBarMiddleware]
+
+    @demo.route('/index')
+    def index_view():
+        return demo.current_request.json_body
+
+    event = create_event('/index', 'GET', {})
+    response = demo(event, context=None)
+    assert json_response_body(response) == {'foo': 'bar'}

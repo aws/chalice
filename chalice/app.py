@@ -1,5 +1,6 @@
 """Chalice app and routing code."""
 # pylint: disable=too-many-lines,ungrouped-imports
+import functools
 import re
 import sys
 import os
@@ -375,6 +376,15 @@ class CORSConfig(object):
             return self.get_access_control_headers() == \
                 other.get_access_control_headers()
         return False
+
+
+class Middleware(object):
+    """Base middleware class."""
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        return self.func()
 
 
 class Request(object):
@@ -966,6 +976,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         # This is marked as internal but is intended to be used by
         # any code within Chalice.
         self._features_used = set()
+        self.middlewares = []
 
     def _initialize(self, env):
         if self.configure_logs:
@@ -1091,8 +1102,8 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                     http_status_code=415,
                     headers=cors_headers
                 )
-        response = self._get_view_function_response(view_function,
-                                                    function_args)
+        get_response = self._get_middleware_chain(view_function, function_args)
+        response = get_response()
         if cors_headers is not None:
             self._add_cors_headers(response, cors_headers)
 
@@ -1129,6 +1140,16 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         if response_is_binary and not expects_binary_response:
             return False
         return True
+
+    def _get_middleware_chain(self, view_function, function_args):
+        get_response = functools.partial(
+            self._get_view_function_response,
+            view_function,
+            function_args
+        )
+        for obj in self.middlewares:
+            get_response = functools.partial(obj(get_response))
+        return get_response
 
     def _get_view_function_response(self, view_function, function_args):
         try:
