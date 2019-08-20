@@ -9,6 +9,8 @@ from chalice.app import Chalice
 # From:
 # http://hypothesis.readthedocs.io/en/latest/settings.html#settings-profiles
 # On travis we'll have it run through more iterations.
+from chalice.deploy import models
+
 settings.register_profile(
     'ci', settings(max_examples=2000,
                    suppress_health_check=[HealthCheck.too_slow]),
@@ -200,3 +202,23 @@ def create_event_with_body(create_event):
         event['body'] = body
         return event
     return create_event_with_body_inner
+
+
+@fixture
+def lambda_function():
+    return models.LambdaFunction(
+        resource_name='foo',
+        function_name='app-stage-foo',
+        deployment_package=None,
+        environment_variables={},
+        runtime='python2.7',
+        handler='app.app',
+        tags={},
+        timeout=None,
+        memory_size=None,
+        role=models.PreCreatedIAMRole(role_arn='foobar'),
+        security_group_ids=[],
+        subnet_ids=[],
+        layers=[],
+        reserved_concurrency=None,
+    )

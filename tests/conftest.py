@@ -1,6 +1,4 @@
 import sys
-import zipfile
-from collections import namedtuple
 
 import botocore.session
 from botocore.stub import Stubber

@@ -5,8 +5,7 @@ import jmespath
 from attr import asdict
 from typing import Dict, List, Any  # noqa
 
-from chalice.deploy import models
-from chalice.deploy.planner import Variable, StringFormat
+from chalice.deploy import models # noqa
 from chalice.awsclient import TypedAWSClient  # noqa
 from chalice.utils import UI  # noqa
 
@@ -68,6 +67,16 @@ class Executor(BaseExecutor):
         result = self._variable_resolver.resolve_variables(
             instruction.value, self.variables)
         self.variables[instruction.name] = result
+
+    def _do_storemultiplevalue(self, instruction):
+        # type: (models.StoreValue) -> None
+        result = self._variable_resolver.resolve_variables(
+            instruction.value, self.variables)
+        data = self.variables.get(instruction.name)
+        if data and isinstance(data, list):
+            self.variables[instruction.name].extend(result)
+        else:
+            self.variables[instruction.name] = result
 
     def _do_recordresourcevariable(self, instruction):
         # type: (models.RecordResourceVariable) -> None
@@ -136,31 +145,51 @@ class Executor(BaseExecutor):
 class VariableResolver(object):
     def resolve_variables(self, value, variables):
         # type: (Any, Dict[str, str]) -> Any
-        if isinstance(value, Variable):
-            return variables[value.name]
-        elif isinstance(value, StringFormat):
-            v = {k: variables[k] for k in value.variables}
-            return value.template.format(**v)
-        elif isinstance(value, models.Placeholder):
-            # The key and method_name values are added
-            # as the exception propagates up the stack.
-            raise UnresolvedValueError('', value, '')
-        elif isinstance(value, dict):
-            final = {}
-            for k, v in value.items():
-                try:
-                    final[k] = self.resolve_variables(v, variables)
-                except UnresolvedValueError as e:
-                    e.key = k
-                    raise
-            return final
-        elif isinstance(value, list):
-            final_list = []
-            for v in value:
-                final_list.append(self.resolve_variables(v, variables))
-            return final_list
+
+        value_type = type(value).__name__.lower()
+        handler_name = '_resolve_%s' % value_type
+        handler = getattr(self, handler_name, None)
+        if handler:
+            return handler(value, variables)
         else:
             return value
+
+    def _resolve_variable(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        return variables[value.name]
+
+    def _resolve_stringformat(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        v = {k: variables[k] for k in value.variables}
+        return value.template.format(**v)
+
+    def _resolve_keydatavariable(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        return variables[value.name][value.key]
+
+    def _resolve_placeholder(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        # The key and method_name values are added
+        # as the exception propagates up the stack.
+        raise UnresolvedValueError('', value, '')
+
+    def _resolve_dict(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        final = {}
+        for k, v in value.items():
+            try:
+                final[k] = self.resolve_variables(v, variables)
+            except UnresolvedValueError as e:
+                e.key = k
+                raise
+        return final
+
+    def _resolve_list(self, value, variables):
+        # type: (Any, Dict[str, str]) -> Any
+        final_list = []
+        for v in value:
+            final_list.append(self.resolve_variables(v, variables))
+        return final_list
 
 
 # This class is used for the ``chalice dev plan`` command.

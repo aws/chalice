@@ -2,12 +2,14 @@ import mock
 
 import attr
 import pytest
+from typing import Tuple
 
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.deploy import models
 from chalice.config import DeployedResources
 from chalice.utils import OSUtils
-from chalice.deploy.planner import PlanStage, Variable, RemoteState
+from chalice.deploy.planner import PlanStage, Variable, RemoteState, \
+    KeyDataVariable
 from chalice.deploy.planner import StringFormat
 from chalice.deploy.models import APICall
 from chalice.deploy.sweeper import ResourceSweeper
@@ -47,6 +49,23 @@ def create_function_resource(name, function_name=None,
     )
 
 
+def create_domain_name():
+    return models.DomainName(
+        protocol='HTTP',
+        resource_name='rest_api_domain_name',
+        domain_name='test_domain_name',
+        security_policy='TLS_1_0',
+        endpoint_configuration={
+            'types': [
+                'REGIONAL'
+            ]
+        },
+        certificate_arn='certificate_arn',
+        regional_certificate_arn=None,
+        hosted_zone_id='hosted_zone_id',
+    )
+
+
 @pytest.fixture
 def no_deployed_values():
     return DeployedResources({'resources': [], 'schema_version': '2.0'})
@@ -81,8 +100,13 @@ class InMemoryRemoteState(object):
         key = (resource.resource_type, resource.resource_name)
         self.known_resources[key] = resource
         if deployed_values:
-            deployed_values['name'] = resource.resource_name
-            self.deployed_values[resource.resource_name] = deployed_values
+            if resource.resource_type == 'base_path_mappings':
+                deployed_values['name'] = resource.domain_name.resource_name
+                deployed_key = resource.domain_name.resource_name
+                self.deployed_values[deployed_key] = deployed_values
+            else:
+                deployed_values['name'] = resource.resource_name
+                self.deployed_values[resource.resource_name] = deployed_values
 
     def declare_no_resources_exists(self):
         self.known_resources = {}
@@ -210,6 +234,206 @@ class TestPlanManagedRole(BasePlannerTests):
         role = models.PreCreatedIAMRole(role_arn='role:arn')
         plan = self.determine_plan(role)
         assert plan == []
+
+
+class TestPlanCreateUpdateBasePathMapping(BasePlannerTests):
+    def test_can_create_base_path_mappings(self, lambda_function):
+        rest_api = models.RestAPI(
+            resource_name='rest_api',
+            swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
+            api_gateway_stage='api',
+            endpoint_type='EDGE',
+            lambda_function=lambda_function,
+        )
+
+        base_path_mappings = models.BasePathMappings(
+            resource_name='base_path_mappings',
+            domain_name=create_domain_name(),
+            base_path='(none)',
+            api=rest_api,
+            stage='dev'
+        )
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(base_path_mappings)
+        params = {
+            'domain_name': base_path_mappings.domain_name.domain_name,
+            'base_path': base_path_mappings.base_path,
+            'stage': base_path_mappings.stage,
+            'api_id': Variable('rest_api_id')
+        }
+        expected = [
+            models.APICall(
+                method_name='create_base_path_mapping',
+                params=params,
+                output_var='base_path_mapping'
+            ),
+        ]
+        # create base path mappings
+        self.assert_apicall_equals(plan[0], expected[0])
+        assert list(self.last_plan.messages.values()) == [
+            'Creating base path mapping: /\n',
+        ]
+
+    def test_can_create_base_path_mappings_with_path(self, lambda_function):
+        rest_api = models.RestAPI(
+            resource_name='websocket',
+            swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
+            api_gateway_stage='api',
+            endpoint_type='EDGE',
+            lambda_function=lambda_function,
+        )
+        domain_name = create_domain_name()
+        domain_name.protocol = 'WEBSOCKET'
+        base_path_mappings = models.BasePathMappings(
+            resource_name='base_path_mappings',
+            domain_name=domain_name,
+            base_path='test-path',
+            api=rest_api,
+            stage='dev'
+        )
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(base_path_mappings)
+        params = {
+            'domain_name': base_path_mappings.domain_name.domain_name,
+            'base_path': base_path_mappings.base_path,
+            'stage': base_path_mappings.stage,
+            'api_id': Variable('websocket_api_id')
+        }
+        expected = [
+            models.APICall(
+                method_name='create_base_path_mapping',
+                params=params,
+                output_var='base_path_mapping'
+            ),
+        ]
+        # create base path mappings
+        self.assert_apicall_equals(plan[0], expected[0])
+        assert list(self.last_plan.messages.values()) == [
+            'Creating base path mapping: /test-path\n',
+        ]
+
+    def test_store_base_path_if_already_exists(self, lambda_function):
+        rest_api = models.RestAPI(
+            resource_name='websocket',
+            swagger_doc={'swagger': '2.0'},
+            minimum_compression='',
+            api_gateway_stage='api',
+            endpoint_type='EDGE',
+            lambda_function=lambda_function,
+        )
+        domain = create_domain_name()
+        base_path_mappings = models.BasePathMappings(
+            resource_name='base_path_mappings',
+            domain_name=domain,
+            base_path='(none)',
+            api=rest_api,
+            stage='dev'
+        )
+        deployed_value = {
+            'name': 'rest_api_domain_name',
+            'resource_type': 'domain_name',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn',
+            'security_policy': 'TLS_1_0',
+            'domain_name': 'test_domain_name',
+            'base_path_mappings': [
+                {
+                    'id': 'path_id',
+                    'key': '/'
+                },
+                {
+                    'id': 'path_id_1',
+                    'key': '/test'
+                }
+            ]
+        }
+        self.remote_state.declare_resource_exists(base_path_mappings,
+                                                  **deployed_value)
+        plan = self.determine_plan(base_path_mappings)
+        expected = [
+            models.StoreMultipleValue(
+                name='rest_base_path_mapping',
+                value=[{
+                    'id': 'path_id',
+                    'key': '/'
+                }]
+            )
+        ]
+        assert plan[0].name == expected[0].name
+        assert plan[0].value == expected[0].value
+        assert isinstance(expected[0], models.StoreMultipleValue)
+        assert isinstance(plan[0], models.StoreMultipleValue)
+
+
+class TestPlanCreateUpdateDomainName(BasePlannerTests):
+    def test_can_create_domain_name(self):
+        domain_name = create_domain_name()
+        domain_name.hosted_zone_id = None
+
+        params = {
+            'protocol': domain_name.protocol,
+            'domain_name': domain_name.domain_name,
+            'endpoint_configuration': domain_name.endpoint_configuration,
+            'security_policy': domain_name.security_policy,
+            'certificate_arn': domain_name.certificate_arn,
+            'regional_certificate_arn': domain_name.regional_certificate_arn,
+            'tags': None
+        }
+        self.remote_state.declare_no_resources_exists()
+        plan = self.determine_plan(domain_name)
+        expected = [
+            models.APICall(
+                method_name='create_domain_name',
+                params=params,
+                output_var=domain_name.resource_name
+            )
+        ]
+        # create domain name
+        self.assert_apicall_equals(plan[0], expected[0])
+        assert list(self.last_plan.messages.values()) == [
+            'Creating custom domain name: test_domain_name\n',
+        ]
+
+    def test_can_update_domain_name(self):
+        deployed_value = {
+            'name': 'rest_api_domain_name',
+            'resource_type': 'domain_name',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn',
+            'security_policy': 'TLS_1_0',
+            'domain_name': 'test_domain_name',
+        }
+        domain_name = create_domain_name()
+        domain_name.security_policy = 'TLS_1_2'
+        domain_name.certificate_arn = 'certificate_arn_1'
+        domain_name.hosted_zone_id = ' hosted_zone_1'
+
+        params = {
+            'domain_name': domain_name.domain_name,
+            'endpoint_configuration': domain_name.endpoint_configuration,
+            'security_policy': domain_name.security_policy,
+            'certificate_arn': domain_name.certificate_arn,
+            'regional_certificate_arn': domain_name.regional_certificate_arn,
+            'hosted_zone_id': domain_name.hosted_zone_id
+        }
+        self.remote_state.declare_resource_exists(
+            domain_name, **deployed_value
+        )
+        plan = self.determine_plan(domain_name)
+        expected = [
+            models.APICall(
+                method_name='update_domain_name',
+                params=params,
+                output_var=domain_name.resource_name
+            )
+        ]
+        # update domain name
+        self.assert_apicall_equals(plan[0], expected[0])
+        assert list(self.last_plan.messages.values()) == [
+            'Updating custom domain name: test_domain_name\n',
+        ]
 
 
 class TestPlanLambdaFunction(BasePlannerTests):
@@ -1528,6 +1752,23 @@ class TestRemoteState(object):
         )
         return rest_api
 
+    def create_domain_name(self):
+        domain_name = models.DomainName(
+            protocol='HTTP',
+            resource_name='rest_api_domain_name',
+            domain_name='test_domain_name',
+            security_policy='TLS_1_0',
+            endpoint_configuration={
+                'types': [
+                    'REGIONAL'
+                ]
+            },
+            certificate_arn='certificate_arn',
+            regional_certificate_arn=None,
+            hosted_zone_id='hosted_zone_id',
+        )
+        return domain_name
+
     def create_websocket_api_model(self):
         websocket_api = models.WebsocketAPI(
             resource_name='websocket_api',
@@ -1571,6 +1812,26 @@ class TestRemoteState(object):
         self.client.lambda_function_exists.assert_called_with(
             function.function_name)
 
+    def test_domain_name_exists(self):
+        domain_name = self.create_domain_name()
+        self.client.domain_name_exists.return_value = True
+        assert self.remote_state.resource_exists(domain_name)
+
+        domain_name.protocol = 'WEBSOCKET'
+        domain_name.resource_name = 'websocket_api_domain_name'
+        self.client.domain_name_exists_v2.return_value = True
+        assert self.remote_state.resource_exists(domain_name)
+
+    def test_domain_name_does_not_exist(self):
+        domain_name = self.create_domain_name()
+        self.client.domain_name_exists.return_value = False
+        assert not self.remote_state.resource_exists(domain_name)
+
+        domain_name.protocol = 'WEBSOCKET'
+        domain_name.resource_name = 'websocket_api_domain_name'
+        self.client.domain_name_exists_v2.return_value = False
+        assert not self.remote_state.resource_exists(domain_name)
+
     def test_exists_check_is_cached(self):
         function = create_function_resource('function-name')
         self.client.lambda_function_exists.return_value = True
@@ -1581,6 +1842,19 @@ class TestRemoteState(object):
         assert self.remote_state.resource_exists(function)
 
         assert self.client.lambda_function_exists.call_count == 1
+
+    def test_exists_check_is_cached_base_path_mappings(self):
+        base_path_mapping = models.BasePathMappings(
+            resource_name='base_path_mappings',
+            domain_name=self.create_domain_name(),
+            api=self.create_rest_api_model(),
+            base_path='(none)',
+            stage='dev'
+        )
+        self.client.base_path_mappings_exists.return_value = True
+        assert self.remote_state.resource_exists(base_path_mapping)
+        assert self.remote_state.resource_exists(base_path_mapping)
+        assert self.remote_state.resource_exists(base_path_mapping)
 
     def test_rest_api_exists_no_deploy(self, no_deployed_values):
         rest_api = self.create_rest_api_model()
@@ -2229,3 +2503,156 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
                 params={'event_uuid': 'event-uuid'},
             ),
         ]
+
+    def test_can_delete_domain_name(self):
+        deployed = {
+            'resources': [{
+                'name': 'rest_api_domain_name',
+                'resource_type': 'domain_name',
+                'domain_name': 'test_domain_name'
+            }]
+        }
+        plan = []
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan[-1:] == [
+            models.APICall(
+                method_name='delete_domain_name',
+                params={'domain_name': 'test_domain_name'},
+            ),
+        ]
+
+    def test_can_handle_domain_name_without_base_path_mapping(self):
+        deployed = {
+            'resources': [{
+                'name': 'rest_api_domain_name',
+                'resource_type': 'domain_name',
+                'domain_name': 'test_domain_name',
+            }]
+        }
+        plan = self.determine_plan(
+            models.BasePathMappings(
+                resource_name='base_path_mappings',
+                domain_name=models.DomainName(
+                    protocol='HTTP',
+                    resource_name='rest_api_domain_name',
+                    domain_name='test_domain_name',
+                    security_policy='TLS_1_2',
+                    endpoint_configuration={},
+                    certificate_arn='certificate_arn',
+                    hosted_zone_id='hosted_zone_id',
+                    regional_certificate_arn=None,
+                    tags=None
+                ),
+                base_path='(none)',
+                api=models.RestAPI(
+                    swagger_doc=None,
+                    resource_name='rest_api',
+                    minimum_compression=None,
+                    api_gateway_stage=None,
+                    endpoint_type=None,
+                    lambda_function=None,
+                    policy=None,
+                    authorizers=None,
+                ),
+                stage='dev',
+            )
+        )
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan[-1] == models.RecordResourceVariable(
+            resource_type='domain_name',
+            resource_name='rest_api_domain_name',
+            name='base_path_mappings',
+            variable_name='rest_base_path_mapping'
+        )
+
+    def test_can_delete_base_path_mapping(self):
+        deployed = {
+            'resources': [{
+                'name': 'rest_api_domain_name',
+                'resource_type': 'domain_name',
+                'domain_name': 'test_domain_name',
+                'base_path_mappings':  [
+                    {'id': 'path_id', 'key': '/path_key'}
+                ]
+            }]
+        }
+        plan = self.determine_plan(
+            models.BasePathMappings(
+                resource_name='base_path_mappings',
+                domain_name=models.DomainName(
+                    protocol='HTTP',
+                    resource_name='rest_api_domain_name',
+                    domain_name='test_domain_name',
+                    security_policy='TLS_1_2',
+                    endpoint_configuration={},
+                    certificate_arn='certificate_arn',
+                    hosted_zone_id='hosted_zone_id',
+                    regional_certificate_arn=None,
+                    tags=None
+                ),
+                base_path='(none)',
+                api=models.RestAPI(
+                    swagger_doc=None,
+                    resource_name='rest_api',
+                    minimum_compression=None,
+                    api_gateway_stage=None,
+                    endpoint_type=None,
+                    lambda_function=None,
+                    policy=None,
+                    authorizers=None,
+                ),
+                stage='dev',
+            )
+        )
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan[0] == models.APICall(
+            method_name='delete_base_path_mapping',
+            params={'domain_name': 'test_domain_name',
+                    'base_path_id': 'path_id'},
+            output_var=None
+        )
+
+    def test_raise_error_not_existed_resource_delete(self):
+        deployed = {
+            'resources': [{
+                'name': 'name',
+                'resource_type': 'not_existed',
+            }]
+        }
+        config = FakeConfig(deployed)
+        with pytest.raises(RuntimeError):
+            self.execute([], config)
+
+    def test_update_plan_with_insert_without_message(self):
+        instructions = (
+            models.APICall(
+                method_name='unsubscribe_from_topic',
+                params={'subscription_arn': 'subscription_arn'},
+            ),
+            models.APICall(
+                method_name='remove_permission_for_sns_topic',
+                params={
+                    'topic_arn': 'topic_arn',
+                    'function_arn': 'lambda_arn',
+                },
+            ),
+        )  # type: Tuple[models.Instruction]
+        self.sweeper._update_plan(instructions, insert=True)
+        assert len(self.sweeper.plan.instructions) == 2
+
+
+class TestKeyVariable(object):
+    def test_key_variable_str(self):
+        key_var = KeyDataVariable('name', 'key')
+        assert str(key_var) == 'KeyDataVariable("name", "key")'
+
+    def test_key_variables_equal(self):
+        key_var = KeyDataVariable('name', 'key')
+        key_var_1 = KeyDataVariable('name', 'key_1')
+        assert not key_var == key_var_1
+
+        key_var_2 = KeyDataVariable('name', 'key')
+        assert key_var == key_var_2

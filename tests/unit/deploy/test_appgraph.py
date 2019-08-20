@@ -64,6 +64,8 @@ class TestApplicationGraphBuilder(object):
                       api_gateway_endpoint_type=None,
                       api_gateway_endpoint_vpce=None,
                       api_gateway_policy_file=None,
+                      rest_api_domain_name=None,
+                      websocket_api_domain_name=None,
                       project_dir='.'):
         kwargs = {
             'chalice_app': app,
@@ -72,7 +74,9 @@ class TestApplicationGraphBuilder(object):
             'api_gateway_stage': api_gateway_stage,
             'api_gateway_policy_file': api_gateway_policy_file,
             'api_gateway_endpoint_type': api_gateway_endpoint_type,
-            'api_gateway_endpoint_vpce': api_gateway_endpoint_vpce
+            'api_gateway_endpoint_vpce': api_gateway_endpoint_vpce,
+            'rest_api_domain_name': rest_api_domain_name,
+            'websocket_api_domain_name': websocket_api_domain_name,
         }
         if iam_role_arn is not None:
             # We want to use an existing role.
@@ -155,9 +159,40 @@ class TestApplicationGraphBuilder(object):
             reserved_concurrency=None,
         )
 
-    def test_can_build_lambda_function_app_with_vpc_config(
-            self, sample_app_lambda_only):
+    def test_can_build_app_with_domain_name(self, sample_app):
+        rest_api_domain_name = {
+            'name': 'test_domain_name',
+            'security_policy': 'TLS_1_0',
+            'endpoint_configuration': {
+                'types': [
+                    'REGIONAL'
+                ]
+            },
+            'regional_certificate_arn': 'certificate_arn',
+            'tags': {
+                'some_key1': 'some_value1',
+                'some_key2': 'some_value2'
+            },
+            'base_path_mappings': ['/']
+        }
+        config = self.create_config(sample_app,
+                                    app_name='rest-api-app',
+                                    api_gateway_endpoint_type='PRIVATE',
+                                    api_gateway_endpoint_vpce='vpce-abc123',
+                                    rest_api_domain_name=rest_api_domain_name,
+                                    )
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        domain_name = application.resources[1]
+        base_path_mapping = application.resources[2]
+        assert isinstance(rest_api, models.RestAPI)
+        assert isinstance(domain_name, models.DomainName)
+        assert isinstance(base_path_mapping, models.BasePathMappings)
 
+    def test_can_build_lambda_function_app_with_vpc_config(
+            self, sample_app_lambda_only
+    ):
         @sample_app_lambda_only.lambda_function()
         def foo(event, context):
             pass
@@ -458,6 +493,37 @@ class TestApplicationGraphBuilder(object):
         disconnect_function = websocket_api.disconnect_function
         assert disconnect_function.resource_name == 'websocket_disconnect'
         assert disconnect_function.handler == 'app.disconnect'
+
+    def test_can_create_websocket_api_with_domain_name(self,
+                                                       sample_websocket_app):
+        api_domain_name = {
+            'name': 'test_domain_name',
+            'security_policy': 'TLS_1_2',
+            'endpoint_configuration': {
+                'types': [
+                    'REGIONAL'
+                ]
+            },
+            'regional_certificate_arn': 'certificate_arn',
+            'tags': {
+                'some_key1': 'some_value1',
+                'some_key2': 'some_value2'
+            }
+        }
+        config = self.create_config(sample_websocket_app,
+                                    app_name='websocket-app',
+                                    autogen_policy=True,
+                                    websocket_api_domain_name=api_domain_name)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        websocket_api = application.resources[0]
+        assert isinstance(websocket_api, models.WebsocketAPI)
+
+        domain_name = application.resources[1]
+        base_path_mapping = application.resources[2]
+        assert isinstance(domain_name, models.DomainName)
+        assert isinstance(base_path_mapping, models.BasePathMappings)
+        assert base_path_mapping.base_path == '(none)'
 
     def test_can_create_websocket_app_missing_connect(
             self, websocket_app_without_connect):
