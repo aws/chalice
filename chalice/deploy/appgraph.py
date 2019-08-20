@@ -120,6 +120,13 @@ class ApplicationGraphBuilder(object):
                 filename=os.path.join(
                     config.project_dir, '.chalice', policy_path))
 
+        custom_domain_name = None
+        if config.custom_domain_name:
+            custom_domain_name = self._create_custom_domain_name_model(
+                protocol="HTTP",
+                config=config
+            )
+
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
@@ -128,7 +135,8 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
-            policy=policy
+            policy=policy,
+            domain_name=custom_domain_name
         )
 
     def _get_default_private_api_policy(self, config):
@@ -177,6 +185,12 @@ class ApplicationGraphBuilder(object):
                 config=config, deployment=deployment, name='websocket_message',
                 handler_name=handler_string, stage_name=stage_name
             )
+        custom_domain_name = None
+        if config.custom_domain_name:
+            custom_domain_name = self._create_custom_domain_name_model(
+                protocol="WEBSOCKET",
+                config=config
+            )
 
         return models.WebsocketAPI(
             name='%s-%s-websocket-api' % (config.app_name, stage_name),
@@ -187,6 +201,7 @@ class ApplicationGraphBuilder(object):
             routes=[h.route_key_handled for h
                     in config.chalice_app.websocket_handlers.values()],
             api_gateway_stage=config.api_gateway_stage,
+            domain_name=custom_domain_name
         )
 
     def _create_cwe_subscription(
@@ -249,6 +264,16 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
         )
         return scheduled_event
+
+    def _create_custom_domain_name_model(self,
+                                         protocol,  # type: str
+                                         config     # type: Config
+                                         ):
+        # type: (...) -> models.CustomDomainName
+        resource = self._build_domain_name(
+
+        )
+        return resource
 
     def _create_lambda_model(self,
                              config,        # type: Config

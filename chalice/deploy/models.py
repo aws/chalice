@@ -200,6 +200,20 @@ class ScheduledEvent(CloudWatchEventBase):
 
 
 @attrs
+class CustomDomainName(ManagedModel):
+    resource_type = 'domain_name'
+    protocol = attrib()                 # type: str
+    name = attrib()                     # type: str
+    endpoint_configuration = attrib()   # type: DV[Dict[str, Any]]
+    acm_certificate_arn = attrib()      # type: str
+    path_mappings = attrib()            # type: List[Dict[str, str]]
+
+    def dependencies(self):
+        # type: () -> List[Model]
+        return [self.acm_certificate_arn]
+
+
+@attrs
 class RestAPI(ManagedModel):
     resource_type = 'rest_api'
     swagger_doc = attrib()                       # type: DV[Dict[str, Any]]
@@ -209,6 +223,7 @@ class RestAPI(ManagedModel):
     lambda_function = attrib()                   # type: LambdaFunction
     policy = attrib(default=None)                # type: Optional[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
+    domain_name = attrib()                       # type: Optional[CustomDomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -224,6 +239,7 @@ class WebsocketAPI(ManagedModel):
     connect_function = attrib()      # type: Optional[LambdaFunction]
     message_function = attrib()      # type: Optional[LambdaFunction]
     disconnect_function = attrib()   # type: Optional[LambdaFunction]
+    domain_name = attrib()           # type: Optional[CustomDomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
