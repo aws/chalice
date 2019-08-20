@@ -127,6 +127,15 @@ class TypedAWSClient(object):
         except client.exceptions.ResourceNotFoundException:
             return False
 
+    def acm_certificate_exists(self, certificate_arn):
+        # type: (str) -> bool
+        client = self._client('acm')
+        try:
+            client.get_certificate(CertificateArn=certificate_arn)
+            return True
+        except client.exceptions.ResourceNotFoundException:
+            return False
+
     def get_function_configuration(self, name):
         # type: (str) -> Dict[str, Any]
         response = self._client('lambda').get_function_configuration(
@@ -187,6 +196,32 @@ class TypedAWSClient(object):
         if layers is not None:
             kwargs['Layers'] = layers
         return self._create_lambda_function(kwargs)
+
+    def create_domain_name(self,
+                           domain_name,                     # type: str
+                           endpoint_configuration,          # type: Dict[str, Any]
+                           security_policy,                 # type: str
+                           certificate_arn=None,            # type: str
+                           regional_certificate_arn=None,   # type: str
+                           ):
+        # type: (...) -> str
+        kwargs = {
+            "domainName": domain_name,
+            "endpointConfiguration": endpoint_configuration,
+            "securityPolicy": security_policy,
+        }
+        if certificate_arn:
+            kwargs["certificateArn"] = certificate_arn
+        if regional_certificate_arn:
+            kwargs["regionalCertificateArn"] = regional_certificate_arn
+        return self._create_domain_name(kwargs)
+
+    def _create_domain_name(self, api_args):
+        # type: (Dict[str, Any]) -> str
+        return self._call_client_method_with_retries(
+            self._client('apigateway').create_domain_name,
+            api_args, max_attempts=5
+        )['domainName']
 
     def _create_lambda_function(self, api_args):
         # type: (Dict[str, Any]) -> str
@@ -472,7 +507,7 @@ class TypedAWSClient(object):
 
     def get_rest_api(self, rest_api_id):
         # type: (str) -> Dict[str, Any]
-        """Check if an an API Gateway REST API exists."""
+        """Check if an API Gateway REST API exists."""
         client = self._client('apigateway')
         try:
             result = client.get_rest_api(restApiId=rest_api_id)

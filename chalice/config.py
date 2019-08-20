@@ -79,8 +79,9 @@ class Config(object):
                  user_provided_params=None,
                  config_from_disk=None,
                  default_params=None,
-                 layers=None):
-        # type: (str, str, StrMap, StrMap, StrMap, List[str]) -> None
+                 layers=None,
+                 custom_domain_name=None):
+        # type: (str, str, StrMap, StrMap, StrMap, List[str], Dict[str, Any]) -> None
         #: Params that a user provided explicitly,
         #: typically via the command line.
         self.chalice_stage = chalice_stage
@@ -97,6 +98,7 @@ class Config(object):
         self._default_params = default_params
         self._chalice_app = None
         self._layers = layers
+        self._custom_domain_name = custom_domain_name
 
     @classmethod
     def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
@@ -170,6 +172,11 @@ class Config(object):
         return self._chain_lookup('layers',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
+
+    @property
+    def custom_domain_name(self):
+        # type: () -> StrMap
+        return self._custom_domain_name
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):
