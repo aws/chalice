@@ -13,21 +13,28 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 InstructionMsg = Union[models.Instruction, Tuple[models.Instruction, str]]
 MarkedResource = Dict[str, List[models.RecordResource]]
+CacheTuples = Union[Tuple[str, str, str], Tuple[str, str]]
 
 
 class RemoteState(object):
     def __init__(self, client, deployed_resources):
         # type: (TypedAWSClient, DeployedResources) -> None
         self._client = client
-        self._cache = {}  # type: Dict[Tuple[str, str], bool]
+        self._cache = {}  # type: Dict[CacheTuples, bool]
         self._deployed_resources = deployed_resources
 
     def _cache_key(self, resource):
-        # type: (models.ManagedModel) -> Tuple[str, str]
-        return (resource.resource_type, resource.resource_name)
+        # type: (models.ManagedModel) -> CacheTuples
+        if isinstance(resource, models.BasePathMappings):
+            return (
+                resource.resource_type,
+                resource.resource_name,
+                resource.base_path
+            )
+        return resource.resource_type, resource.resource_name
 
     def resource_deployed_values(self, resource):
-        # type: (models.ManagedModel) -> Dict[str, str]
+        # type: (models.ManagedModel) -> Dict[str, Any]
         try:
             return self._deployed_resources.resource_values(
                 resource.resource_name)
@@ -101,6 +108,18 @@ class RemoteState(object):
         except ResourceDoesNotExistError:
             return False
 
+    def _resource_exists_basepathmappings(self, resource):
+        # type: (models.BasePathMappings) -> bool
+        return self._client.base_path_mappings_exists(
+            resource.domain_name.domain_name, resource.base_path)
+
+    def _resource_exists_domainname(self, resource):
+        # type: (models.DomainName) -> bool
+        if resource.protocol == "WEBSOCKET":
+            return self._client.domain_name_exists_v2(
+                resource.domain_name)
+        return self._client.domain_name_exists(resource.domain_name)
+
     def _resource_exists_restapi(self, resource):
         # type: (models.RestAPI) -> bool
         try:
@@ -158,6 +177,180 @@ class PlanStage(object):
     # TODO: This code will likely be refactored and pulled into
     # per-resource classes so the PlanStage object doesn't need
     # to know about every type of resource.
+
+    def _plan_basepathmappings(self, resource):
+        # type: (models.BasePathMappings) -> Sequence[InstructionMsg]
+        api_calls = []  # type: List[InstructionMsg]
+        params = {
+            'domain_name': resource.domain_name.domain_name,
+            'base_path': resource.base_path,
+            'stage': resource.stage
+        }  # type: Dict[str, Any]
+        if resource.domain_name.protocol == 'WEBSOCKET':
+            params['api_id'] = Variable('websocket_api_id')
+            variable_name = 'websocket_base_path_mapping'
+        else:
+            params['api_id'] = Variable('rest_api_id')
+            variable_name = 'rest_base_path_mapping'
+
+        if not self._remote_state.resource_exists(resource):
+            path_to_print = '/'
+            if resource.base_path != '(none)':
+                path_to_print = '/%s' % resource.base_path
+            api_calls.extend([
+                (models.APICall(
+                    method_name='create_base_path_mapping',
+                    params=params,
+                    output_var='base_path_mapping'
+                ), "Creating base path mapping: %s\n" % path_to_print),
+                models.StoreMultipleValue(
+                    name=variable_name,
+                    value=[Variable('base_path_mapping')]
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.domain_name.resource_name,
+                    name='base_path_mappings',
+                    variable_name=variable_name
+                ),
+            ])
+        else:
+            deployed = self._remote_state.resource_deployed_values(
+                resource.domain_name
+            )
+            for base_path_mapping in deployed['base_path_mappings']:
+
+                base_path = base_path_mapping['key'].lstrip('/')
+                if not base_path:
+                    base_path = '(none)'
+                if base_path != resource.base_path:
+                    continue
+
+                api_calls.extend([
+                    models.StoreMultipleValue(
+                        name=variable_name,
+                        value=[base_path_mapping]
+                    ),
+                    models.RecordResourceVariable(
+                        resource_type='domain_name',
+                        resource_name=resource.domain_name.resource_name,
+                        name='base_path_mappings',
+                        variable_name=variable_name
+                    ),
+                ])
+        return api_calls
+
+    def _plan_domainname(self, resource):
+        # type: (models.DomainName) -> Sequence[InstructionMsg]
+        api_calls = []  # type: List[InstructionMsg]
+
+        params = {
+            'domain_name': resource.domain_name,
+            'endpoint_configuration': resource.endpoint_configuration,
+            'security_policy': resource.security_policy,
+            'certificate_arn': resource.certificate_arn,
+            'regional_certificate_arn': resource.regional_certificate_arn
+        }
+        if resource.hosted_zone_id:
+            params['hosted_zone_id'] = resource.hosted_zone_id
+
+        if not self._remote_state.resource_exists(resource):
+            params['protocol'] = resource.protocol
+            params['tags'] = resource.tags
+            api_calls.extend([
+                (models.APICall(
+                    method_name='create_domain_name',
+                    params=params,
+                    output_var=resource.resource_name
+                ), "Creating custom domain name: %s\n" % resource.domain_name),
+                models.StoreValue(
+                    name='hosted_zone_id',
+                    value=KeyDataVariable(resource.resource_name,
+                                          'hosted_zone_id')
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='hosted_zone_id',
+                    variable_name='hosted_zone_id'
+                ),
+                models.StoreValue(
+                    name='certificate_arn',
+                    value=KeyDataVariable(resource.resource_name,
+                                          'certificate_arn')
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='certificate_arn',
+                    variable_name='certificate_arn'
+                ),
+                models.StoreValue(
+                    name='security_policy',
+                    value=KeyDataVariable(resource.resource_name,
+                                          'security_policy')
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='security_policy',
+                    variable_name='security_policy'
+                ),
+                models.RecordResourceValue(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='domain_name',
+                    value=resource.domain_name
+                )
+            ])
+        else:
+            api_calls.extend([
+                (models.APICall(
+                    method_name='update_domain_name',
+                    params=params,
+                    output_var=resource.resource_name
+                ), "Updating custom domain name: %s\n" % resource.domain_name),
+                models.StoreValue(
+                    name='hosted_zone_id',
+                    value=KeyDataVariable(resource.resource_name,
+                                          'hosted_zone_id')
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='hosted_zone_id',
+                    variable_name='hosted_zone_id'
+                ),
+                models.StoreValue(
+                    name='certificate_arn',
+                    value=KeyDataVariable(resource.resource_name,
+                                          'certificate_arn')
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='certificate_arn',
+                    variable_name='certificate_arn'
+                ),
+                models.StoreValue(
+                    name='security_policy',
+                    value=KeyDataVariable(resource.resource_name,
+                                          'security_policy')
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='security_policy',
+                    variable_name='security_policy'
+                ),
+                models.RecordResourceValue(
+                    resource_type='domain_name',
+                    resource_name=resource.resource_name,
+                    name='domain_name',
+                    value=resource.domain_name
+                )
+            ])
+        return api_calls
 
     def _plan_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> Sequence[InstructionMsg]
@@ -1025,3 +1218,22 @@ class PlanEncoder(json.JSONEncoder):
         if isinstance(o, StringFormat):
             return o.template
         return o
+
+
+class KeyDataVariable(object):
+    def __init__(self, name, key):
+        # type: (str, str) -> None
+        self.name = name
+        self.key = key
+
+    def __repr__(self):
+        # type: () -> str
+        return 'KeyDataVariable("%s", "%s")' % (self.name, self.key)
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return (
+            isinstance(other, KeyDataVariable) and
+            self.name == other.name and
+            self.key == other.key
+        )

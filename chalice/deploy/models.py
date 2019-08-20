@@ -42,6 +42,12 @@ class StoreValue(Instruction):
 
 
 @attrs(frozen=True)
+class StoreMultipleValue(Instruction):
+    name = attrib()   # type: str
+    value = attrib(default=Factory(list))  # type: List[Any]
+
+
+@attrs(frozen=True)
 class CopyVariable(Instruction):
     from_var = attrib()  # type: str
     to_var = attrib()    # type: str
@@ -200,17 +206,16 @@ class ScheduledEvent(CloudWatchEventBase):
 
 
 @attrs
-class CustomDomainName(ManagedModel):
+class DomainName(ManagedModel):
     resource_type = 'domain_name'
-    protocol = attrib()                 # type: str
-    name = attrib()                     # type: str
-    endpoint_configuration = attrib()   # type: DV[Dict[str, Any]]
-    acm_certificate_arn = attrib()      # type: str
-    path_mappings = attrib()            # type: List[Dict[str, str]]
-
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.acm_certificate_arn]
+    domain_name = attrib()                  # type: str
+    protocol = attrib()                     # type: str
+    hosted_zone_id = attrib()               # type: Optional[str]
+    endpoint_configuration = attrib()       # type: DV[Dict[str, Any]]
+    security_policy = attrib()              # type: str
+    certificate_arn = attrib()              # type: Optional[str]
+    regional_certificate_arn = attrib()     # type: Optional[str]
+    tags = attrib(default=None)             # type: Optional[Dict[str, Any]]
 
 
 @attrs
@@ -223,11 +228,23 @@ class RestAPI(ManagedModel):
     lambda_function = attrib()                   # type: LambdaFunction
     policy = attrib(default=None)                # type: Optional[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
-    domain_name = attrib()                       # type: Optional[CustomDomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
         return cast(List[Model], [self.lambda_function] + self.authorizers)
+
+
+@attrs
+class BasePathMappings(ManagedModel):
+    resource_type = 'base_path_mappings'
+    domain_name = attrib()          # type: DomainName
+    base_path = attrib()            # type: str
+    api = attrib()                  # type: Union[RestAPI, WebsocketAPI]
+    stage = attrib()                # type: str
+
+    def dependencies(self):
+        # type: () -> List[Model]
+        return [self.domain_name, self.api]
 
 
 @attrs
@@ -239,7 +256,6 @@ class WebsocketAPI(ManagedModel):
     connect_function = attrib()      # type: Optional[LambdaFunction]
     message_function = attrib()      # type: Optional[LambdaFunction]
     disconnect_function = attrib()   # type: Optional[LambdaFunction]
-    domain_name = attrib()           # type: Optional[CustomDomainName]
 
     def dependencies(self):
         # type: () -> List[Model]

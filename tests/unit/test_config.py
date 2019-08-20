@@ -572,6 +572,29 @@ def test_deployed_resource_does_not_exist():
         deployed.resource_values('bar')
 
 
+def test_deployed_base_path_mapping_resource():
+    deployed = DeployedResources(
+        {'resources': [
+            {'name': 'foo'},
+            {'name': 'test_domain_name',
+             'base_path_mappings': [{
+                 'id': 'path_id',
+                 'key': 'path_key'
+             }]}
+        ]}
+    )
+
+    name = 'test_domain_name.base_path_mappings.path_id'
+    result = deployed.resource_values(name)
+    assert result == {
+        'name': 'test_domain_name',
+        'base_path_mappings': [{
+            'id': 'path_id',
+            'key': 'path_key'
+        }]
+    }
+
+
 def test_deployed_resource_exists():
     deployed = DeployedResources(
         {'resources': [{'name': 'foo'}]}

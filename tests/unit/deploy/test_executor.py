@@ -9,7 +9,7 @@ from chalice.deploy.executor import Executor, UnresolvedValueError, \
 from chalice.deploy.models import APICall, RecordResourceVariable, \
     RecordResourceValue, StoreValue, JPSearch, BuiltinFunction, Instruction, \
     CopyVariable
-from chalice.deploy.planner import Variable, StringFormat
+from chalice.deploy.planner import Variable, StringFormat, KeyDataVariable
 from chalice.utils import UI
 
 
@@ -42,6 +42,25 @@ class TestExecutor(object):
         self.execute([apicall])
 
         assert self.executor.variables['my_variable_name'] == 'myrole:arn'
+
+    def test_can_store_multiple_value(self):
+        instruction = models.StoreMultipleValue(
+            name='list_data',
+            value=['first_elem']
+        )
+
+        self.execute([instruction])
+        assert self.executor.variables['list_data'] == ['first_elem']
+
+        instruction = models.StoreMultipleValue(
+            name='list_data',
+            value=['second_elem']
+        )
+
+        self.execute([instruction])
+        assert self.executor.variables['list_data'] == [
+            'first_elem', 'second_elem'
+        ]
 
     def test_can_reference_stored_results_in_api_calls(self):
         params = {
@@ -398,3 +417,15 @@ class TestResolveVariables(object):
                 }
             }
         }
+
+    def test_can_handle_dict_value_by_key(self):
+        variables = {
+            'domain_name': {
+                'base_path_mapping': {
+                    'path': '/'
+                }
+            }
+        }
+        assert self.resolve_vars(
+            KeyDataVariable('domain_name', 'base_path_mapping'), variables
+        ) == {'path': '/'}

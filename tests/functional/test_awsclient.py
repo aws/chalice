@@ -334,6 +334,609 @@ class TestDeleteRestAPI(object):
             assert awsclient.delete_rest_api('name')
 
 
+class TestGetDomainName(object):
+    def test_get_domain_name(self, stubbed_session):
+        domain_name = 'test_domain'
+        certificate_arn = 'arn:aws:acm:us-east-1:aws_id:certificate/12345'
+        regional_name = 'test.execute-api.us-east-1.amazonaws.com'
+        stubbed_session.stub('apigateway')\
+            .get_domain_name(domainName=domain_name)\
+            .returns({
+                'domainName': 'test_domain',
+                'certificateUploadDate': datetime.datetime.now(),
+                'regionalDomainName': regional_name,
+                'regionalHostedZoneId': 'TEST1TEST1TESTQ1',
+                'regionalCertificateArn': certificate_arn,
+                'endpointConfiguration': {
+                    'types': ['REGIONAL']
+                },
+                'domainNameStatus': 'AVAILABLE',
+                'securityPolicy': 'TLS_1_0',
+                'tags': {
+                    'some_key1': 'test_value1',
+                    'some_key2': 'test_value2'
+                }
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        result = awsclient.get_domain_name(domain_name)['domainName']
+        assert result == domain_name
+
+    def test_get_domain_name_failed(self, stubbed_session):
+        domain_name = 'unknown_domain'
+        stubbed_session.stub('apigateway') \
+            .get_domain_name(domainName=domain_name) \
+            .raises_error(error_code='NotFoundException',
+                          message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            assert awsclient.get_domain_name(domain_name)
+
+    def test_domain_name_exists(self, stubbed_session):
+        domain_name = 'test_domain'
+        certificate_arn = 'arn:aws:acm:us-east-1:aws_id:certificate/12345'
+        regional_name = 'test.execute-api.us-east-1.amazonaws.com'
+        stubbed_session.stub('apigateway')\
+            .get_domain_name(domainName=domain_name)\
+            .returns({
+                'domainName': 'test_domain',
+                'certificateUploadDate': datetime.datetime.now(),
+                'regionalDomainName': regional_name,
+                'regionalHostedZoneId': 'TEST1TEST1TESTQ1',
+                'regionalCertificateArn': certificate_arn,
+                'endpointConfiguration': {
+                    'types': ['REGIONAL']
+                },
+                'domainNameStatus': 'AVAILABLE',
+                'securityPolicy': 'TLS_1_0',
+                'tags': {
+                    'some_key1': 'test_value1',
+                    'some_key2': 'test_value2'
+                }
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.domain_name_exists(domain_name)
+
+    def test_domain_name_does_not_exist(self, stubbed_session):
+        domain_name = 'unknown_domain'
+        stubbed_session.stub('apigateway') \
+            .get_domain_name(domainName=domain_name) \
+            .raises_error(error_code='NotFoundException',
+                          message='Unknown')
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        assert not awsclient.domain_name_exists(domain_name)
+
+    def test_domain_name_exists_v2(self, stubbed_session):
+        domain_name = 'test_domain'
+        certificate_arn = 'arn:aws:acm:us-east-1:aws_id:certificate/12345'
+        regional_name = 'test.execute-api.us-east-1.amazonaws.com'
+        stubbed_session.stub('apigatewayv2') \
+            .get_domain_name(DomainName=domain_name) \
+            .returns({
+                'DomainName': 'test_domain',
+                'DomainNameConfigurations': [{
+                    'ApiGatewayDomainName': regional_name,
+                    'CertificateArn': certificate_arn,
+                    'EndpointType': 'REGIONAL',
+                    'HostedZoneId': 'TEST1TEST1TESTQ1',
+                    'SecurityPolicy': 'TLS_1_0',
+                    'DomainNameStatus': 'AVAILABLE'
+                }],
+                'Tags': {
+                    'some_key1': 'some_value1',
+                    'some_key2': 'some_value2'
+                }
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.domain_name_exists_v2(domain_name)
+
+    def test_domain_name_does_not_exist_v2(self, stubbed_session):
+        domain_name = 'unknown_domain'
+        stubbed_session.stub('apigatewayv2') \
+            .get_domain_name(DomainName=domain_name) \
+            .raises_error(
+                error_code='NotFoundException',
+                message='Unknown'
+            )
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        assert not awsclient.domain_name_exists_v2(domain_name)
+
+
+class TestGetBasePathMapping(object):
+    def test_base_path_mapping_exists(self, stubbed_session):
+        domain_name = 'test_domain'
+        path = '(none)'
+        stubbed_session.stub('apigateway') \
+            .get_base_path_mapping(
+                domainName=domain_name,
+                basePath=path
+            ).returns({
+                'basePath': '(none)',
+                'restApiId': 'rest_api_id',
+                'stage': 'test'
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.base_path_mappings_exists(domain_name, path)
+
+    def test_base_path_mapping_does_not_exist(self, stubbed_session):
+        domain_name = 'unknown_domain'
+        path = '/unknown'
+        stubbed_session.stub('apigateway') \
+            .get_base_path_mapping(
+                domainName=domain_name,
+                basePath=path
+            ).raises_error(
+                error_code='NotFoundException',
+                message='Unknown'
+            )
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert not awsclient.base_path_mappings_exists(domain_name, path)
+
+
+class TestCreateBasePathMapping(object):
+    def test_create_base_path_mapping(self, stubbed_session):
+        domain_name = 'test_domain'
+        base_path = '(none)'
+        api_id = 'rest_api_id'
+        stage = 'test'
+        stubbed_session.stub('apigatewayv2') \
+            .create_api_mapping(
+                DomainName=domain_name,
+                ApiMappingKey=base_path,
+                ApiId=api_id,
+                Stage=stage
+            ).returns({
+                'ApiId': api_id,
+                'ApiMappingId': 'api_mapping_id',
+                'ApiMappingKey': '',
+                'Stage': stage
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_base_path_mapping(
+            domain_name=domain_name,
+            base_path=base_path,
+            api_id=api_id,
+            stage=stage
+        ) == {
+            'id': 'api_mapping_id',
+            'key': '/'
+        }
+
+    def test_create_base_path_mapping_failed(self, stubbed_session):
+        domain_name = 'test_domain'
+        base_path = '/test'
+        api_id = 'rest_api_id'
+        stage = 'test'
+
+        err_msg = 'An ApiMapping key may contain only letters, ' \
+                  'numbers and one of $-_.+!*\'()'
+        stubbed_session.stub('apigatewayv2') \
+            .create_api_mapping(
+                DomainName=domain_name,
+                ApiMappingKey=base_path,
+                ApiId=api_id,
+                Stage=stage
+            ).raises_error(
+                error_code='BadRequestException',
+                message=err_msg
+            )
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.create_base_path_mapping(
+                domain_name=domain_name,
+                base_path=base_path,
+                api_id=api_id,
+                stage=stage
+            )
+
+
+class TestCreateDomainName(object):
+
+    def test_create_domain_name_with_unsupported_protocol(
+            self, stubbed_session
+    ):
+        awsclient = TypedAWSClient(stubbed_session)
+        params = {
+            'protocol': 'SOME_PROTOCOL',
+            'domain_name': 'test_domain',
+            'endpoint_configuration': {'types': ['REGIONAL']},
+            'security_policy': 'TLS_1_0',
+            'certificate_arn': 'certificate_arn',
+            'regional_certificate_arn': None,
+            'hosted_zone_id': 'hosted_zone_id',
+            'tags': None
+        }
+        with pytest.raises(ValueError):
+            awsclient.create_domain_name(**params)
+
+    def test_create_domain_name_failed(self, stubbed_session):
+        stubbed_session.stub('apigateway') \
+            .create_domain_name(
+            domainName='test_domain',
+            endpointConfiguration={
+                'types': ['EDGE']
+            },
+            securityPolicy=123,
+            tags={
+                'some_key1': 'some_value1',
+                'some_key2': 'some_value2'
+            },
+            certificateArn='certificate_arn',
+        ).raises_error(
+            error_code='ParamValidationError',
+            message='Parameter validation failed'
+        )
+        awsclient = TypedAWSClient(stubbed_session)
+        params = {
+            'protocol': 'HTTP',
+            'domain_name': 'test_domain',
+            'endpoint_configuration': {'types': ['REGIONAL']},
+            'security_policy': 123,
+            'certificate_arn': 'certificate_arn',
+            'regional_certificate_arn': None,
+            'hosted_zone_id': 'hosted_zone_id',
+            'tags': None,
+        }
+        with pytest.raises(botocore.exceptions.ParamValidationError):
+            awsclient.create_domain_name(**params)
+
+    def test_create_rest_api_domain_name(self, stubbed_session):
+        stubbed_session.stub('apigateway') \
+            .create_domain_name(
+                domainName='test_domain',
+                endpointConfiguration={
+                    'types': ['REGIONAL']
+                },
+                securityPolicy='TLS_1_0',
+                tags={
+                  'some_key1': 'some_value1',
+                  'some_key2': 'some_value2'
+                },
+                regionalCertificateArn='certificate_arn',
+            ).returns({
+                'domainName': 'test_domain',
+                'regionalCertificateName': 'certificate_name',
+                'regionalCertificateArn': 'certificate_arn',
+                'regionalDomainName': 'domain_name',
+                'regionalHostedZoneId': 'hosted_zone_id',
+                'endpointConfiguration': {
+                    'types': ['REGIONAL'],
+                },
+                'domainNameStatus': 'AVAILABLE',
+                'domainNameStatusMessage': 'string',
+                'securityPolicy': 'TLS_1_0',
+                'tags': {
+                    'some_key1': 'some_value1',
+                    'some_key2': 'some_value2'
+                }
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_domain_name(
+            protocol='HTTP',
+            domain_name='test_domain',
+            endpoint_configuration={
+                'types': ['REGIONAL']
+            },
+            security_policy='TLS_1_0',
+            regional_certificate_arn='certificate_arn',
+            tags={
+              'some_key1': 'some_value1',
+              'some_key2': 'some_value2'
+            }
+        ) == {
+            'domain_name': 'test_domain',
+            'endpoint_configuration': {
+                'types': ['REGIONAL'],
+            },
+            'security_policy': 'TLS_1_0',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn'
+        }
+        stubbed_session.verify_stubs()
+
+    def test_create_rest_api_domain_name_no_regional(self, stubbed_session):
+        stubbed_session.stub('apigateway') \
+            .create_domain_name(
+                domainName='test_domain',
+                endpointConfiguration={
+                    'types': ['EDGE']
+                },
+                securityPolicy='TLS_1_0',
+                tags={
+                  'some_key1': 'some_value1',
+                  'some_key2': 'some_value2'
+                },
+                certificateArn='certificate_arn',
+            ).returns({
+                'domainName': 'test_domain',
+                'certificateName': 'certificate_name',
+                'certificateArn': 'certificate_arn',
+                'certificateUploadDate': datetime.datetime.now(),
+                'endpointConfiguration': {
+                    'types': ['EDGE'],
+                },
+                'distributionDomainName': 'test_domain',
+                'distributionHostedZoneId': 'hosted_zone_id',
+                'domainNameStatus': 'AVAILABLE',
+                'domainNameStatusMessage': 'string',
+                'securityPolicy': 'TLS_1_0',
+                'tags': {
+                    'some_key1': 'some_value1',
+                    'some_key2': 'some_value2'
+                }
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_domain_name(
+            protocol='HTTP',
+            domain_name='test_domain',
+            endpoint_configuration={
+                'types': ['EDGE']
+            },
+            security_policy='TLS_1_0',
+            certificate_arn='certificate_arn',
+            tags={
+              'some_key1': 'some_value1',
+              'some_key2': 'some_value2'
+            }
+        ) == {
+            'domain_name': 'test_domain',
+            'endpoint_configuration': {
+                'types': ['EDGE'],
+            },
+            'security_policy': 'TLS_1_0',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn'
+        }
+        stubbed_session.verify_stubs()
+
+    def test_create_websocket_api_domain_name(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2') \
+            .create_domain_name(
+                DomainName='test_websocket_domain',
+                DomainNameConfigurations=[{
+                    'ApiGatewayDomainName': 'test_websocket_domain',
+                    'CertificateArn': 'certificate_arn',
+                    'EndpointType': 'REGIONAL',
+                    'SecurityPolicy': 'TLS_1_2',
+                    'DomainNameStatus': 'AVAILABLE',
+                    'HostedZoneId': 'hosted_zone_id',
+                }],
+                Tags={
+                    'some_key1': 'some_value1',
+                    'some_key2': 'some_value2'
+                }
+            ).returns({
+                'DomainName': 'test_websocket_domain',
+                'DomainNameConfigurations': [
+                    {
+                        'ApiGatewayDomainName': 'test_websocket_domain',
+                        'CertificateArn': 'certificate_arn',
+                        'CertificateName': 'certificate_name',
+                        'CertificateUploadDate': datetime.datetime.now(),
+                        'EndpointType': 'REGIONAL',
+                        'HostedZoneId': 'hosted_zone_id',
+                        'SecurityPolicy': 'TLS_1_2',
+                        'DomainNameStatus': 'AVAILABLE',
+                    },
+                ],
+                'Tags': {
+                    'some_key1': 'some_value1',
+                    'some_key2': 'some_value2'
+                }
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.create_domain_name(
+            protocol='WEBSOCKET',
+            domain_name='test_websocket_domain',
+            endpoint_configuration={
+                'types': ['REGIONAL']
+            },
+            security_policy='TLS_1_2',
+            regional_certificate_arn='certificate_arn',
+            hosted_zone_id='hosted_zone_id',
+            tags={
+              'some_key1': 'some_value1',
+              'some_key2': 'some_value2'
+            }
+        ) == {
+            'domain_name': 'test_websocket_domain',
+            'endpoint_configuration': 'REGIONAL',
+            'security_policy': 'TLS_1_2',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn'
+        }
+        stubbed_session.verify_stubs()
+
+    def test_get_custom_domain_params(self, stubbed_session):
+        awsclient = TypedAWSClient(stubbed_session)
+        result = awsclient.get_custom_domain_params(
+            domain_name='test_domain_name',
+            endpoint_configuration={
+                'types': ['EDGE']
+            },
+            security_policy='TLS_1_2',
+            hosted_zone_id='hosted_zone_id',
+            certificate_arn='certificate_arn',
+            regional_certificate_arn=None,
+            tags={
+              'some_key1': 'some_value1',
+              'some_key2': 'some_value2'
+            },
+        )
+        assert result == {
+            'DomainName': 'test_domain_name',
+            'DomainNameConfigurations': [
+                {
+                    'ApiGatewayDomainName': 'test_domain_name',
+                    'CertificateArn': 'certificate_arn',
+                    'EndpointType': 'EDGE',
+                    'HostedZoneId': 'hosted_zone_id',
+                    'SecurityPolicy': 'TLS_1_2',
+                    'DomainNameStatus': 'AVAILABLE',
+                },
+            ],
+            'Tags': {
+                'some_key1': 'some_value1',
+                'some_key2': 'some_value2'
+            }
+        }
+
+
+class TestUpdateDomainName(object):
+    def test_update_domain_name(self, stubbed_session):
+        stubbed_session.stub('apigatewayv2') \
+            .update_domain_name(
+            DomainName='test_domain',
+            DomainNameConfigurations=[{
+                'ApiGatewayDomainName': 'test_domain',
+                'CertificateArn': 'certificate_arn',
+                'EndpointType': 'REGIONAL',
+                'SecurityPolicy': 'TLS_1_0',
+                'DomainNameStatus': 'AVAILABLE',
+                'HostedZoneId': 'hosted_zone_id',
+            }]
+        ).returns({
+            'DomainName': 'test_domain',
+            'DomainNameConfigurations': [
+                {
+                    'ApiGatewayDomainName': 'test_domain',
+                    'CertificateArn': 'certificate_arn',
+                    'CertificateName': 'certificate_name',
+                    'CertificateUploadDate': datetime.datetime.now(),
+                    'EndpointType': 'REGIONAL',
+                    'HostedZoneId': 'hosted_zone_id',
+                    'SecurityPolicy': 'TLS_1_0',
+                    'DomainNameStatus': 'AVAILABLE',
+                },
+            ]
+        })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        assert awsclient.update_domain_name(
+            domain_name='test_domain',
+            endpoint_configuration={
+                'types': ['REGIONAL']
+            },
+            security_policy='TLS_1_0',
+            regional_certificate_arn='certificate_arn',
+            hosted_zone_id='hosted_zone_id'
+        ) == {
+           'domain_name': 'test_domain',
+           'endpoint_configuration': 'REGIONAL',
+           'security_policy': 'TLS_1_0',
+           'hosted_zone_id': 'hosted_zone_id',
+           'certificate_arn': 'certificate_arn'
+        }
+        stubbed_session.verify_stubs()
+
+    def test_update_domain_name_failed(self, stubbed_session):
+        err_msg = 'The resource specified in the request was not found.'
+        stubbed_session.stub('apigatewayv2') \
+            .update_domain_name(
+            DomainName='unknown_domain',
+            DomainNameConfigurations=[{
+                'ApiGatewayDomainName': 'unknown_domain',
+                'CertificateArn': 'certificate_arn',
+                'EndpointType': 'REGIONAL',
+                'SecurityPolicy': 'TLS_1_0',
+                'DomainNameStatus': 'AVAILABLE',
+                'HostedZoneId': 'hosted_zone_id',
+            }]).raises_error(
+                error_code='NotFoundException',
+                message=err_msg
+            )
+
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.update_domain_name(
+                domain_name='unknown_domain',
+                endpoint_configuration={
+                    'types': ['REGIONAL']
+                },
+                security_policy='TLS_1_0',
+                regional_certificate_arn='certificate_arn',
+                hosted_zone_id='hosted_zone_id'
+            )
+
+
+class TestDeleteDomainName(object):
+    def test_delete_domain_name(self, stubbed_session):
+        domain_name = 'test_domain'
+        stubbed_session.stub('apigatewayv2') \
+            .delete_domain_name(DomainName=domain_name).returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_domain_name(domain_name=domain_name)
+        stubbed_session.verify_stubs()
+
+    def test_delete_domain_name_failed(self, stubbed_session):
+        domain_name = 'unknown_domain'
+        err_msg = 'The resource specified in the request was not found.'
+        stubbed_session.stub('apigatewayv2') \
+            .delete_domain_name(DomainName=domain_name) \
+            .raises_error(
+                error_code='NotFoundException',
+                message=err_msg
+            )
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.delete_domain_name(domain_name=domain_name)
+
+
+class TestDeleteBasePathMapping(object):
+    def test_delete_base_path_mapping(self, stubbed_session):
+        domain_name = 'test_domain'
+        stubbed_session.stub('apigatewayv2') \
+            .delete_api_mapping(
+                DomainName=domain_name,
+                ApiMappingId='123'
+            ).returns({})
+        stubbed_session.activate_stubs()
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.delete_base_path_mapping(
+            domain_name=domain_name,
+            base_path_id='123'
+        )
+        stubbed_session.verify_stubs()
+
+    def test_delete_base_path_mapping_failed(self, stubbed_session):
+        domain_name = 'unknown_domain'
+        err_msg = 'The resource specified in the request was not found.'
+        stubbed_session.stub('apigatewayv2') \
+            .delete_api_mapping(
+                DomainName=domain_name,
+                ApiMappingId='123'
+            ).raises_error(
+                error_code='NotFoundException',
+                message=err_msg
+            )
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(botocore.exceptions.ClientError):
+            awsclient.delete_base_path_mapping(
+                domain_name=domain_name,
+                base_path_id='123'
+            )
+
+
 class TestGetRestAPI(object):
     def test_rest_api_exists(self, stubbed_session):
         desired_name = 'myappname'
