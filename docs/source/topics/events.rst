@@ -72,13 +72,13 @@ and ``every_two_hours`` to be invoked once every two hours.
 
 .. _cwe-events:
 
-Cloud Watch Events
+CloudWatch Events
 ==================
 
 You can configure a lambda function to subscribe to
-any `Cloud Watch Event <https://amzn.to/2SCgWA6>`.
+any `CloudWatch Event <https://amzn.to/2SCgWA6>`.
 
-To subscribe to a cloud watch event in chalice, you use the
+To subscribe to a CloudWatch Event in chalice, you use the
 ``@app.on_cw_event()`` decorator.  Let's look at an example.
 
 
@@ -94,7 +94,7 @@ In this example, we have a single lambda function that we subscribe to all
 events from the AWS Code Commit service. The first parameter to the decorator
 is the event pattern that will be used to filter the events sent to the function.
 
-See the Cloud Watch Event pattern docs for additional syntax and examples
+See the CloudWatch Event pattern docs for additional syntax and examples
 https://amzn.to/2OlqZso
 
 The function you decorate must accept a single argument,

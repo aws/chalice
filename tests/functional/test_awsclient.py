@@ -1778,7 +1778,7 @@ def test_add_permission_for_scheduled_event(stubbed_session):
     stubbed_session.activate_stubs()
 
     awsclient = TypedAWSClient(stubbed_session)
-    awsclient.add_permission_for_cloud_watch_event(
+    awsclient.add_permission_for_cloudwatch_event(
         'rule-arn', 'function-arn')
 
     stubbed_session.verify_stubs()
@@ -1807,7 +1807,7 @@ def test_skip_if_permission_already_granted(stubbed_session):
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    awsclient.add_permission_for_cloud_watch_event(
+    awsclient.add_permission_for_cloudwatch_event(
         'rule-arn', 'function-arn')
     stubbed_session.verify_stubs()
 

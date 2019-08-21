@@ -588,7 +588,7 @@ class PlanStage(object):
                         'function_arn': function_arn}
             ),
             models.APICall(
-                method_name='add_permission_for_cloud_watch_event',
+                method_name='add_permission_for_cloudwatch_event',
                 params={'rule_arn': Variable('rule-arn'),
                         'function_arn': function_arn},
             ),

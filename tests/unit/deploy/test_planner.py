@@ -445,7 +445,7 @@ class TestPlanS3Events(BasePlannerTests):
 
 class TestPlanCloudWatchEvent(BasePlannerTests):
 
-    def test_can_plan_cloud_watch_event(self):
+    def test_can_plan_cloudwatch_event(self):
         function = create_function_resource('function_name')
         event = models.CloudWatchEvent(
             resource_name='bar',
@@ -477,7 +477,7 @@ class TestPlanCloudWatchEvent(BasePlannerTests):
         self.assert_apicall_equals(
             plan[2],
             models.APICall(
-                method_name='add_permission_for_cloud_watch_event',
+                method_name='add_permission_for_cloudwatch_event',
                 params={
                     'rule_arn': Variable('rule-arn'),
                     'function_arn': Variable('function_name_lambda_arn'),
@@ -525,7 +525,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
         self.assert_apicall_equals(
             plan[2],
             models.APICall(
-                method_name='add_permission_for_cloud_watch_event',
+                method_name='add_permission_for_cloudwatch_event',
                 params={
                     'rule_arn': Variable('rule-arn'),
                     'function_arn': Variable('function_name_lambda_arn'),

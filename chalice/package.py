@@ -736,6 +736,17 @@ class TerraformGenerator(TemplateGenerator):
                 'source_arn': topic_arn
         }
 
+    def _generate_cloudwatchevent(self, resource, template):
+        # type: (models.CloudWatchEvent, Dict[str, Any]) -> None
+
+        template['resource'].setdefault(
+            'aws_cloudwatch_event_rule', {})[
+                resource.resource_name] = {
+                    'name': resource.resource_name,
+                    'event_pattern': resource.event_pattern
+        }
+        self._cwe_helper(resource, template)
+
     def _generate_scheduledevent(self, resource, template):
         # type: (models.ScheduledEvent, Dict[str, Any]) -> None
 
@@ -745,6 +756,10 @@ class TerraformGenerator(TemplateGenerator):
                     'name': resource.resource_name,
                     'schedule_expression': resource.schedule_expression
         }
+        self._cwe_helper(resource, template)
+
+    def _cwe_helper(self, resource, template):
+        # type: (models.CloudWatchEventBase, Dict[str, Any]) -> None
         template['resource'].setdefault(
             'aws_cloudwatch_event_target', {})[
                 resource.resource_name] = {

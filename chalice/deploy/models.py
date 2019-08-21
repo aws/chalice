@@ -188,7 +188,7 @@ class CloudWatchEventBase(FunctionEventSubscriber):
 
 @attrs
 class CloudWatchEvent(CloudWatchEventBase):
-    resource_type = 'cloud_watch_event'
+    resource_type = 'cloudwatch_event'
     event_pattern = attrib()    # type: str
 
 

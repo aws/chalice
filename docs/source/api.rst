@@ -179,11 +179,11 @@ Chalice
    .. method:: on_cw_event(pattern, name=None)
 
       Create a lambda function and configure it to be invoked whenever
-      an event that matches the given pattern flows through Cloud Watch Events
+      an event that matches the given pattern flows through CloudWatch Events
       or Event Bridge.
 
       :param pattern: The event pattern to use to filter subscribed events.
-        See the Cloud Watch Events docs for examples https://amzn.to/2OlqZso
+        See the CloudWatch Events docs for examples https://amzn.to/2OlqZso
 
       :param name: The name of the function to create.  This name is combined
         with the chalice app name as well as the stage name to create the
@@ -883,7 +883,7 @@ Event Sources
 
 .. class:: CloudWatchEvent()
 
-   This is the input argument for a scheduled or cloud watch events.
+   This is the input argument for a scheduled or CloudWatch events.
 
    .. code-block:: python
 
@@ -909,7 +909,7 @@ Event Sources
 
    .. attribute:: detail
 
-      For cloud watch events this will be the event payload.
+      For CloudWatch events this will be the event payload.
       For scheduled events, this will be an empty dictionary.
 
    .. attribute:: detail_type

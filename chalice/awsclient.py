@@ -760,8 +760,7 @@ class TypedAWSClient(object):
         events.put_targets(Rule=rule_name,
                            Targets=[{'Id': '1', 'Arn': function_arn}])
 
-    def add_permission_for_cloud_watch_event(self, rule_arn,
-                                             function_arn):
+    def add_permission_for_cloudwatch_event(self, rule_arn, function_arn):
         # type: (str, str) -> None
         self._add_lambda_permission_if_needed(
             source_arn=rule_arn,

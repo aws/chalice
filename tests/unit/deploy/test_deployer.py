@@ -277,8 +277,8 @@ def scheduled_event_app():
 
 
 @fixture
-def cloud_watch_event_app():
-    app = Chalice('cloud-watch-event')
+def cloudwatch_event_app():
+    app = Chalice('cloudwatch-event')
 
     @app.on_cw_event({'source': {'source': ['aws.ec2']}})
     def foo(event):
@@ -703,9 +703,9 @@ class TestApplicationGraphBuilder(object):
             policy=models.AutoGenIAMPolicy(models.Placeholder.BUILD_STAGE),
         )
 
-    def test_cloud_watch_event_models(self, cloud_watch_event_app):
-        config = self.create_config(cloud_watch_event_app,
-                                    app_name='cloud-watch-event',
+    def test_cloudwatch_event_models(self, cloudwatch_event_app):
+        config = self.create_config(cloudwatch_event_app,
+                                    app_name='cloudwatch-event',
                                     autogen_policy=True)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
@@ -713,7 +713,7 @@ class TestApplicationGraphBuilder(object):
         event = application.resources[0]
         assert isinstance(event, models.CloudWatchEvent)
         assert event.resource_name == 'foo-event'
-        assert event.rule_name == 'cloud-watch-event-dev-foo-event'
+        assert event.rule_name == 'cloudwatch-event-dev-foo-event'
         assert isinstance(event.lambda_function, models.LambdaFunction)
         assert event.lambda_function.resource_name == 'foo'
 
