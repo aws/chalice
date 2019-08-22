@@ -443,6 +443,55 @@ class TestPlanS3Events(BasePlannerTests):
         )
 
 
+class TestPlanCloudWatchEvent(BasePlannerTests):
+
+    def test_can_plan_cloudwatch_event(self):
+        function = create_function_resource('function_name')
+        event = models.CloudWatchEvent(
+            resource_name='bar',
+            rule_name='myrulename',
+            event_pattern='"source": ["aws.ec2"]',
+            lambda_function=function,
+        )
+        plan = self.determine_plan(event)
+        assert len(plan) == 4
+        self.assert_apicall_equals(
+            plan[0],
+            models.APICall(
+                method_name='get_or_create_rule_arn',
+                params={
+                    'rule_name': 'myrulename',
+                    'event_pattern': '"source": ["aws.ec2"]'
+                },
+                output_var='rule-arn',
+            )
+        )
+        self.assert_apicall_equals(
+            plan[1],
+            models.APICall(
+                method_name='connect_rule_to_lambda',
+                params={'rule_name': 'myrulename',
+                        'function_arn': Variable('function_name_lambda_arn')}
+            )
+        )
+        self.assert_apicall_equals(
+            plan[2],
+            models.APICall(
+                method_name='add_permission_for_cloudwatch_event',
+                params={
+                    'rule_arn': Variable('rule-arn'),
+                    'function_arn': Variable('function_name_lambda_arn'),
+                },
+            )
+        )
+        assert plan[3] == models.RecordResourceValue(
+            resource_type='cloudwatch_event',
+            resource_name='bar',
+            name='rule_name',
+            value='myrulename',
+        )
+
+
 class TestPlanScheduledEvent(BasePlannerTests):
     def test_can_plan_scheduled_event(self):
         function = create_function_resource('function_name')
@@ -476,7 +525,7 @@ class TestPlanScheduledEvent(BasePlannerTests):
         self.assert_apicall_equals(
             plan[2],
             models.APICall(
-                method_name='add_permission_for_scheduled_event',
+                method_name='add_permission_for_cloudwatch_event',
                 params={
                     'rule_arn': Variable('rule-arn'),
                     'function_arn': Variable('function_name_lambda_arn'),

@@ -131,6 +131,12 @@ def test_can_iterate_logs(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_rule_arn_requires_expression_or_pattern(stubbed_session):
+    client = TypedAWSClient(stubbed_session)
+    with pytest.raises(ValueError):
+        client.get_or_create_rule_arn("foo")
+
+
 class TestLambdaFunctionExists(object):
 
     def test_can_query_lambda_function_exists(self, stubbed_session):
@@ -1713,6 +1719,23 @@ def test_update_rest_api(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_can_get_or_create_rule_arn_with_pattern(stubbed_session):
+    events = stubbed_session.stub('events')
+    events.put_rule(
+        Name='rule-name',
+        EventPattern='{"source": ["aws.ec2"]}').returns({
+            'RuleArn': 'rule-arn',
+        })
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    result = awsclient.get_or_create_rule_arn(
+        rule_name='rule-name',
+        event_pattern='{"source": ["aws.ec2"]}')
+    stubbed_session.verify_stubs()
+    assert result == 'rule-arn'
+
+
 def test_can_get_or_create_rule_arn(stubbed_session):
     events = stubbed_session.stub('events')
     events.put_rule(
@@ -1755,7 +1778,7 @@ def test_add_permission_for_scheduled_event(stubbed_session):
     stubbed_session.activate_stubs()
 
     awsclient = TypedAWSClient(stubbed_session)
-    awsclient.add_permission_for_scheduled_event(
+    awsclient.add_permission_for_cloudwatch_event(
         'rule-arn', 'function-arn')
 
     stubbed_session.verify_stubs()
@@ -1784,7 +1807,7 @@ def test_skip_if_permission_already_granted(stubbed_session):
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    awsclient.add_permission_for_scheduled_event(
+    awsclient.add_permission_for_cloudwatch_event(
         'rule-arn', 'function-arn')
     stubbed_session.verify_stubs()
 

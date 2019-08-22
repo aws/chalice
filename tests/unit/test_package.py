@@ -338,6 +338,30 @@ class TestTerraformTemplate(TemplateTestBase):
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
 
+    def test_can_generate_cloudwatch_event(self):
+        function = self.lambda_function()
+        event = models.CloudWatchEvent(
+            resource_name='foo-event',
+            rule_name='myrule',
+            event_pattern='{"source": ["aws.ec2"]}',
+            lambda_function=function,
+        )
+        template = self.template_gen.generate(
+            [function, event]
+        )
+        rule = template['resource'][
+            'aws_cloudwatch_event_rule'][event.resource_name]
+        assert rule == {
+            'name': event.resource_name,
+            'event_pattern': event.event_pattern}
+        target = template['resource'][
+            'aws_cloudwatch_event_target'][event.resource_name]
+        assert target == {
+            'target_id': 'foo-event',
+            'rule': '${aws_cloudwatch_event_rule.foo-event.name}',
+            'arn': '${aws_lambda_function.foo.arn}'
+        }
+
     def test_can_generate_scheduled_event(self):
         function = self.lambda_function()
         event = models.ScheduledEvent(
@@ -726,6 +750,33 @@ class TestSAMTemplate(TemplateTestBase):
                 'Runtime': 'python27',
                 'Tags': {'foo': 'bar'},
                 'Timeout': 120
+            },
+        }
+
+    def test_can_generate_cloudwatch_event(self):
+        function = self.lambda_function()
+        event = models.CloudWatchEvent(
+            resource_name='foo-event',
+            rule_name='myrule',
+            event_pattern='{"source": ["aws.ec2"]}',
+            lambda_function=function,
+        )
+        template = self.template_gen.generate(
+            [function, event]
+        )
+        resources = template['Resources']
+        assert len(resources) == 1
+        cfn_resource = list(resources.values())[0]
+        assert cfn_resource['Properties']['Events'] == {
+            'FooEvent': {
+                'Type': 'CloudWatchEvent',
+                'Properties': {
+                    'Pattern': {
+                        'source': [
+                            'aws.ec2'
+                        ]
+                    }
+                },
             },
         }
 

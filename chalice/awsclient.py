@@ -729,13 +729,21 @@ class TypedAWSClient(object):
             SourceArn=source_arn,
         )
 
-    def get_or_create_rule_arn(self, rule_name, schedule_expression):
-        # type: (str, str) -> str
+    def get_or_create_rule_arn(
+            self, rule_name, schedule_expression=None, event_pattern=None):
+        # type: (str, str, str) -> str
         events = self._client('events')
         # put_rule is idempotent so we can safely call it even if it already
         # exists.
-        rule_arn = events.put_rule(Name=rule_name,
-                                   ScheduleExpression=schedule_expression)
+        params = {'Name': rule_name}
+        if schedule_expression:
+            params['ScheduleExpression'] = schedule_expression
+        elif event_pattern:
+            params['EventPattern'] = event_pattern
+        else:
+            raise ValueError(
+                "schedule_expression or event_pattern required")
+        rule_arn = events.put_rule(**params)
         return rule_arn['RuleArn']
 
     def delete_rule(self, rule_name):
@@ -752,8 +760,7 @@ class TypedAWSClient(object):
         events.put_targets(Rule=rule_name,
                            Targets=[{'Id': '1', 'Arn': function_arn}])
 
-    def add_permission_for_scheduled_event(self, rule_arn,
-                                           function_arn):
+    def add_permission_for_cloudwatch_event(self, rule_arn, function_arn):
         # type: (str, str) -> None
         self._add_lambda_permission_if_needed(
             source_arn=rule_arn,

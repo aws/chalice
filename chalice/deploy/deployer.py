@@ -419,7 +419,13 @@ class ApplicationGraphBuilder(object):
                 )
             elif isinstance(event_source, app.CloudWatchEventConfig):
                 resources.append(
-                    self._create_event_model(
+                    self._create_cwe_subscription(
+                        config, deployment, event_source, stage_name
+                    )
+                )
+            elif isinstance(event_source, app.ScheduledEventConfig):
+                resources.append(
+                    self._create_scheduled_model(
                         config, deployment, event_source, stage_name
                     )
                 )
@@ -540,12 +546,36 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
         )
 
-    def _create_event_model(self,
-                            config,        # type: Config
-                            deployment,    # type: models.DeploymentPackage
-                            event_source,  # type: app.CloudWatchEventConfig
-                            stage_name,    # type: str
-                            ):
+    def _create_cwe_subscription(
+            self,
+            config,        # type: Config
+            deployment,    # type: models.DeploymentPackage
+            event_source,  # type: app.CloudWatchEventConfig
+            stage_name,    # type: str
+    ):
+        # type: (...) -> models.CloudWatchEvent
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=event_source.name,
+            handler_name=event_source.handler_string, stage_name=stage_name
+        )
+
+        resource_name = event_source.name + '-event'
+        rule_name = '%s-%s-%s' % (config.app_name, config.chalice_stage,
+                                  resource_name)
+        cwe = models.CloudWatchEvent(
+            resource_name=resource_name,
+            rule_name=rule_name,
+            event_pattern=json.dumps(event_source.event_pattern),
+            lambda_function=lambda_function,
+        )
+        return cwe
+
+    def _create_scheduled_model(self,
+                                config,        # type: Config
+                                deployment,    # type: models.DeploymentPackage
+                                event_source,  # type: app.ScheduledEventConfig
+                                stage_name,    # type: str
+                                ):
         # type: (...) -> models.ScheduledEvent
         lambda_function = self._create_lambda_model(
             config=config, deployment=deployment, name=event_source.name,

@@ -173,15 +173,29 @@ class LambdaFunction(ManagedModel):
 
 
 @attrs
-class ScheduledEvent(ManagedModel):
-    resource_type = 'scheduled_event'
-    rule_name = attrib()            # type: str
-    schedule_expression = attrib()  # type: str
-    lambda_function = attrib()      # type: LambdaFunction
+class FunctionEventSubscriber(ManagedModel):
+    lambda_function = attrib()  # type: LambdaFunction
 
     def dependencies(self):
         # type: () -> List[Model]
         return [self.lambda_function]
+
+
+@attrs
+class CloudWatchEventBase(FunctionEventSubscriber):
+    rule_name = attrib()        # type: str
+
+
+@attrs
+class CloudWatchEvent(CloudWatchEventBase):
+    resource_type = 'cloudwatch_event'
+    event_pattern = attrib()    # type: str
+
+
+@attrs
+class ScheduledEvent(CloudWatchEventBase):
+    resource_type = 'scheduled_event'
+    schedule_expression = attrib()  # type: str
 
 
 @attrs
@@ -223,37 +237,22 @@ class WebsocketAPI(ManagedModel):
 
 
 @attrs
-class S3BucketNotification(ManagedModel):
+class S3BucketNotification(FunctionEventSubscriber):
     resource_type = 's3_event'
     bucket = attrib()           # type: str
     events = attrib()           # type: List[str]
     prefix = attrib()           # type: Optional[str]
     suffix = attrib()           # type: Optional[str]
-    lambda_function = attrib()  # type: LambdaFunction
-
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.lambda_function]
 
 
 @attrs
-class SNSLambdaSubscription(ManagedModel):
+class SNSLambdaSubscription(FunctionEventSubscriber):
     resource_type = 'sns_event'
     topic = attrib()            # type: str
-    lambda_function = attrib()  # type: LambdaFunction
-
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.lambda_function]
 
 
 @attrs
-class SQSEventSource(ManagedModel):
+class SQSEventSource(FunctionEventSubscriber):
     resource_type = 'sqs_event'
     queue = attrib()            # type: str
     batch_size = attrib()       # type: int
-    lambda_function = attrib()  # type: LambdaFunction
-
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.lambda_function]

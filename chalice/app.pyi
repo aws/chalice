@@ -267,8 +267,12 @@ class SQSEventConfig(BaseEventSourceConfig):
     batch_size = ... # type: int
 
 
-class CloudWatchEventConfig(BaseEventSourceConfig):
+class ScheduledEventConfig(BaseEventSourceConfig):
     schedule_expression = ...  # type: Union[str, ScheduleExpression]
+
+
+class CloudWatchEventConfig(BaseEventSourceConfig):
+    event_pattern = ...  # type: Dict
 
 
 class Blueprint(DecoratorAPI):

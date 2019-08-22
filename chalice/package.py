@@ -1,7 +1,8 @@
 # pylint: disable=too-many-lines
+
+import copy
 import json
 import os
-import copy
 
 from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
@@ -157,6 +158,24 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Type': 'Schedule',
                 'Properties': {
                     'Schedule': resource.schedule_expression,
+                }
+            }
+        }
+
+    def _generate_cloudwatchevent(self, resource, template):
+        # type: (models.CloudWatchEvent, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        event_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        function_cfn['Properties']['Events'] = {
+            event_cfn_name: {
+                'Type': 'CloudWatchEvent',
+                'Properties': {
+                    # For api calls we need serialized string form, for
+                    # SAM Templates we need datastructures.
+                    'Pattern': json.loads(resource.event_pattern)
                 }
             }
         }
@@ -717,6 +736,17 @@ class TerraformGenerator(TemplateGenerator):
                 'source_arn': topic_arn
         }
 
+    def _generate_cloudwatchevent(self, resource, template):
+        # type: (models.CloudWatchEvent, Dict[str, Any]) -> None
+
+        template['resource'].setdefault(
+            'aws_cloudwatch_event_rule', {})[
+                resource.resource_name] = {
+                    'name': resource.resource_name,
+                    'event_pattern': resource.event_pattern
+        }
+        self._cwe_helper(resource, template)
+
     def _generate_scheduledevent(self, resource, template):
         # type: (models.ScheduledEvent, Dict[str, Any]) -> None
 
@@ -726,6 +756,10 @@ class TerraformGenerator(TemplateGenerator):
                     'name': resource.resource_name,
                     'schedule_expression': resource.schedule_expression
         }
+        self._cwe_helper(resource, template)
+
+    def _cwe_helper(self, resource, template):
+        # type: (models.CloudWatchEventBase, Dict[str, Any]) -> None
         template['resource'].setdefault(
             'aws_cloudwatch_event_target', {})[
                 resource.resource_name] = {
