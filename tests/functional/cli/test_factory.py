@@ -32,6 +32,7 @@ def clifactory(tmpdir):
     )
     chalice_dir = appdir.mkdir('.chalice')
     chalice_dir.join('config.json').write('{}')
+    os.makedirs(os.path.expanduser('~/.aws/cli/cache'))
     return factory.CLIFactory(str(appdir))
 
 
