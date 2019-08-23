@@ -762,11 +762,16 @@ class TestApplicationGraphBuilder(object):
                                     project_dir=str(tmpdir))
         tmpdir.mkdir('.chalice').join('foo.json').write(
             serialize_to_json({'Version': '2012-10-17', 'Statement': []}))
-
-        builder = ApplicationGraphBuilder()
-        application = builder.build(config, stage_name='dev')
+        application_builder = ApplicationGraphBuilder()
+        build_stage = BuildStage(
+            steps=[
+                PolicyGenerator(osutils=OSUtils(), policy_gen=None)
+            ]
+         )
+        application = application_builder.build(config, stage_name='dev')
+        build_stage.execute(config, application.resources)
         rest_api = application.resources[0]
-        rest_api.policy.document == {
+        assert rest_api.policy.document == {
                 'Version': '2012-10-17', 'Statement': []
             }
 
