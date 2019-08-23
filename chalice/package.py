@@ -754,7 +754,8 @@ class TerraformGenerator(TemplateGenerator):
             'aws_cloudwatch_event_rule', {})[
                 resource.resource_name] = {
                     'name': resource.resource_name,
-                    'schedule_expression': resource.schedule_expression
+                    'schedule_expression': resource.schedule_expression,
+                    'description': resource.rule_description,
         }
         self._cwe_helper(resource, template)
 

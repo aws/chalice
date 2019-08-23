@@ -359,7 +359,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert target == {
             'target_id': 'foo-event',
             'rule': '${aws_cloudwatch_event_rule.foo-event.name}',
-            'arn': '${aws_lambda_function.foo.arn}'
+            'arn': '${aws_lambda_function.foo.arn}',
         }
 
     def test_can_generate_scheduled_event(self):
@@ -369,6 +369,7 @@ class TestTerraformTemplate(TemplateTestBase):
             rule_name='myrule',
             schedule_expression='rate(5 minutes)',
             lambda_function=function,
+            rule_description='description',
         )
         template = self.template_gen.generate(
             [function, event]
@@ -378,7 +379,9 @@ class TestTerraformTemplate(TemplateTestBase):
 
         assert rule == {
             'name': event.resource_name,
-            'schedule_expression': 'rate(5 minutes)'}
+            'schedule_expression': 'rate(5 minutes)',
+            'description': 'description',
+        }
 
     def test_can_generate_rest_api(self, sample_app_with_auth):
         config = Config.create(chalice_app=sample_app_with_auth,
