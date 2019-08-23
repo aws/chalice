@@ -42,8 +42,10 @@ def create_botocore_session(profile=None, debug=False,
                             max_retries=None):
     # type: (OptStr, bool, OptInt, OptInt, OptInt) -> Session
     s = Session(profile=profile)
-    s.get_component('credential_provider').get_provider('assume-role').cache \
-        = JSONFileCache(os.path.expanduser('~/.aws/cli/cache'))
+    if os.path.exists(os.path.expanduser('~/.aws/cli/cache')):
+        s.get_component('credential_provider').\
+            get_provider('assume-role').cache \
+            = JSONFileCache(os.path.expanduser('~/.aws/cli/cache'))
     _add_chalice_user_agent(s)
     if debug:
         _inject_large_request_body_filter()
