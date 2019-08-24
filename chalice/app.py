@@ -899,6 +899,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         # This is marked as internal but is intended to be used by
         # any code within Chalice.
         self._features_used = set()
+        self.features_with_dependencies = set()
 
     def _initialize(self, env):
         if self.configure_logs:

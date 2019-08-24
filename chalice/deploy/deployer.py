@@ -109,6 +109,7 @@ from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
+from chalice.constants import FEATURE_DEPENDENCIES
 from chalice.deploy import models
 from chalice.deploy.executor import Executor
 from chalice.deploy.packager import PipRunner
@@ -873,9 +874,20 @@ class DeploymentPackager(BaseDeployStep):
     def handle_deploymentpackage(self, config, resource):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
+            extra_dependencies = self._get_extra_dependencies_from_app(
+                config.chalice_app)
+            print(extra_dependencies)
             zip_filename = self._packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version)
+                config.project_dir,
+                config.lambda_python_version,
+                extra_dependencies=extra_dependencies,
+            )
             resource.filename = zip_filename
+
+    def _get_extra_dependencies_from_app(self, app):
+        extras = [FEATURE_DEPENDENCIES[feature]
+                  for feature in app.features_with_dependencies]
+        return extras
 
 
 class SwaggerBuilder(BaseDeployStep):
