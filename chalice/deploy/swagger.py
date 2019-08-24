@@ -40,12 +40,35 @@ class SwaggerGenerator(object):
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
         self._add_resource_policy(api, rest_api)
+        self._add_validators(api, app)
+        self._add_model_definitions(api, rest_api)
         return api
 
     def _add_resource_policy(self, api, rest_api):
         # type: (Dict[str, Any], Optional[RestAPI]) -> None
         if rest_api and rest_api.policy:
             api['x-amazon-apigateway-policy'] = rest_api.policy.document
+
+    def _add_model_definitions(self, api, rest_api):
+        # type: (Dict[str, Any], Optional[RestAPI]) -> None
+        if rest_api and rest_api.model_definitions:
+            api['definitions'] = copy.copy(rest_api.model_definitions)
+
+    def _add_validators(self, api, app):
+        body_validator = {
+            "body-only": {
+                "validateRequestBody": True,
+                "validateRequestParameters": False
+            }
+        }
+        needs_validators = False
+        for methods in app.routes.values():
+            for view in methods.values():
+                if view.input_model.validate:
+                    needs_validators = True
+                    break
+        if needs_validators:
+            api["x-amazon-apigateway-request-validators"] = body_validator
 
     def _add_binary_types(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None
@@ -154,7 +177,30 @@ class SwaggerGenerator(object):
                 {view.authorizer.name: []})
         if view.view_args:
             self._add_view_args(current, view.view_args)
+        if view.input_model:
+            self._add_input_model_ref(
+                current,
+                view.input_model.model_name,
+                view.input_model.validate
+            )
         return current
+
+    def _add_input_model_ref(self, single_method, name, validate):
+        validation = {
+            'name': name,
+            'in': 'body',
+            'required': True,
+            'schema': {
+                '$ref': '#/definitions/%s' % name
+            }
+        }
+        if 'parameters' not in single_method:
+            single_method['parameters'] = []
+        single_method['parameters'].append(validation)
+
+        if not validate:
+            return
+        single_method["x-amazon-apigateway-request-validator"] = "body-only"
 
     def _generate_precanned_responses(self):
         # type: () -> Dict[str, Any]

@@ -92,6 +92,7 @@ import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
+from marshmallow_jsonschema import JSONSchema
 from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 from chalice import app
@@ -478,6 +479,16 @@ class ApplicationGraphBuilder(object):
                 filename=os.path.join(
                     config.project_dir, '.chalice', policy_path))
 
+        definitions = {}
+        for route in config.chalice_app.routes.values():
+            for handler in route.values():
+                model = handler.input_model.model
+                if model:
+                    json_schema = JSONSchema().dump(model()).data
+                    for k, v in json_schema['definitions'].items():
+                        if k not in definitions:
+                            definitions[k] = v
+
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
@@ -486,7 +497,8 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
-            policy=policy
+            policy=policy,
+            model_definitions=definitions,
         )
 
     def _get_default_private_api_policy(self, config):

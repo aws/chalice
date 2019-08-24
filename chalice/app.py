@@ -354,13 +354,14 @@ class Request(object):
     """The current request from API gateway."""
 
     def __init__(self, query_params, headers, uri_params, method, body,
-                 context, stage_vars, is_base64_encoded):
+                 context, stage_vars, is_base64_encoded, input_model):
         self.query_params = None if query_params is None \
             else MultiDict(query_params)
         self.headers = CaseInsensitiveMapping(headers)
         self.uri_params = uri_params
         self.method = method
         self._is_base64_encoded = is_base64_encoded
+        self._input_model = input_model
         self._body = body
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
@@ -396,6 +397,10 @@ class Request(object):
                 except ValueError:
                     raise BadRequestError('Error Parsing JSON')
             return self._json_body
+
+    @property
+    def model_body(self):
+        return self._input_model.deserialize(self.json_body)
 
     def to_dict(self):
         # Don't copy internal attributes.
@@ -458,11 +463,40 @@ class Response(object):
         return data.decode('ascii')
 
 
+class ModelConfig(object):
+    def __init__(self, model, validate=False, cls=None):
+        self.model = model
+        self.validate = validate
+        self.cls = cls
+
+    @property
+    def model_name(self):
+        return type(self.model()).__name__
+
+    def serialize(self, obj):
+        if not self.cls:
+            raise TypeError('TypeError: cannot serialize output without cls')
+        schema = self.model()
+        result = schema.dump(obj).data
+        if self.validate:
+            errors = schema.validate(result)
+            if errors:
+                raise TypeError(json.dumps(errors, indent=4))
+        return result
+
+    def deserialize(self, data):
+        if not self.cls:
+            return data
+        loaded_data = self.model().load(data).data
+        return self.cls(**loaded_data)
+
+
 class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, method,
                  api_key_required=None, content_types=None,
-                 cors=False, authorizer=None):
+                 cors=False, authorizer=None, input_model=None,
+                 output_model=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -483,6 +517,8 @@ class RouteEntry(object):
             cors = None
         self.cors = cors
         self.authorizer = authorizer
+        self.input_model = input_model
+        self.output_model = output_model
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -853,6 +889,8 @@ class _HandlerRegistration(object):
             'content_types': actual_kwargs.pop('content_types',
                                                ['application/json']),
             'cors': actual_kwargs.pop('cors', False),
+            'input_model': actual_kwargs.pop('input_model', None),
+            'output_model': actual_kwargs.pop('output_model', None),
         }
         if not isinstance(route_kwargs['content_types'], list):
             raise ValueError(
@@ -860,6 +898,21 @@ class _HandlerRegistration(object):
                 'value must be a list, not %s: %s' % (
                     name, type(route_kwargs['content_types']),
                     route_kwargs['content_types']))
+
+        if 'input_model' in route_kwargs:
+            self.features_with_dependencies.add('MODELS')
+            if not isinstance(route_kwargs['input_model'], ModelConfig):
+                raise TypeError(
+                    'TypeError: input_model parameter must be of type '
+                    'ModelConfig'
+                )
+        if 'output_model' in route_kwargs:
+            self.features_with_dependencies.add('MODELS')
+            if not isinstance(route_kwargs['output_model'], ModelConfig):
+                raise TypeError(
+                    'TypeError: output_model parameter must be of type '
+                    'ModelConfig'
+                )
         if actual_kwargs:
             raise TypeError('TypeError: route() got unexpected keyword '
                             'arguments: %s' % ', '.join(list(actual_kwargs)))
@@ -1005,7 +1058,8 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             event['body'],
             event['requestContext'],
             event['stageVariables'],
-            event.get('isBase64Encoded', False)
+            event.get('isBase64Encoded', False),
+            route_entry.input_model,
         )
         # We're getting the CORS headers before validation to be able to
         # output desired headers with
@@ -1027,7 +1081,8 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                     headers=cors_headers
                 )
         response = self._get_view_function_response(view_function,
-                                                    function_args)
+                                                    function_args,
+                                                    route_entry.output_model)
         if cors_headers is not None:
             self._add_cors_headers(response, cors_headers)
 
@@ -1065,9 +1120,12 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             return False
         return True
 
-    def _get_view_function_response(self, view_function, function_args):
+    def _get_view_function_response(self, view_function, function_args,
+                                    output_model):
         try:
             response = view_function(**function_args)
+            if output_model.cls is not None:
+                response = Response(body=output_model.serialize(response))
             if not isinstance(response, Response):
                 response = Response(body=response)
             self._validate_response(response)
