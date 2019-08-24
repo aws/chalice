@@ -482,12 +482,13 @@ class ApplicationGraphBuilder(object):
         definitions = {}
         for route in config.chalice_app.routes.values():
             for handler in route.values():
-                model = handler.input_model.model
-                if model:
-                    json_schema = JSONSchema().dump(model()).data
-                    for k, v in json_schema['definitions'].items():
-                        if k not in definitions:
-                            definitions[k] = v
+                if handler.input_model:
+                    model = handler.input_model.model
+                    if model:
+                        json_schema = JSONSchema().dump(model()).data
+                        for k, v in json_schema['definitions'].items():
+                            if k not in definitions:
+                                definitions[k] = v
 
         return models.RestAPI(
             resource_name='rest_api',
@@ -888,7 +889,6 @@ class DeploymentPackager(BaseDeployStep):
         if isinstance(resource.filename, models.Placeholder):
             extra_dependencies = self._get_extra_dependencies_from_app(
                 config.chalice_app)
-            print(extra_dependencies)
             zip_filename = self._packager.create_deployment_package(
                 config.project_dir,
                 config.lambda_python_version,

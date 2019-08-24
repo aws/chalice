@@ -64,9 +64,10 @@ class SwaggerGenerator(object):
         needs_validators = False
         for methods in app.routes.values():
             for view in methods.values():
-                if view.input_model.validate:
-                    needs_validators = True
-                    break
+                if view.input_model:
+                    if view.input_model.validate:
+                        needs_validators = True
+                        break
         if needs_validators:
             api["x-amazon-apigateway-request-validators"] = body_validator
 

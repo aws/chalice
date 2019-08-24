@@ -899,14 +899,14 @@ class _HandlerRegistration(object):
                     name, type(route_kwargs['content_types']),
                     route_kwargs['content_types']))
 
-        if 'input_model' in route_kwargs:
+        if route_kwargs['input_model']:
             self.features_with_dependencies.add('MODELS')
             if not isinstance(route_kwargs['input_model'], ModelConfig):
                 raise TypeError(
                     'TypeError: input_model parameter must be of type '
                     'ModelConfig'
                 )
-        if 'output_model' in route_kwargs:
+        if route_kwargs['output_model']:
             self.features_with_dependencies.add('MODELS')
             if not isinstance(route_kwargs['output_model'], ModelConfig):
                 raise TypeError(
@@ -1124,7 +1124,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                                     output_model):
         try:
             response = view_function(**function_args)
-            if output_model.cls is not None:
+            if output_model and output_model.cls is not None:
                 response = Response(body=output_model.serialize(response))
             if not isinstance(response, Response):
                 response = Response(body=response)
