@@ -15,6 +15,8 @@ install_requires = [
     'attrs>=17.4.0,<20.0.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
+    'marshmallow>=2.0.0,<3.0.0', # 3.0 is not compatible with jsonschema
+    'marshmallow-jsonschema<1.0.0',
     'wheel',
     'setuptools'
 ]
