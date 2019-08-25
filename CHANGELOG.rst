@@ -7,9 +7,11 @@ Next Release (TBD)
 
 * Add support for stage independent lambda configuration
   (`#1162 <https://github.com/aws/chalice/pull/1162>`__)
-
 * Add support for subscribing to CloudWatch Events
   (`#1126 <https://github.com/aws/chalice/pull/1126>`__)
+* Add a ``description`` argument to CloudWatch schedule events
+  (`#1155 <https://github.com/aws/chalice/pull/1155>`__)
+
 
 1.10.0
 ======

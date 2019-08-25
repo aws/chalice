@@ -596,11 +596,12 @@ class DecoratorAPI(object):
             registration_kwargs={'event_pattern': event_pattern}
         )
 
-    def schedule(self, expression, name=None):
+    def schedule(self, expression, name=None, description=''):
         return self._create_registration_function(
             handler_type='schedule',
             name=name,
-            registration_kwargs={'expression': expression},
+            registration_kwargs={'expression': expression,
+                                 'description': description},
         )
 
     def route(self, path, **kwargs):
@@ -817,6 +818,7 @@ class _HandlerRegistration(object):
         event_source = ScheduledEventConfig(
             name=name,
             schedule_expression=kwargs['expression'],
+            description=kwargs["description"],
             handler_string=handler_string,
         )
         self.event_sources.append(event_source)
@@ -879,7 +881,6 @@ class _HandlerRegistration(object):
 
 
 class Chalice(_HandlerRegistration, DecoratorAPI):
-
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
 
     def __init__(self, app_name, debug=False, configure_logs=True, env=None):
@@ -1274,9 +1275,10 @@ class BaseEventSourceConfig(object):
 
 
 class ScheduledEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, schedule_expression):
+    def __init__(self, name, handler_string, schedule_expression, description):
         super(ScheduledEventConfig, self).__init__(name, handler_string)
         self.schedule_expression = schedule_expression
+        self.description = description
 
 
 class CloudWatchEventConfig(BaseEventSourceConfig):

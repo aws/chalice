@@ -153,7 +153,8 @@ class DecoratorAPI(object):
 
     def schedule(self,
                  expression: str,
-                 name: Optional[str]=None) -> Callable[..., Any]: ...
+                 name: Optional[str]=None,
+                 description: Optional[str]="") -> Callable[..., Any]: ...
 
     def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
 
@@ -269,6 +270,7 @@ class SQSEventConfig(BaseEventSourceConfig):
 
 class ScheduledEventConfig(BaseEventSourceConfig):
     schedule_expression = ...  # type: Union[str, ScheduleExpression]
+    description = ...  # type: str
 
 
 class CloudWatchEventConfig(BaseEventSourceConfig):

@@ -601,6 +601,7 @@ class ApplicationGraphBuilder(object):
         scheduled_event = models.ScheduledEvent(
             resource_name=resource_name,
             rule_name=rule_name,
+            rule_description=event_source.description,
             schedule_expression=expression,
             lambda_function=lambda_function,
         )
