@@ -11,6 +11,8 @@ Next Release (TBD)
   (`#1126 <https://github.com/aws/chalice/pull/1126>`__)
 * Add a ``description`` argument to CloudWatch schedule events
   (`#1155 <https://github.com/aws/chalice/pull/1155>`__)
+* Fix deployment of API Gateway resource policies
+  (`#1220 <https://github.com/aws/chalice/pull/1220>`__)
 
 
 1.10.0

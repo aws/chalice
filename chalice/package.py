@@ -846,8 +846,8 @@ class TerraformGenerator(TemplateGenerator):
         if 'x-amazon-apigateway-policy' in swagger_doc:
             template['resource'][
                 'aws_api_gateway_rest_api'][
-                    resource.resource_name]['policy'] = swagger_doc[
-                        'x-amazon-apigateway-policy']
+                    resource.resource_name]['policy'] = json.dumps(
+                        swagger_doc['x-amazon-apigateway-policy'])
         if resource.minimum_compression.isdigit():
             template['resource'][
                 'aws_api_gateway_rest_api'][
