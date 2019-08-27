@@ -403,9 +403,26 @@ class TestTerraformTemplate(TemplateTestBase):
             'source_arn': (
                 '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
         }
-        assert resources['aws_api_gateway_rest_api']
-        assert resources['aws_api_gateway_rest_api'][
-            'rest_api']['policy']
+        assert 'aws_api_gateway_rest_api' in resources
+        assert 'rest_api' in resources['aws_api_gateway_rest_api']
+        resource_policy = resources[
+            'aws_api_gateway_rest_api']['rest_api']['policy']
+        assert json.loads(resource_policy) == {
+            'Version': '2012-10-17',
+            'Statement': [
+                {
+                    'Action': 'execute-api:Invoke',
+                    'Resource': 'arn:aws:execute-api:*:*:*',
+                    'Effect': 'Allow',
+                    'Condition': {
+                        'StringEquals': {
+                            'aws:SourceVpce': 'vpce-abc123'
+                            }
+                        },
+                    'Principal': '*'
+                }
+            ]
+        }
         assert resources['aws_api_gateway_rest_api'][
             'rest_api']['minimum_compression_size'] == 8192
         assert resources['aws_api_gateway_rest_api'][

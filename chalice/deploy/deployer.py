@@ -955,14 +955,24 @@ class PolicyGenerator(BaseDeployStep):
         self._policy_gen = policy_gen
         self._osutils = osutils
 
-    def handle_filebasediampolicy(self, config, resource):
-        # type: (Config, models.FileBasedIAMPolicy) -> None
+    def _read_document_from_file(self, filename):
+        # type: (PolicyGenerator, str) -> Dict[str, Any]
         try:
-            resource.document = json.loads(
-                self._osutils.get_file_contents(resource.filename))
+            return json.loads(self._osutils.get_file_contents(filename))
         except IOError as e:
             raise RuntimeError("Unable to load IAM policy file %s: %s"
-                               % (resource.filename, e))
+                               % (filename, e))
+
+    def handle_filebasediampolicy(self, config, resource):
+        # type: (Config, models.FileBasedIAMPolicy) -> None
+        resource.document = self._read_document_from_file(resource.filename)
+
+    def handle_restapi(self, config, resource):
+        # type: (Config, models.RestAPI) -> None
+        if resource.policy and isinstance(
+                resource.policy, models.FileBasedIAMPolicy):
+            resource.policy.document = self._read_document_from_file(
+                resource.policy.filename)
 
     def handle_autogeniampolicy(self, config, resource):
         # type: (Config, models.AutoGenIAMPolicy) -> None
