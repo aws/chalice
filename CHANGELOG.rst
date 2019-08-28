@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.11.0
+======
 
 * Add support for stage independent lambda configuration
   (`#1162 <https://github.com/aws/chalice/pull/1162>`__)
