@@ -102,7 +102,7 @@ class ChaliceZipFile(zipfile.ZipFile):
     Normalizes datetime and permissions.
     """
 
-    compression = 0  # try to make mypy happy
+    compression = 0  # Try to make mypy happy.
 
     # pylint: disable=W0221
     def write(self, filename, arcname=None, compress_type=None):
@@ -151,7 +151,7 @@ class OSUtils(object):
 
     def open_zip(self, filename, mode, compression=ZIP_DEFLATED):
         # type: (str, str, int) -> zipfile.ZipFile
-        return zipfile.ZipFile(filename, mode, compression=compression)
+        return ChaliceZipFile(filename, mode, compression=compression)
 
     def remove_file(self, filename):
         # type: (str) -> None

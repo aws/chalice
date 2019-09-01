@@ -1,6 +1,7 @@
 import os
 import uuid
 from zipfile import ZipFile
+import hashlib
 from contextlib import contextmanager
 
 from click.testing import CliRunner
@@ -111,3 +112,33 @@ class TestPackage(object):
         ex = result.exception
         assert isinstance(ex, NoSuchPackageError)
         assert str(ex) == 'Could not satisfy the requirement: %s' % package
+
+    def test_packaging_requirements_keeps_same_hash(self, runner,
+                                                    app_skeleton):
+        req = os.path.join(app_skeleton, 'requirements.txt')
+        package = 'botocore==1.12.202'
+        with open(req, 'w') as f:
+            f.write('%s\n' % package)
+        cli_factory = factory.CLIFactory(app_skeleton)
+        package_output_location = os.path.join(app_skeleton, 'pkg')
+        self._run_package_cmd(package_output_location, app_skeleton,
+                              cli_factory, runner)
+        original_checksum = self._calculate_checksum(package_output_location)
+        self._run_package_cmd(package_output_location, app_skeleton,
+                              cli_factory, runner)
+        new_checksum = self._calculate_checksum(package_output_location)
+        assert original_checksum == new_checksum
+
+    def _calculate_checksum(self, package_output_location):
+        zip_filename = os.path.join(package_output_location, 'deployment.zip')
+        with open(zip_filename, 'rb') as f:
+            return hashlib.md5(f.read()).hexdigest()
+
+    def _run_package_cmd(self, package_output_location, app_skeleton,
+                         cli_factory, runner):
+        result = runner.invoke(
+            cli.package, [package_output_location],
+            obj={'project_dir': app_skeleton,
+                 'debug': False,
+                 'factory': cli_factory})
+        return result
