@@ -9,9 +9,12 @@ import json
 import re
 
 from logging import getLogger
+from typing import Any, Callable, Dict, Optional  # noqa
 
+from chalice import Chalice  # noqa
 from chalice.config import Config
 from chalice.local import LocalGateway
+from chalice.local import EventType, HeaderType  # noqa
 
 logger = getLogger(__name__)
 
@@ -24,7 +27,7 @@ if hasattr(json, 'JSONDecodeError'):
 class InternalLocalGateway(LocalGateway):
     def __init__(self, *args, **kwargs):
         # type: (Any, Any) -> None
-        self.custom_context = {}  # type: Dict
+        self.__custom_context = {}  # type: Dict
         super(InternalLocalGateway, self).__init__(*args, **kwargs)
 
     @property
@@ -37,10 +40,11 @@ class InternalLocalGateway(LocalGateway):
         # type: (Dict[str, Any]) -> None
         self.__custom_context = context
 
-    def _generate_lambda_event(self, *args, **kwargs):
-        # type: (Any, Any) -> Dict[str, Any]
+    def _generate_lambda_event(self, method, path, headers, body):
+        # type: (str, str, HeaderType, Optional[str])-> EventType
         event = super(
-            InternalLocalGateway, self)._generate_lambda_event(*args, **kwargs)
+            InternalLocalGateway, self)._generate_lambda_event(
+                method, path, headers, body)
         event['requestContext'].update(self.custom_context)
         return event
 
@@ -62,8 +66,8 @@ class ResponseHandler(object):
             self.values['json'] = json.loads(self.values['body'])
         except JSONDecodeError:  # type: ignore
             logger.info(
-                'Response body is NOT JSON decodable: {}'.format(
-                    self.values['body']))
+                'Response body is NOT JSON decodable: %s',
+                self.values['body'])
 
     def __getattr__(self, key):
         # type: (str) -> Any
@@ -71,7 +75,7 @@ class ResponseHandler(object):
             return self.values[key]
         except KeyError:
             raise AttributeError(
-                "'{}' object has no attribute '{}'".format(
+                "'%s' object has no attribute '%s'" % (
                     self.__class__.__name__, key))
 
 
@@ -111,8 +115,9 @@ class RequestHandler(object):
                 "'{}' object has no attribute '{}'".format(
                     self.__class__.__name__, method))
 
-        def request(path, headers={}, body=''):
-            # type: (str, Dict[str, str], str) -> ResponseHandler
+        def request(path, headers=None, body=''):
+            # type: (str, Optional[Dict[str, str]], str) -> ResponseHandler
+            headers = {} if headers is None else headers
             response = self.local_gateway.handle_request(
                 method=method.upper(), path=path, headers=headers, body=body)
             return ResponseHandler(response)
