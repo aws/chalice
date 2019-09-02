@@ -19,9 +19,10 @@ from chalice.local import EventType, HeaderType  # noqa
 logger = getLogger(__name__)
 
 # Python 3.4 or older don't have JSONDecodeError within json module
-JSONDecodeError = ValueError  # type: ignore
-if hasattr(json, 'JSONDecodeError'):
+try:
     JSONDecodeError = json.JSONDecodeError  # type: ignore
+except AttributeError:
+    JSONDecodeError = ValueError  # type: ignore
 
 
 class InternalLocalGateway(LocalGateway):
