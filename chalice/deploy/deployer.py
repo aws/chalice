@@ -485,7 +485,7 @@ class ApplicationGraphBuilder(object):
                 if handler.input_model:
                     model = handler.input_model.model
                     if model:
-                        json_schema = JSONSchema().dump(model()).data
+                        json_schema = JSONSchema().dump(model).data
                         for k, v in json_schema['definitions'].items():
                             if k not in definitions:
                                 definitions[k] = v

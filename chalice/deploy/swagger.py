@@ -65,7 +65,7 @@ class SwaggerGenerator(object):
         for methods in app.routes.values():
             for view in methods.values():
                 if view.input_model:
-                    if view.input_model.validate:
+                    if view.input_model.api_gateway_validate:
                         needs_validators = True
                         break
         if needs_validators:
@@ -182,7 +182,7 @@ class SwaggerGenerator(object):
             self._add_input_model_ref(
                 current,
                 view.input_model.model_name,
-                view.input_model.validate
+                view.input_model.api_gateway_validate,
             )
         return current
 

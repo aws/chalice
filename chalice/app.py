@@ -396,11 +396,9 @@ class Request(object):
                     self._json_body = json.loads(self.raw_body)
                 except ValueError:
                     raise BadRequestError('Error Parsing JSON')
+            if self._input_model and self._input_model.validate:
+                return self._input_model.deserialize(self._json_body)
             return self._json_body
-
-    @property
-    def model_body(self):
-        return self._input_model.deserialize(self.json_body)
 
     def to_dict(self):
         # Don't copy internal attributes.
@@ -464,31 +462,31 @@ class Response(object):
 
 
 class ModelConfig(object):
-    def __init__(self, model, validate=False, cls=None):
+    def __init__(self, model, validate=False, api_gateway_validate=False):
         self.model = model
         self.validate = validate
-        self.cls = cls
+        self.api_gateway_validate = api_gateway_validate
 
     @property
     def model_name(self):
-        return type(self.model()).__name__
+        return type(self.model).__name__
 
     def serialize(self, obj):
-        if not self.cls:
-            raise TypeError('TypeError: cannot serialize output without cls')
-        schema = self.model()
-        result = schema.dump(obj).data
+        result = self.model.dump(obj).data
         if self.validate:
-            errors = schema.validate(result)
+            errors = self.model.validate(result)
             if errors:
                 raise TypeError(json.dumps(errors, indent=4))
         return result
 
     def deserialize(self, data):
-        if not self.cls:
-            return data
-        loaded_data = self.model().load(data).data
-        return self.cls(**loaded_data)
+        result, errors = self.model.load(data)
+        if errors:
+            raise BadRequestError(
+                ' '.join(['%s: %s' % (key, ', '.join(value))
+                          for key, value in errors.items()])
+            )
+        return result
 
 
 class RouteEntry(object):
@@ -1046,6 +1044,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                 message='Unsupported method: %s' % http_method,
                 http_status_code=405)
         route_entry = self.routes[resource_path][http_method]
+        input_model = route_entry.input_model
         view_function = route_entry.view_function
         function_args = {name: event['pathParameters'][name]
                          for name in route_entry.view_args}
@@ -1059,7 +1058,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             event['requestContext'],
             event['stageVariables'],
             event.get('isBase64Encoded', False),
-            route_entry.input_model,
+            input_model,
         )
         # We're getting the CORS headers before validation to be able to
         # output desired headers with
@@ -1124,7 +1123,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                                     output_model):
         try:
             response = view_function(**function_args)
-            if output_model and output_model.cls is not None:
+            if output_model:
                 response = Response(body=output_model.serialize(response))
             if not isinstance(response, Response):
                 response = Response(body=response)

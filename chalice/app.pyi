@@ -1,6 +1,7 @@
 from typing import Dict, List, Any, Callable, Union, Optional, Set
 import logging
 from chalice.local import LambdaContext
+from marshmallow import Schema
 
 __version__ = ... # type: str
 
@@ -47,6 +48,10 @@ class CORSConfig:
 
     def __eq__(self, other: object) -> bool: ...
 
+class ModelConfig:
+    model = ... # type: Schema
+    validate = ... # type: bool
+    cls = ... # type: Any
 
 class Request:
     query_params = ... # type: Dict[str, str]
