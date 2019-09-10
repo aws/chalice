@@ -865,6 +865,7 @@ class TerraformGenerator(TemplateGenerator):
                     "${md5(data.template_file.chalice_api_swagger.rendered)}"),
                 'rest_api_id': '${aws_api_gateway_rest_api.%s.id}' % (
                     resource.resource_name),
+                'lifecycle': {'create_before_destroy': True}
         }
 
         template['resource'].setdefault('aws_lambda_permission', {})[
