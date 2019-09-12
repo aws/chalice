@@ -6,3 +6,5 @@ update_configs:
     allowed_updates:
       - match:
           dependency_name: "pip"
+      - match:
+          dependency_name: "click"
