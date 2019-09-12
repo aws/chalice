@@ -1863,6 +1863,28 @@ def test_can_mount_apis_at_url_prefix():
     assert list(sorted(myapp.routes)) == ['/myprefix/bar', '/myprefix/foo']
 
 
+def test_can_mount_root_url_in_blueprint():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+    root = app.Blueprint('root')
+
+    @root.route('/')
+    def myroot():
+        pass
+
+    @foo.route('/')
+    def myfoo():
+        pass
+
+    @foo.route('/bar')
+    def mybar():
+        pass
+
+    myapp.register_blueprint(foo, url_prefix='/foo')
+    myapp.register_blueprint(root)
+    assert list(sorted(myapp.routes)) == ['/', '/foo', '/foo/bar']
+
+
 def test_can_combine_lambda_functions_and_routes_in_blueprints():
     myapp = app.Chalice('myapp')
 
