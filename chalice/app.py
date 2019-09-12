@@ -847,7 +847,7 @@ class _HandlerRegistration(object):
         url_prefix = kwargs.pop('url_prefix', None)
         if url_prefix is not None:
             path = '/'.join([url_prefix.rstrip('/'),
-                             path.strip('/')]).rstrip('/') or '/'
+                             path.strip('/')]).rstrip('/')
         methods = actual_kwargs.pop('methods', ['GET'])
         route_kwargs = {
             'authorizer': actual_kwargs.pop('authorizer', None),
