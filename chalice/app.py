@@ -422,14 +422,26 @@ class Response(object):
         if not isinstance(body, _ANY_STRING):
             body = json.dumps(body, separators=(',', ':'),
                               default=handle_extra_types)
+        single_headers, multi_headers = self._sort_headers(self.headers)
         response = {
-            'headers': self.headers,
+            'headers': single_headers,
+            'multiValueHeaders': multi_headers,
             'statusCode': self.status_code,
             'body': body
         }
         if binary_types is not None:
             self._b64encode_body_if_needed(response, binary_types)
         return response
+
+    def _sort_headers(self, all_headers):
+        multi_headers = {}
+        single_headers = {}
+        for name, value in all_headers.items():
+            if isinstance(value, list):
+                multi_headers[name] = value
+            else:
+                single_headers[name] = value
+        return single_headers, multi_headers
 
     def _b64encode_body_if_needed(self, response_dict, binary_types):
         response_headers = CaseInsensitiveMapping(response_dict['headers'])

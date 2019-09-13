@@ -146,8 +146,14 @@ def multifile():
 
 @app.route('/custom-response', methods=['GET'])
 def custom_response():
-    return Response(status_code=204, body='',
-                    headers={'Content-Type': 'text/plain'})
+    return Response(
+        status_code=204,
+        body='',
+        headers={
+            'Content-Type': 'text/plain',
+            'Set-Cookie': ['key=value', 'foo=bar'],
+        },
+    )
 
 
 @app.route('/api-key-required', methods=['GET'], api_key_required=True)
