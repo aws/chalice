@@ -149,8 +149,10 @@ def custom_response():
     return Response(
         status_code=204,
         body='',
-        headers={'Content-Type': 'text/plain'},
-        multi_value_headers={'Set-Cookie': ['key=value', 'foo=bar']}
+        headers={
+            'Content-Type': 'text/plain',
+            'Set-Cookie': ['key=value', 'foo=bar'],
+        },
     )
 
 

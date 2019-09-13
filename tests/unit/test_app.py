@@ -642,8 +642,10 @@ def test_can_return_response_object(create_event):
         return app.Response(
             status_code=200,
             body={'foo': 'bar'},
-            headers={'Content-Type': 'application/json'},
-            multi_value_headers={'Set-Cookie': ['key=value', 'foo=bar']}
+            headers={
+                'Content-Type': 'application/json',
+                'Set-Cookie': ['key=value', 'foo=bar'],
+            },
         )
 
     event = create_event('/index', 'GET', {})

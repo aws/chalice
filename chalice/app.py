@@ -410,15 +410,11 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200,
-                 multi_value_headers=None):
+    def __init__(self, body, headers=None, status_code=200):
         self.body = body
         if headers is None:
             headers = {}
         self.headers = headers
-        if multi_value_headers is None:
-            multi_value_headers = {}
-        self.multi_value_headers = multi_value_headers
         self.status_code = status_code
 
     def to_dict(self, binary_types=None):
@@ -426,15 +422,26 @@ class Response(object):
         if not isinstance(body, _ANY_STRING):
             body = json.dumps(body, separators=(',', ':'),
                               default=handle_extra_types)
+        single_headers, multi_headers = self._sort_headers(self.headers)
         response = {
-            'headers': self.headers,
-            'multiValueHeaders': self.multi_value_headers,
+            'headers': single_headers,
+            'multiValueHeaders': multi_headers,
             'statusCode': self.status_code,
             'body': body
         }
         if binary_types is not None:
             self._b64encode_body_if_needed(response, binary_types)
         return response
+
+    def _sort_headers(self, all_headers):
+        multi_headers = {}
+        single_headers = {}
+        for name, value in all_headers.items():
+            if isinstance(value, list):
+                multi_headers[name] = value
+            else:
+                single_headers[name] = value
+        return single_headers, multi_headers
 
     def _b64encode_body_if_needed(self, response_dict, binary_types):
         response_headers = CaseInsensitiveMapping(response_dict['headers'])
