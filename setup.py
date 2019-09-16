@@ -7,7 +7,7 @@ with open('README.rst') as readme_file:
 
 
 install_requires = [
-    'click>=6.6,<7.0',
+    'click>=6.6,<8.0',
     'botocore>=1.12.86,<2.0.0',
     'typing==3.6.4;python_version<"3.7"',
     'six>=1.10.0,<2.0.0',
