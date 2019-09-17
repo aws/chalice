@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.11.1
+======
 
 * Fix mouting blueprints with root routes
   (`#1230 <https://github.com/aws/chalice/pull/1230>`__)
