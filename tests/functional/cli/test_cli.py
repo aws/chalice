@@ -128,10 +128,109 @@ def test_gen_policy_command_creates_policy(runner):
         assert 'Statement' in parsed_policy
 
 
+def test_does_fail_to_generate_swagger_if_no_rest_api(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        sys.modules.pop('app', None)
+        os.chdir('testproject')
+        with open('app.py', 'w') as f:
+            f.write(
+                'from chalice import Chalice\n'
+                'app = Chalice("myapp")\n'
+            )
+        result = _run_cli_command(runner, cli.export_models, [])
+        assert result.exit_code == 1
+        assert result.output == (
+            'No REST API found to generate model from.\n'
+            'Aborted!\n'
+        )
+
+
+def test_can_write_swagger_model(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        sys.modules.pop('app', None)
+        result = _run_cli_command(runner, cli.export_models, [])
+        assert result.exit_code == 0
+        model = json.loads(result.output)
+        assert model == {
+            "swagger": "2.0",
+            "info": {
+                "version": "1.0",
+                "title": "testproject"
+            },
+            "schemes": [
+                "https"
+            ],
+            "paths": {
+                "/": {
+                    "get": {
+                        "consumes": [
+                            "application/json"
+                        ],
+                        "produces": [
+                            "application/json"
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "200 response",
+                                "schema": {
+                                    "$ref": "#/definitions/Empty"
+                                }
+                            }
+                        },
+                        "x-amazon-apigateway-integration": {
+                            "responses": {
+                                "default": {
+                                    "statusCode": "200"
+                                }
+                            },
+                            "uri": (
+                                "arn:aws:apigateway:{region_name}:lambda:"
+                                "path/2015-03-31/functions/"
+                                "{api_handler_lambda_arn}/invocations"
+                            ),
+                            "passthroughBehavior": "when_no_match",
+                            "httpMethod": "POST",
+                            "contentHandling": "CONVERT_TO_TEXT",
+                            "type": "aws_proxy"
+                        }
+                    }
+                }
+            },
+            "definitions": {
+                "Empty": {
+                    "type": "object",
+                    "title": "Empty Schema"
+                }
+            },
+            "x-amazon-apigateway-binary-media-types": [
+                "application/octet-stream",
+                "application/x-tar",
+                "application/zip",
+                "audio/basic",
+                "audio/ogg",
+                "audio/mp4",
+                "audio/mpeg",
+                "audio/wav",
+                "audio/webm",
+                "image/png",
+                "image/jpg",
+                "image/jpeg",
+                "image/gif",
+                "video/ogg",
+                "video/mpeg",
+                "video/webm"
+            ]
+        }
+
+
 def test_can_package_command(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
+        sys.modules.pop('app', None)
         result = _run_cli_command(runner, cli.package, ['outdir'])
         assert result.exit_code == 0, result.output
         assert os.path.isdir('outdir')

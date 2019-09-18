@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines
+import json
 from collections import OrderedDict
 
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
@@ -1014,3 +1015,13 @@ class StringFormat(object):
             self.template == other.template and
             self.variables == other.variables
         )
+
+
+class PlanEncoder(json.JSONEncoder):
+    # pylint false positive overriden below
+    # https://github.com/PyCQA/pylint/issues/414
+    def default(self, o):  # pylint: disable=E0202
+        # type: (Any) -> Any
+        if isinstance(o, StringFormat):
+            return o.template
+        return o
