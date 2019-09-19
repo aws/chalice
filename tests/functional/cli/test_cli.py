@@ -138,7 +138,7 @@ def test_does_fail_to_generate_swagger_if_no_rest_api(runner):
                 'from chalice import Chalice\n'
                 'app = Chalice("myapp")\n'
             )
-        result = _run_cli_command(runner, cli.export_models, [])
+        result = _run_cli_command(runner, cli.generate_models, [])
         assert result.exit_code == 1
         assert result.output == (
             'No REST API found to generate model from.\n'
@@ -151,7 +151,7 @@ def test_can_write_swagger_model(runner):
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         sys.modules.pop('app', None)
-        result = _run_cli_command(runner, cli.export_models, [])
+        result = _run_cli_command(runner, cli.generate_models, [])
         assert result.exit_code == 0
         model = json.loads(result.output)
         assert model == {

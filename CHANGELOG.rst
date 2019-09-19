@@ -5,7 +5,7 @@ CHANGELOG
 Next Release (TBD)
 ==================
 
-* Add ``export-models`` command
+* Add ``generate-models`` command
   (`#1245 <https://github.com/aws/chalice/pull/1245>`__)
 
 

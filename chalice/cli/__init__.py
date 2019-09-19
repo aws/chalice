@@ -372,11 +372,11 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
         raise click.Abort()
 
 
-@cli.command('export-models')
+@cli.command('generate-models')
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help="Chalice Stage for which to generate models.")
 @click.pass_context
-def export_models(ctx, stage):
+def generate_models(ctx, stage):
     # type: (click.Context, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
