@@ -36,9 +36,7 @@ from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
-from chalice.deploy.deployer import ApplicationGraphBuilder
 from chalice.deploy.planner import PlanEncoder
-from chalice.deploy import models
 
 
 def _configure_logging(level, format_string=None):
@@ -380,11 +378,7 @@ def generate_models(ctx, stage):
     # type: (click.Context, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
-    graph_builder = ApplicationGraphBuilder()
-    graph = graph_builder.build(config, stage)
-    rest_apis = [m for m in list(graph.resources)
-                 if isinstance(m, models.RestAPI)]
-    if not rest_apis:
+    if not config.chalice_app.routes:
         click.echo('No REST API found to generate model from.')
         raise click.Abort()
     swagger_generator = TemplatedSwaggerGenerator()
