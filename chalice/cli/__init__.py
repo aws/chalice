@@ -390,7 +390,6 @@ def generate_models(ctx, stage):
     swagger_generator = TemplatedSwaggerGenerator()
     model = swagger_generator.generate_swagger(
         config.chalice_app,
-        rest_apis[0]
     )
     ui = UI()
     ui.write(json.dumps(model, indent=4, cls=PlanEncoder))
