@@ -376,6 +376,10 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
 @click.pass_context
 def generate_models(ctx, stage):
     # type: (click.Context, str) -> None
+    """Generate a model from Chalice routes.
+
+    Currently only supports generating Swagger 2.0 models.
+    """
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
     if not config.chalice_app.routes:
