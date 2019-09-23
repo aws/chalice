@@ -131,6 +131,18 @@ def test_can_iterate_logs(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_missing_log_messages_doesnt_fail(stubbed_session):
+    stubbed_session.stub('logs').filter_log_events(
+        logGroupName='loggroup', interleaved=True).raises_error(
+            error_code='ResourceNotFoundException',
+            message='ResourceNotFound')
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    logs = list(awsclient.iter_log_events('loggroup'))
+    assert logs == []
+
+
 def test_rule_arn_requires_expression_or_pattern(stubbed_session):
     client = TypedAWSClient(stubbed_session)
     with pytest.raises(ValueError):
