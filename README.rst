@@ -1207,6 +1207,60 @@ need to use an ``AWS_PROFILE`` that has sufficient permissions
 to your AWS resources used in your ``app.py``.
 
 
+Tutorial: Local Mode (Browser)
+====================
+
+As you develop your application, you may want to experiment locally  before
+deploying your changes.  You can use ``chalice local`` to spin up a local
+HTTP server you can use for testing. Then you can load the URLs via your web 
+browser such as Chrome, Firefox, or Edge. You can also build web applications
+that call your new API endpoints.
+
+For example, if we have the following ``app.py`` file:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='helloworld')
+
+
+    @app.route('/')
+    def index():
+        return {'hello': 'world'}
+
+
+We can run ``chalice local`` to test this API locally::
+
+
+    $ chalice local
+    Serving on localhost:8000
+
+We can override the port using::
+
+    $ chalice local --port=8080
+
+We can now test our API using ``localhost:8000`` in your browser.
+
+Or we can call our API endpoint via Javascript in the browser. We 
+will use the new fetch_.
+
+.. _fetch: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch 
+
+ command in javascript to call our endpoint.
+
+.. code-block:: javascript
+
+    const response = await fetch('http://localhost:8000/')
+    const json = await response.json();
+    console.log(json);
+    // this should print "{"hello": "world"}" to the console
+
+The ``chalice local`` command *does not* assume the
+role associated with your lambda function, so you'll
+need to use an ``AWS_PROFILE`` that has sufficient permissions
+to your AWS resources used in your ``app.py``.
+
 Deleting Your App
 =================
 
