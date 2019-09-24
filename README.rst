@@ -1243,11 +1243,9 @@ We can override the port using::
 We can now test our API using ``localhost:8000`` in your browser.
 
 Or we can call our API endpoint via Javascript in the browser. We 
-will use the new fetch_.
+will use the new fetch_ command in javascript to call our endpoint.
 
 .. _fetch: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch 
-
- command in javascript to call our endpoint.
 
 .. code-block:: javascript
 
