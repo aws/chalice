@@ -11,6 +11,7 @@ import tempfile
 import shutil
 import traceback
 import functools
+import json
 
 import botocore.exceptions
 import click
@@ -34,6 +35,8 @@ from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
+from chalice.deploy.swagger import TemplatedSwaggerGenerator
+from chalice.deploy.planner import PlanEncoder
 
 
 def _configure_logging(level, format_string=None):
@@ -365,6 +368,30 @@ def generate_sdk(ctx, sdk_type, stage, outdir):
         click.echo("Could not find API ID, has this application "
                    "been deployed?", err=True)
         raise click.Abort()
+
+
+@cli.command('generate-models')
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help="Chalice Stage for which to generate models.")
+@click.pass_context
+def generate_models(ctx, stage):
+    # type: (click.Context, str) -> None
+    """Generate a model from Chalice routes.
+
+    Currently only supports generating Swagger 2.0 models.
+    """
+    factory = ctx.obj['factory']  # type: CLIFactory
+    config = factory.create_config_obj(stage)
+    if not config.chalice_app.routes:
+        click.echo('No REST API found to generate model from.')
+        raise click.Abort()
+    swagger_generator = TemplatedSwaggerGenerator()
+    model = swagger_generator.generate_swagger(
+        config.chalice_app,
+    )
+    ui = UI()
+    ui.write(json.dumps(model, indent=4, cls=PlanEncoder))
+    ui.write('\n')
 
 
 @cli.command('package')
