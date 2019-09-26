@@ -872,7 +872,7 @@ Code sample defining more CORS headers:
         expose_headers=['X-Special-Header'],
         allow_credentials=True
     )
-    @app.route('/custom_cors', methods=['GET'], cors=cors_config)
+    @app.route('/custom-cors', methods=['GET'], cors=cors_config)
     def supports_custom_cors():
         return {'cors': True}
 
