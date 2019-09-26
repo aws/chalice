@@ -1,6 +1,6 @@
-===========
-AWS Chalice
-===========
+
+.. image:: ./img/chalice-logo-whitespace.png
+   :alt: Chalice Logo
 
 AWS Chalice allows you to quickly create and
 deploy applications that use Amazon API Gateway and AWS Lambda.

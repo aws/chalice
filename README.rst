@@ -1,6 +1,6 @@
-========================================
-Python Serverless Microframework for AWS
-========================================
+===========
+AWS Chalice
+===========
 
 .. image:: https://badges.gitter.im/awslabs/chalice.svg
    :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
@@ -14,6 +14,12 @@ Python Serverless Microframework for AWS
 .. image:: https://codecov.io/github/aws/chalice/coverage.svg?branch=master
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
+
+
+.. image:: https://chalice.readthedocs.io/en/latest/_images/chalice-logo-whitespace.png
+   :target: https://chalice.readthedocs.io/en/latest/
+   :alt: Chalice Logo
+
 
 Chalice is a microframework for writing serverless apps in python. It allows
 you to quickly create and deploy applications that use AWS Lambda.  It provides:
