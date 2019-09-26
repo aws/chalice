@@ -65,6 +65,17 @@ def sample_app_schedule_only():
 
 
 @fixture
+def sample_sqs_event_app():
+    app = Chalice('sqs-event')
+
+    @app.on_sqs_message(queue='myqueue')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def sample_app_lambda_only():
     app = Chalice('lambda_only')
 
@@ -80,16 +91,49 @@ def sample_websocket_app():
     app = Chalice('sample')
 
     @app.on_ws_connect()
-    def foo():
+    def connect():
         pass
 
     @app.on_ws_message()
-    def bar():
+    def message():
         pass
 
     @app.on_ws_disconnect()
-    def baz():
+    def disconnect():
         pass
+
+    return app
+
+
+@fixture
+def sample_s3_event_app():
+    app = Chalice('s3-event')
+
+    @app.on_s3_event(bucket='mybucket')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
+def sample_sns_event_app():
+    app = Chalice('sns-event')
+
+    @app.on_sns_message(topic='mytopic')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
+def sample_cloudwatch_event_app():
+    app = Chalice('cloudwatch-event')
+
+    @app.on_cw_event({'source': {'source': ['aws.ec2']}})
+    def foo(event):
+        return event
 
     return app
 

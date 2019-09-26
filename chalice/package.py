@@ -12,8 +12,7 @@ from chalice.deploy.swagger import (
 from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
 from chalice.config import Config  # noqa
 from chalice.deploy import models
-from chalice.deploy.deployer import ApplicationGraphBuilder
-from chalice.deploy.deployer import DependencyBuilder
+from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
 from chalice.deploy.deployer import BuildStage  # noqa
 from chalice.deploy.deployer import create_build_stage
 

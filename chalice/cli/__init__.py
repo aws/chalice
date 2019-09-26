@@ -37,6 +37,7 @@ from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanEncoder
+from chalice.deploy.appgraph import ApplicationGraphBuilder, GraphPrettyPrint
 
 
 def _configure_logging(level, format_string=None):
@@ -258,6 +259,33 @@ def plan(ctx, autogen_policy, profile, api_gateway_stage, stage):
     d = factory.create_plan_only_deployer(
         session=session, config=config, ui=ui)
     d.deploy(config, chalice_stage_name=stage)
+
+
+@dev.command()
+@click.option('--autogen-policy/--no-autogen-policy',
+              default=None,
+              help='Automatically generate IAM policy for app code.')
+@click.option('--profile', help='Override profile at deploy time.')
+@click.option('--api-gateway-stage',
+              help='Name of the API gateway stage to deploy to.')
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help=('Name of the Chalice stage to deploy to. '
+                    'Specifying a new chalice stage will create '
+                    'an entirely new set of AWS resources.'))
+@click.pass_context
+def appgraph(ctx, autogen_policy, profile, api_gateway_stage, stage):
+    # type: (click.Context, Optional[bool], str, str, str) -> None
+    """Generate and display the application graph."""
+    factory = ctx.obj['factory']  # type: CLIFactory
+    factory.profile = profile
+    config = factory.create_config_obj(
+        chalice_stage_name=stage, autogen_policy=autogen_policy,
+        api_gateway_stage=api_gateway_stage,
+    )
+    graph_build = ApplicationGraphBuilder()
+    graph = graph_build.build(config, stage)
+    ui = UI()
+    GraphPrettyPrint(ui).display_graph(graph)
 
 
 @cli.command('invoke')
