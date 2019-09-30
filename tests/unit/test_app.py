@@ -4,6 +4,7 @@ import logging
 import json
 import gzip
 import inspect
+import collections
 from copy import deepcopy
 
 import pytest
@@ -91,15 +92,30 @@ class FakeExceptionFactory(object):
 
 
 class FakeClient(object):
-    def __init__(self, errors=None):
+    def __init__(self, errors=None, infos=None):
         if errors is None:
             errors = []
+        if infos is None:
+            infos = []
         self._errors = errors
-        self.calls = []
+        self._infos = infos
+        self.calls = collections.defaultdict(lambda: [])
         self.exceptions = FakeExceptionFactory()
 
     def post_to_connection(self, ConnectionId, Data):
-        self.calls.append((ConnectionId, Data))
+        self._call('post_to_connection', ConnectionId, Data)
+
+    def delete_connection(self, ConnectionId):
+        self._call('close', ConnectionId)
+
+    def get_connection(self, ConnectionId):
+        self._call('info', ConnectionId)
+        if self._infos is not None:
+            info = self._infos.pop()
+            return info
+
+    def _call(self, name, *args):
+        self.calls[name].append((*args,))
         if self._errors:
             error = self._errors.pop()
             raise error
@@ -2385,6 +2401,48 @@ def test_cannot_send_websocket_message_without_configure(
     )
 
 
+def test_can_close_websocket_connection(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        demo.websocket_api.close('connection_id')
+
+    event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
+
+    calls = client.calls['close']
+    assert len(calls) == 1
+    call = calls[0]
+    connection_id = call[0]
+    assert connection_id == 'connection_id'
+
+
+def test_can_get_info_about_websocket_connection(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient(infos=[{'foo': 'bar'}])
+    demo.websocket_api.session = FakeSession(client)
+    closure = {}
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        closure['info'] = demo.websocket_api.info('connection_id')
+
+    event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
+
+    assert closure['info'] == {'foo': 'bar'}
+    calls = client.calls['info']
+    assert len(calls) == 1
+    call = calls[0]
+    connection_id = call[0]
+    assert connection_id == 'connection_id'
+
+
 def test_can_send_websocket_message(create_websocket_event):
     demo = app.Chalice('app-name')
     client = FakeClient()
@@ -2398,8 +2456,9 @@ def test_can_send_websocket_message(create_websocket_event):
     handler = websocket_handler_for_route('$default', demo)
     handler(event, context=None)
 
-    assert len(client.calls) == 1
-    call = client.calls[0]
+    calls = client.calls['post_to_connection']
+    assert len(calls) == 1
+    call = calls[0]
     connection_id, message = call
     assert connection_id == 'connection_id'
     assert message == 'foo bar'

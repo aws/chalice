@@ -7,6 +7,8 @@ Next Release (TBD)
 
 * Add ``generate-models`` command
   (`#1245 <https://github.com/aws/chalice/pull/1245>`__)
+* Add ``close`` and ``info`` commands to websocket api
+  (`#1259 <https://github.com/aws/chalice/pull/1259>`__)
 
 
 1.11.1

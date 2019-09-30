@@ -707,7 +707,7 @@ WebsocketAPI
       Configure prepares the :class:`WebsocketAPI` to call the :meth:`send`
       method. Without first calling this method calls to :meth:`send` will fail
       with the message ``WebsocketAPI needs to be configured before sending
-      messages.``. This is because a boto3 ``apigatewaymanagmentapi`` client
+      messages.``. This is because a boto3 ``apigatewaymanagementapi`` client
       must be created from the :attr:`session` with a custom endpoint in order
       to properly communicate with our API Gateway WebsocketAPI. This method is
       called on your behalf before each of the websocket handlers:
@@ -721,6 +721,33 @@ WebsocketAPI
       Method to send a message to a client. The ``connection_id`` is the unique
       identifier of the socket to send the ``message`` to. The ``message`` must
       be a utf-8 string.
+
+      If the socket is disconnected it raises a :class:`WebsocketDisconnectedError`
+      error.
+
+   .. method:: close(connection_id)
+
+      Method to close a WebSocket connection. The ``connection_id`` is the
+      unique identifier of the socket to close.
+
+      If the socket is already disconnected it raises a
+      :class:`WebsocketDisconnectedError` error.
+
+   .. method:: info(connection_id)
+
+      Method to get info about a WebSocket. The ``connection_id`` is the unique
+      identifier of the socket to get info about.
+
+      The following is an example of the format this method returns::
+
+       {
+           'ConnectedAt': datetime(2015, 1, 1),
+           'Identity': {
+               'SourceIp': 'string',
+               'UserAgent': 'string'
+           },
+           'LastActiveAt': datetime(2015, 1, 1)
+       }
 
       If the socket is disconnected it raises a :class:`WebsocketDisconnectedError`
       error.
