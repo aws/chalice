@@ -115,7 +115,7 @@ class FakeClient(object):
             return info
 
     def _call(self, name, *args):
-        self.calls[name].append((*args,))
+        self.calls[name].append(tuple(args))
         if self._errors:
             error = self._errors.pop()
             raise error
