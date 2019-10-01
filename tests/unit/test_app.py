@@ -2421,7 +2421,51 @@ def test_can_close_websocket_connection(create_websocket_event):
     assert connection_id == 'connection_id'
 
 
-def test_can_get_info_about_websocket_connection(create_websocket_event):
+def test_close_does_fail_if_already_disconnected(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient(errors=[FakeGoneException])
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        with pytest.raises(WebsocketDisconnectedError) as e:
+            demo.websocket_api.close('connection_id')
+        assert e.value.connection_id == 'connection_id'
+
+    event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
+
+    calls = client.calls['close']
+    assert len(calls) == 1
+    call = calls[0]
+    connection_id = call[0]
+    assert connection_id == 'connection_id'
+
+
+def test_info_does_fail_if_already_disconnected(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient(errors=[FakeGoneException])
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_message()
+    def message_handler(event):
+        with pytest.raises(WebsocketDisconnectedError) as e:
+            demo.websocket_api.info('connection_id')
+        assert e.value.connection_id == 'connection_id'
+
+    event = create_websocket_event('$default', body='foo bar')
+    handler = websocket_handler_for_route('$default', demo)
+    handler(event, context=None)
+
+    calls = client.calls['info']
+    assert len(calls) == 1
+    call = calls[0]
+    connection_id = call[0]
+    assert connection_id == 'connection_id'
+
+
+def test_can__about_websocket_connection(create_websocket_event):
     demo = app.Chalice('app-name')
     client = FakeClient(infos=[{'foo': 'bar'}])
     demo.websocket_api.session = FakeSession(client)
