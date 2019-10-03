@@ -718,6 +718,8 @@ WebsocketAPI
 
    .. method:: send(connection_id, message)
 
+      *requires* ``boto3>=1.9.91``
+
       Method to send a message to a client. The ``connection_id`` is the unique
       identifier of the socket to send the ``message`` to. The ``message`` must
       be a utf-8 string.
@@ -727,6 +729,8 @@ WebsocketAPI
 
    .. method:: close(connection_id)
 
+      *requires* ``boto3>=1.9.221``
+
       Method to close a WebSocket connection. The ``connection_id`` is the
       unique identifier of the socket to close.
 
@@ -734,6 +738,8 @@ WebsocketAPI
       :class:`WebsocketDisconnectedError` error.
 
    .. method:: info(connection_id)
+
+      *requires* ``boto3>=1.9.221``
 
       Method to get info about a WebSocket. The ``connection_id`` is the unique
       identifier of the socket to get info about.
