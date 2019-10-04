@@ -87,12 +87,12 @@ class TestHTTPClient(object):
 
     def __init__(self, app):
         # type: (Chalice) -> None
-        self.local_gateway = InternalLocalGateway(app, Config())
+        self._local_gateway = InternalLocalGateway(app, Config())
 
     @property
     def custom_context(self):
         # type: () -> Dict[str, Any]
-        return self.local_gateway.custom_context
+        return self._local_gateway.custom_context
 
     # As of Chalice version 1.8.0,
     # LocalGateway object doesn't handle Cognito's context
@@ -107,7 +107,7 @@ class TestHTTPClient(object):
     @custom_context.setter
     def custom_context(self, context):
         # type: (Dict[str, Any]) -> None
-        self.local_gateway.custom_context = context
+        self._local_gateway.custom_context = context
 
     def __getattr__(self, method):
         # type: (str) -> Callable
@@ -119,7 +119,7 @@ class TestHTTPClient(object):
         def request(path, headers=None, body=''):
             # type: (str, Optional[Dict[str, str]], str) -> ResponseHandler
             headers = {} if headers is None else headers
-            response = self.local_gateway.handle_request(
+            response = self._local_gateway.handle_request(
                 method=method.upper(), path=path, headers=headers, body=body)
             return ResponseHandler(response)
 
