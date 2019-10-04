@@ -3,7 +3,7 @@
 import pytest
 
 from chalice import Chalice
-from chalice.local.internal import RequestHandler
+from chalice.local.internal import TestHTTPClient
 
 
 @pytest.fixture
@@ -38,11 +38,11 @@ def sample_app():
 
 @pytest.fixture
 def sample_client(sample_app):
-    # type: (Chalice) -> RequestHandler
-    return RequestHandler(sample_app)
+    # type: (Chalice) -> TestHTTPClient
+    return TestHTTPClient(sample_app)
 
 
-class TestRequestHandler:
+class TestTestHTTPClient:
     @pytest.mark.parametrize('method',  (
         'get', 'head', 'post', 'put',
         'delete', 'trace', 'patch', 'link', 'unlink',
@@ -53,19 +53,19 @@ class TestRequestHandler:
         assert response.json == {'hello': 'world'}
 
     def test_invalid_method(self, sample_client):
-        # type: (RequestHandler) -> None
+        # type: (TestHTTPClient) -> None
         with pytest.raises(AttributeError, match=r' object has no attribute '):
             sample_client.invalid_method('/')
 
     def test_string_response_dont_have_json_attribute(self, sample_client):
-        # type: (RequestHandler) -> None
+        # type: (TestHTTPClient) -> None
         response = sample_client.get('/string')
         assert not hasattr(response, 'json')
 
 
 class TestCustomContext:
     def test_check_default_context(self, sample_client):
-        # type: (RequestHandler) -> None
+        # type: (TestHTTPClient) -> None
         response = sample_client.get('/context')
         assert response.json == {
             'context': {
@@ -77,7 +77,7 @@ class TestCustomContext:
         }
 
     def test_custom_context(self, sample_client):
-        # type: (RequestHandler) -> None
+        # type: (TestHTTPClient) -> None
         sample_client.custom_context = {
             'authorizer': {'claims': {}},
         }

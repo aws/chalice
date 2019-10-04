@@ -80,7 +80,7 @@ class ResponseHandler(object):
                     self.__class__.__name__, key))
 
 
-class RequestHandler(object):
+class TestHTTPClient(object):
     METHODS = (
         'get', 'head', 'post', 'options', 'put',
         'delete', 'trace', 'patch', 'link', 'unlink')
