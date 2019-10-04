@@ -541,7 +541,7 @@ class WebsocketAPI(object):
             stage=stage,
         )
 
-    def send(self, connection_id, message):
+    def _get_client(self):
         if self.session is None:
             raise ValueError(
                 'Assign app.websocket_api.session to a boto3 session before '
@@ -557,12 +557,34 @@ class WebsocketAPI(object):
                 'apigatewaymanagementapi',
                 endpoint_url=self._endpoint,
             )
+        return self._client
+
+    def send(self, connection_id, message):
+        client = self._get_client()
         try:
-            self._client.post_to_connection(
+            client.post_to_connection(
                 ConnectionId=connection_id,
                 Data=message,
             )
-        except self._client.exceptions.GoneException:
+        except client.exceptions.GoneException:
+            raise WebsocketDisconnectedError(connection_id)
+
+    def close(self, connection_id):
+        client = self._get_client()
+        try:
+            client.delete_connection(
+                ConnectionId=connection_id,
+            )
+        except client.exceptions.GoneException:
+            raise WebsocketDisconnectedError(connection_id)
+
+    def info(self, connection_id):
+        client = self._get_client()
+        try:
+            return client.get_connection(
+                ConnectionId=connection_id,
+            )
+        except client.exceptions.GoneException:
             raise WebsocketDisconnectedError(connection_id)
 
 
