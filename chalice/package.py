@@ -129,6 +129,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         'Transform': 'AWS::Serverless-2016-10-31',
         'Outputs': {},
         'Resources': {},
+        'Globals': {},
     }
 
     template_file = "sam.json"
@@ -276,6 +277,13 @@ class SAMTemplateGenerator(TemplateGenerator):
                 },
             }
         }
+
+        if self._config.api_gateway_responses:
+            template_globals = template['Globals']
+            template_globals['Api'] = {
+                'GatewayResponses': self._config.api_gateway_responses
+            }
+
         for auth in resource.authorizers:
             auth_cfn_name = to_cfn_resource_name(auth.resource_name)
             resources[auth_cfn_name + 'InvokePermission'] = {
@@ -825,6 +833,21 @@ class TerraformGenerator(TemplateGenerator):
 
         # typechecker happiness
         swagger_doc = cast(Dict, resource.swagger_doc)
+
+        if self._config.api_gateway_responses:
+            for response_type, params in \
+                    self._config.api_gateway_responses.items():
+                response_parameters = {}
+                for key, value in\
+                        params['ResponseParameters']['Headers'].items():
+                    response_parameters[f'gatewayresponse.header.{key}'] = \
+                        value
+
+                swagger_doc.setdefault(
+                    'x-amazon-apigateway-gateway-responses', {}).setdefault(
+                    response_type, {}).setdefault(
+                    'responseParameters', response_parameters)
+
         template['data'].setdefault(
             'template_file', {}).setdefault(
                 'chalice_api_swagger', {})['template'] = json.dumps(
