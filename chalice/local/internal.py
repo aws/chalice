@@ -18,12 +18,6 @@ from chalice.local import EventType, HeaderType  # noqa
 
 logger = getLogger(__name__)
 
-# Python 3.4 or older don't have JSONDecodeError within json module
-try:
-    JSONDecodeError = json.JSONDecodeError  # type: ignore
-except AttributeError:
-    JSONDecodeError = ValueError  # type: ignore
-
 
 class InternalLocalGateway(LocalGateway):
     def __init__(self, *args, **kwargs):
@@ -65,7 +59,7 @@ class ResponseHandler(object):
 
         try:
             self.values['json'] = json.loads(self.values['body'])
-        except JSONDecodeError:  # type: ignore
+        except ValueError:
             logger.info(
                 'Response body is NOT JSON decodable: %s',
                 self.values['body'])
