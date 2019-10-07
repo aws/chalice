@@ -3,7 +3,7 @@
 import pytest
 
 from chalice import Chalice
-from chalice.local.internal import TestHTTPClient
+from chalice.testutils import TestHTTPClient
 
 
 @pytest.fixture
