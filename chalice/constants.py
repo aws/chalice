@@ -249,3 +249,8 @@ POST_TO_WEBSOCKET_CONNECTION_POLICY = {
     ],
     "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
 }
+
+
+FEATURE_DEPENDENCIES = {
+    'MODELS': 'marshmallow>2.0.0,<3.0.0',
+}

@@ -92,6 +92,7 @@ import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.session import Session  # noqa
+from marshmallow_jsonschema import JSONSchema
 from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
 from chalice import app
@@ -109,6 +110,7 @@ from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
+from chalice.constants import FEATURE_DEPENDENCIES
 from chalice.deploy import models
 from chalice.deploy.executor import Executor
 from chalice.deploy.packager import PipRunner
@@ -477,6 +479,17 @@ class ApplicationGraphBuilder(object):
                 filename=os.path.join(
                     config.project_dir, '.chalice', policy_path))
 
+        definitions = {}
+        for route in config.chalice_app.routes.values():
+            for handler in route.values():
+                if handler.input_model:
+                    model = handler.input_model.model
+                    if model:
+                        json_schema = JSONSchema().dump(model).data
+                        for k, v in json_schema['definitions'].items():
+                            if k not in definitions:
+                                definitions[k] = v
+
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
@@ -485,7 +498,8 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
-            policy=policy
+            policy=policy,
+            model_definitions=definitions,
         )
 
     def _get_default_private_api_policy(self, config):
@@ -874,9 +888,19 @@ class DeploymentPackager(BaseDeployStep):
     def handle_deploymentpackage(self, config, resource):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
+            extra_dependencies = self._get_extra_dependencies_from_app(
+                config.chalice_app)
             zip_filename = self._packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version)
+                config.project_dir,
+                config.lambda_python_version,
+                extra_dependencies=extra_dependencies,
+            )
             resource.filename = zip_filename
+
+    def _get_extra_dependencies_from_app(self, app):
+        extras = [FEATURE_DEPENDENCIES[feature]
+                  for feature in app.features_with_dependencies]
+        return extras
 
 
 class SwaggerBuilder(BaseDeployStep):

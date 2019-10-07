@@ -209,6 +209,7 @@ class RestAPI(ManagedModel):
     lambda_function = attrib()                   # type: LambdaFunction
     policy = attrib(default=None)                # type: Optional[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
+    model_definitions = attrib(default=None)     # type: Optional[Dict[str,Any]]
 
     def dependencies(self):
         # type: () -> List[Model]

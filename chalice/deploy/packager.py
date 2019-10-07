@@ -75,8 +75,11 @@ class LambdaDeploymentPackager(object):
         return self._osutils.joinpath(project_dir, 'requirements.txt')
 
     def create_deployment_package(self, project_dir, python_version,
-                                  package_filename=None):
+                                  package_filename=None,
+                                  extra_dependencies=None):
         # type: (str, str, Optional[str]) -> str
+        if extra_dependencies is None:
+            extra_dependencies = []
         msg = "Creating deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
@@ -87,26 +90,35 @@ class LambdaDeploymentPackager(object):
         if package_filename is None:
             package_filename = deployment_package_filename
         requirements_filepath = self._get_requirements_filename(project_dir)
-        with self._osutils.tempdir() as site_packages_dir:
-            try:
-                abi = self._RUNTIME_TO_ABI[python_version]
-                self._dependency_builder.build_site_packages(
-                    abi, requirements_filepath, site_packages_dir)
-            except MissingDependencyError as e:
-                missing_packages = '\n'.join([p.identifier for p
-                                              in e.missing])
-                self._ui.write(
-                    MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
-            dirname = self._osutils.dirname(
-                self._osutils.abspath(package_filename))
-            if not self._osutils.directory_exists(dirname):
-                self._osutils.makedirs(dirname)
-            with self._osutils.open_zip(package_filename, 'w',
-                                        self._osutils.ZIP_DEFLATED) as z:
-                self._add_py_deps(z, site_packages_dir)
-                self._add_app_files(z, project_dir)
-                self._add_vendor_files(z, self._osutils.joinpath(
-                    project_dir, self._VENDOR_DIR))
+        with self._osutils.tempdir() as requirements_dir:
+            reqs = self._osutils.get_file_contents(
+                requirements_filepath, binary=False)
+            if extra_dependencies:
+                reqs = '%s\n%s' % (reqs, '\n'.join(extra_dependencies))
+            requirements_filepath = self._osutils.joinpath(
+                requirements_dir, 'requirements.txt')
+            self._osutils.set_file_contents(
+                requirements_filepath, reqs, binary=False)
+            with self._osutils.tempdir() as site_packages_dir:
+                try:
+                    abi = self._RUNTIME_TO_ABI[python_version]
+                    self._dependency_builder.build_site_packages(
+                        abi, requirements_filepath, site_packages_dir)
+                except MissingDependencyError as e:
+                    missing_packages = '\n'.join([p.identifier for p
+                                                  in e.missing])
+                    self._ui.write(
+                        MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
+                dirname = self._osutils.dirname(
+                    self._osutils.abspath(package_filename))
+                if not self._osutils.directory_exists(dirname):
+                    self._osutils.makedirs(dirname)
+                with self._osutils.open_zip(package_filename, 'w',
+                                            self._osutils.ZIP_DEFLATED) as z:
+                    self._add_py_deps(z, site_packages_dir)
+                    self._add_app_files(z, project_dir)
+                    self._add_vendor_files(z, self._osutils.joinpath(
+                        project_dir, self._VENDOR_DIR))
         return package_filename
 
     def _add_vendor_files(self, zipped, dirname):
@@ -374,7 +386,7 @@ class DependencyBuilder(object):
         # Pip will give us a wheel when it can, but some distributions do not
         # ship with wheels at all in which case we will have an sdist for it.
         # In some cases a platform specific wheel file may be availble so pip
-        # will have downloaded that, if our platform does not match the
+        # will have downloaded, that, if our platform does not match the
         # platform lambda runs on (linux_x86_64/manylinux) then the downloaded
         # wheel file may not be compatible with lambda. Pure python wheels
         # still will be compatible because they have no platform dependencies.
@@ -723,7 +735,7 @@ class PipRunner(object):
                       env_vars=env_vars, shim=shim)
 
     def download_all_dependencies(self, requirements_filename, directory):
-        # type: (str, str) -> None
+        # type: (str, List[str], str) -> None
         """Download all dependencies as sdist or wheel."""
         arguments = ['-r', requirements_filename, '--dest', directory]
         rc, out, err = self._execute('download', arguments)
