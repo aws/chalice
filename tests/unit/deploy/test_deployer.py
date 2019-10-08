@@ -1338,19 +1338,22 @@ class TestSwaggerBuilder(object):
             }
         }
 
-        config = Config.create(chalice_app=app, api_gateway_responses=api_gateway_responses)
+        config = Config.create(chalice_app=app,
+                               api_gateway_responses=api_gateway_responses)
         p = SwaggerBuilder(generator)
         p.handle(config, rest_api)
 
         assert 'x-amazon-apigateway-gateway-responses' in rest_api.swagger_doc
 
-        assert rest_api.swagger_doc['x-amazon-apigateway-gateway-responses'] == {
-            'DEFAULT_4XX': {
-                'responseParameters': {
-                    'gatewayresponse.header.Access-Control-Allow-Origin': "'*'"
+        assert \
+            rest_api.swagger_doc['x-amazon-apigateway-gateway-responses'] == {
+                'DEFAULT_4XX': {
+                    'responseParameters': {
+                        'gatewayresponse.header.Access-Control-Allow-Origin':
+                            "'*'"
+                    }
                 }
             }
-        }
 
 
 class TestDeploymentPackager(object):
