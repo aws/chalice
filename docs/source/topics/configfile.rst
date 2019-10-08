@@ -240,7 +240,7 @@ a top level ``lambda_functions`` key::
     "app_name": "app",
     "lambda_functions": {
       "foo": {
-        "lamba_timeout": 120
+        "lambda_timeout": 120
       }
     }
   }
