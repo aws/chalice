@@ -148,6 +148,30 @@ def test_apigateway_integration_generation(sample_app, swagger_gen):
     assert responses['default'] == {'statusCode': '200'}
 
 
+def test_can_inject_api_gateway_responses(sample_app, swagger_gen):
+    api_gateway_responses = {
+        'DEFAULT_4XX': {
+            'ResponseParameters': {
+                'Headers': {
+                    'Access-Control-Allow-Origin': "'*'"
+                }
+            }
+        }
+    }
+    doc = swagger_gen.generate_swagger(
+        sample_app, api_gateway_responses=api_gateway_responses)
+
+    assert 'x-amazon-apigateway-gateway-responses' in doc
+
+    assert doc['x-amazon-apigateway-gateway-responses'] == {
+        'DEFAULT_4XX': {
+            'responseParameters': {
+                'gatewayresponse.header.Access-Control-Allow-Origin': "'*'"
+            }
+        }
+    }
+
+
 def test_can_add_url_captures_to_params(sample_app, swagger_gen):
     @sample_app.route('/path/{capture}')
     def foo(name):

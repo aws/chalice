@@ -1309,51 +1309,14 @@ class TestSwaggerBuilder(object):
             lambda_function=None,
         )
         app = Chalice(app_name='foo')
-        config = Config.create(chalice_app=app)
-        p = SwaggerBuilder(generator)
-        p.handle(config, rest_api)
-        assert rest_api.swagger_doc == {'swagger': '2.0'}
-        generator.generate_swagger.assert_called_with(app, rest_api)
-
-    def test_can_inject_gateway_responses(self):
-        generator = mock.Mock(spec=SwaggerGenerator)
-        generator.generate_swagger.return_value = {'swagger': '2.0'}
-
-        rest_api = models.RestAPI(
-            resource_name='foo',
-            swagger_doc=models.Placeholder.BUILD_STAGE,
-            minimum_compression='',
-            endpoint_type='EDGE',
-            api_gateway_stage='api',
-            lambda_function=None,
-        )
-        app = Chalice(app_name='foo')
-        api_gateway_responses = {
-            'DEFAULT_4XX': {
-                'ResponseParameters': {
-                    'Headers': {
-                        'Access-Control-Allow-Origin': "'*'"
-                    }
-                }
-            }
-        }
-
+        api_gateway_responses = mock.Mock()
         config = Config.create(chalice_app=app,
                                api_gateway_responses=api_gateway_responses)
         p = SwaggerBuilder(generator)
         p.handle(config, rest_api)
-
-        assert 'x-amazon-apigateway-gateway-responses' in rest_api.swagger_doc
-
-        assert \
-            rest_api.swagger_doc['x-amazon-apigateway-gateway-responses'] == {
-                'DEFAULT_4XX': {
-                    'responseParameters': {
-                        'gatewayresponse.header.Access-Control-Allow-Origin':
-                            "'*'"
-                    }
-                }
-            }
+        assert rest_api.swagger_doc == {'swagger': '2.0'}
+        generator.generate_swagger.assert_called_with(
+            app, rest_api, api_gateway_responses=api_gateway_responses)
 
 
 class TestDeploymentPackager(object):

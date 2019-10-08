@@ -833,21 +833,6 @@ class TerraformGenerator(TemplateGenerator):
 
         # typechecker happiness
         swagger_doc = cast(Dict, resource.swagger_doc)
-
-        if self._config.api_gateway_responses:
-            for response_type, params in \
-                    self._config.api_gateway_responses.items():
-                response_parameters = {}
-                for key, value in\
-                        params['ResponseParameters']['Headers'].items():
-                    response_parameters[f'gatewayresponse.header.{key}'] = \
-                        value
-
-                swagger_doc.setdefault(
-                    'x-amazon-apigateway-gateway-responses', {}).setdefault(
-                    response_type, {}).setdefault(
-                    'responseParameters', response_parameters)
-
         template['data'].setdefault(
             'template_file', {}).setdefault(
                 'chalice_api_swagger', {})['template'] = json.dumps(

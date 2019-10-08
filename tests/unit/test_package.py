@@ -455,39 +455,6 @@ class TestTerraformTemplate(TemplateTestBase):
                 'value': '${aws_api_gateway_deployment.rest_api.invoke_url}'}
         }
 
-    def test_can_modify_rest_api_swagger_file(self, sample_app_with_auth):
-        api_gateway_responses = {
-            'DEFAULT_4XX': {
-                'ResponseParameters': {
-                    'Headers': {
-                        'Access-Control-Allow-Origin': "'*'"
-                    }
-                }
-            }
-        }
-        config = Config.create(chalice_app=sample_app_with_auth,
-                               project_dir='.',
-                               minimum_compression_size=8192,
-                               api_gateway_endpoint_type='PRIVATE',
-                               api_gateway_endpoint_vpce='vpce-abc123',
-                               app_name='sample_app',
-                               api_gateway_stage='api',
-                               api_gateway_responses=api_gateway_responses)
-        template = self.generate_template(config, 'dev')
-        data = template['data']
-        swagger_doc = json.loads(
-            data['template_file']['chalice_api_swagger']['template'])
-
-        assert 'x-amazon-apigateway-gateway-responses' in swagger_doc
-
-        assert swagger_doc['x-amazon-apigateway-gateway-responses'] == {
-            'DEFAULT_4XX': {
-                'responseParameters': {
-                    'gatewayresponse.header.Access-Control-Allow-Origin': "'*'"
-                }
-            }
-        }
-
     def test_can_package_s3_event_handler_with_tf_ref(self, sample_app):
         @sample_app.on_s3_event(
             bucket='${aws_s3_bucket.my_data_bucket.id}')
