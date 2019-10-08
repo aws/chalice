@@ -129,7 +129,6 @@ class SAMTemplateGenerator(TemplateGenerator):
         'Transform': 'AWS::Serverless-2016-10-31',
         'Outputs': {},
         'Resources': {},
-        'Globals': {},
     }
 
     template_file = "sam.json"
@@ -277,13 +276,6 @@ class SAMTemplateGenerator(TemplateGenerator):
                 },
             }
         }
-
-        if self._config.api_gateway_responses:
-            template_globals = template['Globals']
-            template_globals['Api'] = {
-                'GatewayResponses': self._config.api_gateway_responses
-            }
-
         for auth in resource.authorizers:
             auth_cfn_name = to_cfn_resource_name(auth.resource_name)
             resources[auth_cfn_name + 'InvokePermission'] = {

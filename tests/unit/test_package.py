@@ -638,7 +638,6 @@ class TestSAMTemplate(TemplateTestBase):
         assert template['Transform'] == 'AWS::Serverless-2016-10-31'
         assert 'Outputs' in template
         assert 'Resources' in template
-        assert 'Globals' in template
         assert list(sorted(template['Resources'])) == [
             'APIHandler', 'APIHandlerInvokePermission',
             # This casing on the ApiHandlerRole name is unfortunate, but the 3
@@ -837,21 +836,10 @@ class TestSAMTemplate(TemplateTestBase):
             resources['RestAPI']['Properties']
 
     def test_can_generate_rest_api(self, sample_app_with_auth):
-        api_gateway_responses = {
-            'DEFAULT_4XX': {
-                'ResponseParameters': {
-                    'Headers': {
-                        'Access-Control-Allow-Origin': "'*'"
-                    }
-                }
-            }
-        }
-
         config = Config.create(chalice_app=sample_app_with_auth,
                                project_dir='.',
                                api_gateway_stage='api',
                                minimum_compression_size=100,
-                               api_gateway_responses=api_gateway_responses
                                )
         template = self.generate_template(config, 'dev')
         resources = template['Resources']
@@ -906,12 +894,6 @@ class TestSAMTemplate(TemplateTestBase):
                 }
             },
             'RestAPIId': {'Value': {'Ref': 'RestAPI'}}
-        }
-
-        assert template['Globals'] == {
-            'Api': {
-                'GatewayResponses': api_gateway_responses
-            }
         }
 
     @pytest.mark.parametrize('route_key,route', [
