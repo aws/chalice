@@ -250,7 +250,7 @@ class Config(object):
 
     @property
     def api_gateway_responses(self):
-        # type: () -> Dict[str: Dict[str, Dict[str, Any]]]
+        # type: () -> Dict[str, Dict[str, Dict[str, Any]]]
         return self._chain_lookup('api_gateway_responses',
                                   varies_per_chalice_stage=True)
 
