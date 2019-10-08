@@ -888,6 +888,20 @@ class SwaggerBuilder(BaseDeployStep):
         # type: (Config, models.RestAPI) -> None
         swagger_doc = self._swagger_generator.generate_swagger(
             config.chalice_app, resource)
+
+        if config.api_gateway_responses:
+            for response_type, params in config.api_gateway_responses.items():
+                response_parameters = {}
+                for key, value in \
+                        params['ResponseParameters']['Headers'].items():
+                    response_parameters[f'gatewayresponse.header.{key}'] = \
+                        value
+
+                swagger_doc.setdefault(
+                    'x-amazon-apigateway-gateway-responses', {}).setdefault(
+                    response_type, {}).setdefault(
+                    'responseParameters', response_parameters)
+
         resource.swagger_doc = swagger_doc
 
 
