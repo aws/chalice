@@ -1309,7 +1309,23 @@ class TestSwaggerBuilder(object):
             lambda_function=None,
         )
         app = Chalice(app_name='foo')
-        api_gateway_responses = mock.Mock()
+        api_gateway_responses = {
+            "DEFAULT_4XX": {
+                "responseParameters": {
+                    "gatewayresponse.header.Access-Control-Allow-Origin":
+                        "'domain.com'"
+                },
+                "responseTemplates": {
+                    "application/json": "{\"message\": test 4xx b }"
+                }
+            },
+            "INVALID_API_KEY": {
+                "statusCode": "429",
+                "responseTemplates": {
+                    "application/json": "{\"message\": test forbidden }"
+                }
+            }
+        }
         config = Config.create(chalice_app=app,
                                api_gateway_responses=api_gateway_responses)
         p = SwaggerBuilder(generator)
