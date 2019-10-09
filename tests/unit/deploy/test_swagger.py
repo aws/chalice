@@ -150,11 +150,19 @@ def test_apigateway_integration_generation(sample_app, swagger_gen):
 
 def test_can_inject_api_gateway_responses(sample_app, swagger_gen):
     api_gateway_responses = {
-        'DEFAULT_4XX': {
-            'ResponseParameters': {
-                'Headers': {
-                    'Access-Control-Allow-Origin': "'*'"
-                }
+        "DEFAULT_4XX": {
+            "responseParameters": {
+                "gatewayresponse.header.Access-Control-Allow-Origin":
+                    "'domain.com'"
+            },
+            "responseTemplates": {
+                "application/json": "{\"message\": test 4xx b }"
+            }
+        },
+        "INVALID_API_KEY": {
+            "statusCode": "429",
+            "responseTemplates": {
+                "application/json": "{\"message\": test forbidden }"
             }
         }
     }
@@ -163,13 +171,8 @@ def test_can_inject_api_gateway_responses(sample_app, swagger_gen):
 
     assert 'x-amazon-apigateway-gateway-responses' in doc
 
-    assert doc['x-amazon-apigateway-gateway-responses'] == {
-        'DEFAULT_4XX': {
-            'responseParameters': {
-                'gatewayresponse.header.Access-Control-Allow-Origin': "'*'"
-            }
-        }
-    }
+    assert doc['x-amazon-apigateway-gateway-responses'] == \
+        api_gateway_responses
 
 
 def test_can_add_url_captures_to_params(sample_app, swagger_gen):

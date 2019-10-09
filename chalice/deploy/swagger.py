@@ -247,17 +247,8 @@ class SwaggerGenerator(object):
     def _add_api_gateway_responses(self, api, api_gateway_responses):
         # type: (Dict[str, Any], Optional[Dict[str, Any]]) -> None
         if api_gateway_responses:
-            for response_type, params in api_gateway_responses.items():
-                response_parameters = {}
-                for key, value in \
-                        params['ResponseParameters']['Headers'].items():
-                    res_key = 'gatewayresponse.header.{key}'.format(key=key)
-                    response_parameters[res_key] = value
-
-                api.setdefault(
-                    'x-amazon-apigateway-gateway-responses', {}).setdefault(
-                    response_type, {}).setdefault(
-                    'responseParameters', response_parameters)
+            api.setdefault('x-amazon-apigateway-gateway-responses',
+                           api_gateway_responses)
 
 
 class CFNSwaggerGenerator(SwaggerGenerator):
