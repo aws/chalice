@@ -295,23 +295,82 @@ def find_skips_in_seq(numbers):
 
 def test_websocket_redployment_does_not_lose_messages(smoke_test_app_ws):
     # This test is to check if one persistant connection is affected by an app
-    # redeployment. A connetion is made to the app, and a sequence of numbers
+    # redeployment. A connection is made to the app, and a sequence of numbers
     # is sent over the socket and written to a DynamoDB table. The app is
     # redeployed in a seprate thread. After the redeployment we wait a
-    # second to ensure more numbers have been sent. Finally we inspect the
-    # DynamoDB table to ensure there are no gaps in the numbers we saw on the
-    # server side, and that the first and last number we sent is also present.
-    ws = websocket.create_connection(smoke_test_app_ws.websocket_connect_url)
-    counter_generator = counter()
-    sender = CountingMessageSender(ws, counter_generator)
-    ping_endpoint = Task(sender.send)
-    ping_endpoint.start()
-    smoke_test_app_ws.redeploy_once()
-    time.sleep(1)
-    ping_endpoint.stop()
+    # second to ensure more numbers have been sent.
+    # All messages we send over the websocket, are echoed back. We record these
+    # values to compare against the ones stored in dynamodb to ensure
+    # everything can be sent and received. Finally we inspect the DynamoDB
+    # table to ensure there are no gaps in the numbers we saw on the server
+    # side, and that the first and last number we sent is also present.
+    closure_values = {
+        'echoed_values': [],
+        'pending_echo': None,
+        'last_sent': None,
+    }
 
+    def on_message(ws, message):
+        message = int(message)
+        closure_values['echoed_values'].append(message)
+        # If the pending_echo value is a set, then we know that we are done
+        # sending new values to the server. And we are waiting for some of
+        # those values to be echoed back before we are done. We can delete
+        # the number we just got from the server from our set of pending_echos.
+        # Once that set is empty, we are no longer waiting and can close the
+        # websocket.
+        if closure_values['pending_echo'] is not None:
+            closure_values['pending_echo'].remove(message)
+            if not closure_values['pending_echo']:
+                ws.close()
+
+    def on_error(ws, error):
+        ws.close()
+
+    def on_open(ws):
+        # Once the websocket is open, we construct a separate thread
+        # to generate and send incrementing numerical messages at
+        # a constant rate.
+        counter_generator = counter()
+        sender = CountingMessageSender(ws, counter_generator)
+        ping_endpoint = Task(sender.send)
+        ping_endpoint.start()
+        smoke_test_app_ws.redeploy_once()
+        time.sleep(1)
+        ping_endpoint.stop()
+
+        # Once we have stopped sending values and are ready to do
+        # our assertions there are a few edge cases to consider. The
+        # easiest case is that all values sent, have been echoed back. We can
+        # just close the websocket.
+        closure_values['last_sent'] = sender.last_sent
+        closure_values['pending_echo'] = set(range(1, sender.last_sent + 1)) \
+            - set(closure_values['echoed_values'])
+        if not closure_values['pending_echo']:
+            ws.close()
+        # If there are still pending values in the set, then
+        # we are still waiting for them to round trip. In this case the
+        # on_message handler can close the websocket once it gets the last
+        # value. There is stil an edge case where something went wrong and some
+        # values are never going to get echoed back. To prevent this we set
+        # a 5 second timeout to close the websocket while waiting for the
+        # stragglers.
+        else:
+            threading.Timer(5.0, ws.close).start()
+
+    ws = websocket.WebSocketApp(
+        smoke_test_app_ws.websocket_connect_url,
+        on_message=on_message,
+        on_error=on_error,
+        on_open=on_open,
+    )
+    # This will block until the websocket is closed.
+    ws.run_forever()
+
+    echoed = sorted(closure_values['echoed_values'])
     numbers = get_numbers_from_dynamodb(smoke_test_app_ws.app_dir)
+    assert echoed == numbers
     assert 1 in numbers
-    assert sender.last_sent in numbers
+    assert closure_values['last_sent'] in numbers
     skips = find_skips_in_seq(numbers)
     assert skips == []
