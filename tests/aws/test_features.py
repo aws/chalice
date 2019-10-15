@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 import time
 import shutil
 import uuid
@@ -101,7 +100,6 @@ class SmokeTestApplication(object):
         original_app_py = os.path.join(self.app_dir, 'app.py')
         shutil.move(original_app_py, original_app_py + '.bak')
         shutil.copy(new_file, original_app_py)
-        self._clear_app_import()
         _deploy_app(self.app_dir)
         self._has_redeployed = True
         # Give it settling time before running more tests.
@@ -119,12 +117,6 @@ class SmokeTestApplication(object):
         except requests.exceptions.HTTPError:
             pass
 
-    def _clear_app_import(self):
-        # Now that we're using `import` instead of `exec` we need
-        # to clear out sys.modules in order to pick up the new
-        # version of the app we just copied over.
-        del sys.modules['app']
-
 
 @pytest.fixture
 def apig_client():
@@ -134,7 +126,6 @@ def apig_client():
 
 @pytest.fixture(scope='module')
 def smoke_test_app(tmpdir_factory):
-    sys.modules.pop('app', None)
     # We can't use the monkeypatch fixture here because this is a module scope
     # fixture and monkeypatch is a function scoped fixture.
     os.environ['APP_NAME'] = RANDOM_APP_NAME

@@ -169,7 +169,6 @@ def test_filename_and_lineno_included_in_syntax_error(clifactory):
     # If this app has been previously imported in another app
     # we need to remove it from the cached modules to ensure
     # we get the syntax error on import.
-    sys.modules.pop('app', None)
     with pytest.raises(RuntimeError) as excinfo:
         clifactory.load_chalice_app()
     message = str(excinfo.value)

@@ -1,3 +1,4 @@
+import sys
 import zipfile
 from collections import namedtuple
 
@@ -9,6 +10,11 @@ from pytest import fixture
 def pytest_addoption(parser):
     parser.addoption('--skip-slow', action='store_true',
                      help='Skip slow tests')
+
+
+@fixture(autouse=True)
+def teardown_function():
+    sys.modules.pop('app', None)
 
 
 class StubbedSession(botocore.session.Session):

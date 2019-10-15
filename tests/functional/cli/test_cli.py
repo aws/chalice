@@ -131,7 +131,6 @@ def test_gen_policy_command_creates_policy(runner):
 def test_does_fail_to_generate_swagger_if_no_rest_api(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
-        sys.modules.pop('app', None)
         os.chdir('testproject')
         with open('app.py', 'w') as f:
             f.write(
@@ -150,7 +149,6 @@ def test_can_write_swagger_model(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
-        sys.modules.pop('app', None)
         result = _run_cli_command(runner, cli.generate_models, [])
         assert result.exit_code == 0
         model = json.loads(result.output)
@@ -230,7 +228,6 @@ def test_can_package_command(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
-        sys.modules.pop('app', None)
         result = _run_cli_command(runner, cli.package, ['outdir'])
         assert result.exit_code == 0, result.output
         assert os.path.isdir('outdir')
@@ -582,7 +579,6 @@ def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
 def test_error_message_displayed_when_missing_feature_opt_in(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
-        sys.modules.pop('app', None)
         with open(os.path.join('testproject', 'app.py'), 'w') as f:
             # Rather than pick an existing experimental feature, we're
             # manually injecting a feature flag into our app.  This ensures
