@@ -9,6 +9,9 @@ Next Release (TBD)
   (`#1245 <https://github.com/aws/chalice/pull/1245>`__)
 * Add ``close`` and ``info`` commands to websocket api
   (`#1259 <https://github.com/aws/chalice/pull/1259>`__)
+* Bump upper bound on PIP to ``<19.4``
+  (`#1273 <https://github.com/aws/chalice/pull/1273>`__)
+  (`#1272 <https://github.com/aws/chalice/pull/1272>`__)
 
 
 1.11.1

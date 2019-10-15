@@ -10,12 +10,17 @@ from six import StringIO
 def pip_import_string():
     # type: () -> str
     import pip
-    pip_major_version = pip.__version__.split('.')[0]
+    pip_major_version = int(pip.__version__.split('.')[0])
+    pip_minor_version = int(pip.__version__.split('.')[1])
     # Pip moved its internals to an _internal module in version 10.
     # In order to be compatible with version 9 which has it at at the
     # top level we need to figure out the correct import path here.
-    if pip_major_version == '9':
+    if pip_major_version == 9:
         return 'from pip import main'
+    # Pip changed their import structure again in 19.3
+    # https://github.com/pypa/pip/commit/09fd200
+    elif pip_major_version >= 19 and pip_minor_version >= 3:
+        return 'from pip._internal.main import main'
     else:
         return 'from pip._internal import main'
 
