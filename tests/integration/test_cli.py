@@ -5,7 +5,11 @@ import pytest
 from chalice.utils import OSUtils
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.join(CURRENT_DIR, 'testapp')
+PROJECT_DIR = os.path.join(
+    os.path.dirname(CURRENT_DIR),
+    'aws',
+    'testapp',
+)
 
 
 @pytest.fixture
