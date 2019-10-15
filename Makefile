@@ -1,14 +1,14 @@
 # Eventually I'll add:
 # py.test --cov chalice --cov-report term-missing --cov-fail-under 95 tests/
 # which will fail if tests are under 95%
-TESTS=tests/unit tests/functional
+TESTS=tests/unit tests/functional tests/integration
 
 check:
 	###### FLAKE8 #####
 	# No unused imports, no undefined vars,
 	flake8 --ignore=E731,W503,W504 --exclude chalice/__init__.py,chalice/compat.py --max-complexity 10 chalice/
 	flake8 --ignore=E731,W503,W504,F401 --max-complexity 10 chalice/compat.py
-	flake8 tests/unit/ tests/functional/ tests/integration
+	flake8 tests/unit/ tests/functional/ tests/integration tests/aws
 	#
 	# Proper docstring conventions according to pep257
 	#
