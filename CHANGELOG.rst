@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.12.0
+======
 
 * Add ``generate-models`` command
   (`#1245 <https://github.com/aws/chalice/pull/1245>`__)
