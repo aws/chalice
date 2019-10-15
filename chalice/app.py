@@ -519,6 +519,7 @@ class APIGateway(object):
 
     def __init__(self):
         self.binary_types = self.default_binary_types
+        self.cors = False
 
     @property
     def default_binary_types(self):
@@ -731,6 +732,7 @@ class _HandlerRegistration(object):
         self.builtin_auth_handlers = []
         self.event_sources = []
         self.pure_lambda_functions = []
+        self.api = APIGateway()
 
     def _do_register_handler(self, handler_type, name, user_handler,
                              wrapped_handler, kwargs, options=None):
@@ -888,8 +890,10 @@ class _HandlerRegistration(object):
             'api_key_required': actual_kwargs.pop('api_key_required', None),
             'content_types': actual_kwargs.pop('content_types',
                                                ['application/json']),
-            'cors': actual_kwargs.pop('cors', False),
+            'cors': actual_kwargs.pop('cors', self.api.cors),
         }
+        if route_kwargs['cors'] is None:
+            route_kwargs['cors'] = self.api.cors
         if not isinstance(route_kwargs['content_types'], list):
             raise ValueError(
                 'In view function "%s", the content_types '
@@ -920,7 +924,6 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
     def __init__(self, app_name, debug=False, configure_logs=True, env=None):
         super(Chalice, self).__init__()
         self.app_name = app_name
-        self.api = APIGateway()
         self.websocket_api = WebsocketAPI()
         self.current_request = None
         self.lambda_context = None
