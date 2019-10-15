@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 from zipfile import ZipFile
 from contextlib import contextmanager
@@ -41,6 +42,7 @@ def _get_random_package_name():
 
 class TestPackage(object):
     def test_can_package_with_dashes_in_name(self, runner, app_skeleton):
+        sys.modules.pop('app', None)
         req = os.path.join(app_skeleton, 'requirements.txt')
         package = 'googleapis-common-protos==1.5.2'
         with open(req, 'w') as f:
@@ -61,6 +63,7 @@ class TestPackage(object):
 
     def test_does_not_package_bad_requirements_file(
             self, runner, app_skeleton):
+        sys.modules.pop('app', None)
         req = os.path.join(app_skeleton, 'requirements.txt')
         package = _get_random_package_name()
         with open(req, 'w') as f:
