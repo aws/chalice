@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+Next Release (TBD)
+==================
+
+* Fix error for ``chalice logs`` when a Lambda function
+  has not been invoked
+  (`#1252 <https://github.com/aws/chalice/issues/1252>`__)
+
+
 1.12.0
 ======
 
