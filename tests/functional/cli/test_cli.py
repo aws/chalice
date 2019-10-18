@@ -217,6 +217,7 @@ def test_can_write_swagger_model(runner):
                 "image/jpg",
                 "image/jpeg",
                 "image/gif",
+                'multipart/form-data',
                 "video/ogg",
                 "video/mpeg",
                 "video/webm"

@@ -48,6 +48,12 @@ class CORSConfig:
     def __eq__(self, other: object) -> bool: ...
 
 
+class File:
+    name = ... # type: str
+    content = ... # type: bytes
+    size = ... # type: int
+
+
 class Request:
     query_params = ... # type: Dict[str, str]
     headers = ... # type: Dict[str, str]

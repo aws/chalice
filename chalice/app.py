@@ -1,7 +1,5 @@
 """Chalice app and routing code."""
 # pylint: disable=too-many-lines,ungrouped-imports
-import cgi
-import io
 import re
 import sys
 import os
@@ -22,6 +20,7 @@ _PARAMS = re.compile(r'{\w+}')
 # startup overhead.  This also means we need to handle py2/py3 compat issues
 # directly in this file instead of copying over compat.py
 try:
+    from email.parser import BytesParser
     from urllib.parse import unquote_plus
     from collections.abc import Mapping
     from collections.abc import MutableMapping
@@ -31,7 +30,12 @@ try:
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
+
+    def parse_multipart(content):
+        return BytesParser().parsebytes(content)
+
 except ImportError:
+    from email.parser import Parser
     from urllib import unquote_plus
     from collections import Mapping
     from collections import MutableMapping
@@ -49,6 +53,9 @@ except ImportError:
     # In python 2 there is a base class for the string types that we can check
     # for. It was removed in python 3 so it will cause a name error.
     _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
+
+    def parse_multipart(content):
+        return Parser().parsestr(content)
 
 
 def handle_extra_types(obj):
@@ -91,40 +98,6 @@ def _content_type_header_contains(content_type_header, valid_content_types):
         content_type_header_parts
     )
     return len(valid_parts) > 0
-
-
-def _get_multipart_upload_files(raw_content, content_type):
-    # type: (bytes, str) -> list
-    """
-    Get list of files uploaded using multipart form.
-
-    Filter body content to remove input parameters,
-    so the function will return only files.
-    :param raw_content: raw request body
-    :param content_type: request content type
-    :return: list of File objects
-    """
-    _, pdict = cgi.parse_header(content_type)
-    boundary = pdict["boundary"].encode("utf-8")
-    pdict["boundary"] = boundary
-    pdict["CONTENT-LENGTH"] = len(raw_content)
-
-    request_params = raw_content.split(boundary)
-    filtered_body = b"--%s" % boundary
-    multipart_files = []
-    for param in request_params:
-        # leave only files
-        if b"filename" in param:
-            multipart_files.append(param)
-
-    filtered_body += boundary.join(multipart_files)
-    try:
-        files = cgi.parse_multipart(io.BytesIO(filtered_body), pdict)
-    except KeyError:
-        # in Python 2.7 cgi.parse_multipart will raise the KeyError
-        # if content-disposition is missing
-        return []
-    return [File(name, files[name][0]) for name in files]
 
 
 class ChaliceError(Exception):
@@ -253,17 +226,6 @@ class CaseInsensitiveMapping(Mapping):
 
     def __repr__(self):
         return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
-
-
-class File(object):
-    """File object."""
-    def __init__(self, name, content):
-        self.name = name  # type: str
-        self.content = io.BytesIO(content)  # type: io.BytesIO
-        self.size = len(content)  # type: int
-
-    def __repr__(self):
-        return "File %s" % self.name
 
 
 class Authorizer(object):
@@ -397,6 +359,13 @@ class CORSConfig(object):
         return False
 
 
+class File(object):
+    def __init__(self, name, content):
+        self.name = name
+        self.content = content
+        self.size = len(content)
+
+
 class Request(object):
     """The current request from API gateway."""
 
@@ -447,16 +416,27 @@ class Request(object):
 
     @property
     def files(self):
-        content_type = self.headers.get('content-type', '')
-        if content_type.startswith('multipart/'):
+        content_type = self.headers.get('content-type')
+        if content_type.startswith('multipart'):
             if self._files is None:
-                try:
-                    self._files = _get_multipart_upload_files(
-                        self.raw_body, content_type
-                    )
-                except KeyError:
-                    raise BadRequestError('Missing boundary')
+                self._files = self._generate_files(
+                    content_type, self.raw_body
+                )
             return self._files
+
+    def _generate_files(self, content_type, raw_body):
+        full_content = b'Content-Type: ' + \
+            content_type.encode('utf-8') + \
+            b'\r\n\r\n' + \
+            raw_body
+        msg = parse_multipart(full_content)
+        if not msg.is_multipart():
+            raise BadRequestError('Invalid multipart request')
+        return [
+            File(part.get_filename(), part.get_payload(decode=True))
+            for part in msg.walk()
+            if part.get_filename()
+        ]
 
     def to_dict(self):
         # Don't copy internal attributes.
@@ -575,7 +555,7 @@ class APIGateway(object):
         'application/octet-stream', 'application/x-tar', 'application/zip',
         'audio/basic', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
         'audio/webm', 'image/png', 'image/jpg', 'image/jpeg', 'image/gif',
-        'video/ogg', 'video/mpeg', 'video/webm',
+        'multipart/form-data', 'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
     def __init__(self):

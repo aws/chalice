@@ -25,7 +25,7 @@ from chalice.app import (
     BadRequestError,
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
-    _get_multipart_upload_files)
+)
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
 from chalice.deploy.validate import validate_feature_flags
@@ -59,7 +59,7 @@ MULTIPART_REQUEST_BODY = b'--513716970da13ba7b3a9355eb790964e\r\n' \
                          b'\r\nContent-Disposition: ' \
                          b'form-data; name="file.txt"; ' \
                          b'filename="file.txt"\r\n\r\n' \
-                         b'example file content\r\n' \
+                         b'\xfe\xed example file content\r\n' \
                          b'--513716970da13ba7b3a9355eb790964e--\r\n'
 
 
@@ -2717,42 +2717,53 @@ def test_does_raise_on_invalid_json_wbsocket_body(create_websocket_event):
 
 
 def test_can_get_multipart_upload_files():
-    files = _get_multipart_upload_files(
-        MULTIPART_REQUEST_BODY,
-        "multipart/form-data; boundary=513716970da13ba7b3a9355eb790964e"
-    )
+    headers = {
+        'Content-Type':
+        'multipart/form-data; boundary=513716970da13ba7b3a9355eb790964e'
+    }
+    body = base64.b64encode(MULTIPART_REQUEST_BODY)
+    encoded = True
+    request = Request(None, headers, None, 'POST', body, None, None, encoded)
+    files = request.files
+
     assert len(files) == 1
     assert files[0].name == "file.txt"
-    assert files[0].content.read() == b'example file content\r\n--'
-    assert files[0].size == 24
+    assert files[0].content == b'\xfe\xed example file content'
+    assert files[0].size == 23
+
+
+def test_can_get_files_twice():
+    headers = {
+        'Content-Type':
+        'multipart/form-data; boundary=513716970da13ba7b3a9355eb790964e'
+    }
+    body = base64.b64encode(MULTIPART_REQUEST_BODY)
+    encoded = True
+    request = Request(None, headers, None, 'POST', body, None, None, encoded)
+    files = request.files
+    files2 = request.files
+
+    assert len(files) == 1
+    assert files[0].name == "file.txt"
+    assert files[0].content == b'\xfe\xed example file content'
+    assert files[0].size == 23
+    assert len(files2) == 1
+    assert files2[0].name == "file.txt"
+    assert files2[0].content == b'\xfe\xed example file content'
+    assert files2[0].size == 23
 
 
 def test_does_raise_on_missing_boundary():
-    with pytest.raises(KeyError):
-        _get_multipart_upload_files(
-            MULTIPART_REQUEST_BODY, "multipart/form-data"
-        )
+    headers = {
+        'Content-Type':
+        'multipart/form-data; '
+    }
+    body = base64.b64encode(MULTIPART_REQUEST_BODY)
+    encoded = True
+    request = Request(None, headers, None, 'POST', body, None, None, encoded)
 
-
-def test_can_access_request_files():
-    request = app.Request(
-        {},
-        {'Content-Type': "multipart/form-data; "
-                         "boundary=513716970da13ba7b3a9355eb790964e"},
-        {}, 'POST', MULTIPART_REQUEST_BODY, {}, {}, False
-    )
-    assert len(request.files) == 1
-    assert isinstance(request.files[0], app.File)
-
-
-def test_request_files_does_raise_on_missing_boundary():
-    request = app.Request(
-        {}, {'Content-Type': "multipart/form-data"},
-        {}, 'POST', MULTIPART_REQUEST_BODY, {}, {}, False
-    )
-    with pytest.raises(BadRequestError) as exc:
+    with pytest.raises(BadRequestError):
         request.files
-    assert str(exc.value) == "BadRequestError: Missing boundary"
 
 
 def test_request_files_wrong_content_type():
@@ -2771,7 +2782,8 @@ def test_request_files_malformed_data():
         {}, 'POST', b'some malformed data', {}, {}, False
     )
 
-    assert request.files == []
+    with pytest.raises(BadRequestError):
+        request.files
 
 
 def test_request_files_empty_body():
@@ -2781,4 +2793,5 @@ def test_request_files_empty_body():
         {}, 'POST', b'', {}, {}, False
     )
 
-    assert request.files == []
+    with pytest.raises(BadRequestError):
+        request.files
