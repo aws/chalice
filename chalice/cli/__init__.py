@@ -222,7 +222,10 @@ def deploy(ctx, autogen_policy, profile, api_gateway_stage, stage,
 @click.pass_context
 def invoke(ctx, name, profile, stage):
     # type: (click.Context, str, str, str) -> None
-    """Invoke the deployed lambda function NAME."""
+    """Invoke the deployed lambda function NAME.
+
+    Reads payload from STDIN.
+    """
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
 
