@@ -203,6 +203,29 @@ def sample_app_with_cors():
 
 
 @fixture
+def sample_app_with_default_cors():
+    demo = app.Chalice('demo-app')
+    demo.api.cors = True
+
+    @demo.route('/on', methods=['POST'],
+                content_types=['image/gif'])
+    def on():
+        return {'image': True}
+
+    @demo.route('/off', methods=['POST'], cors=False,
+                content_types=['image/gif'])
+    def off():
+        return {'image': True}
+
+    @demo.route('/default', methods=['POST'], cors=None,
+                content_types=['image/gif'])
+    def default():
+        return {'image': True}
+
+    return demo
+
+
+@fixture
 def sample_websocket_app():
     demo = app.Chalice('app-name')
     demo.websocket_api.session = FakeSession()
@@ -427,6 +450,26 @@ def test_error_contains_cors_headers(sample_app_with_cors, create_event):
     raw_response = sample_app_with_cors(event, context=None)
     assert raw_response['statusCode'] == 415
     assert 'Access-Control-Allow-Origin' in raw_response['headers']
+
+
+class TestDefaultCORS(object):
+    def test_cors_enabled(self, sample_app_with_default_cors, create_event):
+        event = create_event('/on', 'POST', {'not': 'image'})
+        raw_response = sample_app_with_default_cors(event, context=None)
+        assert raw_response['statusCode'] == 415
+        assert 'Access-Control-Allow-Origin' in raw_response['headers']
+
+    def test_cors_none(self, sample_app_with_default_cors, create_event):
+        event = create_event('/default', 'POST', {'not': 'image'})
+        raw_response = sample_app_with_default_cors(event, context=None)
+        assert raw_response['statusCode'] == 415
+        assert 'Access-Control-Allow-Origin' in raw_response['headers']
+
+    def test_cors_disabled(self, sample_app_with_default_cors, create_event):
+        event = create_event('/off', 'POST', {'not': 'image'})
+        raw_response = sample_app_with_default_cors(event, context=None)
+        assert raw_response['statusCode'] == 415
+        assert 'Access-Control-Allow-Origin' not in raw_response['headers']
 
 
 def test_no_view_function_found(sample_app, create_event):

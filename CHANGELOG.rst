@@ -8,6 +8,8 @@ Next Release (TBD)
 * Fix error for ``chalice logs`` when a Lambda function
   has not been invoked
   (`#1252 <https://github.com/aws/chalice/issues/1252>`__)
+* Add global CORS configuration
+  (`#70 <https://github.com/aws/chalice/pull/70>`__)
 
 
 1.12.0

@@ -825,7 +825,8 @@ Tutorial: CORS Support
 
 You can specify whether a view supports CORS by adding the
 ``cors=True`` parameter to your ``@app.route()`` call.  By
-default this value is false:
+default this value is ``False``. Global CORS can be set by
+setting ``app.api.cors = True``.
 
 .. code-block:: python
 
@@ -834,7 +835,7 @@ default this value is false:
         return {}
 
 
-Settings ``cors=True`` has similar behavior to enabling CORS
+Setting ``cors=True`` has similar behavior to enabling CORS
 using the AWS Console.  This includes:
 
 * Injecting the ``Access-Control-Allow-Origin: *`` header to your
