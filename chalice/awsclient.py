@@ -14,6 +14,7 @@ this class to get improved type checking across chalice.
 
 """
 # pylint: disable=too-many-lines
+import base64
 import os
 import time
 import tempfile
@@ -30,7 +31,7 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
-from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
+from typing import Any, Optional, Dict, Callable, List, Iterator, Union  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
@@ -1170,3 +1171,20 @@ class TypedAWSClient(object):
     def _random_id(self):
         # type: () -> str
         return str(uuid.uuid4())
+
+    def encrypt_data(self, key, data):
+        # type: (str, Union[dict, bytes]) -> str
+        if isinstance(data, dict):
+            data = json.dumps(data).encode('utf-8')
+        kms_client = self._client('kms')
+        resp = kms_client.encrypt(KeyId=key, Plaintext=data)
+        resp = base64.b64encode(resp.get('CiphertextBlob')).decode('utf-8')
+        return resp
+
+    def decrypt_data(self, data):
+        # type: (Union[str, bytes]) -> dict
+        data = base64.b64decode(data)
+        kms_client = self._client('kms')
+        resp = kms_client.decrypt(CiphertextBlob=data)
+        resp = resp.get('Plaintext').decode('utf-8')
+        return json.loads(resp)
