@@ -52,6 +52,21 @@ HTTP_REQUEST = st.fixed_dictionaries({
 })
 BINARY_TYPES = APIGateway().binary_types
 
+MULTIPART_REQUEST_BODY = b'--513716970da13ba7b3a9355eb790964e\r\n' \
+                         b'Content-Disposition: form-data; name="key"' \
+                         b'\r\n\r\nvalue\r\n' \
+                         b'--513716970da13ba7b3a9355eb790964e' \
+                         b'\r\nContent-Disposition: ' \
+                         b'form-data; name="file.txt"; ' \
+                         b'filename="file.txt"\r\n\r\n' \
+                         b'\xFE\xED example file content\r\n' \
+                         b'--513716970da13ba7b3a9355eb790964e' \
+                         b'\r\nContent-Disposition: ' \
+                         b'form-data; name="ascii.txt"; ' \
+                         b'filename="ascii.txt"\r\n\r\n' \
+                         b'example file content\r\n' \
+                         b'--513716970da13ba7b3a9355eb790964e--\r\n'
+
 
 class FakeLambdaContextIdentity(object):
     def __init__(self, cognito_identity_id, cognito_identity_pool_id):
@@ -2704,3 +2719,94 @@ def test_does_raise_on_invalid_json_wbsocket_body(create_websocket_event):
 
     event = create_websocket_event('$default', body='foo bar')
     demo(event, context=None)
+
+
+def test_can_get_multipart_upload_files():
+    headers = {
+        'Content-Type':
+        'multipart/form-data; boundary=513716970da13ba7b3a9355eb790964e'
+    }
+    body = base64.b64encode(MULTIPART_REQUEST_BODY)
+    encoded = True
+    request = Request(None, headers, None, 'POST', body, None, None, encoded)
+    files = request.files
+
+    assert len(files) == 2
+    assert files[0].name == "file.txt"
+    assert files[0].content == b'\xfe\xed example file content'
+    assert files[0].size == 23
+    assert files[1].name == "ascii.txt"
+    assert files[1].content == b'example file content'
+    assert files[1].size == 20
+
+
+def test_can_get_files_twice():
+    headers = {
+        'Content-Type':
+        'multipart/form-data; boundary=513716970da13ba7b3a9355eb790964e'
+    }
+    body = base64.b64encode(MULTIPART_REQUEST_BODY)
+    encoded = True
+    request = Request(None, headers, None, 'POST', body, None, None, encoded)
+    files = request.files
+    files2 = request.files
+
+    assert len(files) == 2
+    assert files[0].name == "file.txt"
+    assert files[0].content == b'\xfe\xed example file content'
+    assert files[0].size == 23
+    assert files[1].name == "ascii.txt"
+    assert files[1].content == b'example file content'
+    assert files[1].size == 20
+
+    assert len(files2) == 2
+    assert files2[0].name == "file.txt"
+    assert files2[0].content == b'\xfe\xed example file content'
+    assert files2[0].size == 23
+    assert files2[1].name == "ascii.txt"
+    assert files2[1].content == b'example file content'
+    assert files2[1].size == 20
+
+
+def test_does_raise_on_missing_boundary():
+    headers = {
+        'Content-Type':
+        'multipart/form-data; '
+    }
+    body = base64.b64encode(MULTIPART_REQUEST_BODY)
+    encoded = True
+    request = Request(None, headers, None, 'POST', body, None, None, encoded)
+
+    with pytest.raises(BadRequestError):
+        request.files
+
+
+def test_request_files_wrong_content_type():
+    request = app.Request(
+        {}, {'Content-Type': "application/json"},
+        {}, 'POST', json.dumps({}), {}, {}, False
+    )
+
+    assert request.files is None
+
+
+def test_request_files_malformed_data():
+    request = app.Request(
+        {}, {'Content-Type': "multipart/form-data; "
+                             "boundary=513716970da13ba7b3a9355eb790964e"},
+        {}, 'POST', b'some malformed data', {}, {}, False
+    )
+
+    with pytest.raises(BadRequestError):
+        request.files
+
+
+def test_request_files_empty_body():
+    request = app.Request(
+        {}, {'Content-Type': "multipart/form-data; "
+                             "boundary=513716970da13ba7b3a9355eb790964e"},
+        {}, 'POST', b'', {}, {}, False
+    )
+
+    with pytest.raises(BadRequestError):
+        request.files

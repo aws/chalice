@@ -10,6 +10,8 @@ Next Release (TBD)
   (`#1252 <https://github.com/aws/chalice/issues/1252>`__)
 * Add global CORS configuration
   (`#70 <https://github.com/aws/chalice/pull/70>`__)
+* Add multipart file upload support
+  (`#1021 <https://github.com/aws/chalice/issues/1021>`__)
 
 
 1.12.0

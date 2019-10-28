@@ -76,6 +76,17 @@ def supports_only_put():
     return {'success': True}
 
 
+@app.route('/multipart', methods=['POST'],
+           content_types=['multipart/form-data'])
+def support_multipart():
+    return Response(
+        app.current_request.files[0].content,
+        headers={
+            'Content-Type': 'application/octet-stream'
+        },
+        status_code=200)
+
+
 @app.route('/jsonpost', methods=['POST'])
 def supports_post_body_as_json():
     json_body = app.current_request.json_body

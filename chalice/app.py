@@ -20,6 +20,7 @@ _PARAMS = re.compile(r'{\w+}')
 # startup overhead.  This also means we need to handle py2/py3 compat issues
 # directly in this file instead of copying over compat.py
 try:
+    from email.parser import BytesParser
     from urllib.parse import unquote_plus
     from collections.abc import Mapping
     from collections.abc import MutableMapping
@@ -29,7 +30,12 @@ try:
     # In python 3 string and bytes are different so we explicitly check
     # for both.
     _ANY_STRING = (str, bytes)
+
+    def parse_multipart(content):
+        return BytesParser().parsebytes(content)
+
 except ImportError:
+    from email.parser import Parser
     from urllib import unquote_plus
     from collections import Mapping
     from collections import MutableMapping
@@ -47,6 +53,9 @@ except ImportError:
     # In python 2 there is a base class for the string types that we can check
     # for. It was removed in python 3 so it will cause a name error.
     _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
+
+    def parse_multipart(content):
+        return Parser().parsestr(content)
 
 
 def handle_extra_types(obj):
@@ -350,6 +359,13 @@ class CORSConfig(object):
         return False
 
 
+class File(object):
+    def __init__(self, name, content):
+        self.name = name
+        self.content = content
+        self.size = len(content)
+
+
 class Request(object):
     """The current request from API gateway."""
 
@@ -366,6 +382,7 @@ class Request(object):
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
         self._json_body = None
+        self._files = None
         self._raw_body = b''
         self.context = context
         self.stage_vars = stage_vars
@@ -396,6 +413,32 @@ class Request(object):
                 except ValueError:
                     raise BadRequestError('Error Parsing JSON')
             return self._json_body
+
+    @property
+    def files(self):
+        content_type = self.headers.get('content-type')
+        if content_type.startswith('multipart/form-data'):
+            if self._files is None:
+                self._files = self._parse_files(
+                    content_type, self.raw_body
+                )
+            return self._files
+
+    def _parse_files(self, content_type, raw_body):
+        full_content = b'Content-Type: ' + \
+            content_type.encode('utf-8') + \
+            b'\r\n\r\n' + \
+            raw_body
+        msg = parse_multipart(full_content)
+        if not msg.is_multipart():
+            raise BadRequestError('Invalid multipart request')
+        for part in msg.walk():
+            print(part.get_filename())
+        return [
+            File(part.get_filename(), part.get_payload(decode=True))
+            for part in msg.walk()
+            if part.get_filename()
+        ]
 
     def to_dict(self):
         # Don't copy internal attributes.
@@ -514,7 +557,7 @@ class APIGateway(object):
         'application/octet-stream', 'application/x-tar', 'application/zip',
         'audio/basic', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
         'audio/webm', 'image/png', 'image/jpg', 'image/jpeg', 'image/gif',
-        'video/ogg', 'video/mpeg', 'video/webm',
+        'multipart/form-data', 'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
     def __init__(self):

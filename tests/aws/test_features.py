@@ -300,6 +300,17 @@ def test_supports_put(smoke_test_app):
         response.raise_for_status()
 
 
+def test_supports_multipart_form_data(smoke_test_app):
+    bin_data = b'\xDE\xAD\xBE\xEF'
+    app_url = smoke_test_app.url
+    response = requests.post(app_url + '/multipart',
+                             files={'file.bin': bin_data},
+                             headers={
+                                 'Accept': 'application/octet-stream',
+                             })
+    assert response.content == bin_data
+
+
 def test_supports_shared_routes(smoke_test_app):
     app_url = smoke_test_app.url
     response = requests.get(app_url + '/shared')
