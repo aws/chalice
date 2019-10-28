@@ -417,14 +417,14 @@ class Request(object):
     @property
     def files(self):
         content_type = self.headers.get('content-type')
-        if content_type.startswith('multipart'):
+        if content_type.startswith('multipart/form-data'):
             if self._files is None:
-                self._files = self._generate_files(
+                self._files = self._parse_files(
                     content_type, self.raw_body
                 )
             return self._files
 
-    def _generate_files(self, content_type, raw_body):
+    def _parse_files(self, content_type, raw_body):
         full_content = b'Content-Type: ' + \
             content_type.encode('utf-8') + \
             b'\r\n\r\n' + \
@@ -432,6 +432,8 @@ class Request(object):
         msg = parse_multipart(full_content)
         if not msg.is_multipart():
             raise BadRequestError('Invalid multipart request')
+        for part in msg.walk():
+            print(part.get_filename())
         return [
             File(part.get_filename(), part.get_payload(decode=True))
             for part in msg.walk()

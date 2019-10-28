@@ -59,7 +59,12 @@ MULTIPART_REQUEST_BODY = b'--513716970da13ba7b3a9355eb790964e\r\n' \
                          b'\r\nContent-Disposition: ' \
                          b'form-data; name="file.txt"; ' \
                          b'filename="file.txt"\r\n\r\n' \
-                         b'\xfe\xed example file content\r\n' \
+                         b'\xFE\xED example file content\r\n' \
+                         b'--513716970da13ba7b3a9355eb790964e' \
+                         b'\r\nContent-Disposition: ' \
+                         b'form-data; name="ascii.txt"; ' \
+                         b'filename="ascii.txt"\r\n\r\n' \
+                         b'example file content\r\n' \
                          b'--513716970da13ba7b3a9355eb790964e--\r\n'
 
 
@@ -2726,10 +2731,13 @@ def test_can_get_multipart_upload_files():
     request = Request(None, headers, None, 'POST', body, None, None, encoded)
     files = request.files
 
-    assert len(files) == 1
+    assert len(files) == 2
     assert files[0].name == "file.txt"
     assert files[0].content == b'\xfe\xed example file content'
     assert files[0].size == 23
+    assert files[1].name == "ascii.txt"
+    assert files[1].content == b'example file content'
+    assert files[1].size == 20
 
 
 def test_can_get_files_twice():
@@ -2743,14 +2751,21 @@ def test_can_get_files_twice():
     files = request.files
     files2 = request.files
 
-    assert len(files) == 1
+    assert len(files) == 2
     assert files[0].name == "file.txt"
     assert files[0].content == b'\xfe\xed example file content'
     assert files[0].size == 23
-    assert len(files2) == 1
+    assert files[1].name == "ascii.txt"
+    assert files[1].content == b'example file content'
+    assert files[1].size == 20
+
+    assert len(files2) == 2
     assert files2[0].name == "file.txt"
     assert files2[0].content == b'\xfe\xed example file content'
     assert files2[0].size == 23
+    assert files2[1].name == "ascii.txt"
+    assert files2[1].content == b'example file content'
+    assert files2[1].size == 20
 
 
 def test_does_raise_on_missing_boundary():
