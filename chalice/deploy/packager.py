@@ -534,8 +534,7 @@ class Package(object):
 
     def _normalize_name(self, name):
         # type: (str) -> str
-        # Taken directly from PEP 503
-        return re.sub(r"[-_.]+", "-", name).lower()
+        return re.sub(r"[-_.]+", "-", name)
 
     @property
     def identifier(self):
