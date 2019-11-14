@@ -26,9 +26,8 @@ worker process).
 import subprocess
 import logging
 import copy
-import sys
 
-from typing import MutableMapping, Type, Callable, Optional  # noqa
+from typing import MutableMapping, Type, Callable, Optional, List  # noqa
 
 from chalice.cli.filewatch import RESTART_REQUEST_RC, WorkerProcess
 from chalice.local import LocalDevServer, HTTPServerThread  # noqa
@@ -50,9 +49,9 @@ def get_best_worker_process():
         return StatWorkerProcess
 
 
-def start_parent_process(env):
-    # type: (MutableMapping) -> None
-    process = ParentProcess(env, subprocess.Popen)
+def start_parent_process(args, env):
+    # type: (List[str], MutableMapping) -> None
+    process = ParentProcess(args, env, subprocess.Popen)
     process.main()
 
 
@@ -70,8 +69,9 @@ def start_worker_process(server_factory, root_dir, worker_process_cls=None):
 
 class ParentProcess(object):
     """Spawns a child process and restarts it as needed."""
-    def __init__(self, env, popen):
-        # type: (MutableMapping, Type[subprocess.Popen]) -> None
+    def __init__(self, args, env, popen):
+        # type: (List[str], MutableMapping, Type[subprocess.Popen]) -> None
+        self._args = self._filter_args(args)
         self._env = copy.copy(env)
         self._popen = popen
 
@@ -83,7 +83,7 @@ class ParentProcess(object):
         while True:
             self._env['CHALICE_WORKER'] = 'true'
             LOGGER.debug("Parent process starting child worker process...")
-            process = self._popen(sys.argv, env=self._env)
+            process = self._popen(self._args, env=self._env)
             try:
                 process.communicate()
                 if process.returncode != RESTART_REQUEST_RC:
@@ -92,9 +92,31 @@ class ParentProcess(object):
                 process.terminate()
                 raise
 
+    def _filter_args(self, args):
+        # type: (List[str]) -> List[str]
+        """Remove --project-dir and positional argument from args list.
 
-def run_with_reloader(server_factory, env, root_dir, worker_process_cls=None):
-    # type: (Callable, MutableMapping, str, WorkerProcType) -> int
+        Since os.chdir has already been called on the project_dir, and the
+        child process will inherit our current working directory, we must
+        remove the --project-dir argument. If not removed, and it was a
+        relative path it will be appended again to the working directory
+        resulting in a stutter at the end of working directory in the worker
+        process.
+
+        Absolute paths are not affected since they will not be appended to the
+        current working directory.
+        """
+        try:
+            marker = args.index('--project-dir')
+            new_args = args[:marker] + args[marker + 2:]
+        except ValueError:
+            new_args = args
+        return new_args
+
+
+def run_with_reloader(server_factory, args, env, root_dir,
+                      worker_process_cls=None):
+    # type: (Callable, List[str], MutableMapping, str, WorkerProcType) -> int
     # This function is invoked in two possible modes, as the parent process
     # or as a chalice worker.
     try:
@@ -108,7 +130,7 @@ def run_with_reloader(server_factory, env, root_dir, worker_process_cls=None):
             # process but with the ``CHALICE_WORKER`` env var set.  It then
             # will monitor this process and restart it if it exits with a
             # RESTART_REQUEST exit code.
-            start_parent_process(env)
+            start_parent_process(args, env)
     except KeyboardInterrupt:
         pass
     return 0

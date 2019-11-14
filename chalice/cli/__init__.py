@@ -143,7 +143,7 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
         project_dir = factory.create_config_obj(
             chalice_stage_name=stage).project_dir
         rc = reloader.run_with_reloader(
-            server_factory, os.environ, project_dir)
+            server_factory, sys.argv, os.environ, project_dir)
         # Click doesn't sys.exit() with the RC this function.  The
         # recommended way to do this is to use sys.exit() directly,
         # see: https://github.com/pallets/click/issues/747
