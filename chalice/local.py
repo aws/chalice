@@ -536,9 +536,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:
             body = self.rfile.read(content_length)
-        # mypy doesn't like dict(self.headers) so I had to use a
-        # dictcomp instead to make it happy.
-        converted_headers = {key: value for key, value in self.headers.items()}
+        converted_headers = dict(self.headers)
         return converted_headers, body
 
     def _generic_handle(self):

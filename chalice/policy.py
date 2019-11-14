@@ -13,6 +13,7 @@ import uuid
 from typing import Any, List, Dict, Set  # noqa
 import botocore.session
 
+from chalice.analyzer import get_client_calls_for_app
 from chalice.constants import CLOUDWATCH_LOGS, VPC_ATTACH_POLICY
 from chalice.utils import OSUtils  # noqa
 from chalice.config import Config  # noqa
@@ -23,7 +24,6 @@ CustomPolicyT = Dict[str, Dict[str, List[str]]]
 
 def policy_from_source_code(source_code):
     # type: (str) -> Dict[str, Any]
-    from chalice.analyzer import get_client_calls_for_app
     client_calls = get_client_calls_for_app(source_code)
     builder = PolicyBuilder()
     policy = builder.build_policy_from_api_calls(client_calls)

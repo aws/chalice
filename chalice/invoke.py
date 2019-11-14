@@ -43,8 +43,7 @@ class LambdaInvokeHandler(object):
         if _response_is_error(response):
             self._ui.error(formatted_response)
             raise UnhandledLambdaError()
-        else:
-            self._ui.write(formatted_response)
+        self._ui.write(formatted_response)
 
 
 class LambdaInvoker(object):

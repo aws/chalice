@@ -229,9 +229,8 @@ class LambdaDeploymentPackager(object):
                 for el in inzip.infolist():
                     if self._needs_latest_version(el.filename):
                         continue
-                    else:
-                        contents = inzip.read(el.filename)
-                        outzip.writestr(el, contents)
+                    contents = inzip.read(el.filename)
+                    outzip.writestr(el, contents)
                 # Then at the end, add back the app.py, chalicelib,
                 # and runtime files.
                 self._add_app_files(outzip, project_dir)
