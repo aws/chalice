@@ -12,6 +12,8 @@ Next Release (TBD)
   (`#70 <https://github.com/aws/chalice/pull/70>`__)
 * Fix packaging simplejson
   (`#1304 <https://github.com/aws/chalice/pull/1304>`__)
+* Fix chalice local bug with relative --project-dir
+  (`#1295 <https://github.com/aws/chalice/pull/1295>`__)
 
 
 1.12.0
