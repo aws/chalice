@@ -30,7 +30,7 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
-from typing import Any, Optional, Dict, Callable, List, Iterator  # noqa
+from typing import Any, Optional, Dict, Callable, List, Iterator, IO  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
@@ -589,7 +589,7 @@ class TypedAWSClient(object):
     def get_sdk_download_stream(self, rest_api_id,
                                 api_gateway_stage=DEFAULT_STAGE_NAME,
                                 sdk_type='javascript'):
-        # type: (str, str, str) -> file
+        # type: (str, str, str) -> IO[str]
         """Generate an SDK for a given SDK.
 
         Returns a file like object that streams a zip contents for the
