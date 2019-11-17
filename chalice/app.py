@@ -276,11 +276,12 @@ class CustomAuthorizer(Authorizer):
     _AUTH_TYPE = 'custom'
 
     def __init__(self, name, authorizer_uri, ttl_seconds=300,
-                 header='Authorization'):
+                 header='Authorization', invoke_role_arn=''):
         self.name = name
         self._header = header
         self._authorizer_uri = authorizer_uri
         self._ttl_seconds = ttl_seconds
+        self._invoke_role_arn = invoke_role_arn
 
     def to_swagger(self):
         return {
@@ -292,6 +293,7 @@ class CustomAuthorizer(Authorizer):
                 'type': 'token',
                 'authorizerUri': self._authorizer_uri,
                 'authorizerResultTtlInSeconds': self._ttl_seconds,
+                'authorizerCredentials': self._invoke_role_arn,
             }
         }
 

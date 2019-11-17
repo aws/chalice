@@ -379,7 +379,8 @@ def test_can_add_api_key(sample_app, swagger_gen):
 
 def test_can_use_authorizer_object(sample_app, swagger_gen):
     authorizer = CustomAuthorizer(
-        'MyAuth', authorizer_uri='auth-uri', header='Authorization')
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization',
+        invoke_role_arn='role-arn')
 
     @sample_app.route('/auth', authorizer=authorizer)
     def auth():
@@ -398,7 +399,8 @@ def test_can_use_authorizer_object(sample_app, swagger_gen):
         'x-amazon-apigateway-authorizer': {
             'authorizerUri': 'auth-uri',
             'type': 'token',
-            'authorizerResultTtlInSeconds': 300
+            'authorizerResultTtlInSeconds': 300,
+            'authorizerCredentials': 'role-arn'
         }
     }
 
