@@ -684,6 +684,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'FunctionName': 'app-dev-foo',
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
@@ -763,6 +764,7 @@ class TestSAMTemplate(TemplateTestBase):
         assert cfn_resource == {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'FunctionName': 'app-dev-foo',
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,

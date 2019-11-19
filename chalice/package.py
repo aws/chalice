@@ -187,6 +187,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         lambdafunction_definition = {
             'Type': 'AWS::Serverless::Function',
             'Properties': {
+                'FunctionName': resource.function_name,
                 'Runtime': resource.runtime,
                 'Handler': resource.handler,
                 'CodeUri': resource.deployment_package.filename,
