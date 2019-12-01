@@ -2,6 +2,8 @@
 
 import pytest
 
+from http import HTTPStatus
+
 import chalice
 from chalice import Chalice
 from chalice.testutils import TestHTTPClient
@@ -73,6 +75,12 @@ class TestTestHTTPClient:
         response = sample_client.get('/exception/{}'.format(exception_class))
         assert response.status_code == expected_response_status
         assert response.json['Code'] == exception_class
+
+    def test_unexpected_exception(self, sample_client):
+        # type: (TestHTTPClient) -> None
+        response = sample_client.get('/exception/{}'.format('RuntimeError'))
+        assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+        assert response.json['Code'] == 'InternalServerError'
 
     def test_invalid_method(self, sample_client):
         # type: (TestHTTPClient) -> None
