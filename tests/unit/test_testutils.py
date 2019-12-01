@@ -2,10 +2,11 @@
 
 import pytest
 
-from http import HTTPStatus
+import json
+import sys
 
 import chalice
-from chalice import Chalice
+from chalice import Chalice, Response
 from chalice.testutils import TestHTTPClient
 
 
@@ -36,6 +37,15 @@ def sample_app():
         # type: () -> str
         return 'Foo'
 
+    @app.route('/any_response_code/{code}')
+    def any_response(code):
+        # type: (str) -> Response
+        return Response(
+            body=json.dumps({'hello': 'world'}),
+            status_code=int(code),
+            headers={'Content-Type': 'application/json'},
+        )
+
     @app.route('/exception/{exception_class}')
     def exception(exception_class):
         # type: (str) -> None
@@ -60,14 +70,24 @@ class TestTestHTTPClient:
         assert response.status_code == 200
         assert response.json == {'hello': 'world'}
 
+    @pytest.mark.parametrize('status_code', [
+        '100', '200', '300', '400', '500',
+    ])
+    def test_any_response_with_response_class(
+            self, sample_client, status_code):
+        # type: (TestHTTPClient, str) -> None
+        response = sample_client.get(
+            '/any_response_code/{}'.format(status_code))
+        assert response.status_code == int(status_code)
+
     @pytest.mark.parametrize(('exception_class', 'expected_response_status'), (
-        ('BadRequestError', HTTPStatus.BAD_REQUEST),
-        ('UnauthorizedError', HTTPStatus.UNAUTHORIZED),
-        ('NotFoundError', HTTPStatus.NOT_FOUND),
-        ('ConflictError', HTTPStatus.CONFLICT),
-        ('UnprocessableEntityError', HTTPStatus.UNPROCESSABLE_ENTITY),
-        ('TooManyRequestsError', HTTPStatus.TOO_MANY_REQUESTS),
-        ('ChaliceViewError', HTTPStatus.INTERNAL_SERVER_ERROR),
+        ('BadRequestError', 400),
+        ('UnauthorizedError', 401),
+        ('NotFoundError', 404),
+        ('ConflictError', 409),
+        ('UnprocessableEntityError', 422),
+        ('TooManyRequestsError', 429),
+        ('ChaliceViewError', 500),
     ))
     def test_abnormal_response(
             self, sample_client, exception_class, expected_response_status):
@@ -79,7 +99,7 @@ class TestTestHTTPClient:
     def test_unexpected_exception(self, sample_client):
         # type: (TestHTTPClient) -> None
         response = sample_client.get('/exception/{}'.format('RuntimeError'))
-        assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+        assert response.status_code == 500
         assert response.json['Code'] == 'InternalServerError'
 
     def test_invalid_method(self, sample_client):
