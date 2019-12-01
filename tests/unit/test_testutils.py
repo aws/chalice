@@ -2,6 +2,7 @@
 
 import pytest
 
+import chalice
 from chalice import Chalice
 from chalice.testutils import TestHTTPClient
 
@@ -33,6 +34,11 @@ def sample_app():
         # type: () -> str
         return 'Foo'
 
+    @app.route('/exception/{exception_class}')
+    def exception(exception_class):
+        # type: (str) -> None
+        raise getattr(chalice, exception_class)
+
     yield app
 
 
@@ -51,6 +57,22 @@ class TestTestHTTPClient:
         response = getattr(sample_client, method)('/')
         assert response.status_code == 200
         assert response.json == {'hello': 'world'}
+
+    @pytest.mark.parametrize(('exception_class', 'expected_response_status'), (
+        ('BadRequestError', HTTPStatus.BAD_REQUEST),
+        ('UnauthorizedError', HTTPStatus.UNAUTHORIZED),
+        ('NotFoundError', HTTPStatus.NOT_FOUND),
+        ('ConflictError', HTTPStatus.CONFLICT),
+        ('UnprocessableEntityError', HTTPStatus.UNPROCESSABLE_ENTITY),
+        ('TooManyRequestsError', HTTPStatus.TOO_MANY_REQUESTS),
+        ('ChaliceViewError', HTTPStatus.INTERNAL_SERVER_ERROR),
+    ))
+    def test_abnormal_response(
+            self, sample_client, exception_class, expected_response_status):
+        # type: (TestHTTPClient, str, int) -> None
+        response = sample_client.get('/exception/{}'.format(exception_class))
+        assert response.status_code == expected_response_status
+        assert response.json['Code'] == exception_class
 
     def test_invalid_method(self, sample_client):
         # type: (TestHTTPClient) -> None
