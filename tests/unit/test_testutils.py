@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import pytest
-
 import json
-import sys
+import pytest
 
 import chalice
 from chalice import Chalice, Response
@@ -37,6 +35,12 @@ def sample_app():
         # type: () -> str
         return 'Foo'
 
+    @app.route('/headers')
+    def headers():
+        # type: () -> Dict[str, str]
+        headers = app.current_request.headers
+        return dict(headers)
+
     @app.route('/any_response_code/{code}')
     def any_response(code):
         # type: (str) -> Response
@@ -69,6 +73,15 @@ class TestTestHTTPClient:
         response = getattr(sample_client, method)('/')
         assert response.status_code == 200
         assert response.json == {'hello': 'world'}
+
+    @pytest.mark.parametrize('headers', (
+        {'X-Chalice-Header': 'Chalice'},
+        {'X-Chalice-Headers': ['AWS', 'Chalice']},
+    ))
+    def test_headers(self, sample_client, headers):
+        # type: (TestHTTPClient, Dict[str, str]) -> None
+        response = sample_client.get('/headers', headers=headers)
+        response.headers == headers
 
     @pytest.mark.parametrize('status_code', [
         '100', '200', '300', '400', '500',
