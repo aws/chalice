@@ -124,31 +124,3 @@ class TestTestHTTPClient:
         # type: (TestHTTPClient) -> None
         response = sample_client.get('/string')
         assert not hasattr(response, 'json')
-
-
-class TestCustomContext:
-    def test_check_default_context(self, sample_client):
-        # type: (TestHTTPClient) -> None
-        response = sample_client.get('/context')
-        assert response.json == {
-            'context': {
-                'httpMethod': 'GET',
-                'identity': {'sourceIp': '127.0.0.1'},
-                'path': '/context',
-                'resourcePath': '/context',
-            }
-        }
-
-    def test_custom_context(self, sample_client):
-        # type: (TestHTTPClient) -> None
-        sample_client.custom_context = {
-            'authorizer': {'claims': {}},
-        }
-
-        response = sample_client.get('/context')
-        response_context = response.json['context']
-        assert 'httpMethod' in response_context
-        assert 'identity' in response_context
-        assert 'path' in response_context
-        assert 'resourcePath' in response_context
-        assert 'authorizer' in response_context

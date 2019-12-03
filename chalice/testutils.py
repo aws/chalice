@@ -19,31 +19,6 @@ from chalice.local import EventType, HeaderType  # noqa
 logger = getLogger(__name__)
 
 
-class InternalLocalGateway(LocalGateway):
-    def __init__(self, *args, **kwargs):
-        # type: (Any, Any) -> None
-        self.__custom_context = {}  # type: Dict
-        super(InternalLocalGateway, self).__init__(*args, **kwargs)
-
-    @property
-    def custom_context(self):
-        # type: () -> Dict[str, Any]
-        return self.__custom_context
-
-    @custom_context.setter
-    def custom_context(self, context):
-        # type: (Dict[str, Any]) -> None
-        self.__custom_context = context
-
-    def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[str])-> EventType
-        event = super(
-            InternalLocalGateway, self)._generate_lambda_event(
-                method, path, headers, body)
-        event['requestContext'].update(self.custom_context)
-        return event
-
-
 UPPERCASE_PATTERN = re.compile('([A-Z])')
 
 
@@ -81,27 +56,7 @@ class TestHTTPClient(object):
 
     def __init__(self, app):
         # type: (Chalice) -> None
-        self._local_gateway = InternalLocalGateway(app, Config())
-
-    @property
-    def custom_context(self):
-        # type: () -> Dict[str, Any]
-        return self._local_gateway.custom_context
-
-    # As of Chalice version 1.8.0,
-    # LocalGateway object doesn't handle Cognito's context
-    # like as the warning message below shows,
-    #
-    # "UserWarning: CognitoUserPoolAuthorizer is not a supported in local mode.
-    # All requests made against a route will be authorized
-    # to allow local testing."
-    #
-    # Not only for this purpose,
-    # it's an interface provided to allow custom contexts in unit tests.
-    @custom_context.setter
-    def custom_context(self, context):
-        # type: (Dict[str, Any]) -> None
-        self._local_gateway.custom_context = context
+        self._local_gateway = LocalGateway(app, Config())
 
     def __getattr__(self, method):
         # type: (str) -> Callable
