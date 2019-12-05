@@ -40,9 +40,9 @@ def _get_random_package_name():
 
 
 class TestPackage(object):
-    def test_can_package_with_dashes_in_name(self, runner, app_skeleton):
+    def assert_can_package_dependency(
+            self, runner, app_skeleton, package, contents):
         req = os.path.join(app_skeleton, 'requirements.txt')
-        package = 'googleapis-common-protos==1.5.2'
         with open(req, 'w') as f:
             f.write('%s\n' % package)
         cli_factory = factory.CLIFactory(app_skeleton)
@@ -57,7 +57,28 @@ class TestPackage(object):
         package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
         package_file = ZipFile(package_path)
         package_content = package_file.namelist()
-        assert 'google/api/__init__.py' in package_content
+        for content in contents:
+            assert content in package_content
+
+    def test_can_package_with_dashes_in_name(self, runner, app_skeleton):
+        self.assert_can_package_dependency(
+            runner,
+            app_skeleton,
+            'googleapis-common-protos==1.5.2',
+            contents=[
+                'google/api/__init__.py',
+            ],
+        )
+
+    def test_can_package_simplejson(self, runner, app_skeleton):
+        self.assert_can_package_dependency(
+            runner,
+            app_skeleton,
+            'simplejson==3.17.0',
+            contents=[
+                'simplejson/__init__.py',
+            ],
+        )
 
     def test_does_not_package_bad_requirements_file(
             self, runner, app_skeleton):
