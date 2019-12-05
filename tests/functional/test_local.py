@@ -159,8 +159,8 @@ def test_can_accept_get_request(config, sample_app, local_server_factory):
     assert response.text == '{"hello":"world"}'
 
 
-def test_can_get_unicode_string_content_length(
-        config, local_server_factory):
+def test_can_get_unicode_string_content_length(config,
+                                               local_server_factory):
     demo = app.Chalice('app-name')
 
     @demo.route('/')
