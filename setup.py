@@ -12,7 +12,7 @@ install_requires = [
     'typing==3.6.4;python_version<"3.7"',
     'six>=1.10.0,<2.0.0',
     'pip>=9,<19.4',
-    'attrs>=17.4.0,<20.0.0',
+    'attrs>=19.3.0,<20.0.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
     'wheel',
@@ -30,7 +30,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=install_requires,
     extras_require={
-        'event-file-poller': ['watchdog==0.8.3'],
+        'event-file-poller': ['watchdog==0.9.0'],
     },
     license="Apache License 2.0",
     package_data={'chalice': ['*.json']},

@@ -928,7 +928,7 @@ def test_unknown_kwargs_raise_error(sample_app, create_event):
             pass
 
 
-def test_name_kwargs_does_not_raise_error(sample_app, create_event):
+def test_name_kwargs_does_not_raise_error(sample_app):
     try:
         @sample_app.route('/foo', name='foo')
         def name_kwarg():

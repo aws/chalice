@@ -190,7 +190,7 @@ def validate_minimum_compression_size(config):
     if not isinstance(config.minimum_compression_size, int):
         raise ValueError("'minimum_compression_size' must be an int.")
     if config.minimum_compression_size < MIN_COMPRESSION_SIZE \
-            or config.minimum_compression_size > MAX_COMPRESSION_SIZE:
+       or config.minimum_compression_size > MAX_COMPRESSION_SIZE:
         raise ValueError("'minimum_compression_size' must be equal to or "
                          "greater than %s and less than or equal to %s."
                          % (MIN_COMPRESSION_SIZE, MAX_COMPRESSION_SIZE))
