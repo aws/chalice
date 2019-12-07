@@ -11,14 +11,12 @@ from chalice.app import Chalice
 # On travis we'll have it run through more iterations.
 settings.register_profile(
     'ci', settings(max_examples=2000,
-                   use_coverage=False,
                    suppress_health_check=[HealthCheck.too_slow]),
 )
 # When you're developing locally, we'll only run a few examples
 # to keep unit tests fast.  If you want to run more iterations
 # locally just set HYPOTHESIS_PROFILE=ci.
-settings.register_profile('dev', settings(use_coverage=False,
-                                          max_examples=10))
+settings.register_profile('dev', settings(max_examples=10))
 settings.load_profile(os.getenv('HYPOTHESIS_PROFILE', 'dev'))
 
 print("HYPOTHESIS PROFILE: %s" % os.environ.get("HYPOTHESIS_PROFILE"))
