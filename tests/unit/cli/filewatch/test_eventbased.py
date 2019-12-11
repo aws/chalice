@@ -77,7 +77,7 @@ def test_parent_process_starts_child_with_worker_env_var():
     process.returncode = 0
     popen = RecordingPopen(process)
     env = {'original-env': 'foo'}
-    parent = reloader.ParentProcess(env, popen)
+    parent = reloader.ParentProcess([], env, popen)
 
     parent.main()
 
@@ -91,7 +91,7 @@ def test_assert_child_restarted_until_not_restart_rc():
     process = mock.Mock(spec=Popen)
     popen = RecordingPopen(
         process, return_codes=[chalice.cli.filewatch.RESTART_REQUEST_RC, 0])
-    parent = reloader.ParentProcess({}, popen)
+    parent = reloader.ParentProcess([], {}, popen)
 
     parent.main()
 
@@ -101,11 +101,25 @@ def test_assert_child_restarted_until_not_restart_rc():
     assert len(popen.recorded_args) == 2
 
 
+def test_does_remove_project_dir_argument():
+    process = mock.Mock(spec=Popen)
+    process.returncode = 0
+    popen = RecordingPopen(process)
+    parent = reloader.ParentProcess(
+        ['chalice', '--project-dir', './relative', 'local'], {}, popen)
+
+    parent.main()
+
+    args = popen.recorded_args[0][0][0]
+    assert '--project-dir' not in args
+    assert './relative' not in args
+
+
 def test_ctrl_c_kill_child_process():
     process = mock.Mock(spec=Popen)
     process.communicate.side_effect = KeyboardInterrupt
     popen = RecordingPopen(process)
-    parent = reloader.ParentProcess({}, popen)
+    parent = reloader.ParentProcess([], {}, popen)
 
     with pytest.raises(KeyboardInterrupt):
         parent.main()
