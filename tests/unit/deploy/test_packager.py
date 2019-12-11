@@ -187,6 +187,17 @@ class TestPipRunner(object):
         assert call.env_vars is None
         assert call.shim is None
 
+    def test_download_sdist(self, pip_factory):
+        pip, runner = pip_factory()
+        packages = ['foo', 'bar', 'baz']
+        runner.download_sdists(packages, 'directory')
+        expected_prefix = ['download', '--no-binary=:all:', '--no-deps',
+                           '--dest', 'directory']
+        for i, package in enumerate(packages):
+            assert pip.calls[i].args == expected_prefix + [package]
+            assert pip.calls[i].env_vars is None
+            assert pip.calls[i].shim is None
+
     def test_download_wheels(self, pip_factory):
         # Make sure that `pip download` is called with the correct arguments
         # for getting lambda compatible wheels.

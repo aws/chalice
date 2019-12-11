@@ -337,6 +337,20 @@ class DependencyBuilder(object):
         self._pip.download_manylinux_wheels(
             abi, [pkg.identifier for pkg in packages], directory)
 
+    def _download_sdists(self, packages, directory):
+        # type: (Set[Package], str) -> None
+        logger.debug("Downloading missing sdists: %s", packages)
+        self._pip.download_sdists(
+            [pkg.identifier for pkg in packages], directory)
+
+    def _find_sdists(self, directory):
+        # type: (str) -> Set[Package]
+        packages = [Package(directory, filename) for filename
+                    in self._osutils.get_directory_contents(directory)]
+        sdists = {package for package in packages
+                  if package.dist_type == 'sdist'}
+        return sdists
+
     def _build_sdists(self, sdists, directory, compile_c=True):
         # type: (Set[Package], str, bool) -> None
         logger.debug("Build missing wheels from sdists "
@@ -359,6 +373,21 @@ class DependencyBuilder(object):
                 incompatible_wheels.add(wheel)
         return compatible_wheels, incompatible_wheels
 
+    def _categorize_deps(self, abi, deps):
+        # type: (str, Set[Package]) -> Any
+        compatible_wheels = set()
+        incompatible_wheels = set()
+        sdists = set()
+        for package in deps:
+            if package.dist_type == 'sdist':
+                sdists.add(package)
+            else:
+                if self._is_compatible_wheel_filename(abi, package.filename):
+                    compatible_wheels.add(package)
+                else:
+                    incompatible_wheels.add(package)
+        return sdists, compatible_wheels, incompatible_wheels
+
     def _download_dependencies(self, abi, directory, requirements_filename):
         # type: (str, str, str) -> Tuple[Set[Package], Set[Package]]
         # Download all dependencies we can, letting pip choose what to
@@ -378,17 +407,8 @@ class DependencyBuilder(object):
         # platform lambda runs on (linux_x86_64/manylinux) then the downloaded
         # wheel file may not be compatible with lambda. Pure python wheels
         # still will be compatible because they have no platform dependencies.
-        compatible_wheels = set()
-        incompatible_wheels = set()
-        sdists = set()
-        for package in deps:
-            if package.dist_type == 'sdist':
-                sdists.add(package)
-            else:
-                if self._is_compatible_wheel_filename(abi, package.filename):
-                    compatible_wheels.add(package)
-                else:
-                    incompatible_wheels.add(package)
+        sdists, compatible_wheels, incompatible_wheels = self._categorize_deps(
+            abi, deps)
         logger.debug("initial compatible: %s", compatible_wheels)
         logger.debug("initial incompatible: %s", incompatible_wheels | sdists)
 
@@ -403,6 +423,14 @@ class DependencyBuilder(object):
         # that has an sdist but not a valid wheel file is still not going to
         # work on lambda and we must now try and build the sdist into a wheel
         # file ourselves.
+        # There also may be the case where no sdist was ever downloaded. For
+        # example if we are on MacOS, and the package in question has a mac
+        # compatible wheel file but no linux ones, we will only have an
+        # incompatible wheel file and no sdist. So we need to get any missing
+        # sdists before we can build them.
+        missing_sdists = incompatible_wheels - sdists
+        self._download_sdists(missing_sdists, directory)
+        sdists = self._find_sdists(directory)
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
             abi, directory)
         logger.debug(
@@ -772,4 +800,11 @@ class PipRunner(object):
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
                          'manylinux1_x86_64', '--implementation', 'cp',
                          '--abi', abi, '--dest', directory, package]
+            self._execute('download', arguments)
+
+    def download_sdists(self, packages, directory):
+        # type: (List[str], str) -> None
+        for package in packages:
+            arguments = ["--no-binary=:all:", "--no-deps", "--dest",
+                         directory, package]
             self._execute('download', arguments)

@@ -251,6 +251,56 @@ class TestDependencyBuilder(object):
         pip.validate()
         assert ['foo'] == installed_packages
 
+    def test_can_get_sdist_if_missing_initially(self, tmpdir, pip_runner):
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        # Initial download yields  an incompatible wheel
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-macosx_10_6_intel.whl'
+            ]
+        )
+        # Secondary download for a compatible only one fails
+        pip.packages_to_download(
+            expected_args=[
+                '--only-binary=:all:', '--no-deps', '--platform',
+                'manylinux1_x86_64', '--implementation', 'cp',
+                '--abi', 'cp36m', '--dest', mock.ANY,
+                'foo==1.2'
+            ],
+            packages=[]
+        )
+        # Third download for an sdist succeeds
+        pip.packages_to_download(
+            expected_args=[
+                '--no-binary=:all:', '--no-deps', '--dest', mock.ANY,
+                'foo==1.2'
+            ],
+            packages=[
+                'foo-1.2.zip',
+            ]
+        )
+        # Wheel successfully builds
+        pip.wheels_to_build(
+            expected_args=['--no-deps', '--wheel-dir', mock.ANY,
+                           PathArgumentEndingWith('foo-1.2.zip')],
+            wheels_to_build=[
+                'foo-1.2-cp36-none-any.whl'
+            ]
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
     def test_can_get_whls_all_manylinux(self, tmpdir, pip_runner):
         reqs = ['foo', 'bar']
         pip, runner = pip_runner
