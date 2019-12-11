@@ -8,7 +8,7 @@ def pytest_collection_modifyitems(session, config, items):
     marked = []
     unmarked = []
     for item in items[start:end]:
-        if item.get_marker('on_redeploy') is not None:
+        if item.get_closest_marker('on_redeploy') is not None:
             marked.append(item)
         else:
             unmarked.append(item)
