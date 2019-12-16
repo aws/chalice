@@ -18,9 +18,7 @@ from chalice.deploy.packager import DependencyBuilder
 from chalice.deploy.packager import Package
 
 
-slow = pytest.mark.skipif(
-    pytest.config.getoption('--skip-slow'),
-    reason='Skipped due to --skip-slow')
+slow = pytest.mark.slow
 
 
 @fixture

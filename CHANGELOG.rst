@@ -12,6 +12,8 @@ Next Release (TBD)
   (`#70 <https://github.com/aws/chalice/pull/70>`__)
 * Fix packaging simplejson
   (`#1304 <https://github.com/aws/chalice/pull/1304>`__)
+* Add support for Python 3.8
+  (`#1315 <https://github.com/aws/chalice/pull/1315>`__)
 
 
 1.12.0

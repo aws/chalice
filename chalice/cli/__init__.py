@@ -18,9 +18,12 @@ import click
 from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
+from chalice import pipeline
+from chalice import policy
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ReadTimeout
+from chalice.cli import reloader
 from chalice.cli.factory import CLIFactory
 from chalice.cli.factory import NoSuchFunctionError
 from chalice.config import Config  # noqa
@@ -127,7 +130,6 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
           autoreload=True):
     # type: (click.Context, str, int, str, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
-    from chalice.cli import reloader
     # We don't create the server here because that will bind the
     # socket and we only want to do this in the worker process.
     server_factory = functools.partial(
@@ -304,7 +306,6 @@ def logs(ctx, num_entries, include_lambda_messages, stage, name, profile):
 @click.pass_context
 def gen_policy(ctx, filename):
     # type: (click.Context, str) -> None
-    from chalice import policy
     if filename is None:
         filename = os.path.join(ctx.obj['project_dir'], 'app.py')
     if not os.path.isfile(filename):
@@ -485,7 +486,6 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
         $ aws cloudformation deploy --stack-name mystack \b
             --template-file pipeline.json --capabilities CAPABILITY_IAM
     """
-    from chalice import pipeline
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
     p = pipeline.CreatePipelineTemplate()

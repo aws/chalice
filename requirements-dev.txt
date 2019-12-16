@@ -1,30 +1,30 @@
 # Dev requirements, used for various linting tools
-coverage==4.5.1
-flake8==3.6.0
+coverage==4.5.4
+flake8==3.7.9
 tox==3.0.0
 wheel==0.26.0
 doc8==0.8.0
 # The latest version of pylint only works on python3.
-pylint==2.2.2 ; python_version >= '3.6'
-astroid==2.1.0 ; python_version >= '3.6'
+pylint==2.4.4 ; python_version >= '3.6'
 # For python2, there are a few bugs in the latest versions of 1.x,
 # so we're locking to a specific version that we know works.
 pylint==1.9.3 ; python_version <= '2.7'
 astroid==1.6.5 ; python_version <= '2.7'
-pytest-cov==2.5.1
+pytest-cov==2.8.1
 pydocstyle==2.0.0
 
 # Test requirements
-pytest==3.5.0
+pytest==5.3.1 ; python_version >= '3.6'
+pytest==4.6.7 ; python_version <= '2.7'
 py==1.5.3
 pygments==2.1.3
 mock==2.0.0
 requests==2.20.0
 boto3==1.9.188
 websocket-client==0.54.0
-hypothesis==3.56.3
+hypothesis==4.43.1
 # pip does not catch the <0.7 requirement in pytest so we need to add it to
 # the top level requirements.
-pluggy<0.7
+pluggy==0.12
 
 mypy==0.740; python_version >= '3.6'

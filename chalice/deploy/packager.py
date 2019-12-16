@@ -61,6 +61,7 @@ class LambdaDeploymentPackager(object):
         'python2.7': 'cp27mu',
         'python3.6': 'cp36m',
         'python3.7': 'cp37m',
+        'python3.8': 'cp38',
     }
 
     def __init__(self, osutils, dependency_builder, ui):
@@ -229,9 +230,8 @@ class LambdaDeploymentPackager(object):
                 for el in inzip.infolist():
                     if self._needs_latest_version(el.filename):
                         continue
-                    else:
-                        contents = inzip.read(el.filename)
-                        outzip.writestr(el, contents)
+                    contents = inzip.read(el.filename)
+                    outzip.writestr(el, contents)
                 # Then at the end, add back the app.py, chalicelib,
                 # and runtime files.
                 self._add_app_files(outzip, project_dir)
