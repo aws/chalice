@@ -26,5 +26,6 @@ hypothesis==4.43.1
 # pip does not catch the <0.7 requirement in pytest so we need to add it to
 # the top level requirements.
 pluggy==0.12
+watchdog==0.9.0
 
 mypy==0.740; python_version >= '3.6'
