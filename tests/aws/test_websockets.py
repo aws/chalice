@@ -155,7 +155,7 @@ class SmokeTestApplication(object):
         time.sleep(self._REDEPLOY_SLEEP)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def smoke_test_app_ws(tmpdir_factory):
     # We can't use the monkeypatch fixture here because this is a module scope
     # fixture and monkeypatch is a function scoped fixture.
