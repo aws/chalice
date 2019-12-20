@@ -223,3 +223,7 @@ htmlhelp_basename = 'Chalicedoc'
 primary_domain = 'py'
 
 linkcheck_retries = 5
+# The AWS Doc site now uses javascript to dynamically render the content,
+# so the anchors aren't going to exist in the static html content.  This
+# will fail the anchor checker so we have to disable this.
+linkcheck_anchors = False
