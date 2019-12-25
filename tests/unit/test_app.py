@@ -1056,7 +1056,8 @@ def test_typecheck_list_type():
 
 def test_can_serialize_custom_authorizer():
     auth = app.CustomAuthorizer(
-        'Name', 'myuri', ttl_seconds=10, header='NotAuth'
+        'Name', 'myuri', ttl_seconds=10, header='NotAuth',
+        token_validation='regex'
     )
     assert auth.to_swagger() == {
         'in': 'header',
@@ -1067,6 +1068,7 @@ def test_can_serialize_custom_authorizer():
             'type': 'token',
             'authorizerUri': 'myuri',
             'authorizerResultTtlInSeconds': 10,
+            'identityValidationExpression': 'regex',
         }
     }
 

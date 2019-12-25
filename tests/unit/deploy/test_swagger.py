@@ -398,7 +398,8 @@ def test_can_use_authorizer_object(sample_app, swagger_gen):
         'x-amazon-apigateway-authorizer': {
             'authorizerUri': 'auth-uri',
             'type': 'token',
-            'authorizerResultTtlInSeconds': 300
+            'authorizerResultTtlInSeconds': 300,
+            'identityValidationExpression': '',
         }
     }
 
