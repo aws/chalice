@@ -13,28 +13,28 @@ As a side benefit, I can also add type annotations to
 this class to get improved type checking across chalice.
 
 """
+import copy
+import datetime
+import json
 # pylint: disable=too-many-lines
 import os
-import time
-import tempfile
-import datetime
-import zipfile
-import shutil
-import json
 import re
+import shutil
+import tempfile
+import time
 import uuid
+import zipfile
+from typing import (IO, Any, Callable, Dict, Iterable, Iterator, List,  # noqa
+                    Optional)
 
 import botocore.session  # noqa
 from botocore.exceptions import ClientError
-from botocore.vendored.requests import ConnectionError as \
-    RequestsConnectionError
-from botocore.vendored.requests.exceptions import ReadTimeout as \
-    RequestsReadTimeout
-from typing import Any, Optional, Dict, Callable, List, Iterator, IO  # noqa
+from botocore.vendored.requests import \
+    ConnectionError as RequestsConnectionError
+from botocore.vendored.requests.exceptions import \
+    ReadTimeout as RequestsReadTimeout
 
-from chalice.constants import DEFAULT_STAGE_NAME
-from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
-
+from chalice.constants import DEFAULT_STAGE_NAME, MAX_LAMBDA_DEPLOYMENT_SIZE
 
 StrMap = Optional[Dict[str, str]]
 OptStr = Optional[str]
@@ -670,6 +670,7 @@ class TypedAWSClient(object):
 
     def iter_log_events(self, log_group_name, interleaved=True):
         # type: (str, bool) -> Iterator[Dict[str, Any]]
+
         logs = self._client('logs')
         paginator = logs.get_paginator('filter_log_events')
         pages = paginator.paginate(logGroupName=log_group_name,
@@ -684,8 +685,55 @@ class TypedAWSClient(object):
             # of propagating an exception back to the user.
             pass
 
+    def follow_log_events(self, log_group_name, interleaved=True):
+        # type: (str, bool) -> Iterator[Dict[str, Any]]
+        """Yield log events indefinitely."""
+        logs = self._client('logs')
+        start_time = int(time.time() * 1000)
+        ids = []  # type: List[str]
+        while True:
+            response = logs.filter_log_events(
+                logGroupName=log_group_name,
+                interleaved=True,
+                startTime=start_time,
+            )
+
+            try:
+                # _iter_log_messages modifies attributes of response, so we
+                # make a copy
+                resp_copy = copy.deepcopy(response)
+                for log_message in self._iter_log_messages([resp_copy]):
+                    start_dt = self._convert_to_datetime(start_time)
+                    timestamp = log_message['timestamp']
+                    event_id = log_message['eventId']
+                    if timestamp == start_dt and event_id in ids:
+                        continue
+                    yield log_message
+            except logs.exceptions.ResourceNotFoundException:
+                # If the lambda function exists but has not been invoked yet,
+                # it's possible that the log group does not exist and we'll get
+                # a ResourceNotFoundException.  If this happens we return
+                # instead of propagating an exception back to the user.
+                pass
+
+            # Retrieve log events starting from the timestamp of the last
+            # event, and record messages with the same timestamp, so that we
+            # can avoid duplicates.
+            try:
+                start_time = response['events'][-1]['timestamp']
+            except IndexError:
+                # No logs since start_time
+                pass
+            else:
+                ids = [
+                    e['eventId'] for e in response['events']
+                    if e['timestamp'] == start_time
+                ]
+
+            time.sleep(1)
+
     def _iter_log_messages(self, pages):
-        # type: (Iterator[Dict[str, Any]]) -> Iterator[Dict[str, Any]]
+        # type: (Iterable[Dict[str, Any]]) -> Iterator[Dict[str, Any]]
         for page in pages:
             events = page['events']
             for event in events:

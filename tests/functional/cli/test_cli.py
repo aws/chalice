@@ -1,25 +1,23 @@
 import json
-import zipfile
 import os
-import sys
 import re
+import sys
+import zipfile
 
-import pytest
-from click.testing import CliRunner
 import mock
+import pytest
 from botocore.exceptions import ClientError
+from click.testing import CliRunner
 
 from chalice import cli
+from chalice.awsclient import ReadTimeout
 from chalice.cli import factory
 from chalice.config import Config, DeployedResources
-from chalice.utils import record_deployed_values
-from chalice.utils import PipeReader
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
-from chalice.logs import LogRetriever
-from chalice.invoke import LambdaInvokeHandler
-from chalice.invoke import UnhandledLambdaError
-from chalice.awsclient import ReadTimeout
 from chalice.deploy.validate import ExperimentalFeatureError
+from chalice.invoke import LambdaInvokeHandler, UnhandledLambdaError
+from chalice.logs import LogRetriever
+from chalice.utils import PipeReader, record_deployed_values
 
 
 class FakeConfig(object):
@@ -485,7 +483,7 @@ def test_can_provide_lambda_name_for_logs(runner, mock_cli_factory):
         )
         assert result.exit_code == 0
     log_retriever.retrieve_logs.assert_called_with(
-        include_lambda_messages=False, max_entries=None)
+        include_lambda_messages=False, max_entries=None, follow=False)
     mock_cli_factory.create_log_retriever.assert_called_with(
         mock.sentinel.Session, 'arn:aws:lambda::app-dev-foo'
     )
