@@ -1,8 +1,8 @@
 import mock
+from six import StringIO
 
 from chalice import logs
 from chalice.awsclient import TypedAWSClient
-from six import StringIO
 
 
 def message(log_message, log_stream_name='logStreamName'):
@@ -80,7 +80,7 @@ def test_can_display_logs():
     stream = StringIO()
     logs.display_logs(retriever, max_entries=None,
                       include_lambda_messages=True,
-                      stream=stream)
+                      stream=stream, follow=False)
     assert stream.getvalue().splitlines() == [
         'NOW shortId One',
         'NOW shortId Two',
