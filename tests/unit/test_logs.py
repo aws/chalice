@@ -1,8 +1,30 @@
+import datetime
+import time
+from contextlib import closing
+from multiprocessing import Process, Queue
+
+import botocore
 import mock
+import pytest
+from botocore import stub
+from botocore.stub import Stubber, StubResponseError
 from six import StringIO
 
 from chalice import logs
 from chalice.awsclient import TypedAWSClient
+
+
+@pytest.fixture
+def session():
+    return botocore.session.get_session()
+
+
+@pytest.fixture
+def logs_client(session):
+    client = session.create_client('logs')
+    stubber = Stubber(client)
+    yield client, stubber
+    stubber.deactivate()
 
 
 def message(log_message, log_stream_name='logStreamName'):
@@ -86,3 +108,95 @@ def test_can_display_logs():
         'NOW shortId Two',
         'NOW shortId Three',
     ]
+
+
+def test_follow(session, logs_client):
+    '''
+    Test follow option
+
+    The following are good functional tests, but they come down to the AWS service behaving the way it should
+    - Test that follow doesn't display duplicates
+    - Test that follow doesn't skip messages
+
+    ---
+
+    Instead we can test that we're building the correct query to retrieve the right results
+    - Test that the filter is constructed correctly
+    - Test that the 
+
+    We test here that the filter is created correctly and the startTime is correct.
+    We do this by utilizing the botocore stubber to compare the expected params with the given params
+    Since follow runs indefinitely, we need to run retrieve_logs in a separate process, so that we can terminate it
+    We need to catch the error in the second process, so that it can passed to and raised in the first process
+    '''
+
+    client, stubber = logs_client
+    log_stream_name = 'loggroup'
+
+    # retrieve_logs should yield logs with the same timestamp from separate
+    # filter_log_events invocations granted that they don't have the same
+    # eventId
+    message1 = {
+        'timestamp': 123,
+        'ingestionTime': 123,
+        'eventId': 'abc',
+        'logStreamName': log_stream_name,
+    }
+    message2 = {
+        'timestamp': 123,
+        'ingestionTime': 123,
+        'eventId': 'bcd',
+        'logStreamName': log_stream_name,
+    }
+    message3 = {
+        'timestamp': 123,
+        'ingestionTime': 123,
+        'eventId': 'cde',
+        'logStreamName': log_stream_name,
+    }
+
+    params_1 = {
+        'startTime': stub.ANY,
+        'filterPattern': stub.ANY,
+        'interleaved': stub.ANY,
+        'logGroupName': stub.ANY,
+    }
+    response_1 = {'events': [dict(message1), dict(message2)]}
+
+    params_2 = {
+        'startTime': 123,
+        'filterPattern': '{($.eventId != abc) && ($.eventId != bcd)}',
+        'interleaved': stub.ANY,
+        'logGroupName': stub.ANY,
+    }
+    response_2 = {'events': [dict(message3)]}
+
+    # Stubber will raise an exception if the params or response do not match
+    stubber.add_response('filter_log_events', response_1, params_1)
+    stubber.add_response('filter_log_events', response_2, params_2)
+    stubber.activate()
+
+    # retrieve_logs will run indefinitely unless terminated
+    def proc(queue):
+        awsclient = TypedAWSClient(session)
+        awsclient._client_cache = {'logs': client}
+        retriever = logs.LogRetriever(awsclient, 'loggroup')
+        try:
+            for log in retriever.retrieve_logs(follow=True):
+                queue.put({'message': log})
+        except StubResponseError as e:
+            queue.put({'error': e})
+            
+
+    messages = []
+    queue = Queue()
+    with closing(Process(target=proc, args=(queue,))) as p:
+        p.start()
+        while len(messages) < 2:
+            message = queue.get()
+            if message.get('error') is not None:
+                raise message['error']
+            messages.append(queue.get())
+            time.sleep(1)
+        p.terminate()
+        p.join(2)

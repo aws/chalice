@@ -687,23 +687,38 @@ class TypedAWSClient(object):
     def follow_log_events(self, log_group_name, interleaved=True):
         # type: (str, bool) -> Iterator[Dict[str, Any]]
 
+        ids: List[str] = []
         logs = self._client('logs')
         start_time = int(time.time() * 1000)
         while True:
+            filter_pattern = ''
+            if ids:
+                if len(ids) == 1:
+                    filter_pattern = f'{{$.eventId != {ids[0]}}}'
+                else:
+                    filter_pattern = ' && '.join([f'($.eventId != {id_})' for id_ in ids])
+                    filter_pattern = f'{{{filter_pattern}}}'
+
+            print(f'start_time: {start_time}, filter_pattern: {filter_pattern}')
             response = logs.filter_log_events(
                 logGroupName=log_group_name,
                 interleaved=True,
-                startTime=start_time
+                startTime=start_time,
+                filterPattern=filter_pattern
             )
+            print(f'events: {response["events"]}')
 
             try:
-                start_time = response['events'][-1]['timestamp'] + 1
+                start_time = response['events'][-1]['timestamp']
+                ids = []
             except IndexError:
                 # No logs since start_time
                 pass
 
             try:
                 for log_message in self._iter_log_messages([response]):
+                    if log_message['timestamp'] == self._convert_to_datetime(start_time):
+                        ids.append(log_message['eventId'])
                     yield log_message
             except logs.exceptions.ResourceNotFoundException:
                 # If the lambda function exists but has not been invoked yet,
