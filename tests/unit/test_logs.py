@@ -1,6 +1,6 @@
 import datetime
 import time
-from contextlib import closing
+from contextlib import closing, suppress
 from multiprocessing import Process, Queue
 
 import botocore
@@ -175,16 +175,18 @@ def test_follow(session, logs_client):
 
     messages = []
     queue = Queue()
-    with closing(Process(target=proc, args=(queue,))) as p:
-        p.start()
-        while len(messages) < 2:
-            message = queue.get()
-            if message.get('error') is not None:
-                raise message['error']
-            messages.append(message['message'])
-            time.sleep(1)
-        p.terminate()
-        p.join(2)
+    # Process doesn't have a close method in Python < 3.7
+    with suppress(AttributeError):
+        with closing(Process(target=proc, args=(queue,))) as p:
+            p.start()
+            while len(messages) < 2:
+                message = queue.get()
+                if message.get('error') is not None:
+                    raise message['error']
+                messages.append(message['message'])
+                time.sleep(1)
+            p.terminate()
+            p.join(2)
 
     def convert(message):
         # retreive_logs converts timestamps from ints to datetimes and adds a
