@@ -7,7 +7,7 @@ import botocore
 import mock
 import pytest
 from botocore import stub
-from botocore.stub import Stubber, StubResponseError
+from botocore.stub import Stubber, StubResponseError, UnStubbedResponseError
 from six import StringIO
 
 from chalice import logs
@@ -114,20 +114,8 @@ def test_follow(session, logs_client):
     '''
     Test follow option
 
-    The following are good functional tests, but they come down to the AWS service behaving the way it should
     - Test that follow doesn't display duplicates
     - Test that follow doesn't skip messages
-
-    ---
-
-    Instead we can test that we're building the correct query to retrieve the right results
-    - Test that the filter is constructed correctly
-    - Test that the 
-
-    We test here that the filter is created correctly and the startTime is correct.
-    We do this by utilizing the botocore stubber to compare the expected params with the given params
-    Since follow runs indefinitely, we need to run retrieve_logs in a separate process, so that we can terminate it
-    We need to catch the error in the second process, so that it can passed to and raised in the first process
     '''
 
     client, stubber = logs_client
@@ -148,35 +136,29 @@ def test_follow(session, logs_client):
         'eventId': 'bcd',
         'logStreamName': log_stream_name,
     }
-    message3 = {
-        'timestamp': 123,
-        'ingestionTime': 123,
-        'eventId': 'cde',
-        'logStreamName': log_stream_name,
-    }
 
     params_1 = {
         'startTime': stub.ANY,
-        'filterPattern': stub.ANY,
         'interleaved': stub.ANY,
         'logGroupName': stub.ANY,
     }
-    response_1 = {'events': [dict(message1), dict(message2)]}
+    response_1 = {'events': [dict(message1)]}
 
     params_2 = {
         'startTime': 123,
-        'filterPattern': '{($.eventId != abc) && ($.eventId != bcd)}',
         'interleaved': stub.ANY,
         'logGroupName': stub.ANY,
     }
-    response_2 = {'events': [dict(message3)]}
+    response_2 = {'events': [dict(message1), dict(message2)]}
 
-    # Stubber will raise an exception if the params or response do not match
     stubber.add_response('filter_log_events', response_1, params_1)
     stubber.add_response('filter_log_events', response_2, params_2)
     stubber.activate()
 
-    # retrieve_logs will run indefinitely unless terminated
+    # retrieve_logs with follow=True will run indefinitely unless terminated,
+    # so we run it in a seperate process.
+    # Stubber will raise StubResponseError if the parameterss or response do
+    # not match. We catch it here so we can pass it to the main thread.
     def proc(queue):
         awsclient = TypedAWSClient(session)
         awsclient._client_cache = {'logs': client}
@@ -184,9 +166,12 @@ def test_follow(session, logs_client):
         try:
             for log in retriever.retrieve_logs(follow=True):
                 queue.put({'message': log})
+        except UnStubbedResponseError:
+            # It's possible that filter_log_events will be called more than
+            # twice before the main thread can exit
+            pass
         except StubResponseError as e:
             queue.put({'error': e})
-            
 
     messages = []
     queue = Queue()
@@ -196,7 +181,22 @@ def test_follow(session, logs_client):
             message = queue.get()
             if message.get('error') is not None:
                 raise message['error']
-            messages.append(queue.get())
+            messages.append(message['message'])
             time.sleep(1)
         p.terminate()
         p.join(2)
+
+    def convert(message):
+        # retreive_logs converts timestamps from ints to datetimes and adds a
+        # logShortId field
+        message = dict(message)
+        message['logShortId'] = log_stream_name
+        message['timestamp'] = datetime.datetime.fromtimestamp(
+            message['timestamp'] / 1000.0
+        )
+        message['ingestionTime'] = datetime.datetime.fromtimestamp(
+            message['ingestionTime'] / 1000.0
+        )
+        return message
+
+    assert messages == [convert(message1), convert(message2)]
