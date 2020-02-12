@@ -175,8 +175,7 @@ def test_follow(session, logs_client):
 
     messages = []
     queue = Queue()
-    # Process doesn't have a close method in Python < 3.7
-    with suppress(AttributeError):
+    try:
         with closing(Process(target=proc, args=(queue,))) as p:
             p.start()
             while len(messages) < 2:
@@ -187,6 +186,9 @@ def test_follow(session, logs_client):
                 time.sleep(1)
             p.terminate()
             p.join(2)
+    except AttributeError:
+        # Process doesn't have a close method in Python < 3.7
+        pass
 
     def convert(message):
         # retreive_logs converts timestamps from ints to datetimes and adds a
