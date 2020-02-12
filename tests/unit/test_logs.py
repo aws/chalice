@@ -1,6 +1,6 @@
 import datetime
 import time
-from contextlib import closing, suppress
+from contextlib import closing
 from multiprocessing import Process, Queue
 
 import botocore
