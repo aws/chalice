@@ -104,7 +104,7 @@ class BaseType(object):
 # import boto3          <--- bind "boto3" as the boto3 module type
 # c = boto.client       <--- bind "c" as the boto3 create client type
 # s3 = c('s3')          <--- bind 's3' as the boto3 client type, subtype 's3'.
-# m = s3.list_objects   <--- bind as API call 's3', 'list_objets'
+# m = s3.list_objects   <--- bind as API call 's3', 'list_objects'
 # r = m()               <--- bind as API call invoked (what we care about).
 #
 # That way we can handle (in addition to the case above) things like:
