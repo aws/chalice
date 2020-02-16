@@ -27,7 +27,7 @@ object.
 .. note::
 
   The Chalice blueprints are conceptually similar to `Blueprints
-  <http://flask.pocoo.org/docs/latest/blueprints/>`__ in Flask.  Flask
+  <https://flask.palletsprojects.com/blueprints/>`__ in Flask.  Flask
   blueprints allow you to define a set of URL routes separately from the main
   ``Flask`` object.  This concept is extended to all resources in Chalice.  A
   Chalice blueprint can have Lambda functions, event handlers, built-in
