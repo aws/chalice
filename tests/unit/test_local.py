@@ -20,6 +20,7 @@ from chalice.local import NotAuthorizedError
 from chalice.local import ForbiddenError
 from chalice.local import InvalidAuthorizerError
 from chalice.local import LocalDevServer
+from chalice.local import LocalChalice
 
 
 AWS_REQUEST_ID_PATTERN = re.compile(
@@ -665,6 +666,21 @@ def test_can_provide_host_to_local_server(sample_app):
     dev_server = local.create_local_server(sample_app, None, host='0.0.0.0',
                                            port=23456)
     assert dev_server.host == '0.0.0.0'
+
+
+def test_wraps_sample_app_with_local_chalice(sample_app):
+    dev_server = local.create_local_server(
+        sample_app, None, "127.0.0.1", 23456
+    )
+    assert isinstance(dev_server.app_object, LocalChalice)
+    assert dev_server.app_object._chalice is sample_app
+    assert dev_server.app_object.app_name is sample_app.app_name
+    dev_server.app_object.current_request = "foo"
+    assert dev_server.app_object.current_request == "foo"
+    assert (
+        dev_server.app_object.current_request
+        is not sample_app.current_request
+    )
 
 
 class TestLambdaContext(object):
