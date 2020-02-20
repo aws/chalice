@@ -111,6 +111,13 @@ class Application(Model):
 @attrs
 class DeploymentPackage(Model):
     filename = attrib()  # type: DV[str]
+    function_path = attrib(default='')          # type: str
+
+
+@attrs
+class FunctionPackage(DeploymentPackage):
+    filename = attrib()  # type: DV[str]
+    function_path = attrib()          # type: str
 
 
 @attrs
@@ -166,6 +173,7 @@ class LambdaFunction(ManagedModel):
     subnet_ids = attrib()             # type: List[str]
     reserved_concurrency = attrib()   # type: int
     layers = attrib()                 # type: List[str]
+    function_path = attrib(default='')          # type: str
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -209,10 +217,11 @@ class RestAPI(ManagedModel):
     lambda_function = attrib()                   # type: LambdaFunction
     policy = attrib(default=None)                # type: Optional[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
+    lambdas_functions = attrib(default=Factory(list))  # type: List[LambdaFunction]
 
     def dependencies(self):
         # type: () -> List[Model]
-        return cast(List[Model], [self.lambda_function] + self.authorizers)
+        return cast(List[Model], self.lambdas_functions + self.authorizers)
 
 
 @attrs

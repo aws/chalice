@@ -1,0 +1,115 @@
+
+
+-->> Criar issue no github para iniciar discussao.
+    -> Melhora para tornar mais flexivel o built in custom authorizer.
+        * type
+            The authorizer type. Valid values are TOKEN for a Lambda function using a single authorization token submitted in a custom header, REQUEST for a Lambda function using incoming request parameters, and COGNITO_USER_POOLS for using an Amazon Cognito user pool.
+            Issue = Extend Custom Authorizer Support API Gateway Request Parameter #948
+    -> Feature para permitir deploys de rest api com multiplos lambdas.
+        * motivacao eh poder segregar rotas do api gateway para multiplos lambdas
+            - Porque?
+                - Melhorar o monitoramento e controle (permissoes e throtling especificos por handler)
+                - Permitir otimizar o pacote .zip
+                - Se algum handler estiver com problema ele nao impacta os demais
+
+
+
+-->> Possibilidade de virar uma extensao.
+
+* definir boiler plate (organização dos diretorios) desse novo tipo de projeto
+
+    <project-dir>
+    ├── helloworld
+    │  ├── functionlib
+    │  │  ├── __init__.py
+    │  │  └── utils.py
+    │  ├── __init__.py
+    │  └── helloworld.py
+    ├── chalicelib
+    │  ├── __init__.py
+    │  └── generics.py
+    ├── app.py
+    ├── requirements.txt
+    └── etc ...
+
+* definir novas regras do framework e seus impactos
+    user_blueprint.registrate_route(
+        name='user_delete',
+        path='/v1/user/delete',
+        function=UserDeleteHandler,
+    )
+
+* dificuldades de design de codigo:
+    * model DeploymentPackage é esperado por ser unico, hoje em dia. Uma instancia compartilhada.
+        - Possibilidades para resolver o problema:
+            - verificar a nessecidade de criar um DeploymentPackage dentro de
+                cada um dos metodos que cria os recursos.
+            - utilizar ou não a instancia global dentro dos metodos que criam os modelos. (utilizada) -> (done)
+                - iniciar pelo Rest Api
+
+
+
+ ---->>> Dificuldade de design de meio de campo resolvida <<<----
+
+* Criar projeto baseado na estrutura de pasta definida, para testar casos de uso.
+
+* Abordagem Top-Down:
+    - Criar regras e logica no app:
+        - Metodo de interface entre a view do Chalice e um handler padrão de lambda:
+            - Estudar inputs do handler do chalice vs o handler padrao da aws
+                - chalice input:
+                    reimplementar o metodo __call__ da classe Chalice
+                    class Request
+                - local runner:
+                    - garantir que o handler seja direcionado localmente
+                        mas que não seja apontado nos templates do api gateway
+                        (ver uma maneira de bloquear)
+            - LambdaHandler:
+                Parecido com o atual BaseHandler da autenticação porem de uso mais genérico.
+            - Classe para traduzir os inputs, similar ao BifrostChalice
+
+        - Traduzir o import do Handler para o function_path (conseguir achar a pasta a ser buildada a partir do import)
+        - Traduzir os methods a partir dos metodos da classe.
+
+    - segregar o metodo _create_rest_api_model em dois outros metodos dependendo do tipo de rest api (?)
+        - Nao sei se ainda é necessário depois de ter resolvido a questão do deployment object.
+        - Pode se criar metodos apenas para organizar caso seja preciso.
+
+    - segregar o metodo create_deployment_package em dois outros metodos dependendo do tipo de package
+        - Para separar:
+            - diretorio do projeto a ser deployado.
+            - logica para pegar arquivos.
+            - logica de build do requirements
+
+    - Outras funcionalidades adicionais
+
+
+* template do cloudformation:
+    - ?
+
+* template do terraform:
+    - adicionar lambda functions no template (done)
+    - referenciar o filename correto no template do terraform (done)
+    - Referenciar os lambdas corretos nas determinadas rotas (done)
+
+    - corrigir o bug da duplicacao no nome api_handler_handler
+
+* adicionar arquivos nos pacotes dos lambdas
+
+* variaveis de ambiente (?)
+
+* Ver diferenca entre nosso api gateway e gerado
+    - como implementar vpc link
+    - mock de resposta para o options
+
+* instalar dependencias que nao foram possiveis pelo pip do chalice
+
+* ver como ele faz o deploy de fato do terraform
+
+* como deployar apenas parte do detalhe do terraform
+
+** Mesclar funcionalidades anteriores com alteracao **
+
+** testes unitarios **
+
+** padroes de codigo **

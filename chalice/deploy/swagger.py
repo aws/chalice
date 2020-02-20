@@ -168,7 +168,7 @@ class SwaggerGenerator(object):
         }
         return responses
 
-    def _uri(self, lambda_arn=None):
+    def _uri(self, lambda_arn=None, view=None):
         # type: (Optional[str]) -> Any
         if lambda_arn is None:
             lambda_arn = self._deployed_resources['api_handler_arn']
@@ -184,7 +184,7 @@ class SwaggerGenerator(object):
                     'statusCode': "200",
                 }
             },
-            'uri': self._uri(),
+            'uri': self._uri(view=view),
             'passthroughBehavior': 'when_no_match',
             'httpMethod': 'POST',
             'contentHandling': 'CONVERT_TO_TEXT',
@@ -294,9 +294,14 @@ class TerraformSwaggerGenerator(SwaggerGenerator):
         # type: () -> None
         pass
 
-    def _uri(self, lambda_arn=None):
+    def _uri(self, lambda_arn=None, view=None):
         # type: (Optional[str]) -> Any
-        return '${aws_lambda_function.api_handler.invoke_arn}'
+        if view:
+            function_name = '%s_handler' % ('_'.join(
+                view.function.split('/')))
+            return '${aws_lambda_function.%s.invoke_arn}' % (function_name)
+        else:
+            return '${aws_lambda_function.api_handler.invoke_arn}'
 
     def _auth_uri(self, authorizer):
         # type: (ChaliceAuthorizer) -> Any
