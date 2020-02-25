@@ -277,7 +277,8 @@ def delete(ctx, profile, stage):
 @click.option('--include-lambda-messages/--no-include-lambda-messages',
               default=False,
               help='Controls whether or not lambda log messages are included.')
-@click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help='Name of the Chalice stage to get logs for.')
 @click.option('-n', '--name',
               help='The name of the lambda function to retrieve logs from.',
               default=DEFAULT_HANDLER_NAME)
@@ -331,7 +332,8 @@ def new_project(project_name, profile):
 
 
 @cli.command('url')
-@click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help='Name of the Chalice stage to get the deployed URL for.')
 @click.pass_context
 def url(ctx, stage):
     # type: (click.Context, str) -> None
@@ -351,7 +353,8 @@ def url(ctx, stage):
 @cli.command('generate-sdk')
 @click.option('--sdk-type', default='javascript',
               type=click.Choice(['javascript']))
-@click.option('--stage', default=DEFAULT_STAGE_NAME)
+@click.option('--stage', default=DEFAULT_STAGE_NAME,
+              help='Name of the Chalice stage to generate an SDK for.')
 @click.argument('outdir')
 @click.pass_context
 def generate_sdk(ctx, sdk_type, stage, outdir):
