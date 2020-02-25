@@ -14,6 +14,8 @@ Next Release (TBD)
   (`#1304 <https://github.com/aws/chalice/pull/1304>`__)
 * Add support for Python 3.8
   (`#1315 <https://github.com/aws/chalice/pull/1315>`__)
+* Add support for invocation role in custom authorizer
+  (`#1303 <https://github.com/aws/chalice/pull/1303>`__)
 
 
 1.12.0

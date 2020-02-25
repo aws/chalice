@@ -276,14 +276,15 @@ class CustomAuthorizer(Authorizer):
     _AUTH_TYPE = 'custom'
 
     def __init__(self, name, authorizer_uri, ttl_seconds=300,
-                 header='Authorization'):
+                 header='Authorization', invoke_role_arn=None):
         self.name = name
         self._header = header
         self._authorizer_uri = authorizer_uri
         self._ttl_seconds = ttl_seconds
+        self._invoke_role_arn = invoke_role_arn
 
     def to_swagger(self):
-        return {
+        swagger = {
             'in': 'header',
             'type': 'apiKey',
             'name': self._header,
@@ -294,6 +295,10 @@ class CustomAuthorizer(Authorizer):
                 'authorizerResultTtlInSeconds': self._ttl_seconds,
             }
         }
+        if self._invoke_role_arn is not None:
+            swagger['x-amazon-apigateway-authorizer'][
+                'authorizerCredentials'] = self._invoke_role_arn
+        return swagger
 
 
 class CORSConfig(object):
