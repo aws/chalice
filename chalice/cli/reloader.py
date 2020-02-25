@@ -31,8 +31,6 @@ import sys
 from typing import MutableMapping, Type, Callable, Optional  # noqa
 
 from chalice.cli.filewatch import RESTART_REQUEST_RC, WorkerProcess
-from chalice.cli.filewatch.eventbased import WatchdogWorkerProcess
-from chalice.cli.filewatch.stat import StatWorkerProcess
 from chalice.local import LocalDevServer, HTTPServerThread  # noqa
 
 
@@ -43,9 +41,11 @@ WorkerProcType = Optional[Type[WorkerProcess]]
 def get_best_worker_process():
     # type: () -> Type[WorkerProcess]
     try:
+        from chalice.cli.filewatch.eventbased import WatchdogWorkerProcess
         LOGGER.debug("Using watchdog worker process.")
         return WatchdogWorkerProcess
     except ImportError:
+        from chalice.cli.filewatch.stat import StatWorkerProcess
         LOGGER.debug("Using stat() based worker process.")
         return StatWorkerProcess
 
