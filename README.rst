@@ -1248,7 +1248,7 @@ The biggest difference between this framework and others is that the Python
 Serverless Microframework for AWS is singularly focused on using a familiar,
 decorator-based API to write python applications that run on Amazon API Gateway
 and AWS Lambda.  You can think of it as
-`Flask <http://flask.pocoo.org/>`__/`Bottle <http://bottlepy.org/docs/dev/index.html>`__
+`Flask <https://palletsprojects.com/p/flask/>`__/`Bottle <http://bottlepy.org/docs/dev/index.html>`__
 for serverless APIs.  Its goal is to make writing and deploying these types of
 applications as simple as possible specifically for Python developers.
 

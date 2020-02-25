@@ -3,7 +3,7 @@ Routing
 
 The :meth:`Chalice.route` method is used to construct which routes
 you want to create for your API.  The concept is the same
-mechanism used by `Flask <http://flask.pocoo.org/>`__ and
+mechanism used by `Flask <https://palletsprojects.com/p/flask/>`__ and
 `bottle <http://bottlepy.org/docs/dev/index.html>`__.
 You decorate a function with ``@app.route(...)``, and whenever
 a user requests that URL, the function you've decorated is called.
