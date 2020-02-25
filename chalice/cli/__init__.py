@@ -333,7 +333,7 @@ def new_project(project_name, profile):
 
 @cli.command('url')
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
-              help='Name of the Chalice stage to get url for.')
+              help='Name of the Chalice stage to get the deployed URL for.')
 @click.pass_context
 def url(ctx, stage):
     # type: (click.Context, str) -> None
@@ -354,7 +354,7 @@ def url(ctx, stage):
 @click.option('--sdk-type', default='javascript',
               type=click.Choice(['javascript']))
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
-               help='Name of the Chalice stage to generate_sdk for.')
+              help='Name of the Chalice stage to generate an SDK for.')
 @click.argument('outdir')
 @click.pass_context
 def generate_sdk(ctx, sdk_type, stage, outdir):
