@@ -560,10 +560,20 @@ class Package(object):
         # The directory format is {distribution}-{version}.data
         return '%s-%s.data' % (self._name, self._version)
 
-    def _normalize_name(self, name):
-        # type: (str) -> str
-        # Taken directly from PEP 503
-        return re.sub(r"[-_.]+", "-", name).lower()
+    def matches_data_dir(self, dirname):
+        # type: (str) -> bool
+        """Check if a directory name matches the data_dir of a package.
+
+        This will normalize the directory name and perform a case-insensitive
+        match against the package name's data dir.
+
+        """
+        if not self.dist_type == 'wheel':
+            return False
+        name, version = dirname.split('-')[:2]
+        comparison_data_dir = '%s-%s' % (self._normalize_name(name), version)
+        comparison_data_dir += dirname[len(comparison_data_dir):]
+        return self.data_dir == comparison_data_dir
 
     @property
     def identifier(self):
@@ -602,6 +612,11 @@ class Package(object):
                 sdist_path)
         normalized_name = self._normalize_name(name)
         return normalized_name, version
+
+    def _normalize_name(self, name):
+        # type: (str) -> str
+        # Taken directly from PEP 503
+        return re.sub(r"[-_.]+", "-", name).lower()
 
 
 class SDistMetadataFetcher(object):

@@ -369,6 +369,28 @@ class TestDependencyBuilder(object):
         for req in reqs:
             assert req in installed_packages
 
+    def test_can_normalize_dirname_for_purelib_whl(self, tmpdir, pip_runner):
+        reqs = ['foo']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
+            ],
+            whl_contents=['Foo-1.2.data/purelib/foo/']
+        )
+
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages('cp36m', requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
     def test_can_expand_platlib_whl(self, tmpdir, pip_runner):
         reqs = ['foo']
         pip, runner = pip_runner
@@ -380,7 +402,7 @@ class TestDependencyBuilder(object):
             packages=[
                 'foo-1.2-cp36-cp36m-manylinux1_x86_64.whl'
             ],
-            whl_contents=['foo-1.2.data/platlib/foo/']
+            whl_contents=['Foo-1.2.data/platlib/foo/']
         )
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
