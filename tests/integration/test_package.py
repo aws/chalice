@@ -80,6 +80,18 @@ class TestPackage(object):
             ],
         )
 
+    def test_can_package_sqlalchemy(self, runner, app_skeleton):
+        # SQLAlchemy is used quite often with Chalice so we want to ensure
+        # we can package it correctly.
+        self.assert_can_package_dependency(
+            runner,
+            app_skeleton,
+            'SQLAlchemy==1.3.13',
+            contents=[
+                'sqlalchemy/__init__.py',
+            ],
+        )
+
     def test_does_not_package_bad_requirements_file(
             self, runner, app_skeleton):
         req = os.path.join(app_skeleton, 'requirements.txt')

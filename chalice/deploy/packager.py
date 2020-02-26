@@ -502,8 +502,12 @@ class DependencyBuilder(object):
         # the parent directory. On some systems purelib and platlib need to
         # be installed into separate locations, for lambda this is not the case
         # and both should be installed in site-packages.
-        data_dir = self._osutils.joinpath(root, wheel.data_dir)
-        if not self._osutils.directory_exists(data_dir):
+        dirnames = self._osutils.get_directory_contents(root)
+        for dirname in dirnames:
+            if wheel.matches_data_dir(dirname):
+                data_dir = self._osutils.joinpath(root, dirname)
+                break
+        else:
             return
         unpack_dirs = {'purelib', 'platlib'}
         data_contents = self._osutils.get_directory_contents(data_dir)
@@ -560,10 +564,19 @@ class Package(object):
         # The directory format is {distribution}-{version}.data
         return '%s-%s.data' % (self._name, self._version)
 
-    def _normalize_name(self, name):
-        # type: (str) -> str
-        # Taken directly from PEP 503
-        return re.sub(r"[-_.]+", "-", name).lower()
+    def matches_data_dir(self, dirname):
+        # type: (str) -> bool
+        """Check if a directory name matches the data_dir of a package.
+
+        This will normalize the directory name and perform a case-insensitive
+        match against the package name's data dir.
+
+        """
+        if not self.dist_type == 'wheel' or '-' not in dirname:
+            return False
+        name, version = dirname.split('-')[:2]
+        comparison_data_dir = '%s-%s' % (self._normalize_name(name), version)
+        return self.data_dir == comparison_data_dir
 
     @property
     def identifier(self):
@@ -602,6 +615,11 @@ class Package(object):
                 sdist_path)
         normalized_name = self._normalize_name(name)
         return normalized_name, version
+
+    def _normalize_name(self, name):
+        # type: (str) -> str
+        # Taken directly from PEP 503
+        return re.sub(r"[-_.]+", "-", name).lower()
 
 
 class SDistMetadataFetcher(object):
