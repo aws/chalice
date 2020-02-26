@@ -502,8 +502,12 @@ class DependencyBuilder(object):
         # the parent directory. On some systems purelib and platlib need to
         # be installed into separate locations, for lambda this is not the case
         # and both should be installed in site-packages.
-        data_dir = self._osutils.joinpath(root, wheel.data_dir)
-        if not self._osutils.directory_exists(data_dir):
+        dirnames = self._osutils.get_directory_contents(root)
+        for dirname in dirnames:
+            if wheel.matches_data_dir(dirname):
+                data_dir = self._osutils.joinpath(root, dirname)
+                break
+        else:
             return
         unpack_dirs = {'purelib', 'platlib'}
         data_contents = self._osutils.get_directory_contents(data_dir)
@@ -568,11 +572,10 @@ class Package(object):
         match against the package name's data dir.
 
         """
-        if not self.dist_type == 'wheel':
+        if not self.dist_type == 'wheel' or '-' not in dirname:
             return False
         name, version = dirname.split('-')[:2]
         comparison_data_dir = '%s-%s' % (self._normalize_name(name), version)
-        comparison_data_dir += dirname[len(comparison_data_dir):]
         return self.data_dir == comparison_data_dir
 
     @property

@@ -16,6 +16,8 @@ Next Release (TBD)
   (`#1315 <https://github.com/aws/chalice/pull/1315>`__)
 * Add support for invocation role in custom authorizer
   (`#1303 <https://github.com/aws/chalice/pull/1303>`__)
+* Fix packaging on case-sensitive filesystems
+  (`#1356 <https://github.com/aws/chalice/pull/1356>`__)
 
 
 1.12.0
