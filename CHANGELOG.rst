@@ -2,8 +2,8 @@
 CHANGELOG
 =========
 
-Next Release (TBD)
-==================
+1.13.0
+======
 
 * Fix error for ``chalice logs`` when a Lambda function
   has not been invoked
