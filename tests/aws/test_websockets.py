@@ -34,6 +34,15 @@ def retry(max_attempts, delay):
     return _create_wrapped_retry_function
 
 
+def _create_ws_connection(url, attempts=5, delay=5):
+    for _ in range(attempts):
+        try:
+            ws = websocket.create_connection(url)
+            return ws
+        except websocket.WebSocketBadStatusException:
+            time.sleep(delay)
+
+
 def _inject_app_name(dirname):
     config_filename = os.path.join(dirname, '.chalice', 'config.json')
     with open(config_filename) as f:
@@ -292,7 +301,7 @@ def test_websocket_redployment_does_not_lose_messages(smoke_test_app_ws):
     # second to ensure more numbers have been sent. Finally we inspect the
     # DynamoDB table to ensure there are no gaps in the numbers we saw on the
     # server side, and that the first and last number we sent is also present.
-    ws = websocket.create_connection(smoke_test_app_ws.websocket_connect_url)
+    ws = _create_ws_connection(smoke_test_app_ws.websocket_connect_url)
     counter_generator = counter()
     sender = CountingMessageSender(ws, counter_generator)
     ping_endpoint = Task(sender.send)
