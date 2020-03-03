@@ -40,9 +40,12 @@ class SmokeTestApplication(object):
 
     # Number of seconds to wait after redeploy before starting
     # to poll for successful 200.
-    _REDEPLOY_SLEEP = 20
+    _REDEPLOY_SLEEP = 30
     # Seconds to wait between poll attempts after redeploy.
     _POLLING_DELAY = 5
+    # Number of successful wait attempts before we consider the app
+    # stabilized.
+    _NUM_SUCCESS = 3
 
     def __init__(self, deployed_values, stage_name, app_name,
                  app_dir, region):
@@ -104,7 +107,9 @@ class SmokeTestApplication(object):
         self._has_redeployed = True
         # Give it settling time before running more tests.
         time.sleep(self._REDEPLOY_SLEEP)
-        self._wait_for_stablize()
+        for _ in range(self._NUM_SUCCESS):
+            self._wait_for_stablize()
+            time.sleep(self._POLLING_DELAY)
 
     @retry(max_attempts=10, delay=5)
     def _wait_for_stablize(self):
