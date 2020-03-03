@@ -979,7 +979,7 @@ First, install boto3::
 
 Next, add ``boto3`` to your requirements.txt file::
 
-    $ echo 'boto3==1.3.1' >> requirements.txt
+    $ pip freeze | grep boto3 >> requirements.txt
 
 The requirements.txt file should be in the same directory that contains
 your ``app.py`` file.  Next, let's update our view code to use boto3:
