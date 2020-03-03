@@ -1,9 +1,8 @@
 import threading  # noqa
 
 from typing import Callable, Optional  # noqa
-import watchdog.observers
-from watchdog.events import FileSystemEventHandler
-from watchdog.events import FileSystemEvent  # noqa
+import watchdog.observers  # pylint: disable=import-error
+from watchdog import events  # pylint: disable=import-error
 
 from chalice.cli.filewatch import FileWatcher, WorkerProcess
 
@@ -27,7 +26,7 @@ class WatchdogFileWatcher(FileWatcher):
         observer.start()
 
 
-class WatchdogRestarter(FileSystemEventHandler):
+class WatchdogRestarter(events.FileSystemEventHandler):
 
     def __init__(self, restart_event):
         # type: (threading.Event) -> None
@@ -35,7 +34,7 @@ class WatchdogRestarter(FileSystemEventHandler):
         self.restart_event = restart_event
 
     def on_any_event(self, event):
-        # type: (FileSystemEvent) -> None
+        # type: (events.FileSystemEvent) -> None
         # If we modify a file we'll get a FileModifiedEvent
         # as well as a DirectoryModifiedEvent.
         # We only care about reloading is a file is modified.

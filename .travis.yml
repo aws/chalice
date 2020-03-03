@@ -1,23 +1,26 @@
 language: python
 sudo: false
+env:
+  global:
+    - INSTALL_STRING=".[event-file-poller]" TEST_TYPE=prcheck HYPOTHESIS_PROFILE=ci
 matrix:
   include:
   - python: "3.8"
     dist: xenial
     sudo: true
-    env: TEST_TYPE=prcheck HYPOTHESIS_PROFILE=ci
+    env: INSTALL_STRING="."
+  - python: "3.8"
+    dist: xenial
+    sudo: true
   - python: "3.7"
     dist: xenial
     sudo: true
-    env: TEST_TYPE=prcheck HYPOTHESIS_PROFILE=ci
   - python: "3.6"
-    env: TEST_TYPE=prcheck HYPOTHESIS_PROFILE=ci
   - python: "2.7"
-    env: TEST_TYPE=prcheck-py2 HYPOTHESIS_PROFILE=ci
+    env: TEST_TYPE=prcheck-py2
 install:
   - pip install -r requirements-dev.txt -r requirements-docs.txt
-  - pip install -e .
-  - pip install -e ".[event-file-poller]"
+  - pip install -e "$INSTALL_STRING"
 script:
   - env
   - make $TEST_TYPE
