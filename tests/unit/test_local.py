@@ -1068,9 +1068,9 @@ class TestLocalDevServer(object):
 
         assert provided_args[0] == ('0.0.0.0', 8000)
 
-    def test_does_use_daemon_threads(self, sample_app):
-        server = LocalDevServer(
+    def test_does_not_use_daemon_threads(self, sample_app):
+        server = LocalDevServer(  # noqa: F841
             sample_app, Config(), '0.0.0.0', 8000
         )
 
-        assert server.server.daemon_threads
+        assert not hasattr('server.server', 'daemon_threads')
