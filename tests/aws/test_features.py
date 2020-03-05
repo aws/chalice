@@ -87,7 +87,14 @@ class SmokeTestApplication(object):
             )
         )
 
+    @retry(max_attempts=10, delay=5)
     def get_json(self, url):
+        try:
+            return self._get_json(url)
+        except requests.exceptions.HTTPError:
+            pass
+
+    def _get_json(self, url):
         if not url.startswith('/'):
             url = '/' + url
         response = requests.get(self.url + url)
@@ -111,16 +118,12 @@ class SmokeTestApplication(object):
             self._wait_for_stablize()
             time.sleep(self._POLLING_DELAY)
 
-    @retry(max_attempts=10, delay=5)
     def _wait_for_stablize(self):
         # After a deployment we sometimes need to wait for
         # API Gateway to propagate all of its changes.
         # We're going to give it num_attempts to give us a
         # 200 response before failing.
-        try:
-            return self.get_json('/')
-        except requests.exceptions.HTTPError:
-            pass
+        return self.get_json('/')
 
 
 @pytest.fixture
