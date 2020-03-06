@@ -199,8 +199,8 @@ def _create_dynamodb_table(table_name, temp_dirname):
             },
         ],
         ProvisionedThroughput={
-            'ReadCapacityUnits': 5,
-            'WriteCapacityUnits': 5,
+            'ReadCapacityUnits': 50,
+            'WriteCapacityUnits': 50,
         },
     )
 
@@ -232,7 +232,6 @@ class Task(threading.Thread):
 
 def counter():
     """Generator of sequential increasing numbers"""
-    yield
     count = 1
     while True:
         yield count
@@ -274,6 +273,17 @@ def get_numbers_from_dynamodb(temp_dirname):
     return numbers
 
 
+def get_errors_from_dynamodb(temp_dirname):
+    factory = CLIFactory(temp_dirname)
+    session = factory.create_botocore_session()
+    ddb = session.create_client('dynamodb')
+    item = ddb.get_item(TableName=RANDOM_APP_NAME,
+                        Key={'entry': {'N': '-9999'}})
+    if 'Item' not in item:
+        return None
+    return item['Item']['errormsg']['S']
+
+
 def find_skips_in_seq(numbers):
     """Find non-sequential gaps in a sequence of numbers
 
@@ -310,6 +320,8 @@ def test_websocket_redployment_does_not_lose_messages(smoke_test_app_ws):
     time.sleep(1)
     ping_endpoint.stop()
 
+    errors = get_errors_from_dynamodb(smoke_test_app_ws.app_dir)
+    assert errors is None
     numbers = get_numbers_from_dynamodb(smoke_test_app_ws.app_dir)
     assert 1 in numbers
     assert sender.last_sent in numbers
