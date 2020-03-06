@@ -1,4 +1,5 @@
 import datetime
+import signal
 import time
 from contextlib import closing
 from multiprocessing import Process, Queue
@@ -172,6 +173,21 @@ def test_follow(session, logs_client):
             pass
         except StubResponseError as e:
             queue.put({'error': e})
+
+    # pytest_cov needs to catch process termination in order to record coverage
+    # data
+    # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html
+    try:
+        from pytest_cov.embed import cleanup_on_signal
+    except ImportError:
+        try:
+            from pytest_cov.embed import cleanup_on_sigterm
+        except ImportError:
+            pass
+        else:
+            cleanup_on_sigterm()
+    else:
+        cleanup_on_signal(signal.SIGTERM)
 
     messages = []
     queue = Queue()
