@@ -1,0 +1,15 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "packaging",
+      "description": "Fix issue deploying some packages in Windows with utf-8 characters\n(`#560 <https://github.com/aws/chalice/pull/560>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "packaging",
+      "description": "Add support for custom authorizers with ``chalice package``\n(`#580 <https://github.com/aws/chalice/pull/580>`__)",
+      "type": "feature"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "logging",
+      "description": "Add default application logger\n(`#149 <https://github.com/awslabs/chalice/issues/149>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "local",
+      "description": "Return 405 when method is not supported when running\n``chalice local``\n(`#159 <https://github.com/awslabs/chalice/issues/159>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "SDK",
+      "description": "Add path params as requestParameters so they can be used\nin generated SDKs as well as cache keys\n(`#163 <https://github.com/awslabs/chalice/issues/163>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Map cognito user pool claims as part of request context\n(`#165 <https://github.com/awslabs/chalice/issues/165>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "CLI",
+      "description": "Add ``chalice url`` command to print the deployed URL\n(`#169 <https://github.com/awslabs/chalice/pull/169>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "deployment",
+      "description": "Bump up retry limit on initial function creation to 30 seconds\n(`#172 <https://github.com/awslabs/chalice/pull/172>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "local",
+      "description": "Add support for ``DELETE`` and ``PATCH`` in ``chalice local``\n(`#167 <https://github.com/awslabs/chalice/issues/167>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "CLI",
+      "description": "Add ``chalice generate-sdk`` command\n(`#178 <https://github.com/awslabs/chalice/pull/178>`__)",
+      "type": "feature"
+    }
+  ]
+}

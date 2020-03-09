@@ -1,0 +1,15 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "dependency",
+      "description": "Add support for pip 10\n(`#808 <https://github.com/aws/chalice/issues/808>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "policy",
+      "description": "Update ``policies.json`` file\n(`#817 <https://github.com/aws/chalice/issues/817>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

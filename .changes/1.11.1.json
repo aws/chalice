@@ -1,0 +1,15 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "blueprint",
+      "description": "Fix mouting blueprints with root routes\n(`#1230 <https://github.com/aws/chalice/pull/1230>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "rest-api",
+      "description": "Add support for multi-value headers responses\n(`#1205 <https://github.com/aws/chalice/pull/1205>`__)",
+      "type": "feature"
+    }
+  ]
+}

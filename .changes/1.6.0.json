@@ -1,0 +1,10 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "CLI",
+      "description": "Add ``chalice invoke`` command\n(`#900 <https://github.com/aws/chalice/issues/900>`__)",
+      "type": "feature"
+    }
+  ]
+}

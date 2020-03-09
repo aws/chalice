@@ -1,0 +1,26 @@
+{
+  "schema-version": "0.2",
+  "summary": "Please read the `upgrade notes for 1.0.0b1\n<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-0-0b1>`__\nfor more detailed information about upgrading to this release.\n\nNote: to install this beta version of chalice you must specify\n``pip install 'chalice>=1.0.0b1,<2.0.0'`` or\nuse the ``--pre`` flag for pip: ``pip install --pre chalice``.\n\n",
+  "changes": [
+    {
+      "category": "rest-api",
+      "description": "Fix unicode responses being quoted in python 2.7\n(`#262 <https://github.com/awslabs/chalice/issues/262>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "event-source",
+      "description": "Add support for scheduled events\n(`#390 <https://github.com/awslabs/chalice/issues/390>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "event-source",
+      "description": "Add support for pure lambda functions\n(`#390 <https://github.com/awslabs/chalice/issues/400>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Add support for wheel packaging.\n(`#249 <https://github.com/awslabs/chalice/issues/249>`__)",
+      "type": "feature"
+    }
+  ]
+}

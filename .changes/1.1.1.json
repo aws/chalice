@@ -1,0 +1,30 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "CLI",
+      "description": "Add ``--connection-timeout`` to the ``deploy`` command\n(`#344 <https://github.com/aws/chalice/issues/344>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "policy",
+      "description": "Fix IAM role creation issue\n(`#565 <https://github.com/aws/chalice/issues/565>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "local",
+      "description": "Fix `chalice local` handling of browser requests\n(`#565 <https://github.com/aws/chalice/issues/628>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "policy",
+      "description": "Support async/await syntax in automatic policy generation\n(`#565 <https://github.com/aws/chalice/issues/646>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "packaging",
+      "description": "Support additional PyPi package formats (.tar.bz2)\n(`#720 <https://github.com/aws/chalice/issues/720>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "python",
+      "description": "Add support for python3!\n(`#296 <https://github.com/awslabs/chalice/pull/296>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Fix swagger generation when using ``api_key_required=True``\n(`#279 <https://github.com/awslabs/chalice/issues/279>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "CI-CD",
+      "description": "Fix ``generate-pipeline`` to install requirements file before packaging\n(`#295 <https://github.com/awslabs/chalice/pull/295>`__)",
+      "type": "bugfix"
+    }
+  ]
+}

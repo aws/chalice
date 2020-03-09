@@ -1,0 +1,20 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "local",
+      "description": "Fix local mode issue with unicode responses and Content-Length\n(`#910 <https://github.com/aws/chalice/pull/910>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "dev",
+      "description": "Fix issue with ``requirements-dev.txt`` not setting up a working\ndev environment\n(`#920 <https://github.com/aws/chalice/pull/920>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "dependencies",
+      "description": "Add support for pip 18\n(`#910 <https://github.com/aws/chalice/pull/908>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

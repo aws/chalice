@@ -1,0 +1,26 @@
+{
+  "schema-version": "0.2",
+  "summary": "Check out the `upgrade notes for 0.6.0\n<http://chalice.readthedocs.io/en/latest/upgrading.html#v0-6-0>`__\nfor more detailed information about changes in this release.\n\n",
+  "changes": [
+    {
+      "category": "local",
+      "description": "Add port parameter to local command\n(`#220 <https://github.com/awslabs/chalice/pull/220>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Add support for binary vendored packages\n(`#182 <https://github.com/awslabs/chalice/pull/182>`__,\n`#106 <https://github.com/awslabs/chalice/issues/106>`__,\n`#42 <https://github.com/awslabs/chalice/issues/42>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "rest-api",
+      "description": "Add support for customizing the returned HTTP response\n(`#240 <https://github.com/awslabs/chalice/pull/240>`__,\n`#218 <https://github.com/awslabs/chalice/issues/218>`__,\n`#110 <https://github.com/awslabs/chalice/issues/110>`__,\n`#30 <https://github.com/awslabs/chalice/issues/30>`__,\n`#226 <https://github.com/awslabs/chalice/issues/226>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Always inject latest runtime to allow for chalice upgrades\n(`#245 <https://github.com/awslabs/chalice/pull/245>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

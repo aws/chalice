@@ -1,0 +1,10 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "rest-api",
+      "description": "Make MultiDict mutable\n(`#1158 <https://github.com/aws/chalice/issues/1158>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

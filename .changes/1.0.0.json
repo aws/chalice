@@ -1,0 +1,35 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "rest-api",
+      "description": "Change default API Gateway stage name to ``api``\n(`#431 <https://github.com/awslabs/chalice/pull/431>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "local",
+      "description": "Add support for ``CORSConfig`` in ``chalice local``\n(`#436 <https://github.com/awslabs/chalice/issues/436>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "logging",
+      "description": "Propagate ``DEBUG`` log level when setting ``app.debug``\n(`#386 <https://github.com/awslabs/chalice/issues/386>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Add support for wildcard routes and HTTP methods in ``AuthResponse``\n(`#403 <https://github.com/awslabs/chalice/issues/403>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "policy",
+      "description": "Fix bug when analyzing list comprehensions\n(`#412 <https://github.com/awslabs/chalice/issues/412>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "local",
+      "description": "Update ``chalice local`` to use HTTP 1.1\n(`#448 <https://github.com/awslabs/chalice/pull/448>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

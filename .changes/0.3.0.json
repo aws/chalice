@@ -1,0 +1,30 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "rest-api",
+      "description": "Fix bug with case insensitive headers\n(`#129 <https://github.com/awslabs/chalice/issues/129>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "CORS",
+      "description": "Add initial support for CORS\n(`#133 <https://github.com/awslabs/chalice/pull/133>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "deployment",
+      "description": "Only add API gateway permissions if needed\n(`#48 <https://github.com/awslabs/chalice/issues/48>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "policy",
+      "description": "Fix error when dict comprehension is encountered during policy generation\n(`#131 <https://github.com/awslabs/chalice/issues/131>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "CLI",
+      "description": "Add ``--version`` and ``--debug`` options to the chalice CLI",
+      "type": "enhancement"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "catrest-api support for input content types besides ``application/json``\n(`#96 <https",
+      "description": "//github.com/awslabs/chalice/issues/96>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Allow ``ChaliceViewErrors`` to propagate, so that API Gateway\ncan properly map HTTP status codes in non debug mode\n(`#113 <https://github.com/awslabs/chalice/issues/113>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "deployment",
+      "description": "Add windows compatibility\n(`#31 <https://github.com/awslabs/chalice/issues/31>`__,\n`#124 <https://github.com/awslabs/chalice/pull/124>`__,\n`#103 <https://github.com/awslabs/chalice/issues/103>`__)",
+      "type": "enhancement"
+    }
+  ]
+}
