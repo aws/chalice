@@ -321,8 +321,7 @@ class LocalGatewayAuthorizer(object):
             if "headers" in lambda_event\
                     and "authorization" in lambda_event["headers"]:
                 token = lambda_event["headers"]["authorization"]
-                signing_input, crypto_segment = token.rsplit(".", 1)
-                header_segment, payload_segment = signing_input.split(".", 1)
+                payload_segment = token.split(".", 2)[1]
                 claims = json.loads(base64url_decode(payload_segment))
                 auth_result = {"context": {"claims": claims},
                                "principalId": claims["cognito:username"]}
