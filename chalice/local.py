@@ -12,6 +12,7 @@ import base64
 import functools
 import warnings
 from collections import namedtuple
+import json
 
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
@@ -30,6 +31,7 @@ from typing import (
 from chalice.app import Chalice  # noqa
 from chalice.app import CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer  # noqa
+from chalice.app import CognitoUserPoolAuthorizer  # noqa
 from chalice.app import RouteEntry  # noqa
 from chalice.app import Request  # noqa
 from chalice.app import AuthResponse  # noqa
@@ -313,6 +315,17 @@ class LocalGatewayAuthorizer(object):
         authorizer = route_entry.authorizer
         if not authorizer:
             return lambda_event, lambda_context
+        # If authorizer is Cognito then try to parse the JWT and simulate an
+        # APIGateway validated request
+        if isinstance(authorizer, CognitoUserPoolAuthorizer):
+            if "headers" in lambda_event\
+                    and "authorization" in lambda_event["headers"]:
+                token = lambda_event["headers"]["authorization"]
+                claims = self._decode_jwt_payload(token)
+                auth_result = {"context": {"claims": claims},
+                               "principalId": claims["cognito:username"]}
+                lambda_event = self._update_lambda_event(lambda_event,
+                                                         auth_result)
         if not isinstance(authorizer, ChaliceAuthorizer):
             # Currently the only supported local authorizer is the
             # BuiltinAuthConfig type. Anything else we will err on the side of
@@ -400,6 +413,19 @@ class LocalGatewayAuthorizer(object):
                 b'{"message":"Unauthorized"}')
         authorizer_event['methodArn'] = arn
         return authorizer_event
+
+    def _decode_jwt_payload(self, jwt):
+        # type: (str) -> Dict
+        payload_segment = jwt.split(".", 2)[1]
+        payload = base64.urlsafe_b64decode(self._base64_pad(payload_segment))
+        return json.loads(payload)
+
+    def _base64_pad(self, value):
+        # type: (str) -> str
+        rem = len(value) % 4
+        if rem > 0:
+            value += "=" * (4 - rem)
+        return value
 
 
 class LocalGateway(object):

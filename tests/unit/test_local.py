@@ -11,6 +11,7 @@ from chalice import app
 from chalice import local, BadRequestError, CORSConfig
 from chalice import Response
 from chalice import IAMAuthorizer
+from chalice import CognitoUserPoolAuthorizer
 from chalice.config import Config
 from chalice.local import LambdaContext
 from chalice.local import LocalARNBuilder
@@ -231,6 +232,8 @@ def demo_app_auth():
 
     iam_authorizer = IAMAuthorizer()
 
+    cognito_authorizer = CognitoUserPoolAuthorizer('app-name', [])
+
     @demo.route('/', authorizer=landing_page_auth)
     def landing_view():
         return {}
@@ -257,6 +260,10 @@ def demo_app_auth():
 
     @demo.route('/iam', authorizer=iam_authorizer)
     def iam_route():
+        return {}
+
+    @demo.route('/cognito', authorizer=cognito_authorizer)
+    def cognito_route():
         return {}
 
     @demo.route('/none', authorizer=demo_authorizer_returns_none)
@@ -929,6 +936,20 @@ class TestLocalBuiltinAuthorizers(object):
         context = LambdaContext(*lambda_context_args)
         with pytest.raises(NotAuthorizedError):
             authorizer.authorize(path, event, context)
+
+    def test_can_understand_cognito_token(self, lambda_context_args,
+                                          demo_app_auth, create_event):
+        # Ensures that / routes work since that is a special case in the
+        # API Gateway arn generation where an extra / is appended to the end
+        # of the arn.
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/cognito'
+        event = create_event(path, 'GET', {})
+        event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tL3VzLWVhc3QtMV9leGFtcGxlIiwiY29nbml0bzp1c2VybmFtZSI6ImphbmVkb2UiLCJleHAiOjE1ODQ3MjM2MTYsImdpdmVuX25hbWUiOiJKYW5lIiwiaWF0IjoxNTAwMDA5NDAwLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJqdGkiOiJkN2UxMTMzYS0xZTNhLTQyMzEtYWU3Yi0yOGQ4NWVlMGIxNGQifQ.p35Yj9KJD5RbfPWGL08IJHgson8BhdGLPQqUOiF0-KM"  # noqa
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        principal_id = event['requestContext']['authorizer']['principalId']
+        assert principal_id == 'janedoe'
 
 
 class TestArnBuilder(object):
