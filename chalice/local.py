@@ -31,7 +31,7 @@ from typing import (
 from chalice.app import Chalice  # noqa
 from chalice.app import CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer  # noqa
-from chalice.app import CognitoUserPoolAuthorizer #noqa
+from chalice.app import CognitoUserPoolAuthorizer  # noqa
 from chalice.app import RouteEntry  # noqa
 from chalice.app import Request  # noqa
 from chalice.app import AuthResponse  # noqa
