@@ -718,6 +718,7 @@ class LocalChalice(object):
 
 
 def base64url_decode(value):
+    # type: (str) -> str
     rem = len(value) % 4
     if rem > 0:
         value += "=" * (4 - rem)
