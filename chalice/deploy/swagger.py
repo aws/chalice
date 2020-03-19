@@ -234,7 +234,8 @@ class SwaggerGenerator(object):
                     "application/json": "{\"statusCode\": 200}"
                 },
                 "passthroughBehavior": "when_no_match",
-                "type": "mock"
+                "type": "mock",
+                "contentHandling": "CONVERT_TO_TEXT"
             }
         }
         swagger_for_path['options'] = options_request

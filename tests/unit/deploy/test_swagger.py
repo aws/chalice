@@ -258,6 +258,7 @@ class TestPreflightCORS(object):
                 },
                 'passthroughBehavior': 'when_no_match',
                 'type': 'mock',
+                'contentHandling': 'CONVERT_TO_TEXT'
             },
         }
 
@@ -319,6 +320,7 @@ class TestPreflightCORS(object):
                 },
                 'passthroughBehavior': 'when_no_match',
                 'type': 'mock',
+                'contentHandling': 'CONVERT_TO_TEXT'
             },
         }
 
