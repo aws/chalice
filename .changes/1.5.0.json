@@ -1,0 +1,10 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "policy",
+      "description": "Add support for S3 upload_file/download_file in\npolicy generator\n(`#889 <https://github.com/aws/chalice/pull/889>`__)",
+      "type": "feature"
+    }
+  ]
+}

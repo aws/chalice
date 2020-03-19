@@ -18,8 +18,8 @@ def cli():
     To do a chalice release, run these commands::
 
         \b
-        $ scripts/release bump-version --release-type patch
-        $ NEXT_VERSION=$(scripts/release get-version)
+        $ NEXT_VERSION=$(jmeslog query next-version)
+        $ scripts/release bump-version --version-number ${NEXT_VERSION}
         $ git commit -am "Bumping version to $NEXT_VERSION"
         $ scripts/release tag-release
         $ scripts/release build-release

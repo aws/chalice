@@ -1,0 +1,30 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "CI-CD",
+      "description": "Add support for generating python 3.6 pipelines\n(`#858 <https://github.com/aws/chalice/pull/858>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "event-source",
+      "description": "Add support for connecting lambda functions to S3 events\n(`#855 <https://github.com/aws/chalice/issues/855>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "event-source",
+      "description": "Add support for connecting lambda functions to SNS message\n(`#488 <https://github.com/aws/chalice/issues/488>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "local",
+      "description": "Make ``watchdog`` an optional dependency and add a built in\n``stat()`` based file poller\n(`#867 <https://github.com/aws/chalice/issues/867>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "event-source",
+      "description": "Add support for connecting lambda functions to an SQS queue\n(`#884 <https://github.com/aws/chalice/issues/884>`__)",
+      "type": "feature"
+    }
+  ]
+}

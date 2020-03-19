@@ -1,0 +1,35 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "logs",
+      "description": "Fix error for ``chalice logs`` when a Lambda function\nhas not been invoked\n(`#1252 <https://github.com/aws/chalice/issues/1252>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "CORS",
+      "description": "Add global CORS configuration\n(`#70 <https://github.com/aws/chalice/pull/70>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Fix packaging simplejson\n(`#1304 <https://github.com/aws/chalice/pull/1304>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "python",
+      "description": "Add support for Python 3.8\n(`#1315 <https://github.com/aws/chalice/pull/1315>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "authorizer",
+      "description": "Add support for invocation role in custom authorizer\n(`#1303 <https://github.com/aws/chalice/pull/1303>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Fix packaging on case-sensitive filesystems\n(`#1356 <https://github.com/aws/chalice/pull/1356>`__)",
+      "type": "bugfix"
+    }
+  ]
+}

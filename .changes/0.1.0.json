@@ -1,0 +1,50 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "packaging",
+      "description": "Require ``virtualenv`` as a package dependency.\n(`#33 <https://github.com/awslabs/chalice/issues/33>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "CLI",
+      "description": "Add ``--profile`` option when creating a new project\n(`#28 <https://github.com/awslabs/chalice/issues/28>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Add support for more error codes exceptions\n(`#34 <https://github.com/awslabs/chalice/issues/34>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Improve error validation when routes containing a\ntrailing ``/`` char\n(`#65 <https://github.com/awslabs/chalice/issues/65>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Validate duplicate route entries\n(`#79 <https://github.com/awslabs/chalice/issues/79>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "policy",
+      "description": "Ignore lambda expressions in policy analyzer\n(`#74 <https://github.com/awslabs/chalice/issues/74>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Print original error traceback in debug mode\n(`#50 <https://github.com/awslabs/chalice/issues/50>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Add support for authenticate routes\n(`#14 <https://github.com/awslabs/chalice/issues/14>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "policy",
+      "description": "Add ability to disable IAM role management\n(`#61 <https://github.com/awslabs/chalice/issues/61>`__)",
+      "type": "feature"
+    }
+  ]
+}

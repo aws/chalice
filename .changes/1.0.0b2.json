@@ -1,0 +1,36 @@
+{
+  "schema-version": "0.2",
+  "summary": "Please read the `upgrade notes for 1.0.0b2\n<http://chalice.readthedocs.io/en/latest/upgrading.html#v1-0-0b2>`__\nfor more detailed information about upgrading to this release.\n\nNote: to install this beta version of chalice you must specify\n``pip install 'chalice>=1.0.0b2,<2.0.0'`` or\nuse the ``--pre`` flag for pip: ``pip install --pre chalice``.\n",
+  "changes": [
+    {
+      "category": "local",
+      "description": "Set env vars from config in ``chalice local``\n(`#396 <https://github.com/awslabs/chalice/issues/396>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "packaging",
+      "description": "Fix edge case when building packages with optional c extensions\n(`#421 <https://github.com/awslabs/chalice/pull/421>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "policy",
+      "description": "Remove legacy ``policy.json`` file support. Policy files must\nuse the stage name, e.g. ``policy-dev.json``\n(`#430 <https://github.com/awslabs/chalice/pull/540>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "deployment",
+      "description": "Fix issue where IAM role policies were updated twice on redeploys\n(`#428 <https://github.com/awslabs/chalice/pull/428>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "rest-api",
+      "description": "Validate route path is not an empty string\n(`#432 <https://github.com/awslabs/chalice/pull/432>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Change route code to invoke view function with kwargs instead of\npositional args\n(`#429 <https://github.com/awslabs/chalice/issues/429>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

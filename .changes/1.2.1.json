@@ -1,0 +1,20 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "rest-api",
+      "description": "Add CORS headers to error response\n(`#715 <https://github.com/aws/chalice/pull/715>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "local",
+      "description": "Fix parsing empty query strings in local mode\n(`#767 <https://github.com/aws/chalice/pull/767>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "packaging",
+      "description": "Fix regression in ``chalice package`` when using role arns\n(`#793 <https://github.com/aws/chalice/issues/793>`__)",
+      "type": "bugfix"
+    }
+  ]
+}

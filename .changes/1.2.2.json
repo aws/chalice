@@ -1,0 +1,10 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "packaging",
+      "description": "Fix package command not correctly setting environment variables\n(`#795 <https://github.com/aws/chalice/issues/795>`__)",
+      "type": "bugfix"
+    }
+  ]
+}

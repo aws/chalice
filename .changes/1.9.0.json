@@ -1,0 +1,60 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "dependencies",
+      "description": "Update PIP to support up to 19.1.x\n(`#1104 <https://github.com/aws/chalice/issues/1104>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Fix handling of more complex Accept headers for binary\ncontent types\n(`#1078 <https://github.com/aws/chalice/issues/1078>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "rest-api",
+      "description": "Raise TypeError when trying to serialize an unserializable\ntype\n(`#1100 <https://github.com/aws/chalice/issues/1100>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "policy",
+      "description": "Update ``policies.json`` file\n(`#1110 <https://github.com/aws/chalice/issues/1110>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Support repeating values in the query string\n(`#1131 <https://github.com/aws/chalice/issues/1131>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Add layer support to chalice package\n(`#1130 <https://github.com/aws/chalice/issues/1130>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "rest-api",
+      "description": "Fix bug with route ``name`` kwarg raising a ``TypeError``\n(`#1112 <https://github.com/aws/chalice/issues/1112>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "logging",
+      "description": "Change exceptions to always be logged at the ERROR level\n(`#969 <https://github.com/aws/chalice/issues/969>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "CLI",
+      "description": "Fix bug handling exceptions during ``chalice invoke`` on\nPython 3.7\n(`#1139 <https://github.com/aws/chalice/issues/1139>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "rest-api",
+      "description": "Add support for API Gateway compression\n(`#672 <https://github.com/aws/chalice/issues/672>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "packaging",
+      "description": "Add support for both relative and absolute paths for\n``--package-dir``\n(`#940 <https://github.com/aws/chalice/issues/940>`__)",
+      "type": "enhancement"
+    }
+  ]
+}

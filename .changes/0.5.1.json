@@ -1,0 +1,40 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "local",
+      "description": "Add support for serializing decimals in ``chalice local``\n(`#187 <https://github.com/awslabs/chalice/pull/187>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "local",
+      "description": "Add stdout handler for root logger when using ``chalice local``\n(`#186 <https://github.com/awslabs/chalice/pull/186>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "local",
+      "description": "Map query string parameters when using ``chalice local``\n(`#184 <https://github.com/awslabs/chalice/pull/184>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "rest-api",
+      "description": "Support Content-Type with a charset\n(`#180 <https://github.com/awslabs/chalice/issues/180>`__)",
+      "type": "enhancement"
+    },
+    {
+      "category": "deployment",
+      "description": "Fix not all resources being retrieved due to pagination\n(`#188 <https://github.com/awslabs/chalice/pull/188>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "deployment",
+      "description": "Fix issue where root resource was not being correctly retrieved\n(`#205 <https://github.com/awslabs/chalice/pull/205>`__)",
+      "type": "bugfix"
+    },
+    {
+      "category": "deployment",
+      "description": "Handle case where local policy does not exist\n(`29 <https://github.com/awslabs/chalice/issues/29>`__)",
+      "type": "bugfix"
+    }
+  ]
+}

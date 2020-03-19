@@ -1,0 +1,30 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "category": "websocket",
+      "description": "Add experimental support for websockets\n(`#1017 <https://github.com/aws/chalice/issues/1017>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "rest-api",
+      "description": "API Gateway Endpoint Type Configuration\n(`#1160 <https://github.com/aws/chalice/pull/1160>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "rest-api",
+      "description": "API Gateway Resource Policy Configuration\n(`#1160 <https://github.com/aws/chalice/pull/1160>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Add --merge-template option to package command\n(`#1195 <https://github.com/aws/chalice/pull/1195>`__)",
+      "type": "feature"
+    },
+    {
+      "category": "packaging",
+      "description": "Add support for packaging via terraform\n(`#1129 <https://github.com/aws/chalice/pull/1129>`__)",
+      "type": "feature"
+    }
+  ]
+}
