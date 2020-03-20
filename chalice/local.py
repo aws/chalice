@@ -321,8 +321,7 @@ class LocalGatewayAuthorizer(object):
             if "headers" in lambda_event\
                     and "authorization" in lambda_event["headers"]:
                 token = lambda_event["headers"]["authorization"]
-                payload_segment = token.split(".", 2)[1]
-                claims = json.loads(base64url_decode(payload_segment))
+                claims = self._decode_jwt_payload(token)
                 auth_result = {"context": {"claims": claims},
                                "principalId": claims["cognito:username"]}
                 lambda_event = self._update_lambda_event(lambda_event,
@@ -414,6 +413,19 @@ class LocalGatewayAuthorizer(object):
                 b'{"message":"Unauthorized"}')
         authorizer_event['methodArn'] = arn
         return authorizer_event
+
+    def _decode_jwt_payload(self, jwt):
+        # type: (str) -> Dict
+        payload_segment = jwt.split(".", 2)[1]
+        payload = base64.urlsafe_b64decode(self._base64_pad(payload_segment))
+        return json.loads(payload)
+
+    def _base64_pad(self, value):
+        # type: (str) -> str
+        rem = len(value) % 4
+        if rem > 0:
+            value += "=" * (4 - rem)
+        return value
 
 
 class LocalGateway(object):
@@ -715,11 +727,3 @@ class LocalChalice(object):
     def __call__(self, *args, **kwargs):
         # type: (Any, Any) -> Any
         return self._chalice(*args, **kwargs)
-
-
-def base64url_decode(value):
-    # type: (str) -> str
-    rem = len(value) % 4
-    if rem > 0:
-        value += "=" * (4 - rem)
-    return base64.urlsafe_b64decode(value)
