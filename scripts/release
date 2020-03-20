@@ -107,13 +107,8 @@ def _regex_based_version_bump(next_version_number, replacer, contents):
 
 
 def update_changelog(next_version_number, contents):
-    underline = '=' * len(next_version_number)
-    lines = contents.splitlines()
-    # Ensure the file ends with a newline.
-    lines.append('')
-    i = lines.index('Next Release (TBD)')
-    lines[i:i+2] = [next_version_number, underline]
-    return '\n'.join(lines)
+    output = subprocess.check_output(['jmeslog', 'render'])
+    return output.decode('utf-8')
 
 
 def update_doc_conf(next_version_number, contents):
