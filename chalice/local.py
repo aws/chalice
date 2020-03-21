@@ -485,6 +485,7 @@ class LocalGateway(object):
             return {
                 'statusCode': 200,
                 'headers': options_headers,
+                'multiValueHeaders': {},
                 'body': None
             }
         # The authorizer call will be a noop if there is no authorizer method
@@ -561,7 +562,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
                 body=body
             )
             status_code = response['statusCode']
-            headers = response['headers']
+            headers = {**response['headers'], **response['multiValueHeaders']}
             body = response['body']
             self._send_http_response(status_code, headers, body)
         except LocalGatewayException as e:
@@ -591,7 +592,11 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             'Content-Type', 'application/json')
         self.send_header('Content-Type', content_type)
         for header_name, header_value in headers.items():
-            self.send_header(header_name, header_value)
+            if isinstance(header_value, list):
+                for value in header_value:
+                    self.send_header(header_name, value)
+            else:
+                self.send_header(header_name, header_value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -602,8 +607,12 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         # type: (int, HeaderType) -> None
         headers['Content-Length'] = '0'
         self.send_response(code)
-        for k, v in headers.items():
-            self.send_header(k, v)
+        for header_name, header_value in headers.items():
+            if isinstance(header_value, list):
+                for value in header_value:
+                    self.send_header(header_name, value)
+            else:
+                self.send_header(header_name, header_value)
         self.end_headers()
 
 
