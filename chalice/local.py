@@ -591,13 +591,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         content_type = headers.pop(
             'Content-Type', 'application/json')
         self.send_header('Content-Type', content_type)
-        for header_name, header_value in headers.items():
-            if isinstance(header_value, list):
-                for value in header_value:
-                    self.send_header(header_name, value)
-            else:
-                self.send_header(header_name, header_value)
-        self.end_headers()
+        self._send_headers(headers)
         self.wfile.write(body)
 
     do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = do_PATCH = do_OPTIONS = \
@@ -607,6 +601,9 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         # type: (int, HeaderType) -> None
         headers['Content-Length'] = '0'
         self.send_response(code)
+        self._send_headers(headers)
+
+    def _send_headers(self, headers):
         for header_name, header_value in headers.items():
             if isinstance(header_value, list):
                 for value in header_value:
