@@ -15,7 +15,7 @@ from collections import namedtuple
 
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
-from six.moves.socketserver import ThreadingMixIn
+from six.moves.socketserver import ForkingMixIn
 from typing import (
     List,
     Any,
@@ -24,7 +24,6 @@ from typing import (
     Callable,
     Optional,
     Union,
-    cast,
 )  # noqa
 
 from chalice.app import Chalice  # noqa
@@ -56,9 +55,7 @@ class Clock(object):
 
 def create_local_server(app_obj, config, host, port):
     # type: (Chalice, Config, str, int) -> LocalDevServer
-    local_app_obj = LocalChalice(app_obj)
-    casted_local_app_obj = cast(Chalice, local_app_obj)
-    return LocalDevServer(casted_local_app_obj, config, host, port)
+    return LocalDevServer(app_obj, config, host, port)
 
 
 class LocalARNBuilder(object):
@@ -607,23 +604,14 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Threading mixin to better support browsers.
-
-    When a browser sends a GET request to Chalice it keeps the connection open
-    for reuse. In the single threaded model this causes Chalice local to become
-    unresponsive to all clients other than that browser socket. Even sending a
-    header requesting that the client close the connection is not good enough,
-    the browswer will simply open another one and sit on it.
-    """
-
-    daemon_threads = True
+class ForkingHTTPServer(ForkingMixIn, HTTPServer):
+    pass
 
 
 class LocalDevServer(object):
     def __init__(self, app_object, config, host, port,
                  handler_cls=ChaliceRequestHandler,
-                 server_cls=ThreadedHTTPServer):
+                 server_cls=ForkingHTTPServer):
         # type: (Chalice, Config, str, int, HandlerCls, ServerCls) -> None
         self.app_object = app_object
         self.host = host
@@ -672,32 +660,3 @@ class HTTPServerThread(threading.Thread):
         # type: () -> None
         if self._server is not None:
             self._server.shutdown()
-
-
-class LocalChalice(object):
-    def __init__(self, chalice):
-        # type: (Chalice) -> None
-        self._current_request_lookup = {}  # type: Dict[int, Optional[Request]]
-        self._chalice = chalice
-
-    @property
-    def current_request(self):  # noqa
-        # type: () -> Optional[Request]
-        thread_id = threading.current_thread().ident
-        assert thread_id is not None
-        return self._current_request_lookup.get(thread_id, None)
-
-    @current_request.setter
-    def current_request(self, value):  # noqa
-        # type: (Optional[Request]) -> None
-        thread_id = threading.current_thread().ident
-        assert thread_id is not None
-        self._current_request_lookup[thread_id] = value
-
-    def __getattr__(self, name):
-        # type: (str) -> Any
-        return getattr(self._chalice, name)
-
-    def __call__(self, *args, **kwargs):
-        # type: (Any, Any) -> Any
-        return self._chalice(*args, **kwargs)

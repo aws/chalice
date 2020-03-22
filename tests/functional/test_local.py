@@ -140,6 +140,7 @@ def local_server_factory(unused_tcp_port):
 @pytest.fixture
 def sample_app():
     demo = app.Chalice('demo-app')
+    setattr(demo, 'request_count', 0)
 
     @demo.route('/', methods=['GET'])
     def index():
@@ -148,6 +149,11 @@ def sample_app():
     @demo.route('/test-cors', methods=['POST'], cors=True)
     def test_cors():
         return {'hello': 'world'}
+
+    @demo.route('/test-forking', methods=['POST'])
+    def test_forking():
+        demo.request_count += 1
+        return {'request_count': demo.request_count, 'pid': os.getpid()}
 
     return demo
 
@@ -223,6 +229,20 @@ def test_can_accept_multiple_connections(config, sample_app,
         )
     assert response.status_code == 200
     assert response.text == '{"hello":"world"}'
+
+
+def test_each_request_is_forked(config, sample_app, local_server_factory):
+    local_server, port = local_server_factory(sample_app, config)
+    local_server.wait_for_server_ready()
+    pids = set()
+    for _ in range(5):
+        response = local_server.make_call(requests.post, "/test-forking", port)
+        assert response.status_code == 200
+        response_body = json.loads(response.text)
+        assert response_body["request_count"] == 1
+        pids.add(response_body["pid"])
+    # Assert a separate pid was received from each request.
+    assert len(pids) == 5
 
 
 def test_can_import_env_vars(unused_tcp_port, http_session):
