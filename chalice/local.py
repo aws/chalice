@@ -562,7 +562,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
                 body=body
             )
             status_code = response['statusCode']
-            headers = {**response['headers'], **response['multiValueHeaders']}
+            headers = response['headers'].copy()
+            headers.update(response['multiValueHeaders'])
             body = response['body']
             self._send_http_response(status_code, headers, body)
         except LocalGatewayException as e:
@@ -604,6 +605,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         self._send_headers(headers)
 
     def _send_headers(self, headers):
+        # type: (HeaderType) -> None
         for header_name, header_value in headers.items():
             if isinstance(header_value, list):
                 for value in header_value:
