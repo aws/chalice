@@ -634,7 +634,7 @@ for more detailed information about changes in this release.
 0.2.0
 =====
 
-* enhancement:catrest-api support for input content types besides ``application/json``
+* enhancement:rest-api:Add support for input content types besides ``application/json``
   (`#96 <https://github.com/awslabs/chalice/issues/96>`__)
 * enhancement:rest-api:Allow ``ChaliceViewErrors`` to propagate, so that API Gateway
   can properly map HTTP status codes in non debug mode

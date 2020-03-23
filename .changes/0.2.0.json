@@ -2,8 +2,8 @@
   "schema-version": "0.2",
   "changes": [
     {
-      "category": "catrest-api support for input content types besides ``application/json``\n(`#96 <https",
-      "description": "//github.com/awslabs/chalice/issues/96>`__)",
+      "category": "rest-api",
+      "description": "Add support for input content types besides ``application/json``\n(`#96 <https://github.com/awslabs/chalice/issues/96>`__)",
       "type": "enhancement"
     },
     {

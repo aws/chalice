@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import re
 import subprocess
@@ -20,7 +20,8 @@ def cli():
         \b
         $ NEXT_VERSION=$(jmeslog query next-version)
         $ scripts/release bump-version --version-number ${NEXT_VERSION}
-        $ git commit -am "Bumping version to $NEXT_VERSION"
+        $ git add -A .
+        $ git commit -m "Bumping version to $NEXT_VERSION"
         $ scripts/release tag-release
         $ scripts/release build-release
         $ git push upstream master --tags
@@ -31,25 +32,30 @@ def cli():
 
 
 @cli.command('bump-version')
-@click.option('--release-type', type=click.Choice(['minor', 'patch']))
-def bump_version(release_type):
+@click.option('--version-number')
+def bump_version(version_number):
     """Update necessary files with next version number."""
-    next_version_number = get_next_version_number(release_type)
-    print("%s release, bumping version to: %s" % (release_type.capitalize(),
-                                                  next_version_number))
+    print(f"Bumping version to: {version_number}")
+    _create_new_changelog_release()
     for filename, replacer in get_files_to_change().items():
         print("Bumping version in %s" % filename)
         with open(filename, 'r') as f:
             contents = f.read()
             if callable(replacer):
-                new_contents = replacer(next_version_number, contents)
+                new_contents = replacer(version_number, contents)
             else:
                 new_contents = _regex_based_version_bump(
-                    next_version_number,
+                    version_number,
                     replacer,
                     contents)
             with open(filename, 'w') as f:
                 f.write(new_contents)
+
+
+def _create_new_changelog_release():
+    # This takes everything from .changes/next-release/ and creates
+    # a new release entry for them.
+    subprocess.check_call(['jmeslog', 'new-release'])
 
 
 @cli.command('build-release')
@@ -107,13 +113,8 @@ def _regex_based_version_bump(next_version_number, replacer, contents):
 
 
 def update_changelog(next_version_number, contents):
-    underline = '=' * len(next_version_number)
-    lines = contents.splitlines()
-    # Ensure the file ends with a newline.
-    lines.append('')
-    i = lines.index('Next Release (TBD)')
-    lines[i:i+2] = [next_version_number, underline]
-    return '\n'.join(lines)
+    output = subprocess.check_output(['jmeslog', 'render'])
+    return output.decode('utf-8')
 
 
 def update_doc_conf(next_version_number, contents):
