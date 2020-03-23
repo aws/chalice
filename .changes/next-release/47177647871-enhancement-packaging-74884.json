@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "packaging",
+  "description": "Ensure repeatable zip file generation (#1114)."
+}
