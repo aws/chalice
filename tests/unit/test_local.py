@@ -148,12 +148,15 @@ def sample_app():
                         headers={'Content-Type': 'application/octet-stream'})
 
     @demo.route('/multi-value-header')
-    def binary_round_trip():
+    def multi_value_header():
         return Response(body={},
                         status_code=200,
-                        headers={'Set-Cookie': ['CookieA=ValueA', 'CookieB=ValueB']})
+                        headers={
+                            'Set-Cookie': ['CookieA=ValueA', 'CookieB=ValueB']
+                        })
 
     return demo
+
 
 @fixture
 def demo_app_auth():
@@ -517,6 +520,7 @@ def test_can_deny_unauthed_request(auth_handler):
     assert b'x-amzn-ErrorType: UnauthorizedException' in response_lines
     assert b'Content-Type: application/json' in response_lines
     assert b'{"message":"Unauthorized"}' in response_lines
+
 
 def test_multi_value_header(handler):
     set_current_request(handler, method='GET', path='/multi-value-header')
