@@ -433,7 +433,8 @@ class TestTerraformTemplate(TemplateTestBase):
             'rest_api_id': '${aws_api_gateway_rest_api.rest_api.id}',
             'stage_description': (
                 '${md5(data.template_file.chalice_api_swagger.rendered)}'),
-            'stage_name': 'api'
+            'stage_name': 'api',
+            'lifecycle': {'create_before_destroy': True}
         }
 
         # We should also create the auth lambda function.
