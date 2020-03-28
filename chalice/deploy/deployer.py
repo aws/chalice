@@ -94,6 +94,7 @@ from botocore.vendored.requests import ConnectionError as \
 from botocore.session import Session  # noqa
 from typing import Optional, Dict, List, Any, Set, Tuple, cast  # noqa
 
+import chalice
 from chalice import app
 from chalice.config import Config  # noqa
 from chalice.config import DeployedResources  # noqa
@@ -380,6 +381,7 @@ class ApplicationGraphBuilder(object):
 
     def build(self, config, stage_name):
         # type: (Config, str) -> models.Application
+        print('build')
         resources = []  # type: List[models.Model]
         deployment = models.DeploymentPackage(models.Placeholder.BUILD_STAGE)
         for function in config.chalice_app.pure_lambda_functions:
@@ -444,10 +446,36 @@ class ApplicationGraphBuilder(object):
                                ):
         # type: (...) -> models.RestAPI
         # Need to mess with the function name for back-compat.
-        lambda_function = self._create_lambda_model(
-            config=config, deployment=deployment, name='api_handler',
-            handler_name='app.app', stage_name=stage_name
-        )
+        print("_create_rest_api_model")
+
+        lambdas_to_build = set()
+        for route_key, route_value in config.chalice_app.routes.items():
+            for method_key, method_value in route_value.items():
+                lambdas_to_build.add(method_value.function)
+
+        # Check here if the deployment instance must be used and appended to 
+        # lambdas_functions list
+        lambdas_functions = []
+        if 'api_handler' in lambdas_to_build:
+            lambdas_to_build.remove('api_handler')
+            lambda_function = self._create_lambda_model(
+                config=config, deployment=deployment, name='api_handler',
+                handler_name='app.app', stage_name=stage_name
+            )
+            lambdas_functions.append(lambda_function)
+
+        for lambda_path in lambdas_to_build:
+            name = '%s_handler' % ('_'.join(lambda_path.split('/')))
+
+            deployment = models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE,
+                lambda_path
+            )
+            lambda_function = self._create_lambda_model(
+                config=config, deployment=deployment, name=name,
+                handler_name='app.app', stage_name=stage_name
+            )
+            lambdas_functions.append(lambda_function)
         # For backwards compatibility with the old deployer, the
         # lambda function for the API handler doesn't have the
         # resource_name appended to its complete function_name,
@@ -485,6 +513,7 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
+            lambdas_functions=lambdas_functions,
             policy=policy
         )
 
@@ -614,6 +643,7 @@ class ApplicationGraphBuilder(object):
                              handler_name,  # type: str
                              stage_name,    # type: str
                              ):
+        print("_create_lambda_model")
         # type: (...) -> models.LambdaFunction
         new_config = config.scope(
             chalice_stage=config.chalice_stage,
@@ -736,7 +766,8 @@ class ApplicationGraphBuilder(object):
             security_group_ids=security_group_ids,
             subnet_ids=subnet_ids,
             reserved_concurrency=config.reserved_concurrency,
-            layers=lambda_layers
+            layers=lambda_layers,
+            function_path=deployment.function_path
         )
         self._inject_role_traits(function, role)
         return function
@@ -875,8 +906,15 @@ class DeploymentPackager(BaseDeployStep):
         # type: (Config, models.DeploymentPackage) -> None
         if isinstance(resource.filename, models.Placeholder):
             zip_filename = self._packager.create_deployment_package(
-                config.project_dir, config.lambda_python_version)
+                config.project_dir, config.lambda_python_version, function_path=resource.function_path)
             resource.filename = zip_filename
+
+    # def handle_functionpackage(self, config, resource):
+    #     # type: (Config, models.DeploymentPackage) -> None
+    #     if isinstance(resource.filename, models.Placeholder):
+    #         zip_filename = self._packager.create_deployment_package(
+    #             config.project_dir, config.lambda_python_version, function_path=resource.function_path)
+    #         resource.filename = zip_filename
 
 
 class SwaggerBuilder(BaseDeployStep):

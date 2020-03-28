@@ -782,6 +782,7 @@ class TerraformGenerator(TemplateGenerator):
     def _generate_lambdafunction(self, resource, template):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
 
+        print('_generate_lambdafunction')
         func_definition = {
             'function_name': resource.function_name,
             'runtime': resource.runtime,
@@ -969,17 +970,31 @@ class SAMCodeLocationPostProcessor(TemplatePostProcessor):
 
 class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
 
+
+    # TODO: Trigar esse para rest api normal
+    # def process(self, template, config, outdir, chalice_stage_name):
+    #     # type: (Dict[str, Any], Config, str, str) -> None
+
+    #     copied = False
+    #     for r in template['resource'].get('aws_lambda_function', {}).values():
+    #         if not copied:
+    #             asset_path = os.path.join(outdir, 'deployment.zip')
+    #             self._osutils.copy(r['filename'], asset_path)
+    #             copied = True
+    #         r['filename'] = "./deployment.zip"
+    #         r['source_code_hash'] = '${filebase64sha256("./deployment.zip")}'
+
+    # TODO: Trigar esse para rest api com multiplos lambdas
     def process(self, template, config, outdir, chalice_stage_name):
         # type: (Dict[str, Any], Config, str, str) -> None
 
-        copied = False
         for r in template['resource'].get('aws_lambda_function', {}).values():
-            if not copied:
-                asset_path = os.path.join(outdir, 'deployment.zip')
-                self._osutils.copy(r['filename'], asset_path)
-                copied = True
-            r['filename'] = "./deployment.zip"
-            r['source_code_hash'] = '${filebase64sha256("./deployment.zip")}'
+            asset_filename = "%s_deployment.zip" % r['function_name']
+            asset_path = os.path.join(outdir, asset_filename)
+            self._osutils.copy(r['filename'], asset_path)
+
+            r['filename'] = "./%s" % asset_filename
+            r['source_code_hash'] = '${filebase64sha256("./%s")}' % asset_filename
 
 
 class TemplateMergePostProcessor(TemplatePostProcessor):

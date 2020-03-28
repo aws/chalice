@@ -479,7 +479,7 @@ class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, method,
                  api_key_required=None, content_types=None,
-                 cors=False, authorizer=None):
+                 cors=False, authorizer=None, function=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -500,6 +500,7 @@ class RouteEntry(object):
             cors = None
         self.cors = cors
         self.authorizer = authorizer
+        self.function = function
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -595,12 +596,14 @@ class WebsocketAPI(object):
 
 
 class DecoratorAPI(object):
-    def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
+    def authorizer(self, ttl_seconds=None, execution_role=None, name=None, function=None):
         return self._create_registration_function(
             handler_type='authorizer',
             name=name,
             registration_kwargs={
-                'ttl_seconds': ttl_seconds, 'execution_role': execution_role,
+                'ttl_seconds': ttl_seconds,
+                'execution_role': execution_role,
+                'function': function
             }
         )
 
@@ -869,6 +872,7 @@ class _HandlerRegistration(object):
         actual_kwargs = kwargs.copy()
         ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
         execution_role = actual_kwargs.pop('execution_role', None)
+        function = actual_kwargs.pop('function', None)
         if actual_kwargs:
             raise TypeError(
                 'TypeError: authorizer() got unexpected keyword '
@@ -878,6 +882,7 @@ class _HandlerRegistration(object):
             handler_string=handler_string,
             ttl_seconds=ttl_seconds,
             execution_role=execution_role,
+            function=function,
         )
         wrapped_handler.config = auth_config
         self.builtin_auth_handlers.append(auth_config)
@@ -896,6 +901,7 @@ class _HandlerRegistration(object):
             'content_types': actual_kwargs.pop('content_types',
                                                ['application/json']),
             'cors': actual_kwargs.pop('cors', self.api.cors),
+            'function': actual_kwargs.pop('function', 'api_handler'),
         }
         if route_kwargs['cors'] is None:
             route_kwargs['cors'] = self.api.cors
@@ -1156,12 +1162,13 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
 
 class BuiltinAuthConfig(object):
     def __init__(self, name, handler_string, ttl_seconds=None,
-                 execution_role=None):
+                 execution_role=None, function=None):
         # We'd also support all the misc config options you can set.
         self.name = name
         self.handler_string = handler_string
         self.ttl_seconds = ttl_seconds
         self.execution_role = execution_role
+        self.function = function
 
 
 # ChaliceAuthorizer is unique in that the runtime component (the thing
