@@ -81,9 +81,9 @@ def test_terraform_post_processor_moves_files_once():
         'old-dir.zip', os.path.join('outdir', 'deployment.zip'))
     assert mock_osutils.copy.call_count == 1
     assert template['resource']['aws_lambda_function'][
-        'foo']['filename'] == ('./deployment.zip')
+        'foo']['filename'] == ('${path.module}/deployment.zip')
     assert template['resource']['aws_lambda_function'][
-        'bar']['filename'] == ('./deployment.zip')
+        'bar']['filename'] == ('${path.module}/deployment.zip')
 
 
 def test_template_generator_default():
