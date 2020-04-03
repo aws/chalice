@@ -979,7 +979,8 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
                 self._osutils.copy(r['filename'], asset_path)
                 copied = True
             r['filename'] = "${path.module}/deployment.zip"
-            r['source_code_hash'] = '${filebase64sha256("${path.module}/deployment.zip")}'
+            r['source_code_hash'] = \
+                '${filebase64sha256("${path.module}/deployment.zip")}'
 
 
 class TemplateMergePostProcessor(TemplatePostProcessor):
