@@ -25,7 +25,6 @@ from typing import (
     Callable,
     Optional,
     Union,
-    cast,
 )  # noqa
 
 from chalice.app import Chalice  # noqa
@@ -58,9 +57,8 @@ class Clock(object):
 
 def create_local_server(app_obj, config, host, port):
     # type: (Chalice, Config, str, int) -> LocalDevServer
-    local_app_obj = LocalChalice(app_obj)
-    casted_local_app_obj = cast(Chalice, local_app_obj)
-    return LocalDevServer(casted_local_app_obj, config, host, port)
+    app_obj.__class__ = LocalChalice
+    return LocalDevServer(app_obj, config, host, port)
 
 
 class LocalARNBuilder(object):
@@ -708,30 +706,21 @@ class HTTPServerThread(threading.Thread):
             self._server.shutdown()
 
 
-class LocalChalice(object):
-    def __init__(self, chalice):
-        # type: (Chalice) -> None
-        self._current_request_lookup = {}  # type: Dict[int, Optional[Request]]
-        self._chalice = chalice
+class LocalChalice(Chalice):
 
-    @property
-    def current_request(self):  # noqa
-        # type: () -> Optional[Request]
-        thread_id = threading.current_thread().ident
-        assert thread_id is not None
-        return self._current_request_lookup.get(thread_id, None)
+    _THREAD_LOCAL = threading.local()
+
+    # This is a known mypy bug where you can't override instance
+    # variables with properties.  So this should be type safe, which
+    # is why we're adding the type: ignore comments here.
+    # See: https://github.com/python/mypy/issues/4125
+
+    @property  # type: ignore
+    def current_request(self):  # type: ignore
+        # type: () -> Request
+        return self._THREAD_LOCAL.current_request
 
     @current_request.setter
-    def current_request(self, value):  # noqa
-        # type: (Optional[Request]) -> None
-        thread_id = threading.current_thread().ident
-        assert thread_id is not None
-        self._current_request_lookup[thread_id] = value
-
-    def __getattr__(self, name):
-        # type: (str) -> Any
-        return getattr(self._chalice, name)
-
-    def __call__(self, *args, **kwargs):
-        # type: (Any, Any) -> Any
-        return self._chalice(*args, **kwargs)
+    def current_request(self, value):  # type: ignore
+        # type: (Request) -> None
+        self._THREAD_LOCAL.current_request = value

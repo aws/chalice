@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "local",
+  "description": "Make ``current_request`` thread safe in local mode (#759)"
+}
