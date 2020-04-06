@@ -4,6 +4,7 @@ import time
 import contextlib
 from threading import Thread
 from threading import Event
+from threading import Lock
 import json
 import subprocess
 from contextlib import contextmanager
@@ -14,7 +15,7 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 from chalice import app
-from chalice.local import LocalDevServer
+from chalice.local import create_local_server
 from chalice.config import Config
 from chalice.utils import OSUtils
 
@@ -71,7 +72,7 @@ class ThreadedLocalServer(Thread):
         self._config = config
 
     def run(self):
-        self._server = LocalDevServer(
+        self._server = create_local_server(
             self._app_object, self._config, self._host, self._port)
         self._server_ready.set()
         self._server.serve_forever()
@@ -103,10 +104,10 @@ def http_session():
     session = requests.Session()
     retry = Retry(
         # How many connection-related errors to retry on.
-        connect=5,
-        # How many connection-related errors to retry on.
+        connect=10,
         # A backoff factor to apply between attempts after the second try.
         backoff_factor=2,
+        method_whitelist=['GET', 'POST', 'PUT'],
     )
     session.mount('http://', HTTPAdapter(max_retries=retry))
     return HTTPFetcher(session)
@@ -141,6 +142,9 @@ def local_server_factory(unused_tcp_port):
 def sample_app():
     demo = app.Chalice('demo-app')
 
+    thread_safety_check = []
+    lock = Lock()
+
     @demo.route('/', methods=['GET'])
     def index():
         return {'hello': 'world'}
@@ -149,7 +153,54 @@ def sample_app():
     def test_cors():
         return {'hello': 'world'}
 
+    @demo.route('/count', methods=['POST'])
+    def record_counter():
+        # An extra delay helps ensure we consistently fail if we're
+        # not thread safe.
+        time.sleep(0.001)
+        count = int(demo.current_request.json_body['counter'])
+        with lock:
+            thread_safety_check.append(count)
+
+    @demo.route('/count', methods=['GET'])
+    def get_record_counter():
+        return thread_safety_check[:]
+
     return demo
+
+
+def test_has_thread_safe_current_request(config, sample_app,
+                                         local_server_factory):
+    local_server, port = local_server_factory(sample_app, config)
+    local_server.wait_for_server_ready()
+
+    num_requests = 25
+    num_threads = 5
+
+    # The idea here is that each requests.post() has a unique 'counter'
+    # integer.  If the current request is thread safe we should see a number
+    # for each 0 - (num_requests * num_threads).  If it's not thread safe
+    # we'll see missing numbers and/or duplicates.
+    def make_requests(counter_start):
+        for i in range(counter_start * num_requests,
+                       (counter_start + 1) * num_requests):
+            # We're slowing the sending rate down a bit.  The threaded
+            # http server is good, but not great.  You can still overwhelm
+            # it pretty easily.
+            time.sleep(0.001)
+            requests.post(
+                'http://localhost:%s/count' % port, json={'counter': i})
+
+    threads = []
+    for i in range(num_threads):
+        threads.append(Thread(target=make_requests, args=(i,)))
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    response = requests.get('http://localhost:%s/count' % port)
+    assert len(response.json()) == len(range(num_requests * num_threads))
+    assert sorted(response.json()) == list(range(num_requests * num_threads))
 
 
 def test_can_accept_get_request(config, sample_app, local_server_factory):
