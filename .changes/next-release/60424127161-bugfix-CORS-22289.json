@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "CORS",
-  "description": "Fix CORS request when returning compressed binary types (#1336)"
-}

@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "packaging",
-  "description": "Fix terraform generation when injecting custom domains (#1237)"
-}

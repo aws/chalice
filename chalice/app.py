@@ -11,7 +11,7 @@ import base64
 from collections import defaultdict
 
 
-__version__ = '1.13.0'
+__version__ = '1.13.1'
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
