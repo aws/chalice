@@ -319,3 +319,15 @@ def test_valid_minimum_compression_size(sample_app):
     config = Config.create(chalice_app=sample_app,
                            minimum_compression_size=1)
     assert validate_configuration(config) is None
+
+
+def test_validate_sqs_queue_name(sample_app):
+
+    @sample_app.on_sqs_message(
+        queue='https://sqs.us-west-2.amazonaws.com/12345/myqueue')
+    def handler(event):
+        pass
+
+    config = Config.create(chalice_app=sample_app)
+    with pytest.raises(ValueError):
+        validate_configuration(config)
