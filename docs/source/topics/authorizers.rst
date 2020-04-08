@@ -158,6 +158,8 @@ URLs as well as the principal id of the user.  You can optionally
 return a dictionary of key value pairs (as the ``context`` kwarg).
 This dictionary will be passed through on subsequent requests.
 In our example above we're not using the context dictionary.
+API Gateway will convert all the values in the ``context``
+dictionary to string values.
 
 Now let's deploy our app.  As usual, we just need to run
 ``chalice deploy`` and chalice will automatically deploy all the
