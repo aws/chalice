@@ -47,6 +47,7 @@ def validate_configuration(config):
     validate_feature_flags(config.chalice_app)
     validate_endpoint_type(config)
     validate_resource_policy(config)
+    validate_sqs_configuration(config.chalice_app)
 
 
 def validate_resource_policy(config):
@@ -231,3 +232,26 @@ def _get_all_function_names(chalice_app):
         yield event.name
     for function in chalice_app.pure_lambda_functions:
         yield function.name
+
+
+def validate_sqs_configuration(chalice_app):
+    # type: (app.Chalice) -> None
+    for event in chalice_app.event_sources:
+        if not isinstance(event, app.SQSEventConfig):
+            continue
+        if not _is_valid_queue_name(event.queue):
+            raise ValueError("The 'queue' parameter for the "
+                             "'@app.on_sqs_message()' handler must be the "
+                             "name of the queue, not the queue URL or the "
+                             "queue ARN.  Invalid value: %s" % event.queue)
+
+
+def _is_valid_queue_name(queue_name):
+    # type: (str) -> bool
+    if queue_name.startswith(('https:', 'arn:')):
+        return False
+    # We're not validating that the queue has only valid chars because SQS
+    # won't let you create a queue with that name in the first place.  We just
+    # want to detect the case where a user puts the queue URL/ARN instead of
+    # the name.
+    return True
