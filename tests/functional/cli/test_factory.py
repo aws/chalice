@@ -103,6 +103,14 @@ def test_can_create_deletion_deployer(clifactory):
     assert isinstance(deployer, Deployer)
 
 
+def test_can_create_plan_only_deployer(clifactory):
+    session = clifactory.create_botocore_session()
+    config = clifactory.create_config_obj(chalice_stage_name='dev')
+    deployer = clifactory.create_plan_only_deployer(
+        session=session, config=config, ui=UI())
+    assert isinstance(deployer, Deployer)
+
+
 def test_can_create_config_obj(clifactory):
     obj = clifactory.create_config_obj()
     assert isinstance(obj, Config)

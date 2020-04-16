@@ -1,5 +1,8 @@
-import jmespath
+import re
+import pprint
 
+import jmespath
+from attr import asdict
 from typing import Dict, List, Any  # noqa
 
 from chalice.deploy import models
@@ -8,15 +11,25 @@ from chalice.awsclient import TypedAWSClient  # noqa
 from chalice.utils import UI  # noqa
 
 
-class Executor(object):
+class BaseExecutor(object):
     def __init__(self, client, ui):
         # type: (TypedAWSClient, UI) -> None
         self._client = client
         self._ui = ui
+        self.resource_values = []  # type: List[Dict[str, Any]]
+
+    def execute(self, plan):
+        # type: (models.Plan) -> None
+        pass
+
+
+class Executor(BaseExecutor):
+    def __init__(self, client, ui):
+        # type: (TypedAWSClient, UI) -> None
+        super(Executor, self).__init__(client, ui)
         # A mapping of variables that's populated as API calls
         # are made.  These can be used in subsequent API calls.
         self.variables = {}  # type: Dict[str, Any]
-        self.resource_values = []  # type: List[Dict[str, Any]]
         self._resource_value_index = {}  # type: Dict[str, Any]
         self._variable_resolver = VariableResolver()
 
@@ -148,6 +161,80 @@ class VariableResolver(object):
             return final_list
         else:
             return value
+
+
+# This class is used for the ``chalice dev plan`` command.
+# The dev commands don't have any backwards compatibility guarantees
+# so we can alter this output as needed.
+class DisplayOnlyExecutor(BaseExecutor):
+
+    # Max length of bytes object before we truncate with '<bytes>'
+    _MAX_BYTE_LENGTH = 30
+    _LINE_VERTICAL = u'\u2502'
+
+    def execute(self, plan):
+        # type: (models.Plan) -> None
+        spillover_values = {}  # type: Dict[str, Any]
+        self._ui.write("Plan\n")
+        self._ui.write("====\n\n")
+        for instruction in plan.instructions:
+            getattr(self, '_do_%s' % instruction.__class__.__name__.lower(),
+                    self._default_handler)(instruction, spillover_values)
+        self._write_spillover(spillover_values)
+
+    def _write_spillover(self, spillover_values):
+        # type: (Dict[str, Any]) -> None
+        if not spillover_values:
+            return
+        self._ui.write("Variable Pool\n")
+        self._ui.write("=============\n\n")
+        for key, value in spillover_values.items():
+            self._ui.write('%s:\n' % key)
+            self._ui.write(pprint.pformat(value) + '\n\n')
+
+    def _default_handler(self, instruction, spillover_values):
+        # type: (models.Instruction, Dict[str, Any]) -> None
+        instruction_name = self._upper_snake_case(
+            instruction.__class__.__name__)
+        for key, value in asdict(instruction).items():
+            if isinstance(value, dict):
+                value = self._format_dict(value, spillover_values)
+            line = ('%-30s %s%20s %-10s' % (
+                instruction_name, self._LINE_VERTICAL, '%s:' % key, value)
+            )
+            self._ui.write(line + '\n')
+            instruction_name = ''
+        self._ui.write('\n')
+
+    def _format_dict(self, dict_value, spillover_values):
+        # type: (Dict[str, Any], Dict[str, Any]) -> str
+        lines = ['']
+        for key, value in dict_value.items():
+            if not value:
+                continue
+            if isinstance(value, bytes) and len(value) > self._MAX_BYTE_LENGTH:
+                value = '<bytes>'
+            if isinstance(value, (dict, list)):
+                # We need a unique name to use so we just use a simple
+                # incrementing counter with the name prefixed.
+                spillover_name = '${%s_%s}' % (
+                    key.upper(), len(spillover_values))
+                spillover_values[spillover_name] = value
+                value = spillover_name
+            line = '%-31s%s%-15s%s%20s %-10s' % (
+                ' ', self._LINE_VERTICAL, ' ', self._LINE_VERTICAL,
+                '%s:' % key, value
+            )
+            lines.append(line)
+        return '\n'.join(lines)
+
+    def _upper_snake_case(self, v):
+        # type: (str) -> str
+        first_cap_regex = re.compile('(.)([A-Z][a-z]+)')
+        end_cap_regex = re.compile('([a-z0-9])([A-Z])')
+        first = first_cap_regex.sub(r'\1_\2', v)
+        transformed = end_cap_regex.sub(r'\1_\2', first).upper()
+        return transformed
 
 
 class UnresolvedValueError(Exception):
