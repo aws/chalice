@@ -1,0 +1,35 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "local",
+      "description": "Add support for multiValueHeaders in local mode (#1381)."
+    },
+    {
+      "type": "bugfix",
+      "category": "local",
+      "description": "Make ``current_request`` thread safe in local mode (#759)"
+    },
+    {
+      "type": "enhancement",
+      "category": "local",
+      "description": "Add support for cognito in local mode (#1377)."
+    },
+    {
+      "type": "bugfix",
+      "category": "packaging",
+      "description": "Fix terraform generation when injecting custom domains (#1237)"
+    },
+    {
+      "type": "enhancement",
+      "category": "packaging",
+      "description": "Ensure repeatable zip file generation (#1114)."
+    },
+    {
+      "type": "bugfix",
+      "category": "CORS",
+      "description": "Fix CORS request when returning compressed binary types (#1336)"
+    }
+  ]
+}
