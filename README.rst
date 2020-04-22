@@ -1265,8 +1265,7 @@ Other full-stack frameworks offer a lot more features and configurability than
 what this framework has and likely will ever have.  Those frameworks are
 excellent choices for applications that need more than what is offered by this
 microframework.  If all you need is to create a simple rest API in Python that
-runs on Amazon API Gateway and AWS Lambda, consider giving the Python
-Serverless Microframework for AWS a try.
+runs on Amazon API Gateway and AWS Lambda, consider giving Chalice a try.
 
 Related Projects
 ----------------
