@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.14.0
+======
+
+* bugfix:packaging:Fix pandas packaging regression (#1398)
+* feature:CLI:Add ``dev plan/appgraph`` commands (#1396)
+* enhancement:SQS:Validate queue name is used and not queue URL or ARN (#1388)
+
+
 1.13.1
 ======
 

@@ -1,0 +1,20 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "packaging",
+      "description": "Fix pandas packaging regression (#1398)"
+    },
+    {
+      "type": "feature",
+      "category": "CLI",
+      "description": "Add ``dev plan/appgraph`` commands (#1396)"
+    },
+    {
+      "type": "enhancement",
+      "category": "SQS",
+      "description": "Validate queue name is used and not queue URL or ARN (#1388)"
+    }
+  ]
+}

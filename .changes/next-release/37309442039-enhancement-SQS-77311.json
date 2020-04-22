@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "SQS",
-  "description": "Validate queue name is used and not queue URL or ARN (#1388)"
-}

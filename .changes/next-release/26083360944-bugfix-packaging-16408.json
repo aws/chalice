@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "packaging",
-  "description": "Fix pandas packaging regression (#1398)"
-}
