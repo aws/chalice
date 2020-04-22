@@ -989,7 +989,6 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self.log.setLevel(level)
 
     def register_blueprint(self, blueprint, name_prefix=None, url_prefix=None):
-        self._features_used.add('BLUEPRINTS')
         blueprint.register(self, options={'name_prefix': name_prefix,
                                           'url_prefix': url_prefix})
 

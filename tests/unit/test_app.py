@@ -2103,19 +2103,6 @@ def test_every_decorator_added_to_blueprint():
         assert method_name in blueprint_api
 
 
-def test_blueprint_gated_behind_feature_flag():
-    # Blueprints won't validate unless you enable their feature flag.
-    myapp = app.Chalice('myapp')
-    bp = app.Blueprint('app.chalicelib.blueprints.foo')
-
-    @bp.route('/')
-    def index():
-        pass
-
-    myapp.register_blueprint(bp)
-    assert_requires_opt_in(myapp, flag='BLUEPRINTS')
-
-
 @pytest.mark.parametrize('input_dict', [
     {},
     {'key': []}
