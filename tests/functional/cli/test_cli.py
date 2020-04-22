@@ -43,6 +43,10 @@ def mock_cli_factory():
     return cli_factory
 
 
+def teardown_function(function):
+    sys.modules.pop('app', None)
+
+
 def assert_chalice_app_structure_created(dirname):
     app_contents = os.listdir(os.path.join(os.getcwd(), dirname))
     assert 'app.py' in app_contents
@@ -617,3 +621,34 @@ def test_cli_with_absolute_path(runner, path):
         assert result.exit_code == 0
         assert os.listdir(os.getcwd()) == ['testproject']
         assert_chalice_app_structure_created(dirname='testproject')
+
+
+def test_can_generate_dev_plan(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.plan, [],
+                                  cli_factory=mock_cli_factory)
+        deployer = mock_cli_factory.create_plan_only_deployer.return_value
+        call_args = deployer.deploy.call_args
+        assert result.exit_code == 0
+        assert isinstance(call_args[0][0], Config)
+        assert call_args[1] == {'chalice_stage_name': 'dev'}
+
+
+# The appgraph command actually works on py27, but due to a bug in click's
+# testing (https://github.com/pallets/click/issues/848), it assumes
+# stdout must be ascii.
+# stdout is a cStringIO.StringIO, which doesn't accept unicode.
+# See: https://docs.python.org/2/library/stringio.html#cStringIO.StringIO
+@pytest.mark.skipif(sys.version_info[0] == 2,
+                    reason="Click bug when writing unicode to stdout.")
+def test_can_generate_appgraph(runner, mock_cli_factory):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.appgraph, [])
+        assert result.exit_code == 0
+        # Just sanity checking some of the output
+        assert 'Application' in result.output
+        assert 'RestAPI(' in result.output

@@ -258,7 +258,7 @@ class LambdaDeploymentPackager(object):
 class DependencyBuilder(object):
     """Build site-packages by manually downloading and unpacking wheels.
 
-    Pip is used to download all the dependency sdists. Then wheels that
+    Pip is used to download all the dependency sdists. Then wheels that are
     compatible with lambda are downloaded. Any source packages that do not
     have a matching wheel file are built into a wheel and that file is checked
     for compatibility with the lambda python runtime environment.
@@ -333,7 +333,7 @@ class DependencyBuilder(object):
     def _download_binary_wheels(self, abi, packages, directory):
         # type: (str, Set[Package], str) -> None
         # Try to get binary wheels for each package that isn't compatible.
-        logger.debug("Downloading missing wheels: %s", packages)
+        logger.debug("Downloading manylinux wheels: %s", packages)
         self._pip.download_manylinux_wheels(
             abi, [pkg.identifier for pkg in packages], directory)
 
@@ -409,14 +409,15 @@ class DependencyBuilder(object):
         # still will be compatible because they have no platform dependencies.
         sdists, compatible_wheels, incompatible_wheels = self._categorize_deps(
             abi, deps)
-        logger.debug("initial compatible: %s", compatible_wheels)
-        logger.debug("initial incompatible: %s", incompatible_wheels | sdists)
+        logger.debug("Compatible wheels for Lambda: %s", compatible_wheels)
+        logger.debug("Initial incompatible wheels for Lambda: %s",
+                     incompatible_wheels | sdists)
 
         # Next we need to go through the downloaded packages and pick out any
         # dependencies that do not have a compatible wheel file downloaded.
         # For these packages we need to explicitly try to download a
         # compatible wheel file.
-        missing_wheels = sdists | incompatible_wheels
+        missing_wheels = sdists.union(incompatible_wheels)
         self._download_binary_wheels(abi, missing_wheels, directory)
 
         # Re-count the wheel files after the second download pass. Anything
@@ -428,11 +429,17 @@ class DependencyBuilder(object):
         # compatible wheel file but no linux ones, we will only have an
         # incompatible wheel file and no sdist. So we need to get any missing
         # sdists before we can build them.
+        compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
+            abi, directory)
+        # The self._download_binary_wheels() can now introduce duplicate
+        # entries.  For example, if we download a macOS whl at first but
+        # then we're able to download a manylinux1 wheel, we'll now have
+        # two wheels for the package, so we have to remove any compatible
+        # wheels from our set of incompatible wheels.
+        incompatible_wheels -= compatible_wheels
         missing_sdists = incompatible_wheels - sdists
         self._download_sdists(missing_sdists, directory)
         sdists = self._find_sdists(directory)
-        compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory)
         logger.debug(
             "compatible wheels after second download pass: %s",
             compatible_wheels

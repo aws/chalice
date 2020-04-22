@@ -127,6 +127,10 @@ class CLIFactory(object):
         # type: (Session, Config, UI) -> deployer.Deployer
         return deployer.create_default_deployer(session, config, ui)
 
+    def create_plan_only_deployer(self, session, config, ui):
+        # type: (Session, Config, UI) -> deployer.Deployer
+        return deployer.create_plan_only_deployer(session, config, ui)
+
     def create_deletion_deployer(self, session, ui):
         # type: (Session, UI) -> deployer.Deployer
         return deployer.create_deletion_deployer(

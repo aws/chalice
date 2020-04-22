@@ -1,10 +1,11 @@
+import re
 import mock
 import pytest
 
 from chalice.awsclient import TypedAWSClient
 from chalice.deploy import models
 from chalice.deploy.executor import Executor, UnresolvedValueError, \
-    VariableResolver
+    VariableResolver, DisplayOnlyExecutor
 from chalice.deploy.models import APICall, RecordResourceVariable, \
     RecordResourceValue, StoreValue, JPSearch, BuiltinFunction, Instruction, \
     CopyVariable
@@ -220,6 +221,93 @@ class TestExecutor(object):
 
         with pytest.raises(RuntimeError):
             self.execute([CustomInstruction()])
+
+
+class TestDisplayOnlyExecutor(object):
+
+    # Note: This executor doesn't have any guarantees on its output,
+    # it's primarily to help debug/understand chalice.  The tests here
+    # check the basic structure of the output, but try to not be overly strict.
+
+    def setup_method(self):
+        self.mock_client = mock.Mock(spec=TypedAWSClient)
+        self.ui = mock.Mock(spec=UI)
+        self.executor = DisplayOnlyExecutor(self.mock_client, self.ui)
+
+    def execute(self, instructions, messages=None):
+        if messages is None:
+            messages = {}
+        self.executor.execute(models.Plan(instructions, messages))
+
+    def get_plan_output(self, instructions):
+        self.executor.execute(models.Plan(instructions, {}))
+        return ''.join(args[0][0] for args in self.ui.write.call_args_list)
+
+    def test_can_display_plan(self):
+        params = {'name': 'foo', 'trust_policy': {'trust': 'policy'},
+                  'policy': {'iam': 'policy'}}
+        call = APICall('create_role', params)
+
+        plan_output = self.get_plan_output([call])
+        # Should have a plan title.
+        assert plan_output.startswith('Plan\n====')
+        # Should print the api call in upper camel case.
+        assert 'API_CALL' in plan_output
+        # Should print the name of the method in the plan.
+        assert 'method_name: create_role' in plan_output
+        # Should print out the api call arguments in output.
+        assert 'name: foo' in plan_output
+        # The values for these are in the tests for the variable pool.
+        assert 'trust_policy: ' in plan_output
+        assert 'policy: ' in plan_output
+
+    def test_variable_pool_printed_if_needed(self):
+        params = {'name': 'foo', 'policy': {'iam': 'policy'}}
+        call = APICall('create_role', params)
+
+        plan_output = self.get_plan_output([call])
+        # Dictionaries for param values are printed at the end so they
+        # don't clutter the plan output.  We should see a placeholder here.
+        assert 'policy: ${POLICY_0}' in plan_output
+        assert 'Variable Pool' in plan_output
+        assert "${POLICY_0}:\n{'iam': 'policy'}" in plan_output
+
+    def test_variable_pool_omitted_if_empty(self):
+        params = {'name': 'foo'}
+        call = APICall('create_role', params)
+
+        plan_output = self.get_plan_output([call])
+        assert 'Variable Pool' not in plan_output
+
+    def test_byte_value_replaced_if_over_length(self):
+        params = {'name': 'foo', 'zip_contents': b'\x01' * 50}
+        call = APICall('create_role', params)
+
+        plan_output = self.get_plan_output([call])
+        assert 'zip_contents: <bytes>' in plan_output
+
+    def test_can_print_multiple_instructions(self):
+        instructions = [
+            JPSearch(expression='foo.bar', input_var='in1', output_var='out1'),
+            JPSearch(expression='foo.baz', input_var='in2', output_var='out2'),
+        ]
+        plan_output = self.get_plan_output(instructions)
+        # Use a regex to ensure they're printed in order.
+        assert re.search(
+            'JP_SEARCH.*expression: foo.bar.*'
+            'JP_SEARCH.*expression: foo.baz', plan_output,
+            re.MULTILINE | re.DOTALL
+        ) is not None
+
+    def test_empty_values_omitted(self):
+        params = {'name': 'foo', 'empty_list': [],
+                  'empty_dict': {}, 'empty_str': ''}
+        call = APICall('create_role', params)
+
+        plan_output = self.get_plan_output([call])
+        assert 'empty_list' not in plan_output
+        assert 'empty_dict' not in plan_output
+        assert 'empty_str' not in plan_output
 
 
 class TestResolveVariables(object):

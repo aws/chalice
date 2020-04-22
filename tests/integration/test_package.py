@@ -1,4 +1,5 @@
 import os
+import sys
 import stat
 import uuid
 from zipfile import ZipFile
@@ -91,6 +92,18 @@ class TestPackage(object):
             'SQLAlchemy==1.3.13',
             contents=[
                 'sqlalchemy/__init__.py',
+            ],
+        )
+
+    @pytest.mark.skipif(sys.version_info[0] == 2,
+                        reason='pandas==1.0.3 is only suported on py3.')
+    def test_can_package_pandas(self, runner, app_skeleton):
+        self.assert_can_package_dependency(
+            runner,
+            app_skeleton,
+            'pandas==1.0.3',
+            contents=[
+                'pandas/_libs/__init__.py',
             ],
         )
 

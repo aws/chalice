@@ -5,8 +5,7 @@ import mock
 import pytest
 from chalice.config import Config
 from chalice import package
-from chalice.deploy.deployer import ApplicationGraphBuilder
-from chalice.deploy.deployer import DependencyBuilder
+from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
 from chalice.deploy.deployer import BuildStage
 from chalice.deploy import models
 from chalice.deploy.swagger import SwaggerGenerator
