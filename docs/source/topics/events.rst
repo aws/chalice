@@ -304,12 +304,11 @@ of our ``handle_sqs_message`` lambda function to 30 seconds::
   }
 
 
-.. note::
-
-    FIFO SQS queues are not currently supported.
-
 In this example below, we're connecting the ``handle_sqs_message`` lambda
-function to the ``my-queue`` SQS queue.
+function to the ``my-queue`` SQS queue.  Note that we are specifying the
+queue name, not the queue URL or queue ARN.  If you are connecting your
+lambda function to a FIFO queue, make sure you specify the ``.fifo``
+suffix, e.g. ``my-queue.fifo``.
 
 .. code-block:: python
 
