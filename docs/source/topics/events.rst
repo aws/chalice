@@ -321,7 +321,7 @@ function to the ``my-queue`` SQS queue.
     @app.on_sqs_message(queue='my-queue', batch_size=1)
     def handle_sqs_message(event):
         for record in event:
-            app.log.debug("Received message with contents: ", record.body)
+            app.log.debug("Received message with contents: %s", record.body)
 
 
 Whenever a message is sent to the SQS queue our function will be automatically
