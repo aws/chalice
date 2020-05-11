@@ -851,10 +851,11 @@ def test_templated_swagger_generator(sample_app):
     uri = doc['paths']['/']['get']['x-amazon-apigateway-integration']['uri']
     assert isinstance(uri, StringFormat)
     assert uri.template == (
-        'arn:aws:apigateway:{region_name}:lambda:path'
+        'arn:{partition}:apigateway:{region_name}:lambda:path'
         '/2015-03-31/functions/{api_handler_lambda_arn}/invocations'
     )
-    assert uri.variables == ['region_name', 'api_handler_lambda_arn']
+    assert uri.variables == ['partition', 'region_name',
+                             'api_handler_lambda_arn']
 
 
 def test_templated_swagger_with_auth_uri(sample_app_with_auth):
@@ -863,10 +864,10 @@ def test_templated_swagger_with_auth_uri(sample_app_with_auth):
         'x-amazon-apigateway-authorizer']['authorizerUri']
     assert isinstance(uri, StringFormat)
     assert uri.template == (
-        'arn:aws:apigateway:{region_name}:lambda:path'
+        'arn:{partition}:apigateway:{region_name}:lambda:path'
         '/2015-03-31/functions/{myauth_lambda_arn}/invocations'
     )
-    assert uri.variables == ['region_name', 'myauth_lambda_arn']
+    assert uri.variables == ['partition', 'region_name', 'myauth_lambda_arn']
 
 
 class TestRecordResults(object):

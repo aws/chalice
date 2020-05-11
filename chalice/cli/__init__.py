@@ -530,14 +530,19 @@ def generate_models(ctx, stage):
               type=click.Choice(['json', 'yaml'], case_sensitive=False),
               help=('Specify if the generated template should be serialized '
                     'as either JSON or YAML.  CloudFormation only.'))
+@click.option('--profile', help='Override profile at packaging time.')
 @click.argument('out')
 @click.pass_context
 def package(ctx, single_file, stage, merge_template,
-            out, pkg_format, template_format):
-    # type: (click.Context, bool, str, str, str, str, str) -> None
+            out, pkg_format, template_format, profile):
+    # type: (click.Context, bool, str, str, str, str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
+    factory.profile = profile
     config = factory.create_config_obj(stage)
-    packager = factory.create_app_packager(config, pkg_format, template_format,
+    options = factory.create_package_options()
+    packager = factory.create_app_packager(config, options,
+                                           pkg_format,
+                                           template_format,
                                            merge_template)
     if pkg_format == 'terraform' and (merge_template or
                                       single_file or

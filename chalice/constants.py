@@ -79,7 +79,7 @@ CLOUDWATCH_LOGS = {
         "logs:CreateLogStream",
         "logs:PutLogEvents"
     ],
-    "Resource": "arn:aws:logs:*:*:*"
+    "Resource": "arn:*:logs:*:*:*"
 }
 
 
@@ -114,7 +114,7 @@ CODEBUILD_POLICY = {
                 "s3:GetObjectVersion",
                 "s3:PutObject"
             ],
-            "Resource": "arn:aws:s3:::*",
+            "Resource": "arn:*:s3:::*",
             "Effect": "Allow"
         }
     ]
@@ -248,5 +248,5 @@ POST_TO_WEBSOCKET_CONNECTION_POLICY = {
     "Action": [
         "execute-api:ManageConnections"
     ],
-    "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
+    "Resource": "arn:*:execute-api:*:*:*/@connections/*"
 }

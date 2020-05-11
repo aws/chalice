@@ -63,7 +63,8 @@ class TestPackage(object):
         for content in contents:
             assert content in package_content
 
-    def test_can_package_with_dashes_in_name(self, runner, app_skeleton):
+    def test_can_package_with_dashes_in_name(self, runner, app_skeleton,
+                                             no_local_config):
         self.assert_can_package_dependency(
             runner,
             app_skeleton,
@@ -73,7 +74,8 @@ class TestPackage(object):
             ],
         )
 
-    def test_can_package_simplejson(self, runner, app_skeleton):
+    def test_can_package_simplejson(self, runner, app_skeleton,
+                                    no_local_config):
         self.assert_can_package_dependency(
             runner,
             app_skeleton,
@@ -83,7 +85,8 @@ class TestPackage(object):
             ],
         )
 
-    def test_can_package_sqlalchemy(self, runner, app_skeleton):
+    def test_can_package_sqlalchemy(self, runner, app_skeleton,
+                                    no_local_config):
         # SQLAlchemy is used quite often with Chalice so we want to ensure
         # we can package it correctly.
         self.assert_can_package_dependency(
@@ -97,7 +100,7 @@ class TestPackage(object):
 
     @pytest.mark.skipif(sys.version_info[0] == 2,
                         reason='pandas==1.0.3 is only suported on py3.')
-    def test_can_package_pandas(self, runner, app_skeleton):
+    def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
         self.assert_can_package_dependency(
             runner,
             app_skeleton,
@@ -128,7 +131,8 @@ class TestPackage(object):
         assert str(ex) == 'Could not satisfy the requirement: %s' % package
 
     def test_packaging_requirements_keeps_same_hash(self, runner,
-                                                    app_skeleton):
+                                                    app_skeleton,
+                                                    no_local_config):
         req = os.path.join(app_skeleton, 'requirements.txt')
         package = 'botocore==1.12.202'
         with open(req, 'w') as f:
@@ -143,7 +147,8 @@ class TestPackage(object):
         new_checksum = self._calculate_checksum(package_output_location)
         assert original_checksum == new_checksum
 
-    def test_preserves_executable_permissions(self, runner, app_skeleton):
+    def test_preserves_executable_permissions(self, runner, app_skeleton,
+                                              no_local_config):
         vendor = os.path.join(app_skeleton, 'vendor')
         os.makedirs(vendor)
         executable_file = os.path.join(vendor, 'myscript.sh')

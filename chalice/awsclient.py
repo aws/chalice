@@ -13,24 +13,27 @@ As a side benefit, I can also add type annotations to
 this class to get improved type checking across chalice.
 
 """
-# pylint: disable=too-many-lines
-import os
-import time
-import tempfile
-from datetime import datetime
-import zipfile
-import shutil
 import json
+import os
 import re
+import shutil
+import tempfile
+import time
 import uuid
+import zipfile
+from collections import OrderedDict
+from datetime import datetime
+from typing import Any, Optional, Dict, Callable, List, Iterator, Iterable, \
+    IO, Union  # noqa
 
 import botocore.session  # noqa
 from botocore.exceptions import ClientError
+from botocore.loaders import create_loader
+from botocore.utils import datetime2timestamp
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
-from botocore.utils import datetime2timestamp
 from mypy_extensions import TypedDict
 from typing import (  # noqa
     Any,
@@ -46,7 +49,7 @@ from typing import (  # noqa
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
-
+from chalice.vendored.botocore.regions import EndpointResolver
 
 StrMap = Optional[Dict[str, str]]
 StrAnyMap = Dict[str, Any]
@@ -70,7 +73,6 @@ LogEventsResponse = TypedDict(
         'nextToken': str,
     }, total=False
 )
-
 
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
@@ -105,9 +107,9 @@ class DeploymentPackageTooLargeError(LambdaClientError):
 
 class LambdaErrorContext(object):
     def __init__(self,
-                 function_name,       # type: str
+                 function_name,  # type: str
                  client_method_name,  # type: str
-                 deployment_size,     # type: int
+                 deployment_size,  # type: int
                  ):
         # type: (...) -> None
         self.function_name = function_name
@@ -116,7 +118,6 @@ class LambdaErrorContext(object):
 
 
 class TypedAWSClient(object):
-
     # 30 * 5 == 150 seconds or 2.5 minutes for the initial lambda
     # creation + role propagation.
     LAMBDA_CREATE_ATTEMPTS = 30
@@ -127,6 +128,135 @@ class TypedAWSClient(object):
         self._session = session
         self._sleep = sleep
         self._client_cache = {}  # type: Dict[str, Any]
+
+        # establish the endpoint resolver using the botocore loader api
+        # in order to determine partition and endpoint information
+        loader = create_loader('data_loader')
+        endpoints = loader.load_data('endpoints')
+        self._endpoint_resolver = EndpointResolver(endpoints)
+
+    def resolve_endpoint(self, service, region):
+        # type: (str, str) -> Union[OrderedDict[str, Any], None]
+        """Find details of an endpoint based on the service and region.
+
+        This utilizes the botocore EndpointResolver in order to find details on
+        the given service and region combination.  If the service and region
+        combination is not found the None will be returned.
+        """
+        return self._endpoint_resolver.construct_endpoint(service, region)
+
+    def endpoint_from_arn(self, arn):
+        # type: (str) -> Union[OrderedDict[str, Any], None]
+        """Find details for the endpoint associated with a resource ARN.
+
+        This allows the an endpoint to be discerned based on an ARN.  This
+        is a convenience method due to the need to parse multiple ARNs
+        throughout the project. If the service and region combination
+        is not found the None will be returned.
+        """
+        arn_split = arn.split(':')
+        return self.resolve_endpoint(arn_split[2], arn_split[3])
+
+    def endpoint_dns_suffix(self, service, region):
+        # type: (str, str) -> str
+        """Discover the dns suffix for a given service and region combination.
+
+        This allows the service DNS suffix to be discoverable throughout the
+        framework.  If the ARN's service and region combination is not found
+        then amazonaws.com is returned.
+
+        """
+        endpoint = self.resolve_endpoint(service, region)
+        return endpoint['dnsSuffix'] if endpoint else 'amazonaws.com'
+
+    def endpoint_dns_suffix_from_arn(self, arn):
+        # type: (str) -> str
+        """Discover the dns suffix for a given ARN.
+
+        This allows the service DNS suffix to be discoverable throughout the
+        framework based on the ARN.  If the ARN's service and region
+        combination is not found then amazonaws.com is returned.
+
+        """
+        endpoint = self.endpoint_from_arn(arn)
+        return endpoint['dnsSuffix'] if endpoint else 'amazonaws.com'
+
+    def service_principal(self, service, region='us-east-1',
+                          url_suffix='amazonaws.com'):
+        # type: (str, str, str) -> str
+        # Disable too-many-return-statements due to ported code
+        # pylint: disable=too-many-return-statements
+        """Compute a "standard" AWS Service principal for given arguments.
+
+        Attribution: This code was ported from https://github.com/aws/aws-cdk
+        and more specifically, aws-cdk/region-info/lib/default.ts
+
+        Computes a "standard" AWS Service principal for a given service, region
+        and suffix. This is useful for example when you need to compute a
+        service principal name, but you do not have a synthesize-time region
+        literal available (so all you have is `{ "Ref": "AWS::Region" }`). This
+        way you get the same defaulting behavior that is normally used for
+        built-in data.
+
+        :param service: the name of the service (s3, s3.amazonaws.com, ...)
+        :param region: the region in which the service principal is needed.
+        :param url_suffix: the URL suffix for the partition in which the region
+        is located.
+        :return: The service principal for the given combination of arguments
+        """
+        matches = re.match(
+            (
+                r'^([^.]+)'
+                r'(?:(?:\.amazonaws\.com(?:\.cn)?)|'
+                r'(?:\.c2s\.ic\.gov)|'
+                r'(?:\.sc2s\.sgov\.gov))?$'
+            ), service)
+
+        if matches is None:
+            #  Return "service" if it does not look like any of the following:
+            #  - s3
+            #  - s3.amazonaws.com
+            #  - s3.amazonaws.com.cn
+            #  - s3.c2s.ic.gov
+            #  - s3.sc2s.sgov.gov
+            return service
+
+        # Simplify the service name down to something like "s3"
+        service_name = matches.group(1)
+
+        # Exceptions for Service Principals in us-iso-*
+        us_iso_exceptions = {'cloudhsm', 'config', 'states', 'workspaces'}
+
+        # Exceptions for Service Principals in us-isob-*
+        us_isob_exceptions = {'dms', 'states'}
+
+        # Account for idiosyncratic Service Principals in `us-iso-*` regions
+        if region.startswith('us-iso-') and service_name in us_iso_exceptions:
+            if service_name == 'states':
+                # Services with universal principal
+                return '{}.amazonaws.com'.format(service_name)
+            else:
+                # Services with a partitional principal
+                return '{}.{}'.format(service_name, url_suffix)
+
+        # Account for idiosyncratic Service Principals in `us-isob-*` regions
+        if region.startswith('us-isob-') and \
+                service_name in us_isob_exceptions:
+            if service_name == 'states':
+                # Services with universal principal
+                return '{}.amazonaws.com'.format(service_name)
+            else:
+                # Services with a partitional principal
+                return '{}.{}'.format(service_name, url_suffix)
+
+        if service_name in ['codedeploy', 'logs']:
+            return '{}.{}.{}'.format(service_name, region, url_suffix)
+        elif service_name == 'states':
+            return '{}.{}.amazonaws.com'.format(service_name, region)
+        elif service_name == 'ec2':
+            return '{}.{}'.format(service_name, url_suffix)
+        else:
+            return '{}.amazonaws.com'.format(service_name)
 
     def lambda_function_exists(self, name):
         # type: (str) -> bool
@@ -203,18 +333,18 @@ class TypedAWSClient(object):
         return vpc_config
 
     def create_function(self,
-                        function_name,               # type: str
-                        role_arn,                    # type: str
-                        zip_contents,                # type: str
-                        runtime,                     # type: str
-                        handler,                     # type: str
+                        function_name,  # type: str
+                        role_arn,  # type: str
+                        zip_contents,  # type: str
+                        runtime,  # type: str
+                        handler,  # type: str
                         environment_variables=None,  # type: StrMap
-                        tags=None,                   # type: StrMap
-                        timeout=None,                # type: OptInt
-                        memory_size=None,            # type: OptInt
-                        security_group_ids=None,     # type: OptStrList
-                        subnet_ids=None,             # type: OptStrList
-                        layers=None,                 # type: OptStrList
+                        tags=None,  # type: StrMap
+                        timeout=None,  # type: OptInt
+                        memory_size=None,  # type: OptInt
+                        security_group_ids=None,  # type: OptStrList
+                        subnet_ids=None,  # type: OptStrList
+                        layers=None,  # type: OptStrList
                         ):
         # type: (...) -> str
         kwargs = {
@@ -676,17 +806,17 @@ class TypedAWSClient(object):
         client.delete_base_path_mapping(**params)
 
     def update_function(self,
-                        function_name,               # type: str
-                        zip_contents,                # type: str
+                        function_name,  # type: str
+                        zip_contents,  # type: str
                         environment_variables=None,  # type: StrMap
-                        runtime=None,                # type: OptStr
-                        tags=None,                   # type: StrMap
-                        timeout=None,                # type: OptInt
-                        memory_size=None,            # type: OptInt
-                        role_arn=None,               # type: OptStr
-                        subnet_ids=None,             # type: OptStrList
-                        security_group_ids=None,     # type: OptStrList
-                        layers=None,                 # type: OptStrList
+                        runtime=None,  # type: OptStr
+                        tags=None,  # type: StrMap
+                        timeout=None,  # type: OptInt
+                        memory_size=None,  # type: OptInt
+                        role_arn=None,  # type: OptStr
+                        subnet_ids=None,  # type: OptStrList
+                        security_group_ids=None,  # type: OptStrList
+                        layers=None,  # type: OptStrList
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -742,14 +872,14 @@ class TypedAWSClient(object):
 
     def _update_function_config(self,
                                 environment_variables,  # type: StrMap
-                                runtime,                # type: OptStr
-                                timeout,                # type: OptInt
-                                memory_size,            # type: OptInt
-                                role_arn,               # type: OptStr
-                                subnet_ids,             # type: OptStrList
-                                security_group_ids,     # type: OptStrList
-                                function_name,          # type: str
-                                layers,                 # type: OptStrList
+                                runtime,  # type: OptStr
+                                timeout,  # type: OptInt
+                                memory_size,  # type: OptInt
+                                role_arn,  # type: OptStr
+                                subnet_ids,  # type: OptStrList
+                                security_group_ids,  # type: OptStrList
+                                function_name,  # type: str
+                                layers,  # type: OptStrList
                                 ):
         # type: (...) -> None
         kwargs = {}  # type: Dict[str, Any]
@@ -1081,13 +1211,19 @@ class TypedAWSClient(object):
     def _build_source_arn_str(self, region_name, account_id, rest_api_id):
         # type: (str, str, str) -> str
         source_arn = (
-            'arn:aws:execute-api:'
+            'arn:{partition}:execute-api:'
             '{region_name}:{account_id}:{rest_api_id}/*').format(
-                region_name=region_name,
-                # Assuming same account id for lambda function and API gateway.
-                account_id=account_id,
-                rest_api_id=rest_api_id)
+            partition=self.partition_name,
+            region_name=region_name,
+            # Assuming same account id for lambda function and API gateway.
+            account_id=account_id,
+            rest_api_id=rest_api_id)
         return source_arn
+
+    @property
+    def partition_name(self):
+        # type: () -> str
+        return self._client('apigateway').meta.partition
 
     @property
     def region_name(self):
@@ -1130,7 +1266,7 @@ class TypedAWSClient(object):
         return datetime.utcfromtimestamp(integer_timestamp / 1000.0)
 
     def filter_log_events(self,
-                          log_group_name,   # type: str
+                          log_group_name,  # type: str
                           start_time=None,  # type: Optional[datetime]
                           next_token=None,  # type: Optional[str]
                           ):
@@ -1185,18 +1321,23 @@ class TypedAWSClient(object):
                 "Unable to find authorizer associated "
                 "with function ARN: %s" % function_arn)
         parts = function_arn.split(':')
+        partition = parts[1]
         region_name = parts[3]
         account_id = parts[4]
         function_name = parts[-1]
-        source_arn = ("arn:aws:execute-api:%s:%s:%s/authorizers/%s" %
-                      (region_name, account_id, rest_api_id, authorizer_id))
+        source_arn = ("arn:%s:execute-api:%s:%s:%s/authorizers/%s" %
+                      (partition, region_name, account_id, rest_api_id,
+                       authorizer_id))
+        dns_suffix = self.endpoint_dns_suffix('apigateway', region_name)
         if random_id is None:
             random_id = self._random_id()
         self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_name,
             StatementId=random_id,
-            Principal='apigateway.amazonaws.com',
+            Principal=self.service_principal('apigateway',
+                                             self.region_name,
+                                             dns_suffix),
             SourceArn=source_arn,
         )
 
@@ -1310,7 +1451,8 @@ class TypedAWSClient(object):
 
     def add_permission_for_s3_event(self, bucket, function_arn):
         # type: (str, str) -> None
-        bucket_arn = 'arn:aws:s3:::%s' % bucket
+        bucket_arn = 'arn:{partition}:s3:::{bucket}'.format(
+            partition=self.partition_name, bucket=bucket)
         self._add_lambda_permission_if_needed(
             source_arn=bucket_arn,
             function_arn=function_arn,
@@ -1319,7 +1461,8 @@ class TypedAWSClient(object):
 
     def remove_permission_for_s3_event(self, bucket, function_arn):
         # type: (str, str) -> None
-        bucket_arn = 'arn:aws:s3:::%s' % bucket
+        bucket_arn = 'arn:{partition}:s3:::{bucket}'.format(
+            partition=self.partition_name, bucket=bucket)
         self._remove_lambda_permission_if_needed(
             source_arn=bucket_arn,
             function_arn=function_arn,
@@ -1352,11 +1495,14 @@ class TypedAWSClient(object):
         if self._policy_gives_access(policy, source_arn, service_name):
             return
         random_id = self._random_id()
+        dns_suffix = self.endpoint_dns_suffix_from_arn(source_arn)
         self._client('lambda').add_permission(
             Action='lambda:InvokeFunction',
             FunctionName=function_arn,
             StatementId=random_id,
-            Principal='%s.amazonaws.com' % service_name,
+            Principal=self.service_principal(service_name,
+                                             self.region_name,
+                                             dns_suffix),
             SourceArn=source_arn,
         )
 
@@ -1393,13 +1539,16 @@ class TypedAWSClient(object):
 
     def _statement_gives_arn_access(self, statement, source_arn, service_name):
         # type: (Dict[str, Any], str, str) -> bool
+        dns_suffix = self.endpoint_dns_suffix_from_arn(source_arn)
+        principal = self.service_principal(service_name,
+                                           self.region_name,
+                                           dns_suffix)
         if not statement['Action'] == 'lambda:InvokeFunction':
             return False
         if statement.get('Condition', {}).get(
                 'ArnLike', {}).get('AWS:SourceArn', '') != source_arn:
             return False
-        if statement.get('Principal', {}).get('Service', '') != \
-                '%s.amazonaws.com' % service_name:
+        if statement.get('Principal', {}).get('Service', '') != principal:
             return False
         # We're not checking the "Resource" key because we're assuming
         # that lambda.get_policy() is returning the policy for the particular
@@ -1472,9 +1621,9 @@ class TypedAWSClient(object):
             attributes = client.get_event_source_mapping(UUID=event_uuid)
             actual_arn = attributes['EventSourceArn']
             arn_start, actual_name = actual_arn.rsplit(':', 1)
-            return (
+            return bool(
                 actual_name == resource_name and
-                arn_start.startswith('arn:aws:%s' % service_name) and
+                re.match("^arn:aws[a-z\\-]*:%s" % service_name, arn_start) and
                 attributes['FunctionArn'] == function_arn
             )
         except client.exceptions.ResourceNotFoundException:
@@ -1538,7 +1687,7 @@ class TypedAWSClient(object):
         )['IntegrationId']
 
     def create_websocket_route(self, api_id, route_key, integration_id):
-        # type: (str, str, str, ) -> None
+        # type: (str, str, str) -> None
         client = self._client('apigatewayv2')
         client.create_route(
             ApiId=api_id,
@@ -1576,7 +1725,7 @@ class TypedAWSClient(object):
         # type: (str) -> List[str]
         client = self._client('apigatewayv2')
         return [i['RouteId']
-                for i in client.get_routes(ApiId=api_id,)['Items']]
+                for i in client.get_routes(ApiId=api_id, )['Items']]
 
     def get_websocket_integrations(self, api_id):
         # type: (str) -> List[str]

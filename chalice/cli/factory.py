@@ -1,37 +1,36 @@
-import sys
-import os
-import json
-import importlib
-import logging
 import functools
+import importlib
+import json
+import logging
+import os
+import sys
+from typing import Any, Optional, Dict, MutableMapping, cast  # noqa
 
 import click
 from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
-from typing import Any, Optional, Dict, MutableMapping, cast  # noqa
 
 from chalice import __version__ as chalice_version
-from chalice.awsclient import TypedAWSClient
+from chalice import local
 from chalice.app import Chalice  # noqa
+from chalice.awsclient import TypedAWSClient
 from chalice.config import Config
 from chalice.config import DeployedResources  # noqa
-from chalice.package import create_app_packager
-from chalice.package import AppPackager  # noqa
-from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.constants import DEFAULT_ENDPOINT_TYPE
-from chalice.logs import LogRetriever, LogEventGenerator
-from chalice.logs import FollowLogEventGenerator
-from chalice.logs import BaseLogEventGenerator
-from chalice import local
-from chalice.utils import UI  # noqa
-from chalice.utils import PipeReader  # noqa
+from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.deploy import deployer  # noqa
 from chalice.deploy import validate
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import LambdaInvoker
 from chalice.invoke import LambdaResponseFormatter
-
+from chalice.logs import BaseLogEventGenerator
+from chalice.logs import FollowLogEventGenerator
+from chalice.logs import LogRetriever, LogEventGenerator
+from chalice.package import AppPackager  # noqa
+from chalice.package import create_app_packager, PackageOptions
+from chalice.utils import PipeReader  # noqa
+from chalice.utils import UI  # noqa
 
 OptStr = Optional[str]
 OptInt = Optional[int]
@@ -75,6 +74,7 @@ def _inject_large_request_body_filter():
 
 class NoSuchFunctionError(Exception):
     """The specified function could not be found."""
+
     def __init__(self, name):
         # type: (str) -> None
         self.name = name
@@ -185,11 +185,11 @@ class CLIFactory(object):
         except ValueError:
             raise UnknownConfigFileVersion(string_version)
 
-    def create_app_packager(self, config, package_format, template_format,
-                            merge_template=None):
-        # type: (Config, str, str, OptStr) -> AppPackager
+    def create_app_packager(self, config, options, package_format,
+                            template_format, merge_template=None):
+        # type: (Config, PackageOptions, str, str, OptStr) -> AppPackager
         return create_app_packager(
-            config, package_format, template_format,
+            config, options, package_format, template_format,
             merge_template=merge_template)
 
     def create_log_retriever(self, session, lambda_arn, follow_logs):
@@ -298,3 +298,10 @@ class CLIFactory(object):
     def create_local_server(self, app_obj, config, host, port):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer
         return local.create_local_server(app_obj, config, host, port)
+
+    def create_package_options(self):
+        # type: () -> PackageOptions
+        """Create the package options that are required to target regions."""
+        s = Session(profile=self.profile)
+        client = TypedAWSClient(session=s)
+        return PackageOptions(client)
