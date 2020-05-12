@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "pip",
+      "description": "Update pip version range to 20.1."
+    }
+  ]
+}

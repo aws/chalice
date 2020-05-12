@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.14.1
+======
+
+* enhancement:pip:Update pip version range to 20.1.
+
+
 1.14.0
 ======
 
