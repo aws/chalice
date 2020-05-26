@@ -6,10 +6,14 @@ import os
 
 from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
+import yaml
+from yaml.scanner import ScannerError
 
 from chalice.deploy.swagger import (
     CFNSwaggerGenerator, TerraformSwaggerGenerator)
-from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
+from chalice.utils import (
+    OSUtils, UI, serialize_to_json, to_cfn_resource_name, is_yml_template,
+)
 from chalice.config import Config  # noqa
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
@@ -30,6 +34,8 @@ def create_app_packager(
     if package_format == 'cloudformation':
         build_stage = create_build_stage(
             osutils, ui, CFNSwaggerGenerator())
+        if merge_template and is_yml_template(merge_template):
+            SAMTemplateGenerator.template_file = "sam.yaml"
         post_processors.extend([
             SAMCodeLocationPostProcessor(osutils=osutils),
             TemplateMergePostProcessor(
@@ -912,6 +918,10 @@ class AppPackager(object):
         # type: (Any) -> str
         return serialize_to_json(doc)
 
+    def _to_yaml(self, doc):
+        # type: (Any) -> str
+        return yaml.dump(doc, allow_unicode=True)
+
     def package_app(self, config, outdir, chalice_stage_name):
         # type: (Config, str, str) -> None
         # Deployment package
@@ -923,9 +933,13 @@ class AppPackager(object):
             self._osutils.makedirs(outdir)
         self._template_post_processor.process(
             template, config, outdir, chalice_stage_name)
+        if is_yml_template(self._templater.template_file):
+            contents = self._to_yaml(template)
+        else:
+            contents = self._to_json(template)
         self._osutils.set_file_contents(
             filename=os.path.join(outdir, self._templater.template_file),
-            contents=self._to_json(template),
+            contents=contents,
             binary=False
         )
 
@@ -1004,11 +1018,21 @@ class TemplateMergePostProcessor(TemplatePostProcessor):
         if not self._osutils.file_exists(filepath):
             raise RuntimeError('Cannot find template file: %s' % filepath)
         template_data = self._osutils.get_file_contents(filepath, binary=False)
-        try:
-            loaded_template = json.loads(template_data)
-        except ValueError:
-            raise RuntimeError(
-                'Expected %s to be valid JSON template.' % filepath)
+        if is_yml_template(template_name):
+            try:
+                loaded_template = yaml.load(
+                    template_data,
+                    Loader=yaml.FullLoader,
+                )
+            except ScannerError:
+                raise RuntimeError(
+                    'Expected %s to be valid YAML template.' % filepath)
+        else:
+            try:
+                loaded_template = json.loads(template_data)
+            except ValueError:
+                raise RuntimeError(
+                    'Expected %s to be valid JSON template.' % filepath)
         return loaded_template
 
 

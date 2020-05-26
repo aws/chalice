@@ -130,3 +130,7 @@ def test_to_cfn_resource_name_properties(name):
         pass
     else:
         assert re.search('[^A-Za-z0-9]', result) is None
+
+
+def test_is_yaml_template():
+    assert utils.is_yml_template("extras.yaml")

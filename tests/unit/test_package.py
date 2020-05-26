@@ -93,24 +93,13 @@ def test_template_generator_default():
 
 
 class TestTemplateMergePostProcessor(object):
-    def test_can_call_merge(self):
+    def _test_can_call_merge(self, file_template, template_name):
         mock_osutils = mock.Mock(spec=OSUtils)
-        file_template = {
-            "Resources": {
-                "foo": {
-                    "Properties": {
-                        "Environment": {
-                            "Variables": {"Name": "Foo"}
-                        }
-                    }
-                }
-            }
-        }
         mock_osutils.get_file_contents.return_value = json.dumps(file_template)
         mock_merger = mock.Mock(spec=package.TemplateMerger)
         mock_merger.merge.return_value = {}
         p = package.TemplateMergePostProcessor(
-            mock_osutils, mock_merger, merge_template='extras.json')
+            mock_osutils, mock_merger, merge_template=template_name)
         template = {
             'Resources': {
                 'foo': {
@@ -136,6 +125,33 @@ class TestTemplateMergePostProcessor(object):
         assert mock_osutils.file_exists.call_count == 1
         assert mock_osutils.get_file_contents.call_count == 1
         mock_merger.merge.assert_called_once_with(file_template, template)
+
+    def test_can_call_merge(self):
+        file_template = {
+            "Resources": {
+                "foo": {
+                    "Properties": {
+                        "Environment": {
+                            "Variables": {"Name": "Foo"}
+                        }
+                    }
+                }
+            }
+        }
+
+        self._test_can_call_merge(file_template, 'extras.json')
+
+    def test_can_call_merge_with_yaml(self):
+        file_template = '''
+            Resources:
+              foo:
+                Properties:
+                  Environment:
+                    Variables:
+                      Name: Foo
+        '''
+
+        self._test_can_call_merge(file_template, 'extras.yaml')
 
     def test_raise_on_bad_json(self):
         mock_osutils = mock.Mock(spec=OSUtils)
@@ -163,6 +179,34 @@ class TestTemplateMergePostProcessor(object):
             )
         assert str(e.value).startswith('Expected')
         assert 'to be valid JSON template' in str(e.value)
+        assert mock_merger.merge.call_count == 0
+
+    def test_raise_on_bad_yaml(self):
+        mock_osutils = mock.Mock(spec=OSUtils)
+        mock_osutils.get_file_contents.return_value = (
+            '---'
+            'Resources:'
+            '    foo:'
+            '      Properties:'
+            '        Environment:'
+            '          - 123'
+            ''
+        )
+        mock_merger = mock.Mock(spec=package.TemplateMerger)
+        p = package.TemplateMergePostProcessor(
+            mock_osutils, mock_merger, merge_template='extras.yaml')
+        template = {}
+
+        config = mock.MagicMock(spec=Config)
+        with pytest.raises(RuntimeError) as e:
+            p.process(
+                template,
+                config=config,
+                outdir='outdir',
+                chalice_stage_name='dev',
+            )
+        assert str(e.value).startswith('Expected')
+        assert 'to be valid YAML template' in str(e.value)
         assert mock_merger.merge.call_count == 0
 
     def test_raise_if_file_does_not_exist(self):

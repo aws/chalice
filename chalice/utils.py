@@ -325,6 +325,12 @@ def getting_started_prompt(prompter):
     return prompter.prompt(WELCOME_PROMPT)
 
 
+def is_yml_template(template_name):
+    # type: (str) -> bool
+    file_extension = template_name.split(".")[-1]
+    return file_extension in ["yaml", "yml"]
+
+
 class UI(object):
     def __init__(self, out=None, err=None, confirm=None):
         # type: (Optional[IO], Optional[IO], Any) -> None
