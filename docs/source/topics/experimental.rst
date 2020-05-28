@@ -46,7 +46,7 @@ tells you which feature flags you need to add::
     If you still like to use these experimental features, you can opt-in by adding this to your app.py file:
 
     app.experimental_feature_flags.update([
-        'BLUEPRINTS'
+        'FEATURE_FLAG_NAME'
     ])
 
 
@@ -76,17 +76,20 @@ The status of an experimental API can be:
   * - Feature
     - Feature Flag Name
     - Version Added
+    - Version Finalized
     - Status
     - GitHub Issue(s)
   * - :doc:`blueprints`
     - ``BLUEPRINTS``
     - 1.7.0
-    - Trial
+    - 1.15.0
+    - Accepted
     - `#1023 <https://github.com/aws/chalice/pull/1023>`__,
       `#651 <https://github.com/aws/chalice/pull/651>`__
   * - :doc:`websockets`
     - ``WEBSOCKETS``
     - 1.10.0
+    - n/a
     - Trial
     - `#1041 <https://github.com/aws/chalice/pull/1041>`__,
       `#1017 <https://github.com/aws/chalice/issues/1017>`__
