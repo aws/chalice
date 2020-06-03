@@ -236,7 +236,18 @@ def test_can_create_log_retriever(clifactory):
     lambda_arn = (
         'arn:aws:lambda:us-west-2:1:function:app-dev-foo'
     )
-    logs = clifactory.create_log_retriever(session, lambda_arn)
+    logs = clifactory.create_log_retriever(session, lambda_arn,
+                                           follow_logs=False)
+    assert isinstance(logs, LogRetriever)
+
+
+def test_can_create_follow_logs_retriever(clifactory):
+    session = clifactory.create_botocore_session()
+    lambda_arn = (
+        'arn:aws:lambda:us-west-2:1:function:app-dev-foo'
+    )
+    logs = clifactory.create_log_retriever(session, lambda_arn,
+                                           follow_logs=True)
     assert isinstance(logs, LogRetriever)
 
 

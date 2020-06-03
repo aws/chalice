@@ -28,3 +28,4 @@ hypothesis==4.43.1
 pluggy==0.12
 
 mypy==0.740; python_version >= '3.6'
+mypy-extensions==0.4.3

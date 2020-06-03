@@ -10,6 +10,7 @@ from botocore.vendored.requests import ConnectionError as \
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
 from botocore import stub
+from botocore.utils import datetime2timestamp
 
 from chalice.awsclient import TypedAWSClient
 from chalice.awsclient import ResourceDoesNotExistError
@@ -118,13 +119,44 @@ def test_can_iterate_logs(stubbed_session):
 
     awsclient = TypedAWSClient(stubbed_session)
     logs = list(awsclient.iter_log_events('loggroup'))
-    timestamp = datetime.datetime.fromtimestamp(1501278366)
+    timestamp = datetime.datetime.utcfromtimestamp(1501278366)
     assert logs == [
         {'logStreamName': 'logStreamName',
          # We should have converted the ints to timestamps.
          'timestamp': timestamp,
          'message': 'message',
          'ingestionTime': timestamp,
+         'eventId': 'eventId'}
+    ]
+
+    stubbed_session.verify_stubs()
+
+
+def test_can_provide_optional_start_time_iter_logs(stubbed_session):
+    timestamp = int(datetime2timestamp(datetime.datetime.utcnow()) * 1000)
+    # We need to convert back from timestamp instead of using utcnow() directly
+    # because the loss of precision in sub ms time.
+    datetime_now = datetime.datetime.utcfromtimestamp(timestamp / 1000.0)
+    stubbed_session.stub('logs').filter_log_events(
+        logGroupName='loggroup', interleaved=True).returns({
+            "events": [{
+                "logStreamName": "logStreamName",
+                "timestamp": timestamp,
+                "message": "message",
+                "ingestionTime": timestamp,
+                "eventId": "eventId"
+            }],
+        })
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    logs = list(awsclient.iter_log_events('loggroup', start_time=datetime_now))
+    assert logs == [
+        {'logStreamName': 'logStreamName',
+         'timestamp': datetime_now,
+         'message': 'message',
+         'ingestionTime': datetime_now,
          'eventId': 'eventId'}
     ]
 
@@ -141,6 +173,78 @@ def test_missing_log_messages_doesnt_fail(stubbed_session):
     awsclient = TypedAWSClient(stubbed_session)
     logs = list(awsclient.iter_log_events('loggroup'))
     assert logs == []
+
+
+def test_can_call_filter_log_events(stubbed_session):
+    stubbed_session.stub('logs').filter_log_events(
+        logGroupName='loggroup', interleaved=True,
+        nextToken='nexttoken', startTime=1577836800000.0
+    ).returns({
+        "events": [{
+            "logStreamName": "logStreamName",
+            "timestamp": 1501278366000,
+            "message": "message",
+            "ingestionTime": 1501278366000,
+            "eventId": "eventId"
+        }],
+    })
+    stubbed_session.activate_stubs()
+    timestamp = datetime.datetime.utcfromtimestamp(1501278366)
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.filter_log_events(
+        log_group_name='loggroup',
+        next_token='nexttoken',
+        start_time=datetime.datetime(2020, 1, 1)
+    ) == {
+        'events': [{
+            "logStreamName": "logStreamName",
+            "timestamp": timestamp,
+            "message": "message",
+            "ingestionTime": timestamp,
+            "eventId": "eventId"
+        }]
+    }
+
+
+def test_optional_kwarg_on_filter_logs_omitted(stubbed_session):
+    stubbed_session.stub('logs').filter_log_events(
+        logGroupName='loggroup', interleaved=True,
+    ).returns({
+        "events": [{
+            "logStreamName": "logStreamName",
+            "timestamp": 1501278366000,
+            "message": "message",
+            "ingestionTime": 1501278366000,
+            "eventId": "eventId"
+        }],
+    })
+    stubbed_session.activate_stubs()
+    timestamp = datetime.datetime.utcfromtimestamp(1501278366)
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.filter_log_events(
+        log_group_name='loggroup',
+    ) == {
+        'events': [{
+            "logStreamName": "logStreamName",
+            "timestamp": timestamp,
+            "message": "message",
+            "ingestionTime": timestamp,
+            "eventId": "eventId"
+        }]
+    }
+
+
+def test_missing_log_events_returns_empty_response(stubbed_session):
+    stubbed_session.stub('logs').filter_log_events(
+        logGroupName='loggroup', interleaved=True).raises_error(
+            error_code='ResourceNotFoundException',
+            message='ResourceNotFound')
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.filter_log_events(
+        log_group_name='loggroup',
+    ) == {'events': []}
 
 
 def test_rule_arn_requires_expression_or_pattern(stubbed_session):

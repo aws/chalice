@@ -3,38 +3,41 @@
 Contains commands for deploying chalice.
 
 """
-import functools
-import json
 import logging
 import os
 import platform
-import shutil
 import sys
 import tempfile
+import shutil
 import traceback
-from typing import Any, Dict, Optional  # noqa
+import functools
+import json
 
 import botocore.exceptions
 import click
+from typing import Dict, Any, Optional  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
-from chalice.awsclient import ReadTimeout, TypedAWSClient
-from chalice.cli.factory import CLIFactory, NoSuchFunctionError
+from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ReadTimeout
+from chalice.cli.factory import CLIFactory
+from chalice.cli.factory import NoSuchFunctionError
 from chalice.config import Config  # noqa
-from chalice.constants import (CONFIG_VERSION, DEFAULT_APIGATEWAY_STAGE_NAME,
-                               DEFAULT_HANDLER_NAME, DEFAULT_STAGE_NAME,
-                               GITIGNORE, TEMPLATE_APP)
+from chalice.logs import display_logs, LogRetrieveOptions
+from chalice.utils import create_zip_file
+from chalice.deploy.validate import validate_routes, validate_python_version
+from chalice.deploy.validate import ExperimentalFeatureError
+from chalice.utils import getting_started_prompt, UI, serialize_to_json
+from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
+from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
+from chalice.local import LocalDevServer  # noqa
+from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.invoke import UnhandledLambdaError
+from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanEncoder
 from chalice.deploy.appgraph import ApplicationGraphBuilder, GraphPrettyPrint
-from chalice.deploy.swagger import TemplatedSwaggerGenerator
-from chalice.deploy.validate import (ExperimentalFeatureError,
-                                     validate_python_version, validate_routes)
-from chalice.invoke import UnhandledLambdaError
-from chalice.local import LocalDevServer  # noqa
-from chalice.logs import display_logs
-from chalice.utils import (UI, create_zip_file, getting_started_prompt,
-                           serialize_to_json)
 
 
 def _configure_logging(level, format_string=None):
@@ -360,19 +363,23 @@ def delete(ctx, profile, stage):
 @click.option('-n', '--name',
               help='The name of the lambda function to retrieve logs from.',
               default=DEFAULT_HANDLER_NAME)
+@click.option('-s', '--since',
+              help=('Only display logs since the provided time.  If the '
+                    '-f/--follow option is specified, then this value will '
+                    'default to 10 minutes from the curren time.  Otherwise '
+                    'by default all log messages are displayed.'),
+              default=None)
+@click.option('-f', '--follow/--no-follow',
+              default=False,
+              help=('Continuously poll for new log messages.  Note that this '
+                    'is a best effort attempt, and in certain cases can '
+                    'miss log messages.  This option is intended for '
+                    'interactive usage only.'))
 @click.option('--profile', help='The profile to use for fetching logs.')
-@click.option('--follow/--no-follow', help='Retrieve logs until canceling.',
-              default=False)
 @click.pass_context
-def logs(ctx,                      # type: click.Context
-         num_entries,              # type: int
-         include_lambda_messages,  # type: bool
-         stage,                    # type: str
-         name,                     # type: str
-         profile,                  # type: str
-         follow                    # type: bool
-         ):
-    # type: (...) -> None
+def logs(ctx, num_entries, include_lambda_messages, stage,
+         name, since, follow, profile):
+    # type: (click.Context, int, bool, str, str, str, bool, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
@@ -381,9 +388,13 @@ def logs(ctx,                      # type: click.Context
         lambda_arn = deployed.resource_values(name)['lambda_arn']
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
-            session, lambda_arn)
-        display_logs(retriever, num_entries, include_lambda_messages,
-                     sys.stdout, follow)
+            session, lambda_arn, follow)
+        options = LogRetrieveOptions.create(
+            max_entries=num_entries,
+            since=since,
+            include_lambda_messages=include_lambda_messages,
+        )
+        display_logs(retriever, sys.stdout, options)
 
 
 @cli.command('gen-policy')

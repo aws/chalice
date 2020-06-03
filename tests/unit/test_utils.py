@@ -9,6 +9,8 @@ from six import StringIO
 from hypothesis.strategies import text
 from hypothesis import given
 import string
+from dateutil import tz
+from datetime import datetime
 
 from chalice import utils
 
@@ -130,3 +132,68 @@ def test_to_cfn_resource_name_properties(name):
         pass
     else:
         assert re.search('[^A-Za-z0-9]', result) is None
+
+
+class TestTimestampUtils(object):
+    def setup(self):
+        self.mock_now = mock.Mock(spec=datetime.utcnow)
+        self.set_now()
+        self.timestamp_convert = utils.TimestampConverter(self.mock_now)
+
+    def set_now(self, year=2020, month=1, day=1, hour=0, minute=0, sec=0):
+        self.now = datetime(
+            year, month, day, hour, minute, sec, tzinfo=tz.tzutc())
+        self.mock_now.return_value = self.now
+
+    def test_iso_no_timezone(self):
+        assert self.timestamp_convert.timestamp_to_datetime(
+            '2020-01-01T00:00:01.000000') == datetime(2020, 1, 1, 0, 0, 1)
+
+    def test_iso_with_timezone(self):
+        assert (
+            self.timestamp_convert.timestamp_to_datetime(
+                '2020-01-01T00:00:01.000000-01:00'
+            ) == datetime(2020, 1, 1, 0, 0, 1, tzinfo=tz.tzoffset(None, -3600))
+        )
+
+    def test_to_datetime_relative_second(self):
+        self.set_now(sec=2)
+        assert (
+            self.timestamp_convert.timestamp_to_datetime('1s') ==
+            datetime(2020, 1, 1, 0, 0, 1, tzinfo=tz.tzutc())
+        )
+
+    def test_to_datetime_relative_multiple_seconds(self):
+        self.set_now(sec=5)
+        assert (
+            self.timestamp_convert.timestamp_to_datetime('2s') ==
+            datetime(2020, 1, 1, 0, 0, 3, tzinfo=tz.tzutc())
+        )
+
+    def test_to_datetime_relative_minute(self):
+        self.set_now(minute=2)
+        assert (
+            self.timestamp_convert.timestamp_to_datetime('1m') ==
+            datetime(2020, 1, 1, 0, 1, 0, tzinfo=tz.tzutc())
+        )
+
+    def test_to_datetime_relative_hour(self):
+        self.set_now(hour=2)
+        assert (
+            self.timestamp_convert.timestamp_to_datetime('1h') ==
+            datetime(2020, 1, 1, 1, 0, 0, tzinfo=tz.tzutc())
+        )
+
+    def test_to_datetime_relative_day(self):
+        self.set_now(day=3)  # 1970-01-03
+        assert (
+            self.timestamp_convert.timestamp_to_datetime('1d') ==
+            datetime(2020, 1, 2, 0, 0, 0, tzinfo=tz.tzutc())
+        )
+
+    def test_to_datetime_relative_week(self):
+        self.set_now(day=14)
+        assert (
+            self.timestamp_convert.timestamp_to_datetime('1w') ==
+            datetime(2020, 1, 7, 0, 0, 0, tzinfo=tz.tzutc())
+        )

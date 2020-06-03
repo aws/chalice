@@ -1,23 +1,25 @@
 import json
-import os
-import re
-import sys
 import zipfile
+import os
+import sys
+import re
 
-import mock
 import pytest
-from botocore.exceptions import ClientError
 from click.testing import CliRunner
+import mock
+from botocore.exceptions import ClientError
 
 from chalice import cli
-from chalice.awsclient import ReadTimeout
 from chalice.cli import factory
 from chalice.config import Config, DeployedResources
+from chalice.utils import record_deployed_values
+from chalice.utils import PipeReader
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
+from chalice.logs import LogRetriever, LogRetrieveOptions
+from chalice.invoke import LambdaInvokeHandler
+from chalice.invoke import UnhandledLambdaError
+from chalice.awsclient import ReadTimeout
 from chalice.deploy.validate import ExperimentalFeatureError
-from chalice.invoke import LambdaInvokeHandler, UnhandledLambdaError
-from chalice.logs import LogRetriever
-from chalice.utils import PipeReader, record_deployed_values
 
 
 class FakeConfig(object):
@@ -483,9 +485,40 @@ def test_can_provide_lambda_name_for_logs(runner, mock_cli_factory):
         )
         assert result.exit_code == 0
     log_retriever.retrieve_logs.assert_called_with(
-        include_lambda_messages=False, max_entries=None, follow=False)
+        LogRetrieveOptions(
+            include_lambda_messages=False, max_entries=None)
+    )
     mock_cli_factory.create_log_retriever.assert_called_with(
-        mock.sentinel.Session, 'arn:aws:lambda::app-dev-foo'
+        mock.sentinel.Session, 'arn:aws:lambda::app-dev-foo', False
+    )
+
+
+def test_can_follow_logs_with_option(runner, mock_cli_factory):
+    deployed_resources = DeployedResources({
+        "resources": [
+            {"name": "foo",
+             "lambda_arn": "arn:aws:lambda::app-dev-foo",
+             "resource_type": "lambda_function"}]
+    })
+    mock_cli_factory.create_config_obj.return_value = FakeConfig(
+        deployed_resources)
+    log_retriever = mock.Mock(spec=LogRetriever)
+    log_retriever.retrieve_logs.return_value = []
+    mock_cli_factory.create_log_retriever.return_value = log_retriever
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(
+            runner, cli.logs, ['--name', 'foo', '--follow'],
+            cli_factory=mock_cli_factory
+        )
+        assert result.exit_code == 0
+    log_retriever.retrieve_logs.assert_called_with(
+        LogRetrieveOptions(
+            include_lambda_messages=False, max_entries=None)
+    )
+    mock_cli_factory.create_log_retriever.assert_called_with(
+        mock.sentinel.Session, 'arn:aws:lambda::app-dev-foo', True
     )
 
 

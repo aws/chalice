@@ -8,13 +8,15 @@ import re
 import shutil
 import sys
 import tarfile
+from datetime import datetime, timedelta
 import subprocess
 
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO, Text  # noqa
 from typing import Optional, Union  # noqa
-from typing import MutableMapping  # noqa
+from typing import MutableMapping, Callable  # noqa
 from typing import cast  # noqa
+from botocore.utils import parse_timestamp
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -368,3 +370,45 @@ class PipeReader(object):
         if not self._stream.isatty():
             return self._stream.read()
         return None
+
+
+class TimestampConverter(object):
+    # This is roughly based off of what's used in the AWS CLI.
+    _RELATIVE_TIMESTAMP_REGEX = re.compile(
+        r"(?P<amount>\d+)(?P<unit>s|m|h|d|w)$"
+    )
+    _TO_SECONDS = {
+        's': 1,
+        'm': 60,
+        'h': 3600,
+        'd': 24 * 3600,
+        'w': 7 * 24 * 3600,
+    }
+
+    def __init__(self, now=None):
+        # type: (Callable[[], datetime]) -> None
+        if now is None:
+            now = datetime.utcnow
+        self._now = now
+
+    def timestamp_to_datetime(self, timestamp):
+        # type: (str) -> datetime
+        """Convert a timestamp to a datetime object.
+
+        This method detects what type of timestamp is provided and
+        parse is appropriately to a timestamp object.
+
+        """
+        re_match = self._RELATIVE_TIMESTAMP_REGEX.match(timestamp)
+        if re_match:
+            datetime_value = self._relative_timestamp_to_datetime(
+                int(re_match.group('amount')), re_match.group('unit')
+            )
+        else:
+            datetime_value = parse_timestamp(timestamp)
+        return datetime_value
+
+    def _relative_timestamp_to_datetime(self, amount, unit):
+        # type: (int, str) -> datetime
+        multiplier = self._TO_SECONDS[unit]
+        return self._now() + timedelta(seconds=amount * multiplier * -1)
