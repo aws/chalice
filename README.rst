@@ -21,7 +21,7 @@ AWS Chalice
    :alt: Chalice Logo
 
 
-Chalice is a microframework for writing serverless apps in python. It allows
+Chalice is a framework for writing serverless apps in python. It allows
 you to quickly create and deploy applications that use AWS Lambda.  It provides:
 
 * A command line tool for creating, deploying, and managing your app
@@ -115,29 +115,24 @@ Quickstart
 .. quick-start-begin
 
 In this tutorial, you'll use the ``chalice`` command line utility
-to create and deploy a basic REST API.
-First, you'll need to install ``chalice``.  Using a virtualenv
-is recommended::
+to create and deploy a basic REST API.  This quickstart uses Python 3.7,
+but AWS Chalice supports all versions of python supported by AWS Lambda,
+which includes python2.7, python3.6, python3.7, python3.8.  We recommend
+you use a version of Python 3.
+You can find the latest versions of python on the
+`Python download page <https://www.python.org/downloads/>`_.
 
-    $ pip install virtualenv
-    $ virtualenv ~/.virtualenvs/chalice-demo
-    $ source ~/.virtualenvs/chalice-demo/bin/activate
+To install Chalice, we'll first create and activate a virtual environment
+in python3.7::
 
-Note: **make sure you are using python2.7, python3.6, python3.7,
-or python3.8**.
-These are the only python versions currently supported by AWS Lambda so they
-are also the only versions supported by the ``chalice`` CLI and ``chalice``
-python package. You can find the latest versions of python on the
-`Python download page <https://www.python.org/downloads/>`_. You can check
-the version of python in your virtualenv by
-running::
+    $ python3 --version
+    Python 3.7.3
+    $ python3 -m venv venv37
+    $ . venv37/bin/activate
 
-    # Double check you have a supported python version in your virtualenv
-    $ python -V
+Next we'll install Chalice using ``pip``::
 
-Next, in your virtualenv, install ``chalice``::
-
-    $ pip install chalice
+    $ python3 -m pip install chalice
 
 You can verify you have chalice installed by running::
 
@@ -671,13 +666,7 @@ types.  Here's an example of this feature:
     import sys
 
     from chalice import Chalice
-    if sys.version_info[0] == 3:
-        # Python 3 imports.
-        from urllib.parse import urlparse, parse_qs
-    else:
-        # Python 2 imports.
-        from urlparse import urlparse, parse_qs
-
+    from urllib.parse import urlparse, parse_qs
 
     app = Chalice(app_name='helloworld')
 
@@ -1202,7 +1191,7 @@ We can now test our API using ``localhost:8000``::
     Content-Length: 18
     Content-Type: application/json
     Date: Thu, 27 Oct 2016 20:08:43 GMT
-    Server: BaseHTTP/0.3 Python/2.7.11
+    Server: BaseHTTP/0.3 Python/3.7.3
 
     {
         "hello": "world"

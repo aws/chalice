@@ -74,17 +74,13 @@ For example, suppose you have an existing chalice app that uses python2::
     https://endpoint/api
 
 To upgrade the application to use python3, create a python3 virtual environment
-and redeploy.  When this happens, you will be prompted to confirm the python
-runtime version changing::
+and redeploy.
 
+::
     $ deactivate
-    $ virtualenv --python python3 /tmp/venv3
+    $ python3 -m venv /tmp/venv3
     $ source /tmp/venv3/bin/activate
     $ python --version
     Python 3.6.1
     $ chalice deploy
     ...
-    The python runtime will change from python2.7 to python3.6,
-    would you like to continue?  [Y/n]: y
-    ...
-    https://endpoint/api
