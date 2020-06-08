@@ -1125,7 +1125,7 @@ class YAMLTemplateSerializer(TemplateSerializer):
         try:
             return yaml.load(
                 file_contents,
-                Loader=yaml.FullLoader,
+                Loader=yaml.SafeLoader,
             )
         except ScannerError:
             raise RuntimeError(
