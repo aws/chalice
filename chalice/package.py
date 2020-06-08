@@ -36,10 +36,13 @@ def create_app_packager(
     if package_format == 'cloudformation':
         build_stage = create_build_stage(
             osutils, ui, CFNSwaggerGenerator())
-        use_yaml_serializer = (
-            merge_template is not None and
-            YAMLTemplateSerializer.is_yaml_template(merge_template)
-        ) or template_format == 'yaml'
+        use_yaml_serializer = template_format == 'yaml'
+        if merge_template is not None and \
+                YAMLTemplateSerializer.is_yaml_template(merge_template):
+            # Automatically switch the serializer to yaml if they specify
+            # a yaml template to merge, regardless of what template format
+            # they specify.
+            use_yaml_serializer = True
         if use_yaml_serializer:
             template_serializer = YAMLTemplateSerializer()
         post_processors.extend([
