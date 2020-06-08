@@ -504,6 +504,7 @@ def generate_models(ctx, stage):
                     'for adding resources to a Chalice template or '
                     'modify values in the template. CloudFormation Only.'))
 @click.option('--template-format', default='json',
+              type=click.Choice(['json', 'yaml'], case_sensitive=False),
               help=('Specify if the generated template should be serialized '
                     'as either JSON or YAML.  CloudFormation only.'))
 @click.argument('out')
