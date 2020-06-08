@@ -22,8 +22,9 @@ from chalice.deploy.deployer import create_build_stage
 
 
 def create_app_packager(
-        config, package_format='cloudformation', merge_template=None):
-    # type: (Config, str, Optional[str]) -> AppPackager
+        config, package_format='cloudformation',
+        template_format='json', merge_template=None):
+    # type: (Config, str, str, Optional[str]) -> AppPackager
     osutils = OSUtils()
     ui = UI()
     application_builder = ApplicationGraphBuilder()
@@ -38,7 +39,7 @@ def create_app_packager(
         use_yaml_serializer = (
             merge_template is not None and
             YAMLTemplateSerializer.is_yaml_template(merge_template)
-        )
+        ) or template_format == 'yaml'
         if use_yaml_serializer:
             template_serializer = YAMLTemplateSerializer()
         post_processors.extend([

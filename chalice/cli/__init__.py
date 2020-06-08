@@ -499,22 +499,30 @@ def generate_models(ctx, stage):
                     "this argument is specified, a single "
                     "zip file will be created instead. CloudFormation Only."))
 @click.option('--merge-template',
-              help=('Specify a JSON template to be merged '
+              help=('Specify a JSON or YAML template to be merged '
                     'into the generated template. This is useful '
                     'for adding resources to a Chalice template or '
                     'modify values in the template. CloudFormation Only.'))
+@click.option('--template-format', default='json',
+              help=('Specify if the generated template should be serialized '
+                    'as either JSON or YAML.  CloudFormation only.'))
 @click.argument('out')
 @click.pass_context
 def package(ctx, single_file, stage, merge_template,
-            out, pkg_format):
-    # type: (click.Context, bool, str, str, str, str) -> None
+            out, pkg_format, template_format):
+    # type: (click.Context, bool, str, str, str, str, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj(stage)
-    packager = factory.create_app_packager(config, pkg_format, merge_template)
-    if pkg_format == 'terraform' and (merge_template or single_file):
+    packager = factory.create_app_packager(config, pkg_format, template_format,
+                                           merge_template)
+    if pkg_format == 'terraform' and (merge_template or
+                                      single_file or
+                                      template_format != 'json'):
+        # I don't see any reason we couldn't support --single-file for
+        # terraform if we wanted to.
         click.echo((
             "Terraform format does not support "
-            "merge-template or single-file options"))
+            "--merge-template, --single-file, or --template-format"))
         raise click.Abort()
 
     if single_file:
