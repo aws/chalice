@@ -948,12 +948,13 @@ def test_can_create_app_packager_with_yaml_extention(tmpdir):
 
     outdir = tmpdir.mkdir('outdir')
     default_params = {'autogen_policy': True}
+    extras_file = tmpdir.join('extras.yaml')
+    extras_file.write("foo: bar")
     config = Config.create(project_dir=str(appdir),
                            chalice_app=sample_app(),
                            **default_params)
-    p = package.create_app_packager(config)
+    p = package.create_app_packager(config, merge_template=str(extras_file))
 
-    p._templater.template_file = 'sam.yaml'
     p.package_app(config, str(outdir), 'dev')
     contents = os.listdir(str(outdir))
     assert 'deployment.zip' in contents

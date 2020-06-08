@@ -99,7 +99,8 @@ class TestTemplateMergePostProcessor(object):
         mock_merger = mock.Mock(spec=package.TemplateMerger)
         mock_merger.merge.return_value = {}
         p = package.TemplateMergePostProcessor(
-            mock_osutils, mock_merger, merge_template=template_name)
+            mock_osutils, mock_merger, package.JSONTemplateSerializer(),
+            merge_template=template_name)
         template = {
             'Resources': {
                 'foo': {
@@ -166,7 +167,8 @@ class TestTemplateMergePostProcessor(object):
         )
         mock_merger = mock.Mock(spec=package.TemplateMerger)
         p = package.TemplateMergePostProcessor(
-            mock_osutils, mock_merger, merge_template='extras.json')
+            mock_osutils, mock_merger, package.JSONTemplateSerializer(),
+            merge_template='extras.json')
         template = {}
 
         config = mock.MagicMock(spec=Config)
@@ -194,7 +196,8 @@ class TestTemplateMergePostProcessor(object):
         )
         mock_merger = mock.Mock(spec=package.TemplateMerger)
         p = package.TemplateMergePostProcessor(
-            mock_osutils, mock_merger, merge_template='extras.yaml')
+            mock_osutils, mock_merger, package.YAMLTemplateSerializer(),
+            merge_template='extras.yaml')
         template = {}
 
         config = mock.MagicMock(spec=Config)
@@ -214,7 +217,8 @@ class TestTemplateMergePostProcessor(object):
         mock_osutils.file_exists.return_value = False
         mock_merger = mock.Mock(spec=package.TemplateMerger)
         p = package.TemplateMergePostProcessor(
-            mock_osutils, mock_merger, merge_template='extras.json')
+            mock_osutils, mock_merger, package.JSONTemplateSerializer(),
+            merge_template='extras.json')
         template = {}
 
         config = mock.MagicMock(spec=Config)
@@ -1377,3 +1381,19 @@ class TestTemplateDeepMerger(object):
         assert result == {
             'key': 'foo'
         }
+
+
+@pytest.mark.parametrize('filename,is_yaml', [
+    ('extras.yaml', True),
+    ('extras.YAML', True),
+    ('extras.yml', True),
+    ('extras.YML', True),
+    ('extras.foo.yml', True),
+    ('extras', False),
+    ('extras.json', False),
+    ('extras.yaml.json', False),
+    ('foo/bar/extras.yaml', True),
+    ('foo/bar/extras.YAML', True),
+])
+def test_to_cfn_resource_name(filename, is_yaml):
+    assert package.YAMLTemplateSerializer.is_yaml_template(filename) == is_yaml
