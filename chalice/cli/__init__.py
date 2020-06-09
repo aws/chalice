@@ -367,7 +367,13 @@ def delete(ctx, profile, stage):
               help=('Only display logs since the provided time.  If the '
                     '-f/--follow option is specified, then this value will '
                     'default to 10 minutes from the current time.  Otherwise '
-                    'by default all log messages are displayed.'),
+                    'by default all log messages are displayed.  This value '
+                    'can either be an ISO8601 formatted timestamp or a '
+                    'relative time.  For relative times provide a number '
+                    'and a single unit.  Units can be "s" for seconds, '
+                    '"m" for minutes, "h" for hours, "d" for days, and "w" '
+                    'for weeks.  For example "5m" would indicate to display '
+                    'logs starting five minutes in the past.'),
               default=None)
 @click.option('-f', '--follow/--no-follow',
               default=False,
