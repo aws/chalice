@@ -16,7 +16,8 @@ from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO, Text  # noqa
 from typing import Optional, Union  # noqa
 from typing import MutableMapping, Callable  # noqa
 from typing import cast  # noqa
-from botocore.utils import parse_timestamp
+import dateutil.parser
+from dateutil.tz import tzutc
 
 from chalice.constants import WELCOME_PROMPT
 
@@ -405,10 +406,14 @@ class TimestampConverter(object):
                 int(re_match.group('amount')), re_match.group('unit')
             )
         else:
-            datetime_value = parse_timestamp(timestamp)
+            datetime_value = self.parse_iso8601_timestamp(timestamp)
         return datetime_value
 
     def _relative_timestamp_to_datetime(self, amount, unit):
         # type: (int, str) -> datetime
         multiplier = self._TO_SECONDS[unit]
         return self._now() + timedelta(seconds=amount * multiplier * -1)
+
+    def parse_iso8601_timestamp(self, timestamp):
+        # type: (str) -> datetime
+        return dateutil.parser.parse(timestamp, tzinfos={'GMT': tzutc()})

@@ -197,3 +197,16 @@ class TestTimestampUtils(object):
             self.timestamp_convert.timestamp_to_datetime('1w') ==
             datetime(2020, 1, 7, 0, 0, 0, tzinfo=tz.tzutc())
         )
+
+
+@pytest.mark.parametrize('timestamp,expected', [
+    ('2020-01-01', datetime(2020, 1, 1)),
+    ('2020-01-01T00:00:01', datetime(2020, 1, 1, 0, 0, 1)),
+    ('2020-02-02T01:02:03', datetime(2020, 2, 2, 1, 2, 3)),
+    ('2020-01-01T00:00:00Z', datetime(2020, 1, 1, 0, 0, tzinfo=tz.tzutc())),
+    ('2020-01-01T00:00:00-04:00', datetime(2020, 1, 1, 0, 0, 0,
+                                           tzinfo=tz.tzoffset('EDT', -14400))),
+])
+def test_parse_iso8601_timestamp(timestamp, expected):
+    timestamp_convert = utils.TimestampConverter()
+    assert timestamp_convert.parse_iso8601_timestamp(timestamp) == expected
