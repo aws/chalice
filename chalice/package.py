@@ -6,10 +6,14 @@ import os
 
 from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
+import yaml
+from yaml.scanner import ScannerError
 
 from chalice.deploy.swagger import (
     CFNSwaggerGenerator, TerraformSwaggerGenerator)
-from chalice.utils import OSUtils, UI, serialize_to_json, to_cfn_resource_name
+from chalice.utils import (
+    OSUtils, UI, serialize_to_json, to_cfn_resource_name
+)
 from chalice.config import Config  # noqa
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
@@ -18,8 +22,9 @@ from chalice.deploy.deployer import create_build_stage
 
 
 def create_app_packager(
-        config, package_format='cloudformation', merge_template=None):
-    # type: (Config, str, Optional[str]) -> AppPackager
+        config, package_format='cloudformation',
+        template_format='json', merge_template=None):
+    # type: (Config, str, str, Optional[str]) -> AppPackager
     osutils = OSUtils()
     ui = UI()
     application_builder = ApplicationGraphBuilder()
@@ -27,14 +32,25 @@ def create_app_packager(
     post_processors = []  # type: List[TemplatePostProcessor]
     generator = None  # type: Union[None, TemplateGenerator]
 
+    template_serializer = cast(TemplateSerializer, JSONTemplateSerializer())
     if package_format == 'cloudformation':
         build_stage = create_build_stage(
             osutils, ui, CFNSwaggerGenerator())
+        use_yaml_serializer = template_format == 'yaml'
+        if merge_template is not None and \
+                YAMLTemplateSerializer.is_yaml_template(merge_template):
+            # Automatically switch the serializer to yaml if they specify
+            # a yaml template to merge, regardless of what template format
+            # they specify.
+            use_yaml_serializer = True
+        if use_yaml_serializer:
+            template_serializer = YAMLTemplateSerializer()
         post_processors.extend([
             SAMCodeLocationPostProcessor(osutils=osutils),
             TemplateMergePostProcessor(
                 osutils=osutils,
                 merger=TemplateDeepMerger(),
+                template_serializer=template_serializer,
                 merge_template=merge_template)])
         generator = SAMTemplateGenerator(config)
     else:
@@ -51,6 +67,7 @@ def create_app_packager(
         generator,
         resource_builder,
         CompositePostProcessor(post_processors),
+        template_serializer,
         osutils)
 
 
@@ -130,7 +147,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         'Resources': {},
     }
 
-    template_file = "sam.json"
+    template_file = "sam"
 
     def __init__(self, config):
         # type: (Config) -> None
@@ -592,7 +609,7 @@ class SAMTemplateGenerator(TemplateGenerator):
 
 class TerraformGenerator(TemplateGenerator):
 
-    template_file = "chalice.tf.json"
+    template_file = "chalice.tf"
 
     def generate(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
@@ -897,20 +914,26 @@ class TerraformGenerator(TemplateGenerator):
 
 class AppPackager(object):
     def __init__(self,
-                 templater,         # type: TemplateGenerator
-                 resource_builder,  # type: ResourceBuilder
-                 post_processor,    # type: TemplatePostProcessor
-                 osutils,           # type: OSUtils
+                 templater,            # type: TemplateGenerator
+                 resource_builder,     # type: ResourceBuilder
+                 post_processor,       # type: TemplatePostProcessor
+                 template_serializer,  # type: TemplateSerializer
+                 osutils,              # type: OSUtils
                  ):
         # type: (...) -> None
         self._templater = templater
         self._resource_builder = resource_builder
         self._template_post_processor = post_processor
+        self._template_serializer = template_serializer
         self._osutils = osutils
 
     def _to_json(self, doc):
         # type: (Any) -> str
         return serialize_to_json(doc)
+
+    def _to_yaml(self, doc):
+        # type: (Any) -> str
+        return yaml.dump(doc, allow_unicode=True)
 
     def package_app(self, config, outdir, chalice_stage_name):
         # type: (Config, str, str) -> None
@@ -923,9 +946,13 @@ class AppPackager(object):
             self._osutils.makedirs(outdir)
         self._template_post_processor.process(
             template, config, outdir, chalice_stage_name)
+        contents = self._template_serializer.serialize_template(template)
+        extension = self._template_serializer.file_extension
+        filename = os.path.join(
+            outdir, self._templater.template_file) + '.' + extension
         self._osutils.set_file_contents(
-            filename=os.path.join(outdir, self._templater.template_file),
-            contents=self._to_json(template),
+            filename=filename,
+            contents=contents,
             binary=False
         )
 
@@ -982,10 +1009,16 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
 
 
 class TemplateMergePostProcessor(TemplatePostProcessor):
-    def __init__(self, osutils, merger, merge_template=None):
-        # type: (OSUtils, TemplateMerger, Optional[str]) -> None
+    def __init__(self,
+                 osutils,              # type: OSUtils
+                 merger,               # type: TemplateMerger
+                 template_serializer,  # type: TemplateSerializer
+                 merge_template=None,  # type: Optional[str]
+                 ):
+        # type: (...) -> None
         super(TemplateMergePostProcessor, self).__init__(osutils)
         self._merger = merger
+        self._template_serializer = template_serializer
         self._merge_template = merge_template
 
     def process(self, template, config, outdir, chalice_stage_name):
@@ -1004,11 +1037,8 @@ class TemplateMergePostProcessor(TemplatePostProcessor):
         if not self._osutils.file_exists(filepath):
             raise RuntimeError('Cannot find template file: %s' % filepath)
         template_data = self._osutils.get_file_contents(filepath, binary=False)
-        try:
-            loaded_template = json.loads(template_data)
-        except ValueError:
-            raise RuntimeError(
-                'Expected %s to be valid JSON template.' % filepath)
+        loaded_template = self._template_serializer.load_template(
+            template_data, filepath)
         return loaded_template
 
 
@@ -1047,3 +1077,59 @@ class TemplateDeepMerger(TemplateMerger):
         for key, value in file_template.items():
             merged[key] = self._merge(value, chalice_template.get(key))
         return merged
+
+
+class TemplateSerializer(object):
+
+    file_extension = ''
+
+    def load_template(self, file_contents, filename=''):
+        # type: (str, str) -> Dict[str, Any]
+        pass
+
+    def serialize_template(self, contents):
+        # type: (Dict[str, Any]) -> str
+        pass
+
+
+class JSONTemplateSerializer(TemplateSerializer):
+
+    file_extension = 'json'
+
+    def serialize_template(self, contents):
+        # type: (Dict[str, Any]) -> str
+        return serialize_to_json(contents)
+
+    def load_template(self, file_contents, filename=''):
+        # type: (str, str) -> Dict[str, Any]
+        try:
+            return json.loads(file_contents)
+        except ValueError:
+            raise RuntimeError(
+                'Expected %s to be valid JSON template.' % filename)
+
+
+class YAMLTemplateSerializer(TemplateSerializer):
+
+    file_extension = 'yaml'
+
+    @classmethod
+    def is_yaml_template(cls, template_name):
+        # type: (str) -> bool
+        file_extension = os.path.splitext(template_name)[1].lower()
+        return file_extension in [".yaml", ".yml"]
+
+    def serialize_template(self, contents):
+        # type: (Dict[str, Any]) -> str
+        return yaml.dump(contents, allow_unicode=True)
+
+    def load_template(self, file_contents, filename=''):
+        # type: (str, str) -> Dict[str, Any]
+        try:
+            return yaml.load(
+                file_contents,
+                Loader=yaml.SafeLoader,
+            )
+        except ScannerError:
+            raise RuntimeError(
+                'Expected %s to be valid YAML template.' % filename)

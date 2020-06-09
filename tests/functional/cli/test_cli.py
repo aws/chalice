@@ -240,6 +240,30 @@ def test_can_package_command(runner):
         assert 'deployment.zip' in dir_contents
 
 
+def test_can_package_with_yaml_command(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.package,
+                                  ['--template-format', 'yaml', 'outdir'])
+        assert result.exit_code == 0, result.output
+        assert os.path.isdir('outdir')
+        dir_contents = os.listdir('outdir')
+        assert 'sam.yaml' in dir_contents
+        assert 'deployment.zip' in dir_contents
+
+
+def test_case_insensitive_template_format(runner):
+    with runner.isolated_filesystem():
+        cli.create_new_project_skeleton('testproject')
+        os.chdir('testproject')
+        result = _run_cli_command(runner, cli.package,
+                                  ['--template-format', 'YAML', 'outdir'])
+        assert result.exit_code == 0, result.output
+        assert os.path.isdir('outdir')
+        assert 'sam.yaml' in os.listdir('outdir')
+
+
 def test_can_package_with_single_file(runner):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')

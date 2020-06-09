@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "package",
+  "description": "Add ability to generate and merge yaml CloudFormation templates (#1425)"
+}
