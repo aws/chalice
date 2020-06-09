@@ -28,6 +28,15 @@ class LogRetrieveOptions(object):
         start_time = None
         if since is not None:
             start_time = TimestampConverter().timestamp_to_datetime(since)
+        elif follow:
+            # If they've specified --follow with no start time, we'll default
+            # to 10 minutes prior to now.  This is a backwards compat
+            # quirk where we can't change the default for `chalice logs`, but
+            # for the --follow mode, we can default to only showing 10 minutes
+            # worth of logs before we start polling for new logs.  In a
+            # future major version we can just change the default for all log
+            # retrieval to 10 minutes.
+            start_time = datetime.utcnow() - timedelta(minutes=10)
         kwargs['start_time'] = start_time
         return cls(**kwargs)
 
@@ -162,15 +171,7 @@ class FollowLogEventGenerator(BaseLogEventGenerator):
 
     def iter_log_events(self, log_group_name, options):
         # type: (str, LogRetrieveOptions) -> Iterator[CWLogEvent]
-        # Default to 10 minutes prior to now.  This is a backwards compat
-        # quirk where we can't change the default for `chalice logs`, but
-        # for the --follow mode, we can default to only showing 10 minutes
-        # worth of logs before we start polling for new logs.  In a
-        # future major version we can just change the default for all log
-        # retrieval to 10 minutes.
         start_time = options.start_time
-        if start_time is None:
-            start_time = datetime.utcnow() - timedelta(minutes=10)
         try:
             for event in self._loop_on_filter_log_events(log_group_name,
                                                          start_time):

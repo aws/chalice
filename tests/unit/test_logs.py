@@ -283,16 +283,11 @@ def test_follow_logs_defaults_to_ten_minutes():
     # This is a safe assumption because we're saving the current time before
     # we invoke iter_log_events().
     ten_minutes = datetime.utcnow() - timedelta(minutes=10)
-    sleep = mock.Mock(spec=time.sleep)
-    client = mock.Mock(spec=TypedAWSClient)
-    client.filter_log_events.side_effect = [
-        {'events': [{'eventId': '1', 'timestamp': 1}]},
-        KeyboardInterrupt(),
-    ]
-    event_gen = logs.FollowLogEventGenerator(client, sleep)
-    assert list(event_gen.iter_log_events(
-        log_group_name='mygroup', options=NO_OPTIONS)) == [
-        {'eventId': '1', 'timestamp': 1},
-    ]
-    first_call_kwargs = client.filter_log_events.call_args_list[0][1]
-    assert first_call_kwargs['start_time'] >= ten_minutes
+    options = logs.LogRetrieveOptions.create(follow=True)
+    assert options.start_time >= ten_minutes
+
+
+def test_dont_default_if_explicit_since_is_provided():
+    utcnow = datetime.utcnow()
+    options = logs.LogRetrieveOptions.create(follow=True, since=str(utcnow))
+    assert options.start_time == utcnow

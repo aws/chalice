@@ -366,7 +366,7 @@ def delete(ctx, profile, stage):
 @click.option('-s', '--since',
               help=('Only display logs since the provided time.  If the '
                     '-f/--follow option is specified, then this value will '
-                    'default to 10 minutes from the curren time.  Otherwise '
+                    'default to 10 minutes from the current time.  Otherwise '
                     'by default all log messages are displayed.'),
               default=None)
 @click.option('-f', '--follow/--no-follow',
