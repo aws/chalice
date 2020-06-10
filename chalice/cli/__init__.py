@@ -24,7 +24,7 @@ from chalice.awsclient import ReadTimeout
 from chalice.cli.factory import CLIFactory
 from chalice.cli.factory import NoSuchFunctionError
 from chalice.config import Config  # noqa
-from chalice.logs import display_logs
+from chalice.logs import display_logs, LogRetrieveOptions
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -363,10 +363,29 @@ def delete(ctx, profile, stage):
 @click.option('-n', '--name',
               help='The name of the lambda function to retrieve logs from.',
               default=DEFAULT_HANDLER_NAME)
+@click.option('-s', '--since',
+              help=('Only display logs since the provided time.  If the '
+                    '-f/--follow option is specified, then this value will '
+                    'default to 10 minutes from the current time.  Otherwise '
+                    'by default all log messages are displayed.  This value '
+                    'can either be an ISO8601 formatted timestamp or a '
+                    'relative time.  For relative times provide a number '
+                    'and a single unit.  Units can be "s" for seconds, '
+                    '"m" for minutes, "h" for hours, "d" for days, and "w" '
+                    'for weeks.  For example "5m" would indicate to display '
+                    'logs starting five minutes in the past.'),
+              default=None)
+@click.option('-f', '--follow/--no-follow',
+              default=False,
+              help=('Continuously poll for new log messages.  Note that this '
+                    'is a best effort attempt, and in certain cases can '
+                    'miss log messages.  This option is intended for '
+                    'interactive usage only.'))
 @click.option('--profile', help='The profile to use for fetching logs.')
 @click.pass_context
-def logs(ctx, num_entries, include_lambda_messages, stage, name, profile):
-    # type: (click.Context, int, bool, str, str, str) -> None
+def logs(ctx, num_entries, include_lambda_messages, stage,
+         name, since, follow, profile):
+    # type: (click.Context, int, bool, str, str, str, bool, str) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
     config = factory.create_config_obj(stage, False)
@@ -375,9 +394,13 @@ def logs(ctx, num_entries, include_lambda_messages, stage, name, profile):
         lambda_arn = deployed.resource_values(name)['lambda_arn']
         session = factory.create_botocore_session()
         retriever = factory.create_log_retriever(
-            session, lambda_arn)
-        display_logs(retriever, num_entries, include_lambda_messages,
-                     sys.stdout)
+            session, lambda_arn, follow)
+        options = LogRetrieveOptions.create(
+            max_entries=num_entries,
+            since=since,
+            include_lambda_messages=include_lambda_messages,
+        )
+        display_logs(retriever, sys.stdout, options)
 
 
 @cli.command('gen-policy')

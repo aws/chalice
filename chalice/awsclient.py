@@ -17,7 +17,7 @@ this class to get improved type checking across chalice.
 import os
 import time
 import tempfile
-import datetime
+from datetime import datetime
 import zipfile
 import shutil
 import json
@@ -30,7 +30,10 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
+from botocore.utils import datetime2timestamp
 from typing import Any, Optional, Dict, Callable, List, Iterator, IO  # noqa
+from typing import Iterable  # noqa
+from mypy_extensions import TypedDict
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
@@ -41,6 +44,23 @@ OptStr = Optional[str]
 OptInt = Optional[int]
 OptStrList = Optional[List[str]]
 ClientMethod = Callable[..., Dict[str, Any]]
+CWLogEvent = TypedDict(
+    'CWLogEvent', {
+        'eventId': str,
+        'ingestionTime': datetime,
+        'logStreamName': str,
+        'message': str,
+        'timestamp': datetime,
+        'logShortId': str,
+    }
+)
+LogEventsResponse = TypedDict(
+    'LogEventsResponse', {
+        'events': List[CWLogEvent],
+        'nextToken': str,
+    }, total=False
+)
+
 
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
@@ -668,8 +688,9 @@ class TypedAWSClient(object):
         # type: () -> str
         return self._client('apigateway').meta.region_name
 
-    def iter_log_events(self, log_group_name, interleaved=True):
-        # type: (str, bool) -> Iterator[Dict[str, Any]]
+    def iter_log_events(self, log_group_name, start_time=None,
+                        interleaved=True):
+        # type: (str, Optional[datetime], bool) -> Iterator[CWLogEvent]
         logs = self._client('logs')
         paginator = logs.get_paginator('filter_log_events')
         pages = paginator.paginate(logGroupName=log_group_name,
@@ -685,7 +706,7 @@ class TypedAWSClient(object):
             pass
 
     def _iter_log_messages(self, pages):
-        # type: (Iterator[Dict[str, Any]]) -> Iterator[Dict[str, Any]]
+        # type: (Iterable[Dict[str, Any]]) -> Iterator[CWLogEvent]
         for page in pages:
             events = page['events']
             for event in events:
@@ -699,8 +720,39 @@ class TypedAWSClient(object):
                 yield event
 
     def _convert_to_datetime(self, integer_timestamp):
-        # type: (int) -> datetime.datetime
-        return datetime.datetime.fromtimestamp(integer_timestamp / 1000.0)
+        # type: (int) -> datetime
+        return datetime.utcfromtimestamp(integer_timestamp / 1000.0)
+
+    def filter_log_events(self,
+                          log_group_name,   # type: str
+                          start_time=None,  # type: Optional[datetime]
+                          next_token=None,  # type: Optional[str]
+                          ):
+        # type: (...) -> LogEventsResponse
+        logs = self._client('logs')
+        kwargs = {
+            'logGroupName': log_group_name,
+            'interleaved': True,
+        }
+        if start_time is not None:
+            kwargs['startTime'] = int(datetime2timestamp(start_time) * 1000)
+        if next_token is not None:
+            kwargs['nextToken'] = next_token
+        try:
+            response = logs.filter_log_events(**kwargs)
+        except logs.exceptions.ResourceNotFoundException:
+            # If there's no log messages yet then we'll just return
+            # an empty response.
+            return {'events': []}
+        # We want to convert the individual events that have integer
+        # types over to datetime objects so it's easier for us to
+        # work with.
+        self._convert_types_on_response(response)
+        return response
+
+    def _convert_types_on_response(self, response):
+        # type: (Dict[str, Any]) -> None
+        response['events'] = list(self._iter_log_messages([response]))
 
     def _client(self, service_name):
         # type: (str) -> Any
