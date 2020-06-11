@@ -1397,3 +1397,26 @@ class TestTemplateDeepMerger(object):
 ])
 def test_to_cfn_resource_name(filename, is_yaml):
     assert package.YAMLTemplateSerializer.is_yaml_template(filename) == is_yaml
+
+
+@pytest.mark.parametrize('yaml_contents,expected', [
+    ('foo: bar', {'foo': 'bar'}),
+    ('foo: !Ref bar', {'foo': {'Ref': 'bar'}}),
+    ('foo: !GetAtt Bar.Baz', {'foo': {'Fn::GetAtt': ['Bar', 'Baz']}}),
+    ('foo: !FooBar [!Baz YetAnother, "hello"]',
+     {'foo': {'Fn::FooBar': [{'Fn::Baz': 'YetAnother'}, 'hello']}}),
+    ('foo: !SomeTag {"a": "1"}', {'foo': {'Fn::SomeTag': {'a': '1'}}}),
+    ('foo: !GetAtt Foo.Bar.Baz', {'foo': {'Fn::GetAtt': ['Foo', 'Bar.Baz']}}),
+    ('foo: !Condition Other', {'foo': {'Condition': 'Other'}}),
+    ('foo: !GetAtt ["a", "b"]', {'foo': {'Fn::GetAtt': ['a', 'b']}}),
+])
+def test_supports_custom_tags(yaml_contents, expected):
+    serialize = package.YAMLTemplateSerializer()
+    actual = serialize.load_template(yaml_contents)
+    assert actual == expected
+    # Also verify we can serialize then parse them back to what we originally
+    # loaded.  Note that this is not the same thing as round tripping as
+    # we convert things like '!Ref foo' over to {'Ref': 'foo'}.
+    yaml_str = serialize.serialize_template(actual).strip()
+    reparsed = serialize.load_template(yaml_str)
+    assert actual == reparsed

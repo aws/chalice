@@ -4,10 +4,12 @@ import copy
 import json
 import os
 
+import six
 from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
 import yaml
 from yaml.scanner import ScannerError
+from yaml.nodes import Node, ScalarNode, SequenceNode
 
 from chalice.deploy.swagger import (
     CFNSwaggerGenerator, TerraformSwaggerGenerator)
@@ -1121,10 +1123,12 @@ class YAMLTemplateSerializer(TemplateSerializer):
 
     def serialize_template(self, contents):
         # type: (Dict[str, Any]) -> str
-        return yaml.dump(contents, allow_unicode=True)
+        return yaml.safe_dump(contents, allow_unicode=True)
 
     def load_template(self, file_contents, filename=''):
         # type: (str, str) -> Dict[str, Any]
+        yaml.SafeLoader.add_multi_constructor(
+            tag_prefix='!', multi_constructor=self._custom_sam_instrinsics)
         try:
             return yaml.load(
                 file_contents,
@@ -1133,3 +1137,24 @@ class YAMLTemplateSerializer(TemplateSerializer):
         except ScannerError:
             raise RuntimeError(
                 'Expected %s to be valid YAML template.' % filename)
+
+    def _custom_sam_instrinsics(self, loader, tag_prefix, node):
+        # type: (yaml.SafeLoader, str, Node) -> Dict[str, Any]
+        tag = node.tag[1:]
+        if tag not in ['Ref', 'Condition']:
+            tag = 'Fn::%s' % tag
+        value = self._get_value(loader, node)
+        return {tag: value}
+
+    def _get_value(self, loader, node):
+        # type: (yaml.SafeLoader, Node) -> Any
+        if node.tag[1:] == 'GetAtt' and isinstance(node.value,
+                                                   six.string_types):
+            value = node.value.split('.', 1)
+        elif isinstance(node, ScalarNode):
+            value = loader.construct_scalar(node)
+        elif isinstance(node, SequenceNode):
+            value = loader.construct_sequence(node)
+        else:
+            value = loader.construct_mapping(node)
+        return value
