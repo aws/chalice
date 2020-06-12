@@ -1,0 +1,170 @@
+{%- extends "basic/layout.html" %}
+
+{%- block extrahead %}
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+{% endblock %}
+
+{%- block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    {% if theme_ga_id %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ theme_ga_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', '{{ theme_ga_id }}');
+    </script>
+    {% endif %}
+{%- endblock %}
+
+{%- block css -%}
+    <link rel="stylesheet" href="{{ pathto('_static/bootstrap-reboot.css', 1) }}" type="text/css" />
+    {{ super() }}
+    <link rel="stylesheet" href="{{ pathto('_static/custom-tabs.css', 1) }}" type="text/css" />
+{% endblock -%}
+
+<div id="site-container">
+
+    {%- block header %}
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="{{ pathto(master_doc) }}">
+		  <span class="logo-icon"><img src="{{ pathto('_static/img/chalice-logo-icon-small.png', 1) }}" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="{{ pathto('quickstart') }}">Quick Start</a></li>
+                <li class="site-page"><a href="{{ pathto('/tutorials/index') }}">Tutorials</a></li>
+                <li class="site-page"><a href="{{ pathto('/topics/index') }}">Topics</a></li>
+                <li class="site-page"><a href="{{ pathto('api') }}">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="{{ pathto('search') }}" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    {% endblock -%}
+
+    {%- block relbar1 %}{% endblock %}
+
+    {% block content %}
+        {% if pagename == "index" %}
+        {%- include 'landing.html' with context %}
+        {% endif %}
+        {% if pagename != "index" or builder == "singlehtml" %}
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    {% if parents %}
+                    <ul class="rel-parents">
+                    {%- for parent in parents %}
+                    <li><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a></li>
+                    {%- endfor %}
+                    </ul>
+                    {% endif %}
+                    {% block body %} {% endblock %}
+                    {% if prev or next %}
+                    <section class="relations">
+                        {% if prev %}
+                        <a href="{{ prev.link|e }}" title="{{ _('previous chapter')}}" class="previous-page clearfix hidden-xs">← {{ prev.title }}</a>
+                        {% endif %}
+                        {%- if next and next.title != '&lt;no title&gt;' %}
+                        <a href="{{ next.link|e }}" title="{{ _('next chapter')}}" class="next-page clearfix">{{ next.title }} →</a>
+                        {%- endif %}
+                    </section>
+                    {% endif %}
+                    {%- block content_footer %}{%- endblock %}
+                </article>
+
+                {%- if pagename not in ('search', 'contents', 'index', '404') -%}
+                <aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            {% if prev or next %}
+                            <section class="next-previous">
+                                {% if prev %}
+                                <a href="{{ prev.link|e }}" title="{{ _('previous chapter')}}" class="previous-page clearfix hidden-xs">← Prev</a>
+                                {% endif %}
+                                {%- if next and next.title != '&lt;no title&gt;' %}
+                                <a href="{{ next.link|e }}" title="{{ _('next chapter')}}" class="next-page clearfix">Next →</a>
+                                {%- endif %}
+                            </section>
+                            {% endif %}
+                            {{ toc }}
+                        </section>
+                    </div>
+                </aside>
+                {%- endif -%}
+            </div>
+        </section>
+        {% endif %}
+    {% endblock %}
+
+</div><!-- site-container -->
+
+{%- block relbar2 %}{% endblock %}
+{%- block footer %}
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+{%- endblock -%}

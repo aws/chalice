@@ -50,24 +50,7 @@ Topics
 .. toctree::
    :maxdepth: 2
 
-   topics/routing
-   topics/views
-   topics/configfile
-   topics/multifile
-   topics/logging
-   topics/sdks
-   topics/stages
-   topics/packaging
-   topics/pyversion
-   topics/cfn
-   topics/tf
-   topics/authorizers
-   topics/events
-   topics/purelambda
-   topics/blueprints
-   topics/websockets
-   topics/cd
-   topics/experimental
+   topics/index
 
 
 API Reference
@@ -85,7 +68,7 @@ Tutorials
 .. toctree::
    :maxdepth: 2
 
-   tutorials/websockets
+   tutorials/index
 
 Upgrade Notes
 -------------
