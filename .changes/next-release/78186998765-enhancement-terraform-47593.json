@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "terraform",
+  "description": "Allow generated terraform template to be used as a terraform module (#1300)"
+}
