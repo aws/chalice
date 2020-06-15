@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+1.15.0
+======
+
+* feature:blueprints:Mark blueprints as an accepted API (#1250)
+* feature:package:Add ability to generate and merge yaml CloudFormation templates (#1425)
+* enhancement:terraform:Allow generated terraform template to be used as a terraform module (#1300)
+* feature:logs:Add support for tailing logs (#4).
+
+
 1.14.1
 ======
 

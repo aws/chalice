@@ -1,5 +1,0 @@
-{
-  "type": "feature",
-  "category": "logs",
-  "description": "Add support for tailing logs (#4)."
-}

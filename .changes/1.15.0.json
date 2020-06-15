@@ -1,0 +1,25 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "blueprints",
+      "description": "Mark blueprints as an accepted API (#1250)"
+    },
+    {
+      "type": "feature",
+      "category": "package",
+      "description": "Add ability to generate and merge yaml CloudFormation templates (#1425)"
+    },
+    {
+      "type": "enhancement",
+      "category": "terraform",
+      "description": "Allow generated terraform template to be used as a terraform module (#1300)"
+    },
+    {
+      "type": "feature",
+      "category": "logs",
+      "description": "Add support for tailing logs (#4)."
+    }
+  ]
+}
