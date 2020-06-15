@@ -16,7 +16,7 @@ install_requires = [
     'attrs>=19.3.0,<20.0.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
-    'pyyaml>=5.3.1,<6.0.0'
+    'pyyaml>=5.3.1,<6.0.0',
     'wheel',
     'setuptools'
 ]
