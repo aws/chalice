@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "packaging",
+  "description": "Fix setup.py dependencies where the wheel package was not being installed (#1435)"
+}
