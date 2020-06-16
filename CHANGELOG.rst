@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.15.1
+======
+
+* bugfix:packaging:Fix setup.py dependencies where the wheel package was not being installed (#1435)
+
+
 1.15.0
 ======
 
