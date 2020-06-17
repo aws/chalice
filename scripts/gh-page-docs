@@ -1,0 +1,56 @@
+#!/bin/bash
+# Run this from the rootdir of the repository:
+#
+# ./scripts/gh-page-docs
+#
+# You can run ./scripts/gh-page-docs build to
+# only build and commit the docs locally without pushing
+# back to github.
+# Do not run this with a virtualenv activated.  This is intended
+# to be run in CI systems where you start with system python.
+# This script will create a venv and then discard it upon completion.
+set -e
+
+CHECKOUT_DIR="/tmp/chalice-gh-doc-build"
+VENV_DIR="/tmp/chalice-gh-doc-build-venv37"
+
+
+echo "Setting up environment"
+python3 -m venv $VENV_DIR
+source "${VENV_DIR}/bin/activate"
+echo
+echo
+which python3
+python3 -c "import sys; print(sys.executable)"
+which pip3
+echo
+echo
+python3 -m pip install -e .
+python3 -m pip install -r requirements-dev.txt
+python3 -m pip install -r requirements-docs.txt
+
+
+# Don't allow docs to be deployed if there's any errors.
+echo "Linting docs and checking for errors"
+make doccheck
+
+echo "Building docs"
+cd docs
+make clean && make html
+
+echo
+echo "Copy docs to local checkout"
+rm -rf "${CHECKOUT_DIR}"
+git clone git://github.com/aws/chalice --branch gh-pages \
+	--single-branch ${CHECKOUT_DIR}
+cp -r build/html/* ${CHECKOUT_DIR}/
+
+echo "Commiting docs."
+cd ${CHECKOUT_DIR}
+git add -A .
+git commit -am "Updating generated documentation"
+git remote add upstream git@github.com:aws/chalice.git
+echo "Docs are available at ${CHECKOUT_DIR}"
+# This step is usually handled by the CI system that has access
+# to the creds needed to push back to github.
+echo "Run 'git push upstream gh-pages' to deploy the docs to github pages"
