@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pure Lambda Functions &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Blueprints" href="blueprints.html" />
+    <link rel="prev" title="Lambda Event Sources" href="events.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="pure-lambda-functions">
+<h1>Pure Lambda Functions<a class="headerlink" href="#pure-lambda-functions" title="Permalink to this headline">¶</a></h1>
+<p>Chalice provides abstractions over AWS Lambda functions, including:</p>
+<ul class="simple">
+<li>An API handler the coordinates with API Gateway for creating rest APIs.</li>
+<li>A custom authorizer that allows you to integrate custom auth logic in your
+rest API.</li>
+<li>A scheduled event that includes managing the CloudWatch Event rules, targets,
+and permissions.</li>
+</ul>
+<p>However, chalice also supports managing pure Lambda functions that don&#8217;t have
+any abstractions built on top.  This is useful if you want to create a Lambda
+function for something that&#8217;s not supported by chalice or if you just want to
+create Lambda functions but don&#8217;t want to manage handling dependencies and
+deployments yourself.</p>
+<p>In order to do this, you can use the <a class="reference internal" href="../api.html#Chalice.lambda_function" title="Chalice.lambda_function"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.lambda_function()</span></code></a> decorator
+to denote that this python function is a pure lambda function that should
+be invoked as is, without any input or output mapping.  When you use
+this function, you must provide a function that maps to the same function
+signature expected by AWS Lambda as <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-programming-model-handler-types.html">defined here</a>.</p>
+<p>Let&#8217;s look at an example.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">custom_lambda_function</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="c1"># Anything you want here.</span>
+    <span class="k">return</span> <span class="p">{}</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;MyFunction&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">other_lambda_function</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="c1"># Anything you want here.</span>
+    <span class="k">return</span> <span class="p">{}</span>
+</pre></div>
+</div>
+<p>In this example, we&#8217;ve updated the starter hello world app with
+two extra Lambda functions.  When you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> Chalice will create
+three Lambda functions.  The first lambda function is for the API handler
+used by API gateway.  The second and third lambda function will be pure lambda
+functions.  These two additional lambda functions won&#8217;t be hooked up to anything.
+You&#8217;ll need to manage connecting them to any additional AWS Resources on your
+own.</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="events.html" title="previous chapter">Lambda Event Sources</a></li>
+      <li>Next: <a href="blueprints.html" title="next chapter">Blueprints</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/purelambda.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/purelambda.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

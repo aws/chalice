@@ -1,0 +1,401 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Lambda Event Sources &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Pure Lambda Functions" href="purelambda.html" />
+    <link rel="prev" title="Authorization" href="authorizers.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="lambda-event-sources">
+<h1>Lambda Event Sources<a class="headerlink" href="#lambda-event-sources" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="scheduled-events">
+<span id="id1"></span><h2>Scheduled Events<a class="headerlink" href="#scheduled-events" title="Permalink to this headline">¶</a></h2>
+<p>Chalice has support for <a class="reference internal" href="#id1">scheduled events</a>.  This feature allows you to
+periodically invoke a lambda function based on some regular schedule.  You can
+specify a fixed rate or a cron expression.</p>
+<p>To create a scheduled event in chalice, you use the <code class="docutils literal"><span class="pre">&#64;app.schedule()</span></code>
+decorator.  Let&#8217;s look at an example.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>In this example, we have a single lambda function that we want automatically
+invoked every hour.  When you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> Chalice will create a
+lambda function as well as the necessary CloudWatch events/rules such that the
+<code class="docutils literal"><span class="pre">every_hour</span></code> function is invoked every hour.</p>
+<p>The <a class="reference internal" href="../api.html#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.schedule()</span></code></a> method accepts either a string or an
+instance of <a class="reference internal" href="../api.html#Rate" title="Rate"><code class="xref py py-class docutils literal"><span class="pre">Rate</span></code></a> or <a class="reference internal" href="../api.html#Cron" title="Cron"><code class="xref py py-class docutils literal"><span class="pre">Cron</span></code></a>.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>The function you decorate must accept a single argument,
+which will be of type <a class="reference internal" href="../api.html#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal"><span class="pre">CloudWatchEvent</span></code></a>.</p>
+<p>You can use the <code class="docutils literal"><span class="pre">schedule()</span></code> decorator multiple times
+in your chalice app.  Each <code class="docutils literal"><span class="pre">schedule()</span></code> decorator will
+result in a new lambda function and associated CloudWatch
+event rule.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+
+
+<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">every_two_hours</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>In the app above, chalice will create two lambda functions,
+and configure <code class="docutils literal"><span class="pre">every_hour</span></code> to be invoked once an hour,
+and <code class="docutils literal"><span class="pre">every_two_hours</span></code> to be invoked once every two hours.</p>
+</div>
+<div class="section" id="cloudwatch-events">
+<span id="cwe-events"></span><h2>CloudWatch Events<a class="headerlink" href="#cloudwatch-events" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a lambda function to subscribe to
+any <cite>CloudWatch Event &lt;https://amzn.to/2SCgWA6&gt;</cite>.</p>
+<p>To subscribe to a CloudWatch Event in chalice, you use the
+<code class="docutils literal"><span class="pre">&#64;app.on_cw_event()</span></code> decorator.  Let&#8217;s look at an example.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.on_cw_event</span><span class="p">({</span><span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;aws.codecommit&quot;</span><span class="p">]})</span>
+<span class="k">def</span> <span class="nf">on_code_commit_changes</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>In this example, we have a single lambda function that we subscribe to all
+events from the AWS Code Commit service. The first parameter to the decorator
+is the event pattern that will be used to filter the events sent to the function.</p>
+<p>See the CloudWatch Event pattern docs for additional syntax and examples
+<a class="reference external" href="https://amzn.to/2OlqZso">https://amzn.to/2OlqZso</a></p>
+<p>The function you decorate must accept a single argument,
+which will be of type <a class="reference internal" href="../api.html#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal"><span class="pre">CloudWatchEvent</span></code></a>.</p>
+</div>
+<div class="section" id="s3-events">
+<span id="id2"></span><h2>S3 Events<a class="headerlink" href="#s3-events" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a lambda function to be invoked whenever
+certain events happen in an S3 bucket.  This uses the
+<a class="reference external" href="https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html">event notifications</a> feature provided by Amazon S3.</p>
+<p>To configure this, you just tell Chalice the name of an existing
+S3 bucket, along with what events should trigger the lambda function.
+This is done with the <a class="reference internal" href="../api.html#Chalice.on_s3_event" title="Chalice.on_s3_event"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.on_s3_event()</span></code></a> decorator.</p>
+<p>Here&#8217;s an example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;s3eventdemo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket-name&#39;</span><span class="p">,</span>
+                 <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:*&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">handle_s3_event</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received event for bucket: </span><span class="si">%s</span><span class="s2">, key: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                  <span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this example above, Chalice connects the S3 bucket to the
+<code class="docutils literal"><span class="pre">handle_s3_event</span></code> Lambda function such that whenver an object is uploaded
+to the <code class="docutils literal"><span class="pre">mybucket-name</span></code> bucket, the Lambda function will be invoked.
+This example also uses the <code class="docutils literal"><span class="pre">.bucket</span></code> and <code class="docutils literal"><span class="pre">.key</span></code> attribute from the
+<code class="docutils literal"><span class="pre">event</span></code> parameter, which is of type <a class="reference internal" href="../api.html#S3Event" title="S3Event"><code class="xref py py-class docutils literal"><span class="pre">S3Event</span></code></a>.</p>
+<p>It will automatically create the appropriate S3 notification configuration
+as needed.  Chalice will also leave any existing notification configuration
+on the <code class="docutils literal"><span class="pre">mybucket-name</span></code> untouched.  It will only merge in the additional
+configuration needed for the <code class="docutils literal"><span class="pre">handle_s3_event</span></code> Lambda function.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This feature only works when using <cite>chalice deploy</cite>.  Because you
+configure the lambda function with the name of an existing S3 bucket,
+it is not possible to describe this using a CloudFormation/SAM template.
+The <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command will fail.  You will eventually be able
+to request that chalice create a bucket for you, which will support
+the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command.</p>
+</div>
+<p>The function you decorate must accept a single argument,
+which will be of type <a class="reference internal" href="../api.html#S3Event" title="S3Event"><code class="xref py py-class docutils literal"><span class="pre">S3Event</span></code></a>.</p>
+</div>
+<div class="section" id="sns-events">
+<span id="id3"></span><h2>SNS Events<a class="headerlink" href="#sns-events" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a lambda function to be automatically invoked whenever
+something publishes to an SNS topic.  Chalice will automatically handle
+creating the lambda function, subscribing the lambda function to the
+SNS topic, and modifying the lambda function policy to allow SNS to invoke
+the function.</p>
+<p>To configure this, you just need the name of an existing SNS topic you&#8217;d
+like to subscribe to.  The SNS topic must already exist.</p>
+<p>Below is an example of how to set this up.  The example uses boto3 to
+create the SNS topic.  If you don&#8217;t have boto3 installed in your virtual
+environment, be sure to install it with:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip install boto3
+</pre></div>
+</div>
+<p>First, we&#8217;ll create an SNS topic using boto3.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; import boto3
+&gt;&gt;&gt; sns = boto3.client(&#39;sns&#39;)
+&gt;&gt;&gt; sns.create_topic(Name=&#39;my-demo-topic&#39;)
+{&#39;TopicArn&#39;: &#39;arn:aws:sns:us-west-2:12345:my-demo-topic&#39;,
+ &#39;ResponseMetadata&#39;: {}}
+</pre></div>
+</div>
+<p>Next, we&#8217;ll create our chalice app:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice new-project chalice-demo-sns
+$ cd chalice-demo-sns/
+</pre></div>
+</div>
+<p>We&#8217;ll update the <code class="docutils literal"><span class="pre">app.py</span></code> file to use the <code class="docutils literal"><span class="pre">on_sns_message</span></code> decorator:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;chalice-sns-demo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;my-demo-topic&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_sns_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received message with subject: </span><span class="si">%s</span><span class="s2">, message: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                  <span class="n">event</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can now deploy our chalice app:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+Creating deployment package.
+Creating IAM role: chalice-demo-sns-dev
+Creating lambda function: chalice-demo-sns-dev-handle_sns_message
+Subscribing chalice-demo-sns-dev-handle_sns_message to SNS topic my-demo-topic
+Resources deployed:
+  - Lambda ARN: arn:aws:lambda:us-west-2:123:function:...
+</pre></div>
+</div>
+<p>And now we can test our app by publishing a few SNS messages to our topic.
+We&#8217;ll do this using boto3.  In the example below, we&#8217;re using <code class="docutils literal"><span class="pre">list_topics()</span></code>
+to find the ARN associated with our topic name before calling the <code class="docutils literal"><span class="pre">publish()</span></code>
+method.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ python
+&gt;&gt;&gt; import boto3
+&gt;&gt;&gt; sns = boto3.client(&#39;sns&#39;)
+&gt;&gt;&gt; topic_arn = [t[&#39;TopicArn&#39;] for t in sns.list_topics()[&#39;Topics&#39;]
+...              if t[&#39;TopicArn&#39;].endswith(&#39;:my-demo-topic&#39;)][0]
+&gt;&gt;&gt; sns.publish(Message=&#39;TestMessage1&#39;, Subject=&#39;TestSubject1&#39;,
+...             TopicArn=topic_arn)
+{&#39;MessageId&#39;: &#39;12345&#39;, &#39;ResponseMetadata&#39;: {}}
+&gt;&gt;&gt; sns.publish(Message=&#39;TestMessage2&#39;, Subject=&#39;TestSubject2&#39;,
+...             TopicArn=topic_arn)
+{&#39;MessageId&#39;: &#39;54321&#39;, &#39;ResponseMetadata&#39;: {}}
+</pre></div>
+</div>
+<p>To verify our function was called correctly, we can use the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">logs</span></code>
+command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice logs -n handle_sns_message
+2018-06-28 17:49:30.513000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject1, message: TestMessage1
+2018-06-28 17:49:40.391000 547e0f chalice-demo-sns - DEBUG - Received message with subject: TestSubject2, message: TestMessage2
+</pre></div>
+</div>
+<p>In this example we used the SNS topic name to register our handler, but you can
+also use the topic arn. This can be useful if your topic is in another region
+or account.</p>
+</div>
+<div class="section" id="sqs-events">
+<span id="id4"></span><h2>SQS Events<a class="headerlink" href="#sqs-events" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a lambda function to be invoked whenever messages are
+available on an SQS queue.  To configure this, use the
+<a class="reference internal" href="../api.html#Chalice.on_sqs_message" title="Chalice.on_sqs_message"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.on_sqs_message()</span></code></a> decorator and provide the name of the SQS queue
+and an optional batch size.</p>
+<p>The message visibility timeout of your SQS queue must be greater than or
+equal to the lambda timeout.  The default message visibility timeout
+when you create an SQS queue is 30 seconds, and the default timeout
+for a Lambda function is 60 seconds, so you&#8217;ll need to modify one of these
+values in order to successfully connect an SQS queue to a Lambda function.</p>
+<p>You can check the visibility timeout of your queue using the
+<code class="docutils literal"><span class="pre">GetQueueAttributes</span></code> API call.  Using the
+<a class="reference external" href="https://docs.aws.amazon.com/cli/latest/reference/sqs/get-queue-attributes.html">AWS CLI</a>,
+you can run this command to check the value:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ aws sqs get-queue-attributes \
+    --queue-url https://us-west-2.queue.amazonaws.com/1/testq \
+    --attribute-names VisibilityTimeout
+{
+    &quot;Attributes&quot;: {
+        &quot;VisibilityTimeout&quot;: &quot;30&quot;
+    }
+}
+</pre></div>
+</div>
+<p>You can set the visibility timeout of your SQS queue using the
+<code class="docutils literal"><span class="pre">SetQueueAttributes</span></code> API call.  Again using the AWS CLI you can
+run this command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ aws sqs set-queue-attributes \
+    --queue-url https://us-west-2.queue.amazonaws.com/1/testq \
+    --attributes VisibilityTimeout=60
+</pre></div>
+</div>
+<p>If you would prefer to change the timeout of your lambda function instead,
+you can specify this timeout value using the <code class="docutils literal"><span class="pre">lambda_timeout</span></code> config key
+if your <code class="docutils literal"><span class="pre">.chalice/config.json</span></code> file.
+See <a class="reference internal" href="configfile.html#lambda-config"><span class="std std-ref">Lambda Specific Configuration</span></a> for a list of all supported lambda configuration
+values in chalice.  In this example below, we&#8217;re setting the timeout
+of our <code class="docutils literal"><span class="pre">handle_sqs_message</span></code> lambda function to 30 seconds:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat .chalice/config.json
+{
+  &quot;stages&quot;: {
+    &quot;dev&quot;: {
+      &quot;lambda_functions&quot;: {
+        &quot;handle_sqs_message&quot;: {
+          &quot;lambda_timeout&quot;: 30
+        }
+      }
+    }
+  },
+  &quot;version&quot;: &quot;2.0&quot;,
+  &quot;app_name&quot;: &quot;chalice-sqs-demo&quot;
+}
+</pre></div>
+</div>
+<p>In this example below, we&#8217;re connecting the <code class="docutils literal"><span class="pre">handle_sqs_message</span></code> lambda
+function to the <code class="docutils literal"><span class="pre">my-queue</span></code> SQS queue.  Note that we are specifying the
+queue name, not the queue URL or queue ARN.  If you are connecting your
+lambda function to a FIFO queue, make sure you specify the <code class="docutils literal"><span class="pre">.fifo</span></code>
+suffix, e.g. <code class="docutils literal"><span class="pre">my-queue.fifo</span></code>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;chalice-sqs-demo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;my-queue&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_sqs_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received message with contents: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Whenever a message is sent to the SQS queue our function will be automatically
+invoked.  The function argument is an <a class="reference internal" href="../api.html#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal"><span class="pre">SQSEvent</span></code></a> object, and each
+<code class="docutils literal"><span class="pre">record</span></code> in the example above is of type <a class="reference internal" href="../api.html#SQSRecord" title="SQSRecord"><code class="xref py py-class docutils literal"><span class="pre">SQSRecord</span></code></a>.  Lambda takes
+care of automatically scaling your function as needed.  See <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/scaling.html">Understanding
+Scaling Behavior</a> for more information on how Lambda scaling works.</p>
+<p>If your lambda functions completes without raising an exception, then
+Lambda will automatically delete all the messages associated with the
+<a class="reference internal" href="../api.html#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal"><span class="pre">SQSEvent</span></code></a>.  You don&#8217;t need to manually call <code class="docutils literal"><span class="pre">sqs.delete_message()</span></code>
+in your lambda function.  If your lambda function raises an exception, then
+Lambda won&#8217;t delete any messages, and once the visibility timeout has been
+reached, the messages will be available again in the SQS queue.  Note that
+if you are using a batch size of more than one, the entire batch succeeds or
+fails.  This means that it is possible for your lambda function to see
+a message multiple times, even if it&#8217;s successfully processed the message
+previously.  There are a few options available to mitigate this:</p>
+<ul class="simple">
+<li>Use a batch size of 1 (the default value).</li>
+<li>Use a separate data store to check if you&#8217;ve already processed an SQS
+message.  You can use services such as Amazon DynamoDB or Amazon ElastiCache.</li>
+<li>Manually call <code class="docutils literal"><span class="pre">sqs.delete_message()</span></code> in your Lambda function once you&#8217;ve
+successfully processed a message.</li>
+</ul>
+<p>For more information on Lambda and SQS,
+see the <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html">AWS documentation</a>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Lambda Event Sources</a><ul>
+<li><a class="reference internal" href="#scheduled-events">Scheduled Events</a></li>
+<li><a class="reference internal" href="#cloudwatch-events">CloudWatch Events</a></li>
+<li><a class="reference internal" href="#s3-events">S3 Events</a></li>
+<li><a class="reference internal" href="#sns-events">SNS Events</a></li>
+<li><a class="reference internal" href="#sqs-events">SQS Events</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="authorizers.html" title="previous chapter">Authorization</a></li>
+      <li>Next: <a href="purelambda.html" title="next chapter">Pure Lambda Functions</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/events.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/events.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

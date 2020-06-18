@@ -1,0 +1,209 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Routing &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Views" href="views.html" />
+    <link rel="prev" title="Quickstart and Tutorial" href="../quickstart.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="routing">
+<h1>Routing<a class="headerlink" href="#routing" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="../api.html#Chalice.route" title="Chalice.route"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.route()</span></code></a> method is used to construct which routes
+you want to create for your API.  The concept is the same
+mechanism used by <a class="reference external" href="https://palletsprojects.com/p/flask/">Flask</a> and
+<a class="reference external" href="http://bottlepy.org/docs/dev/index.html">bottle</a>.
+You decorate a function with <code class="docutils literal"><span class="pre">&#64;app.route(...)</span></code>, and whenever
+a user requests that URL, the function you&#8217;ve decorated is called.
+For example, suppose you deployed this app:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;view&#39;</span><span class="p">:</span> <span class="s1">&#39;index&#39;</span><span class="p">}</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/a&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">a</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;view&#39;</span><span class="p">:</span> <span class="s1">&#39;a&#39;</span><span class="p">}</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/b&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">b</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;view&#39;</span><span class="p">:</span> <span class="s1">&#39;b&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>If you go to <code class="docutils literal"><span class="pre">https://endpoint/</span></code>, the <code class="docutils literal"><span class="pre">index()</span></code> function would be called.
+If you went to <code class="docutils literal"><span class="pre">https://endpoint/a</span></code> and <code class="docutils literal"><span class="pre">https://endpoint/b</span></code>, then the
+<code class="docutils literal"><span class="pre">a()</span></code> and <code class="docutils literal"><span class="pre">b()</span></code> function would be called, respectively.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Do not end your route paths with a trailing slash.  If you do this, the
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command will raise a validation error.</p>
+</div>
+<p>You can also create a route that captures part of the URL.  This captured value
+will then be passed in as arguments to your view function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/users/{name}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">users</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>If you then go to <code class="docutils literal"><span class="pre">https://endpoint/users/james</span></code>, then the view function
+will be called as: <code class="docutils literal"><span class="pre">users('james')</span></code>.  The parameters are passed as
+keyword parameters based on the name as they appear in the URL. The argument
+names for the view function must match the name of the captured
+argument:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/a/{first}/b/{second}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">users</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;first&#39;</span><span class="p">:</span> <span class="n">first</span><span class="p">,</span> <span class="s1">&#39;second&#39;</span><span class="p">:</span> <span class="n">second</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="other-request-metadata">
+<h2>Other Request Metadata<a class="headerlink" href="#other-request-metadata" title="Permalink to this headline">¶</a></h2>
+<p>The route path can only contain <code class="docutils literal"><span class="pre">[a-zA-Z0-9._-]</span></code> chars and curly braces for
+parts of the URL you want to capture.  You do not need to model other parts of
+the request you want to capture, including headers and query strings.  Within
+a view function, you can introspect the current request using the
+<a class="reference internal" href="../api.html#Chalice.current_request" title="Chalice.current_request"><code class="xref py py-attr docutils literal"><span class="pre">app.current_request</span></code></a> attribute.  This also
+means you cannot control the routing based on query strings or headers.
+Here&#8217;s an example for accessing query string data in a view function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/users/{name}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">users</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;include-greeting&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;true&#39;</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;greeting&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Hello, </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span>
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+<p>In the function above, if the user provides a <code class="docutils literal"><span class="pre">?include-greeting=true</span></code> in the
+HTTP request, then an additional <code class="docutils literal"><span class="pre">greeting</span></code> key will be returned:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/api/users/bob
+
+{
+    &quot;name&quot;: &quot;bob&quot;
+}
+
+$ http https://endpoint/api/users/bob?include-greeting=true
+
+{
+    &quot;greeting&quot;: &quot;Hello, bob&quot;,
+    &quot;name&quot;: &quot;bob&quot;
+}
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Routing</a><ul>
+<li><a class="reference internal" href="#other-request-metadata">Other Request Metadata</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../quickstart.html" title="previous chapter">Quickstart and Tutorial</a></li>
+      <li>Next: <a href="views.html" title="next chapter">Views</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/routing.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/routing.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

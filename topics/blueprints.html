@@ -1,0 +1,290 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Blueprints &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Websockets" href="websockets.html" />
+    <link rel="prev" title="Pure Lambda Functions" href="purelambda.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="blueprints">
+<h1>Blueprints<a class="headerlink" href="#blueprints" title="Permalink to this headline">¶</a></h1>
+<p>Chalice blueprints are used to organize your application into logical
+components.  Using a blueprint, you define your resources and decorators in
+modules outside of your <code class="docutils literal"><span class="pre">app.py</span></code>.  You then register a blueprint in your main
+<code class="docutils literal"><span class="pre">app.py</span></code> file.  Blueprints support any decorator available on an application
+object.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The Chalice blueprints are conceptually similar to <a class="reference external" href="https://flask.palletsprojects.com/blueprints/">Blueprints</a> in Flask.  Flask
+blueprints allow you to define a set of URL routes separately from the main
+<code class="docutils literal"><span class="pre">Flask</span></code> object.  This concept is extended to all resources in Chalice.  A
+Chalice blueprint can have Lambda functions, event handlers, built-in
+authorizers, etc. in addition to a collection of routes.</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>In this example, we&#8217;ll create a blueprint with part of our routes defined in a
+separate file.  First, let&#8217;s create an application:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice new-project blueprint-demo
+$ cd blueprint-demo
+$ mkdir chalicelib
+$ touch chalicelib/__init__.py
+$ touch chalicelib/blueprints.py
+</pre></div>
+</div>
+<p>Next, we&#8217;ll open the <code class="docutils literal"><span class="pre">chalicelib/blueprints.py</span></code> file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
+
+
+<span class="n">extra_routes</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="nd">@extra_routes.route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">__name__</span></code> is used to denote the import path of the blueprint.  This name
+must match the import name of the module so the function can be properly
+imported when running in Lambda.  We&#8217;ll now import this module in our
+<code class="docutils literal"><span class="pre">app.py</span></code> and register this blueprint.  We&#8217;ll also add a route in our
+<code class="docutils literal"><span class="pre">app.py</span></code> directly:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="kn">from</span> <span class="nn">chalicelib.blueprints</span> <span class="kn">import</span> <span class="n">extra_routes</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;blueprint-demo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">extra_routes</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>At this point, we&#8217;ve defined two routes.  One route, <code class="docutils literal"><span class="pre">/</span></code>, is directly defined
+in our <code class="docutils literal"><span class="pre">app.py</span></code> file.  The other route, <code class="docutils literal"><span class="pre">/foo</span></code> is defined in
+<code class="docutils literal"><span class="pre">chalicelib/blueprints.py</span></code>.  It was added to our Chalice app when we
+registered it via <code class="docutils literal"><span class="pre">app.register_blueprint(extra_routes)</span></code>.</p>
+<p>We can deploy our application to verify this works as expected:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+Creating deployment package.
+Creating IAM role: blueprint-demo-dev
+Creating lambda function: blueprint-demo-dev
+Creating Rest API
+Resources deployed:
+  - Lambda ARN: arn:aws:lambda:us-west-2:1234:function:blueprint-demo-dev
+  - Rest API URL: https://rest-api.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>We should now be able to request the <code class="docutils literal"><span class="pre">/</span></code> and <code class="docutils literal"><span class="pre">/foo</span></code> routes:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://rest-api.execute-api.us-west-2.amazonaws.com/api/
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 17
+Content-Type: application/json
+Date: Sat, 22 Dec 2018 01:05:48 GMT
+Via: 1.1 5ab5dc09da67e3ea794ec8a82992cc89.cloudfront.net (CloudFront)
+X-Amz-Cf-Id: Cdsow9--fnTH5EdjkjWBMWINCCMD4nGmi4S_3iMYMK0rpc8Mpiymgw==
+X-Amzn-Trace-Id: Root=1-5c1d8dec-f1ef3ee83c7c654ca7fb3a70;Sampled=0
+X-Cache: Miss from cloudfront
+x-amz-apigw-id: SSMc6H_yvHcFcEw=
+x-amzn-RequestId: b7bd0c87-0585-11e9-90cf-59b71c1a1de1
+
+{
+    &quot;hello&quot;: &quot;world&quot;
+}
+
+$ http https://rest-api.execute-api.us-west-2.amazonaws.com/api/foo
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 13
+Content-Type: application/json
+Date: Sat, 22 Dec 2018 01:05:51 GMT
+Via: 1.1 95b0ac620fa3a80ee590ecf1cda1c698.cloudfront.net (CloudFront)
+X-Amz-Cf-Id: HX4l1BNdWvYDRXan17PFZya1vaomoJel4rP7d8_stdw2qT50v7Iybg==
+X-Amzn-Trace-Id: Root=1-5c1d8def-214e7f681ff82c00fd81f37a;Sampled=0
+X-Cache: Miss from cloudfront
+x-amz-apigw-id: SSMdXF40vHcF-mg=
+x-amzn-RequestId: b96f77bf-0585-11e9-b229-01305cd40040
+
+{
+    &quot;foo&quot;: &quot;bar&quot;
+}
+</pre></div>
+</div>
+</div>
+<div class="section" id="blueprint-registration">
+<h2>Blueprint Registration<a class="headerlink" href="#blueprint-registration" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">app.register_blueprint</span></code> function accepts two optional arguments,
+<code class="docutils literal"><span class="pre">name_prefix</span></code> and <code class="docutils literal"><span class="pre">url_prefix</span></code>.  This allows you to register the resources
+in your blueprint at a certain url and name prefix.  If you specify
+<code class="docutils literal"><span class="pre">url_prefix</span></code>, any routes defined in your blueprint will have the
+<code class="docutils literal"><span class="pre">url_prefix</span></code> prepended to it.  If you specify the <code class="docutils literal"><span class="pre">name_prefix</span></code>, any Lambda
+functions created will have the <code class="docutils literal"><span class="pre">name_prefix</span></code> prepended to the resource name.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <code class="docutils literal"><span class="pre">name_prefix</span></code> parameter does not apply to the Lambda function
+associated with API Gateway, which is anything decorated with
+<code class="docutils literal"><span class="pre">&#64;app.route()</span></code>.</p>
+</div>
+</div>
+<div class="section" id="advanced-example">
+<h2>Advanced Example<a class="headerlink" href="#advanced-example" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s create a more advanced example.  If this application, let&#8217;s say we want
+to organize our application into separate modules for our API and our event
+sources.  We can create an app with these files:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ ls -la chalicelib/
+__init__.py
+api.py
+events.py
+</pre></div>
+</div>
+<p>The contents of <code class="docutils literal"><span class="pre">api.py</span></code> are:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
+
+
+<span class="n">myapi</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="nd">@myapi.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+
+<span class="nd">@myapi.route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The contents of <code class="docutils literal"><span class="pre">events.py</span></code> are:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
+
+
+<span class="n">myevents</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="nd">@myevents.schedule</span><span class="p">(</span><span class="s1">&#39;rate(5 minutes)&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">cron</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="nd">@myevents.on_sns_message</span><span class="p">(</span><span class="s1">&#39;MyTopic&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_sns_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>In our <code class="docutils literal"><span class="pre">app.py</span></code> we&#8217;ll register these blueprints:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="kn">from</span> <span class="nn">chalicelib.events</span> <span class="kn">import</span> <span class="n">myevents</span>
+<span class="kn">from</span> <span class="nn">chalicelib.api</span> <span class="kn">import</span> <span class="n">myapi</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;blueprint-demo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">myevents</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">myapi</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now our <code class="docutils literal"><span class="pre">app.py</span></code> only registers the necessary blueprints, and all our
+resources are defined in blueprints.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Blueprints</a><ul>
+<li><a class="reference internal" href="#example">Example</a></li>
+<li><a class="reference internal" href="#blueprint-registration">Blueprint Registration</a></li>
+<li><a class="reference internal" href="#advanced-example">Advanced Example</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="purelambda.html" title="previous chapter">Pure Lambda Functions</a></li>
+      <li>Next: <a href="websockets.html" title="next chapter">Websockets</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/blueprints.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/blueprints.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

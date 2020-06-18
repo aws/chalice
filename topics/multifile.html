@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Multifile Support &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Logging" href="logging.html" />
+    <link rel="prev" title="Configuration File" href="configfile.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="multifile-support">
+<h1>Multifile Support<a class="headerlink" href="#multifile-support" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal"><span class="pre">app.py</span></code> file contains all of your view functions and route
+information, but you don&#8217;t have to keep all of your application
+code in your <code class="docutils literal"><span class="pre">app.py</span></code> file.</p>
+<p>As your application grows, you may reach out a point where you&#8217;d
+prefer to structure your application in multiple files.
+You can create a <code class="docutils literal"><span class="pre">chalicelib/</span></code> directory, and anything
+in that directory is recursively included in the deployment
+package.  This means that you can have files besides just
+<code class="docutils literal"><span class="pre">.py</span></code> files in <code class="docutils literal"><span class="pre">chalicelib/</span></code>, including <code class="docutils literal"><span class="pre">.json</span></code> files
+for config, or any kind of binary assets.</p>
+<p>Let&#8217;s take a look at a few examples.</p>
+<p>Consider the following app directory structure layout:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>.
+├── app.py
+├── chalicelib
+│   └── __init__.py
+└── requirements.txt
+</pre></div>
+</div>
+<p>Where <code class="docutils literal"><span class="pre">chalicelib/__init__.py</span></code> contains:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">MESSAGE</span> <span class="o">=</span> <span class="s1">&#39;world&#39;</span>
+</pre></div>
+</div>
+<p>and the <code class="docutils literal"><span class="pre">app.py</span></code> file contains:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="hll"><span class="kn">from</span> <span class="nn">chalicelib</span> <span class="kn">import</span> <span class="n">MESSAGE</span>
+</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;multifile&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="n">MESSAGE</span><span class="p">}</span>
+</pre></div>
+</td></tr></table></div>
+<p>Note in line 2 we&#8217;re importing the <code class="docutils literal"><span class="pre">MESSAGE</span></code> variable from
+the <code class="docutils literal"><span class="pre">chalicelib</span></code> package, which is a top level directory
+in our project.  We&#8217;ve created a <code class="docutils literal"><span class="pre">chalicelib/__init__.py</span></code>
+file which turns the <code class="docutils literal"><span class="pre">chalicelib</span></code> directory into a python
+package.</p>
+<p>We can also use this directory to store config data.   Consider
+this app structure layout:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>.
+├── app.py
+├── chalicelib
+│   └── config.json
+└── requirements.txt
+</pre></div>
+</div>
+<p>With <code class="docutils literal"><span class="pre">chalicelib/config.json</span></code> containing:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;world&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>In our <code class="docutils literal"><span class="pre">app.py</span></code> code, we can load and use our config file:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;multifile&quot;</span><span class="p">)</span>
+
+<span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="s1">&#39;chalicelib&#39;</span><span class="p">,</span> <span class="s1">&#39;config.json&#39;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="c1"># We can access ``config`` here if we want.</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;message&#39;</span><span class="p">]}</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="configfile.html" title="previous chapter">Configuration File</a></li>
+      <li>Next: <a href="logging.html" title="next chapter">Logging</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/multifile.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/multifile.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

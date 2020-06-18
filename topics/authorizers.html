@@ -1,0 +1,302 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Authorization &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Lambda Event Sources" href="events.html" />
+    <link rel="prev" title="Terraform Support" href="tf.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="authorization">
+<h1>Authorization<a class="headerlink" href="#authorization" title="Permalink to this headline">¶</a></h1>
+<p>Chalice supports multiple mechanisms for authorization.  This topic
+covers how you can integrate authorization into your Chalice applications.</p>
+<p>In Chalice, all the authorizers are configured per-route and specified
+using the <code class="docutils literal"><span class="pre">authorizer</span></code> kwarg to an <code class="docutils literal"><span class="pre">&#64;app.route()</span></code> call.  You
+control which type of authorizer to use based on what&#8217;s passed as the
+<code class="docutils literal"><span class="pre">authorizer</span></code> kwarg.  You can use the same authorizer instance for
+multiple routes.</p>
+<p>The first set of authorizers chalice supports cover the scenario where
+you have some existing authorization mechanism that you just want your
+Chalice app to use.</p>
+<p>Chalice also supports built-in authorizers, which allows Chalice to
+manage your custom authorizers as part of <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.  This is
+covered in the Built-in Authorizers section.</p>
+<div class="section" id="aws-iam-authorizer">
+<h2>AWS IAM Authorizer<a class="headerlink" href="#aws-iam-authorizer" title="Permalink to this headline">¶</a></h2>
+<p>The IAM Authorizer allows you to control access to API Gateway with
+<a class="reference external" href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html">IAM permissions</a></p>
+<p>To associate an IAM authorizer with a route in chalice, you use the
+<code class="xref py py-class docutils literal"><span class="pre">IAMAUthorizer</span></code> class:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">IAMAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">IAMAuthorizer</span><span class="p">()</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/iam-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>See the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html">API Gateway documentation</a>
+for more information on controlling access to API Gateway with IAM permissions.</p>
+</div>
+<div class="section" id="amazon-cognito-user-pools">
+<h2>Amazon Cognito User Pools<a class="headerlink" href="#amazon-cognito-user-pools" title="Permalink to this headline">¶</a></h2>
+<p>In addition to using IAM roles and policies with the <a class="reference internal" href="../api.html#IAMAuthorizer" title="IAMAuthorizer"><code class="xref py py-class docutils literal"><span class="pre">IAMAuthorizer</span></code></a> you
+can also use a <a class="reference external" href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html">Cognito user pools</a> to control who can access your Chalice
+app.  A cognito user pool serves as your own identity provider to maintain a
+user directory.</p>
+<p>To integrate Cognito user pools with Chalice, you&#8217;ll need to have an existing
+cognito user pool configured.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CognitoUserPoolAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
+    <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>For more information about using Cognito user pools with API Gateway,
+see the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html">Use Amazon Cognito User Pools documentation</a>.</p>
+</div>
+<div class="section" id="custom-authorizers">
+<h2>Custom Authorizers<a class="headerlink" href="#custom-authorizers" title="Permalink to this headline">¶</a></h2>
+<p>API Gateway also lets you write custom authorizers using a Lambda function.
+You can configure a Chalice route to use a pre-existing Lambda function as
+a custom authorizer.  If you also want to write and manage your Lambda
+authorizer using Chalice, see the next section, Built-in Authorizers.</p>
+<p>To connect an existing Lambda function as a custom authorizer in chalice,
+you use the <code class="docutils literal"><span class="pre">CustomAuthorizer</span></code> class:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CustomAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">CustomAuthorizer</span><span class="p">(</span>
+    <span class="s1">&#39;MyCustomAuth&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
+    <span class="n">authorizer_uri</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;arn:aws:apigateway:region:lambda:path/2015-03-31&#39;</span>
+                    <span class="s1">&#39;/functions/arn:aws:lambda:region:account-id:&#39;</span>
+                    <span class="s1">&#39;function:FunctionName/invocations&#39;</span><span class="p">))</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/custom-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="built-in-authorizers">
+<h2>Built-in Authorizers<a class="headerlink" href="#built-in-authorizers" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">IAMAuthorizer</span></code>, <code class="docutils literal"><span class="pre">CognitoUserPoolAuthorizer</span></code>, and the
+<code class="docutils literal"><span class="pre">CustomAuthorizer</span></code> classes are all for cases where you have existing
+resources for managing authorization and you want to wire them together with
+your Chalice app.  A Built-in authorizer is used when you&#8217;d like to write your
+custom authorizer in Chalice, and have the additional Lambda functions managed
+when you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy/delete</span></code>.  This section will cover how to use the
+built-in authorizers in chalice.</p>
+<p>Creating an authorizer in chalice requires you use the <code class="docutils literal"><span class="pre">&#64;app.authorizer</span></code>
+decorator to a function.  The function must accept a single arg, which will be
+an instance of <a class="reference internal" href="../api.html#AuthRequest" title="AuthRequest"><code class="xref py py-class docutils literal"><span class="pre">AuthRequest</span></code></a>.  The function must return a
+<a class="reference internal" href="../api.html#AuthResponse" title="AuthResponse"><code class="xref py py-class docutils literal"><span class="pre">AuthResponse</span></code></a>.  As an example, we&#8217;ll port the example from the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html">API
+Gateway documentation</a>.  First, we&#8217;ll show the code and then walk through it:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">AuthResponse</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demoauth1&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.authorizer</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">demo_auth</span><span class="p">(</span><span class="n">auth_request</span><span class="p">):</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">auth_request</span><span class="o">.</span><span class="n">token</span>
+    <span class="c1"># This is just for demo purposes as shown in the API Gateway docs.</span>
+    <span class="c1"># Normally you&#39;d call an oauth provider, validate the</span>
+    <span class="c1"># jwt token, etc.</span>
+    <span class="c1"># In this exampe, the token is treated as the status for demo</span>
+    <span class="c1"># purposes.</span>
+    <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s1">&#39;allow&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># By specifying an empty list of routes,</span>
+        <span class="c1"># we&#39;re saying this user is not authorized</span>
+        <span class="c1"># for any URLs, which will result in an</span>
+        <span class="c1"># Unauthorized response.</span>
+        <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">demo_auth</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;context&#39;</span><span class="p">:</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">context</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>In the example above we define a built-in authorizer by decorating
+the <code class="docutils literal"><span class="pre">demo_auth</span></code> function with the <code class="docutils literal"><span class="pre">&#64;app.authorizer()</span></code> decorator.
+Note you must use <code class="docutils literal"><span class="pre">&#64;app.authorizer()</span></code> and not <code class="docutils literal"><span class="pre">&#64;app.authorizer</span></code>.
+A built-in authorizer function has this type signature:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">auth_handler</span><span class="p">(</span><span class="n">auth_request</span><span class="p">:</span> <span class="n">AuthRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AuthResponse</span><span class="p">:</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>Within the auth handler you must determine if the request is
+authorized or not.  The <code class="docutils literal"><span class="pre">AuthResponse</span></code> contains the allowed
+URLs as well as the principal id of the user.  You can optionally
+return a dictionary of key value pairs (as the <code class="docutils literal"><span class="pre">context</span></code> kwarg).
+This dictionary will be passed through on subsequent requests.
+In our example above we&#8217;re not using the context dictionary.
+API Gateway will convert all the values in the <code class="docutils literal"><span class="pre">context</span></code>
+dictionary to string values.</p>
+<p>Now let&#8217;s deploy our app.  As usual, we just need to run
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and chalice will automatically deploy all the
+necessary Lambda functions for us.</p>
+<p>Now when we try to make a request, we&#8217;ll get an Unauthorized error:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://api.us-west-2.amazonaws.com/api/
+HTTP/1.1 401 Unauthorized
+
+{
+    &quot;message&quot;: &quot;Unauthorized&quot;
+}
+</pre></div>
+</div>
+<p>If we add the appropriate authorization header, we&#8217;ll see the call succeed:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://api.us-west-2.amazonaws.com/api/ &#39;Authorization: allow&#39;
+HTTP/1.1 200 OK
+
+{
+    &quot;context&quot;: {
+        &quot;accountId&quot;: &quot;12345&quot;,
+        &quot;apiId&quot;: &quot;api&quot;,
+        &quot;authorizer&quot;: {
+            &quot;principalId&quot;: &quot;user&quot;
+        },
+        &quot;httpMethod&quot;: &quot;GET&quot;,
+        &quot;identity&quot;: {
+            &quot;accessKey&quot;: null,
+            &quot;accountId&quot;: null,
+            &quot;apiKey&quot;: &quot;&quot;,
+            &quot;caller&quot;: null,
+            &quot;cognitoAuthenticationProvider&quot;: null,
+            &quot;cognitoAuthenticationType&quot;: null,
+            &quot;cognitoIdentityId&quot;: null,
+            &quot;cognitoIdentityPoolId&quot;: null,
+            &quot;sourceIp&quot;: &quot;1.1.1.1&quot;,
+            &quot;user&quot;: null,
+            &quot;userAgent&quot;: &quot;HTTPie/0.9.9&quot;,
+            &quot;userArn&quot;: null
+        },
+        &quot;path&quot;: &quot;/api/&quot;,
+        &quot;requestId&quot;: &quot;d35d2063-56be-11e7-9ce1-dd61c24a3668&quot;,
+        &quot;resourceId&quot;: &quot;id&quot;,
+        &quot;resourcePath&quot;: &quot;/&quot;,
+        &quot;stage&quot;: &quot;dev&quot;
+    }
+}
+</pre></div>
+</div>
+<p>The low level API for API Gateway&#8217;s custom authorizer feature requires
+that an IAM policy must be returned.  The <a class="reference internal" href="../api.html#AuthResponse" title="AuthResponse"><code class="xref py py-class docutils literal"><span class="pre">AuthResponse</span></code></a> class we&#8217;re
+using is a wrapper over building the IAM policy ourself.  If you want
+low level control and would prefer to construct the IAM policy yourself
+you can return a dictionary of the IAM policy instead of an instance of
+<a class="reference internal" href="../api.html#AuthResponse" title="AuthResponse"><code class="xref py py-class docutils literal"><span class="pre">AuthResponse</span></code></a>.  If you do that, the dictionary is returned
+without modification back to API Gateway.</p>
+<p>For more information on custom authorizers, see the
+<a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html">Use API Gateway Custom Authorizers</a>
+page in the API Gateway user guide.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Authorization</a><ul>
+<li><a class="reference internal" href="#aws-iam-authorizer">AWS IAM Authorizer</a></li>
+<li><a class="reference internal" href="#amazon-cognito-user-pools">Amazon Cognito User Pools</a></li>
+<li><a class="reference internal" href="#custom-authorizers">Custom Authorizers</a></li>
+<li><a class="reference internal" href="#built-in-authorizers">Built-in Authorizers</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="tf.html" title="previous chapter">Terraform Support</a></li>
+      <li>Next: <a href="events.html" title="next chapter">Lambda Event Sources</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/authorizers.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/authorizers.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

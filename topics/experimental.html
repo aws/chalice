@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Experimental APIs &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Chalice" href="../api.html" />
+    <link rel="prev" title="Continuous Deployment (CD)" href="cd.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="experimental-apis">
+<h1>Experimental APIs<a class="headerlink" href="#experimental-apis" title="Permalink to this headline">¶</a></h1>
+<p>Chalice maintains backwards compatibility for all features that appear in this
+documentation.  Any Chalice application using version 1.x will continue to work
+for all future versions of 1.x.</p>
+<p>We also believe that Chalice has a lot of potential for new ideas and APIs,
+many of which will take several iterations to get right.  We may implement a
+new idea and need to make changes based on customer usage and feedback.  This
+may include backwards incompatible changes all the way up to the removal of
+a feature.</p>
+<p>To accommodate these new features, Chalice has support for experimental APIs,
+which are features that are added to Chalice on a provisional basis.  Because
+these features may include backwards incompatible changes, you must explicitly
+opt-in to using these features.  This makes it clear that you are using an
+experimental feature that may change.</p>
+<div class="section" id="opting-in-to-experimental-apis">
+<h2>Opting-in to Experimental APIs<a class="headerlink" href="#opting-in-to-experimental-apis" title="Permalink to this headline">¶</a></h2>
+<p>Each experimental feature in chalice has a name associated with it.  To opt-in
+to an experimental API, you must have the feature name to the
+<code class="docutils literal"><span class="pre">experimental_feature_flags</span></code> attribute on your <code class="docutils literal"><span class="pre">app</span></code> object.
+This attribute&#8217;s type is a set of strings.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="s1">&#39;myapp&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;MYFEATURE1&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;MYFEATURE2&#39;</span><span class="p">,</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>If you use an experimental API without opting-in, you will receive
+a message whenever you run a Chalice CLI command.  The error message
+tells you which feature flags you need to add:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+You are using experimental features without explicitly opting in.
+Experimental features do not guarantee backwards compatibility and may be removed in the future.
+If you still like to use these experimental features, you can opt-in by adding this to your app.py file:
+
+app.experimental_feature_flags.update([
+    &#39;FEATURE_FLAG_NAME&#39;
+])
+
+
+See https://chalice.readthedocs.io/en/latest/topics/experimental.rst for more details.
+</pre></div>
+</div>
+<p>The feature flag only happens when running CLI commands.  There are no runtime
+checks for experimental features once your application is deployed.</p>
+</div>
+<div class="section" id="list-of-experimental-apis">
+<h2>List of Experimental APIs<a class="headerlink" href="#list-of-experimental-apis" title="Permalink to this headline">¶</a></h2>
+<p>In the table below, the &#8220;Feature Flag Name&#8221; column is the value you
+must add to the <code class="docutils literal"><span class="pre">app.experimental_feature_flags</span></code> attribute.
+The status of an experimental API can be:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">Trial</span></code> - You must explicitly opt-in to use this feature.</li>
+<li><code class="docutils literal"><span class="pre">Accepted</span></code> - This feature has graduated from an experimental
+feature to a fully supported, backwards compatible feature in Chalice.
+Accepted features still appear in the table for auditing purposes.</li>
+<li><code class="docutils literal"><span class="pre">Rejected</span></code> - This feature has been removed.</li>
+</ul>
+<table border="1" class="docutils" id="id1">
+<caption><span class="caption-text">Experimental APIs</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="17%" />
+<col width="17%" />
+<col width="17%" />
+<col width="17%" />
+<col width="17%" />
+<col width="17%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Feature</th>
+<th class="head">Feature Flag Name</th>
+<th class="head">Version Added</th>
+<th class="head">Version Finalized</th>
+<th class="head">Status</th>
+<th class="head">GitHub Issue(s)</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="blueprints.html"><span class="doc">Blueprints</span></a></td>
+<td><code class="docutils literal"><span class="pre">BLUEPRINTS</span></code></td>
+<td>1.7.0</td>
+<td>1.15.0</td>
+<td>Accepted</td>
+<td><a class="reference external" href="https://github.com/aws/chalice/pull/1023">#1023</a>,
+<a class="reference external" href="https://github.com/aws/chalice/pull/651">#651</a></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="websockets.html"><span class="doc">Websockets</span></a></td>
+<td><code class="docutils literal"><span class="pre">WEBSOCKETS</span></code></td>
+<td>1.10.0</td>
+<td>n/a</td>
+<td>Trial</td>
+<td><a class="reference external" href="https://github.com/aws/chalice/pull/1041">#1041</a>,
+<a class="reference external" href="https://github.com/aws/chalice/issues/1017">#1017</a></td>
+</tr>
+</tbody>
+</table>
+<p>See the <a class="reference external" href="https://github.com/aws/chalice/issues/1019">original discussion</a>
+for more background information and alternative proposals.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Experimental APIs</a><ul>
+<li><a class="reference internal" href="#opting-in-to-experimental-apis">Opting-in to Experimental APIs</a></li>
+<li><a class="reference internal" href="#list-of-experimental-apis">List of Experimental APIs</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cd.html" title="previous chapter">Continuous Deployment (CD)</a></li>
+      <li>Next: <a href="../api.html" title="next chapter">Chalice</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/experimental.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/experimental.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

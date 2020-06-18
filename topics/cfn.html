@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AWS CloudFormation Support &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Terraform Support" href="tf.html" />
+    <link rel="prev" title="Python Version Support" href="pyversion.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="aws-cloudformation-support">
+<h1>AWS CloudFormation Support<a class="headerlink" href="#aws-cloudformation-support" title="Permalink to this headline">¶</a></h1>
+<p>When you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, chalice will deploy your application using the
+<a class="reference external" href="http://boto3.readthedocs.io/en/docs/">AWS SDK for Python</a>).  Chalice also
+provides functionality that allows you to manage deployments yourself using
+cloudformation.  This is provided via the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command.</p>
+<p>When you run this command, chalice will generate the AWS Lambda deployment
+package that contains your application as well as a <a class="reference external" href="https://github.com/awslabs/serverless-application-model">Serverless Application
+Model (SAM)</a>
+template.  You can then use a tool like the AWS CLI, or any cloudformation
+deployment tools you use, to deploy your chalice application.</p>
+<div class="section" id="considerations">
+<h2>Considerations<a class="headerlink" href="#considerations" title="Permalink to this headline">¶</a></h2>
+<p>Using the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command is useful when you don&#8217;t want to
+use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> to manage your deployments.  There&#8217;s several reasons
+why you might want to do this:</p>
+<ul class="simple">
+<li>You have pre-existing infrastructure and tooling set up to manage
+cloudformation stacks.</li>
+<li>You want to integrate with other cloudformation stacks to manage
+all your AWS resources, including resources outside of your chalice
+app.</li>
+<li>You&#8217;d like to integrate with <a class="reference external" href="https://aws.amazon.com/codepipeline/">AWS CodePipeline</a> to automatically deploy
+changes when you push to a git repo.</li>
+</ul>
+<p>Keep in mind that you can&#8217;t switch between <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> + CloudFormation for deploying your app.</p>
+<p>If you choose to use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> and CloudFormation to deploy
+your app, you won&#8217;t be able to switch back to <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
+Running <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> would create an entirely new set of AWS
+resources (API Gateway Rest API, AWS Lambda function, etc).</p>
+</div>
+<div class="section" id="template-merge">
+<h2>Template Merge<a class="headerlink" href="#template-merge" title="Permalink to this headline">¶</a></h2>
+<p>It&#8217;s a common use case to need to modify a Chalice generated template
+before deployment. Often to inject extra resources, values, or
+configurations that are not supported directly by Chalice. It will
+always be the case that something on AWS is not supported by Chalice
+directly that a consumer may want to interact with.</p>
+<p>The package command can now be invoked with the <code class="docutils literal"><span class="pre">--merge-template</span></code> argument:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice package --merge-template extras.json out
+</pre></div>
+</div>
+<p>This extras.json file should be a JSON formatted file which will be
+deep-merged on top of the sam.json that is generated by Chalice.</p>
+<p>For a simple example lets assume that we have the default new Chalice
+project and that extras.json has the following content:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;Resources&quot;</span> <span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;MusicTable&quot;</span> <span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;Type&quot;</span> <span class="p">:</span> <span class="s2">&quot;AWS::DynamoDB::Table&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;Properties&quot;</span> <span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;TableName&quot;</span> <span class="p">:</span> <span class="s2">&quot;MusicData&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;AttributeDefinitions&quot;</span> <span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="s2">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;Album&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;AttributeType&quot;</span> <span class="p">:</span> <span class="s2">&quot;S&quot;</span>
+          <span class="p">},</span>
+          <span class="p">{</span>
+            <span class="s2">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;Artist&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;AttributeType&quot;</span> <span class="p">:</span> <span class="s2">&quot;S&quot;</span>
+          <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="s2">&quot;KeySchema&quot;</span> <span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="s2">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;Album&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;HASH&quot;</span>
+          <span class="p">},</span>
+          <span class="p">{</span>
+            <span class="s2">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;Artist&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;RANGE&quot;</span>
+          <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="s2">&quot;ProvisionedThroughput&quot;</span> <span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;ReadCapacityUnits&quot;</span> <span class="p">:</span> <span class="s2">&quot;5&quot;</span><span class="p">,</span>
+          <span class="s2">&quot;WriteCapacityUnits&quot;</span> <span class="p">:</span> <span class="s2">&quot;5&quot;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;APIHandler&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;MUSIC_TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;MusicTable&quot;</span><span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The generated template located at out/sam.json will have the DynamoDB table
+injected into the resource section, as well as the <code class="docutils literal"><span class="pre">MUSIC_TABLE</span></code> environment
+variable added to the <code class="docutils literal"><span class="pre">APIHandler</span></code> Lambda function:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">...</span>
+    <span class="s2">&quot;APIHandler&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;Type&quot;</span><span class="p">:</span> <span class="s2">&quot;AWS::Serverless::Function&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;Runtime&quot;</span><span class="p">:</span> <span class="s2">&quot;python3.6&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Handler&quot;</span><span class="p">:</span> <span class="s2">&quot;app.app&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;CodeUri&quot;</span><span class="p">:</span> <span class="s2">&quot;./deployment.zip&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Tags&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;aws-chalice&quot;</span><span class="p">:</span> <span class="s2">&quot;version=1.10-:stage=dev:app=test&quot;</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;Timeout&quot;</span><span class="p">:</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="s2">&quot;MemorySize&quot;</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="s2">&quot;Role&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;Fn::GetAtt&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;DefaultRole&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Arn&quot;</span>
+          <span class="p">]</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;MUSIC_TABLE&quot;</span><span class="p">:</span> <span class="s2">&quot;MusicData&quot;</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>This gives us the ability to inject arbitrary resources into our Chalice
+applications, and reference them from our Chalice-deployed functions. We can
+now rely on Chalice&#8217;s policy auto-generation to generate a policy that allows
+DynamoDB access, inject our own policy modifications through the same
+extras.json file, or specify a custom policy using the config file.</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>In this example, we&#8217;ll create a chalice app and deploy it using
+the AWS CLI.</p>
+<p>First install the necessary packages:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ virtualenv /tmp/venv
+$ . /tmp/venv/bin/activate
+$ pip install chalice awscli
+$ chalice new-project test-cfn-deploy
+$ cd test-cfn-deploy
+</pre></div>
+</div>
+<p>At this point we&#8217;ve installed chalice and the AWS CLI and we have
+a basic app created locally.  Next we&#8217;ll run the <code class="docutils literal"><span class="pre">package</span></code> command
+and look at its contents:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ $ chalice package /tmp/packaged-app/
+Creating deployment package.
+$ ls -la /tmp/packaged-app/
+-rw-r--r--   1 j         wheel  3355270 May 25 14:20 deployment.zip
+-rw-r--r--   1 j         wheel     3068 May 25 14:20 sam.json
+
+$ unzip -l /tmp/packaged-app/deployment.zip  | tail -n 5
+    17292  05-25-17 14:19   chalice/app.py
+      283  05-25-17 14:19   chalice/__init__.py
+      796  05-25-17 14:20   app.py
+ --------                   -------
+  9826899                   723 files
+
+$ head &lt; /tmp/packaged-app/sam.json
+{
+  &quot;AWSTemplateFormatVersion&quot;: &quot;2010-09-09&quot;,
+  &quot;Outputs&quot;: {
+    &quot;RestAPIId&quot;: {
+      &quot;Value&quot;: {
+        &quot;Ref&quot;: &quot;RestAPI&quot;
+      }
+    },
+    &quot;APIHandlerName&quot;: {
+      &quot;Value&quot;: {
+</pre></div>
+</div>
+<p>As you can see in the above example, the <code class="docutils literal"><span class="pre">package</span></code> command created a
+directory that contained two files, a <code class="docutils literal"><span class="pre">deployment.zip</span></code> file, which is the
+Lambda deployment package, and a <code class="docutils literal"><span class="pre">sam.json</span></code> file, which is the SAM template
+that can be deployed using CloudFormation.  Next we&#8217;re going to use the AWS CLI
+to deploy our app.  To this, we&#8217;ll first run the <code class="docutils literal"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">package</span></code>
+command, which will take our deployment.zip file and upload to an S3 bucket
+we specify:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ aws cloudformation package \
+     --template-file /tmp/packaged-app/sam.json \
+     --s3-bucket myapp-bucket \
+     --output-template-file /tmp/packaged-app/packaged.yaml
+</pre></div>
+</div>
+<p>Now we can deploy our app using the <code class="docutils literal"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">deploy</span></code> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ aws cloudformation deploy \
+    --template-file /tmp/packaged-app/packaged.yaml \
+    --stack-name test-cfn-stack \
+    --capabilities CAPABILITY_IAM
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - test-cfn-stack
+</pre></div>
+</div>
+<p>This will take a few minutes to complete, but once it&#8217;s done, the endpoint url
+will be available as an output:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ aws cloudformation describe-stacks --stack-name test-cfn-stack \
+  --query &quot;Stacks[].Outputs[?OutputKey==&#39;EndpointURL&#39;][] | [0].OutputValue&quot;
+&quot;https://abc29hkq0i.execute-api.us-west-2.amazonaws.com/api/&quot;
+
+$ http &quot;https://abc29hkq0i.execute-api.us-west-2.amazonaws.com/api/&quot;
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 18
+Content-Type: application/json
+...
+
+{
+    &quot;hello&quot;: &quot;world&quot;
+}
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">AWS CloudFormation Support</a><ul>
+<li><a class="reference internal" href="#considerations">Considerations</a></li>
+<li><a class="reference internal" href="#template-merge">Template Merge</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="pyversion.html" title="previous chapter">Python Version Support</a></li>
+      <li>Next: <a href="tf.html" title="next chapter">Terraform Support</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/cfn.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/cfn.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

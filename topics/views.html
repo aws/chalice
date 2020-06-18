@@ -1,0 +1,374 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Views &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Configuration File" href="configfile.html" />
+    <link rel="prev" title="Routing" href="routing.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="views">
+<h1>Views<a class="headerlink" href="#views" title="Permalink to this headline">¶</a></h1>
+<p>A view function in chalice is the function attached to an
+<code class="docutils literal"><span class="pre">&#64;app.route()</span></code> decorator.  In the example below, <code class="docutils literal"><span class="pre">index</span></code>
+is the view function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;view&#39;</span><span class="p">:</span> <span class="s1">&#39;index&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="view-function-parameters">
+<h2>View Function Parameters<a class="headerlink" href="#view-function-parameters" title="Permalink to this headline">¶</a></h2>
+<p>A view function&#8217;s parameters correspond to the number of captured
+URL parameters specified in the <code class="docutils literal"><span class="pre">&#64;app.route</span></code> call.  In the example above,
+the route <code class="docutils literal"><span class="pre">/</span></code> specifies no captured parameters so the <code class="docutils literal"><span class="pre">index</span></code> view
+function accepts no parameters.  However, in the view function below,
+a single URL parameter, <code class="docutils literal"><span class="pre">{city}</span></code> is specified, so the view function
+must accept a single parameter:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/cities/{city}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="n">city</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;city&#39;</span><span class="p">:</span> <span class="n">city</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>This indicates that the value of <code class="docutils literal"><span class="pre">{city}</span></code> is variable, and whatever
+value is provided in the URL is passed to the <code class="docutils literal"><span class="pre">index</span></code> view function.
+For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">GET</span> <span class="o">/</span><span class="n">cities</span><span class="o">/</span><span class="n">seattle</span>   <span class="o">--&gt;</span> <span class="n">index</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
+<span class="n">GET</span> <span class="o">/</span><span class="n">cities</span><span class="o">/</span><span class="n">portland</span>  <span class="o">--&gt;</span> <span class="n">index</span><span class="p">(</span><span class="s1">&#39;portland&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you want to access any other metdata of the incoming HTTP request,
+you can use the <code class="docutils literal"><span class="pre">app.current_request</span></code> property, which is an instance of
+the the <a class="reference internal" href="../api.html#Request" title="Request"><code class="xref py py-class docutils literal"><span class="pre">Request</span></code></a> class.</p>
+</div>
+<div class="section" id="view-function-return-values">
+<h2>View Function Return Values<a class="headerlink" href="#view-function-return-values" title="Permalink to this headline">¶</a></h2>
+<p>The response returned back to the client depends on the behavior
+of the view function.  There are several options available:</p>
+<ul class="simple">
+<li>Returning an instance of <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal"><span class="pre">Response</span></code></a>.  This gives you
+complete control over what gets returned back to the customer.</li>
+<li>A <code class="docutils literal"><span class="pre">bytes</span></code> type response body must have a <code class="docutils literal"><span class="pre">Content-Type</span></code> header value
+that is present in the <code class="docutils literal"><span class="pre">app.api.binary_types</span></code> list in order to be handled
+properly.</li>
+<li>Any other return value will be serialized as JSON and sent back
+as the response body with content type <code class="docutils literal"><span class="pre">application/json</span></code>.</li>
+<li>Any subclass of <code class="docutils literal"><span class="pre">ChaliceViewError</span></code> will result in an HTTP
+response being returned with the status code associated with that
+response, and a JSON response body containing a <code class="docutils literal"><span class="pre">Code</span></code> and a <code class="docutils literal"><span class="pre">Message</span></code>.
+This is discussed in more detail below.</li>
+<li>Any other exception raised will result in a 500 HTTP response.
+The body of that response depends on whether debug mode is enabled.</li>
+</ul>
+</div>
+<div class="section" id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Permalink to this headline">¶</a></h2>
+<p>Chalice provides a built in set of exception classes that map to common
+HTTP errors including:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">BadRequestError</span></code>- returns a status code of 400</li>
+<li><code class="docutils literal"><span class="pre">UnauthorizedError</span></code>- returns a status code of 401</li>
+<li><code class="docutils literal"><span class="pre">ForbiddenError</span></code>- returns a status code of 403</li>
+<li><code class="docutils literal"><span class="pre">NotFoundError</span></code>- returns a status code of 404</li>
+<li><code class="docutils literal"><span class="pre">ConflictError</span></code>- returns a status code of 409</li>
+<li><code class="docutils literal"><span class="pre">TooManyRequestsError</span></code>- returns a status code of 429</li>
+<li><code class="docutils literal"><span class="pre">ChaliceViewError</span></code>- returns a status code of 500</li>
+</ul>
+<p>You can raise these anywhere in your view functions and chalice will convert
+these to the appropriate HTTP response.  The default chalice error responses
+will send the error back as <code class="docutils literal"><span class="pre">application/json</span></code> with the response body
+containing a <code class="docutils literal"><span class="pre">Code</span></code> corresponding to the exception class name and a
+<code class="docutils literal"><span class="pre">Message</span></code> key corresponding to the string provided when the exception
+was instantiated.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">BadRequestError</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;badrequest&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/badrequest&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">badrequest</span><span class="p">():</span>
+    <span class="k">raise</span> <span class="n">BadRequestError</span><span class="p">(</span><span class="s2">&quot;This is a bad request&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This view function will generate the following HTTP response:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/api/badrequest
+HTTP/1.1 400 Bad Request
+
+{
+    &quot;Code&quot;: &quot;BadRequestError&quot;,
+    &quot;Message&quot;: &quot;This is a bad request&quot;
+}
+</pre></div>
+</div>
+<p>In addition to the built in chalice exceptions, you can use the
+<a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal"><span class="pre">Response</span></code></a> class to customize the HTTP errors if you prefer to
+either not have JSON error responses or customize the JSON response body
+for errors.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;badrequest&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/badrequest&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">badrequest</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s1">&#39;Plain text error message&#39;</span><span class="p">,</span>
+                    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">},</span>
+                    <span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="specifying-http-methods">
+<h2>Specifying HTTP Methods<a class="headerlink" href="#specifying-http-methods" title="Permalink to this headline">¶</a></h2>
+<p>So far, our examples have only allowed GET requests. It&#8217;s actually possible
+to support additional HTTP methods. Here&#8217;s an example of a view function that
+supports PUT:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/resource/{value}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">put_test</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>We can test this method using the <code class="docutils literal"><span class="pre">http</span></code> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http PUT https://endpoint/api/resource/foo
+HTTP/1.1 200 OK
+
+{
+    &quot;value&quot;: &quot;foo&quot;
+}
+</pre></div>
+</div>
+<p>Note that the <code class="docutils literal"><span class="pre">methods</span></code> kwarg accepts a list of methods.  Your view function
+will be called when any of the HTTP methods you specify are used for the
+specified resource.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">():</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>The above view function will be called when either an HTTP POST or
+PUT is sent to <code class="docutils literal"><span class="pre">/myview</span></code> as shown below:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">myview</span>   <span class="o">--&gt;</span> <span class="n">myview</span><span class="p">()</span>
+<span class="n">PUT</span> <span class="o">/</span><span class="n">myview</span>  <span class="o">--&gt;</span> <span class="n">myview</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Alternatively if you do not want to share the same view function across
+multiple HTTP methods for the same route url, you may define separate view
+functions to the same route url but have the view functions differ by
+HTTP method. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">myview_post</span><span class="p">():</span>
+    <span class="k">pass</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">myview_put</span><span class="p">():</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>This setup will route all HTTP POST&#8217;s to <code class="docutils literal"><span class="pre">/myview</span></code> to the <code class="docutils literal"><span class="pre">myview_post()</span></code>
+view function and route all HTTP PUT&#8217;s to <code class="docutils literal"><span class="pre">/myview</span></code> to the <code class="docutils literal"><span class="pre">myview_put()</span></code>
+view function as shown below:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">myview</span>   <span class="o">--&gt;</span> <span class="n">myview_post</span><span class="p">()</span>
+<span class="n">PUT</span> <span class="o">/</span><span class="n">myview</span>  <span class="o">--&gt;</span> <span class="n">myview_put</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>If you do chose to use separate view functions for the same route path, it is
+important to know:</p>
+<ul class="simple">
+<li>View functions that share the same route cannot have the same names.
+For example, two view functions that both share the same route path cannot
+both be named <code class="docutils literal"><span class="pre">view()</span></code>.</li>
+<li>View functions that share the same route cannot overlap in supported HTTP
+methods. For example if two view function both share the same route path,
+they both cannot contain <code class="docutils literal"><span class="pre">'PUT'</span></code> in their route <code class="docutils literal"><span class="pre">methods</span></code> list.</li>
+<li>View functions that share the same route path and have CORS configured cannot
+have differing CORS configuration. For example, if two view functions that
+both share the same route path, the route configuration for one of the
+view functions cannot set <code class="docutils literal"><span class="pre">cors=True</span></code> while having the route
+configuration of the other view function be set to
+<code class="docutils literal"><span class="pre">cors=app.CORSConfig(allow_origin='https://foo.example.com')</span></code>.</li>
+</ul>
+</div>
+<div class="section" id="binary-content">
+<h2>Binary Content<a class="headerlink" href="#binary-content" title="Permalink to this headline">¶</a></h2>
+<p>Chalice supports binary payloads through its <code class="docutils literal"><span class="pre">app.api.binary_types</span></code> list. Any
+type in this list is considered a binary <code class="docutils literal"><span class="pre">Content-Type</span></code>. Whenever a request
+with a <code class="docutils literal"><span class="pre">Content-Type</span></code> header is encountered that matches an entry in the
+<code class="docutils literal"><span class="pre">binary_types</span></code> list, its body will be available as a <code class="docutils literal"><span class="pre">bytes</span></code> type on the
+property <code class="docutils literal"><span class="pre">app.current_request.raw_body</span></code>. Similarly, in order to send binary
+data back in a response, simply set your <code class="docutils literal"><span class="pre">Content-Type</span></code> header to something
+present in the <code class="docutils literal"><span class="pre">binary_types</span></code> list. Note that you can override the default
+types by modifying the <code class="docutils literal"><span class="pre">app.api.binary_types</span></code> list at the module level.</p>
+<p>Here is an example app which simply echos back binary content:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;binary-response&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/bin-echo&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">],</span>
+           <span class="n">content_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;application/octet-stream&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">bin_echo</span><span class="p">():</span>
+    <span class="n">raw_request_body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">raw_body</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">raw_request_body</span><span class="p">,</span>
+                    <span class="n">status_code</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;application/octet-stream&#39;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>You can see this app echo back binary data sent to it:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ echo -n -e &quot;\xFE\xED&quot; | http POST $(chalice url)bin-echo \
+  Accept:application/octet-stream Content-Type:application/octet-stream | xxd
+0000000: feed                                     ..
+</pre></div>
+</div>
+<p>Note that both the <code class="docutils literal"><span class="pre">Accept</span></code> and <code class="docutils literal"><span class="pre">Content-Type</span></code> header are required. If
+you fail to set the <code class="docutils literal"><span class="pre">Content-Type</span></code> header on the request will result in a
+<code class="docutils literal"><span class="pre">415</span> <span class="pre">UnsupportedMediaType</span></code> error. Care must be taken when configuring what
+<code class="docutils literal"><span class="pre">content_types</span></code> a route accepts, they must all be valid binary types, or they
+must all be non-binary types. The <code class="docutils literal"><span class="pre">Accept</span></code> header must also be set if the
+data returned is to be the raw binary, if is omitted the call return a <code class="docutils literal"><span class="pre">400</span></code>
+Bad Request response.</p>
+<p>For example, here is the same call as above without the <code class="docutils literal"><span class="pre">Accept</span></code> header:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ echo -n -e &quot;\xFE\xED&quot; | http POST  $(chalice url)bin-echo \
+  Content-Type:application/octet-stream
+HTTP/1.1 400 Bad Request
+Connection: keep-alive
+Content-Length: 270
+Content-Type: application/json
+Date: Sat, 27 May 2017 07:09:51 GMT
+
+{
+  &quot;Code&quot;: &quot;BadRequest&quot;,
+  &quot;Message&quot;: &quot;Request did not specify an Accept header with
+    application/octet-stream, The response has a Content-Type of
+    application/octet-stream. If a response has a binary Content-Type then
+    the request must specify an Accept header that matches.&quot;
+}
+</pre></div>
+</div>
+</div>
+<div class="section" id="usage-recommendations">
+<h2>Usage Recommendations<a class="headerlink" href="#usage-recommendations" title="Permalink to this headline">¶</a></h2>
+<p>If you want to return a JSON response body, just return the corresponding
+python types directly.  You don&#8217;t need to use the <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal"><span class="pre">Response</span></code></a> class.
+Chalice will automatically convert this to a JSON HTTP response as a
+convenience for you.</p>
+<p>Use the <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal"><span class="pre">Response</span></code></a> class when you want to return non-JSON content, or
+when you want to inject custom HTTP headers to your response.</p>
+<p>For errors, raise the built in <code class="docutils literal"><span class="pre">ChaliceViewError</span></code> subclasses (e.g
+<code class="docutils literal"><span class="pre">BadRequestError</span></code>, <code class="docutils literal"><span class="pre">NotFoundError</span></code>, <code class="docutils literal"><span class="pre">ConflictError</span></code> etc)  when you
+want to return a HTTP error response with a preconfigured JSON body containing
+a <code class="docutils literal"><span class="pre">Code</span></code> and <code class="docutils literal"><span class="pre">Message</span></code>.</p>
+<p>Use the <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal"><span class="pre">Response</span></code></a> class when you want to customize the error responses
+to either return a different JSON error response body, or to return an HTTP
+response that&#8217;s not <code class="docutils literal"><span class="pre">application/json</span></code>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Views</a><ul>
+<li><a class="reference internal" href="#view-function-parameters">View Function Parameters</a></li>
+<li><a class="reference internal" href="#view-function-return-values">View Function Return Values</a></li>
+<li><a class="reference internal" href="#error-handling">Error Handling</a></li>
+<li><a class="reference internal" href="#specifying-http-methods">Specifying HTTP Methods</a></li>
+<li><a class="reference internal" href="#binary-content">Binary Content</a></li>
+<li><a class="reference internal" href="#usage-recommendations">Usage Recommendations</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="routing.html" title="previous chapter">Routing</a></li>
+      <li>Next: <a href="configfile.html" title="next chapter">Configuration File</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/views.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/views.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

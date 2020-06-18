@@ -1,0 +1,212 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Python Version Support &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="AWS CloudFormation Support" href="cfn.html" />
+    <link rel="prev" title="App Packaging" href="packaging.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="python-version-support">
+<h1>Python Version Support<a class="headerlink" href="#python-version-support" title="Permalink to this headline">¶</a></h1>
+<p>Chalice supports all versions of python supported by AWS Lambda, which is
+currently <code class="docutils literal"><span class="pre">python2.7</span></code> and <code class="docutils literal"><span class="pre">python3.6</span></code>.</p>
+<p>Chalice will automatically pick which version of python to use for Lambda
+based on the major version of python you are using.  You don&#8217;t have to
+explicitly configure which version of python you want to use. For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ python --version
+Python 3.6.1
+$ chalice new-project test-versions
+$ cd test-versions
+$ chalice package test-package
+$ grep -C 3 python test-package/sam.json
+    &quot;APIHandler&quot;: {
+      &quot;Type&quot;: &quot;AWS::Serverless::Function&quot;,
+      &quot;Properties&quot;: {
+        &quot;Runtime&quot;: &quot;python3.6&quot;,
+        &quot;Handler&quot;: &quot;app.app&quot;,
+        &quot;CodeUri&quot;: &quot;./deployment.zip&quot;,
+        &quot;Events&quot;: {
+
+# Similarly, if we were to run &quot;chalice deploy&quot; we&#39;d
+# use python3.6 for the runtime.
+$ chalice --debug deploy
+Initiating first time deployment...
+Deploying to: dev
+...
+&quot;Runtime&quot;:&quot;python3.6&quot;
+...
+https://rest-api-id.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>In the example above, we&#8217;re using python 3.6.1 so chalice automatically
+selects the <code class="docutils literal"><span class="pre">python3.6</span></code> runtime for lambda.  If we were using python 2.7.11,
+chalice would automatically select <code class="docutils literal"><span class="pre">python2.7</span></code> as the runtime.</p>
+<p>Chalice will emit a warning if the minor version does not match a python
+version supported by Lambda.  Chalice will select the closest Lambda version
+in this scenario, as shown in the table below.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="49%" />
+<col width="51%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Local Python Version</th>
+<th class="head">Lambda Python Runtime</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>python2.7.10</td>
+<td>python2.7</td>
+</tr>
+<tr class="row-odd"><td>python2.7.11</td>
+<td>python2.7</td>
+</tr>
+<tr class="row-even"><td>python2.7.12</td>
+<td>python2.7</td>
+</tr>
+<tr class="row-odd"><td>python2.7.13</td>
+<td>python2.7</td>
+</tr>
+<tr class="row-even"><td>python3.3.6</td>
+<td>python3.6</td>
+</tr>
+<tr class="row-odd"><td>python3.4.6</td>
+<td>python3.6</td>
+</tr>
+<tr class="row-even"><td>python3.5.3</td>
+<td>python3.6</td>
+</tr>
+<tr class="row-odd"><td>python3.6.0</td>
+<td>python3.6</td>
+</tr>
+<tr class="row-even"><td>python3.6.1</td>
+<td>python3.6</td>
+</tr>
+</tbody>
+</table>
+<p>We strongly encourage you to develop your application using the same
+major/minor version of python you plan on using on AWS Lambda.</p>
+</div>
+<div class="section" id="changing-python-runtime-versions">
+<h1>Changing Python Runtime Versions<a class="headerlink" href="#changing-python-runtime-versions" title="Permalink to this headline">¶</a></h1>
+<p>The version of the python runtime to use in AWS Lambda can be reconfigured
+whenever you deploy your chalice app.  This allows you to migrate to python3
+in AWS Lambda by creating a new virtual environment that uses python3.
+For example, suppose you have an existing chalice app that uses python2:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ python --version
+Python 2.7.12
+$ chalice deploy
+...
+https://endpoint/api
+</pre></div>
+</div>
+<p>To upgrade the application to use python3, create a python3 virtual environment
+and redeploy.</p>
+<dl class="docutils">
+<dt>::</dt>
+<dd>$ deactivate
+$ python3 -m venv /tmp/venv3
+$ source /tmp/venv3/bin/activate
+$ python &#8211;version
+Python 3.6.1
+$ chalice deploy
+...</dd>
+</dl>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Python Version Support</a></li>
+<li><a class="reference internal" href="#changing-python-runtime-versions">Changing Python Runtime Versions</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="packaging.html" title="previous chapter">App Packaging</a></li>
+      <li>Next: <a href="cfn.html" title="next chapter">AWS CloudFormation Support</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/pyversion.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/pyversion.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Upgrade Notes &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="index.html" />
+    <link rel="prev" title="Websocket Tutorials" href="tutorials/websockets.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="upgrade-notes">
+<h1>Upgrade Notes<a class="headerlink" href="#upgrade-notes" title="Permalink to this headline">¶</a></h1>
+<p>This document provides additional documentation
+on upgrading your version of chalice.  If you&#8217;re just
+interested in the high level changes, see the
+<a class="reference external" href="https://github.com/aws/chalice/blob/master/CHANGELOG.rst">CHANGELOG.rst</a>)
+file.</p>
+<div class="section" id="v1-2-0">
+<span id="id1"></span><h2>1.2.0<a class="headerlink" href="#v1-2-0" title="Permalink to this headline">¶</a></h2>
+<p>This release features a rewrite of the Chalice deployer
+(<a class="reference external" href="https://github.com/aws/chalice/issues/604">#604</a>).
+This is a backwards compatible change, and should not have any
+noticeable changes with deployments with the exception of
+fixing deployer bugs (e.g. <a class="reference external" href="https://github.com/aws/chalice/issues/604">https://github.com/aws/chalice/issues/604</a>).
+This code path affects the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">delete</span></code>, and
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> commands.</p>
+<p>While this release is backwards compatible, you will notice several
+changes when you upgrade to version 1.2.0.</p>
+<p>The output of <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> has changed in order to give
+more details about the resources it creates along with a more detailed
+summary at the end:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+Creating deployment package.
+Creating IAM role: myapp-dev
+Creating lambda function: myapp-dev-foo
+Creating lambda function: myapp-dev
+Creating Rest API
+Resources deployed:
+  - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:myapp-dev-foo
+  - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:myapp-dev
+  - Rest API URL: https://abcd.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>Also, the files used to store deployed values has changed.  These files are
+used internally by the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy/delete</span></code> commands and you typically
+do not interact with these files directly.  It&#8217;s mentioned here in case
+you notice new files in your <code class="docutils literal"><span class="pre">.chalice</span></code> directory.  Note that these files
+are <em>not</em> part of the public interface of Chalice and are documented here
+for completeness and to help with debugging issues.</p>
+<p>In versions &lt; 1.2.0, the value of deployed resources was stored in
+<code class="docutils literal"><span class="pre">.chalice/deployed.json</span></code> and looked like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;us-west-2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;api_handler_name&quot;</span><span class="p">:</span> <span class="s2">&quot;demoauth4-dev&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;api_handler_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:lambda:us-west-2:123:function:myapp-dev&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rest_api_id&quot;</span><span class="p">:</span> <span class="s2">&quot;abcd&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lambda_functions&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;myapp-dev-foo&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;pure_lambda&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:lambda:us-west-2:123:function:myapp-dev-foo&quot;</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;chalice_version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.1.1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;backend&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;prod&quot;</span><span class="p">:</span> <span class="p">{</span><span class="o">...</span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In version 1.2.0, the deployed resources are split into multiple files, one
+file per chalice stage.  These files are in the
+<code class="docutils literal"><span class="pre">.chalice/deployed/&lt;stage.json&gt;</span></code>, so if you had a dev and a prod chalice
+stage you&#8217;d have <code class="docutils literal"><span class="pre">.chalice/deployed/dev.json</span></code> and
+<code class="docutils literal"><span class="pre">.chalice/deployed/prod.json</span></code>.  The schema has also changed and looks
+like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat .chalice/deployed/dev.json
+{
+  &quot;schema_version&quot;: &quot;2.0&quot;,
+  &quot;resources&quot;: [
+    {
+      &quot;role_name&quot;: &quot;myapp-dev&quot;,
+      &quot;role_arn&quot;: &quot;arn:aws:iam::123:role/myapp-dev&quot;,
+      &quot;name&quot;: &quot;default-role&quot;,
+      &quot;resource_type&quot;: &quot;iam_role&quot;
+    },
+    {
+      &quot;lambda_arn&quot;: &quot;arn:aws:lambda:us-west-2:123:function:myapp-dev-foo&quot;,
+      &quot;name&quot;: &quot;foo&quot;,
+      &quot;resource_type&quot;: &quot;lambda_function&quot;
+    },
+    {
+      &quot;lambda_arn&quot;: &quot;arn:aws:lambda:us-west-2:123:function:myapp-dev&quot;,
+      &quot;name&quot;: &quot;api_handler&quot;,
+      &quot;resource_type&quot;: &quot;lambda_function&quot;
+    },
+    {
+      &quot;name&quot;: &quot;rest_api&quot;,
+      &quot;rest_api_id&quot;: &quot;abcd&quot;,
+      &quot;rest_api_url&quot;: &quot;https://abcd.execute-api.us-west-2.amazonaws.com/api&quot;,
+      &quot;resource_type&quot;: &quot;rest_api&quot;
+    }
+  ],
+  &quot;backend&quot;: &quot;api&quot;
+}
+</pre></div>
+</div>
+<p>When you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> for the first time after upgrading to version
+1.2.0, chalice will automatically converted <code class="docutils literal"><span class="pre">.chalice/deployed.json</span></code> over to
+the format as you deploy a given stage.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Once you upgrade to 1.2.0, chalice will only update the new
+<code class="docutils literal"><span class="pre">.chalice/deployed/&lt;stage&gt;.json</span></code>.  This means you cannot downgrade
+to earlier versions of chalice unless you manually update
+<code class="docutils literal"><span class="pre">.chalice/deployed.json</span></code> as well.</p>
+</div>
+<p>The <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command has also been updated to use the
+deployer.  This results in several changes compared to the previous
+version:</p>
+<ul class="simple">
+<li>Pure lambdas are supported</li>
+<li>Scheduled events are supported</li>
+<li>Parity between the behavior of <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code></li>
+</ul>
+<p>As part of this change, the CFN resource names have been updated
+to use <code class="docutils literal"><span class="pre">CamelCase</span></code> names.  Previously, chalice converted your
+python function names to CFN resource names by removing all
+non alphanumeric characters and appending an md5 checksum,
+e.g <code class="docutils literal"><span class="pre">my_function</span> <span class="pre">-&gt;</span> <span class="pre">myfunction3bfc</span></code>.  With this new packager
+update, the resource name would be converted as
+<code class="docutils literal"><span class="pre">my_function</span> <span class="pre">-&gt;</span> <span class="pre">MyFunction</span></code>.  Note, the <code class="docutils literal"><span class="pre">Outputs</span></code> section
+renames unchanged in order to preserve backwards compatibility.
+In order to fix parity issues with <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code>, we now explicitly create an IAM role
+resource as part of the default configuration.</p>
+</div>
+<div class="section" id="b2">
+<span id="v1-0-0b2"></span><h2>1.0.0b2<a class="headerlink" href="#b2" title="Permalink to this headline">¶</a></h2>
+<p>The url parameter names and the function argument names must match.
+Previously, the routing code would use positional args <code class="docutils literal"><span class="pre">handler(*args)</span></code>
+to invoke a view function.  In this version, kwargs are now used instead:
+<code class="docutils literal"><span class="pre">handler(**view_args)</span></code>.  For example, this code will no longer work:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/{a}/{b}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{}</span>
+</pre></div>
+</div>
+<p>The example above must be updated to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/{a}/{b}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{}</span>
+</pre></div>
+</div>
+<p>Now that functions are invoked with kwargs, the order doesn&#8217;t matter.  You may
+also write the above view function as:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/{a}/{b}&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{}</span>
+</pre></div>
+</div>
+<p>This was done to have consistent behavior with other web frameworks such as
+Flask.</p>
+</div>
+<div class="section" id="b1">
+<span id="v1-0-0b1"></span><h2>1.0.0b1<a class="headerlink" href="#b1" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">Chalice.define_authorizer</span></code> method has been removed.  This has been
+deprecated since v0.8.1.  See <a class="reference internal" href="topics/authorizers.html"><span class="doc">Authorization</span></a> for updated
+information on configuring authorizers in Chalice as well as the
+original deprecation notice in the <a class="reference internal" href="#v0-8-1"><span class="std std-ref">0.8.1</span></a> upgrade notes.</p>
+<p>The optional deprecated positional parameter in the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command
+for specifying the API Gateway stage has been removed.  If you want to
+specify the API Gateway stage, you can use the <code class="docutils literal"><span class="pre">--api-gateway-stage</span></code>
+option in the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span># Deprecated and removed in 1.0.0b1
+$ chalice deploy prod
+
+# Equivalent and updated way to specify an API Gateway stage:
+$ chalice deploy --api-gateway-stage prod
+</pre></div>
+</div>
+</div>
+<div class="section" id="v0-9-0">
+<span id="id2"></span><h2>0.9.0<a class="headerlink" href="#v0-9-0" title="Permalink to this headline">¶</a></h2>
+<p>The 0.9.0 release changed the type of <code class="docutils literal"><span class="pre">app.current_request.raw_body</span></code> to
+always be of type <code class="docutils literal"><span class="pre">bytes()</span></code>.  This only affects users that were using
+python3.  Previously you would get a type <code class="docutils literal"><span class="pre">str()</span></code>, but with the introduction
+of <a class="reference external" href="https://github.com/aws/chalice/issues/348">binary content type support</a>, the <code class="docutils literal"><span class="pre">raw_body</span></code> attribute
+was made to consistently be of type <code class="docutils literal"><span class="pre">bytes()</span></code>.</p>
+</div>
+<div class="section" id="v0-8-1">
+<span id="id3"></span><h2>0.8.1<a class="headerlink" href="#v0-8-1" title="Permalink to this headline">¶</a></h2>
+<p>The 0.8.1 changed the preferred way of specifying authorizers for view
+functions.  You now specify either an instance of
+<code class="docutils literal"><span class="pre">chalice.CognitoUserPoolAuthorizer</span></code> or <code class="docutils literal"><span class="pre">chalice.CustomAuthorizer</span></code>
+to an <code class="docutils literal"><span class="pre">&#64;app.route()</span></code> function using the <code class="docutils literal"><span class="pre">authorizer</span></code> argument.</p>
+<p>Deprecated:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer_name</span><span class="o">=</span><span class="s1">&#39;MyPool&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">define_authorizer</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;MyPool&#39;</span><span class="p">,</span>
+    <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
+    <span class="n">auth_type</span><span class="o">=</span><span class="s1">&#39;cognito_user_pools&#39;</span><span class="p">,</span>
+    <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Equivalent, and preferred way</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CognitoUserPoolAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
+    <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
+    <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">define_authorizer</span></code> is still available, but is now deprecated and will
+be removed in future versions of chalice.  You can also use the new
+<code class="docutils literal"><span class="pre">authorizer</span></code> argument to provider a <code class="docutils literal"><span class="pre">CustomAuthorizer</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CustomAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">CustomAuthorizer</span><span class="p">(</span>
+    <span class="s1">&#39;MyCustomAuth&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
+    <span class="n">authorizer_uri</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;arn:aws:apigateway:region:lambda:path/2015-03-01&#39;</span>
+                    <span class="s1">&#39;/functions/arn:aws:lambda:region:account-id:&#39;</span>
+                    <span class="s1">&#39;function:FunctionName/invocations&#39;</span><span class="p">))</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/custom-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="v0-7-0">
+<span id="id4"></span><h2>0.7.0<a class="headerlink" href="#v0-7-0" title="Permalink to this headline">¶</a></h2>
+<p>The 0.7.0 release adds several major features to chalice.  While the majority
+of these features are introduced in a backwards compatible way, there are a few
+backwards incompatible changes that were made in order to support these new
+major features.</p>
+<div class="section" id="separate-stages">
+<h3>Separate Stages<a class="headerlink" href="#separate-stages" title="Permalink to this headline">¶</a></h3>
+<p>Prior to this version, chalice had a notion of a &#8220;stage&#8221; that corresponded to
+an API gateway stage.  You can create and deploy a new API gateway stage by
+running <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code>.  In 0.7.0, stage support was been
+reworked such that a chalice stage is a completely separate set of AWS
+resources.  This means that if you have two chalice stages, say <code class="docutils literal"><span class="pre">dev</span></code> and
+<code class="docutils literal"><span class="pre">prod</span></code>, then you will have two separate sets of AWS resources, one set per
+stage:</p>
+<ul class="simple">
+<li>Two API Gateway Rest APIs</li>
+<li>Two separate Lambda functions</li>
+<li>Two separate IAM roles</li>
+</ul>
+<p>The <a class="reference internal" href="topics/stages.html"><span class="doc">Chalice Stages</span></a> doc has more details on the new chalice stages
+feature.  This section highlights the key differences between the old stage
+behavior and the new chalice stage functionality in 0.7.0.  In order to ease
+transition to this new model, the following changes were made:</p>
+<ul class="simple">
+<li>A new <code class="docutils literal"><span class="pre">--stage</span></code> argument was added to the <code class="docutils literal"><span class="pre">deploy</span></code>, <code class="docutils literal"><span class="pre">logs</span></code>, <code class="docutils literal"><span class="pre">url</span></code>,
+<code class="docutils literal"><span class="pre">generate-sdk</span></code>, and <code class="docutils literal"><span class="pre">package</span></code> commands.  If this value is specified
+and the stage does not exist, a new chalice stage with that name will
+be created for you.</li>
+<li>The existing form <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code> has been deprecated.
+The command will still work in version 0.7.0, but a deprecation warning
+will be printed to stderr.</li>
+<li>If you want the pre-existing behavior of creating a new API gateway stage
+(while using the same Lambda function), you can use the
+<code class="docutils literal"><span class="pre">--api-gateway-stage</span></code> argument.  This is the replacement for the
+deprecated form <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code>.</li>
+<li>The default stage if no <code class="docutils literal"><span class="pre">--stage</span></code> option is provided is <code class="docutils literal"><span class="pre">dev</span></code>.  By
+defaulting to a <code class="docutils literal"><span class="pre">dev</span></code> stage, the pre-existing behavior of not
+specifying a stage name, e.g <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">url</span></code>, etc.
+will still work exactly the same.</li>
+<li>A new <code class="docutils literal"><span class="pre">stages</span></code> key is supported in the <code class="docutils literal"><span class="pre">.chalice/config.json</span></code>.  This
+allows you to specify configuration specific to a chalice stage.
+See the <a class="reference internal" href="topics/configfile.html"><span class="doc">Configuration File</span></a> doc for more information about stage
+specific configuration.</li>
+<li>Setting <code class="docutils literal"><span class="pre">autogen_policy</span></code> to false will result in chalice looking
+for a IAM policy file named <code class="docutils literal"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code>.
+Previously it would look for a file named <code class="docutils literal"><span class="pre">.chalice/policy.json</span></code>.
+You can also explicitly set this value to
+In order to ease transition, chalice will check for a
+<code class="docutils literal"><span class="pre">.chalice/policy.json</span></code> file when depoying to the <code class="docutils literal"><span class="pre">dev</span></code> stage.
+Support for <code class="docutils literal"><span class="pre">.chalice/policy.json</span></code> will be removed in future
+versions of chalice and users are encouraged to switch to the
+stage specific <code class="docutils literal"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> files.</li>
+</ul>
+<p>See the <a class="reference internal" href="topics/stages.html"><span class="doc">Chalice Stages</span></a> doc for more details on the new chalice stages
+feature.</p>
+<p><strong>Note, the AWS resource names it creates now have the form
+``&lt;app-name&gt;-&lt;stage-name&gt;``, e.g. ``myapp-dev``, ``myapp-prod``.</strong></p>
+<p>We recommend using the new stage specific resource names.  However, If you
+would like to use the existing resource names for a specific stage, you can
+create a <code class="docutils literal"><span class="pre">.chalice/deployed.json</span></code> file that specifies the existing values:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;backend&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;api_handler_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda-function-arn&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;api_handler_name&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda-function-name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rest_api_id&quot;</span><span class="p">:</span> <span class="s2">&quot;your-rest-api-id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;dev&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;your region (e.g us-west-2)&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;chalice_version&quot;</span><span class="p">:</span> <span class="s2">&quot;0.7.0&quot;</span><span class="p">,</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This file is discussed in the next section.</p>
+</div>
+<div class="section" id="deployed-values">
+<h3>Deployed Values<a class="headerlink" href="#deployed-values" title="Permalink to this headline">¶</a></h3>
+<p>In version 0.7.0, the way deployed values are stored and retrieved
+has changed.  In prior versions, only the <code class="docutils literal"><span class="pre">lambda_arn</span></code> was saved,
+and its value was written to the <code class="docutils literal"><span class="pre">.chalice/config.json</span></code> file.
+Any of other deployed values that were needed (for example the
+API Gateway rest API id) was dynamically queried by assuming the
+resource names matches the app name.  In this version of chalice,
+a separate <code class="docutils literal"><span class="pre">.chalice/deployed.json</span></code> file is written on every
+deployement which contains all the resources that have been created.
+While this should be a transparent change, you may noticed
+issues if you run commands such as <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">url</span></code> and <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">logs</span></code>
+without first deploying.  To fix this issue, run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
+and version 0.7.0 of chalice so a <code class="docutils literal"><span class="pre">.chalice/deployed.json</span></code> will
+be created for you.</p>
+</div>
+<div class="section" id="authorizer-changes">
+<h3>Authorizer Changes<a class="headerlink" href="#authorizer-changes" title="Permalink to this headline">¶</a></h3>
+<p><strong>The ``authorizer_id`` and ``authorization_type`` args are
+no longer supported in ``&#64;app.route(...)`` calls.</strong></p>
+<p>They have been replaced with an <code class="docutils literal"><span class="pre">authorizer_name</span></code> parameter and an
+<code class="docutils literal"><span class="pre">app.define_authorizer</span></code> method.</p>
+<p>This version changed the internals of how an API gateway REST API is created.
+Prior to 0.7.0, the AWS SDK for Python was used to make the appropriate service
+API calls to API gateway include <code class="docutils literal"><span class="pre">create_rest_api</span></code> and <code class="docutils literal"><span class="pre">put_method</span> <span class="pre">/</span>
+<span class="pre">put_method_response</span></code> for each route.  In version 0.7.0, this internal
+mechanism was changed to instead generate a swagger document.  The rest api is
+then created or updated by calling <code class="docutils literal"><span class="pre">import_rest_api</span></code> or <code class="docutils literal"><span class="pre">put_rest_api</span></code> and
+providing the swagger document.  This simplifies the internals and also unifies
+the code base for the newly added <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command (which uses a
+swagger document internally).  One consequence of this change is that the
+entire REST API must be defined in the swagger document.  With the previous
+<code class="docutils literal"><span class="pre">authorizer_id</span></code> parameter, you would create/deploy a rest api, create your
+authorizer, and then provide that <code class="docutils literal"><span class="pre">authorizer_id</span></code> in your <code class="docutils literal"><span class="pre">&#64;app.route</span></code>
+calls.  Now they must be defined all at once in the <code class="docutils literal"><span class="pre">app.py</span></code> file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/auth-required&#39;</span><span class="p">,</span> <span class="n">authorizer_name</span><span class="o">=</span><span class="s1">&#39;MyUserPool&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{}</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">define_authorizer</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;MyUserPool&#39;</span><span class="p">,</span>
+    <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
+    <span class="n">auth_type</span><span class="o">=</span><span class="s1">&#39;cognito_user_pools&#39;</span><span class="p">,</span>
+    <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="v0-6-0">
+<span id="id5"></span><h2>0.6.0<a class="headerlink" href="#v0-6-0" title="Permalink to this headline">¶</a></h2>
+<p>This version changed how the internals of how API gateway resources are created
+by chalice.  The integration type changed from <code class="docutils literal"><span class="pre">AWS</span></code> to <code class="docutils literal"><span class="pre">AWS_PROXY</span></code>.  This
+was to enable additional functionality, notable to allows users to provide
+non-JSON HTTP responses and inject arbitrary headers to the HTTP responses.
+While this change to the internals is primarily internal, there are several
+user-visible changes.</p>
+<ul>
+<li><p class="first">Uncaught exceptions with <code class="docutils literal"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">False</span></code> (the default value)
+will result in a more generic <code class="docutils literal"><span class="pre">InternalServerError</span></code> error.  The
+previous behavior was to return a <code class="docutils literal"><span class="pre">ChaliceViewError</span></code>.</p>
+</li>
+<li><p class="first">When you enabled debug mode via <code class="docutils literal"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">True</span></code>, the HTTP
+response will contain the python stack trace as the entire request
+body.  This is to improve the readability of stack traces.
+For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/dev/
+HTTP/1.1 500 Internal Server Error
+Content-Length: 358
+Content-Type: text/plain
+
+Traceback (most recent call last):
+  File &quot;/var/task/chalice/app.py&quot;, line 286, in __call__
+    response = view_function(*function_args)
+  File &quot;/var/task/app.py&quot;, line 12, in index
+    return a()
+  File &quot;/var/task/app.py&quot;, line 16, in a
+    return b()
+  File &quot;/var/task/app.py&quot;, line 19, in b
+    raise ValueError(&quot;Hello, error!&quot;)
+ValueError: Hello, error!
+</pre></div>
+</div>
+</li>
+<li><p class="first">Content type validation now has error responses that match the same error
+response format used for other chalice built in responses.  Chalice was
+previously relying on API gateway to perform the content type validation.
+As a result of the <code class="docutils literal"><span class="pre">AWS_PROXY</span></code> work, this logic has moved into the chalice
+handler and now has a consistent error response:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/dev/ &#39;Content-Type: text/plain&#39;
+HTTP/1.1 415 Unsupported Media Type
+Content-Type: application/json
+
+{
+    &quot;Code&quot;: &quot;UnsupportedMediaType&quot;,
+    &quot;Message&quot;: &quot;Unsupported media type: text/plain&quot;
+}
+</pre></div>
+</div>
+</li>
+<li><p class="first">The keys in the <code class="docutils literal"><span class="pre">app.current_request.to_dict()</span></code> now match the casing used
+by the <code class="docutils literal"><span class="pre">AWS_PPROXY</span></code> lambda integration, which are <code class="docutils literal"><span class="pre">lowerCamelCased</span></code>.
+This method is primarily intended for introspection purposes.</p>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Upgrade Notes</a><ul>
+<li><a class="reference internal" href="#v1-2-0">1.2.0</a></li>
+<li><a class="reference internal" href="#b2">1.0.0b2</a></li>
+<li><a class="reference internal" href="#b1">1.0.0b1</a></li>
+<li><a class="reference internal" href="#v0-9-0">0.9.0</a></li>
+<li><a class="reference internal" href="#v0-8-1">0.8.1</a></li>
+<li><a class="reference internal" href="#v0-7-0">0.7.0</a><ul>
+<li><a class="reference internal" href="#separate-stages">Separate Stages</a></li>
+<li><a class="reference internal" href="#deployed-values">Deployed Values</a></li>
+<li><a class="reference internal" href="#authorizer-changes">Authorizer Changes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-6-0">0.6.0</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="tutorials/websockets.html" title="previous chapter">Websocket Tutorials</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/upgrading.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="_sources/upgrading.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

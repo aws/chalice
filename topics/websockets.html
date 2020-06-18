@@ -1,0 +1,190 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Websockets &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Continuous Deployment (CD)" href="cd.html" />
+    <link rel="prev" title="Blueprints" href="blueprints.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="websockets">
+<h1>Websockets<a class="headerlink" href="#websockets" title="Permalink to this headline">¶</a></h1>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p>Websockets are considered an experimental API.  You&#8217;ll need to opt-in
+to this feature using the <code class="docutils literal"><span class="pre">WEBSOCKETS</span></code> feature flag:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="s1">&#39;myapp&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p class="last">See <a class="reference internal" href="experimental.html"><span class="doc">Experimental APIs</span></a> for more information.</p>
+</div>
+<p>Chalice supports websockets through integration with an API Gateway Websocket
+API. If any of the decorators are present in a Chalice app, then an API
+Gateway Websocket API will be deployed and wired to Lambda Functions.</p>
+<div class="section" id="responding-to-websocket-events">
+<h2>Responding to websocket events<a class="headerlink" href="#responding-to-websocket-events" title="Permalink to this headline">¶</a></h2>
+<p>In a Chalice app the websocket API is accessed through the three decorators
+<code class="docutils literal"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal"><span class="pre">on_ws_message</span></code>, <code class="docutils literal"><span class="pre">on_ws_disconnect</span></code>. These handle a new
+websocket connection, an incoming message on an existing connection, and a
+connection being cleaned up respectively.</p>
+<p>A decorated websocket handler function takes one argument <code class="docutils literal"><span class="pre">event</span></code> with the
+type <a class="reference internal" href="../api.html#websocket-api"><span class="std std-ref">WebsocketEvent</span></a>. This class allows easy access to
+information about the API Gateway Websocket API, and information about the
+particular socket the handler is being invoked to serve.</p>
+<p>Below is a simple working example application that prints to CloudWatch Logs
+for each of the events.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;test-websockets&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span><span class="p">,</span>
+<span class="p">])</span>
+<span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+
+
+<span class="nd">@app.on_ws_connect</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;New connection: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+
+
+<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">))</span>
+
+
+<span class="nd">@app.on_ws_disconnect</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> disconnected&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="sending-a-message-over-a-websocket">
+<h2>Sending a message over a websocket<a class="headerlink" href="#sending-a-message-over-a-websocket" title="Permalink to this headline">¶</a></h2>
+<p>To send a message to a websocket client Chalice, use the
+<a class="reference internal" href="../api.html#websocket-send"><span class="std std-ref">app.websocket_api.send()</span></a> method. This method will work in any
+of the decorated functions outlined in the above section.</p>
+<p>Two pieces of information are needed to send a message. The identifier of the
+websocket, and the contents for the message. Below is a simple example that when
+it receives a message, it sends back the message <code class="docutils literal"><span class="pre">&quot;I</span> <span class="pre">got</span> <span class="pre">your</span> <span class="pre">message!&quot;</span></code> over
+the same socket.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;test-websockets&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span><span class="p">,</span>
+<span class="p">])</span>
+<span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+
+
+<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;I got your message!&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="../tutorials/websockets.html#websocket-tutorial"><span class="std std-ref">Websocket Tutorials</span></a> for completely worked example applications.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Websockets</a><ul>
+<li><a class="reference internal" href="#responding-to-websocket-events">Responding to websocket events</a></li>
+<li><a class="reference internal" href="#sending-a-message-over-a-websocket">Sending a message over a websocket</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="blueprints.html" title="previous chapter">Blueprints</a></li>
+      <li>Next: <a href="cd.html" title="next chapter">Continuous Deployment (CD)</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/websockets.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/websockets.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

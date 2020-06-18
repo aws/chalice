@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Chalice Stages &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="App Packaging" href="packaging.html" />
+    <link rel="prev" title="SDK Generation" href="sdks.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="chalice-stages">
+<h1>Chalice Stages<a class="headerlink" href="#chalice-stages" title="Permalink to this headline">¶</a></h1>
+<p>Chalice has the concept of stages, which are completely
+separate sets of AWS resources.  When you first create a chalice
+project and run commands such as <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">url</span></code>,
+you don&#8217;t have to specify any stage values or stage configuration.
+This is because chalice will use a stage named <code class="docutils literal"><span class="pre">dev</span></code> by default.</p>
+<p>You may eventually want to have multiple stages of your application.  A
+common configuration would be to have a <code class="docutils literal"><span class="pre">dev</span></code>, <code class="docutils literal"><span class="pre">beta</span></code> and <code class="docutils literal"><span class="pre">prod</span></code>
+stage.  A <code class="docutils literal"><span class="pre">dev</span></code> stage would be used by developers to test out new
+features.  Completed features would be deployed to <code class="docutils literal"><span class="pre">beta</span></code>, and the
+<code class="docutils literal"><span class="pre">prod</span></code> stage would be used for serving production traffic.</p>
+<p>Chalice can help you manage this.</p>
+<p>To create a new chalice stage, specify the <code class="docutils literal"><span class="pre">--stage</span></code> argument.
+If the stage does not exist yet, it will be created for you:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy --stage prod
+</pre></div>
+</div>
+<p>By creating a new chalice stage, a new API Gateway rest API, Lambda
+function, and potentially (depending on config settings) a new IAM role
+will be created for you.</p>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s say we have a new app:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice new-project myapp
+$ cd myapp
+$ chalice deploy
+...
+https://mmnkdi.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>We&#8217;ve just created our first stage, <code class="docutils literal"><span class="pre">dev</span></code>.  We can iterate on our
+application and continue to run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> to deploy our code
+to the <code class="docutils literal"><span class="pre">dev</span></code> stage.  Let&#8217;s say we want to now create a <code class="docutils literal"><span class="pre">prod</span></code> stage.
+To do this, we can run:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy --stage prod
+...
+https://wk9fhx.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>We now have two completely separate rest APIs:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice url --stage dev
+https://mmnkdi.execute-api.us-west-2.amazonaws.com/api/
+
+$ chalice url --stage prod
+https://wk9fhx.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>Additionally, we can see all our deployed values by looking
+at the <code class="docutils literal"><span class="pre">.chalice/deployed/dev.json</span></code> or <code class="docutils literal"><span class="pre">.chalice/deployed/prod.json</span></code> files:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat .chalice/deployed/dev.json
+{
+  &quot;resources&quot;: [
+    {
+      &quot;name&quot;: &quot;api_handler&quot;,
+      &quot;resource_type&quot;: &quot;lambda_function&quot;,
+      &quot;lambda_arn&quot;: &quot;arn:aws:lambda:...:function:myapp-dev&quot;
+    },
+    {
+      &quot;name&quot;: &quot;rest_api&quot;,
+      &quot;resource_type&quot;: &quot;rest_api&quot;,
+      &quot;rest_api_id&quot;: &quot;wk9fhx&quot;,
+      &quot;rest_api_url&quot;: &quot;https://wk9fhx.execute-api.us-west-2.amazonaws.com/api/&quot;
+    }
+  ],
+  &quot;schema_version&quot;: &quot;2.0&quot;,
+  &quot;backend&quot;: &quot;api&quot;
+}
+
+$ cat .chalice/deployed/prod.json
+{
+  &quot;resources&quot;: [
+    {
+      &quot;name&quot;: &quot;api_handler&quot;,
+      &quot;resource_type&quot;: &quot;lambda_function&quot;,
+      &quot;lambda_arn&quot;: &quot;arn:aws:lambda:...:function:myapp-prod&quot;
+    },
+    {
+      &quot;name&quot;: &quot;rest_api&quot;,
+      &quot;resource_type&quot;: &quot;rest_api&quot;,
+      &quot;rest_api_id&quot;: &quot;mmnkdi&quot;,
+      &quot;rest_api_url&quot;: &quot;https://mmnkdi.execute-api.us-west-2.amazonaws.com/api/&quot;
+    }
+  ],
+  &quot;schema_version&quot;: &quot;2.0&quot;,
+  &quot;backend&quot;: &quot;api&quot;
+}
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Chalice Stages</a><ul>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="sdks.html" title="previous chapter">SDK Generation</a></li>
+      <li>Next: <a href="packaging.html" title="next chapter">App Packaging</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/stages.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/stages.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

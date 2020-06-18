@@ -1,1 +1,331 @@
-Initial github page setup
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Getting Started &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="#" />
+    <link rel="next" title="Quickstart and Tutorial" href="quickstart.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <img alt="Chalice Logo" src="_images/chalice-logo-whitespace.png" />
+<p>AWS Chalice allows you to quickly create and
+deploy applications that use Amazon API Gateway and AWS Lambda.
+It provides:</p>
+<ul class="simple">
+<li>A command line tool for creating, deploying, and managing your app</li>
+<li>A familiar and easy to use API for declaring views in python code</li>
+<li>Automatic IAM policy generation</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip install chalice
+$ chalice new-project helloworld &amp;&amp; cd helloworld
+$ cat app.py
+
+from chalice import Chalice
+
+app = Chalice(app_name=&quot;helloworld&quot;)
+
+@app.route(&quot;/&quot;)
+def index():
+    return {&quot;hello&quot;: &quot;world&quot;}
+
+$ chalice deploy
+...
+https://endpoint/dev
+
+$ curl https://endpoint/api
+{&quot;hello&quot;: &quot;world&quot;}
+</pre></div>
+</div>
+<p>Up and running in less than 30 seconds.</p>
+<div class="section" id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart and Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#credentials">Credentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-your-project">Creating Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#deploying">Deploying</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-url-parameters">Tutorial: URL Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-error-messages">Tutorial: Error Messages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-additional-routing">Tutorial: Additional Routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-request-metadata">Tutorial: Request Metadata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-request-content-types">Tutorial: Request Content Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-customizing-the-http-response">Tutorial: Customizing the HTTP Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-gzip-compression-for-json">Tutorial: GZIP compression for json</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-cors-support">Tutorial: CORS Support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-policy-generation">Tutorial: Policy Generation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#manually-providing-policies">Manually Providing Policies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#experimental-status">Experimental Status</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-using-custom-authentication">Tutorial: Using Custom Authentication</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#api-key">API Key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#using-aws-iam">Using AWS IAM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#using-amazon-cognito-user-pools">Using Amazon Cognito User Pools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#using-custom-authorizers">Using Custom Authorizers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#tutorial-local-mode">Tutorial: Local Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#deleting-your-app">Deleting Your App</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="topics">
+<h1>Topics<a class="headerlink" href="#topics" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="topics/routing.html">Routing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/routing.html#other-request-metadata">Other Request Metadata</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/views.html">Views</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html#view-function-parameters">View Function Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html#view-function-return-values">View Function Return Values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html#error-handling">Error Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html#specifying-http-methods">Specifying HTTP Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html#binary-content">Binary Content</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html#usage-recommendations">Usage Recommendations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/configfile.html">Configuration File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/configfile.html#stage-specific-configuration">Stage Specific Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/configfile.html#lambda-specific-configuration">Lambda Specific Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/configfile.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/multifile.html">Multifile Support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topics/logging.html">Logging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/logging.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/sdks.html">SDK Generation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/sdks.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/stages.html">Chalice Stages</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/stages.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/packaging.html">App Packaging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/packaging.html#app-directories">App Directories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/packaging.html#rd-party-packages">3rd Party Packages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/packaging.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/packaging.html#cryptography-example">Cryptography Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/pyversion.html">Python Version Support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topics/pyversion.html#changing-python-runtime-versions">Changing Python Runtime Versions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topics/cfn.html">AWS CloudFormation Support</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/cfn.html#considerations">Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cfn.html#template-merge">Template Merge</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cfn.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/tf.html">Terraform Support</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/tf.html#considerations">Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/tf.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/authorizers.html">Authorization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/authorizers.html#aws-iam-authorizer">AWS IAM Authorizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/authorizers.html#amazon-cognito-user-pools">Amazon Cognito User Pools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/authorizers.html#custom-authorizers">Custom Authorizers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/authorizers.html#built-in-authorizers">Built-in Authorizers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/events.html">Lambda Event Sources</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/events.html#scheduled-events">Scheduled Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/events.html#cloudwatch-events">CloudWatch Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/events.html#s3-events">S3 Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/events.html#sns-events">SNS Events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/events.html#sqs-events">SQS Events</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/purelambda.html">Pure Lambda Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topics/blueprints.html">Blueprints</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/blueprints.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/blueprints.html#blueprint-registration">Blueprint Registration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/blueprints.html#advanced-example">Advanced Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/websockets.html">Websockets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/websockets.html#responding-to-websocket-events">Responding to websocket events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/websockets.html#sending-a-message-over-a-websocket">Sending a message over a websocket</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/cd.html">Continuous Deployment (CD)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html#usage-example">Usage example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html#codecommit-repository">CodeCommit repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html#id1">CodePipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html#codebuild-build-script">CodeBuild build script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html#deploying-to-beta-stage">Deploying to beta stage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html#extending">Extending</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topics/experimental.html">Experimental APIs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/experimental.html#opting-in-to-experimental-apis">Opting-in to Experimental APIs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/experimental.html#list-of-experimental-apis">List of Experimental APIs</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Chalice</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#request">Request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#response">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#authorization">Authorization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#built-in-authorizers">Built-in Authorizers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#apigateway">APIGateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#websocketapi">WebsocketAPI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#cors">CORS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#event-sources">Event Sources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#blueprints">Blueprints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#websockets">Websockets</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="tutorials">
+<h1>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/websockets.html">Websocket Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/websockets.html#echo-server-example">Echo Server Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/websockets.html#chat-server-example">Chat Server Example</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="upgrade-notes">
+<h1>Upgrade Notes<a class="headerlink" href="#upgrade-notes" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="upgrading.html">Upgrade Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v1-2-0">1.2.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#b2">1.0.0b2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#b1">1.0.0b1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-9-0">0.9.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-8-1">0.8.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-7-0">0.7.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-6-0">0.6.0</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Getting Started</a></li>
+<li><a class="reference internal" href="#topics">Topics</a></li>
+<li><a class="reference internal" href="#api-reference">API Reference</a></li>
+<li><a class="reference internal" href="#tutorials">Tutorials</a></li>
+<li><a class="reference internal" href="#upgrade-notes">Upgrade Notes</a><ul>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="quickstart.html" title="next chapter">Quickstart and Tutorial</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="_sources/index.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

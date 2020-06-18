@@ -1,0 +1,259 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>SDK Generation &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Chalice Stages" href="stages.html" />
+    <link rel="prev" title="Logging" href="logging.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="sdk-generation">
+<h1>SDK Generation<a class="headerlink" href="#sdk-generation" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal"><span class="pre">&#64;app.route(...)</span></code> information you provide chalice allows
+it to create corresponding routes in API Gateway.  One of the benefits of this
+approach is that we can leverage API Gateway&#8217;s SDK generation process.
+Chalice offers a <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">generate-sdk</span></code> command that will automatically
+generate an SDK based on your declared routes.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The only supported language at this time is javascript.</p>
+</div>
+<p>Keep in mind that chalice itself does not have any logic for generating
+SDKs.  The SDK generation happens service side in <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-generate-sdk.html">API Gateway</a>, the
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">generate-sdk</span></code> is just a high level wrapper around that
+functionality.</p>
+<p>To generate an SDK for a chalice app, run this command from the project
+directory:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice generate-sdk /tmp/sdk
+</pre></div>
+</div>
+<p>You should now have a generated javascript sdk in <code class="docutils literal"><span class="pre">/tmp/sdk</span></code>.
+API Gateway includes a <code class="docutils literal"><span class="pre">README.md</span></code> as part of its SDK generation
+which contains details on how to use the javascript SDK.</p>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Suppose we have the following chalice app:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;sdktest&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/hello/{name}&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello_name</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/users/{user_id}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">update_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;msg&quot;</span><span class="p">:</span> <span class="s2">&quot;fake updated user&quot;</span><span class="p">,</span> <span class="s2">&quot;userId&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Let&#8217;s generate a javascript SDK and test it out in the browser.
+Run the following command from the project dir:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice generate-sdk /tmp/sdkdemo
+$ cd /tmp/sdkdemo
+$ ls -la
+-rw-r--r--   1 jamessar  r  3227 Nov 21 17:06 README.md
+-rw-r--r--   1 jamessar  r  9243 Nov 21 17:06 apigClient.js
+drwxr-xr-x   6 jamessar  r   204 Nov 21 17:06 lib
+</pre></div>
+</div>
+<p>You should now be able to follow the instructions from API Gateway in the
+<code class="docutils literal"><span class="pre">README.md</span></code> file. Below is a snippet that shows how the generated
+javascript SDK methods correspond to the <code class="docutils literal"><span class="pre">&#64;app.route()</span></code> calls in chalice.</p>
+<div class="highlight-html"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span><span class="p">&gt;</span>
+  <span class="c1">// Below are examples of how the javascript SDK methods</span>
+  <span class="c1">// correspond to chalice @app.routes()</span>
+  <span class="kd">var</span> <span class="nx">apigClient</span> <span class="o">=</span> <span class="nx">apigClientFactory</span><span class="p">.</span><span class="nx">newClient</span><span class="p">();</span>
+
+  <span class="c1">// @app.route(&#39;/&#39;)</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">rootGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;root-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+  <span class="p">});</span>
+
+  <span class="c1">// @app.route(&#39;/foo&#39;)</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">fooGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;foo-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+  <span class="p">});</span>
+
+  <span class="c1">// @app.route(&#39;/hello/{name}&#39;)</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">helloNameGet</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;jimmy&#39;</span><span class="p">}).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;helloname-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+  <span class="p">});</span>
+
+  <span class="c1">// @app.route(&#39;/users/{user_id}&#39;, methods=[&#39;PUT&#39;])</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">usersUserIdPut</span><span class="p">({</span><span class="nx">user_id</span><span class="o">:</span> <span class="s1">&#39;123&#39;</span><span class="p">},</span> <span class="s1">&#39;body content&#39;</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;users-userid-put&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+<div class="section" id="example-html-file">
+<h3>Example HTML File<a class="headerlink" href="#example-html-file" title="Permalink to this headline">¶</a></h3>
+<p>If you want to try out the example above, you can use the following index.html
+page to test:</p>
+<div class="highlight-html"><div class="highlight"><pre><span></span><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="p">&lt;</span><span class="nt">html</span> <span class="na">lang</span><span class="o">=</span><span class="s">&quot;en&quot;</span><span class="p">&gt;</span>
+    <span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">title</span><span class="p">&gt;</span>SDK Test<span class="p">&lt;/</span><span class="nt">title</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">meta</span> <span class="na">charset</span><span class="o">=</span><span class="s">&quot;UTF-8&quot;</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">meta</span> <span class="na">name</span><span class="o">=</span><span class="s">&quot;viewport&quot;</span> <span class="na">content</span><span class="o">=</span><span class="s">&quot;width=device-width, initial-scale=1&quot;</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css&quot;</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/axios/dist/axios.standalone.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/CryptoJS/rollups/hmac-sha256.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/CryptoJS/rollups/sha256.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/CryptoJS/components/hmac.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/CryptoJS/components/enc-base64.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/url-template/url-template.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/apiGatewayCore/sigV4Client.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/apiGatewayCore/apiGatewayClient.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/apiGatewayCore/simpleHttpClient.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;lib/apiGatewayCore/utils.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;apigClient.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+
+
+        <span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text/javascript&quot;</span><span class="p">&gt;</span>
+          <span class="c1">// Below are examples of how the javascript SDK methods</span>
+          <span class="c1">// correspond to chalice @app.routes()</span>
+          <span class="kd">var</span> <span class="nx">apigClient</span> <span class="o">=</span> <span class="nx">apigClientFactory</span><span class="p">.</span><span class="nx">newClient</span><span class="p">();</span>
+
+          <span class="c1">// @app.route(&#39;/&#39;)</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">rootGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+              <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;root-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+          <span class="p">});</span>
+
+          <span class="c1">// @app.route(&#39;/foo&#39;)</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">fooGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+              <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;foo-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+          <span class="p">});</span>
+
+          <span class="c1">// @app.route(&#39;/hello/{name}&#39;)</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">helloNameGet</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;jimmy&#39;</span><span class="p">}).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+              <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;helloname-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+          <span class="p">});</span>
+
+          <span class="c1">// @app.route(&#39;/users/{user_id}&#39;, methods=[&#39;PUT&#39;])</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">usersUserIdPut</span><span class="p">({</span><span class="nx">user_id</span><span class="o">:</span> <span class="s1">&#39;123&#39;</span><span class="p">},</span> <span class="s1">&#39;body content&#39;</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+              <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;users-userid-put&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+          <span class="p">});</span>
+        <span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+    <span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
+    <span class="p">&lt;</span><span class="nt">body</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;&lt;</span><span class="nt">h5</span><span class="p">&gt;</span>result of rootGet()<span class="p">&lt;/</span><span class="nt">h5</span><span class="p">&gt;&lt;</span><span class="nt">pre</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;root-get&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">pre</span><span class="p">&gt;&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;&lt;</span><span class="nt">h5</span><span class="p">&gt;</span>result of fooGet()<span class="p">&lt;/</span><span class="nt">h5</span><span class="p">&gt;&lt;</span><span class="nt">pre</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;foo-get&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">pre</span><span class="p">&gt;&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;&lt;</span><span class="nt">h5</span><span class="p">&gt;</span>result of helloNameGet({name: &#39;jimmy&#39;})<span class="p">&lt;/</span><span class="nt">h5</span><span class="p">&gt;&lt;</span><span class="nt">pre</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;helloname-get&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">pre</span><span class="p">&gt;&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;&lt;</span><span class="nt">h5</span><span class="p">&gt;</span>result of usersUserIdPut({user_id: &#39;123&#39;})<span class="p">&lt;/</span><span class="nt">h5</span><span class="p">&gt;&lt;</span><span class="nt">pre</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;users-userid-put&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">pre</span><span class="p">&gt;&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+    <span class="p">&lt;/</span><span class="nt">body</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">SDK Generation</a><ul>
+<li><a class="reference internal" href="#example">Example</a><ul>
+<li><a class="reference internal" href="#example-html-file">Example HTML File</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="logging.html" title="previous chapter">Logging</a></li>
+      <li>Next: <a href="stages.html" title="next chapter">Chalice Stages</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/sdks.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/sdks.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

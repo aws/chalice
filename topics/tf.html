@@ -1,0 +1,227 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Terraform Support &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.15.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <link rel="next" title="Authorization" href="authorizers.html" />
+    <link rel="prev" title="AWS CloudFormation Support" href="cfn.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="terraform-support">
+<h1>Terraform Support<a class="headerlink" href="#terraform-support" title="Permalink to this headline">¶</a></h1>
+<p>When you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, chalice will deploy your application using the
+<a class="reference external" href="http://boto3.readthedocs.io/en/docs/">AWS SDK for Python</a>).  Chalice also
+provides functionality that allows you to manage deployments yourself using
+terraform.  This is provided via the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span> <span class="pre">--pkg-format</span> <span class="pre">terraform</span></code>
+command.</p>
+<p>When you run this command, chalice will generate the AWS Lambda
+deployment package that contains your application and a <a class="reference external" href="https://www.terraform.io">Terraform</a> configuration file. You can then use the
+terraform cli to deploy your chalice application.</p>
+<div class="section" id="considerations">
+<h2>Considerations<a class="headerlink" href="#considerations" title="Permalink to this headline">¶</a></h2>
+<p>Using the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command is useful when you don&#8217;t want to
+use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> to manage your deployments.  There&#8217;s several reasons
+why you might want to do this:</p>
+<ul class="simple">
+<li>You have pre-existing infrastructure and tooling set up to manage
+Terraform deployments.</li>
+<li>You want to integrate with other Terraform resources to manage all
+your application resources, including resources outside of your
+chalice app.</li>
+<li>You&#8217;d like to integrate with <a class="reference external" href="https://aws.amazon.com/codepipeline/">AWS CodePipeline</a> to automatically deploy
+changes when you push to a git repo.</li>
+</ul>
+<p>Keep in mind that you can&#8217;t switch between <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
+<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> + Terraform for deploying your app.</p>
+<p>If you choose to use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> and Terraform to deploy
+your app, you won&#8217;t be able to switch back to <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
+Running <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> would create an entirely new set of AWS
+resources (API Gateway Rest API, AWS Lambda function, etc).</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>In this example, we&#8217;ll create a chalice app and deploy it using
+the AWS CLI.</p>
+<p>First install the necessary packages:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ virtualenv /tmp/venv
+$ . /tmp/venv/bin/activate
+$ pip install chalice awscli
+$ chalice new-project test-tf-deploy
+$ cd test-tf-deploy
+</pre></div>
+</div>
+<p>At this point we&#8217;ve installed chalice and the AWS CLI and we have
+a basic app created locally.  Next we&#8217;ll run the <code class="docutils literal"><span class="pre">package</span></code> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice package --pkg-format terraform /tmp/packaged-app/
+Creating deployment package.
+$ ls -la /tmp/packaged-app/
+-rw-r--r--   1 j         wheel  3355270 May 25 14:20 deployment.zip
+-rw-r--r--   1 j         wheel     3068 May 25 14:20 chalice.tf.json
+
+$ unzip -l /tmp/packaged-app/deployment.zip  | tail -n 5
+    17292  05-25-17 14:19   chalice/app.py
+      283  05-25-17 14:19   chalice/__init__.py
+      796  05-25-17 14:20   app.py
+ --------                   -------
+  9826899                   723 files
+</pre></div>
+</div>
+<p>As you can see in the above example, the <code class="docutils literal"><span class="pre">package</span> <span class="pre">--pkg-format</span></code>
+command created a directory that contained two files, a
+<code class="docutils literal"><span class="pre">deployment.zip</span></code> file, which is the Lambda deployment package, and a
+<code class="docutils literal"><span class="pre">chalice.tf.json</span></code> file, which is the Terraform template that can be
+deployed using Terraform.  Next we&#8217;re going to use the Terraform CLI
+to deploy our app.</p>
+<p>Note terraform will deploy run against all terraform files in this
+directory, so we can add additional resources for our application by
+adding terraform additional files here. The Chalice terraform template
+includes two static data values (<cite>app</cite> and <cite>stage</cite> names) that we can
+optionally use when constructing these additional resources,
+ie. <cite>${data.null_data_source.chalice.outputs.app}</cite></p>
+<p>First let&#8217;s run Terraform init to install the AWS Terraform Provider:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ cd /tmp/packaged-app
+$ terraform init
+</pre></div>
+</div>
+<p>Now we can deploy our app using the <code class="docutils literal"><span class="pre">terraform</span> <span class="pre">apply</span></code> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ terraform apply
+data.aws_region.chalice: Refreshing state...
+data.aws_caller_identity.chalice: Refreshing state...
+
+An execution plan has been generated and is shown below.
+Resource actions are indicated with the following symbols:
++ create
+
+... (omit plan output)
+
+Plan: 14 to add, 0 to change, 0 to destroy.
+
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only &#39;yes&#39; will be accepted to approve.
+Enter a value: yes
+
+... (omit apply output)
+
+Apply complete! Resources: 14 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+EndpointURL = https://7bnxriulj5.execute-api.us-east-1.amazonaws.com/dev
+</pre></div>
+</div>
+<p>This will take a minute to complete, but once it&#8217;s done, the endpoint url
+will be available as an output which we can then curl:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ http &quot;$(terraform output EndpointURL)&quot;
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 18
+Content-Type: application/json
+...
+
+{
+    &quot;hello&quot;: &quot;world&quot;
+}
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Terraform Support</a><ul>
+<li><a class="reference internal" href="#considerations">Considerations</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cfn.html" title="previous chapter">AWS CloudFormation Support</a></li>
+      <li>Next: <a href="authorizers.html" title="next chapter">Authorization</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/tf.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, James Saryerwinnie.
+      
+      |
+      <a href="../_sources/topics/tf.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
