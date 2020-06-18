@@ -43,6 +43,9 @@ rm -rf "${CHECKOUT_DIR}"
 git clone git://github.com/aws/chalice --branch gh-pages \
 	--single-branch ${CHECKOUT_DIR}
 cp -r build/html/* ${CHECKOUT_DIR}/
+# Add a .nojekyll file so make sure we don't ignore _static
+# paths.
+touch ${CHECKOUT_DIR}/.nojekyll
 
 echo "Commiting docs."
 cd ${CHECKOUT_DIR}
