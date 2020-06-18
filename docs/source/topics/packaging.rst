@@ -135,7 +135,7 @@ get the following warning during deployment::
 
   Your deployment will continue but may not work correctly
   if missing dependencies are not present. For more information:
-  http://chalice.readthedocs.io/en/latest/topics/packaging.html
+  http://aws.github.io/chalice/topics/packaging.html
 
 This happened because the ``cryptography`` version 1.9 does not have wheel
 files available on PyPi, and has C extensions. Since we are not on the same

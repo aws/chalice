@@ -50,7 +50,7 @@ tells you which feature flags you need to add::
     ])
 
 
-    See https://chalice.readthedocs.io/en/latest/topics/experimental.rst for more details.
+    See https://aws.github.io/chalice/topics/experimental.rst for more details.
 
 The feature flag only happens when running CLI commands.  There are no runtime
 checks for experimental features once your application is deployed.

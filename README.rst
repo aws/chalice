@@ -9,15 +9,15 @@ AWS Chalice
    :target: https://travis-ci.org/aws/chalice
    :alt: Travis CI
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
-   :target: http://chalice.readthedocs.io/en/latest/?badge=latest
+   :target: http://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status
 .. image:: https://codecov.io/github/aws/chalice/coverage.svg?branch=master
    :target: https://codecov.io/github/aws/chalice
    :alt: codecov.io
 
 
-.. image:: https://chalice.readthedocs.io/en/latest/_images/chalice-logo-whitespace.png
-   :target: https://chalice.readthedocs.io/en/latest/
+.. image:: https://aws.github.io/chalice/_images/chalice-logo-whitespace.png
+   :target: https://aws.github.io/chalice/
    :alt: Chalice Logo
 
 
@@ -107,7 +107,7 @@ Up and running in less than 30 seconds.
 Give this project a try and share your feedback with us here on Github.
 
 The documentation is available
-`on readthedocs <http://chalice.readthedocs.io/en/latest/>`__.
+`on readthedocs <http://aws.github.io/chalice/>`__.
 
 Quickstart
 ==========
