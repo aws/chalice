@@ -107,7 +107,7 @@ Up and running in less than 30 seconds.
 Give this project a try and share your feedback with us here on Github.
 
 The documentation is available
-`on readthedocs <http://aws.github.io/chalice/>`__.
+`here <http://aws.github.io/chalice/>`__.
 
 Quickstart
 ==========
