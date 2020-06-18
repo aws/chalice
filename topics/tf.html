@@ -1,66 +1,132 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Terraform Support &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Terraform Support &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Authorization" href="authorizers.html" />
     <link rel="prev" title="AWS CloudFormation Support" href="cfn.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="terraform-support">
 <h1>Terraform Support<a class="headerlink" href="#terraform-support" title="Permalink to this headline">¶</a></h1>
-<p>When you run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, chalice will deploy your application using the
+<p>When you run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, chalice will deploy your application using the
 <a class="reference external" href="http://boto3.readthedocs.io/en/docs/">AWS SDK for Python</a>).  Chalice also
 provides functionality that allows you to manage deployments yourself using
-terraform.  This is provided via the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span> <span class="pre">--pkg-format</span> <span class="pre">terraform</span></code>
+terraform.  This is provided via the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span> <span class="pre">--pkg-format</span> <span class="pre">terraform</span></code>
 command.</p>
 <p>When you run this command, chalice will generate the AWS Lambda
 deployment package that contains your application and a <a class="reference external" href="https://www.terraform.io">Terraform</a> configuration file. You can then use the
 terraform cli to deploy your chalice application.</p>
 <div class="section" id="considerations">
 <h2>Considerations<a class="headerlink" href="#considerations" title="Permalink to this headline">¶</a></h2>
-<p>Using the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command is useful when you don&#8217;t want to
-use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> to manage your deployments.  There&#8217;s several reasons
+<p>Using the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> command is useful when you don’t want to
+use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> to manage your deployments.  There’s several reasons
 why you might want to do this:</p>
 <ul class="simple">
 <li>You have pre-existing infrastructure and tooling set up to manage
@@ -68,31 +134,31 @@ Terraform deployments.</li>
 <li>You want to integrate with other Terraform resources to manage all
 your application resources, including resources outside of your
 chalice app.</li>
-<li>You&#8217;d like to integrate with <a class="reference external" href="https://aws.amazon.com/codepipeline/">AWS CodePipeline</a> to automatically deploy
+<li>You’d like to integrate with <a class="reference external" href="https://aws.amazon.com/codepipeline/">AWS CodePipeline</a> to automatically deploy
 changes when you push to a git repo.</li>
 </ul>
-<p>Keep in mind that you can&#8217;t switch between <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> + Terraform for deploying your app.</p>
-<p>If you choose to use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> and Terraform to deploy
-your app, you won&#8217;t be able to switch back to <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
-Running <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> would create an entirely new set of AWS
+<p>Keep in mind that you can’t switch between <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> + Terraform for deploying your app.</p>
+<p>If you choose to use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> and Terraform to deploy
+your app, you won’t be able to switch back to <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
+Running <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> would create an entirely new set of AWS
 resources (API Gateway Rest API, AWS Lambda function, etc).</p>
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<p>In this example, we&#8217;ll create a chalice app and deploy it using
+<p>In this example, we’ll create a chalice app and deploy it using
 the AWS CLI.</p>
 <p>First install the necessary packages:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ virtualenv /tmp/venv
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ virtualenv /tmp/venv
 $ . /tmp/venv/bin/activate
 $ pip install chalice awscli
 $ chalice new-project test-tf-deploy
 $ cd test-tf-deploy
 </pre></div>
 </div>
-<p>At this point we&#8217;ve installed chalice and the AWS CLI and we have
-a basic app created locally.  Next we&#8217;ll run the <code class="docutils literal"><span class="pre">package</span></code> command:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice package --pkg-format terraform /tmp/packaged-app/
+<p>At this point we’ve installed chalice and the AWS CLI and we have
+a basic app created locally.  Next we’ll run the <code class="docutils literal notranslate"><span class="pre">package</span></code> command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice package --pkg-format terraform /tmp/packaged-app/
 Creating deployment package.
 $ ls -la /tmp/packaged-app/
 -rw-r--r--   1 j         wheel  3355270 May 25 14:20 deployment.zip
@@ -106,11 +172,11 @@ $ unzip -l /tmp/packaged-app/deployment.zip  | tail -n 5
   9826899                   723 files
 </pre></div>
 </div>
-<p>As you can see in the above example, the <code class="docutils literal"><span class="pre">package</span> <span class="pre">--pkg-format</span></code>
+<p>As you can see in the above example, the <code class="docutils literal notranslate"><span class="pre">package</span> <span class="pre">--pkg-format</span></code>
 command created a directory that contained two files, a
-<code class="docutils literal"><span class="pre">deployment.zip</span></code> file, which is the Lambda deployment package, and a
-<code class="docutils literal"><span class="pre">chalice.tf.json</span></code> file, which is the Terraform template that can be
-deployed using Terraform.  Next we&#8217;re going to use the Terraform CLI
+<code class="docutils literal notranslate"><span class="pre">deployment.zip</span></code> file, which is the Lambda deployment package, and a
+<code class="docutils literal notranslate"><span class="pre">chalice.tf.json</span></code> file, which is the Terraform template that can be
+deployed using Terraform.  Next we’re going to use the Terraform CLI
 to deploy our app.</p>
 <p>Note terraform will deploy run against all terraform files in this
 directory, so we can add additional resources for our application by
@@ -118,13 +184,13 @@ adding terraform additional files here. The Chalice terraform template
 includes two static data values (<cite>app</cite> and <cite>stage</cite> names) that we can
 optionally use when constructing these additional resources,
 ie. <cite>${data.null_data_source.chalice.outputs.app}</cite></p>
-<p>First let&#8217;s run Terraform init to install the AWS Terraform Provider:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ cd /tmp/packaged-app
+<p>First let’s run Terraform init to install the AWS Terraform Provider:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd /tmp/packaged-app
 $ terraform init
 </pre></div>
 </div>
-<p>Now we can deploy our app using the <code class="docutils literal"><span class="pre">terraform</span> <span class="pre">apply</span></code> command:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ terraform apply
+<p>Now we can deploy our app using the <code class="docutils literal notranslate"><span class="pre">terraform</span> <span class="pre">apply</span></code> command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ terraform apply
 data.aws_region.chalice: Refreshing state...
 data.aws_caller_identity.chalice: Refreshing state...
 
@@ -150,9 +216,9 @@ Outputs:
 EndpointURL = https://7bnxriulj5.execute-api.us-east-1.amazonaws.com/dev
 </pre></div>
 </div>
-<p>This will take a minute to complete, but once it&#8217;s done, the endpoint url
+<p>This will take a minute to complete, but once it’s done, the endpoint url
 will be available as an output which we can then curl:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http &quot;$(terraform output EndpointURL)&quot;
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http &quot;$(terraform output EndpointURL)&quot;
 HTTP/1.1 200 OK
 Connection: keep-alive
 Content-Length: 18
@@ -168,60 +234,45 @@ Content-Type: application/json
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="cfn.html" title="previous chapter" class="previous-page clearfix hidden-xs">← AWS CloudFormation Support</a>
+                        
+                        <a href="authorizers.html" title="next chapter" class="next-page clearfix">Authorization →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="cfn.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="authorizers.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Terraform Support</a><ul>
 <li><a class="reference internal" href="#considerations">Considerations</a></li>
 <li><a class="reference internal" href="#example">Example</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="cfn.html" title="previous chapter">AWS CloudFormation Support</a></li>
-      <li>Next: <a href="authorizers.html" title="next chapter">Authorization</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/tf.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/tf.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

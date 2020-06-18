@@ -1,59 +1,125 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Configuration File &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Configuration File &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Multifile Support" href="multifile.html" />
     <link rel="prev" title="Views" href="views.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="configuration-file">
 <h1>Configuration File<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h1>
 <p>Whenever you create a new project using
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">new-project</span></code>, a <code class="docutils literal"><span class="pre">.chalice</span></code> directory is created
-for you.  In this directory is a <code class="docutils literal"><span class="pre">config.json</span></code> file that
-you can use to control what happens when you <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ tree -a
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">new-project</span></code>, a <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory is created
+for you.  In this directory is a <code class="docutils literal notranslate"><span class="pre">config.json</span></code> file that
+you can use to control what happens when you <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tree -a
 .
 ├── .chalice
 │   └── config.json
@@ -70,52 +136,52 @@ that is specific to a chalice stage as well as configuration that should
 be shared across all stages.  See the <a class="reference internal" href="stages.html"><span class="doc">Chalice Stages</span></a> doc for more
 information about chalice stages.</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">stages</span></code> - This value of this key is a mapping of chalice stage
+<li><code class="docutils literal notranslate"><span class="pre">stages</span></code> - This value of this key is a mapping of chalice stage
 name to stage configuration.  Chalice assumes a default stage name
-of <code class="docutils literal"><span class="pre">dev</span></code>.  If you run the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">new-project</span></code> command on
-chalice 0.7.0 or higher, this key along with the default <code class="docutils literal"><span class="pre">dev</span></code>
+of <code class="docutils literal notranslate"><span class="pre">dev</span></code>.  If you run the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">new-project</span></code> command on
+chalice 0.7.0 or higher, this key along with the default <code class="docutils literal notranslate"><span class="pre">dev</span></code>
 key will automatically be created for you.  See the examples
 section below for some stage specific configurations.</li>
 </ul>
 <p>The following config values can either be specified per stage config
 or as a top level key which is not tied to a specific stage.  Whenever
-a stage specific configuration value is needed, the <code class="docutils literal"><span class="pre">stages</span></code> mapping
+a stage specific configuration value is needed, the <code class="docutils literal notranslate"><span class="pre">stages</span></code> mapping
 is checked first.  If no value is found then the top level keys will
 be checked.</p>
 <div class="section" id="api-gateway-endpoint-type">
-<h3><code class="docutils literal"><span class="pre">api_gateway_endpoint_type</span></code><a class="headerlink" href="#api-gateway-endpoint-type" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">api_gateway_endpoint_type</span></code><a class="headerlink" href="#api-gateway-endpoint-type" title="Permalink to this headline">¶</a></h3>
 <p>The endpoint configuration of the deployed API Gateway which determines how the
 API will be accessed, can be EDGE, REGIONAL, PRIVATE. Note this value can only
 be set as a top level key and defaults to EDGE. For more information see
 <a class="reference external" href="https://amzn.to/2LofApt">https://amzn.to/2LofApt</a></p>
 </div>
 <div class="section" id="api-gateway-endpoint-vpce">
-<h3><code class="docutils literal"><span class="pre">api_gateway_endpoint_vpce</span></code><a class="headerlink" href="#api-gateway-endpoint-vpce" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">api_gateway_endpoint_vpce</span></code><a class="headerlink" href="#api-gateway-endpoint-vpce" title="Permalink to this headline">¶</a></h3>
 <p>When configuring a Private API a VPC Endpoint id must be specified to configure
 a default resource policy on the API if an explicit policy is not specified.
 This value can be a list or a string of endpoint ids.</p>
 </div>
 <div class="section" id="api-gateway-policy-file">
-<h3><code class="docutils literal"><span class="pre">api_gateway_policy_file</span></code><a class="headerlink" href="#api-gateway-policy-file" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">api_gateway_policy_file</span></code><a class="headerlink" href="#api-gateway-policy-file" title="Permalink to this headline">¶</a></h3>
 <p>A file pointing to an IAM resource policy for the REST API. If not specified
 chalice will autogenerate this policy when endpoint_type is PRIVATE. This
-filename is relative to the <code class="docutils literal"><span class="pre">.chalice</span></code> directory.</p>
+filename is relative to the <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory.</p>
 </div>
 <div class="section" id="api-gateway-stage">
-<h3><code class="docutils literal"><span class="pre">api_gateway_stage</span></code><a class="headerlink" href="#api-gateway-stage" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code><a class="headerlink" href="#api-gateway-stage" title="Permalink to this headline">¶</a></h3>
 <p>The name of the API gateway stage.  This will also be the URL prefix for your
-API (<code class="docutils literal"><span class="pre">https://endpoint/prefix/your-api</span></code>).</p>
+API (<code class="docutils literal notranslate"><span class="pre">https://endpoint/prefix/your-api</span></code>).</p>
 </div>
 <div class="section" id="autogen-policy">
-<h3><code class="docutils literal"><span class="pre">autogen_policy</span></code><a class="headerlink" href="#autogen-policy" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code><a class="headerlink" href="#autogen-policy" title="Permalink to this headline">¶</a></h3>
 <p>A boolean value that indicates if chalice should try to automatically generate
 an IAM policy based on analyzing your application source code.  The default
-value is <code class="docutils literal"><span class="pre">true</span></code>.  If this value is <code class="docutils literal"><span class="pre">false</span></code> then chalice will load try to a
-local file in <code class="docutils literal"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> instead of auto-generating
+value is <code class="docutils literal notranslate"><span class="pre">true</span></code>.  If this value is <code class="docutils literal notranslate"><span class="pre">false</span></code> then chalice will load try to a
+local file in <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> instead of auto-generating
 a policy from source code analysis.</p>
 </div>
 <div class="section" id="environment-variables">
-<h3><code class="docutils literal"><span class="pre">environment_variables</span></code><a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code><a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
 <p>A mapping of key value pairs.  These key value pairs will be set as environment
 variables in your application.  All environment variables must be strings.  If
 this key is specified in both a stage specific config option as well as a top
@@ -123,59 +189,59 @@ level key, the stage specific environment variables will be merged into the top
 level keys.  See the examples section below for a concrete example.</p>
 </div>
 <div class="section" id="iam-policy-file">
-<h3><code class="docutils literal"><span class="pre">iam_policy_file</span></code><a class="headerlink" href="#iam-policy-file" title="Permalink to this headline">¶</a></h3>
-<p>When <code class="docutils literal"><span class="pre">autogen_policy</span></code> is false, chalice will try to load an IAM policy from
+<h3><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code><a class="headerlink" href="#iam-policy-file" title="Permalink to this headline">¶</a></h3>
+<p>When <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> is false, chalice will try to load an IAM policy from
 disk instead of auto-generating one based on source code analysis.  The default
-location of this file is <code class="docutils literal"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code>, e.g
-<code class="docutils literal"><span class="pre">.chalice/policy-dev.json</span></code>, <code class="docutils literal"><span class="pre">.chalice/policy-prod.json</span></code>, etc.  You can
-change the filename by providing this <code class="docutils literal"><span class="pre">iam_policy_file</span></code> config option.  This
-filename is relative to the <code class="docutils literal"><span class="pre">.chalice</span></code> directory.</p>
+location of this file is <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code>, e.g
+<code class="docutils literal notranslate"><span class="pre">.chalice/policy-dev.json</span></code>, <code class="docutils literal notranslate"><span class="pre">.chalice/policy-prod.json</span></code>, etc.  You can
+change the filename by providing this <code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code> config option.  This
+filename is relative to the <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory.</p>
 </div>
 <div class="section" id="iam-role-arn">
-<h3><code class="docutils literal"><span class="pre">iam_role_arn</span></code><a class="headerlink" href="#iam-role-arn" title="Permalink to this headline">¶</a></h3>
-<p>If <code class="docutils literal"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal"><span class="pre">false</span></code>, you must specify this value that indicates
+<h3><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code><a class="headerlink" href="#iam-role-arn" title="Permalink to this headline">¶</a></h3>
+<p>If <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, you must specify this value that indicates
 which IAM role arn to use when configuration your application.  This value is
-only used if <code class="docutils literal"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal"><span class="pre">false</span></code>.</p>
+only used if <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p>
 </div>
 <div class="section" id="lambda-memory-size">
-<h3><code class="docutils literal"><span class="pre">lambda_memory_size</span></code><a class="headerlink" href="#lambda-memory-size" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code><a class="headerlink" href="#lambda-memory-size" title="Permalink to this headline">¶</a></h3>
 <p>An integer representing the amount of memory, in MB, your Lambda function is
 given. AWS Lambda uses this memory size to infer the amount of CPU allocated to
-your function. The default <code class="docutils literal"><span class="pre">lambda_memory_size</span></code> value is <code class="docutils literal"><span class="pre">128</span></code>. The value
+your function. The default <code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code> value is <code class="docutils literal notranslate"><span class="pre">128</span></code>. The value
 must be a multiple of 64 MB.</p>
 </div>
 <div class="section" id="lambda-timeout">
-<h3><code class="docutils literal"><span class="pre">lambda_timeout</span></code><a class="headerlink" href="#lambda-timeout" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code><a class="headerlink" href="#lambda-timeout" title="Permalink to this headline">¶</a></h3>
 <p>An integer representing the function execution time, in seconds, at which AWS
-Lambda should terminate the function. The default <code class="docutils literal"><span class="pre">lambda_timeout</span></code> is <code class="docutils literal"><span class="pre">60</span></code>
+Lambda should terminate the function. The default <code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code> is <code class="docutils literal notranslate"><span class="pre">60</span></code>
 seconds.</p>
 </div>
 <div class="section" id="layers">
-<h3><code class="docutils literal"><span class="pre">layers</span></code><a class="headerlink" href="#layers" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">layers</span></code><a class="headerlink" href="#layers" title="Permalink to this headline">¶</a></h3>
 <p>A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html">AWS Lambda Layers Configuration</a>.</p>
 </div>
 <div class="section" id="manage-iam-role">
-<h3><code class="docutils literal"><span class="pre">manage_iam_role</span></code><a class="headerlink" href="#manage-iam-role" title="Permalink to this headline">¶</a></h3>
-<p><code class="docutils literal"><span class="pre">true</span></code>/<code class="docutils literal"><span class="pre">false</span></code>.  Indicates if you want chalice to create and update the IAM
-role used for your application.  By default, this value is <code class="docutils literal"><span class="pre">true</span></code>.  However,
-if you have a pre-existing role you&#8217;ve created, you can set this value to
-<code class="docutils literal"><span class="pre">false</span></code> and a role will not be created or updated.  <code class="docutils literal"><span class="pre">&quot;manage_iam_role&quot;:</span>
+<h3><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code><a class="headerlink" href="#manage-iam-role" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">false</span></code>.  Indicates if you want chalice to create and update the IAM
+role used for your application.  By default, this value is <code class="docutils literal notranslate"><span class="pre">true</span></code>.  However,
+if you have a pre-existing role you’ve created, you can set this value to
+<code class="docutils literal notranslate"><span class="pre">false</span></code> and a role will not be created or updated.  <code class="docutils literal notranslate"><span class="pre">&quot;manage_iam_role&quot;:</span>
 <span class="pre">false</span></code> means that you are responsible for managing the role and any associated
-policies associated with that role.  If this value is <code class="docutils literal"><span class="pre">false</span></code> you must
-specify an <code class="docutils literal"><span class="pre">iam_role_arn</span></code>, otherwise an error is raised when you try to run
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.</p>
+policies associated with that role.  If this value is <code class="docutils literal notranslate"><span class="pre">false</span></code> you must
+specify an <code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code>, otherwise an error is raised when you try to run
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.</p>
 </div>
 <div class="section" id="minimum-compression-size">
-<h3><code class="docutils literal"><span class="pre">minimum_compression_size</span></code><a class="headerlink" href="#minimum-compression-size" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">minimum_compression_size</span></code><a class="headerlink" href="#minimum-compression-size" title="Permalink to this headline">¶</a></h3>
 <p>An integer value that indicates the minimum compression size to apply to the
 API gateway. If this key is specified in both a stage specific config option as
 well as a top level key, the stage specific key will override the top level key
 for the given stage. For more information check out the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-gzip-compression-decompression.html">Service Docs</a></p>
 </div>
 <div class="section" id="reserved-concurrency">
-<h3><code class="docutils literal"><span class="pre">reserved_concurrency</span></code><a class="headerlink" href="#reserved-concurrency" title="Permalink to this headline">¶</a></h3>
-<p>An integer representing each function&#8217;s reserved concurrency.  This value can
+<h3><code class="docutils literal notranslate"><span class="pre">reserved_concurrency</span></code><a class="headerlink" href="#reserved-concurrency" title="Permalink to this headline">¶</a></h3>
+<p>An integer representing each function’s reserved concurrency.  This value can
 be provided per stage as well as per Lambda function. AWS Lambda reserves this
 value of concurrency to each lambda deployed in this stage. If the value is set
 to 0, invocations to this function are blocked. If the value is unset, there
@@ -183,30 +249,30 @@ will be no reserved concurrency allocations. For more information, see <a class=
 Documentation on managing concurrency</a>.</p>
 </div>
 <div class="section" id="subnet-ids">
-<h3><code class="docutils literal"><span class="pre">subnet_ids</span></code><a class="headerlink" href="#subnet-ids" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code><a class="headerlink" href="#subnet-ids" title="Permalink to this headline">¶</a></h3>
 <p>A list of subnet ids for VPC configuration.  This value can be provided per
 stage as well as per Lambda function.  In order for this value to take effect,
-you must also provide the <code class="docutils literal"><span class="pre">security_group_ids</span></code> value.  When both values are
-provided and <code class="docutils literal"><span class="pre">autogen_policy</span></code> is True, chalice will automatically update your
+you must also provide the <code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code> value.  When both values are
+provided and <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> is True, chalice will automatically update your
 IAM role with the necessary permissions to create, describe, and delete ENIs.
 If you are managing the IAM role policy yourself, make sure to update your
 permissions accordingly, as described in the <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/vpc.html#vpc-configuring">AWS Lambda VPC documentation</a>.</p>
 </div>
 <div class="section" id="security-group-ids">
-<h3><code class="docutils literal"><span class="pre">security_group_ids</span></code><a class="headerlink" href="#security-group-ids" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code><a class="headerlink" href="#security-group-ids" title="Permalink to this headline">¶</a></h3>
 <p>A list of security groups for VPC configuration.  This value can be provided
 per stage as well as per Lambda function.  In order for this value to take
-effect, you must also provide the <code class="docutils literal"><span class="pre">subnet_ids</span></code> value.</p>
+effect, you must also provide the <code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code> value.</p>
 </div>
 <div class="section" id="tags">
-<h3><code class="docutils literal"><span class="pre">tags</span></code><a class="headerlink" href="#tags" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">tags</span></code><a class="headerlink" href="#tags" title="Permalink to this headline">¶</a></h3>
 <p>A mapping of key value pairs. These key value pairs will be set as the tags on
 the resources running your deployed application. All tag keys and values must
-be strings. Similar to <code class="docutils literal"><span class="pre">environment_variables</span></code>, if a key is specified in both
+be strings. Similar to <code class="docutils literal notranslate"><span class="pre">environment_variables</span></code>, if a key is specified in both
 a stage specific config option as well as a top level key, the stage specific
 tags will be merged into the top level keys. By default, all chalice deployed
-resources are tagged with the key <code class="docutils literal"><span class="pre">'aws-chalice'</span></code> whose value is
-<code class="docutils literal"><span class="pre">'version={chalice-version}:stage={stage-name}:app={app-name}'</span></code>.  Currently
+resources are tagged with the key <code class="docutils literal notranslate"><span class="pre">'aws-chalice'</span></code> whose value is
+<code class="docutils literal notranslate"><span class="pre">'version={chalice-version}:stage={stage-name}:app={app-name}'</span></code>.  Currently
 only the following chalice deployed resources are tagged: Lambda functions.</p>
 </div>
 </div>
@@ -218,8 +284,8 @@ stages, and a stage can have many Lambda functions.</p>
 <p>You have the option to specify configuration for a lambda function across
 all your stages, or for a lambda function in a specific stage.</p>
 <p>To configure per lambda configuration for a specific stage, you add a
-<code class="docutils literal"><span class="pre">lambda_functions</span></code> key in your stage configuration:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<code class="docutils literal notranslate"><span class="pre">lambda_functions</span></code> key in your stage configuration:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
   <span class="s2">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -235,8 +301,8 @@ all your stages, or for a lambda function in a specific stage.</p>
 </pre></div>
 </div>
 <p>To specify per lambda configuration across all stages, you add
-a top level <code class="docutils literal"><span class="pre">lambda_functions</span></code> key:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+a top level <code class="docutils literal notranslate"><span class="pre">lambda_functions</span></code> key:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
   <span class="s2">&quot;lambda_functions&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -247,41 +313,41 @@ a top level <code class="docutils literal"><span class="pre">lambda_functions</s
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Each key in the <code class="docutils literal"><span class="pre">lambda_functions</span></code> dictionary is the name of a Lambda
+<p>Each key in the <code class="docutils literal notranslate"><span class="pre">lambda_functions</span></code> dictionary is the name of a Lambda
 function in your app.  The value is a dictionary of configuration that
 will be applied to that function.  These are the configuration options
 that can be applied per function:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">autogen_policy</span></code></li>
-<li><code class="docutils literal"><span class="pre">environment_variables</span></code></li>
-<li><code class="docutils literal"><span class="pre">iam_policy_file</span></code></li>
-<li><code class="docutils literal"><span class="pre">iam_role_arn</span></code></li>
-<li><code class="docutils literal"><span class="pre">lambda_memory_size</span></code></li>
-<li><code class="docutils literal"><span class="pre">lambda_timeout</span></code></li>
-<li><code class="docutils literal"><span class="pre">layers</span></code></li>
-<li><code class="docutils literal"><span class="pre">manage_iam_role</span></code></li>
-<li><code class="docutils literal"><span class="pre">reserved_concurrency</span></code></li>
-<li><code class="docutils literal"><span class="pre">security_group_ids</span></code></li>
-<li><code class="docutils literal"><span class="pre">subnet_ids</span></code></li>
-<li><code class="docutils literal"><span class="pre">tags</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">layers</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">reserved_concurrency</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">tags</span></code></li>
 </ul>
 <p>See the <a class="reference internal" href="#stage-config"><span class="std std-ref">Stage Specific Configuration</span></a> section above for a description
 of these config options.</p>
 <p>In general, the name of your lambda function will correspond to
 the name of the function in your app.  For example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
 </div>
 <p>To specify configuration for this function, you would use the
-key of <code class="docutils literal"><span class="pre">foo</span></code> in the <code class="docutils literal"><span class="pre">lambda_functions</span></code> configuration.</p>
+key of <code class="docutils literal notranslate"><span class="pre">foo</span></code> in the <code class="docutils literal notranslate"><span class="pre">lambda_functions</span></code> configuration.</p>
 <p>There is one exception to this, which is any python function
-decorated with the <code class="docutils literal"><span class="pre">&#64;app.route()</span></code> decorator.  Chalice uses
+decorated with the <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> decorator.  Chalice uses
 a single Lambda function for all requests from API gateway,
-and this name is <code class="docutils literal"><span class="pre">api_handler</span></code>.  So if you have an app
+and this name is <code class="docutils literal notranslate"><span class="pre">api_handler</span></code>.  So if you have an app
 like this:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span> <span class="k">pass</span>
 
 <span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
@@ -289,9 +355,9 @@ like this:</p>
 </pre></div>
 </div>
 <p>Then to specify configuration values for the underlying
-lambda function, which <code class="docutils literal"><span class="pre">index()</span></code> and <code class="docutils literal"><span class="pre">other_handler()</span></code> share,
+lambda function, which <code class="docutils literal notranslate"><span class="pre">index()</span></code> and <code class="docutils literal notranslate"><span class="pre">other_handler()</span></code> share,
 you would specify:</p>
-<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
    <span class="nt">&quot;lambda_functions&quot;</span><span class="p">:</span> <span class="p">{</span>
      <span class="nt">&quot;api_handler&quot;</span><span class="p">:</span> <span class="p">{</span>
        <span class="nt">&quot;subnet_ids&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;sn-1&quot;</span><span class="p">,</span> <span class="s2">&quot;sn-2&quot;</span><span class="p">],</span>
@@ -308,8 +374,8 @@ you would specify:</p>
 <p>Below are examples that show how you can configure your chalice app.</p>
 <div class="section" id="iam-roles-and-policies">
 <h3>IAM Roles and Policies<a class="headerlink" href="#iam-roles-and-policies" title="Permalink to this headline">¶</a></h3>
-<p>Here&#8217;s an example for configuring IAM policies across stages:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<p>Here’s an example for configuring IAM policies across stages:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
   <span class="s2">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -329,16 +395,16 @@ you would specify:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>In this config file we&#8217;re specifying three stages, <code class="docutils literal"><span class="pre">dev</span></code>, <code class="docutils literal"><span class="pre">beta</span></code>,
-and <code class="docutils literal"><span class="pre">prod</span></code>.  In the <code class="docutils literal"><span class="pre">dev</span></code> stage, chalice will automatically
+<p>In this config file we’re specifying three stages, <code class="docutils literal notranslate"><span class="pre">dev</span></code>, <code class="docutils literal notranslate"><span class="pre">beta</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">prod</span></code>.  In the <code class="docutils literal notranslate"><span class="pre">dev</span></code> stage, chalice will automatically
 generate an IAM policy based on analyzing the application source code.
-For the <code class="docutils literal"><span class="pre">beta</span></code> stage, chalice will load the
-<code class="docutils literal"><span class="pre">.chalice/beta-app-policy.json</span></code> file and use it as the policy to
-associate with the IAM role for that stage.  In the <code class="docutils literal"><span class="pre">prod</span></code> stage,
-chalice won&#8217;t modify any IAM roles.  It will just set the IAM role
-for the Lambda function to be <code class="docutils literal"><span class="pre">arn:aws:iam::...:role/prod-role</span></code>.</p>
-<p>Here&#8217;s an example that show config precedence:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+For the <code class="docutils literal notranslate"><span class="pre">beta</span></code> stage, chalice will load the
+<code class="docutils literal notranslate"><span class="pre">.chalice/beta-app-policy.json</span></code> file and use it as the policy to
+associate with the IAM role for that stage.  In the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage,
+chalice won’t modify any IAM roles.  It will just set the IAM role
+for the Lambda function to be <code class="docutils literal notranslate"><span class="pre">arn:aws:iam::...:role/prod-role</span></code>.</p>
+<p>Here’s an example that show config precedence:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
   <span class="s2">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
@@ -356,12 +422,12 @@ for the Lambda function to be <code class="docutils literal"><span class="pre">a
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>In this config file, both the <code class="docutils literal"><span class="pre">dev</span></code> and <code class="docutils literal"><span class="pre">beta</span></code> stage will
-have an API gateway stage name of <code class="docutils literal"><span class="pre">api</span></code> because they will
-default to the top level <code class="docutils literal"><span class="pre">api_gateway_stage</span></code> key.
-However, the <code class="docutils literal"><span class="pre">prod</span></code> stage will have an API gateway stage
-name of <code class="docutils literal"><span class="pre">prod</span></code> because the <code class="docutils literal"><span class="pre">api_gateway_stage</span></code> is specified
-in <code class="docutils literal"><span class="pre">{&quot;stages&quot;:</span> <span class="pre">{&quot;prod&quot;:</span> <span class="pre">...}}</span></code> mapping.</p>
+<p>In this config file, both the <code class="docutils literal notranslate"><span class="pre">dev</span></code> and <code class="docutils literal notranslate"><span class="pre">beta</span></code> stage will
+have an API gateway stage name of <code class="docutils literal notranslate"><span class="pre">api</span></code> because they will
+default to the top level <code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code> key.
+However, the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage will have an API gateway stage
+name of <code class="docutils literal notranslate"><span class="pre">prod</span></code> because the <code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code> is specified
+in <code class="docutils literal notranslate"><span class="pre">{&quot;stages&quot;:</span> <span class="pre">{&quot;prod&quot;:</span> <span class="pre">...}}</span></code> mapping.</p>
 </div>
 <div class="section" id="id1">
 <h3>Environment Variables<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
@@ -369,7 +435,7 @@ in <code class="docutils literal"><span class="pre">{&quot;stages&quot;:</span> 
 both as top level keys as well as per stage.  This allows us to
 provide environment variables that all stages should have as well
 as stage specific environment variables:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
   <span class="s2">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -393,17 +459,17 @@ as stage specific environment variables:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>For the above config, the <code class="docutils literal"><span class="pre">dev</span></code> stage will have the
+<p>For the above config, the <code class="docutils literal notranslate"><span class="pre">dev</span></code> stage will have the
 following environment variables set:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;SHARED_CONFIG&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
   <span class="s2">&quot;TABLE_NAME&quot;</span><span class="p">:</span> <span class="s2">&quot;dev-table&quot;</span><span class="p">,</span>
   <span class="s2">&quot;OTHER_CONFIG&quot;</span><span class="p">:</span> <span class="s2">&quot;dev-value&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">prod</span></code> stage will have these environment variables set:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<p>The <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage will have these environment variables set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;SHARED_CONFIG&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
   <span class="s2">&quot;TABLE_NAME&quot;</span><span class="p">:</span> <span class="s2">&quot;prod-table&quot;</span><span class="p">,</span>
   <span class="s2">&quot;OTHER_CONFIG&quot;</span><span class="p">:</span> <span class="s2">&quot;prod-value&quot;</span><span class="p">,</span>
@@ -414,7 +480,7 @@ following environment variables set:</p>
 <div class="section" id="per-lambda-examples">
 <h3>Per Lambda Examples<a class="headerlink" href="#per-lambda-examples" title="Permalink to this headline">¶</a></h3>
 <p>Suppose we had the following chalice app:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">)</span>
 
@@ -427,27 +493,27 @@ following environment variables set:</p>
     <span class="k">pass</span>
 </pre></div>
 </div>
-<p>Given these two functions, we&#8217;d like to configure the functions
+<p>Given these two functions, we’d like to configure the functions
 as follows:</p>
 <ul class="simple">
-<li>Both functions should have an environment variable <code class="docutils literal"><span class="pre">OWNER</span></code> with value
-<code class="docutils literal"><span class="pre">dev-team</span></code>.</li>
-<li>The <code class="docutils literal"><span class="pre">foo</span></code> function should have an autogenerated IAM policy managed by
+<li>Both functions should have an environment variable <code class="docutils literal notranslate"><span class="pre">OWNER</span></code> with value
+<code class="docutils literal notranslate"><span class="pre">dev-team</span></code>.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should have an autogenerated IAM policy managed by
 chalice.</li>
-<li>The <code class="docutils literal"><span class="pre">foo</span></code> function should be run in a VPC with subnet ids <code class="docutils literal"><span class="pre">sn-1</span></code> and
-<code class="docutils literal"><span class="pre">sn-2</span></code>, with security groups <code class="docutils literal"><span class="pre">sg-10</span></code> and <code class="docutils literal"><span class="pre">sg-11</span></code>.  Chalice should
+<li>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should be run in a VPC with subnet ids <code class="docutils literal notranslate"><span class="pre">sn-1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sn-2</span></code>, with security groups <code class="docutils literal notranslate"><span class="pre">sg-10</span></code> and <code class="docutils literal notranslate"><span class="pre">sg-11</span></code>.  Chalice should
 also automatically configure the IAM policy with permissions to modify
 EC2 network interfaces.</li>
-<li>The <code class="docutils literal"><span class="pre">foo</span></code> function should have two connected layers as <code class="docutils literal"><span class="pre">layer-arn-1</span></code> and
-<code class="docutils literal"><span class="pre">layer-arn-2</span></code>. Chalice should automatically configure the IAM policy.</li>
-<li>The <code class="docutils literal"><span class="pre">bar</span></code> function should use a pre-existing IAM role that was created
+<li>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should have two connected layers as <code class="docutils literal notranslate"><span class="pre">layer-arn-1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">layer-arn-2</span></code>. Chalice should automatically configure the IAM policy.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function should use a pre-existing IAM role that was created
 outside of chalice.  Chalice should not perform an IAM role management for
-the <code class="docutils literal"><span class="pre">bar</span></code> function.</li>
-<li>The <code class="docutils literal"><span class="pre">bar</span></code> function should have an environment variable <code class="docutils literal"><span class="pre">TABLE_NAME</span></code> with
-value <code class="docutils literal"><span class="pre">mytable</span></code>.</li>
+the <code class="docutils literal notranslate"><span class="pre">bar</span></code> function.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function should have an environment variable <code class="docutils literal notranslate"><span class="pre">TABLE_NAME</span></code> with
+value <code class="docutils literal notranslate"><span class="pre">mytable</span></code>.</li>
 </ul>
 <p>We can accomplish all this with this config file:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
     <span class="s2">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
       <span class="s2">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -478,33 +544,45 @@ value <code class="docutils literal"><span class="pre">mytable</span></code>.</l
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="views.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Views</a>
+                        
+                        <a href="multifile.html" title="next chapter" class="next-page clearfix">Multifile Support →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="views.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="multifile.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Configuration File</a><ul>
 <li><a class="reference internal" href="#stage-specific-configuration">Stage Specific Configuration</a><ul>
-<li><a class="reference internal" href="#api-gateway-endpoint-type"><code class="docutils literal"><span class="pre">api_gateway_endpoint_type</span></code></a></li>
-<li><a class="reference internal" href="#api-gateway-endpoint-vpce"><code class="docutils literal"><span class="pre">api_gateway_endpoint_vpce</span></code></a></li>
-<li><a class="reference internal" href="#api-gateway-policy-file"><code class="docutils literal"><span class="pre">api_gateway_policy_file</span></code></a></li>
-<li><a class="reference internal" href="#api-gateway-stage"><code class="docutils literal"><span class="pre">api_gateway_stage</span></code></a></li>
-<li><a class="reference internal" href="#autogen-policy"><code class="docutils literal"><span class="pre">autogen_policy</span></code></a></li>
-<li><a class="reference internal" href="#environment-variables"><code class="docutils literal"><span class="pre">environment_variables</span></code></a></li>
-<li><a class="reference internal" href="#iam-policy-file"><code class="docutils literal"><span class="pre">iam_policy_file</span></code></a></li>
-<li><a class="reference internal" href="#iam-role-arn"><code class="docutils literal"><span class="pre">iam_role_arn</span></code></a></li>
-<li><a class="reference internal" href="#lambda-memory-size"><code class="docutils literal"><span class="pre">lambda_memory_size</span></code></a></li>
-<li><a class="reference internal" href="#lambda-timeout"><code class="docutils literal"><span class="pre">lambda_timeout</span></code></a></li>
-<li><a class="reference internal" href="#layers"><code class="docutils literal"><span class="pre">layers</span></code></a></li>
-<li><a class="reference internal" href="#manage-iam-role"><code class="docutils literal"><span class="pre">manage_iam_role</span></code></a></li>
-<li><a class="reference internal" href="#minimum-compression-size"><code class="docutils literal"><span class="pre">minimum_compression_size</span></code></a></li>
-<li><a class="reference internal" href="#reserved-concurrency"><code class="docutils literal"><span class="pre">reserved_concurrency</span></code></a></li>
-<li><a class="reference internal" href="#subnet-ids"><code class="docutils literal"><span class="pre">subnet_ids</span></code></a></li>
-<li><a class="reference internal" href="#security-group-ids"><code class="docutils literal"><span class="pre">security_group_ids</span></code></a></li>
-<li><a class="reference internal" href="#tags"><code class="docutils literal"><span class="pre">tags</span></code></a></li>
+<li><a class="reference internal" href="#api-gateway-endpoint-type"><code class="docutils literal notranslate"><span class="pre">api_gateway_endpoint_type</span></code></a></li>
+<li><a class="reference internal" href="#api-gateway-endpoint-vpce"><code class="docutils literal notranslate"><span class="pre">api_gateway_endpoint_vpce</span></code></a></li>
+<li><a class="reference internal" href="#api-gateway-policy-file"><code class="docutils literal notranslate"><span class="pre">api_gateway_policy_file</span></code></a></li>
+<li><a class="reference internal" href="#api-gateway-stage"><code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code></a></li>
+<li><a class="reference internal" href="#autogen-policy"><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code></a></li>
+<li><a class="reference internal" href="#environment-variables"><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code></a></li>
+<li><a class="reference internal" href="#iam-policy-file"><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code></a></li>
+<li><a class="reference internal" href="#iam-role-arn"><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code></a></li>
+<li><a class="reference internal" href="#lambda-memory-size"><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code></a></li>
+<li><a class="reference internal" href="#lambda-timeout"><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code></a></li>
+<li><a class="reference internal" href="#layers"><code class="docutils literal notranslate"><span class="pre">layers</span></code></a></li>
+<li><a class="reference internal" href="#manage-iam-role"><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code></a></li>
+<li><a class="reference internal" href="#minimum-compression-size"><code class="docutils literal notranslate"><span class="pre">minimum_compression_size</span></code></a></li>
+<li><a class="reference internal" href="#reserved-concurrency"><code class="docutils literal notranslate"><span class="pre">reserved_concurrency</span></code></a></li>
+<li><a class="reference internal" href="#subnet-ids"><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code></a></li>
+<li><a class="reference internal" href="#security-group-ids"><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code></a></li>
+<li><a class="reference internal" href="#tags"><code class="docutils literal notranslate"><span class="pre">tags</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#lambda-specific-configuration">Lambda Specific Configuration</a></li>
@@ -517,46 +595,19 @@ value <code class="docutils literal"><span class="pre">mytable</span></code>.</l
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="views.html" title="previous chapter">Views</a></li>
-      <li>Next: <a href="multifile.html" title="next chapter">Multifile Support</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/configfile.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/configfile.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

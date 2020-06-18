@@ -1,58 +1,124 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Continuous Deployment (CD) &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Continuous Deployment (CD) &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Experimental APIs" href="experimental.html" />
     <link rel="prev" title="Websockets" href="websockets.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="continuous-deployment-cd">
 <h1>Continuous Deployment (CD)<a class="headerlink" href="#continuous-deployment-cd" title="Permalink to this headline">¶</a></h1>
 <p>Chalice can be used to set up a basic Continuous Deployment pipeline. The
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command is good for getting up and running quickly with
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command is good for getting up and running quickly with
 Chalice, but in a team environment properly managing permissions and sharing
-and updating the <code class="docutils literal"><span class="pre">deployed.json</span></code> file will get messy.</p>
+and updating the <code class="docutils literal notranslate"><span class="pre">deployed.json</span></code> file will get messy.</p>
 <p>One way to scale up your chalice app is to create a continuous deployment
 pipeline. The pipeline can run tests on code changes and, if they pass, promote
 the new build to a testing stage. More checks can be put in place to manually
@@ -66,10 +132,10 @@ application using CloudFormation.</p>
 <div class="section" id="usage-example">
 <h2>Usage example<a class="headerlink" href="#usage-example" title="Permalink to this headline">¶</a></h2>
 <p>Setting up the deployment pipeline is a two step process. First use the
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">generate-pipeline</span></code> command to generate a base CloudFormation
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">generate-pipeline</span></code> command to generate a base CloudFormation
 template. Second use the AWS CLI to deploy the CloudFormation template using
-the <code class="docutils literal"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">deploy</span></code> command. Below is an example.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice generate-pipeline pipeline.json
+the <code class="docutils literal notranslate"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">deploy</span></code> command. Below is an example.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice generate-pipeline pipeline.json
 $ aws cloudformation deploy --stack-name mystack
       --template-file pipeline.json --capabilities CAPABILITY_IAM
 Waiting for changeset to be created..
@@ -89,12 +155,12 @@ the build process, and pushes the released code out.</li>
 <li><strong>CodeBuild Project</strong> - The <a class="reference external" href="https://aws.amazon.com/codebuild/">CodeBuild</a>
 project is where the code bundle is built that will be pushed to Lambda. The
 default CloudFormation template will create a CodeBuild stage that builds
-a package using <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> and then uploads those artifacts for
+a package using <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> and then uploads those artifacts for
 CodePipeline to deploy.</li>
 <li><strong>S3 Buckets</strong> - Two S3 buckets are created on your behalf.<ul>
 <li><strong>artifactbucketstore</strong> - This bucket stores artifacts that are built by
 the CodeBuild project. The only artifact by default is the
-<code class="docutils literal"><span class="pre">transformed.yaml</span></code> created by the <code class="docutils literal"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">package</span></code> command.</li>
+<code class="docutils literal notranslate"><span class="pre">transformed.yaml</span></code> created by the <code class="docutils literal notranslate"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">package</span></code> command.</li>
 <li><strong>applicationbucket</strong> - Stores the application bundle after the Chalice
 application has been packaged in the CodeBuild stage.</li>
 </ul>
@@ -108,8 +174,8 @@ application has been packaged in the CodeBuild stage.</li>
 makes it easy to kick off deployments. The developer doing the deployment only
 needs to push the release code up to the CodeCommit repository master branch.
 All the developer needs is keys that allow for push access to the CodeCommit
-repository. This is a lot easier than managing a set of <code class="docutils literal"><span class="pre">deployed.json</span></code>
-resources across a repsoitory and manually doing <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> whenever
+repository. This is a lot easier than managing a set of <code class="docutils literal notranslate"><span class="pre">deployed.json</span></code>
+resources across a repsoitory and manually doing <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> whenever
 a change needs to be deployed.</p>
 <p>The default CodeCommit repository that is created is empty, you will have to
 populate it with the Chalice application code. Permissions will also need to be
@@ -129,7 +195,7 @@ a starting point, not a fully featured CD system.</p>
 <h2>CodeBuild build script<a class="headerlink" href="#codebuild-build-script" title="Permalink to this headline">¶</a></h2>
 <p>By default Chalice will create the CodeBuild project with a default buildspec
 that does the following.</p>
-<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">version</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">version</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span>
 <span class="l l-Scalar l-Scalar-Plain">phases</span><span class="p p-Indicator">:</span>
   <span class="l l-Scalar l-Scalar-Plain">install</span><span class="p p-Indicator">:</span>
     <span class="l l-Scalar l-Scalar-Plain">commands</span><span class="p p-Indicator">:</span>
@@ -156,8 +222,8 @@ succeeded.</p>
 <div class="section" id="deploying-to-beta-stage">
 <h2>Deploying to beta stage<a class="headerlink" href="#deploying-to-beta-stage" title="Permalink to this headline">¶</a></h2>
 <p>Once the CodeBuild stage has finished building the Chalice package and
-creating the <code class="docutils literal"><span class="pre">transformed.yaml</span></code>, CodePipeline will take these artifacts and
-use them to create or update the beta stage. The <code class="docutils literal"><span class="pre">transformed.yaml</span></code>
+creating the <code class="docutils literal notranslate"><span class="pre">transformed.yaml</span></code>, CodePipeline will take these artifacts and
+use them to create or update the beta stage. The <code class="docutils literal notranslate"><span class="pre">transformed.yaml</span></code>
 is a CloudFormation template that CodePipeline will execute, all the code it
 references has been uploaded to the application bucket by the AWS CLI in the
 CodeBuild stage, so this is the only artifact we need.</p>
@@ -177,14 +243,26 @@ promoted to a production stage using the CodePipleine manual approval feature.</
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="websockets.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Websockets</a>
+                        
+                        <a href="experimental.html" title="next chapter" class="next-page clearfix">Experimental APIs →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="websockets.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="experimental.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Continuous Deployment (CD)</a><ul>
 <li><a class="reference internal" href="#usage-example">Usage example</a></li>
 <li><a class="reference internal" href="#codecommit-repository">CodeCommit repository</a></li>
@@ -195,46 +273,19 @@ promoted to a production stage using the CodePipleine manual approval feature.</
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="websockets.html" title="previous chapter">Websockets</a></li>
-      <li>Next: <a href="experimental.html" title="next chapter">Experimental APIs</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/cd.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/cd.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

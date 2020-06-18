@@ -1,52 +1,118 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Experimental APIs &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Experimental APIs &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Chalice" href="../api.html" />
     <link rel="prev" title="Continuous Deployment (CD)" href="cd.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="experimental-apis">
 <h1>Experimental APIs<a class="headerlink" href="#experimental-apis" title="Permalink to this headline">¶</a></h1>
 <p>Chalice maintains backwards compatibility for all features that appear in this
@@ -66,9 +132,9 @@ experimental feature that may change.</p>
 <h2>Opting-in to Experimental APIs<a class="headerlink" href="#opting-in-to-experimental-apis" title="Permalink to this headline">¶</a></h2>
 <p>Each experimental feature in chalice has a name associated with it.  To opt-in
 to an experimental API, you must have the feature name to the
-<code class="docutils literal"><span class="pre">experimental_feature_flags</span></code> attribute on your <code class="docutils literal"><span class="pre">app</span></code> object.
-This attribute&#8217;s type is a set of strings.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<code class="docutils literal notranslate"><span class="pre">experimental_feature_flags</span></code> attribute on your <code class="docutils literal notranslate"><span class="pre">app</span></code> object.
+This attribute’s type is a set of strings.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="s1">&#39;myapp&#39;</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
@@ -80,7 +146,7 @@ This attribute&#8217;s type is a set of strings.</p>
 <p>If you use an experimental API without opting-in, you will receive
 a message whenever you run a Chalice CLI command.  The error message
 tells you which feature flags you need to add:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 You are using experimental features without explicitly opting in.
 Experimental features do not guarantee backwards compatibility and may be removed in the future.
 If you still like to use these experimental features, you can opt-in by adding this to your app.py file:
@@ -98,15 +164,15 @@ checks for experimental features once your application is deployed.</p>
 </div>
 <div class="section" id="list-of-experimental-apis">
 <h2>List of Experimental APIs<a class="headerlink" href="#list-of-experimental-apis" title="Permalink to this headline">¶</a></h2>
-<p>In the table below, the &#8220;Feature Flag Name&#8221; column is the value you
-must add to the <code class="docutils literal"><span class="pre">app.experimental_feature_flags</span></code> attribute.
+<p>In the table below, the “Feature Flag Name” column is the value you
+must add to the <code class="docutils literal notranslate"><span class="pre">app.experimental_feature_flags</span></code> attribute.
 The status of an experimental API can be:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">Trial</span></code> - You must explicitly opt-in to use this feature.</li>
-<li><code class="docutils literal"><span class="pre">Accepted</span></code> - This feature has graduated from an experimental
+<li><code class="docutils literal notranslate"><span class="pre">Trial</span></code> - You must explicitly opt-in to use this feature.</li>
+<li><code class="docutils literal notranslate"><span class="pre">Accepted</span></code> - This feature has graduated from an experimental
 feature to a fully supported, backwards compatible feature in Chalice.
 Accepted features still appear in the table for auditing purposes.</li>
-<li><code class="docutils literal"><span class="pre">Rejected</span></code> - This feature has been removed.</li>
+<li><code class="docutils literal notranslate"><span class="pre">Rejected</span></code> - This feature has been removed.</li>
 </ul>
 <table border="1" class="docutils" id="id1">
 <caption><span class="caption-text">Experimental APIs</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
@@ -129,7 +195,7 @@ Accepted features still appear in the table for auditing purposes.</li>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td><a class="reference internal" href="blueprints.html"><span class="doc">Blueprints</span></a></td>
-<td><code class="docutils literal"><span class="pre">BLUEPRINTS</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">BLUEPRINTS</span></code></td>
 <td>1.7.0</td>
 <td>1.15.0</td>
 <td>Accepted</td>
@@ -137,7 +203,7 @@ Accepted features still appear in the table for auditing purposes.</li>
 <a class="reference external" href="https://github.com/aws/chalice/pull/651">#651</a></td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="websockets.html"><span class="doc">Websockets</span></a></td>
-<td><code class="docutils literal"><span class="pre">WEBSOCKETS</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">WEBSOCKETS</span></code></td>
 <td>1.10.0</td>
 <td>n/a</td>
 <td>Trial</td>
@@ -152,60 +218,45 @@ for more background information and alternative proposals.</p>
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="cd.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Continuous Deployment (CD)</a>
+                        
+                        <a href="../api.html" title="next chapter" class="next-page clearfix">Chalice →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="cd.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="../api.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Experimental APIs</a><ul>
 <li><a class="reference internal" href="#opting-in-to-experimental-apis">Opting-in to Experimental APIs</a></li>
 <li><a class="reference internal" href="#list-of-experimental-apis">List of Experimental APIs</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="cd.html" title="previous chapter">Continuous Deployment (CD)</a></li>
-      <li>Next: <a href="../api.html" title="next chapter">Chalice</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/experimental.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/experimental.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

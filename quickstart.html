@@ -1,75 +1,137 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Quickstart and Tutorial &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Quickstart and Tutorial &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="index.html" />
-    <link rel="next" title="Routing" href="topics/routing.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Topics" href="topics/index.html" />
     <link rel="prev" title="Getting Started" href="index.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="index.html">
+		  <span class="logo-icon"><img src="_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="#">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    
   <div class="section" id="quickstart-and-tutorial">
 <h1>Quickstart and Tutorial<a class="headerlink" href="#quickstart-and-tutorial" title="Permalink to this headline">¶</a></h1>
-<p>In this tutorial, you&#8217;ll use the <code class="docutils literal"><span class="pre">chalice</span></code> command line utility
+<p>In this tutorial, you’ll use the <code class="docutils literal notranslate"><span class="pre">chalice</span></code> command line utility
 to create and deploy a basic REST API.  This quickstart uses Python 3.7,
 but AWS Chalice supports all versions of python supported by AWS Lambda,
 which includes python2.7, python3.6, python3.7, python3.8.  We recommend
 you use a version of Python 3.
 You can find the latest versions of python on the
 <a class="reference external" href="https://www.python.org/downloads/">Python download page</a>.</p>
-<p>To install Chalice, we&#8217;ll first create and activate a virtual environment
+<p>To install Chalice, we’ll first create and activate a virtual environment
 in python3.7:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ python3 --version
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 --version
 Python 3.7.3
 $ python3 -m venv venv37
 $ . venv37/bin/activate
 </pre></div>
 </div>
-<p>Next we&#8217;ll install Chalice using <code class="docutils literal"><span class="pre">pip</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ python3 -m pip install chalice
+<p>Next we’ll install Chalice using <code class="docutils literal notranslate"><span class="pre">pip</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install chalice
 </pre></div>
 </div>
 <p>You can verify you have chalice installed by running:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice --help
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice --help
 Usage: chalice [OPTIONS] COMMAND [ARGS]...
 ...
 </pre></div>
@@ -82,7 +144,7 @@ machine to run boto3 (the AWS SDK for Python) or the AWS CLI then
 you can skip this section.</p>
 <p>If this is your first time configuring credentials for AWS you
 can follow these steps to quickly get started:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ mkdir ~/.aws
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir ~/.aws
 $ cat &gt;&gt; ~/.aws/config
 [default]
 aws_access_key_id=YOUR_ACCESS_KEY_HERE
@@ -96,24 +158,24 @@ configuring credentials, see the
 </div>
 <div class="section" id="creating-your-project">
 <h2>Creating Your Project<a class="headerlink" href="#creating-your-project" title="Permalink to this headline">¶</a></h2>
-<p>The next thing we&#8217;ll do is use the <code class="docutils literal"><span class="pre">chalice</span></code> command to create a new
+<p>The next thing we’ll do is use the <code class="docutils literal notranslate"><span class="pre">chalice</span></code> command to create a new
 project:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice new-project helloworld
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice new-project helloworld
 </pre></div>
 </div>
-<p>This will create a <code class="docutils literal"><span class="pre">helloworld</span></code> directory.  Cd into this
-directory.  You&#8217;ll see several files have been created for you:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ cd helloworld
+<p>This will create a <code class="docutils literal notranslate"><span class="pre">helloworld</span></code> directory.  Cd into this
+directory.  You’ll see several files have been created for you:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd helloworld
 $ ls -la
 drwxr-xr-x   .chalice
 -rw-r--r--   app.py
 -rw-r--r--   requirements.txt
 </pre></div>
 </div>
-<p>You can ignore the <code class="docutils literal"><span class="pre">.chalice</span></code> directory for now, the two main files
-we&#8217;ll focus on is <code class="docutils literal"><span class="pre">app.py</span></code> and <code class="docutils literal"><span class="pre">requirements.txt</span></code>.</p>
-<p>Let&#8217;s take a look at the <code class="docutils literal"><span class="pre">app.py</span></code> file:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<p>You can ignore the <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory for now, the two main files
+we’ll focus on is <code class="docutils literal notranslate"><span class="pre">app.py</span></code> and <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>.</p>
+<p>Let’s take a look at the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
 
@@ -123,34 +185,34 @@ we&#8217;ll focus on is <code class="docutils literal"><span class="pre">app.py<
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">new-project</span></code> command created a sample app that defines a
-single view, <code class="docutils literal"><span class="pre">/</span></code>, that when called will return the JSON body
-<code class="docutils literal"><span class="pre">{&quot;hello&quot;:</span> <span class="pre">&quot;world&quot;}</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">new-project</span></code> command created a sample app that defines a
+single view, <code class="docutils literal notranslate"><span class="pre">/</span></code>, that when called will return the JSON body
+<code class="docutils literal notranslate"><span class="pre">{&quot;hello&quot;:</span> <span class="pre">&quot;world&quot;}</span></code>.</p>
 </div>
 <div class="section" id="deploying">
 <h2>Deploying<a class="headerlink" href="#deploying" title="Permalink to this headline">¶</a></h2>
-<p>Let&#8217;s deploy this app.  Make sure you&#8217;re in the <code class="docutils literal"><span class="pre">helloworld</span></code>
-directory and run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+<p>Let’s deploy this app.  Make sure you’re in the <code class="docutils literal notranslate"><span class="pre">helloworld</span></code>
+directory and run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 ...
 Initiating first time deployment...
 https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
 </pre></div>
 </div>
 <p>You now have an API up and running using API Gateway and Lambda:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
 {&quot;hello&quot;: &quot;world&quot;}
 </pre></div>
 </div>
-<p>Try making a change to the returned dictionary from the <code class="docutils literal"><span class="pre">index()</span></code>
-function.  You can then redeploy your changes by running <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.</p>
-<p>For the rest of these tutorials, we&#8217;ll be using <code class="docutils literal"><span class="pre">httpie</span></code> instead of <code class="docutils literal"><span class="pre">curl</span></code>
+<p>Try making a change to the returned dictionary from the <code class="docutils literal notranslate"><span class="pre">index()</span></code>
+function.  You can then redeploy your changes by running <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.</p>
+<p>For the rest of these tutorials, we’ll be using <code class="docutils literal notranslate"><span class="pre">httpie</span></code> instead of <code class="docutils literal notranslate"><span class="pre">curl</span></code>
 (<a class="reference external" href="https://github.com/jakubroztocil/httpie">https://github.com/jakubroztocil/httpie</a>) to test our API.  You can install
-<code class="docutils literal"><span class="pre">httpie</span></code> using <code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">httpie</span></code>, or if you&#8217;re on Mac, you can run
-<code class="docutils literal"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">httpie</span></code>.  The Github link has more information on installation
-instructions.  Here&#8217;s an example of using <code class="docutils literal"><span class="pre">httpie</span></code> to request the root
-resource of the API we just created.  Note that the command name is <code class="docutils literal"><span class="pre">http</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
+<code class="docutils literal notranslate"><span class="pre">httpie</span></code> using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">httpie</span></code>, or if you’re on Mac, you can run
+<code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">httpie</span></code>.  The Github link has more information on installation
+instructions.  Here’s an example of using <code class="docutils literal notranslate"><span class="pre">httpie</span></code> to request the root
+resource of the API we just created.  Note that the command name is <code class="docutils literal notranslate"><span class="pre">http</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
 HTTP/1.1 200 OK
 Connection: keep-alive
 Content-Length: 18
@@ -164,14 +226,14 @@ X-Cache: Miss from cloudfront
 </pre></div>
 </div>
 <p>Additionally, the API Gateway endpoints will be shortened to
-<code class="docutils literal"><span class="pre">https://endpoint/api/</span></code> for brevity.  Be sure to substitute
-<code class="docutils literal"><span class="pre">https://endpoint/api/</span></code> for the actual endpoint that the <code class="docutils literal"><span class="pre">chalice</span></code>
+<code class="docutils literal notranslate"><span class="pre">https://endpoint/api/</span></code> for brevity.  Be sure to substitute
+<code class="docutils literal notranslate"><span class="pre">https://endpoint/api/</span></code> for the actual endpoint that the <code class="docutils literal notranslate"><span class="pre">chalice</span></code>
 CLI displays when you deploy your API (it will look something like
-<code class="docutils literal"><span class="pre">https://abcdefg.execute-api.us-west-2.amazonaws.com/api/</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">https://abcdefg.execute-api.us-west-2.amazonaws.com/api/</span></code>.</p>
 </div>
 <div class="section" id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
-<p>You&#8217;ve now created your first app using <code class="docutils literal"><span class="pre">chalice</span></code>.</p>
+<p>You’ve now created your first app using <code class="docutils literal notranslate"><span class="pre">chalice</span></code>.</p>
 <p>The next few sections will build on this quickstart section and introduce
 you to additional features including: URL parameter capturing,
 error handling, advanced routing, current request metadata, and automatic
@@ -180,13 +242,13 @@ policy generation.</p>
 </div>
 <div class="section" id="tutorial-url-parameters">
 <h1>Tutorial: URL Parameters<a class="headerlink" href="#tutorial-url-parameters" title="Permalink to this headline">¶</a></h1>
-<p>Now we&#8217;re going to make a few changes to our <code class="docutils literal"><span class="pre">app.py</span></code> file that
+<p>Now we’re going to make a few changes to our <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file that
 demonstrate additional capabilities provided by the python serverless
 microframework for AWS.</p>
 <p>Our application so far has a single view that allows you to make
-an HTTP GET request to <code class="docutils literal"><span class="pre">/</span></code>.  Now let&#8217;s suppose we want to capture
+an HTTP GET request to <code class="docutils literal notranslate"><span class="pre">/</span></code>.  Now let’s suppose we want to capture
 parts of the URI:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
 
@@ -205,27 +267,27 @@ parts of the URI:</p>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="n">CITIES_TO_STATE</span><span class="p">[</span><span class="n">city</span><span class="p">]}</span>
 </pre></div>
 </div>
-<p>In the example above, we&#8217;ve now added a <code class="docutils literal"><span class="pre">state_of_city</span></code> view that allows
+<p>In the example above, we’ve now added a <code class="docutils literal notranslate"><span class="pre">state_of_city</span></code> view that allows
 a user to specify a city name.  The view function takes the city
 name and returns name of the state the city is in.  Notice that the
-<code class="docutils literal"><span class="pre">&#64;app.route</span></code> decorator has a URL pattern of <code class="docutils literal"><span class="pre">/cities/{city}</span></code>.  This
-means that the value of <code class="docutils literal"><span class="pre">{city}</span></code> is captured and passed to the view
-function.  You can also see that the <code class="docutils literal"><span class="pre">state_of_city</span></code> takes a single
+<code class="docutils literal notranslate"><span class="pre">&#64;app.route</span></code> decorator has a URL pattern of <code class="docutils literal notranslate"><span class="pre">/cities/{city}</span></code>.  This
+means that the value of <code class="docutils literal notranslate"><span class="pre">{city}</span></code> is captured and passed to the view
+function.  You can also see that the <code class="docutils literal notranslate"><span class="pre">state_of_city</span></code> takes a single
 argument.  This argument is the name of the city provided by the user.
 For example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">GET</span> <span class="o">/</span><span class="n">cities</span><span class="o">/</span><span class="n">seattle</span>   <span class="o">--&gt;</span> <span class="n">state_of_city</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GET</span> <span class="o">/</span><span class="n">cities</span><span class="o">/</span><span class="n">seattle</span>   <span class="o">--&gt;</span> <span class="n">state_of_city</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
 <span class="n">GET</span> <span class="o">/</span><span class="n">cities</span><span class="o">/</span><span class="n">portland</span>  <span class="o">--&gt;</span> <span class="n">state_of_city</span><span class="p">(</span><span class="s1">&#39;portland&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Now that we&#8217;ve updated our <code class="docutils literal"><span class="pre">app.py</span></code> file with this new view function,
-let&#8217;s redeploy our application.  You can run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> from
-the <code class="docutils literal"><span class="pre">helloworld</span></code> directory and it will deploy your application:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+<p>Now that we’ve updated our <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file with this new view function,
+let’s redeploy our application.  You can run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> from
+the <code class="docutils literal notranslate"><span class="pre">helloworld</span></code> directory and it will deploy your application:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 </pre></div>
 </div>
-<p>Let&#8217;s try it out.  Note the examples below use the <code class="docutils literal"><span class="pre">http</span></code> command
-from the <code class="docutils literal"><span class="pre">httpie</span></code> package.  You can install this using <code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">httpie</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/api/cities/seattle
+<p>Let’s try it out.  Note the examples below use the <code class="docutils literal notranslate"><span class="pre">http</span></code> command
+from the <code class="docutils literal notranslate"><span class="pre">httpie</span></code> package.  You can install this using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">httpie</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http https://endpoint/api/cities/seattle
 HTTP/1.1 200 OK
 
 {
@@ -240,9 +302,9 @@ HTTP/1.1 200 OK
 }
 </pre></div>
 </div>
-<p>Notice what happens if we try to request a city that&#8217;s not in our
-<code class="docutils literal"><span class="pre">CITIES_TO_STATE</span></code> map:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/api/cities/vancouver
+<p>Notice what happens if we try to request a city that’s not in our
+<code class="docutils literal notranslate"><span class="pre">CITIES_TO_STATE</span></code> map:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http https://endpoint/api/cities/vancouver
 HTTP/1.1 500 Internal Server Error
 Content-Type: application/json
 X-Cache: Error from cloudfront
@@ -253,34 +315,34 @@ X-Cache: Error from cloudfront
 }
 </pre></div>
 </div>
-<p>In the next section, we&#8217;ll see how to fix this and provide better
+<p>In the next section, we’ll see how to fix this and provide better
 error messages.</p>
 </div>
 <div class="section" id="tutorial-error-messages">
 <h1>Tutorial: Error Messages<a class="headerlink" href="#tutorial-error-messages" title="Permalink to this headline">¶</a></h1>
-<p>In the example above, you&#8217;ll notice that when our app raised
+<p>In the example above, you’ll notice that when our app raised
 an uncaught exception, a 500 internal server error was returned.</p>
-<p>In this section, we&#8217;re going to show how you can debug and improve
+<p>In this section, we’re going to show how you can debug and improve
 these error messages.</p>
-<p>The first thing we&#8217;re going to look at is how we can debug this
+<p>The first thing we’re going to look at is how we can debug this
 issue.  By default, debugging is turned off, but you can
 enable debugging to get more information:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">True</span></code> enables debugging for your app.
+<p>The <code class="docutils literal notranslate"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">True</span></code> enables debugging for your app.
 Save this file and redeploy your changes:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 ...
 https://endpoint/api/
 </pre></div>
 </div>
 <p>Now, when you request the same URL that returned an internal
-server error, you&#8217;ll get back the original stack trace:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/api/cities/vancouver
+server error, you’ll get back the original stack trace:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http https://endpoint/api/cities/vancouver
 Traceback (most recent call last):
   File &quot;/var/task/chalice/app.py&quot;, line 304, in _get_view_function_response
     response = view_function(*function_args)
@@ -289,12 +351,12 @@ Traceback (most recent call last):
 KeyError: u&#39;vancouver&#39;
 </pre></div>
 </div>
-<p>We can see that the error is caused from an uncaught <code class="docutils literal"><span class="pre">KeyError</span></code> resulting
-from trying to access the <code class="docutils literal"><span class="pre">vancouver</span></code> key.</p>
-<p>Now that we know the error, we can fix our code.  What we&#8217;d like to do is
+<p>We can see that the error is caused from an uncaught <code class="docutils literal notranslate"><span class="pre">KeyError</span></code> resulting
+from trying to access the <code class="docutils literal notranslate"><span class="pre">vancouver</span></code> key.</p>
+<p>Now that we know the error, we can fix our code.  What we’d like to do is
 catch this exception and instead return a more helpful error message
-to the user.  Here&#8217;s the updated code:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">BadRequestError</span>
+to the user.  Here’s the updated code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">BadRequestError</span>
 
 <span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/cities/{city}&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">state_of_city</span><span class="p">(</span><span class="n">city</span><span class="p">):</span>
@@ -306,7 +368,7 @@ to the user.  Here&#8217;s the updated code:</p>
 </pre></div>
 </div>
 <p>Save and deploy these changes:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 $ http https://endpoint/api/cities/vancouver
 HTTP/1.1 400 Bad Request
 
@@ -316,12 +378,12 @@ HTTP/1.1 400 Bad Request
 }
 </pre></div>
 </div>
-<p>We can see now that we have received a <code class="docutils literal"><span class="pre">Code</span></code> and <code class="docutils literal"><span class="pre">Message</span></code> key, with the message
-being the value we passed to <code class="docutils literal"><span class="pre">BadRequestError</span></code>.  Whenever you raise
-a <code class="docutils literal"><span class="pre">BadRequestError</span></code> from your view function, the framework will return an
-HTTP status code of 400 along with a JSON body with a <code class="docutils literal"><span class="pre">Code</span></code> and <code class="docutils literal"><span class="pre">Message</span></code>.
+<p>We can see now that we have received a <code class="docutils literal notranslate"><span class="pre">Code</span></code> and <code class="docutils literal notranslate"><span class="pre">Message</span></code> key, with the message
+being the value we passed to <code class="docutils literal notranslate"><span class="pre">BadRequestError</span></code>.  Whenever you raise
+a <code class="docutils literal notranslate"><span class="pre">BadRequestError</span></code> from your view function, the framework will return an
+HTTP status code of 400 along with a JSON body with a <code class="docutils literal notranslate"><span class="pre">Code</span></code> and <code class="docutils literal notranslate"><span class="pre">Message</span></code>.
 There are a few additional exceptions you can raise from your python code:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">BadRequestError</span> <span class="o">-</span> <span class="k">return</span> <span class="n">a</span> <span class="n">status</span> <span class="n">code</span> <span class="n">of</span> <span class="mi">400</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">BadRequestError</span> <span class="o">-</span> <span class="k">return</span> <span class="n">a</span> <span class="n">status</span> <span class="n">code</span> <span class="n">of</span> <span class="mi">400</span>
 <span class="o">*</span> <span class="n">UnauthorizedError</span> <span class="o">-</span> <span class="k">return</span> <span class="n">a</span> <span class="n">status</span> <span class="n">code</span> <span class="n">of</span> <span class="mi">401</span>
 <span class="o">*</span> <span class="n">ForbiddenError</span> <span class="o">-</span> <span class="k">return</span> <span class="n">a</span> <span class="n">status</span> <span class="n">code</span> <span class="n">of</span> <span class="mi">403</span>
 <span class="o">*</span> <span class="n">NotFoundError</span> <span class="o">-</span> <span class="k">return</span> <span class="n">a</span> <span class="n">status</span> <span class="n">code</span> <span class="n">of</span> <span class="mi">404</span>
@@ -331,23 +393,23 @@ There are a few additional exceptions you can raise from your python code:</p>
 <span class="o">*</span> <span class="n">ChaliceViewError</span> <span class="o">-</span> <span class="k">return</span> <span class="n">a</span> <span class="n">status</span> <span class="n">code</span> <span class="n">of</span> <span class="mi">500</span>
 </pre></div>
 </div>
-<p>You can import these directly from the <code class="docutils literal"><span class="pre">chalice</span></code> package:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">UnauthorizedError</span>
+<p>You can import these directly from the <code class="docutils literal notranslate"><span class="pre">chalice</span></code> package:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">UnauthorizedError</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="tutorial-additional-routing">
 <h1>Tutorial: Additional Routing<a class="headerlink" href="#tutorial-additional-routing" title="Permalink to this headline">¶</a></h1>
 <p>So far, our examples have only allowed GET requests.
-It&#8217;s actually possible to support additional HTTP methods.
-Here&#8217;s an example of a view function that supports PUT:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/resource/{value}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+It’s actually possible to support additional HTTP methods.
+Here’s an example of a view function that supports PUT:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/resource/{value}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">put_test</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>We can test this method using the <code class="docutils literal"><span class="pre">http</span></code> command:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http PUT https://endpoint/api/resource/foo
+<p>We can test this method using the <code class="docutils literal notranslate"><span class="pre">http</span></code> command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http PUT https://endpoint/api/resource/foo
 HTTP/1.1 200 OK
 
 {
@@ -355,21 +417,21 @@ HTTP/1.1 200 OK
 }
 </pre></div>
 </div>
-<p>Note that the <code class="docutils literal"><span class="pre">methods</span></code> kwarg accepts a list of methods.  Your view function
+<p>Note that the <code class="docutils literal notranslate"><span class="pre">methods</span></code> kwarg accepts a list of methods.  Your view function
 will be called when any of the HTTP methods you specify are used for the
 specified resource.  For example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myview</span><span class="p">():</span>
     <span class="k">pass</span>
 </pre></div>
 </div>
 <p>The above view function will be called when either an HTTP POST or
-PUT is sent to <code class="docutils literal"><span class="pre">/myview</span></code>.</p>
+PUT is sent to <code class="docutils literal notranslate"><span class="pre">/myview</span></code>.</p>
 <p>Alternatively if you do not want to share the same view function across
 multiple HTTP methods for the same route url, you may define separate view
 functions to the same route url but have the view functions differ by
 HTTP method. For example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myview_post</span><span class="p">():</span>
     <span class="k">pass</span>
 
@@ -378,34 +440,34 @@ HTTP method. For example:</p>
     <span class="k">pass</span>
 </pre></div>
 </div>
-<p>This setup will route all HTTP POST&#8217;s to <code class="docutils literal"><span class="pre">/myview</span></code> to the <code class="docutils literal"><span class="pre">myview_post()</span></code>
-view function and route all HTTP PUT&#8217;s to <code class="docutils literal"><span class="pre">/myview</span></code> to the <code class="docutils literal"><span class="pre">myview_put()</span></code>
+<p>This setup will route all HTTP POST’s to <code class="docutils literal notranslate"><span class="pre">/myview</span></code> to the <code class="docutils literal notranslate"><span class="pre">myview_post()</span></code>
+view function and route all HTTP PUT’s to <code class="docutils literal notranslate"><span class="pre">/myview</span></code> to the <code class="docutils literal notranslate"><span class="pre">myview_put()</span></code>
 view function. It is also important to note that the view functions
 <strong>must</strong> have unique names. For example, both view functions cannot be
-named <code class="docutils literal"><span class="pre">myview()</span></code>.</p>
-<p>In the next section we&#8217;ll go over how you can introspect the given request
+named <code class="docutils literal notranslate"><span class="pre">myview()</span></code>.</p>
+<p>In the next section we’ll go over how you can introspect the given request
 in order to differentiate between various HTTP methods.</p>
 </div>
 <div class="section" id="tutorial-request-metadata">
 <h1>Tutorial: Request Metadata<a class="headerlink" href="#tutorial-request-metadata" title="Permalink to this headline">¶</a></h1>
 <p>In the examples above, you saw how to create a view function that supports
 an HTTP PUT request as well as a view function that supports both POST and
-PUT via the same view function.  However, there&#8217;s more information we
+PUT via the same view function.  However, there’s more information we
 might need about a given request:</p>
 <ul class="simple">
 <li>In a PUT/POST, you frequently send a request body.  We need some
 way of accessing the contents of the request body.</li>
-<li>For view functions that support multiple HTTP methods, we&#8217;d like
+<li>For view functions that support multiple HTTP methods, we’d like
 to detect which HTTP method was used so we can have different
 code paths for PUTs vs. POSTs.</li>
 </ul>
 <p>All of this and more is handled by the current request object that the
-<code class="docutils literal"><span class="pre">chalice</span></code> library makes available to each view function when it&#8217;s called.</p>
-<p>Let&#8217;s see an example of this.  Suppose we want to create a view function
+<code class="docutils literal notranslate"><span class="pre">chalice</span></code> library makes available to each view function when it’s called.</p>
+<p>Let’s see an example of this.  Suppose we want to create a view function
 that allowed you to PUT data to an object and retrieve that data
 via a corresponding GET.  We could accomplish that with the
 following view function:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">NotFoundError</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">NotFoundError</span>
 
 <span class="n">OBJECTS</span> <span class="o">=</span> <span class="p">{</span>
 <span class="p">}</span>
@@ -422,11 +484,11 @@ following view function:</p>
             <span class="k">raise</span> <span class="n">NotFoundError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Save this in your <code class="docutils literal"><span class="pre">app.py</span></code> file and rerun <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
-Now, you can make a PUT request to <code class="docutils literal"><span class="pre">/objects/your-key</span></code> with a request
+<p>Save this in your <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file and rerun <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
+Now, you can make a PUT request to <code class="docutils literal notranslate"><span class="pre">/objects/your-key</span></code> with a request
 body, and retrieve the value of that body by making a subsequent
-<code class="docutils literal"><span class="pre">GET</span></code> request to the same resource.  Here&#8217;s an example of its usage:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span># First, trying to retrieve the key will return a 404.
+<code class="docutils literal notranslate"><span class="pre">GET</span></code> request to the same resource.  Here’s an example of its usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># First, trying to retrieve the key will return a 404.
 $ http GET https://endpoint/api/objects/mykey
 HTTP/1.1 404 Not Found
 
@@ -454,32 +516,32 @@ HTTP/1.1 200 OK
 </pre></div>
 </div>
 <p>You might see a problem with storing the objects in a module level
-<code class="docutils literal"><span class="pre">OBJECTS</span></code> variable.  We address this in the next section.</p>
-<p>The <code class="docutils literal"><span class="pre">app.current_request</span></code> object also has the following properties.</p>
+<code class="docutils literal notranslate"><span class="pre">OBJECTS</span></code> variable.  We address this in the next section.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> object also has the following properties.</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">current_request.query_params</span></code> - A dict of the query params for the request.</li>
-<li><code class="docutils literal"><span class="pre">current_request.headers</span></code> - A dict of the request headers.</li>
-<li><code class="docutils literal"><span class="pre">current_request.uri_params</span></code> - A dict of the captured URI params.</li>
-<li><code class="docutils literal"><span class="pre">current_request.method</span></code> -  The HTTP method (as a string).</li>
-<li><code class="docutils literal"><span class="pre">current_request.json_body</span></code> - The parsed JSON body (<code class="docutils literal"><span class="pre">json.loads(raw_body)</span></code>)</li>
-<li><code class="docutils literal"><span class="pre">current_request.raw_body</span></code> - The raw HTTP body as bytes.</li>
-<li><code class="docutils literal"><span class="pre">current_request.context</span></code> - A dict of additional context information</li>
-<li><code class="docutils literal"><span class="pre">current_request.stage_vars</span></code> - Configuration for the API Gateway stage</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.query_params</span></code> - A dict of the query params for the request.</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.headers</span></code> - A dict of the request headers.</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.uri_params</span></code> - A dict of the captured URI params.</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.method</span></code> -  The HTTP method (as a string).</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.json_body</span></code> - The parsed JSON body (<code class="docutils literal notranslate"><span class="pre">json.loads(raw_body)</span></code>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.raw_body</span></code> - The raw HTTP body as bytes.</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.context</span></code> - A dict of additional context information</li>
+<li><code class="docutils literal notranslate"><span class="pre">current_request.stage_vars</span></code> - Configuration for the API Gateway stage</li>
 </ul>
-<p>Don&#8217;t worry about the <code class="docutils literal"><span class="pre">context</span></code> and <code class="docutils literal"><span class="pre">stage_vars</span></code> for now.  We haven&#8217;t
-discussed those concepts yet.  The <code class="docutils literal"><span class="pre">current_request</span></code> object also
-has a <code class="docutils literal"><span class="pre">to_dict</span></code> method, which returns all the information about the
-current request as a dictionary.  Let&#8217;s use this method to write a view
+<p>Don’t worry about the <code class="docutils literal notranslate"><span class="pre">context</span></code> and <code class="docutils literal notranslate"><span class="pre">stage_vars</span></code> for now.  We haven’t
+discussed those concepts yet.  The <code class="docutils literal notranslate"><span class="pre">current_request</span></code> object also
+has a <code class="docutils literal notranslate"><span class="pre">to_dict</span></code> method, which returns all the information about the
+current request as a dictionary.  Let’s use this method to write a view
 function that returns everything it knows about the request:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/introspect&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/introspect&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">introspect</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Save this to your <code class="docutils literal"><span class="pre">app.py</span></code> file and redeploy with <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
-Here&#8217;s an example of hitting the <code class="docutils literal"><span class="pre">/introspect</span></code> URL.  Note how we&#8217;re
-sending a query string as well as a custom <code class="docutils literal"><span class="pre">X-TestHeader</span></code> header:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http &#39;https://endpoint/api/introspect?query1=value1&amp;query2=value2&#39; &#39;X-TestHeader: Foo&#39;
+<p>Save this to your <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file and redeploy with <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
+Here’s an example of hitting the <code class="docutils literal notranslate"><span class="pre">/introspect</span></code> URL.  Note how we’re
+sending a query string as well as a custom <code class="docutils literal notranslate"><span class="pre">X-TestHeader</span></code> header:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http &#39;https://endpoint/api/introspect?query1=value1&amp;query2=value2&#39; &#39;X-TestHeader: Foo&#39;
 HTTP/1.1 200 OK
 
 {
@@ -524,16 +586,16 @@ HTTP/1.1 200 OK
 <div class="section" id="tutorial-request-content-types">
 <h1>Tutorial: Request Content Types<a class="headerlink" href="#tutorial-request-content-types" title="Permalink to this headline">¶</a></h1>
 <p>The default behavior of a view function supports
-a request body of <code class="docutils literal"><span class="pre">application/json</span></code>.  When a request is
-made with a <code class="docutils literal"><span class="pre">Content-Type</span></code> of <code class="docutils literal"><span class="pre">application/json</span></code>, the
-<code class="docutils literal"><span class="pre">app.current_request.json_body</span></code> attribute is automatically
+a request body of <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.  When a request is
+made with a <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> of <code class="docutils literal notranslate"><span class="pre">application/json</span></code>, the
+<code class="docutils literal notranslate"><span class="pre">app.current_request.json_body</span></code> attribute is automatically
 set for you.  This value is the parsed JSON body.</p>
 <p>You can also configure a view function to support other
 content types.  You can do this by specifying the
-<code class="docutils literal"><span class="pre">content_types</span></code> parameter value to your <code class="docutils literal"><span class="pre">app.route</span></code>
+<code class="docutils literal notranslate"><span class="pre">content_types</span></code> parameter value to your <code class="docutils literal notranslate"><span class="pre">app.route</span></code>
 function.  This parameter is a list of acceptable content
-types.  Here&#8217;s an example of this feature:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+types.  Here’s an example of this feature:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">parse_qs</span>
@@ -550,12 +612,12 @@ types.  Here&#8217;s an example of this feature:</p>
     <span class="p">}</span>
 </pre></div>
 </div>
-<p>There&#8217;s a few things worth noting in this view function.
-First, we&#8217;ve specified that we only accept the
-<code class="docutils literal"><span class="pre">application/x-www-form-urlencoded</span></code> content type.  If we
-try to send a request with <code class="docutils literal"><span class="pre">application/json</span></code>, we&#8217;ll now
-get a <code class="docutils literal"><span class="pre">415</span> <span class="pre">Unsupported</span> <span class="pre">Media</span> <span class="pre">Type</span></code> response:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http POST https://endpoint/api/ states=WA states=CA --debug
+<p>There’s a few things worth noting in this view function.
+First, we’ve specified that we only accept the
+<code class="docutils literal notranslate"><span class="pre">application/x-www-form-urlencoded</span></code> content type.  If we
+try to send a request with <code class="docutils literal notranslate"><span class="pre">application/json</span></code>, we’ll now
+get a <code class="docutils literal notranslate"><span class="pre">415</span> <span class="pre">Unsupported</span> <span class="pre">Media</span> <span class="pre">Type</span></code> response:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http POST https://endpoint/api/ states=WA states=CA --debug
 ...
 &gt;&gt;&gt; requests.request(**{&#39;allow_redirects&#39;: False,
  &#39;headers&#39;: {&#39;Accept&#39;: &#39;application/json&#39;,
@@ -570,10 +632,10 @@ HTTP/1.1 415 Unsupported Media Type
 }
 </pre></div>
 </div>
-<p>If we use the <code class="docutils literal"><span class="pre">--form</span></code> argument, we can see the
-expected behavior of this view function because <code class="docutils literal"><span class="pre">httpie</span></code> sets the
-<code class="docutils literal"><span class="pre">Content-Type</span></code> header to <code class="docutils literal"><span class="pre">application/x-www-form-urlencoded</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http --form POST https://endpoint/api/formtest states=WA states=CA --debug
+<p>If we use the <code class="docutils literal notranslate"><span class="pre">--form</span></code> argument, we can see the
+expected behavior of this view function because <code class="docutils literal notranslate"><span class="pre">httpie</span></code> sets the
+<code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header to <code class="docutils literal notranslate"><span class="pre">application/x-www-form-urlencoded</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http --form POST https://endpoint/api/formtest states=WA states=CA --debug
 ...
 &gt;&gt;&gt; requests.request(**{&#39;allow_redirects&#39;: False,
  &#39;headers&#39;: {&#39;Content-Type&#39;: &#39;application/x-www-form-urlencoded; charset=utf-8&#39;,
@@ -588,16 +650,16 @@ HTTP/1.1 200 OK
 }
 </pre></div>
 </div>
-<p>The second thing worth noting is that <code class="docutils literal"><span class="pre">app.current_request.json_body</span></code>
+<p>The second thing worth noting is that <code class="docutils literal notranslate"><span class="pre">app.current_request.json_body</span></code>
 <strong>is only available for the application/json content type.</strong>
-In our example above, we used <code class="docutils literal"><span class="pre">app.current_request.raw_body</span></code> to access
+In our example above, we used <code class="docutils literal notranslate"><span class="pre">app.current_request.raw_body</span></code> to access
 the raw body bytes:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_qs</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">raw_body</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_qs</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">raw_body</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal"><span class="pre">app.current_request.json_body</span></code> is set to <code class="docutils literal"><span class="pre">None</span></code> whenever the
-<code class="docutils literal"><span class="pre">Content-Type</span></code> is not <code class="docutils literal"><span class="pre">application/json</span></code>.  This means that
-you will need to use <code class="docutils literal"><span class="pre">app.current_request.raw_body</span></code> and parse
+<p><code class="docutils literal notranslate"><span class="pre">app.current_request.json_body</span></code> is set to <code class="docutils literal notranslate"><span class="pre">None</span></code> whenever the
+<code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> is not <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.  This means that
+you will need to use <code class="docutils literal notranslate"><span class="pre">app.current_request.raw_body</span></code> and parse
 the request body as needed.</p>
 </div>
 <div class="section" id="tutorial-customizing-the-http-response">
@@ -606,14 +668,14 @@ the request body as needed.</p>
 response body returned back to the caller.  This makes it easy to create
 rest APIs that return JSON response bodies.</p>
 <p>Chalice allows you to control this behavior by returning an instance of
-a chalice specific <code class="docutils literal"><span class="pre">Response</span></code> class.  This behavior allows you to:</p>
+a chalice specific <code class="docutils literal notranslate"><span class="pre">Response</span></code> class.  This behavior allows you to:</p>
 <ul class="simple">
 <li>Specify the status code to return</li>
 <li>Specify custom headers to add to the response</li>
-<li>Specify response bodies that are not <code class="docutils literal"><span class="pre">application/json</span></code></li>
+<li>Specify response bodies that are not <code class="docutils literal notranslate"><span class="pre">application/json</span></code></li>
 </ul>
-<p>Here&#8217;s an example of this:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
+<p>Here’s an example of this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;custom-response&#39;</span><span class="p">)</span>
 
@@ -626,7 +688,7 @@ a chalice specific <code class="docutils literal"><span class="pre">Response</sp
 </pre></div>
 </div>
 <p>This will result in a plain text response body:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http https://endpoint/api/
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http https://endpoint/api/
 HTTP/1.1 200 OK
 Content-Length: 12
 Content-Type: text/plain
@@ -641,15 +703,15 @@ hello world!
 response body returned back to the caller.  This makes it easy to create
 rest APIs that return JSON response bodies.</p>
 <p>Chalice allows you to control this behavior by returning an instance of
-a chalice specific <code class="docutils literal"><span class="pre">Response</span></code> class.  This behavior allows you to:</p>
+a chalice specific <code class="docutils literal notranslate"><span class="pre">Response</span></code> class.  This behavior allows you to:</p>
 <ul class="simple">
-<li>Add <code class="docutils literal"><span class="pre">application/json</span></code> to binary_types</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">application/json</span></code> to binary_types</li>
 <li>Specify the status code to return</li>
-<li>Specify custom header <code class="docutils literal"><span class="pre">Content-Type:</span> <span class="pre">application/json</span></code></li>
-<li>Specify custom header <code class="docutils literal"><span class="pre">Content-Encoding:</span> <span class="pre">gzip</span></code></li>
+<li>Specify custom header <code class="docutils literal notranslate"><span class="pre">Content-Type:</span> <span class="pre">application/json</span></code></li>
+<li>Specify custom header <code class="docutils literal notranslate"><span class="pre">Content-Encoding:</span> <span class="pre">gzip</span></code></li>
 </ul>
-<p>Here&#8217;s an example of this:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+<p>Here’s an example of this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">gzip</span>
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
 
@@ -673,34 +735,34 @@ a chalice specific <code class="docutils literal"><span class="pre">Response</sp
 <div class="section" id="tutorial-cors-support">
 <h1>Tutorial: CORS Support<a class="headerlink" href="#tutorial-cors-support" title="Permalink to this headline">¶</a></h1>
 <p>You can specify whether a view supports CORS by adding the
-<code class="docutils literal"><span class="pre">cors=True</span></code> parameter to your <code class="docutils literal"><span class="pre">&#64;app.route()</span></code> call.  By
-default this value is <code class="docutils literal"><span class="pre">False</span></code>. Global CORS can be set by
-setting <code class="docutils literal"><span class="pre">app.api.cors</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/supports-cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<code class="docutils literal notranslate"><span class="pre">cors=True</span></code> parameter to your <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> call.  By
+default this value is <code class="docutils literal notranslate"><span class="pre">False</span></code>. Global CORS can be set by
+setting <code class="docutils literal notranslate"><span class="pre">app.api.cors</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/supports-cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">supports_cors</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{}</span>
 </pre></div>
 </div>
-<p>Setting <code class="docutils literal"><span class="pre">cors=True</span></code> has similar behavior to enabling CORS
+<p>Setting <code class="docutils literal notranslate"><span class="pre">cors=True</span></code> has similar behavior to enabling CORS
 using the AWS Console.  This includes:</p>
 <ul class="simple">
-<li>Injecting the <code class="docutils literal"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code> header to your
+<li>Injecting the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code> header to your
 responses, including all error responses you can return.</li>
-<li>Automatically adding an <code class="docutils literal"><span class="pre">OPTIONS</span></code> method to support preflighting
+<li>Automatically adding an <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method to support preflighting
 requests.</li>
 </ul>
 <p>The preflight request will return a response that includes:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code></li>
-<li>The <code class="docutils literal"><span class="pre">Access-Control-Allow-Methods</span></code> header will return a list of all HTTP
-methods you&#8217;ve called out in your view function.  In the example above,
-this will be <code class="docutils literal"><span class="pre">PUT,OPTIONS</span></code>.</li>
-<li><code class="docutils literal"><span class="pre">Access-Control-Allow-Headers:</span> <span class="pre">Content-Type,X-Amz-Date,Authorization,</span>
+<li><code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code></li>
+<li>The <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Methods</span></code> header will return a list of all HTTP
+methods you’ve called out in your view function.  In the example above,
+this will be <code class="docutils literal notranslate"><span class="pre">PUT,OPTIONS</span></code>.</li>
+<li><code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Headers:</span> <span class="pre">Content-Type,X-Amz-Date,Authorization,</span>
 <span class="pre">X-Api-Key,X-Amz-Security-Token</span></code>.</li>
 </ul>
-<p>If more fine grained control of the CORS headers is desired, set the <code class="docutils literal"><span class="pre">cors</span></code>
-parameter to an instance of <code class="docutils literal"><span class="pre">CORSConfig</span></code> instead of <code class="docutils literal"><span class="pre">True</span></code>. The
-<code class="docutils literal"><span class="pre">CORSConfig</span></code> object can be imported from from the <code class="docutils literal"><span class="pre">chalice</span></code> package it&#8217;s
+<p>If more fine grained control of the CORS headers is desired, set the <code class="docutils literal notranslate"><span class="pre">cors</span></code>
+parameter to an instance of <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> instead of <code class="docutils literal notranslate"><span class="pre">True</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> object can be imported from from the <code class="docutils literal notranslate"><span class="pre">chalice</span></code> package it’s
 constructor takes the following keyword arguments that map to CORS headers:</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -738,7 +800,7 @@ constructor takes the following keyword arguments that map to CORS headers:</p>
 </tbody>
 </table>
 <p>Code sample defining more CORS headers:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CORSConfig</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CORSConfig</span>
 <span class="n">cors_config</span> <span class="o">=</span> <span class="n">CORSConfig</span><span class="p">(</span>
     <span class="n">allow_origin</span><span class="o">=</span><span class="s1">&#39;https://foo.example.com&#39;</span><span class="p">,</span>
     <span class="n">allow_headers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;X-Special-Header&#39;</span><span class="p">],</span>
@@ -751,24 +813,24 @@ constructor takes the following keyword arguments that map to CORS headers:</p>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;cors&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>There&#8217;s a couple of things to keep in mind when enabling cors for a view:</p>
+<p>There’s a couple of things to keep in mind when enabling cors for a view:</p>
 <ul>
-<li><p class="first">An <code class="docutils literal"><span class="pre">OPTIONS</span></code> method for preflighting is always injected.  Ensure that
-you don&#8217;t have <code class="docutils literal"><span class="pre">OPTIONS</span></code> in the <code class="docutils literal"><span class="pre">methods=[...]</span></code> list of your
+<li><p class="first">An <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method for preflighting is always injected.  Ensure that
+you don’t have <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> in the <code class="docutils literal notranslate"><span class="pre">methods=[...]</span></code> list of your
 view function.</p>
 </li>
-<li><p class="first">Even though the <code class="docutils literal"><span class="pre">Access-Control-Allow-Origin</span></code> header can be set to a
+<li><p class="first">Even though the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header can be set to a
 string that is a space separated list of origins, this behavior does not
 work on all clients that implement CORS. You should only supply a single
-origin to the <code class="docutils literal"><span class="pre">CORSConfig</span></code> object. If you need to supply multiple origins
-you will need to define a custom handler for it that accepts <code class="docutils literal"><span class="pre">OPTIONS</span></code>
-requests and matches the <code class="docutils literal"><span class="pre">Origin</span></code> header against a whitelist of origins.
-If the match is successful then return just their <code class="docutils literal"><span class="pre">Origin</span></code> back to them
-in the <code class="docutils literal"><span class="pre">Access-Control-Allow-Origin</span></code> header.</p>
+origin to the <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> object. If you need to supply multiple origins
+you will need to define a custom handler for it that accepts <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code>
+requests and matches the <code class="docutils literal notranslate"><span class="pre">Origin</span></code> header against a whitelist of origins.
+If the match is successful then return just their <code class="docutils literal notranslate"><span class="pre">Origin</span></code> back to them
+in the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header.</p>
 <p>Example:</p>
 </li>
 </ul>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;multipleorigincors&#39;</span><span class="p">)</span>
 
@@ -809,11 +871,11 @@ for more information.</p>
 <h1>Tutorial: Policy Generation<a class="headerlink" href="#tutorial-policy-generation" title="Permalink to this headline">¶</a></h1>
 <p>In the previous section we created a basic rest API that
 allowed you to store JSON objects by sending the JSON
-in the body of an HTTP PUT request to <code class="docutils literal"><span class="pre">/objects/{name}</span></code>.
+in the body of an HTTP PUT request to <code class="docutils literal notranslate"><span class="pre">/objects/{name}</span></code>.
 You could then retrieve objects by sending a GET request to
-<code class="docutils literal"><span class="pre">/objects/{name}</span></code>.</p>
-<p>However, there&#8217;s a problem with the code we wrote:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">OBJECTS</span> <span class="o">=</span> <span class="p">{</span>
+<code class="docutils literal notranslate"><span class="pre">/objects/{name}</span></code>.</p>
+<p>However, there’s a problem with the code we wrote:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">OBJECTS</span> <span class="o">=</span> <span class="p">{</span>
 <span class="p">}</span>
 
 <span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/objects/{key}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
@@ -828,22 +890,22 @@ You could then retrieve objects by sending a GET request to
             <span class="k">raise</span> <span class="n">NotFoundError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>We&#8217;re storing the key value pairs in a module level <code class="docutils literal"><span class="pre">OBJECTS</span></code>
-variable.  We can&#8217;t rely on local storage like this persisting
+<p>We’re storing the key value pairs in a module level <code class="docutils literal notranslate"><span class="pre">OBJECTS</span></code>
+variable.  We can’t rely on local storage like this persisting
 across requests.</p>
 <p>A better solution would be to store this information in Amazon S3.
-To do this, we&#8217;re going to use boto3, the AWS SDK for Python.
+To do this, we’re going to use boto3, the AWS SDK for Python.
 First, install boto3:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip install boto3
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install boto3
 </pre></div>
 </div>
-<p>Next, add <code class="docutils literal"><span class="pre">boto3</span></code> to your requirements.txt file:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip freeze | grep boto3 &gt;&gt; requirements.txt
+<p>Next, add <code class="docutils literal notranslate"><span class="pre">boto3</span></code> to your requirements.txt file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip freeze | grep boto3 &gt;&gt; requirements.txt
 </pre></div>
 </div>
 <p>The requirements.txt file should be in the same directory that contains
-your <code class="docutils literal"><span class="pre">app.py</span></code> file.  Next, let&#8217;s update our view code to use boto3:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+your <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.  Next, let’s update our view code to use boto3:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">boto3</span>
 <span class="kn">from</span> <span class="nn">botocore.exceptions</span> <span class="kn">import</span> <span class="n">ClientError</span>
 
@@ -868,10 +930,10 @@ your <code class="docutils literal"><span class="pre">app.py</span></code> file.
             <span class="k">raise</span> <span class="n">NotFoundError</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Make sure to change <code class="docutils literal"><span class="pre">BUCKET</span></code> with the name of an S3 bucket
-you own.  Redeploy your changes with <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
-Now, whenever we make a <code class="docutils literal"><span class="pre">PUT</span></code> request to <code class="docutils literal"><span class="pre">/objects/keyname</span></code>, the
-data send will be stored in S3.  Any subsequent <code class="docutils literal"><span class="pre">GET</span></code> requests will
+<p>Make sure to change <code class="docutils literal notranslate"><span class="pre">BUCKET</span></code> with the name of an S3 bucket
+you own.  Redeploy your changes with <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
+Now, whenever we make a <code class="docutils literal notranslate"><span class="pre">PUT</span></code> request to <code class="docutils literal notranslate"><span class="pre">/objects/keyname</span></code>, the
+data send will be stored in S3.  Any subsequent <code class="docutils literal notranslate"><span class="pre">GET</span></code> requests will
 retrieve this data from S3.</p>
 <div class="section" id="manually-providing-policies">
 <h2>Manually Providing Policies<a class="headerlink" href="#manually-providing-policies" title="Permalink to this headline">¶</a></h2>
@@ -880,24 +942,24 @@ pre-created and explicitly configured. To use a
 pre-configured IAM role ARN for chalice, add these two keys to your
 chalice configuration. Setting manage_iam_role to false tells
 Chalice to not attempt to generate policies and create IAM role.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="s2">&quot;manage_iam_role&quot;</span><span class="p">:</span><span class="n">false</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;manage_iam_role&quot;</span><span class="p">:</span><span class="n">false</span>
 <span class="s2">&quot;iam_role_arn&quot;</span><span class="p">:</span><span class="s2">&quot;arn:aws:iam::&lt;account-id&gt;:role/&lt;role-name&gt;&quot;</span>
 </pre></div>
 </div>
-<p>Whenever your application is deployed using <code class="docutils literal"><span class="pre">chalice</span></code>, the
+<p>Whenever your application is deployed using <code class="docutils literal notranslate"><span class="pre">chalice</span></code>, the
 auto generated policy is written to disk at
-<code class="docutils literal"><span class="pre">&lt;projectdir&gt;/.chalice/policy.json</span></code>.  When you run the
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command, you can also specify the
-<code class="docutils literal"><span class="pre">--no-autogen-policy</span></code> option.  Doing so will result in the
-<code class="docutils literal"><span class="pre">chalice</span></code> CLI loading the <code class="docutils literal"><span class="pre">&lt;projectdir&gt;/.chalice/policy.json</span></code>
+<code class="docutils literal notranslate"><span class="pre">&lt;projectdir&gt;/.chalice/policy.json</span></code>.  When you run the
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command, you can also specify the
+<code class="docutils literal notranslate"><span class="pre">--no-autogen-policy</span></code> option.  Doing so will result in the
+<code class="docutils literal notranslate"><span class="pre">chalice</span></code> CLI loading the <code class="docutils literal notranslate"><span class="pre">&lt;projectdir&gt;/.chalice/policy.json</span></code>
 file and using that file as the policy for the IAM role.
-You can manually edit this file and specify <code class="docutils literal"><span class="pre">--no-autogen-policy</span></code>
-if you&#8217;d like to have full control over what IAM policy to associate
+You can manually edit this file and specify <code class="docutils literal notranslate"><span class="pre">--no-autogen-policy</span></code>
+if you’d like to have full control over what IAM policy to associate
 with the IAM role.</p>
-<p>You can also run the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">gen-policy</span></code> command from your project
+<p>You can also run the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">gen-policy</span></code> command from your project
 directory to print the auto generated policy to stdout.  You can
 then use this as a starting point for your policy.</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice gen-policy
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice gen-policy
 {
   &quot;Version&quot;: &quot;2012-10-17&quot;,
   &quot;Statement&quot;: [
@@ -920,10 +982,10 @@ then use this as a starting point for your policy.</p>
 <h2>Experimental Status<a class="headerlink" href="#experimental-status" title="Permalink to this headline">¶</a></h2>
 <p>The automatic policy generation is still in the early stages, it should
 be considered experimental.  You can always disable policy
-generation with <code class="docutils literal"><span class="pre">--no-autogen-policy</span></code> for complete control.</p>
+generation with <code class="docutils literal notranslate"><span class="pre">--no-autogen-policy</span></code> for complete control.</p>
 <p>Additionally, you will be prompted for confirmation whenever the
 auto policy generator detects actions that it would like to add or remove:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice deploy
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 Updating IAM policy.
 
 The following action will be added to the execution policy:
@@ -946,7 +1008,7 @@ Would you like to continue?  [Y/n]:
 </ul>
 <div class="section" id="api-key">
 <h2>API Key<a class="headerlink" href="#api-key" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/authenticated&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">api_key_required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/authenticated&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">api_key_required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
 </pre></div>
@@ -955,7 +1017,7 @@ Would you like to continue?  [Y/n]:
 </div>
 <div class="section" id="using-aws-iam">
 <h2>Using AWS IAM<a class="headerlink" href="#using-aws-iam" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">IAMAuthorizer</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">IAMAuthorizer</span><span class="p">()</span>
 
 <span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/iam-role&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
@@ -966,8 +1028,8 @@ Would you like to continue?  [Y/n]:
 <div class="section" id="using-amazon-cognito-user-pools">
 <h2>Using Amazon Cognito User Pools<a class="headerlink" href="#using-amazon-cognito-user-pools" title="Permalink to this headline">¶</a></h2>
 <p>To integrate with cognito user pools, you can use the
-<code class="docutils literal"><span class="pre">CognitoUserPoolAuthorizer</span></code> object:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
+<code class="docutils literal notranslate"><span class="pre">CognitoUserPoolAuthorizer</span></code> object:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
     <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
 
@@ -976,18 +1038,18 @@ Would you like to continue?  [Y/n]:
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>Note, earlier versions of chalice also have an <code class="docutils literal"><span class="pre">app.define_authorizer</span></code>
-method as well as an <code class="docutils literal"><span class="pre">authorizer_name</span></code> argument on the <code class="docutils literal"><span class="pre">&#64;app.route(...)</span></code>
-method.  This approach is deprecated in favor of <code class="docutils literal"><span class="pre">CognitoUserPoolAuthorizer</span></code>
-and the <code class="docutils literal"><span class="pre">authorizer</span></code> argument in the <code class="docutils literal"><span class="pre">&#64;app.route(...)</span></code> method.
-<code class="docutils literal"><span class="pre">app.define_authorizer</span></code> will be removed in future versions of chalice.</p>
+<p>Note, earlier versions of chalice also have an <code class="docutils literal notranslate"><span class="pre">app.define_authorizer</span></code>
+method as well as an <code class="docutils literal notranslate"><span class="pre">authorizer_name</span></code> argument on the <code class="docutils literal notranslate"><span class="pre">&#64;app.route(...)</span></code>
+method.  This approach is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">CognitoUserPoolAuthorizer</span></code>
+and the <code class="docutils literal notranslate"><span class="pre">authorizer</span></code> argument in the <code class="docutils literal notranslate"><span class="pre">&#64;app.route(...)</span></code> method.
+<code class="docutils literal notranslate"><span class="pre">app.define_authorizer</span></code> will be removed in future versions of chalice.</p>
 </div>
 <div class="section" id="using-custom-authorizers">
 <h2>Using Custom Authorizers<a class="headerlink" href="#using-custom-authorizers" title="Permalink to this headline">¶</a></h2>
-<p>To integrate with custom authorizers, you can use the <code class="docutils literal"><span class="pre">CustomAuthorizer</span></code> method
-on the <code class="docutils literal"><span class="pre">app</span></code> object.  You&#8217;ll need to set the <code class="docutils literal"><span class="pre">authorizer_uri</span></code>
+<p>To integrate with custom authorizers, you can use the <code class="docutils literal notranslate"><span class="pre">CustomAuthorizer</span></code> method
+on the <code class="docutils literal notranslate"><span class="pre">app</span></code> object.  You’ll need to set the <code class="docutils literal notranslate"><span class="pre">authorizer_uri</span></code>
 to the URI of your lambda function.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">CustomAuthorizer</span><span class="p">(</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">CustomAuthorizer</span><span class="p">(</span>
     <span class="s1">&#39;MyCustomAuth&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
     <span class="n">authorizer_uri</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;arn:aws:apigateway:region:lambda:path/2015-03-31&#39;</span>
                     <span class="s1">&#39;/functions/arn:aws:lambda:region:account-id:&#39;</span>
@@ -1003,10 +1065,10 @@ to the URI of your lambda function.</p>
 <div class="section" id="tutorial-local-mode">
 <h1>Tutorial: Local Mode<a class="headerlink" href="#tutorial-local-mode" title="Permalink to this headline">¶</a></h1>
 <p>As you develop your application, you may want to experiment locally  before
-deploying your changes.  You can use <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">local</span></code> to spin up a local
+deploying your changes.  You can use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">local</span></code> to spin up a local
 HTTP server you can use for testing.</p>
-<p>For example, if we have the following <code class="docutils literal"><span class="pre">app.py</span></code> file:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<p>For example, if we have the following <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
 
@@ -1016,17 +1078,17 @@ HTTP server you can use for testing.</p>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>We can run <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">local</span></code> to test this API locally:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice local
+<p>We can run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">local</span></code> to test this API locally:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice local
 Serving on localhost:8000
 </pre></div>
 </div>
 <p>We can override the port using:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice local --port=8080
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice local --port=8080
 </pre></div>
 </div>
-<p>We can now test our API using <code class="docutils literal"><span class="pre">localhost:8000</span></code>:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ http localhost:8000/
+<p>We can now test our API using <code class="docutils literal notranslate"><span class="pre">localhost:8000</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ http localhost:8000/
 HTTP/1.0 200 OK
 Content-Length: 18
 Content-Type: application/json
@@ -1038,17 +1100,17 @@ Server: BaseHTTP/0.3 Python/3.7.3
 }
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">local</span></code> command <em>does not</em> assume the
-role associated with your lambda function, so you&#8217;ll
-need to use an <code class="docutils literal"><span class="pre">AWS_PROFILE</span></code> that has sufficient permissions
-to your AWS resources used in your <code class="docutils literal"><span class="pre">app.py</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">local</span></code> command <em>does not</em> assume the
+role associated with your lambda function, so you’ll
+need to use an <code class="docutils literal notranslate"><span class="pre">AWS_PROFILE</span></code> that has sufficient permissions
+to your AWS resources used in your <code class="docutils literal notranslate"><span class="pre">app.py</span></code>.</p>
 </div>
 <div class="section" id="deleting-your-app">
 <h1>Deleting Your App<a class="headerlink" href="#deleting-your-app" title="Permalink to this headline">¶</a></h1>
-<p>You can use the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">delete</span></code> command to delete your app.
-Similar to the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command, you can specify which
-chalice stage to delete.  By default it will delete the <code class="docutils literal"><span class="pre">dev</span></code> stage:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice delete --stage dev
+<p>You can use the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">delete</span></code> command to delete your app.
+Similar to the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command, you can specify which
+chalice stage to delete.  By default it will delete the <code class="docutils literal notranslate"><span class="pre">dev</span></code> stage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice delete --stage dev
 Deleting Rest API: duvw4kwyl3
 Deleting function aws:arn:lambda:region:123456789:helloworld-dev
 Deleting IAM Role helloworld-dev
@@ -1057,14 +1119,26 @@ Deleting IAM Role helloworld-dev
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="index.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Getting Started</a>
+                        
+                        <a href="topics/index.html" title="next chapter" class="next-page clearfix">Topics →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="index.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="topics/index.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Quickstart and Tutorial</a><ul>
 <li><a class="reference internal" href="#credentials">Credentials</a></li>
 <li><a class="reference internal" href="#creating-your-project">Creating Your Project</a></li>
@@ -1095,46 +1169,19 @@ Deleting IAM Role helloworld-dev
 <li><a class="reference internal" href="#tutorial-local-mode">Tutorial: Local Mode</a></li>
 <li><a class="reference internal" href="#deleting-your-app">Deleting Your App</a></li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Getting Started</a></li>
-      <li>Next: <a href="topics/routing.html" title="next chapter">Routing</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/quickstart.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="_sources/quickstart.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

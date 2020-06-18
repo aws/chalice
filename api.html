@@ -1,52 +1,114 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Chalice &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Chalice &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="index.html" />
-    <link rel="next" title="Websocket Tutorials" href="tutorials/websockets.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorials" href="tutorials/index.html" />
     <link rel="prev" title="Experimental APIs" href="topics/experimental.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="index.html">
+		  <span class="logo-icon"><img src="_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="#">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    
   <div class="section" id="chalice">
 <h1>Chalice<a class="headerlink" href="#chalice" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
@@ -54,15 +116,15 @@
 <em class="property">class </em><code class="descname">Chalice</code><span class="sig-paren">(</span><em>app_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class represents a chalice application.  It provides:</p>
 <ul class="simple">
-<li>The ability to register routes using the <a class="reference internal" href="#Chalice.route" title="Chalice.route"><code class="xref py py-meth docutils literal"><span class="pre">route()</span></code></a> method.</li>
+<li>The ability to register routes using the <a class="reference internal" href="#Chalice.route" title="Chalice.route"><code class="xref py py-meth docutils literal notranslate"><span class="pre">route()</span></code></a> method.</li>
 <li>Within a view function, the ability to introspect the current
-request using the <code class="docutils literal"><span class="pre">current_request</span></code> attribute which is an instance
-of the <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal"><span class="pre">Request</span></code></a> class.</li>
+request using the <code class="docutils literal notranslate"><span class="pre">current_request</span></code> attribute which is an instance
+of the <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a> class.</li>
 </ul>
 <dl class="attribute">
 <dt id="Chalice.current_request">
 <code class="descname">current_request</code><a class="headerlink" href="#Chalice.current_request" title="Permalink to this definition">¶</a></dt>
-<dd><p>An object of type <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal"><span class="pre">Request</span></code></a>.  This value is only set when
+<dd><p>An object of type <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a>.  This value is only set when
 a view function is being called.  This attribute can be used to
 introspect the current HTTP request.</p>
 </dd></dl>
@@ -70,8 +132,8 @@ introspect the current HTTP request.</p>
 <dl class="attribute">
 <dt id="Chalice.api">
 <code class="descname">api</code><a class="headerlink" href="#Chalice.api" title="Permalink to this definition">¶</a></dt>
-<dd><p>An object of type <a class="reference internal" href="#APIGateway" title="APIGateway"><code class="xref py py-class docutils literal"><span class="pre">APIGateway</span></code></a>. This attribute can be used to control
-how apigateway interprets <code class="docutils literal"><span class="pre">Content-Type</span></code> headers in both requests and
+<dd><p>An object of type <a class="reference internal" href="#APIGateway" title="APIGateway"><code class="xref py py-class docutils literal notranslate"><span class="pre">APIGateway</span></code></a>. This attribute can be used to control
+how apigateway interprets <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> headers in both requests and
 responses.</p>
 </dd></dl>
 
@@ -83,9 +145,9 @@ Lambda. You can find out more about this object by reading the
 <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">lambda context object documentation</a>.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">This is only set on <code class="docutils literal"><span class="pre">&#64;app.route</span></code> handlers. For other handlers it
-will be <code class="docutils literal"><span class="pre">None</span></code>. Instead the event parameter will have a <code class="docutils literal"><span class="pre">context</span></code>
-property. For example <a class="reference internal" href="#S3Event.context" title="S3Event.context"><code class="xref py py-attr docutils literal"><span class="pre">S3Event.context</span></code></a>.</p>
+<p class="last">This is only set on <code class="docutils literal notranslate"><span class="pre">&#64;app.route</span></code> handlers. For other handlers it
+will be <code class="docutils literal notranslate"><span class="pre">None</span></code>. Instead the event parameter will have a <code class="docutils literal notranslate"><span class="pre">context</span></code>
+property. For example <a class="reference internal" href="#S3Event.context" title="S3Event.context"><code class="xref py py-attr docutils literal notranslate"><span class="pre">S3Event.context</span></code></a>.</p>
 </div>
 </dd></dl>
 
@@ -93,10 +155,10 @@ property. For example <a class="reference internal" href="#S3Event.context" titl
 <dt id="Chalice.debug">
 <code class="descname">debug</code><a class="headerlink" href="#Chalice.debug" title="Permalink to this definition">¶</a></dt>
 <dd><p>A boolean value that enables debugging.  By default, this value is
-<code class="docutils literal"><span class="pre">False</span></code>.  If debugging is true, then internal errors are returned back
+<code class="docutils literal notranslate"><span class="pre">False</span></code>.  If debugging is true, then internal errors are returned back
 to the client.  Additionally, debug log messages generated by the
 framework will show up in the cloudwatch logs.  Example usage:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;appname&quot;</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
@@ -107,7 +169,7 @@ framework will show up in the cloudwatch logs.  Example usage:</p>
 <dl class="attribute">
 <dt id="Chalice.websocket_api">
 <code class="descname">websocket_api</code><a class="headerlink" href="#Chalice.websocket_api" title="Permalink to this definition">¶</a></dt>
-<dd><p>An object of type <a class="reference internal" href="#WebsocketAPI" title="WebsocketAPI"><code class="xref py py-class docutils literal"><span class="pre">WebsocketAPI</span></code></a>. This attribute can be used to
+<dd><p>An object of type <a class="reference internal" href="#WebsocketAPI" title="WebsocketAPI"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketAPI</span></code></a>. This attribute can be used to
 send messages to websocket clients connected through API Gateway.</p>
 </dd></dl>
 
@@ -116,7 +178,7 @@ send messages to websocket clients connected through API Gateway.</p>
 <code class="descname">route</code><span class="sig-paren">(</span><em>path</em>, <em>**options</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.route" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register a view function for a particular URI path.  This method
 is intended to be used as a decorator for a view function.  For example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;appname&quot;</span><span class="p">)</span>
 
@@ -130,39 +192,39 @@ is intended to be used as a decorator for a view function.  For example:</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>path</strong> (<em>str</em>) &#8211; The path to associate with the view function.  The
-<code class="docutils literal"><span class="pre">path</span></code> should only contain <code class="docutils literal"><span class="pre">[a-zA-Z0-9._-]</span></code> chars and curly
+<li><strong>path</strong> (<em>str</em>) – The path to associate with the view function.  The
+<code class="docutils literal notranslate"><span class="pre">path</span></code> should only contain <code class="docutils literal notranslate"><span class="pre">[a-zA-Z0-9._-]</span></code> chars and curly
 braces for parts of the URL you would like to capture.  The path
 should not end in a trailing slash, otherwise a validation error
 will be raised during deployment.</li>
-<li><strong>methods</strong> (<em>list</em>) &#8211; Optional parameter that indicates which HTTP methods
-this view function should accept.  By default, only <code class="docutils literal"><span class="pre">GET</span></code> requests
-are supported.  If you only wanted to support <code class="docutils literal"><span class="pre">POST</span></code> requests, you
-would specify <code class="docutils literal"><span class="pre">methods=['POST']</span></code>.  If you support multiple HTTP
-methods in a single view function (<code class="docutils literal"><span class="pre">methods=['GET',</span> <span class="pre">'POST']</span></code>), you
-can check the <a class="reference internal" href="#Request.method" title="Request.method"><code class="xref py py-attr docutils literal"><span class="pre">app.current_request.method</span></code></a>
+<li><strong>methods</strong> (<em>list</em>) – Optional parameter that indicates which HTTP methods
+this view function should accept.  By default, only <code class="docutils literal notranslate"><span class="pre">GET</span></code> requests
+are supported.  If you only wanted to support <code class="docutils literal notranslate"><span class="pre">POST</span></code> requests, you
+would specify <code class="docutils literal notranslate"><span class="pre">methods=['POST']</span></code>.  If you support multiple HTTP
+methods in a single view function (<code class="docutils literal notranslate"><span class="pre">methods=['GET',</span> <span class="pre">'POST']</span></code>), you
+can check the <a class="reference internal" href="#Request.method" title="Request.method"><code class="xref py py-attr docutils literal notranslate"><span class="pre">app.current_request.method</span></code></a>
 attribute to see which HTTP method was used when making the request.</li>
-<li><strong>name</strong> (<em>str</em>) &#8211; Optional parameter to specify the name of the view
+<li><strong>name</strong> (<em>str</em>) – Optional parameter to specify the name of the view
 function.  You generally do not need to set this value.  The name
 of the view function is used as the default value for the view name.</li>
-<li><strong>authorizer</strong> (<em>Authorizer</em>) &#8211; Specify an authorizer to use for this
-view.  Can be an instance of <a class="reference internal" href="#CognitoUserPoolAuthorizer" title="CognitoUserPoolAuthorizer"><code class="xref py py-class docutils literal"><span class="pre">CognitoUserPoolAuthorizer</span></code></a>,
-<a class="reference internal" href="#CustomAuthorizer" title="CustomAuthorizer"><code class="xref py py-class docutils literal"><span class="pre">CustomAuthorizer</span></code></a> or <a class="reference internal" href="#IAMAuthorizer" title="IAMAuthorizer"><code class="xref py py-class docutils literal"><span class="pre">IAMAuthorizer</span></code></a>.</li>
-<li><strong>content_types</strong> (<em>str</em>) &#8211; A list of content types to accept for
-this view.  By default <code class="docutils literal"><span class="pre">application/json</span></code> is accepted.  If
+<li><strong>authorizer</strong> (<em>Authorizer</em>) – Specify an authorizer to use for this
+view.  Can be an instance of <a class="reference internal" href="#CognitoUserPoolAuthorizer" title="CognitoUserPoolAuthorizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CognitoUserPoolAuthorizer</span></code></a>,
+<a class="reference internal" href="#CustomAuthorizer" title="CustomAuthorizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">CustomAuthorizer</span></code></a> or <a class="reference internal" href="#IAMAuthorizer" title="IAMAuthorizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">IAMAuthorizer</span></code></a>.</li>
+<li><strong>content_types</strong> (<em>str</em>) – A list of content types to accept for
+this view.  By default <code class="docutils literal notranslate"><span class="pre">application/json</span></code> is accepted.  If
 this value is specified, then chalice will reject any incoming request
 that does not match the provided list of content types with a
 415 Unsupported Media Type response.</li>
-<li><strong>api_key_required</strong> (<em>boolean</em>) &#8211; Optional parameter to specify whether
+<li><strong>api_key_required</strong> (<em>boolean</em>) – Optional parameter to specify whether
 the method required a valid API key.</li>
-<li><strong>cors</strong> &#8211; Specify if CORS is supported for this view.  This can either
-by a boolean value, <code class="docutils literal"><span class="pre">None</span></code>, or an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfig"><code class="xref py py-class docutils literal"><span class="pre">CORSConfig</span></code></a>.
-Setting this value is set to <code class="docutils literal"><span class="pre">True</span></code> gives similar behavior to enabling
+<li><strong>cors</strong> – Specify if CORS is supported for this view.  This can either
+by a boolean value, <code class="docutils literal notranslate"><span class="pre">None</span></code>, or an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">CORSConfig</span></code></a>.
+Setting this value is set to <code class="docutils literal notranslate"><span class="pre">True</span></code> gives similar behavior to enabling
 CORS in the AWS Console.  This includes injecting the
-<code class="docutils literal"><span class="pre">Access-Control-Allow-Origin</span></code> header to have a value of <code class="docutils literal"><span class="pre">*</span></code> as well
-as adding an <code class="docutils literal"><span class="pre">OPTIONS</span></code> method to support preflighting requests.  If
+<code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header to have a value of <code class="docutils literal notranslate"><span class="pre">*</span></code> as well
+as adding an <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method to support preflighting requests.  If
 you would like more control over how CORS is configured, you can provide
-an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfig"><code class="xref py py-class docutils literal"><span class="pre">CORSConfig</span></code></a>.</li>
+an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">CORSConfig</span></code></a>.</li>
 </ul>
 </td>
 </tr>
@@ -174,7 +236,7 @@ an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfi
 <dt id="Chalice.authorizer">
 <code class="descname">authorizer</code><span class="sig-paren">(</span><em>name</em>, <em>**options</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.authorizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register a built-in authorizer.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">AuthResponse</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">AuthResponse</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;appname&quot;</span><span class="p">)</span>
 
@@ -193,10 +255,10 @@ an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfi
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ttl_seconds</strong> &#8211; The number of seconds to cache this response.
+<li><strong>ttl_seconds</strong> – The number of seconds to cache this response.
 Subsequent requests that require this authorizer will use a
 cached response if available.  The default is 300 seconds.</li>
-<li><strong>execution_role</strong> &#8211; An optional IAM role to specify when invoking
+<li><strong>execution_role</strong> – An optional IAM role to specify when invoking
 the Lambda function associated with the built-in authorizer.</li>
 </ul>
 </td>
@@ -208,12 +270,12 @@ the Lambda function associated with the built-in authorizer.</li>
 <dl class="method">
 <dt id="Chalice.schedule">
 <code class="descname">schedule</code><span class="sig-paren">(</span><em>expression</em>, <em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.schedule" title="Permalink to this definition">¶</a></dt>
-<dd><p>Register a scheduled event that&#8217;s invoked on a regular schedule.
+<dd><p>Register a scheduled event that’s invoked on a regular schedule.
 This will create a lambda function associated with the decorated
 function.  It will also schedule the lambda function to be invoked
 with a scheduled CloudWatch Event.</p>
 <p>See <a class="reference internal" href="topics/events.html#scheduled-events"><span class="std std-ref">Scheduled Events</span></a> for more information.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;cron(15 10 ? * 6L 2002-2005)&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;cron(15 10 ? * 6L 2002-2005)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">cron_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 
@@ -235,14 +297,14 @@ with a scheduled CloudWatch Event.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>expression</strong> &#8211; The schedule expression to use for the CloudWatch
+<li><strong>expression</strong> – The schedule expression to use for the CloudWatch
 event rule.  This value can either be a string value or an
-instance of type <code class="docutils literal"><span class="pre">ScheduleExpression</span></code>, which is either a
-<a class="reference internal" href="#Cron" title="Cron"><code class="xref py py-class docutils literal"><span class="pre">Cron</span></code></a> or <a class="reference internal" href="#Rate" title="Rate"><code class="xref py py-class docutils literal"><span class="pre">Rate</span></code></a> object.  If a string value is
-provided, it will be provided directly as the <code class="docutils literal"><span class="pre">ScheduleExpression</span></code>
+instance of type <code class="docutils literal notranslate"><span class="pre">ScheduleExpression</span></code>, which is either a
+<a class="reference internal" href="#Cron" title="Cron"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cron</span></code></a> or <a class="reference internal" href="#Rate" title="Rate"><code class="xref py py-class docutils literal notranslate"><span class="pre">Rate</span></code></a> object.  If a string value is
+provided, it will be provided directly as the <code class="docutils literal notranslate"><span class="pre">ScheduleExpression</span></code>
 value in the <a class="reference external" href="https://docs.aws.amazon.com/AmazonCloudWatchEvents/latest/APIReference/API_PutRule.html#API_PutRule_RequestSyntax">PutRule</a> API
 call.</li>
-<li><strong>name</strong> &#8211; The name of the function to use.  This name is combined
+<li><strong>name</strong> – The name of the function to use.  This name is combined
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</li>
@@ -264,9 +326,9 @@ or Event Bridge.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>pattern</strong> &#8211; The event pattern to use to filter subscribed events.
+<li><strong>pattern</strong> – The event pattern to use to filter subscribed events.
 See the CloudWatch Events docs for examples <a class="reference external" href="https://amzn.to/2OlqZso">https://amzn.to/2OlqZso</a></li>
-<li><strong>name</strong> &#8211; The name of the function to create.  This name is combined
+<li><strong>name</strong> – The name of the function to create.  This name is combined
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</li>
@@ -284,15 +346,15 @@ not provided, the name of the python function will be used.</li>
 whenever an event happens on an S3 bucket.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">You can&#8217;t use the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">package</span></code> command when using the
-<code class="docutils literal"><span class="pre">on_s3_event</span></code> decorator.  This is because CFN does not support
+<p class="last">You can’t use the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> command when using the
+<code class="docutils literal notranslate"><span class="pre">on_s3_event</span></code> decorator.  This is because CFN does not support
 configuring an existing S3 bucket.</p>
 </div>
 <p>See <a class="reference internal" href="topics/events.html#s3-events"><span class="std std-ref">S3 Events</span></a> for more information.</p>
-<p>This example shows how you could implement an image resizer that&#8217;s
-triggered whenever an object is uploaded to the <code class="docutils literal"><span class="pre">images/</span></code> prefix
-of an S3 bucket (e.g <code class="docutils literal"><span class="pre">s3://mybucket/images/house.jpg</span></code>).</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span> <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:Put&#39;</span><span class="p">],</span>
+<p>This example shows how you could implement an image resizer that’s
+triggered whenever an object is uploaded to the <code class="docutils literal notranslate"><span class="pre">images/</span></code> prefix
+of an S3 bucket (e.g <code class="docutils literal notranslate"><span class="pre">s3://mybucket/images/house.jpg</span></code>).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span> <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:Put&#39;</span><span class="p">],</span>
                  <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;images/&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.jpg&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">resize_image</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -306,24 +368,24 @@ of an S3 bucket (e.g <code class="docutils literal"><span class="pre">s3://mybuc
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>bucket</strong> &#8211; The name of the S3 bucket.  This bucket must already exist.</li>
-<li><strong>events</strong> &#8211; A list of strings indicating the events that should trigger
+<li><strong>bucket</strong> – The name of the S3 bucket.  This bucket must already exist.</li>
+<li><strong>events</strong> – A list of strings indicating the events that should trigger
 the lambda function.  See <a class="reference external" href="https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html#supported-notification-event-types">Supported Event Types</a>
 for the full list of strings you can provide.  If this option is not
-provided, a default of <code class="docutils literal"><span class="pre">['s3:ObjectCreated:*']</span></code> is used, which will
+provided, a default of <code class="docutils literal notranslate"><span class="pre">['s3:ObjectCreated:*']</span></code> is used, which will
 configure the lambda function to be invoked whenever a new object
 is created in the S3 bucket.</li>
-<li><strong>prefix</strong> &#8211; An optional key prefix.  This specifies that
+<li><strong>prefix</strong> – An optional key prefix.  This specifies that
 the lambda function should only be invoked if the key starts with
-this prefix (e.g. <code class="docutils literal"><span class="pre">prefix='images/'</span></code>).  Note that this value
-is not a glob (e.g. <code class="docutils literal"><span class="pre">images/*</span></code>), it is a literal string match
+this prefix (e.g. <code class="docutils literal notranslate"><span class="pre">prefix='images/'</span></code>).  Note that this value
+is not a glob (e.g. <code class="docutils literal notranslate"><span class="pre">images/*</span></code>), it is a literal string match
 for the start of the key.</li>
-<li><strong>suffix</strong> &#8211; An optional key suffix.  This specifies that the
+<li><strong>suffix</strong> – An optional key suffix.  This specifies that the
 lambda function should only be invoked if the key name ends with
-this suffix (e.g. <code class="docutils literal"><span class="pre">suffix='.jpg'</span></code>).  Note that this value is
-not a glob (e.g. <code class="docutils literal"><span class="pre">*.txt</span></code>), it is a literal string match for
+this suffix (e.g. <code class="docutils literal notranslate"><span class="pre">suffix='.jpg'</span></code>).  Note that this value is
+not a glob (e.g. <code class="docutils literal notranslate"><span class="pre">*.txt</span></code>), it is a literal string match for
 the end of the key.</li>
-<li><strong>name</strong> &#8211; The name of the function to use.  This name is combined
+<li><strong>name</strong> – The name of the function to use.  This name is combined
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</li>
@@ -341,9 +403,9 @@ not provided, the name of the python function will be used.</li>
 whenever an SNS message is published to the specified topic.</p>
 <p>See <a class="reference internal" href="topics/events.html#sns-events"><span class="std std-ref">SNS Events</span></a> for more information.</p>
 <p>This example prints the subject and the contents of the message whenever
-something publishes to the sns topic of <code class="docutils literal"><span class="pre">mytopic</span></code>.  In this example,
-the input parameter is of type <a class="reference internal" href="#SNSEvent" title="SNSEvent"><code class="xref py py-class docutils literal"><span class="pre">SNSEvent</span></code></a>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+something publishes to the sns topic of <code class="docutils literal notranslate"><span class="pre">mytopic</span></code>.  In this example,
+the input parameter is of type <a class="reference internal" href="#SNSEvent" title="SNSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SNSEvent</span></code></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
 
 <span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
@@ -356,8 +418,8 @@ the input parameter is of type <a class="reference internal" href="#SNSEvent" ti
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>topic</strong> &#8211; The name or ARN of the SNS topic you want to subscribe to.</li>
-<li><strong>name</strong> &#8211; The name of the function to use.  This name is combined
+<li><strong>topic</strong> – The name or ARN of the SNS topic you want to subscribe to.</li>
+<li><strong>name</strong> – The name of the function to use.  This name is combined
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</li>
@@ -374,11 +436,11 @@ not provided, the name of the python function will be used.</li>
 <dd><p>Create a lambda function and configure it to be automatically invoked
 whenever a message is published to the specified SQS queue.</p>
 <p>The lambda function must accept a single parameter which
-is of type <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal"><span class="pre">SQSEvent</span></code></a>.</p>
+is of type <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a>.</p>
 <p>If the decorated function returns without raising any exceptions
 then Lambda will automatically delete the SQS messages associated
-with the <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal"><span class="pre">SQSEvent</span></code></a>.  You don&#8217;t need to manually delete
-messages.  If any exception is raised, Lambda won&#8217;t delete any messages,
+with the <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a>.  You don’t need to manually delete
+messages.  If any exception is raised, Lambda won’t delete any messages,
 and the messages will become available once the visibility timeout
 has been reached.  Note that for batch sizes of more than one, either
 the entire batch succeeds and all the messages in the batch are
@@ -388,7 +450,7 @@ is 1.  See the
 for more information on how Lambda integrates with SQS.</p>
 <p>See the <a class="reference internal" href="topics/events.html#sqs-events"><span class="std std-ref">SQS Events</span></a> topic guide for more information on using SQS
 in Chalice.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
 
 <span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
@@ -402,14 +464,14 @@ in Chalice.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>queue</strong> &#8211; The name of the SQS queue you want to subscribe to.
+<li><strong>queue</strong> – The name of the SQS queue you want to subscribe to.
 This is the name of the queue, not the ARN or Queue URL.</li>
-<li><strong>batch_size</strong> &#8211; The maximum number of messages to retrieve
+<li><strong>batch_size</strong> – The maximum number of messages to retrieve
 when polling for SQS messages.  The event parameter can have
 multiple SQS messages associated with it.  This is why the
 event parameter passed to the lambda function is iterable.  The
 batch size controls how many messages can be in a single event.</li>
-<li><strong>name</strong> &#8211; The name of the function to use.  This name is combined
+<li><strong>name</strong> – The name of the function to use.  This name is combined
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</li>
@@ -423,13 +485,13 @@ not provided, the name of the python function will be used.</li>
 <dl class="method">
 <dt id="Chalice.lambda_function">
 <code class="descname">lambda_function</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.lambda_function" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a pure lambda function that&#8217;s not connected to anything.</p>
+<dd><p>Create a pure lambda function that’s not connected to anything.</p>
 <p>See <a class="reference internal" href="topics/purelambda.html"><span class="doc">Pure Lambda Functions</span></a> for more information.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> &#8211; The name of the function to use.  This name is combined
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – The name of the function to use.  This name is combined
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</td>
@@ -441,17 +503,17 @@ not provided, the name of the python function will be used.</td>
 <dl class="method">
 <dt id="Chalice.register_blueprint">
 <code class="descname">register_blueprint</code><span class="sig-paren">(</span><em>blueprint</em>, <em>name_prefix=None</em>, <em>url_prefix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.register_blueprint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Register a <a class="reference internal" href="#Blueprint" title="Blueprint"><code class="xref py py-class docutils literal"><span class="pre">Blueprint</span></code></a> to a Chalice app.
+<dd><p>Register a <a class="reference internal" href="#Blueprint" title="Blueprint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Blueprint</span></code></a> to a Chalice app.
 See <a class="reference internal" href="topics/blueprints.html"><span class="doc">Blueprints</span></a> for more information.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>blueprint</strong> &#8211; The <a class="reference internal" href="#Blueprint" title="Blueprint"><code class="xref py py-class docutils literal"><span class="pre">Blueprint</span></code></a> to register to the app.</li>
-<li><strong>name_prefix</strong> &#8211; An optional name prefix that&#8217;s added to all the
+<li><strong>blueprint</strong> – The <a class="reference internal" href="#Blueprint" title="Blueprint"><code class="xref py py-class docutils literal notranslate"><span class="pre">Blueprint</span></code></a> to register to the app.</li>
+<li><strong>name_prefix</strong> – An optional name prefix that’s added to all the
 resources specified in the blueprint.</li>
-<li><strong>url_prefix</strong> &#8211; An optional url prefix that&#8217;s added to all the
+<li><strong>url_prefix</strong> – An optional url prefix that’s added to all the
 routes defined the Blueprint.  This allows you to set the root mount
 point for all URLs in a Blueprint.</li>
 </ul>
@@ -469,9 +531,9 @@ point for all URLs in a Blueprint.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> &#8211; The <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal"><span class="pre">WebsocketEvent</span></code></a> received to indicate a new
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> – The <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketEvent</span></code></a> received to indicate a new
 connection has been registered with API Gateway. The identifier of this
-connection is under the <a class="reference internal" href="#WebsocketEvent.connection_id" title="WebsocketEvent.connection_id"><code class="xref py py-attr docutils literal"><span class="pre">WebsocketEvent.connection_id</span></code></a> attribute.</td>
+connection is under the <a class="reference internal" href="#WebsocketEvent.connection_id" title="WebsocketEvent.connection_id"><code class="xref py py-attr docutils literal notranslate"><span class="pre">WebsocketEvent.connection_id</span></code></a> attribute.</td>
 </tr>
 </tbody>
 </table>
@@ -486,11 +548,11 @@ connection is under the <a class="reference internal" href="#WebsocketEvent.conn
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> &#8211; The <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal"><span class="pre">WebsocketEvent</span></code></a> received to indicate API Gateway
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> – The <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketEvent</span></code></a> received to indicate API Gateway
 received a message from a connected client. The identifier of the
 client that sent the message is under the
-<a class="reference internal" href="#WebsocketEvent.connection_id" title="WebsocketEvent.connection_id"><code class="xref py py-attr docutils literal"><span class="pre">WebsocketEvent.connection_id</span></code></a> attribute. The content of the
-message is available in the <a class="reference internal" href="#WebsocketEvent.body" title="WebsocketEvent.body"><code class="xref py py-attr docutils literal"><span class="pre">WebsocketEvent.body</span></code></a> attribute.</td>
+<a class="reference internal" href="#WebsocketEvent.connection_id" title="WebsocketEvent.connection_id"><code class="xref py py-attr docutils literal notranslate"><span class="pre">WebsocketEvent.connection_id</span></code></a> attribute. The content of the
+message is available in the <a class="reference internal" href="#WebsocketEvent.body" title="WebsocketEvent.body"><code class="xref py py-attr docutils literal notranslate"><span class="pre">WebsocketEvent.body</span></code></a> attribute.</td>
 </tr>
 </tbody>
 </table>
@@ -505,9 +567,9 @@ message is available in the <a class="reference internal" href="#WebsocketEvent.
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> &#8211; The <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal"><span class="pre">WebsocketEvent</span></code></a> received to indicate an existing
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> – The <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketEvent</span></code></a> received to indicate an existing
 connection has been disconnected from API Gateway. The identifier of this
-connection is under the <a class="reference internal" href="#WebsocketEvent.connection_id" title="WebsocketEvent.connection_id"><code class="xref py py-attr docutils literal"><span class="pre">WebsocketEvent.connection_id</span></code></a> attribute.</td>
+connection is under the <a class="reference internal" href="#WebsocketEvent.connection_id" title="WebsocketEvent.connection_id"><code class="xref py py-attr docutils literal notranslate"><span class="pre">WebsocketEvent.connection_id</span></code></a> attribute.</td>
 </tr>
 </tbody>
 </table>
@@ -523,8 +585,8 @@ connection is under the <a class="reference internal" href="#WebsocketEvent.conn
 <dt id="Request">
 <em class="property">class </em><code class="descname">Request</code><a class="headerlink" href="#Request" title="Permalink to this definition">¶</a></dt>
 <dd><p>A class that represents the current request.  This is mapped to
-the <code class="docutils literal"><span class="pre">app.current_request</span></code> object.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/objects/{key}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+the <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> object.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/objects/{key}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myobject</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
     <span class="n">request</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
@@ -538,7 +600,7 @@ the <code class="docutils literal"><span class="pre">app.current_request</span><
 <dl class="attribute">
 <dt id="Request.query_params">
 <code class="descname">query_params</code><a class="headerlink" href="#Request.query_params" title="Permalink to this definition">¶</a></dt>
-<dd><p>A dict of the query params for the request.  This value is <code class="docutils literal"><span class="pre">None</span></code> if
+<dd><p>A dict of the query params for the request.  This value is <code class="docutils literal notranslate"><span class="pre">None</span></code> if
 no query params were provided in the request.</p>
 </dd></dl>
 
@@ -551,7 +613,7 @@ no query params were provided in the request.</p>
 <dl class="attribute">
 <dt id="Request.uri_params">
 <code class="descname">uri_params</code><a class="headerlink" href="#Request.uri_params" title="Permalink to this definition">¶</a></dt>
-<dd><p>A dict of the captured URI params.  This value is <code class="docutils literal"><span class="pre">None</span></code> if no
+<dd><p>A dict of the captured URI params.  This value is <code class="docutils literal notranslate"><span class="pre">None</span></code> if no
 URI params were provided in the request.</p>
 </dd></dl>
 
@@ -564,8 +626,8 @@ URI params were provided in the request.</p>
 <dl class="attribute">
 <dt id="Request.json_body">
 <code class="descname">json_body</code><a class="headerlink" href="#Request.json_body" title="Permalink to this definition">¶</a></dt>
-<dd><p>The parsed JSON body (<code class="docutils literal"><span class="pre">json.loads(raw_body)</span></code>).  This value will only
-be non-None if the Content-Type header is <code class="docutils literal"><span class="pre">application/json</span></code>, which
+<dd><p>The parsed JSON body (<code class="docutils literal notranslate"><span class="pre">json.loads(raw_body)</span></code>).  This value will only
+be non-None if the Content-Type header is <code class="docutils literal notranslate"><span class="pre">application/json</span></code>, which
 is the default content type value in chalice.</p>
 </dd></dl>
 
@@ -591,7 +653,7 @@ calculate a checksum of the HTTP body.</p>
 <dl class="method">
 <dt id="Request.to_dict">
 <code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Request.to_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert the <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal"><span class="pre">Request</span></code></a> object to a dictionary.  This is useful
+<dd><p>Convert the <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a> object to a dictionary.  This is useful
 for debugging purposes.  This dictionary is guaranteed to be JSON
 serializable so you can return this value from a chalice view.</p>
 </dd></dl>
@@ -607,7 +669,7 @@ serializable so you can return this value from a chalice view.</p>
 <dd><p>A class that represents the response for the view function.  You
 can optionally return an instance of this class from a view function if you
 want complete control over the returned HTTP response.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;custom-response&#39;</span><span class="p">)</span>
 
@@ -632,7 +694,7 @@ want complete control over the returned HTTP response.</p>
 <dt id="Response.headers">
 <code class="descname">headers</code><a class="headerlink" href="#Response.headers" title="Permalink to this definition">¶</a></dt>
 <dd><p>An optional dictionary of HTTP headers to send back.  This is a dictionary
-of header name to header value, e.g <code class="docutils literal"><span class="pre">{'Content-Type':</span> <span class="pre">'text/plain'}</span></code></p>
+of header name to header value, e.g <code class="docutils literal notranslate"><span class="pre">{'Content-Type':</span> <span class="pre">'text/plain'}</span></code></p>
 </dd></dl>
 
 <dl class="attribute">
@@ -646,9 +708,9 @@ of header name to header value, e.g <code class="docutils literal"><span class="
 </div>
 <div class="section" id="authorization">
 <h1>Authorization<a class="headerlink" href="#authorization" title="Permalink to this headline">¶</a></h1>
-<p>Each of these classes below can be provided using the <code class="docutils literal"><span class="pre">authorizer</span></code> argument
-for an <code class="docutils literal"><span class="pre">&#64;app.route(authorizer=...)</span></code> call:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
+<p>Each of these classes below can be provided using the <code class="docutils literal notranslate"><span class="pre">authorizer</span></code> argument
+for an <code class="docutils literal notranslate"><span class="pre">&#64;app.route(authorizer=...)</span></code> call:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
     <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
 
@@ -708,7 +770,7 @@ for an <code class="docutils literal"><span class="pre">&#64;app.route(authorize
 <code class="descname">authorizer_uri</code><a class="headerlink" href="#CustomAuthorizer.authorizer_uri" title="Permalink to this definition">¶</a></dt>
 <dd><p>The URI of the lambda function to use for the custom authorizer.  This
 usually has the form
-<code class="docutils literal"><span class="pre">arn:aws:apigateway:{region}:lambda:path/2015-03-31/functions/{lambda_arn}/invocations</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">arn:aws:apigateway:{region}:lambda:path/2015-03-31/functions/{lambda_arn}/invocations</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -733,7 +795,7 @@ authorizer.</p>
 <dt id="AuthRequest">
 <em class="property">class </em><code class="descname">AuthRequest</code><span class="sig-paren">(</span><em>auth_type</em>, <em>token</em>, <em>method_arn</em><span class="sig-paren">)</span><a class="headerlink" href="#AuthRequest" title="Permalink to this definition">¶</a></dt>
 <dd><p>An instance of this class is passed as the first argument
-to an authorizer defined via <code class="docutils literal"><span class="pre">&#64;app.authorizer()</span></code>.  You
+to an authorizer defined via <code class="docutils literal notranslate"><span class="pre">&#64;app.authorizer()</span></code>.  You
 generally do not instantiate this class directly.</p>
 <dl class="attribute">
 <dt id="AuthRequest.auth_type">
@@ -745,7 +807,7 @@ generally do not instantiate this class directly.</p>
 <dt id="AuthRequest.token">
 <code class="descname">token</code><a class="headerlink" href="#AuthRequest.token" title="Permalink to this definition">¶</a></dt>
 <dd><p>The authorization token.  This is usually the value of the
-<code class="docutils literal"><span class="pre">Authorization</span></code> header.</p>
+<code class="docutils literal notranslate"><span class="pre">Authorization</span></code> header.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -763,13 +825,13 @@ generally do not instantiate this class directly.</p>
 <dt id="AuthResponse.routes">
 <code class="descname">routes</code><a class="headerlink" href="#AuthResponse.routes" title="Permalink to this definition">¶</a></dt>
 <dd><p>A list of authorized routes.  Each element in the list
-can either by a string route such as <cite>&#8220;/foo/bar&#8221;</cite> or
-an instance of <code class="docutils literal"><span class="pre">AuthRoute</span></code>.  If you specify the URL as
+can either by a string route such as <cite>“/foo/bar”</cite> or
+an instance of <code class="docutils literal notranslate"><span class="pre">AuthRoute</span></code>.  If you specify the URL as
 a string, then all supported HTTP methods will be authorized.
 If you want to specify which HTTP methods are allowed, you
-can use <code class="docutils literal"><span class="pre">AuthRoute</span></code>.  If you want to specify that all
+can use <code class="docutils literal notranslate"><span class="pre">AuthRoute</span></code>.  If you want to specify that all
 routes and HTTP methods are supported you can use the
-wildcard value of <code class="docutils literal"><span class="pre">&quot;*&quot;</span></code>: <code class="docutils literal"><span class="pre">AuthResponse(routes=['*'],</span> <span class="pre">...)</span></code></p>
+wildcard value of <code class="docutils literal notranslate"><span class="pre">&quot;*&quot;</span></code>: <code class="docutils literal notranslate"><span class="pre">AuthResponse(routes=['*'],</span> <span class="pre">...)</span></code></p>
 </dd></dl>
 
 <dl class="attribute">
@@ -782,7 +844,7 @@ wildcard value of <code class="docutils literal"><span class="pre">&quot;*&quot;
 <dt id="AuthResponse.context">
 <code class="descname">context</code><a class="headerlink" href="#AuthResponse.context" title="Permalink to this definition">¶</a></dt>
 <dd><p>An optional dictionary of key value pairs.  This dictionary
-will be accessible in the <code class="docutils literal"><span class="pre">app.current_request.context</span></code>
+will be accessible in the <code class="docutils literal notranslate"><span class="pre">app.current_request.context</span></code>
 in all subsequent authorized requests for this user.</p>
 </dd></dl>
 
@@ -791,8 +853,8 @@ in all subsequent authorized requests for this user.</p>
 <dl class="class">
 <dt id="AuthRoute">
 <em class="property">class </em><code class="descname">AuthRoute</code><span class="sig-paren">(</span><em>path</em>, <em>methods</em><span class="sig-paren">)</span><a class="headerlink" href="#AuthRoute" title="Permalink to this definition">¶</a></dt>
-<dd><p>This class be used in the <code class="docutils literal"><span class="pre">routes</span></code> attribute of a
-<a class="reference internal" href="#AuthResponse" title="AuthResponse"><code class="xref py py-class docutils literal"><span class="pre">AuthResponse</span></code></a> instance to get fine grained control
+<dd><p>This class be used in the <code class="docutils literal notranslate"><span class="pre">routes</span></code> attribute of a
+<a class="reference internal" href="#AuthResponse" title="AuthResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">AuthResponse</span></code></a> instance to get fine grained control
 over which HTTP methods are allowed for a given route.</p>
 <dl class="attribute">
 <dt id="AuthRoute.path">
@@ -816,18 +878,18 @@ over which HTTP methods are allowed for a given route.</p>
 <dt id="APIGateway">
 <em class="property">class </em><code class="descname">APIGateway</code><a class="headerlink" href="#APIGateway" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class is used to control
-how API Gateway interprets <code class="docutils literal"><span class="pre">Content-Type</span></code> headers in both requests and
+how API Gateway interprets <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> headers in both requests and
 responses.</p>
 <p>There is a single instance of this class attached to each
-<a class="reference internal" href="#Chalice" title="Chalice"><code class="xref py py-class docutils literal"><span class="pre">Chalice</span></code></a> object under the <code class="docutils literal"><span class="pre">api</span></code> attribute.</p>
+<a class="reference internal" href="#Chalice" title="Chalice"><code class="xref py py-class docutils literal notranslate"><span class="pre">Chalice</span></code></a> object under the <code class="docutils literal notranslate"><span class="pre">api</span></code> attribute.</p>
 <dl class="attribute">
 <dt id="APIGateway.cors">
 <code class="descname">cors</code><a class="headerlink" href="#APIGateway.cors" title="Permalink to this definition">¶</a></dt>
 <dd><p>Global cors configuration. If a route-level cors configuration is not
-provided, or is <code class="docutils literal"><span class="pre">None</span></code> then this configuration will be used. By
-default it is set to <code class="docutils literal"><span class="pre">False</span></code>. This can either be <code class="docutils literal"><span class="pre">True</span></code>, <code class="docutils literal"><span class="pre">False</span></code>,
-or an instance of the <code class="docutils literal"><span class="pre">CORSConfig</span></code> class. This makes it easy to enable
-CORS for your entire application by setting <code class="docutils literal"><span class="pre">app.api.cors</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
+provided, or is <code class="docutils literal notranslate"><span class="pre">None</span></code> then this configuration will be used. By
+default it is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>. This can either be <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">False</span></code>,
+or an instance of the <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> class. This makes it easy to enable
+CORS for your entire application by setting <code class="docutils literal notranslate"><span class="pre">app.api.cors</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
 <div class="versionadded">
 <p><span class="versionmodified">New in version 1.12.1.</span></p>
 </div>
@@ -836,34 +898,34 @@ CORS for your entire application by setting <code class="docutils literal"><span
 <dl class="attribute">
 <dt id="APIGateway.default_binary_types">
 <code class="descname">default_binary_types</code><a class="headerlink" href="#APIGateway.default_binary_types" title="Permalink to this definition">¶</a></dt>
-<dd><p>The value of <code class="docutils literal"><span class="pre">default_binary_types</span></code> are the <code class="docutils literal"><span class="pre">Content-Types</span></code> that are
+<dd><p>The value of <code class="docutils literal notranslate"><span class="pre">default_binary_types</span></code> are the <code class="docutils literal notranslate"><span class="pre">Content-Types</span></code> that are
 considered binary by default. This value should not be changed, instead
-you should modify the <code class="docutils literal"><span class="pre">binary_types</span></code> list to change the behavior of a
-content type. Its value is: <code class="docutils literal"><span class="pre">application/octet-stream</span></code>,
-<code class="docutils literal"><span class="pre">application/x-tar</span></code>, <code class="docutils literal"><span class="pre">application/zip</span></code>, <code class="docutils literal"><span class="pre">audio/basic</span></code>,
-<code class="docutils literal"><span class="pre">audio/ogg</span></code>, <code class="docutils literal"><span class="pre">audio/mp4</span></code>, <code class="docutils literal"><span class="pre">audio/mpeg</span></code>, <code class="docutils literal"><span class="pre">audio/wav</span></code>,
-<code class="docutils literal"><span class="pre">audio/webm</span></code>, <code class="docutils literal"><span class="pre">image/png</span></code>, <code class="docutils literal"><span class="pre">image/jpg</span></code>, <code class="docutils literal"><span class="pre">image/jpeg</span></code>,
-<code class="docutils literal"><span class="pre">image/gif</span></code>, <code class="docutils literal"><span class="pre">video/ogg</span></code>, <code class="docutils literal"><span class="pre">video/mpeg</span></code>, <code class="docutils literal"><span class="pre">video/webm</span></code>.</p>
+you should modify the <code class="docutils literal notranslate"><span class="pre">binary_types</span></code> list to change the behavior of a
+content type. Its value is: <code class="docutils literal notranslate"><span class="pre">application/octet-stream</span></code>,
+<code class="docutils literal notranslate"><span class="pre">application/x-tar</span></code>, <code class="docutils literal notranslate"><span class="pre">application/zip</span></code>, <code class="docutils literal notranslate"><span class="pre">audio/basic</span></code>,
+<code class="docutils literal notranslate"><span class="pre">audio/ogg</span></code>, <code class="docutils literal notranslate"><span class="pre">audio/mp4</span></code>, <code class="docutils literal notranslate"><span class="pre">audio/mpeg</span></code>, <code class="docutils literal notranslate"><span class="pre">audio/wav</span></code>,
+<code class="docutils literal notranslate"><span class="pre">audio/webm</span></code>, <code class="docutils literal notranslate"><span class="pre">image/png</span></code>, <code class="docutils literal notranslate"><span class="pre">image/jpg</span></code>, <code class="docutils literal notranslate"><span class="pre">image/jpeg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">image/gif</span></code>, <code class="docutils literal notranslate"><span class="pre">video/ogg</span></code>, <code class="docutils literal notranslate"><span class="pre">video/mpeg</span></code>, <code class="docutils literal notranslate"><span class="pre">video/webm</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="APIGateway.binary_types">
 <code class="descname">binary_types</code><a class="headerlink" href="#APIGateway.binary_types" title="Permalink to this definition">¶</a></dt>
-<dd><p>The value of <code class="docutils literal"><span class="pre">binary_types</span></code> controls how API Gateway interprets
+<dd><p>The value of <code class="docutils literal notranslate"><span class="pre">binary_types</span></code> controls how API Gateway interprets
 requests and responses as detailed below.</p>
-<p>If an incoming request has a <code class="docutils literal"><span class="pre">Content-Type</span></code> header value that is
-present in the <code class="docutils literal"><span class="pre">binary_types</span></code> list it will be assumed that its body is
+<p>If an incoming request has a <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header value that is
+present in the <code class="docutils literal notranslate"><span class="pre">binary_types</span></code> list it will be assumed that its body is
 a sequence of raw bytes. You can access these bytes by accessing the
-<code class="docutils literal"><span class="pre">app.current_request.raw_body</span></code> property.</p>
-<p>If an outgoing response from <code class="docutils literal"><span class="pre">Chalice</span></code> has a header <code class="docutils literal"><span class="pre">Content-Type</span></code>
-that matches one of the <code class="docutils literal"><span class="pre">binary_types</span></code> its body must be a <code class="docutils literal"><span class="pre">bytes</span></code>
+<code class="docutils literal notranslate"><span class="pre">app.current_request.raw_body</span></code> property.</p>
+<p>If an outgoing response from <code class="docutils literal notranslate"><span class="pre">Chalice</span></code> has a header <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code>
+that matches one of the <code class="docutils literal notranslate"><span class="pre">binary_types</span></code> its body must be a <code class="docutils literal notranslate"><span class="pre">bytes</span></code>
 type object. It is important to note that originating request must have
-the <code class="docutils literal"><span class="pre">Accept</span></code> header for the same type as the <code class="docutils literal"><span class="pre">Content-Type</span></code> on the
-response. Otherwise a <code class="docutils literal"><span class="pre">400</span></code> error will be returned.</p>
+the <code class="docutils literal notranslate"><span class="pre">Accept</span></code> header for the same type as the <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> on the
+response. Otherwise a <code class="docutils literal notranslate"><span class="pre">400</span></code> error will be returned.</p>
 <p>This value can be modified to change what types API Gateway treats as
 binary. The easiest way to do this is to simply append new types to
 the list.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">binary_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;application/my-binary-data&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">binary_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;application/my-binary-data&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Keep in mind that there can only be a total of 25 binary types at a time
@@ -871,20 +933,20 @@ and Chalice by default has a list of 16 types. It is recommended if you
 are going to make extensive use of binary types to reset the list to
 the exact set of content types you will be using. This can easily be
 done by reassigning the whole list.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">binary_types</span> <span class="o">=</span> <span class="p">[</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">binary_types</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s1">&#39;application/octet-stream&#39;</span><span class="p">,</span>
     <span class="s1">&#39;application/my-binary-data&#39;</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 </div>
 <p><strong>Implementation Note</strong>: API Gateway and Lambda communicate through a
-JSON event which is encoded using <code class="docutils literal"><span class="pre">UTF-8</span></code>. The raw bytes are
+JSON event which is encoded using <code class="docutils literal notranslate"><span class="pre">UTF-8</span></code>. The raw bytes are
 temporarily encoded using base64 when being passed between API Gateway
 and Lambda. In the worst case this encoding can cause the binary body
-to be inflated up to <code class="docutils literal"><span class="pre">4/3</span></code> its original size. Lambda only accepts an
-event up to <code class="docutils literal"><span class="pre">6mb</span></code>, which means even if your binary data was not quite
+to be inflated up to <code class="docutils literal notranslate"><span class="pre">4/3</span></code> its original size. Lambda only accepts an
+event up to <code class="docutils literal notranslate"><span class="pre">6mb</span></code>, which means even if your binary data was not quite
 at that limit, with the base64 encoding it may exceed that limit. This
-will manifest as a <code class="docutils literal"><span class="pre">502</span></code> Bad Gateway error.</p>
+will manifest as a <code class="docutils literal notranslate"><span class="pre">502</span></code> Bad Gateway error.</p>
 </dd></dl>
 
 </dd></dl>
@@ -902,9 +964,9 @@ Gateway Websocket API.</p>
 <code class="descname">session</code><a class="headerlink" href="#WebsocketAPI.session" title="Permalink to this definition">¶</a></dt>
 <dd><p>A boto3 Session that will be used to send websocket messages to
 clients. Any custom configuration can be set through a botocore
-<code class="docutils literal"><span class="pre">session</span></code>. This <strong>must</strong> be manually set before websocket features can
+<code class="docutils literal notranslate"><span class="pre">session</span></code>. This <strong>must</strong> be manually set before websocket features can
 be used.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">botocore</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">botocore</span>
 <span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
@@ -919,15 +981,15 @@ be used.</p>
 <dl class="method">
 <dt id="WebsocketAPI.configure">
 <code class="descname">configure</code><span class="sig-paren">(</span><em>domain_name</em>, <em>stage</em><span class="sig-paren">)</span><a class="headerlink" href="#WebsocketAPI.configure" title="Permalink to this definition">¶</a></dt>
-<dd><p>Configure prepares the <a class="reference internal" href="#WebsocketAPI" title="WebsocketAPI"><code class="xref py py-class docutils literal"><span class="pre">WebsocketAPI</span></code></a> to call the <a class="reference internal" href="#send" title="send"><code class="xref py py-meth docutils literal"><span class="pre">send()</span></code></a>
-method. Without first calling this method calls to <a class="reference internal" href="#send" title="send"><code class="xref py py-meth docutils literal"><span class="pre">send()</span></code></a> will fail
-with the message <code class="docutils literal"><span class="pre">WebsocketAPI</span> <span class="pre">needs</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">configured</span> <span class="pre">before</span> <span class="pre">sending</span>
-<span class="pre">messages.</span></code>. This is because a boto3 <code class="docutils literal"><span class="pre">apigatewaymanagementapi</span></code> client
-must be created from the <a class="reference internal" href="#WebsocketAPI.session" title="WebsocketAPI.session"><code class="xref py py-attr docutils literal"><span class="pre">session</span></code></a> with a custom endpoint in order
+<dd><p>Configure prepares the <a class="reference internal" href="#WebsocketAPI" title="WebsocketAPI"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketAPI</span></code></a> to call the <a class="reference internal" href="#send" title="send"><code class="xref py py-meth docutils literal notranslate"><span class="pre">send()</span></code></a>
+method. Without first calling this method calls to <a class="reference internal" href="#send" title="send"><code class="xref py py-meth docutils literal notranslate"><span class="pre">send()</span></code></a> will fail
+with the message <code class="docutils literal notranslate"><span class="pre">WebsocketAPI</span> <span class="pre">needs</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">configured</span> <span class="pre">before</span> <span class="pre">sending</span>
+<span class="pre">messages.</span></code>. This is because a boto3 <code class="docutils literal notranslate"><span class="pre">apigatewaymanagementapi</span></code> client
+must be created from the <a class="reference internal" href="#WebsocketAPI.session" title="WebsocketAPI.session"><code class="xref py py-attr docutils literal notranslate"><span class="pre">session</span></code></a> with a custom endpoint in order
 to properly communicate with our API Gateway WebsocketAPI. This method is
 called on your behalf before each of the websocket handlers:
-<code class="docutils literal"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal"><span class="pre">on_ws_message</span></code>, <code class="docutils literal"><span class="pre">on_ws_disconnect</span></code>. This ensures
-that the <a class="reference internal" href="#send" title="send"><code class="xref py py-meth docutils literal"><span class="pre">send()</span></code></a> method is available in each of those handlers.</p>
+<code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_message</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_disconnect</span></code>. This ensures
+that the <a class="reference internal" href="#send" title="send"><code class="xref py py-meth docutils literal notranslate"><span class="pre">send()</span></code></a> method is available in each of those handlers.</p>
 </dd></dl>
 
 </dd></dl>
@@ -936,32 +998,32 @@ that the <a class="reference internal" href="#send" title="send"><code class="xr
 <div><dl class="method">
 <dt id="send">
 <code class="descname">send</code><span class="sig-paren">(</span><em>connection_id</em>, <em>message</em><span class="sig-paren">)</span><a class="headerlink" href="#send" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>requires</em> <code class="docutils literal"><span class="pre">boto3&gt;=1.9.91</span></code></p>
-<p>Method to send a message to a client. The <code class="docutils literal"><span class="pre">connection_id</span></code> is the unique
-identifier of the socket to send the <code class="docutils literal"><span class="pre">message</span></code> to. The <code class="docutils literal"><span class="pre">message</span></code> must
+<dd><p><em>requires</em> <code class="docutils literal notranslate"><span class="pre">boto3&gt;=1.9.91</span></code></p>
+<p>Method to send a message to a client. The <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> is the unique
+identifier of the socket to send the <code class="docutils literal notranslate"><span class="pre">message</span></code> to. The <code class="docutils literal notranslate"><span class="pre">message</span></code> must
 be a utf-8 string.</p>
-<p>If the socket is disconnected it raises a <a class="reference internal" href="#WebsocketDisconnectedError" title="WebsocketDisconnectedError"><code class="xref py py-class docutils literal"><span class="pre">WebsocketDisconnectedError</span></code></a>
+<p>If the socket is disconnected it raises a <a class="reference internal" href="#WebsocketDisconnectedError" title="WebsocketDisconnectedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketDisconnectedError</span></code></a>
 error.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="close">
 <code class="descname">close</code><span class="sig-paren">(</span><em>connection_id</em><span class="sig-paren">)</span><a class="headerlink" href="#close" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>requires</em> <code class="docutils literal"><span class="pre">boto3&gt;=1.9.221</span></code></p>
-<p>Method to close a WebSocket connection. The <code class="docutils literal"><span class="pre">connection_id</span></code> is the
+<dd><p><em>requires</em> <code class="docutils literal notranslate"><span class="pre">boto3&gt;=1.9.221</span></code></p>
+<p>Method to close a WebSocket connection. The <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> is the
 unique identifier of the socket to close.</p>
 <p>If the socket is already disconnected it raises a
-<a class="reference internal" href="#WebsocketDisconnectedError" title="WebsocketDisconnectedError"><code class="xref py py-class docutils literal"><span class="pre">WebsocketDisconnectedError</span></code></a> error.</p>
+<a class="reference internal" href="#WebsocketDisconnectedError" title="WebsocketDisconnectedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketDisconnectedError</span></code></a> error.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="info">
 <code class="descname">info</code><span class="sig-paren">(</span><em>connection_id</em><span class="sig-paren">)</span><a class="headerlink" href="#info" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>requires</em> <code class="docutils literal"><span class="pre">boto3&gt;=1.9.221</span></code></p>
-<p>Method to get info about a WebSocket. The <code class="docutils literal"><span class="pre">connection_id</span></code> is the unique
+<dd><p><em>requires</em> <code class="docutils literal notranslate"><span class="pre">boto3&gt;=1.9.221</span></code></p>
+<p>Method to get info about a WebSocket. The <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> is the unique
 identifier of the socket to get info about.</p>
 <p>The following is an example of the format this method returns:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="s1">&#39;ConnectedAt&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
     <span class="s1">&#39;Identity&#39;</span><span class="p">:</span> <span class="p">{</span>
         <span class="s1">&#39;SourceIp&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span>
@@ -971,7 +1033,7 @@ identifier of the socket to get info about.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>If the socket is disconnected it raises a <a class="reference internal" href="#WebsocketDisconnectedError" title="WebsocketDisconnectedError"><code class="xref py py-class docutils literal"><span class="pre">WebsocketDisconnectedError</span></code></a>
+<p>If the socket is disconnected it raises a <a class="reference internal" href="#WebsocketDisconnectedError" title="WebsocketDisconnectedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketDisconnectedError</span></code></a>
 error.</p>
 </dd></dl>
 
@@ -994,8 +1056,8 @@ error.</p>
 <dl class="class">
 <dt id="CORSConfig">
 <em class="property">class </em><code class="descname">CORSConfig</code><span class="sig-paren">(</span><em>allow_origin='*'</em>, <em>allow_headers=None</em>, <em>expose_headers=None</em>, <em>max_age=None</em>, <em>allow_credentials=None</em><span class="sig-paren">)</span><a class="headerlink" href="#CORSConfig" title="Permalink to this definition">¶</a></dt>
-<dd><p>CORS configuration to attach to a route, or globally on <code class="docutils literal"><span class="pre">app.api.cors</span></code>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CORSConfig</span>
+<dd><p>CORS configuration to attach to a route, or globally on <code class="docutils literal notranslate"><span class="pre">app.api.cors</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CORSConfig</span>
 <span class="n">cors_config</span> <span class="o">=</span> <span class="n">CORSConfig</span><span class="p">(</span>
     <span class="n">allow_origin</span><span class="o">=</span><span class="s1">&#39;https://foo.example.com&#39;</span><span class="p">,</span>
     <span class="n">allow_headers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;X-Special-Header&#39;</span><span class="p">],</span>
@@ -1015,42 +1077,42 @@ error.</p>
 <dl class="attribute">
 <dt id="CORSConfig.allow_origin">
 <code class="descname">allow_origin</code><a class="headerlink" href="#CORSConfig.allow_origin" title="Permalink to this definition">¶</a></dt>
-<dd><p>The value of the <code class="docutils literal"><span class="pre">Access-Control-Allow-Origin</span></code> to send in the response.
-Keep in mind that even though the <code class="docutils literal"><span class="pre">Access-Control-Allow-Origin</span></code> header
+<dd><p>The value of the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> to send in the response.
+Keep in mind that even though the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header
 can be set to a string that is a space separated list of origins, this
 behavior does not work on all clients that implement CORS. You should only
-supply a single origin to the <code class="docutils literal"><span class="pre">CORSConfig</span></code> object. If you need to supply
+supply a single origin to the <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> object. If you need to supply
 multiple origins you will need to define a custom handler for it that
-accepts <code class="docutils literal"><span class="pre">OPTIONS</span></code> requests and matches the <code class="docutils literal"><span class="pre">Origin</span></code> header against a
+accepts <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> requests and matches the <code class="docutils literal notranslate"><span class="pre">Origin</span></code> header against a
 whitelist of origins.  If the match is successful then return just their
-<code class="docutils literal"><span class="pre">Origin</span></code> back to them in the <code class="docutils literal"><span class="pre">Access-Control-Allow-Origin</span></code> header.</p>
+<code class="docutils literal notranslate"><span class="pre">Origin</span></code> back to them in the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CORSConfig.allow_headers">
 <code class="descname">allow_headers</code><a class="headerlink" href="#CORSConfig.allow_headers" title="Permalink to this definition">¶</a></dt>
 <dd><p>The list of additional allowed headers.  This list is added to list of
-built in allowed headers: <code class="docutils literal"><span class="pre">Content-Type</span></code>, <code class="docutils literal"><span class="pre">X-Amz-Date</span></code>,
-<code class="docutils literal"><span class="pre">Authorization</span></code>, <code class="docutils literal"><span class="pre">X-Api-Key</span></code>, <code class="docutils literal"><span class="pre">X-Amz-Security-Token</span></code>.</p>
+built in allowed headers: <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code>, <code class="docutils literal notranslate"><span class="pre">X-Amz-Date</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Authorization</span></code>, <code class="docutils literal notranslate"><span class="pre">X-Api-Key</span></code>, <code class="docutils literal notranslate"><span class="pre">X-Amz-Security-Token</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CORSConfig.expose_headers">
 <code class="descname">expose_headers</code><a class="headerlink" href="#CORSConfig.expose_headers" title="Permalink to this definition">¶</a></dt>
-<dd><p>A list of values to return for the <code class="docutils literal"><span class="pre">Access-Control-Expose-Headers</span></code>:</p>
+<dd><p>A list of values to return for the <code class="docutils literal notranslate"><span class="pre">Access-Control-Expose-Headers</span></code>:</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CORSConfig.max_age">
 <code class="descname">max_age</code><a class="headerlink" href="#CORSConfig.max_age" title="Permalink to this definition">¶</a></dt>
-<dd><p>The value for the <code class="docutils literal"><span class="pre">Access-Control-Max-Age</span></code></p>
+<dd><p>The value for the <code class="docutils literal notranslate"><span class="pre">Access-Control-Max-Age</span></code></p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CORSConfig.allow_credentials">
 <code class="descname">allow_credentials</code><a class="headerlink" href="#CORSConfig.allow_credentials" title="Permalink to this definition">¶</a></dt>
 <dd><p>A boolean value that sets the value of
-<code class="docutils literal"><span class="pre">Access-Control-Allow-Credentials</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Credentials</span></code>.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1064,15 +1126,15 @@ built in allowed headers: <code class="docutils literal"><span class="pre">Conte
 <dl class="class">
 <dt id="Rate">
 <em class="property">class </em><code class="descname">Rate</code><span class="sig-paren">(</span><em>value</em>, <em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#Rate" title="Permalink to this definition">¶</a></dt>
-<dd><p>An instance of this class can be used as the <code class="docutils literal"><span class="pre">expression</span></code> value
-in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.schedule()</span></code></a> method:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
+<dd><p>An instance of this class can be used as the <code class="docutils literal notranslate"><span class="pre">expression</span></code> value
+in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.schedule()</span></code></a> method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
 </div>
 <p>Examples:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Run every minute.</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run every minute.</span>
 <span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">)</span>
 
 <span class="c1"># Run every 2 hours.</span>
@@ -1089,14 +1151,14 @@ between invocations of the scheduled event.</p>
 <dl class="attribute">
 <dt id="Rate.unit">
 <code class="descname">unit</code><a class="headerlink" href="#Rate.unit" title="Permalink to this definition">¶</a></dt>
-<dd><p>The unit of the provided <code class="docutils literal"><span class="pre">value</span></code> attribute.  This can be
-either <code class="docutils literal"><span class="pre">Rate.MINUTES</span></code>, <code class="docutils literal"><span class="pre">Rate.HOURS</span></code>, or <code class="docutils literal"><span class="pre">Rate.DAYS</span></code>.</p>
+<dd><p>The unit of the provided <code class="docutils literal notranslate"><span class="pre">value</span></code> attribute.  This can be
+either <code class="docutils literal notranslate"><span class="pre">Rate.MINUTES</span></code>, <code class="docutils literal notranslate"><span class="pre">Rate.HOURS</span></code>, or <code class="docutils literal notranslate"><span class="pre">Rate.DAYS</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt>
 <code class="descname">MINUTES, HOURS, DAYS</code></dt>
-<dd><p>These values should be used for the <code class="docutils literal"><span class="pre">unit</span></code> attribute.</p>
+<dd><p>These values should be used for the <code class="docutils literal notranslate"><span class="pre">unit</span></code> attribute.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1104,26 +1166,26 @@ either <code class="docutils literal"><span class="pre">Rate.MINUTES</span></cod
 <dl class="class">
 <dt id="Cron">
 <em class="property">class </em><code class="descname">Cron</code><span class="sig-paren">(</span><em>minutes</em>, <em>hours</em>, <em>day_of_month</em>, <em>month</em>, <em>day_of_week</em>, <em>year</em><span class="sig-paren">)</span><a class="headerlink" href="#Cron" title="Permalink to this definition">¶</a></dt>
-<dd><p>An instance of this class can be used as the <code class="docutils literal"><span class="pre">expression</span></code> value
-in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.schedule()</span></code></a> method.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
+<dd><p>An instance of this class can be used as the <code class="docutils literal notranslate"><span class="pre">expression</span></code> value
+in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.schedule()</span></code></a> method.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
 </div>
-<p>It provides more capabilities than the <a class="reference internal" href="#Rate" title="Rate"><code class="xref py py-class docutils literal"><span class="pre">Rate</span></code></a>
+<p>It provides more capabilities than the <a class="reference internal" href="#Rate" title="Rate"><code class="xref py py-class docutils literal notranslate"><span class="pre">Rate</span></code></a>
 class.  There are a few limits:</p>
 <ul class="simple">
-<li>You can&#8217;t specify <code class="docutils literal"><span class="pre">day_of_month</span></code> and <code class="docutils literal"><span class="pre">day_of_week</span></code> fields in
+<li>You can’t specify <code class="docutils literal notranslate"><span class="pre">day_of_month</span></code> and <code class="docutils literal notranslate"><span class="pre">day_of_week</span></code> fields in
 the same Cron expression.  If you specify a value in one of the
-fields, you must use a <code class="docutils literal"><span class="pre">?</span></code> in the other.</li>
+fields, you must use a <code class="docutils literal notranslate"><span class="pre">?</span></code> in the other.</li>
 <li>Cron expressions that lead to rates faster than 1 minute are not
 supported.</li>
 </ul>
 <p>For more information, see the API
 <a class="reference external" href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions">docs page</a>.</p>
 <p>Examples:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Run at 10:00am (UTC) every day.</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run at 10:00am (UTC) every day.</span>
 <span class="n">Cron</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">)</span>
 
 <span class="c1"># Run at 12:15pm (UTC) every day.</span>
@@ -1152,13 +1214,13 @@ supported.</li>
 <dt id="CloudWatchEvent">
 <em class="property">class </em><code class="descname">CloudWatchEvent</code><a class="headerlink" href="#CloudWatchEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a scheduled or CloudWatch events.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">CloudWatchEvent</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
 </div>
-<p>In the code example above, the <code class="docutils literal"><span class="pre">event</span></code> argument is of
-type <code class="docutils literal"><span class="pre">CloudWatchEvent</span></code>, which will have the following
+<p>In the code example above, the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument is of
+type <code class="docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code>, which will have the following
 attributes.</p>
 <dl class="attribute">
 <dt id="CloudWatchEvent.version">
@@ -1188,17 +1250,17 @@ For scheduled events, this will be an empty dictionary.</p>
 <dl class="attribute">
 <dt id="CloudWatchEvent.detail_type">
 <code class="descname">detail_type</code><a class="headerlink" href="#CloudWatchEvent.detail_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>For scheduled events, this value will be <code class="docutils literal"><span class="pre">&quot;Scheduled</span> <span class="pre">Event&quot;</span></code>.</p>
+<dd><p>For scheduled events, this value will be <code class="docutils literal notranslate"><span class="pre">&quot;Scheduled</span> <span class="pre">Event&quot;</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CloudWatchEvent.source">
 <code class="descname">source</code><a class="headerlink" href="#CloudWatchEvent.source" title="Permalink to this definition">¶</a></dt>
 <dd><p>Identifies the service that sourced the event. All events sourced from
-within AWS will begin with &#8220;aws.&#8221; Customer-generated events can have any
-value here as long as it doesn&#8217;t begin with &#8220;aws.&#8221; We recommend the use
+within AWS will begin with “aws.” Customer-generated events can have any
+value here as long as it doesn’t begin with “aws.” We recommend the use
 of java package-name style reverse domain-name strings.</p>
-<p>For scheduled events, this will be <code class="docutils literal"><span class="pre">aws.events</span></code>.</p>
+<p>For scheduled events, this will be <code class="docutils literal notranslate"><span class="pre">aws.events</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1242,9 +1304,9 @@ the AWS request ID for tracing, or any other data in the context object.</p>
 from Lambda.  This is useful if you need direct
 access to the lambda event, for example if a
 new key is added to the lambda event that has not
-been mapped as an attribute to the <code class="docutils literal"><span class="pre">CloudWatchEvent</span></code>
+been mapped as an attribute to the <code class="docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code>
 object.  Example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;account&#39;</span><span class="p">:</span> <span class="s1">&#39;123457940291&#39;</span><span class="p">,</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;account&#39;</span><span class="p">:</span> <span class="s1">&#39;123457940291&#39;</span><span class="p">,</span>
  <span class="s1">&#39;detail&#39;</span><span class="p">:</span> <span class="p">{},</span>
  <span class="s1">&#39;detail-type&#39;</span><span class="p">:</span> <span class="s1">&#39;Scheduled Event&#39;</span><span class="p">,</span>
  <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;12345678-b9f1-4667-9c5e-39f98e9a6113&#39;</span><span class="p">,</span>
@@ -1263,14 +1325,14 @@ object.  Example:</p>
 <dt id="S3Event">
 <em class="property">class </em><code class="descname">S3Event</code><a class="headerlink" href="#S3Event" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an S3 event.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">S3Event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event received for bucket: </span><span class="si">%s</span><span class="s2">, key </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
                  <span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>In the code example above, the <code class="docutils literal"><span class="pre">event</span></code> argument is of
-type <code class="docutils literal"><span class="pre">S3Event</span></code>, which will have the following
+<p>In the code example above, the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument is of
+type <code class="docutils literal notranslate"><span class="pre">S3Event</span></code>, which will have the following
 attributes.</p>
 <dl class="attribute">
 <dt id="S3Event.bucket">
@@ -1283,10 +1345,10 @@ attributes.</p>
 <code class="descname">key</code><a class="headerlink" href="#S3Event.key" title="Permalink to this definition">¶</a></dt>
 <dd><p>The S3 key name associated with the event.
 The original key name in the S3 event payload
-is URL encoded.  However, this <code class="docutils literal"><span class="pre">key</span></code> attribute automatically
+is URL encoded.  However, this <code class="docutils literal notranslate"><span class="pre">key</span></code> attribute automatically
 URL decodes the key name for you.  If you need
 access to the original URL encoded key name, you can
-access it through the <code class="docutils literal"><span class="pre">to_dict()</span></code> method.</p>
+access it through the <code class="docutils literal notranslate"><span class="pre">to_dict()</span></code> method.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1304,7 +1366,7 @@ the AWS request ID for tracing, or any other data in the context object.</p>
 from Lambda.  This is useful if you need direct
 access to the lambda event, for example if a
 new key is added to the lambda event that has not
-been mapped as an attribute to the <code class="docutils literal"><span class="pre">S3Event</span></code>
+been mapped as an attribute to the <code class="docutils literal notranslate"><span class="pre">S3Event</span></code>
 object.  Note that this event is not modified in any way.
 This means that the key name of the S3 object is URL
 encoded, which is the way that S3 sends this value
@@ -1317,14 +1379,14 @@ to Lambda.</p>
 <dt id="SNSEvent">
 <em class="property">class </em><code class="descname">SNSEvent</code><a class="headerlink" href="#SNSEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an SNS event handler.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">SNSEvent</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Message received with subject: </span><span class="si">%s</span><span class="s2">, message: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
                  <span class="n">event</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>In the code example above, the <code class="docutils literal"><span class="pre">event</span></code> argument is of
-type <code class="docutils literal"><span class="pre">SNSEvent</span></code>, which will have the following
+<p>In the code example above, the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument is of
+type <code class="docutils literal notranslate"><span class="pre">SNSEvent</span></code>, which will have the following
 attributes.</p>
 <dl class="attribute">
 <dt id="SNSEvent.subject">
@@ -1353,7 +1415,7 @@ the AWS request ID for tracing, or any other data in the context object.</p>
 from Lambda.  This is useful if you need direct
 access to the lambda event, for example if a
 new key is added to the lambda event that has not
-been mapped as an attribute to the <code class="docutils literal"><span class="pre">SNSEvent</span></code>
+been mapped as an attribute to the <code class="docutils literal notranslate"><span class="pre">SNSEvent</span></code>
 object.</p>
 </dd></dl>
 
@@ -1363,21 +1425,21 @@ object.</p>
 <dt id="SQSEvent">
 <em class="property">class </em><code class="descname">SQSEvent</code><a class="headerlink" href="#SQSEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an SQS event handler.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">SQSEvent</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
 </div>
-<p>In the code example above, the <code class="docutils literal"><span class="pre">event</span></code> argument is of
-type <code class="docutils literal"><span class="pre">SQSEvent</span></code>.  An <code class="docutils literal"><span class="pre">SQSEvent</span></code> can have multiple
+<p>In the code example above, the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument is of
+type <code class="docutils literal notranslate"><span class="pre">SQSEvent</span></code>.  An <code class="docutils literal notranslate"><span class="pre">SQSEvent</span></code> can have multiple
 sqs messages associated with it.  To access the multiple
-messages, you can iterate over the <code class="docutils literal"><span class="pre">SQSEvent</span></code>.</p>
+messages, you can iterate over the <code class="docutils literal notranslate"><span class="pre">SQSEvent</span></code>.</p>
 <dl class="method">
 <dt id="SQSEvent.__iter__">
 <code class="descname">__iter__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#SQSEvent.__iter__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterate over individual SQS messages associated with
 the event.  Each element in the iterable is of type
-<a class="reference internal" href="#SQSRecord" title="SQSRecord"><code class="xref py py-class docutils literal"><span class="pre">SQSRecord</span></code></a>.</p>
+<a class="reference internal" href="#SQSRecord" title="SQSRecord"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSRecord</span></code></a>.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1395,7 +1457,7 @@ the AWS request ID for tracing, or any other data in the context object.</p>
 from Lambda.  This is useful if you need direct
 access to the lambda event, for example if a
 new key is added to the lambda event that has not
-been mapped as an attribute to the <code class="docutils literal"><span class="pre">SQSEvent</span></code>
+been mapped as an attribute to the <code class="docutils literal notranslate"><span class="pre">SQSEvent</span></code>
 object.</p>
 </dd></dl>
 
@@ -1404,7 +1466,7 @@ object.</p>
 <dl class="class">
 <dt id="SQSRecord">
 <em class="property">class </em><code class="descname">SQSRecord</code><a class="headerlink" href="#SQSRecord" title="Permalink to this definition">¶</a></dt>
-<dd><p>Represents a single SQS record within an <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal"><span class="pre">SQSEvent</span></code></a>.</p>
+<dd><p>Represents a single SQS record within an <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a>.</p>
 <dl class="attribute">
 <dt id="SQSRecord.body">
 <code class="descname">body</code><a class="headerlink" href="#SQSRecord.body" title="Permalink to this definition">¶</a></dt>
@@ -1444,16 +1506,16 @@ access to the lambda event.</p>
 <em class="property">class </em><code class="descname">Blueprint</code><span class="sig-paren">(</span><em>import_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Blueprint" title="Permalink to this definition">¶</a></dt>
 <dd><p>An object used for grouping related handlers together.
 This is primarily used as a mechanism for organizing your lambda
-handlers.  Any decorator methods defined in the <a class="reference internal" href="#Chalice" title="Chalice"><code class="xref py py-class docutils literal"><span class="pre">Chalice</span></code></a>
-object are also defined on a <code class="docutils literal"><span class="pre">Blueprint</span></code> object.  You can register
-a blueprint to a Chalice app using the <a class="reference internal" href="#Chalice.register_blueprint" title="Chalice.register_blueprint"><code class="xref py py-meth docutils literal"><span class="pre">Chalice.register_blueprint()</span></code></a>
+handlers.  Any decorator methods defined in the <a class="reference internal" href="#Chalice" title="Chalice"><code class="xref py py-class docutils literal notranslate"><span class="pre">Chalice</span></code></a>
+object are also defined on a <code class="docutils literal notranslate"><span class="pre">Blueprint</span></code> object.  You can register
+a blueprint to a Chalice app using the <a class="reference internal" href="#Chalice.register_blueprint" title="Chalice.register_blueprint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.register_blueprint()</span></code></a>
 method.</p>
-<p>The <code class="docutils literal"><span class="pre">import_name</span></code> is the module in which the Blueprint is defined.
+<p>The <code class="docutils literal notranslate"><span class="pre">import_name</span></code> is the module in which the Blueprint is defined.
 It is used to construct the appropriate handler string when creating
 the Lambda functions associated with a Blueprint.  This is typically
-the <cite>__name__</cite> attribute:<code class="docutils literal"><span class="pre">mybp</span> <span class="pre">=</span> <span class="pre">Blueprint(__name__)</span></code>.</p>
+the <cite>__name__</cite> attribute:<code class="docutils literal notranslate"><span class="pre">mybp</span> <span class="pre">=</span> <span class="pre">Blueprint(__name__)</span></code>.</p>
 <p>See <a class="reference internal" href="topics/blueprints.html"><span class="doc">Blueprints</span></a> for more information.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># In ./app.py</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># In ./app.py</span>
 
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 <span class="kn">from</span> <span class="nn">chalicelib</span> <span class="kn">import</span> <span class="n">myblueprint</span>
@@ -1482,7 +1544,7 @@ the <cite>__name__</cite> attribute:<code class="docutils literal"><span class="
 <em class="property">class </em><code class="descname">WebsocketEvent</code><a class="headerlink" href="#WebsocketEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Event object event that is passed as the sole arugment to any handler
 function decorated with one of the three websocket related handlers:
-<code class="docutils literal"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal"><span class="pre">on_ws_disconnect</span></code>, <code class="docutils literal"><span class="pre">on_ws_message</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_disconnect</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_message</span></code>.</p>
 <dl class="attribute">
 <dt id="WebsocketEvent.domain_name">
 <code class="descname">domain_name</code><a class="headerlink" href="#WebsocketEvent.domain_name" title="Permalink to this definition">¶</a></dt>
@@ -1504,15 +1566,15 @@ function decorated with one of the three websocket related handlers:
 <dl class="attribute">
 <dt id="WebsocketEvent.body">
 <code class="descname">body</code><a class="headerlink" href="#WebsocketEvent.body" title="Permalink to this definition">¶</a></dt>
-<dd><p>The message body received. This is only populated on the <code class="docutils literal"><span class="pre">on_ws_message</span></code>
-otherwise it will be set to <code class="docutils literal"><span class="pre">None</span></code>.</p>
+<dd><p>The message body received. This is only populated on the <code class="docutils literal notranslate"><span class="pre">on_ws_message</span></code>
+otherwise it will be set to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="WebsocketEvent.json_body">
 <code class="descname">json_body</code><a class="headerlink" href="#WebsocketEvent.json_body" title="Permalink to this definition">¶</a></dt>
-<dd><p>The parsed JSON body (<code class="docutils literal"><span class="pre">json.loads(body)</span></code>) of the message. If the body is
-not JSON parsable then using this attribute will raise a <code class="docutils literal"><span class="pre">ValueError</span></code>.</p>
+<dd><p>The parsed JSON body (<code class="docutils literal notranslate"><span class="pre">json.loads(body)</span></code>) of the message. If the body is
+not JSON parsable then using this attribute will raise a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
 </dd></dl>
 
 <p>See <a class="reference internal" href="topics/websockets.html"><span class="doc">Websockets</span></a> for more information.</p>
@@ -1521,14 +1583,26 @@ not JSON parsable then using this attribute will raise a <code class="docutils l
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="topics/experimental.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Experimental APIs</a>
+                        
+                        <a href="tutorials/index.html" title="next chapter" class="next-page clearfix">Tutorials →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="topics/experimental.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="tutorials/index.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Chalice</a></li>
 <li><a class="reference internal" href="#request">Request</a></li>
 <li><a class="reference internal" href="#response">Response</a></li>
@@ -1543,46 +1617,19 @@ not JSON parsable then using this attribute will raise a <code class="docutils l
 <li><a class="reference internal" href="#blueprints">Blueprints</a></li>
 <li><a class="reference internal" href="#websockets">Websockets</a></li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="topics/experimental.html" title="previous chapter">Experimental APIs</a></li>
-      <li>Next: <a href="tutorials/websockets.html" title="next chapter">Websocket Tutorials</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/api.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="_sources/api.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

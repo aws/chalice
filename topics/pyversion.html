@@ -1,60 +1,126 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Python Version Support &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Python Version Support &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="AWS CloudFormation Support" href="cfn.html" />
     <link rel="prev" title="App Packaging" href="packaging.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="python-version-support">
 <h1>Python Version Support<a class="headerlink" href="#python-version-support" title="Permalink to this headline">¶</a></h1>
 <p>Chalice supports all versions of python supported by AWS Lambda, which is
-currently <code class="docutils literal"><span class="pre">python2.7</span></code> and <code class="docutils literal"><span class="pre">python3.6</span></code>.</p>
+currently <code class="docutils literal notranslate"><span class="pre">python2.7</span></code> and <code class="docutils literal notranslate"><span class="pre">python3.6</span></code>.</p>
 <p>Chalice will automatically pick which version of python to use for Lambda
-based on the major version of python you are using.  You don&#8217;t have to
+based on the major version of python you are using.  You don’t have to
 explicitly configure which version of python you want to use. For example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ python --version
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python --version
 Python 3.6.1
 $ chalice new-project test-versions
 $ cd test-versions
@@ -79,9 +145,9 @@ Deploying to: dev
 https://rest-api-id.execute-api.us-west-2.amazonaws.com/api/
 </pre></div>
 </div>
-<p>In the example above, we&#8217;re using python 3.6.1 so chalice automatically
-selects the <code class="docutils literal"><span class="pre">python3.6</span></code> runtime for lambda.  If we were using python 2.7.11,
-chalice would automatically select <code class="docutils literal"><span class="pre">python2.7</span></code> as the runtime.</p>
+<p>In the example above, we’re using python 3.6.1 so chalice automatically
+selects the <code class="docutils literal notranslate"><span class="pre">python3.6</span></code> runtime for lambda.  If we were using python 2.7.11,
+chalice would automatically select <code class="docutils literal notranslate"><span class="pre">python2.7</span></code> as the runtime.</p>
 <p>Chalice will emit a warning if the minor version does not match a python
 version supported by Lambda.  Chalice will select the closest Lambda version
 in this scenario, as shown in the table below.</p>
@@ -134,7 +200,7 @@ major/minor version of python you plan on using on AWS Lambda.</p>
 whenever you deploy your chalice app.  This allows you to migrate to python3
 in AWS Lambda by creating a new virtual environment that uses python3.
 For example, suppose you have an existing chalice app that uses python2:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ python --version
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python --version
 Python 2.7.12
 $ chalice deploy
 ...
@@ -148,65 +214,50 @@ and redeploy.</p>
 <dd>$ deactivate
 $ python3 -m venv /tmp/venv3
 $ source /tmp/venv3/bin/activate
-$ python &#8211;version
+$ python –version
 Python 3.6.1
 $ chalice deploy
-...</dd>
+…</dd>
 </dl>
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="packaging.html" title="previous chapter" class="previous-page clearfix hidden-xs">← App Packaging</a>
+                        
+                        <a href="cfn.html" title="next chapter" class="next-page clearfix">AWS CloudFormation Support →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="packaging.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="cfn.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Python Version Support</a></li>
 <li><a class="reference internal" href="#changing-python-runtime-versions">Changing Python Runtime Versions</a></li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="packaging.html" title="previous chapter">App Packaging</a></li>
-      <li>Next: <a href="cfn.html" title="next chapter">AWS CloudFormation Support</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/pyversion.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/pyversion.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

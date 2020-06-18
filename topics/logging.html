@@ -1,52 +1,118 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Logging &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>Logging &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="SDK Generation" href="sdks.html" />
     <link rel="prev" title="Multifile Support" href="multifile.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="logging">
 <h1>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h1>
 <p>You have several options for logging in your
@@ -56,29 +122,29 @@ in the
 <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-logging.html">AWS Lambda Docs</a>.
 The simplest option is to just use print statements.
 Anything you print will be accessible in cloudwatch logs
-as well as in the output of the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">logs</span></code> command.</p>
-<p>In addition to using the stdlib <code class="docutils literal"><span class="pre">logging</span></code> module directly,
+as well as in the output of the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">logs</span></code> command.</p>
+<p>In addition to using the stdlib <code class="docutils literal notranslate"><span class="pre">logging</span></code> module directly,
 the framework offers a preconfigured logger designed to work
 nicely with Lambda.  This is offered purely as a convenience,
-you can use <code class="docutils literal"><span class="pre">print</span></code> or the <code class="docutils literal"><span class="pre">logging</span></code> module directly if you prefer.</p>
-<p>You can access this logger via the <code class="docutils literal"><span class="pre">app.log</span></code>
+you can use <code class="docutils literal notranslate"><span class="pre">print</span></code> or the <code class="docutils literal notranslate"><span class="pre">logging</span></code> module directly if you prefer.</p>
+<p>You can access this logger via the <code class="docutils literal notranslate"><span class="pre">app.log</span></code>
 attribute, which is a logger specifically for your application.
-This attribute is an instance of <code class="docutils literal"><span class="pre">logging.getLogger(your_app_name_)</span></code>
-that&#8217;s been preconfigured with reasonable defaults:</p>
+This attribute is an instance of <code class="docutils literal notranslate"><span class="pre">logging.getLogger(your_app_name_)</span></code>
+that’s been preconfigured with reasonable defaults:</p>
 <ul class="simple">
-<li>StreamHandler associated with <code class="docutils literal"><span class="pre">sys.stdout</span></code>.</li>
-<li>Log level set to <code class="docutils literal"><span class="pre">logging.ERROR</span></code> by default.
+<li>StreamHandler associated with <code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code>.</li>
+<li>Log level set to <code class="docutils literal notranslate"><span class="pre">logging.ERROR</span></code> by default.
 You can also manually set the logging level by setting
-<code class="docutils literal"><span class="pre">app.log.setLevel(logging.DEBUG)</span></code>.</li>
+<code class="docutils literal notranslate"><span class="pre">app.log.setLevel(logging.DEBUG)</span></code>.</li>
 <li>A logging formatter that displays the app name, level name,
 and message.</li>
 </ul>
 <div class="section" id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
-<p>In the following application, we&#8217;re using the application logger
-to emit two log messages, one at <code class="docutils literal"><span class="pre">DEBUG</span></code> and one at the <code class="docutils literal"><span class="pre">ERROR</span></code>
+<p>In the following application, we’re using the application logger
+to emit two log messages, one at <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> and one at the <code class="docutils literal notranslate"><span class="pre">ERROR</span></code>
 level:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demolog&#39;</span><span class="p">)</span>
 
@@ -91,15 +157,15 @@ level:</p>
 </pre></div>
 </div>
 <p>If we make a request to this endpoint, and then look at
-<code class="docutils literal"><span class="pre">chalice</span> <span class="pre">logs</span></code> we&#8217;ll see the following log message:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">2016</span><span class="o">-</span><span class="mi">11</span><span class="o">-</span><span class="mi">06</span> <span class="mi">20</span><span class="p">:</span><span class="mi">24</span><span class="p">:</span><span class="mf">25.490000</span> <span class="mi">9</span><span class="n">d2a92</span> <span class="n">demolog</span> <span class="o">-</span> <span class="n">ERROR</span> <span class="o">-</span> <span class="n">This</span> <span class="ow">is</span> <span class="n">an</span> <span class="n">error</span> <span class="n">statement</span>
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">logs</span></code> we’ll see the following log message:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2016</span><span class="o">-</span><span class="mi">11</span><span class="o">-</span><span class="mi">06</span> <span class="mi">20</span><span class="p">:</span><span class="mi">24</span><span class="p">:</span><span class="mf">25.490000</span> <span class="mi">9</span><span class="n">d2a92</span> <span class="n">demolog</span> <span class="o">-</span> <span class="n">ERROR</span> <span class="o">-</span> <span class="n">This</span> <span class="ow">is</span> <span class="n">an</span> <span class="n">error</span> <span class="n">statement</span>
 </pre></div>
 </div>
-<p>As you can see, only the <code class="docutils literal"><span class="pre">ERROR</span></code> level log is emitted because
-the default log level is <code class="docutils literal"><span class="pre">ERROR</span></code>.  Also note the log message formatting.
-This is the default format that&#8217;s been automatically configured.
+<p>As you can see, only the <code class="docutils literal notranslate"><span class="pre">ERROR</span></code> level log is emitted because
+the default log level is <code class="docutils literal notranslate"><span class="pre">ERROR</span></code>.  Also note the log message formatting.
+This is the default format that’s been automatically configured.
 We can make a change to set our log level to debug:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demolog&#39;</span><span class="p">)</span>
 <span class="c1"># Enable DEBUG logs.</span>
@@ -113,21 +179,21 @@ We can make a change to set our log level to debug:</p>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>Now if we make a request to the <code class="docutils literal"><span class="pre">/</span></code> URL and look at the
-output of <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">logs</span></code>, we&#8217;ll see the following log message:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">2016</span><span class="o">-</span><span class="mi">11</span><span class="o">-</span><span class="mi">07</span> <span class="mi">12</span><span class="p">:</span><span class="mi">29</span><span class="p">:</span><span class="mf">15.714</span> <span class="mi">431786</span> <span class="n">demolog</span> <span class="o">-</span> <span class="n">DEBUG</span> <span class="o">-</span> <span class="n">This</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">debug</span> <span class="n">statement</span>
+<p>Now if we make a request to the <code class="docutils literal notranslate"><span class="pre">/</span></code> URL and look at the
+output of <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">logs</span></code>, we’ll see the following log message:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2016</span><span class="o">-</span><span class="mi">11</span><span class="o">-</span><span class="mi">07</span> <span class="mi">12</span><span class="p">:</span><span class="mi">29</span><span class="p">:</span><span class="mf">15.714</span> <span class="mi">431786</span> <span class="n">demolog</span> <span class="o">-</span> <span class="n">DEBUG</span> <span class="o">-</span> <span class="n">This</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">debug</span> <span class="n">statement</span>
 <span class="mi">2016</span><span class="o">-</span><span class="mi">11</span><span class="o">-</span><span class="mi">07</span> <span class="mi">12</span><span class="p">:</span><span class="mi">29</span><span class="p">:</span><span class="mf">15.714</span> <span class="mi">431786</span> <span class="n">demolog</span> <span class="o">-</span> <span class="n">ERROR</span> <span class="o">-</span> <span class="n">This</span> <span class="ow">is</span> <span class="n">an</span> <span class="n">error</span> <span class="n">statement</span>
 </pre></div>
 </div>
 <p>As you can see here, both the debug and error log message are shown.</p>
-<p>You can use the <code class="docutils literal"><span class="pre">-n/--name</span></code> option to view the logs for a specific lambda
+<p>You can use the <code class="docutils literal notranslate"><span class="pre">-n/--name</span></code> option to view the logs for a specific lambda
 function.  By default, the logs for the API handler lambda function are shown.
-This corresponds to any log statements made within an <code class="docutils literal"><span class="pre">&#64;app.route()</span></code> call.
+This corresponds to any log statements made within an <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> call.
 The name option is the logical name of the lambda function.  This is the
 name of the python function by default, or whatever name you provided
-as the <code class="docutils literal"><span class="pre">name</span></code> kwarg to the <code class="docutils literal"><span class="pre">&#64;app.lambda_function()</span></code> call.  For example,
+as the <code class="docutils literal notranslate"><span class="pre">name</span></code> kwarg to the <code class="docutils literal notranslate"><span class="pre">&#64;app.lambda_function()</span></code> call.  For example,
 given this app:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;multilog&#39;</span><span class="p">)</span>
 
@@ -146,7 +212,7 @@ given this app:</p>
 </pre></div>
 </div>
 <p>You can retrieve logs for the above function by running:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ chalice logs --name foo
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice logs --name foo
 $ chalice logs --name MyFunction
 </pre></div>
 </div>
@@ -154,59 +220,44 @@ $ chalice logs --name MyFunction
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="multifile.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Multifile Support</a>
+                        
+                        <a href="sdks.html" title="next chapter" class="next-page clearfix">SDK Generation →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="multifile.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="sdks.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">Logging</a><ul>
 <li><a class="reference internal" href="#examples">Examples</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="multifile.html" title="previous chapter">Multifile Support</a></li>
-      <li>Next: <a href="sdks.html" title="next chapter">SDK Generation</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/logging.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/logging.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>

@@ -1,52 +1,118 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>App Packaging &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <title>App Packaging &mdash; Python Serverless Microframework for AWS 1.15.1 documentation</title>
-    
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+
     
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.15.1',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Python Serverless Microframework for AWS 1.15.1 documentation" href="../index.html" />
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Python Version Support" href="pyversion.html" />
     <link rel="prev" title="Chalice Stages" href="stages.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 
-  </head>
-  <body role="document">
-  
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          
-
-          <div class="body" role="main">
-            
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="/tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="/topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
   <div class="section" id="app-packaging">
 <h1>App Packaging<a class="headerlink" href="#app-packaging" title="Permalink to this headline">¶</a></h1>
 <p>In order to deploy your Chalice app, a zip file is created that
@@ -66,10 +132,10 @@ included in the deployment package.</li>
 <li><strong>chalicelib/</strong> - This directory (if it exists) is included in the
 deployment package.  This is where you can add config files and additional
 application modules if you prefer not to have all your app code in the
-<code class="docutils literal"><span class="pre">app.py</span></code> file.</li>
+<code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.</li>
 </ul>
-<p>See <a class="reference internal" href="multifile.html"><span class="doc">Multifile Support</span></a> for more info on the <code class="docutils literal"><span class="pre">chalicelib/</span></code> directory.  Both the
-<code class="docutils literal"><span class="pre">app.py</span></code> and the <code class="docutils literal"><span class="pre">chalicelib/</span></code> directory are intended for code that you
+<p>See <a class="reference internal" href="multifile.html"><span class="doc">Multifile Support</span></a> for more info on the <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code> directory.  Both the
+<code class="docutils literal notranslate"><span class="pre">app.py</span></code> and the <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code> directory are intended for code that you
 write yourself.</p>
 </div>
 <div class="section" id="rd-party-packages">
@@ -79,31 +145,31 @@ write yourself.</p>
 <li><strong>requirements.txt</strong> - During the packaging process, Chalice will
 install any packages it finds or can build compatible wheels for.
 Specifically all pure python packages as well as all packages that upload
-wheel files for the <code class="docutils literal"><span class="pre">manylinux1_x86_64</span></code> platform will be automatically
+wheel files for the <code class="docutils literal notranslate"><span class="pre">manylinux1_x86_64</span></code> platform will be automatically
 installable.</li>
 <li><strong>vendor/</strong> - The <em>contents</em> of this directory are automatically added to
 the top level of the deployment package.</li>
 </ul>
-<p>Chalice will also check for an optional <code class="docutils literal"><span class="pre">vendor/</span></code> directory in the project
+<p>Chalice will also check for an optional <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory in the project
 root directory.  The contents of this directory are automatically included in
 the top level of the deployment package (see <a class="reference internal" href="#package-examples"><span class="std std-ref">Examples</span></a> for
-specific examples).  The <code class="docutils literal"><span class="pre">vendor/</span></code> directory is helpful in these scenarios:</p>
+specific examples).  The <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory is helpful in these scenarios:</p>
 <ul class="simple">
 <li>You need to include custom packages or binary content that is not accessible
-via <code class="docutils literal"><span class="pre">pip</span></code>.  These may be internal packages that aren&#8217;t public.</li>
+via <code class="docutils literal notranslate"><span class="pre">pip</span></code>.  These may be internal packages that aren’t public.</li>
 <li>Wheel files are not available for a package you need from pip.</li>
-<li>A package is installable with <code class="docutils literal"><span class="pre">requirements.txt</span></code> but has optional c
+<li>A package is installable with <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> but has optional c
 extensions. Chalice can build the dependency without the c extensions, but
 if you want better performance you can vendor a version that is compiled.</li>
 </ul>
-<p>As a general rule of thumb, code that you write goes in either <code class="docutils literal"><span class="pre">app.py</span></code> or
-<code class="docutils literal"><span class="pre">chalicelib/</span></code>, and dependencies are either specified in <code class="docutils literal"><span class="pre">requirements.txt</span></code>
-or placed in the <code class="docutils literal"><span class="pre">vendor/</span></code> directory.</p>
+<p>As a general rule of thumb, code that you write goes in either <code class="docutils literal notranslate"><span class="pre">app.py</span></code> or
+<code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code>, and dependencies are either specified in <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>
+or placed in the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory.</p>
 </div>
 <div class="section" id="examples">
 <span id="package-examples"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <p>Suppose I have the following app structure:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>.
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
 ├── app.py
 ├── chalicelib
 │   ├── __init__.py
@@ -114,13 +180,13 @@ or placed in the <code class="docutils literal"><span class="pre">vendor/</span>
         └── __init__.py
 </pre></div>
 </div>
-<p>And the <code class="docutils literal"><span class="pre">requirements.txt</span></code> file had one requirement:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat requirements.txt
+<p>And the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file had one requirement:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cat requirements.txt
 sortedcontainers==1.5.4
 </pre></div>
 </div>
 <p>Then the final deployment package directory structure would look like this:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>.
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
 ├── app.py
 ├── chalicelib
 │   ├── __init__.py
@@ -141,7 +207,7 @@ deployment process.</p>
 <p>Since the original version of this example was written, cryptography has
 released version 2.0 which does have manylinux1 wheels available. This
 means if you want to use cryptography in a Chalice app all you need to
-do is add <code class="docutils literal"><span class="pre">cryptography</span></code> or <code class="docutils literal"><span class="pre">cryptography&gt;=2.0</span></code> in your
+do is add <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> or <code class="docutils literal notranslate"><span class="pre">cryptography&gt;=2.0</span></code> in your
 requirements.txt file.</p>
 <p>This example will use version 1.9 of Cryptography
 because it is a good example of a library with C extensions and no wheel
@@ -149,12 +215,12 @@ files.</p>
 </div></blockquote>
 <p>Below shows an example of how to use the
 <a class="reference external" href="https://pypi.org/project/cryptography/1.9/">cryptography 1.9</a> package
-in a Chalice app for the <code class="docutils literal"><span class="pre">python3.6</span></code> lambda environment.</p>
+in a Chalice app for the <code class="docutils literal notranslate"><span class="pre">python3.6</span></code> lambda environment.</p>
 <p>Suppose you are on a Mac or Windows and want to deploy a Chalice app that
-depends on the <code class="docutils literal"><span class="pre">cryptography==1.9</span></code> package. If you simply add it to your
-<code class="docutils literal"><span class="pre">requirements.txt</span></code> file and try to deploy it with <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> you will
+depends on the <code class="docutils literal notranslate"><span class="pre">cryptography==1.9</span></code> package. If you simply add it to your
+<code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file and try to deploy it with <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> you will
 get the following warning during deployment:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat requirements.txt
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cat requirements.txt
 cryptography==1.9
 $ chalice deploy
 Updating IAM policy.
@@ -171,55 +237,55 @@ if missing dependencies are not present. For more information:
 http://chalice.readthedocs.io/en/latest/topics/packaging.html
 </pre></div>
 </div>
-<p>This happened because the <code class="docutils literal"><span class="pre">cryptography</span></code> version 1.9 does not have wheel
+<p>This happened because the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> version 1.9 does not have wheel
 files available on PyPi, and has C extensions. Since we are not on the same
 platform as AWS Lambda, the compiled C extensions Chalice built were not
-compatible. To get around this we are going to leverage the <code class="docutils literal"><span class="pre">vendor/</span></code>
-directory, and build the <code class="docutils literal"><span class="pre">cryptography</span></code> package on a compatible linux system.</p>
-<p>You can do this yourself by building <code class="docutils literal"><span class="pre">cryptography</span></code> on an Amazon Linux
+compatible. To get around this we are going to leverage the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code>
+directory, and build the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> package on a compatible linux system.</p>
+<p>You can do this yourself by building <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> on an Amazon Linux
 instance running in EC2. All of the following commands were run inside a
-<code class="docutils literal"><span class="pre">python</span> <span class="pre">3.6</span></code> virtual environment.</p>
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">3.6</span></code> virtual environment.</p>
 <ul>
 <li><p class="first">Download the source first:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip download cryptography==1.9
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip download cryptography==1.9
 </pre></div>
 </div>
 <p>This will download all the requirements into the current working directory.
 The directory should have the following contents:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">asn1crypto-0.22.0-py2.py3-none-any.whl</span></code></li>
-<li><code class="docutils literal"><span class="pre">cffi-1.10.0-cp36-cp36m-manylinux1_x86_64.whl</span></code></li>
-<li><code class="docutils literal"><span class="pre">cryptography-1.9.tar.gz</span></code></li>
-<li><code class="docutils literal"><span class="pre">idna-2.5-py2.py3-none-any.whl</span></code></li>
-<li><code class="docutils literal"><span class="pre">pycparser-2.17.tar.gz</span></code></li>
-<li><code class="docutils literal"><span class="pre">six-1.10.0-py2.py3-none-any.whl</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">asn1crypto-0.22.0-py2.py3-none-any.whl</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">cffi-1.10.0-cp36-cp36m-manylinux1_x86_64.whl</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">cryptography-1.9.tar.gz</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">idna-2.5-py2.py3-none-any.whl</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">pycparser-2.17.tar.gz</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">six-1.10.0-py2.py3-none-any.whl</span></code></li>
 </ul>
 <p>This is a complete set of dependencies required for the cryptography package.
 Most of these packages have wheels that were downloaded, which means they can
-simply be put in the <code class="docutils literal"><span class="pre">requirements.txt</span></code> and Chalice will take care of
-downloading them. That leaves <code class="docutils literal"><span class="pre">cryptography</span></code> itself and <code class="docutils literal"><span class="pre">pycparser</span></code> as
+simply be put in the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> and Chalice will take care of
+downloading them. That leaves <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> itself and <code class="docutils literal notranslate"><span class="pre">pycparser</span></code> as
 the only two that did not have a wheel file available for download.</p>
 </li>
-<li><p class="first">Next build the <code class="docutils literal"><span class="pre">cryptography</span></code> source package into a wheel file:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ pip wheel cryptography-1.9.tar.gz
+<li><p class="first">Next build the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> source package into a wheel file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip wheel cryptography-1.9.tar.gz
 </pre></div>
 </div>
-<p>This will take a few seconds and build a wheel file for both <code class="docutils literal"><span class="pre">cryptography</span></code>
-and <code class="docutils literal"><span class="pre">pycparser</span></code>. The directory should now have two additional wheel files:</p>
+<p>This will take a few seconds and build a wheel file for both <code class="docutils literal notranslate"><span class="pre">cryptography</span></code>
+and <code class="docutils literal notranslate"><span class="pre">pycparser</span></code>. The directory should now have two additional wheel files:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">cryptography-1.9-cp36-cp36m-linux_x86_64.whl</span></code></li>
-<li><code class="docutils literal"><span class="pre">pycparser-2.17-py2.py3-none-any.whl</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">cryptography-1.9-cp36-cp36m-linux_x86_64.whl</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">pycparser-2.17-py2.py3-none-any.whl</span></code></li>
 </ul>
-<p>The <code class="docutils literal"><span class="pre">cryptography</span></code> wheel file has been built with a compatible
-architecture for Lambda (<code class="docutils literal"><span class="pre">linux_x86_64</span></code>) and the <code class="docutils literal"><span class="pre">pycparser</span></code> has been
-built for <code class="docutils literal"><span class="pre">any</span></code> architecture which means it can also be automatically
-packaged by Chalice if it is listed in the <code class="docutils literal"><span class="pre">requirements.txt</span></code> file.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> wheel file has been built with a compatible
+architecture for Lambda (<code class="docutils literal notranslate"><span class="pre">linux_x86_64</span></code>) and the <code class="docutils literal notranslate"><span class="pre">pycparser</span></code> has been
+built for <code class="docutils literal notranslate"><span class="pre">any</span></code> architecture which means it can also be automatically
+packaged by Chalice if it is listed in the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file.</p>
 </li>
-<li><p class="first">Download the <code class="docutils literal"><span class="pre">cryptography</span></code> wheel file from the Amazon Linux instance and
-unzip it into the <code class="docutils literal"><span class="pre">vendor/</span></code> directory in the root directory of your Chalice
+<li><p class="first">Download the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> wheel file from the Amazon Linux instance and
+unzip it into the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory in the root directory of your Chalice
 app.</p>
 <p>You should now have a project directory that looks like this:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ tree
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tree
 .
 ├── app.py
 ├── requirements.txt
@@ -237,8 +303,8 @@ app.</p>
         └── top_level.txt
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">requirements.txt</span></code> file should look like this:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat requirements.txt
+<p>The <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file should look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cat requirements.txt
 cffi==1.10.0
 six==1.10.0
 asn1crypto==0.22.0
@@ -246,8 +312,8 @@ idna==2.5
 pycparser==2.17
 </pre></div>
 </div>
-<p>In your <code class="docutils literal"><span class="pre">app.py</span></code> file you can now import <code class="docutils literal"><span class="pre">cryptography</span></code>, and these
-dependencies will all get included when the <code class="docutils literal"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command is
+<p>In your <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file you can now import <code class="docutils literal notranslate"><span class="pre">cryptography</span></code>, and these
+dependencies will all get included when the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command is
 run.</p>
 </li>
 </ul>
@@ -255,14 +321,26 @@ run.</p>
 </div>
 
 
-          </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
+                    
+                    <section class="relations">
+                        
+                        <a href="stages.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Chalice Stages</a>
+                        
+                        <a href="pyversion.html" title="next chapter" class="next-page clearfix">Python Version Support →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="stages.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="pyversion.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
 <li><a class="reference internal" href="#">App Packaging</a><ul>
 <li><a class="reference internal" href="#app-directories">App Directories</a></li>
 <li><a class="reference internal" href="#rd-party-packages">3rd Party Packages</a></li>
@@ -271,46 +349,19 @@ run.</p>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="stages.html" title="previous chapter">Chalice Stages</a></li>
-      <li>Next: <a href="pyversion.html" title="next chapter">Python Version Support</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/topics/packaging.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
         </div>
-      </div>
-      <div class="clearer"></div>
     </div>
-    <div class="footer">
-      &copy;2016, James Saryerwinnie.
-      
-      |
-      <a href="../_sources/topics/packaging.txt"
-          rel="nofollow">Page source</a>
-    </div>
-
-    
-
-    
+</footer>
   </body>
 </html>
