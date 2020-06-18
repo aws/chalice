@@ -113,25 +113,11 @@ todo_include_todos = False
 
 # -- Options for HTML output ----------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-html_theme = 'alabaster'
-# Guzzle theme options (see theme.conf for more information)
-
-html_theme_options = {
-    'github_user': 'aws',
-    'github_repo': 'chalice',
-    'sidebar_width': '270px',
-    'page_width': '1020px',
-    'note_bg': '#f1f7f4',
-    'note_border': '#ccb7b7',
-    'pre_bg': '#fbfbfb',
-    'code_bg': '#fbfafa',
-    'show_powered_by': False,
-    'font_size': '16px',
-    'font_family': '"Open Sans", Helvetica, Arial, sans-serif',
-
-}
+# Our theme is based off the smithy theme but keep in mind that we heavily
+# modify parts of the theme.
+html_theme = 'smithy'
+html_theme_path = ['./theme']
+html_theme_options = {'ga_id': os.environ.get('_CHALICE_GA_ID', '')}
 
 
 # The name for this set of Sphinx documents.
