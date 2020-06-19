@@ -3,7 +3,7 @@ coverage==4.5.4
 flake8==3.7.9
 tox==3.0.0
 wheel==0.26.0
-doc8==0.8.0
+doc8==0.8.1
 # The latest version of pylint only works on python3.
 pylint==2.4.4 ; python_version >= '3.6'
 # For python2, there are a few bugs in the latest versions of 1.x,

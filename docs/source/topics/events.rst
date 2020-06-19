@@ -194,7 +194,7 @@ We'll update the ``app.py`` file to use the ``on_sns_message`` decorator:
 
     from chalice import Chalice
 
-    app = chalice.Chalice(app_name='chalice-sns-demo')
+    app = Chalice(app_name='chalice-sns-demo')
     app.debug = True
 
     @app.on_sns_message(topic='my-demo-topic')

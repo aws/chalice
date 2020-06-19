@@ -1,184 +1,5 @@
-.. _websocket-tutorial:
-
-Websocket Tutorials
-===================
-
-Echo Server Example
--------------------
-
-An echo server is a simple server that echos any message it receives back to
-the client that sent it.
-
-First install a copy of Chalice in a fresh environment, create a new project
-and cd into the directory::
-
-  $ pip install -U chalice
-  $ chalice new-project echo-server
-  $ cd echo-server
-
-Our Chalice application will need boto3 as a dependency for both API Gateway
-to send websocket messages. Let's add a boto3 to the ``requirements.txt``
-file::
-
-  $ echo "boto3>=1.9.91" > requirements.txt
-
-
-Now that the requirement has been added. Let's install it locally since our
-next script will need it as well::
-
-  $ pip install -r requirements.txt
-
-
-Next replace the contents of the ``app.py`` file with the code below.
-
-.. code-block:: python
-   :caption: app.py
-   :linenos:
-
-   from boto3.session import Session
-
-   from chalice import Chalice
-   from chalice import WebsocketDisconnectedError
-
-   app = Chalice(app_name="echo-server")
-   app.websocket_api.session = Session()
-   app.experimental_feature_flags.update([
-       'WEBSOCKETS'
-   ])
-
-
-   @app.on_ws_message()
-   def message(event):
-       try:
-           app.websocket_api.send(
-               connection_id=event.connection_id,
-               message=event.body,
-           )
-       except WebsocketDisconnectedError as e:
-           pass  # Disconnected so we can't send the message back.
-
-
-Stepping through this app line by line, the first thing to note is that we
-need to import and instantiate a boto3 session. This session is manually
-assigned to ``app.websocket_api.session``.
-This is needed because in order to send websocket responses to API Gateway we
-need to construct a boto3 client. Chalice does not take a direct dependency
-on boto3 or botocore, so we need to provide the Session ourselves.
-
-.. code-block:: python
-
-   from boto3.session import Session
-   app.websocket_api.session = Session()
-
-
-Next we enable the experimental feature ``WEBSOCKETS``. Websockets are an
-experimental feature and are subject to API changes. This includes all aspects
-of the Websocket API exposted in Chalice. Including any public members of
-``app.websocket_api``, and the three decorators ``on_ws_connect``,
-``on_ws_message``, and ``on_ws_disconnect``.
-
-.. code-block:: python
-
-   app.experimental_feature_flags.update([
-       'WEBSOCKETS'
-   ])
-
-
-To register a websocket handler, and cause Chalice to deploy an
-API Gateway Websocket API we use the ``app.on_ws_message()`` decorator.
-The event parameter here is a wrapper object with some convenience
-parameters attached. The most useful are ``event.connection_id`` and
-``event.body``. The ``connection_id`` is an API Gateway specific identifier
-that allows you to refer to the connection that sent the message. The ``body``
-is the content of the message.
-
-.. code-block:: python
-
-   @app.on_ws_message()
-   def message(event):
-
-
-Since this is an echo server, the message handler simply reads the content it
-received on the socket, and rewrites it back to the same socket. To send a
-message to a socket we call ``app.websocket_api.send(connection_id, message)``.
-In this case, we just use the same ``connection_id`` we got the message from,
-and use the ``body`` we got from the event as the ``message`` to send.
-
-.. code-block:: python
-
-   app.websocket_api.send(
-       connection_id=event.connection_id,
-       message=event.body,
-    )
-
-
-Finally, we catch the exception ``WebsocketDisconnectedError`` which is raised
-by ``app.websocket_api.send`` if the provided ``connection_id`` is not
-connected anymore. In our case this doesn't really matter since we don't have
-anything tracking our connections. The error has a ``connection_id`` property
-that contains the offending connection id.
-
-.. code-block:: python
-
-   except WebsocketDisconnectedError as e:
-       pass  # Disconnected so we can't send the message back.
-
-
-Now that we understand the code, lets deploy it with ``chalice deploy``::
-
-   $ chalice deploy
-     Creating deployment package.
-     Creating IAM role: echo-server-dev
-     Creating lambda function: echo-server-dev-websocket_message
-     Creating websocket api: echo-server-dev-websocket-api
-     Resources deployed:
-       - Lambda ARN: arn:aws:lambda:region:0123456789:function:echo-server-dev-websocket_message
-       - Websocket API URL: wss://{websocket_api_id}.execute-api.region.amazonaws.com/api/
-
-To test out the echo server we will use the  ``websocket-client`` package. You
-install it from PyPI::
-
-  $ pip install websocket-client
-
-
-After deploying the Chalice app the output will contain a URL for connecting
-to the websocket API labeled: ``- Websocket API URL:``. The
-``websocket-client`` package installs a command line tool called ``wsdump.py``
-which can be used to test websocket echo server::
-
-  $ wsdump.py wss://{websocket_api_id}.execute-api.region.amazonaws.com/api/
-  Press Ctrl+C to quit
-  > foo
-  < foo
-  > bar
-  < bar
-  > foo bar baz
-  < foo bar baz
-  >
-
-
-Every message sent to the server (lines that start with ``>``) result in a
-message sent to us (lines that start with ``<``) with the same content.
-
-If something goes wrong, you can check the chalice error logs using the
-following command::
-
-  $ chalice logs -n websocket_message
-
-.. note::
-   If you encounter an Internal Server Error here it is likely that you forgot
-   to include ``boto3>=1.9.91`` in the ``requirements.txt`` file.
-
-To tear down the example. Just run::
-
-  $ chalice delete
-    Deleting Websocket API: {websocket_api_id}
-    Deleting function: arn:aws:lambda:us-west-2:0123456789:function:echo-server-dev-websocket_message
-    Deleting IAM role: echo-server-dev
-
-
 Chat Server Example
--------------------
+===================
 
 .. note::
 
@@ -233,145 +54,145 @@ Below is the JSON file that contains all of our custom Cloudformation.
    {
      "Resources": {
        "ChaliceChatTable": {
-	 "Type" : "AWS::DynamoDB::Table",
-	 "Properties" : {
-	   "AttributeDefinitions" : [
-	     {
-	       "AttributeName": "PK",
-	       "AttributeType": "S"
-	     },
-	     {
-	       "AttributeName": "SK",
-	       "AttributeType": "S"
-	     }
-	   ],
-	   "KeySchema" : [
-	     {
-	       "AttributeName" : "PK",
-	       "KeyType" : "HASH"
-	     },{
-	       "AttributeName" : "SK",
-	       "KeyType" : "RANGE"
-	     }
-	   ],
-	   "GlobalSecondaryIndexes": [
-	     {
-	       "IndexName" : "ReverseLookup",
-	       "KeySchema" : [
-		 {
-		   "AttributeName" : "SK",
-		   "KeyType" : "HASH"
-		 },
-		 {
-		   "AttributeName" : "PK",
-		   "KeyType" : "RANGE"
-		 }
-	       ],
-	       "Projection" : {
-		 "ProjectionType": "ALL"
-	       },
-	       "ProvisionedThroughput": {
-		 "ReadCapacityUnits": 1,
-		 "WriteCapacityUnits": 1
-	       }
-	     }
-	   ],
-	   "ProvisionedThroughput" : {
-	     "ReadCapacityUnits": 1,
-	     "WriteCapacityUnits": 1
-	   },
-	   "TableName": "ChaliceChat"
-	 }
+         "Type" : "AWS::DynamoDB::Table",
+         "Properties" : {
+           "AttributeDefinitions" : [
+             {
+               "AttributeName": "PK",
+               "AttributeType": "S"
+             },
+             {
+               "AttributeName": "SK",
+               "AttributeType": "S"
+             }
+           ],
+           "KeySchema" : [
+             {
+               "AttributeName" : "PK",
+               "KeyType" : "HASH"
+             },{
+               "AttributeName" : "SK",
+               "KeyType" : "RANGE"
+             }
+           ],
+           "GlobalSecondaryIndexes": [
+             {
+               "IndexName" : "ReverseLookup",
+               "KeySchema" : [
+                 {
+                   "AttributeName" : "SK",
+                   "KeyType" : "HASH"
+                 },
+                 {
+                   "AttributeName" : "PK",
+                   "KeyType" : "RANGE"
+                 }
+               ],
+               "Projection" : {
+                 "ProjectionType": "ALL"
+               },
+               "ProvisionedThroughput": {
+                 "ReadCapacityUnits": 1,
+                 "WriteCapacityUnits": 1
+               }
+             }
+           ],
+           "ProvisionedThroughput" : {
+             "ReadCapacityUnits": 1,
+             "WriteCapacityUnits": 1
+           },
+           "TableName": "ChaliceChat"
+         }
        },
        "WebsocketConnect": {
-	 "Properties": {
-	   "Environment": {
-	     "Variables": {
-	       "TABLE": {"Ref": "ChaliceChatTable"}
-	     }
-	   }
-	 }
+         "Properties": {
+           "Environment": {
+             "Variables": {
+               "TABLE": {"Ref": "ChaliceChatTable"}
+             }
+           }
+         }
        },
        "WebsocketMessage": {
-	 "Properties": {
-	   "Environment": {
-	     "Variables": {
-	       "TABLE": {"Ref": "ChaliceChatTable"}
-	     }
-	   }
-	 }
+         "Properties": {
+           "Environment": {
+             "Variables": {
+               "TABLE": {"Ref": "ChaliceChatTable"}
+             }
+           }
+         }
        },
        "WebsocketDisconnect": {
-	 "Properties": {
-	   "Environment": {
-	     "Variables": {
-	       "TABLE": {"Ref": "ChaliceChatTable"}
-	     }
-	   }
-	 }
+         "Properties": {
+           "Environment": {
+             "Variables": {
+               "TABLE": {"Ref": "ChaliceChatTable"}
+             }
+           }
+         }
        },
        "DefaultRole": {
-	 "Type": "AWS::IAM::Role",
-	 "Properties": {
-	   "AssumeRolePolicyDocument": {
-	     "Version": "2012-10-17",
-	     "Statement": [
-	       {
-		 "Sid": "",
-		 "Effect": "Allow",
-		 "Principal": {
-		   "Service": "lambda.amazonaws.com"
-		 },
-		 "Action": "sts:AssumeRole"
-	       }
-	     ]
-	   },
-	   "Policies": [
-	     {
-	       "PolicyName": "DefaultRolePolicy",
-	       "PolicyDocument": {
-		 "Version": "2012-10-17",
-		 "Statement": [
-		   {
-		     "Effect": "Allow",
-		     "Action": [
-		       "logs:CreateLogGroup",
-		       "logs:CreateLogStream",
-		       "logs:PutLogEvents"
-		     ],
-		     "Resource": "arn:aws:logs:*:*:*"
-		   },
-		   {
-		     "Effect": "Allow",
-		     "Action": [
-		       "execute-api:ManageConnections"
-		     ],
-		     "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
-		   },
-		   {
-		     "Effect": "Allow",
-		     "Action": [
-		       "dynamodb:DeleteItem",
-		       "dynamodb:PutItem",
-		       "dynamodb:GetItem",
-		       "dynamodb:UpdateItem",
-		       "dynamodb:Query",
-		       "dynamodb:Scan"
-		     ],
-		     "Resource": [
-		       {
-			 "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}"
-		       },
-		       {
-			 "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup"
-		       }
-		     ]
-		   }
-		 ]
-	       }
-	     }
-	   ]
-	 }
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+           "AssumeRolePolicyDocument": {
+             "Version": "2012-10-17",
+             "Statement": [
+               {
+                 "Sid": "",
+                 "Effect": "Allow",
+                 "Principal": {
+                   "Service": "lambda.amazonaws.com"
+                 },
+                 "Action": "sts:AssumeRole"
+               }
+             ]
+           },
+           "Policies": [
+             {
+               "PolicyName": "DefaultRolePolicy",
+               "PolicyDocument": {
+                 "Version": "2012-10-17",
+                 "Statement": [
+                   {
+                     "Effect": "Allow",
+                     "Action": [
+                       "logs:CreateLogGroup",
+                       "logs:CreateLogStream",
+                       "logs:PutLogEvents"
+                     ],
+                     "Resource": "arn:aws:logs:*:*:*"
+                   },
+                   {
+                     "Effect": "Allow",
+                     "Action": [
+                       "execute-api:ManageConnections"
+                     ],
+                     "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
+                   },
+                   {
+                     "Effect": "Allow",
+                     "Action": [
+                       "dynamodb:DeleteItem",
+                       "dynamodb:PutItem",
+                       "dynamodb:GetItem",
+                       "dynamodb:UpdateItem",
+                       "dynamodb:Query",
+                       "dynamodb:Scan"
+                     ],
+                     "Resource": [
+                       {
+                         "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}"
+                       },
+                       {
+                         "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup"
+                       }
+                     ]
+                   }
+                 ]
+               }
+             }
+           ]
+         }
        }
      }
    }
@@ -472,10 +293,10 @@ following file.
 
            The environment variable TABLE is present for a deployed application
            since it is set in all of the Lambda functions by a CloudFormation
-	   reference. We default to '', which will happen when we run
-	   ``chalice package`` since it loads the application, and no
-	   environment variable has been set. For local testing, a value should
-	   be manually set in the environment if '' will not suffice.
+           reference. We default to '', which will happen when we run
+           ``chalice package`` since it loads the application, and no
+           environment variable has been set. For local testing, a value should
+           be manually set in the environment if '' will not suffice.
            """
            table_name = os.environ.get('TABLE', '')
            table = boto3.resource('dynamodb').Table(table_name)
@@ -995,19 +816,23 @@ Next we use the AWS CLI to package this template, and prepare it for
 deployment. In order for this to work you will need to replace ``$BUCKET``
 with the name of a bucket you control::
 
-  $ aws cloudformation package  --template-file out/sam.json --s3-bucket $BUCKET --output-template-file out/template.yml
+  $ aws cloudformation package  --template-file out/sam.json \
+      --s3-bucket $BUCKET --output-template-file out/template.yml
 
 Once this is complete, a new template should be located at ``out/template.yml``
 this is the final CloudFormation template which is ready for deployment.
 Deploying it with the AWS CLI can be done with the following command::
 
-  $ aws cloudformation deploy --template-file out/template.yml --stack-name ChaliceChat --capabilities CAPABILITY_IAM
+  $ aws cloudformation deploy --template-file out/template.yml \
+      --stack-name ChaliceChat --capabilities CAPABILITY_IAM
 
 This command should wait awhile, and once it exits the app should be ready. To
 get the websocket connection URL, we can use the AWS CLI again to check the
 stack output ``WebsocketConnectEndpointURL``::
 
-  $ aws cloudformation describe-stacks --stack-name ChaliceChat --query "Stacks[0].Outputs[?OutputKey=='WebsocketConnectEndpointURL'].OutputValue" --output text
+  $ aws cloudformation describe-stacks --stack-name ChaliceChat \
+      --query "Stacks[0].Outputs[?OutputKey=='WebsocketConnectEndpointURL'].OutputValue" \
+      --output text
   wss://{id}.execute-api.{region}.amazonaws.com/api/
 
 
@@ -1105,3 +930,4 @@ message sent to the server is used as the client's username.
 To delete the resources you can run use the AWS CLI to delete the stack::
 
   $ aws cloudformation delete-stack --stack-name ChaliceChat
+

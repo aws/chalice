@@ -64,7 +64,7 @@ h1, h2, h3, h4, h5, h6, h7 {
 }
 
 h2, h3, h4, h5, h6, h7 {
-  margin-top: 2em;
+  margin-top: 1.25em;
 }
 
 h1 {

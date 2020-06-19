@@ -44,6 +44,15 @@ Getting Started
    quickstart
 
 
+Tutorials
+---------
+
+.. toctree::
+   :maxdepth: 2
+
+   tutorials/index
+
+
 Topics
 ------
 
@@ -61,14 +70,6 @@ API Reference
 
    api
 
-
-Tutorials
----------
-
-.. toctree::
-   :maxdepth: 2
-
-   tutorials/index
 
 Upgrade Notes
 -------------
