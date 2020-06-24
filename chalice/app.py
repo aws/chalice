@@ -479,7 +479,7 @@ class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, method,
                  api_key_required=None, content_types=None,
-                 cors=False, authorizer=None):
+                 cors=False, authorizer=None, scopes=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -500,6 +500,7 @@ class RouteEntry(object):
             cors = None
         self.cors = cors
         self.authorizer = authorizer
+        self.scopes = scopes
 
     def _parse_view_args(self):
         if '{' not in self.uri_pattern:
@@ -896,6 +897,7 @@ class _HandlerRegistration(object):
             'content_types': actual_kwargs.pop('content_types',
                                                ['application/json']),
             'cors': actual_kwargs.pop('cors', self.api.cors),
+            'scopes': actual_kwargs.pop('scopes', None),
         }
         if route_kwargs['cors'] is None:
             route_kwargs['cors'] = self.api.cors

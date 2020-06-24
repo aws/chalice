@@ -430,6 +430,40 @@ def test_can_use_authorizer_object_with_role_arn(sample_app, swagger_gen):
     }
 
 
+def test_can_use_authorizer_object_with_scopes(sample_app, swagger_gen):
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization',
+        invoke_role_arn='role-arn')
+
+    @sample_app.route(
+        '/auth',
+        authorizer=authorizer,
+        scopes=["write:test", "read:test"]
+    )
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{
+        'MyAuth': ["write:test", "read:test"]
+    }]
+    security_definitions = doc['securityDefinitions']
+    assert 'MyAuth' in security_definitions
+    assert security_definitions['MyAuth'] == {
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'in': 'header',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'authorizerUri': 'auth-uri',
+            'type': 'token',
+            'authorizerResultTtlInSeconds': 300,
+            'authorizerCredentials': 'role-arn'
+        }
+    }
+
+
 def test_can_use_api_key_and_authorizers(sample_app, swagger_gen):
     authorizer = CustomAuthorizer(
         'MyAuth', authorizer_uri='auth-uri', header='Authorization')
@@ -443,6 +477,27 @@ def test_can_use_api_key_and_authorizers(sample_app, swagger_gen):
     assert single_method.get('security') == [
         {'api_key': []},
         {'MyAuth': []},
+    ]
+
+
+def test_can_use_api_key_and_authorizers_with_scopes(sample_app, swagger_gen):
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization')
+
+    @sample_app.route(
+        '/auth',
+        authorizer=authorizer,
+        scopes=["write:test", "read:test"],
+        api_key_required=True
+    )
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [
+        {'api_key': []},
+        {'MyAuth': ["write:test", "read:test"]},
     ]
 
 
@@ -478,6 +533,37 @@ def test_can_use_cognito_auth_object(sample_app, swagger_gen):
     doc = swagger_gen.generate_swagger(sample_app)
     single_method = doc['paths']['/api-key-required']['get']
     assert single_method.get('security') == [{'MyUserPool': []}]
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions'].get('MyUserPool') == {
+        'in': 'header',
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'x-amazon-apigateway-authtype': 'cognito_user_pools',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'cognito_user_pools',
+            'providerARNs': ['myarn']
+        }
+    }
+
+
+def test_can_use_cognito_auth_object_with_scopes(sample_app, swagger_gen):
+    authorizer = CognitoUserPoolAuthorizer('MyUserPool',
+                                           header='Authorization',
+                                           provider_arns=['myarn'])
+
+    @sample_app.route(
+        '/api-key-required',
+        authorizer=authorizer,
+        scopes=["write:test", "read:test"]
+    )
+    def foo():
+        return {}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/api-key-required']['get']
+    assert single_method.get('security') == [{
+        'MyUserPool': ["write:test", "read:test"]
+    }]
     assert 'securityDefinitions' in doc
     assert doc['securityDefinitions'].get('MyUserPool') == {
         'in': 'header',

@@ -223,6 +223,35 @@ For more information on custom authorizers, see the
 page in the API Gateway user guide.
 
 
+Scopes
+-------------------------
+
+OAuth 2.0 and OpenID Connect (OIDC) scopes can be used to implement access
+controls in your Chalice app. In Chalice, all scopes are configured per-route
+and specified using the ``scopes`` kwarg to an ``@app.route()`` call.
+
+To integrate Scopes with a Cognito Authorizer in Chalice, you'll need to have
+an existing `Cognito user pools`_ and `Cognito resource server`_ configured.
+Scopes for Cognito Authorizers need to include the full identifier
+which is ``resourceServerIdentifier/scopeName``.
+
+.. code-block:: python
+
+    from chalice import CognitoUserPoolAuthorizer
+
+    authorizer = CognitoUserPoolAuthorizer(
+        'MyPool', provider_arns=['arn:aws:cognito:...:userpool/name'])
+
+    @app.route('/user-pools', methods=['GET'], authorizer=authorizer, scopes=["https://mychaliceapp.example.com/todos.read"])
+    def authenticated():
+        return {"success": True}
+
+Scopes can also be used with custom authorizers. The custom authorizer will
+need to inspect the access token to determine if access should be granted
+based on the scopes configured for the route.
+
+
 .. _IAM permissions: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html
 .. _Cognito User Pools: https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
+.. _Cognito Resource Server: https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html
 .. _API Gateway documentation: https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html

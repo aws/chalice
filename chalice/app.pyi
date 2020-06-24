@@ -96,6 +96,7 @@ class RouteEntry(object):
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]
     cors = ... # type: CORSConfig
+    scopes = ... # type: List[str]
 
     def __init__(self,
                  view_function: Callable[..., Any],
@@ -104,6 +105,7 @@ class RouteEntry(object):
                  method: str,
                  api_key_required: Optional[bool]=None,
                  content_types: Optional[List[str]]=None,
+                 scopes: Optional[List[str]]=None,
                  authorizer: Optional[Union[Authorizer,
                                             ChaliceAuthorizer]]=None,
                  cors: Union[bool, CORSConfig]=False) -> None: ...
