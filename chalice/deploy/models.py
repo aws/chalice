@@ -215,6 +215,7 @@ class DomainName(ManagedModel):
     security_policy = attrib()              # type: str
     certificate_arn = attrib()              # type: Optional[str]
     regional_certificate_arn = attrib()     # type: Optional[str]
+    base_path_mappings = attrib()           # type: List[BasePathMappings]
     tags = attrib(default=None)             # type: Optional[Dict[str, Any]]
 
 
@@ -228,6 +229,7 @@ class RestAPI(ManagedModel):
     lambda_function = attrib()                   # type: LambdaFunction
     policy = attrib(default=None)                # type: Optional[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
+    custom_domain_name = attrib(default=None)    # type: Optional[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -237,14 +239,8 @@ class RestAPI(ManagedModel):
 @attrs
 class BasePathMappings(ManagedModel):
     resource_type = 'base_path_mappings'
-    domain_name = attrib()          # type: DomainName
     base_path = attrib()            # type: str
-    api = attrib()                  # type: Union[RestAPI, WebsocketAPI]
     stage = attrib()                # type: str
-
-    def dependencies(self):
-        # type: () -> List[Model]
-        return [self.domain_name, self.api]
 
 
 @attrs
@@ -256,6 +252,7 @@ class WebsocketAPI(ManagedModel):
     connect_function = attrib()      # type: Optional[LambdaFunction]
     message_function = attrib()      # type: Optional[LambdaFunction]
     disconnect_function = attrib()   # type: Optional[LambdaFunction]
+    custom_domain_name = attrib(default=None)  # type: Optional[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
