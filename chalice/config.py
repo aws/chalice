@@ -100,7 +100,7 @@ class Config(object):
         self._default_params = default_params
         self._chalice_app = None
         self._layers = layers
-        self._rest_api_domain_name = rest_api_domain_name
+        self._api_gateway_domain_name = rest_api_domain_name  # for REST API
         self._websocket_api_domain_name = websocket_api_domain_name
 
     @classmethod
@@ -177,18 +177,16 @@ class Config(object):
                                   varies_per_function=True)
 
     @property
-    def rest_api_domain_name(self):
+    def api_gateway_domain_name(self):
         # type: () -> StrMap
-        return self._chain_lookup('rest_api_domain_name',
-                                  varies_per_chalice_stage=True,
-                                  varies_per_function=True)
+        return self._chain_lookup('api_gateway_domain_name',
+                                  varies_per_chalice_stage=True)
 
     @property
     def websocket_api_domain_name(self):
         # type: () -> StrMap
         return self._chain_lookup('websocket_api_domain_name',
-                                  varies_per_chalice_stage=True,
-                                  varies_per_function=True)
+                                  varies_per_chalice_stage=True)
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):
