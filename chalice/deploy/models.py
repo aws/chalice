@@ -1,6 +1,6 @@
 # pylint: disable=line-too-long
 import enum
-from typing import List, Dict, Optional, Any, TypeVar, Union, Set  # noqa
+from typing import List, Dict, Optional as Opt, Any, TypeVar, Union, Set  # noqa
 from typing import cast
 from attr import attrs, attrib, Factory
 
@@ -32,7 +32,7 @@ class Plan(object):
 class APICall(Instruction):
     method_name = attrib()             # type: str
     params = attrib()                  # type: Dict[str, Any]
-    output_var = attrib(default=None)  # type: Optional[str]
+    output_var = attrib(default=None)  # type: Opt[str]
 
 
 @attrs(frozen=True)
@@ -206,17 +206,24 @@ class ScheduledEvent(CloudWatchEventBase):
 
 
 @attrs
+class ApiMapping(ManagedModel):
+    resource_type = 'api_mapping'
+    mapping_key = attrib()          # type: str
+    stage = attrib()                # type: str
+
+
+@attrs
 class DomainName(ManagedModel):
     resource_type = 'domain_name'
-    domain_name = attrib()                  # type: str
-    protocol = attrib()                     # type: str
-    hosted_zone_id = attrib()               # type: Optional[str]
-    endpoint_configuration = attrib()       # type: DV[Dict[str, Any]]
-    security_policy = attrib()              # type: str
-    certificate_arn = attrib()              # type: Optional[str]
-    regional_certificate_arn = attrib()     # type: Optional[str]
-    base_path_mappings = attrib()           # type: List[BasePathMappings]
-    tags = attrib(default=None)             # type: Optional[Dict[str, Any]]
+    domain_name = attrib()                           # type: str
+    protocol = attrib()                              # type: str
+    endpoint_type = attrib()                         # type: str
+    security_policy = attrib()                       # type: str
+    api_mapping = attrib()                           # type: List[ApiMapping]
+    certificate_arn = attrib(default=None)           # type: Opt[str]
+    regional_certificate_arn = attrib(default=None)  # type: Opt[str]
+    hosted_zone_id = attrib(default=None)            # type: Opt[str]
+    tags = attrib(default=None)                     # type: Opt[Dict[str, Any]]
 
 
 @attrs
@@ -227,9 +234,9 @@ class RestAPI(ManagedModel):
     api_gateway_stage = attrib()                 # type: str
     endpoint_type = attrib()                     # type: str
     lambda_function = attrib()                   # type: LambdaFunction
-    policy = attrib(default=None)                # type: Optional[IAMPolicy]
+    policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
-    custom_domain_name = attrib(default=None)    # type: Optional[DomainName]
+    custom_domain_name = attrib(default=None)    # type: Opt[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -237,22 +244,15 @@ class RestAPI(ManagedModel):
 
 
 @attrs
-class BasePathMappings(ManagedModel):
-    resource_type = 'base_path_mappings'
-    base_path = attrib()            # type: str
-    stage = attrib()                # type: str
-
-
-@attrs
 class WebsocketAPI(ManagedModel):
     resource_type = 'websocket_api'
-    name = attrib()                  # type: str
-    api_gateway_stage = attrib()     # type: str
-    routes = attrib()                # type: List[str]
-    connect_function = attrib()      # type: Optional[LambdaFunction]
-    message_function = attrib()      # type: Optional[LambdaFunction]
-    disconnect_function = attrib()   # type: Optional[LambdaFunction]
-    custom_domain_name = attrib(default=None)  # type: Optional[DomainName]
+    name = attrib()                             # type: str
+    api_gateway_stage = attrib()                # type: str
+    routes = attrib()                           # type: List[str]
+    connect_function = attrib()                 # type: Opt[LambdaFunction]
+    message_function = attrib()                 # type: Opt[LambdaFunction]
+    disconnect_function = attrib()              # type: Opt[LambdaFunction]
+    custom_domain_name = attrib(default=None)   # type: Opt[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -271,8 +271,8 @@ class S3BucketNotification(FunctionEventSubscriber):
     resource_type = 's3_event'
     bucket = attrib()           # type: str
     events = attrib()           # type: List[str]
-    prefix = attrib()           # type: Optional[str]
-    suffix = attrib()           # type: Optional[str]
+    prefix = attrib()           # type: Opt[str]
+    suffix = attrib()           # type: Opt[str]
 
 
 @attrs

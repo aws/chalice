@@ -135,6 +135,35 @@ seconds.
 A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See `AWS Lambda Layers Configuration`_.
 
+``api_gateway_custom_domain``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A mapping of key value pairs. Next keys should be present:
+
+- domain_name - Custom domain name (api.example.com)
+- security_policy - The Transport Layer Security (TLS) version
+                    of the security policy for this domain name.
+- certificate_arn - the arn of AWS-managed certificate for current domain name.
+- url_prefixes - (optional) a list of Api mappings keys.
+- tags - (optional) a dictionary of tags.
+
+See `AWS Custom Domain names setup`_.
+
+
+``websocket_api_domain_name``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A mapping of key value pairs. Next keys should be present:
+
+- domain_name - Custom domain name (api.example.com)
+- security_policy - The Transport Layer Security (TLS) version of
+                    the security policy for this domain name.
+- certificate_arn - the arn of AWS-managed certificate for current domain name.
+- url_prefixes - (optional) a list of Api mappings keys.
+- tags - (optional) a dictionary of tags.
+
+See `AWS Custom Domain names setup`_.
+
 
 ``manage_iam_role``
 ~~~~~~~~~~~~~~~~~~~
@@ -316,6 +345,40 @@ Examples
 
 Below are examples that show how you can configure your chalice app.
 
+Custom Domain Name
+~~~~~~~~~~~~~~~~~~
+
+Here's an example for configuring Custom domain name for
+dev stage for REST API::
+
+  {
+    "version": "2.0",
+    "app_name": "app",
+    "stages": {
+      "dev": {
+        "autogen_policy": true,
+        "api_gateway_stage": "dev"
+        "api_gateway_custom_domain": {
+          "domain_name": "api.example.com",
+          "security_policy": "TLS 1.2|TLS 1.0",
+          "certificate_arn": "arn:aws:acm:example.com",
+          "url_prefixes": ["foo", "bar],
+          "tags": {
+            "key": "tag1",
+            "key1": "tag2"
+          }
+        },
+      },
+    }
+  }
+
+In this config file we're specifying ``dev`` stage for ApiGateway.
+In the ``dev`` stage, chalice will automatically create ``custom domain name``
+with specified ``url_prefixes`` that should contain information about
+`AWS Api Mapping key`_.
+
+If there is Websocket API ``websocket_api_domain_name`` should be used instead
+of ``api_gateway_custom_domain``.
 
 IAM Roles and Policies
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -500,3 +563,5 @@ We can accomplish all this with this config file::
 .. _AWS Lambda VPC documentation: https://docs.aws.amazon.com/lambda/latest/dg/vpc.html#vpc-configuring
 .. _AWS Documentation on managing concurrency: https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html
 .. _AWS Lambda Layers Configuration: https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
+.. _AWS Custom Domain names setup: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
+.. _AWS Api Mapping key:    https://docs.aws.amazon.com/apigatewayv2/latest/api-reference/domainnames-domainname-apimappings.html

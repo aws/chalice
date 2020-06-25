@@ -3,40 +3,6 @@ from attr import evolve
 from chalice.deploy import models
 
 
-def test_can_instantiate_rest_base_path_mapping(lambda_function):
-    rest_api = models.RestAPI(
-        resource_name='rest_api',
-        swagger_doc={'swagger': '2.0'},
-        minimum_compression='',
-        api_gateway_stage='api',
-        endpoint_type='EDGE',
-        lambda_function=lambda_function,
-    )
-
-    domain_name = models.DomainName(
-        protocol='HTTP',
-        resource_name='rest_api_domain_name',
-        domain_name='test_domain_name',
-        security_policy='TLS_1_0',
-        endpoint_configuration={
-          'types': [
-            'REGIONAL'
-          ]
-        },
-        certificate_arn='certificate_arn',
-        regional_certificate_arn=None,
-        hosted_zone_id='hosted_zone_id',
-    )
-    base_path_mapping = models.BasePathMappings(
-        resource_name='base_path_mappings',
-        domain_name=domain_name,
-        base_path='(none)',
-        api=rest_api,
-        stage='dev'
-    )
-    assert base_path_mapping.dependencies() == [domain_name, rest_api]
-
-
 def test_can_instantiate_empty_application():
     app = models.Application(stage='dev', resources=[])
     assert app.dependencies() == []

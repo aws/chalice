@@ -80,8 +80,6 @@ class Config(object):
                  config_from_disk=None,                 # type: StrMap
                  default_params=None,                   # type: StrMap
                  layers=None,                           # type: List[str]
-                 rest_api_domain_name=None,             # type: StrMap
-                 websocket_api_domain_name=None         # type: StrMap
                  ):
         # type: (...) -> None
         #: Params that a user provided explicitly,
@@ -100,8 +98,6 @@ class Config(object):
         self._default_params = default_params
         self._chalice_app = None
         self._layers = layers
-        self._api_gateway_domain_name = rest_api_domain_name  # for REST API
-        self._websocket_api_domain_name = websocket_api_domain_name
 
     @classmethod
     def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
@@ -177,9 +173,9 @@ class Config(object):
                                   varies_per_function=True)
 
     @property
-    def api_gateway_domain_name(self):
+    def api_gateway_custom_domain(self):
         # type: () -> StrMap
-        return self._chain_lookup('api_gateway_domain_name',
+        return self._chain_lookup('api_gateway_custom_domain',
                                   varies_per_chalice_stage=True)
 
     @property
@@ -479,7 +475,7 @@ class DeployedResources(object):
 
     def resource_values(self, name):
         # type: (str) -> Dict[str, Any]
-        if 'base_path_mappings' in name:
+        if 'api_mapping' in name:
             name = name.split('.')[0]
 
         try:

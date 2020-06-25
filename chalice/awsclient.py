@@ -137,14 +137,19 @@ class TypedAWSClient(object):
         except client.exceptions.ResourceNotFoundException:
             return False
 
-    def base_path_mappings_exists(self, domain_name, path):
+    def api_mapping_exists(self, domain_name, api_map_key):
         # type: (str, str) -> bool
-        client = self._client('apigateway')
+        client = self._client('apigatewayv2')
         try:
-            client.get_base_path_mapping(
-                domainName=domain_name,
-                basePath=path)
-            return True
+            result = client.get_api_mappings(DomainName=domain_name)
+            api_map = [
+                api_map
+                for api_map in result['Items']
+                if api_map['ApiMappingKey'] == api_map_key
+            ]
+            if api_map:
+                return True
+            return False
         except client.exceptions.NotFoundException:
             return False
 
@@ -236,27 +241,67 @@ class TypedAWSClient(object):
             kwargs['Layers'] = layers
         return self._create_lambda_function(kwargs)
 
-    def create_base_path_mapping(self,
-                                 domain_name,  # type: str
-                                 base_path,    # type: str
-                                 api_id,       # type: str
-                                 stage         # type: str
-                                 ):
+    def create_api_mapping(self,
+                           domain_name,  # type: str
+                           path_key,  # type: str
+                           api_id,       # type: str
+                           stage         # type: str
+                           ):
         # type: (...) -> Dict[str, str]
         kwargs = {
             'DomainName': domain_name,
-            'ApiMappingKey': base_path,
+            'ApiMappingKey': path_key,
             'ApiId': api_id,
             'Stage': stage
         }
+        return self._create_api_mapping(kwargs)
+
+    def create_base_path_mapping(self,
+                                 domain_name,    # type: str
+                                 path_key,  # type: str
+                                 api_id,         # type: str
+                                 stage           # type: str
+                                 ):
+        # type: (...) -> Dict[str, str]
+        kwargs = {
+            'domainName': domain_name,
+            'basePath': path_key,
+            'restApiId': api_id,
+            'stage': stage
+        }
         return self._create_base_path_mapping(kwargs)
+
+    def _create_base_path_mapping(self, base_path_args):
+        # type: (Dict[str, Any]) -> Dict[str, str]
+        result = self._client('apigateway').create_base_path_mapping(
+            **base_path_args
+        )
+        if result['basePath'] == '(none)':
+            base_path = "/"
+        else:
+            base_path = "/%s" % result['basePath']
+        base_path_mapping = {
+            'key': base_path
+        }
+        return base_path_mapping
+
+    def _create_api_mapping(self, api_args):
+        # type: (Dict[str, Any]) -> Dict[str, str]
+        result = self._client('apigatewayv2').create_api_mapping(**api_args)
+        if result['ApiMappingKey'] == '(none)':
+            map_key = "/"
+        else:
+            map_key = "/%s" % result['ApiMappingKey']
+        api_mapping = {
+            'key': map_key
+        }
+        return api_mapping
 
     def create_domain_name(self,
                            protocol,                       # type: str
                            domain_name,                    # type: str
-                           endpoint_configuration,         # type: StrAnyMap
+                           endpoint_type,                  # type: str
                            security_policy,                # type: str
-                           hosted_zone_id=None,            # type: OptStr
                            certificate_arn=None,           # type: str
                            regional_certificate_arn=None,  # type: str
                            tags=None,                      # type: StrMap
@@ -265,41 +310,62 @@ class TypedAWSClient(object):
         if protocol == 'HTTP':
             kwargs = {
                 'domainName': domain_name,
-                'endpointConfiguration': endpoint_configuration,
-                'securityPolicy': security_policy,
-                'tags': tags
+                'endpointConfiguration': {
+                    'types': [endpoint_type],
+                },
+                'securityPolicy': security_policy
             }
             if certificate_arn:
                 kwargs['certificateArn'] = certificate_arn
             if regional_certificate_arn:
                 kwargs['regionalCertificateArn'] = regional_certificate_arn
-            created_domain_name = self._create_custom_domain(kwargs)
+            if tags:
+                kwargs['tags'] = tags
+            created_domain_name = self._create_domain_name(kwargs)
         elif protocol == 'WEBSOCKET':
-            kwargs = self.get_custom_domain_params(
+            kwargs = self.get_custom_domain_params_v2(
                 domain_name,
-                endpoint_configuration,
+                endpoint_type,
                 security_policy,
-                hosted_zone_id,
                 certificate_arn,
                 regional_certificate_arn,
                 tags
             )
-            created_domain_name = self._create_custom_domain(kwargs)
+            created_domain_name = self._create_domain_name_v2(kwargs)
         else:
             raise ValueError("Unsupported protocol value.")
         return created_domain_name
 
-    def _create_base_path_mapping(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, str]
-        result = self._client('apigatewayv2').create_api_mapping(**api_args)
-        map_key = "/%s" % result['ApiMappingKey']
-        base_path_mapping = {
-            'id': result['ApiMappingId'],
-            'key': map_key
+    def _create_domain_name(self, api_args):
+        # type: (Dict[str, Any]) -> Dict[str, Any]
+        client = self._client('apigateway')
+        exceptions = (
+            client.exceptions.TooManyRequestsException,
+        )
+        result = self._call_client_method_with_retries(
+            client.create_domain_name,
+            api_args, max_attempts=6,
+            should_retry=lambda x: True,
+            retryable_exceptions=exceptions
+        )
+        domain_name = {
+            'domain_name': result['domainName'],
+            'endpoint_configuration': result['endpointConfiguration'],
+            'security_policy': result['securityPolicy'],
         }
-        return base_path_mapping
+        if result.get('regionalHostedZoneId'):
+            domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
+        else:
+            domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
 
-    def _create_custom_domain(self, api_args):
+        if result.get('regionalCertificateArn'):
+            domain_name['certificate_arn'] = result['regionalCertificateArn']
+        else:
+            domain_name['certificate_arn'] = result['certificateArn']
+
+        return domain_name
+
+    def _create_domain_name_v2(self, api_args):
         # type: (Dict[str, Any]) -> Dict[str, Any]
         client = self._client('apigatewayv2')
         exceptions = (
@@ -313,8 +379,8 @@ class TypedAWSClient(object):
         )
         result_data = result['DomainNameConfigurations'][0]
         domain_name = {
-            'domain_name': result['DomainName'],
-            'endpoint_configuration': result_data['EndpointType'],
+            'domain_name': result_data['ApiGatewayDomainName'],
+            'endpoint_type': result_data['EndpointType'],
             'security_policy': result_data['SecurityPolicy'],
             'hosted_zone_id': result_data['HostedZoneId'],
             'certificate_arn': result_data['CertificateArn']
@@ -402,17 +468,16 @@ class TypedAWSClient(object):
         except lambda_client.exceptions.ResourceNotFoundException:
             raise ResourceDoesNotExistError(function_name)
 
-    def get_custom_domain_params(self,
-                                 domain_name,                 # type: str
-                                 endpoint_configuration,      # type: StrAnyMap
-                                 security_policy,             # type: str
-                                 hosted_zone_id=None,         # type: OptStr
-                                 certificate_arn=None,        # type: str
-                                 regional_certificate_arn=None,  # type: str
-                                 tags=None,                      # type: StrMap
-                                 ):
+    def get_custom_domain_params_v2(
+            self,
+            domain_name,                    # type: str
+            endpoint_type,                  # type: str
+            security_policy,                # type: str
+            certificate_arn=None,           # type: Optional[str]
+            regional_certificate_arn=None,  # type: Optional[str]
+            tags=None,                      # type: StrMap
+    ):
         # type: (...) -> Dict[str, Any]
-        endpoint_type = endpoint_configuration['types'][0].upper()
         if endpoint_type == 'REGIONAL':
             certificate_arn = regional_certificate_arn
         kwargs = {
@@ -425,34 +490,140 @@ class TypedAWSClient(object):
                 'DomainNameStatus': 'AVAILABLE',
             }],
         }  # type: Dict[str, Any]
-        if hosted_zone_id:
-            kwargs['DomainNameConfigurations'][0].update(
-                HostedZoneId=hosted_zone_id
-            )
         if tags:
             kwargs['Tags'] = tags
         return kwargs
 
+    def get_custom_domain_patch_operations(self,
+                                           security_policy,
+                                           certificate_arn=None,
+                                           regional_certificate_arn=None,
+                                           ):
+        # type: (str, Optional[str], Optional[str]) -> List[Dict[str, str]]
+        patch_operations = [
+            {
+                'op': 'replace',
+                'path': '/securityPolicy',
+                'value': security_policy,
+            },
+        ]
+        if certificate_arn:
+            patch_operations.append({
+                'op': 'replace',
+                'path': '/certificateArn',
+                'value': certificate_arn,
+            })
+        if regional_certificate_arn:
+            patch_operations.append({
+                'op': 'replace',
+                'path': '/regionalCertificateArn',
+                'value': regional_certificate_arn,
+            })
+        return patch_operations
+
     def update_domain_name(self,
-                           domain_name,                     # type: str
-                           endpoint_configuration,          # type: StrAnyMap
-                           security_policy,                 # type: str
-                           hosted_zone_id=None,             # type: OptStr
-                           certificate_arn=None,            # type: str
-                           regional_certificate_arn=None,   # type: str
-                           tags=None,                       # type: StrMap
+                           protocol,                       # type: str
+                           domain_name,                    # type: str
+                           endpoint_type,                  # type: str
+                           security_policy,                # type: str
+                           certificate_arn=None,           # type: str
+                           regional_certificate_arn=None,  # type: str
+                           tags=None,                      # type: StrMap
                            ):
         # type: (...) -> Dict[str, Any]
-        kwargs = self.get_custom_domain_params(
-            domain_name,
-            endpoint_configuration,
-            security_policy,
-            hosted_zone_id,
-            certificate_arn,
-            regional_certificate_arn,
-            tags
+        if protocol == 'HTTP':
+            patch_operations = self.get_custom_domain_patch_operations(
+                security_policy,
+                certificate_arn,
+                regional_certificate_arn,
+            )
+            updated_domain_name = self._update_domain_name(
+                domain_name, patch_operations
+            )
+        elif protocol == 'WEBSOCKET':
+            kwargs = self.get_custom_domain_params_v2(
+                domain_name,
+                endpoint_type,
+                security_policy,
+                certificate_arn,
+                regional_certificate_arn,
+            )
+            updated_domain_name = self._update_domain_name_v2(kwargs)
+        else:
+            raise ValueError('Unsupported protocol value.')
+        resource_arn = 'arn:aws:apigateway:{region_name}:' \
+                       ':/domainnames/{domain_name}'\
+            .format(
+                region_name=self.region_name,
+                domain_name=domain_name
+            )
+        self._update_resource_tags(resource_arn, tags)
+        return updated_domain_name
+
+    def _update_resource_tags(self, resource_arn, requested_tags):
+        # type: (str, Optional[Dict[str, str]]) -> None
+        if not requested_tags:
+            requested_tags = {}
+
+        remote_tags = self._client('apigatewayv2').get_tags(
+            ResourceArn=resource_arn)['Tags']
+        self._remove_unrequested_resource_tags(
+            resource_arn, requested_tags, remote_tags)
+        self._add_missing_or_differing_value_resource_tags(
+            resource_arn, requested_tags, remote_tags)
+
+    def _remove_unrequested_resource_tags(
+            self, resource_arn, requested_tags, remote_tags):
+        # type: (str, Dict[Any, Any], Dict[Any, Any]) -> None
+        tag_keys_to_remove = list(set(remote_tags) - set(requested_tags))
+        if tag_keys_to_remove:
+            self._client('apigatewayv2').untag_resource(
+                ResourceArn=resource_arn, TagKeys=tag_keys_to_remove)
+
+    def _add_missing_or_differing_value_resource_tags(
+            self, resource_arn, requested_tags, remote_tags):
+        # type: (str, Dict[Any, Any], Dict[Any, Any]) -> None
+        tags_to_add = {k: v for k, v in requested_tags.items()
+                       if k not in remote_tags or v != remote_tags[k]}
+        if tags_to_add:
+            self._client('apigatewayv2').tag_resource(
+                ResourceArn=resource_arn, Tags=tags_to_add)
+
+    def _update_domain_name(self, custom_domain_name, patch_operations):
+        # type: (str, List[Dict[str, str]]) -> Dict[str, Any]
+        client = self._client('apigateway')
+        exceptions = (
+            client.exceptions.TooManyRequestsException,
         )
-        return self._update_domain_name_v2(kwargs)
+        result = {}
+        for patch_operation in patch_operations:
+            api_args = {
+                'domainName': custom_domain_name,
+                'patchOperations': [patch_operation]
+            }
+            response = self._call_client_method_with_retries(
+                client.update_domain_name,
+                api_args, max_attempts=6,
+                should_retry=lambda x: True,
+                retryable_exceptions=exceptions
+            )
+            result.update(response)
+
+        domain_name = {
+            'domain_name': result['domainName'],
+            'endpoint_configuration': result['endpointConfiguration'],
+            'security_policy': result['securityPolicy'],
+        }
+        if result.get('regionalCertificateArn'):
+            domain_name['certificate_arn'] = result['regionalCertificateArn']
+        else:
+            domain_name['certificate_arn'] = result['certificateArn']
+
+        if result.get('regionalHostedZoneId'):
+            domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
+        else:
+            domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
+        return domain_name
 
     def _update_domain_name_v2(self, api_args):
         # type: (Dict[str, Any]) -> Dict[str, Any]
@@ -492,14 +663,14 @@ class TypedAWSClient(object):
             retryable_exceptions=exceptions
         )
 
-    def delete_base_path_mapping(self, domain_name, base_path_id):
+    def delete_api_mapping(self, domain_name, path_key):
         # type: (str, str) -> None
-        client = self._client('apigatewayv2')
+        client = self._client('apigateway')
         params = {
-            'DomainName': domain_name,
-            'ApiMappingId': base_path_id
+            'domainName': domain_name,
+            'basePath': path_key
         }
-        client.delete_api_mapping(**params)
+        client.delete_base_path_mapping(**params)
 
     def update_function(self,
                         function_name,               # type: str
