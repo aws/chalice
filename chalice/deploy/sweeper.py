@@ -84,38 +84,38 @@ class ResourceSweeper(object):
 
     def _determine_domain_name(self, name, resource_values):
         # type: (str, Dict[str, Any]) -> Optional[List[str]]
-        base_path_mappings = resource_values.get('base_path_mappings')
-        if not base_path_mappings:
+        api_mapping = resource_values.get('api_mapping')
+        if not api_mapping:
             return None
 
-        deployed_path_mappings_ids = {
-            path_map['id']
-            for path_map in base_path_mappings
+        deployed_api_mappings_ids = {
+            api_map['key']
+            for api_map in api_mapping
         }
-        path_mapping_data = (
-            'rest_base_path_mapping',
-            'websocket_base_path_mapping'
+        api_mapping_data = (
+            'rest_api_mapping',
+            'websocket_api_mapping'
         )
 
         instructions = self.plan.instructions
 
-        planned_path_mappings_ids = {
-            instr.value[0]['id']
+        planned_api_mappings_ids = {
+            instr.value[0]['key']
             for instr in instructions
             if isinstance(instr, StoreMultipleValue) and
-            (instr.name in path_mapping_data and
+            (instr.name in api_mapping_data and
                 isinstance(instr.value[0], dict))
         }
 
-        path_mappings_to_remove = list(
-            deployed_path_mappings_ids - planned_path_mappings_ids
+        api_mappings_to_remove = list(
+            deployed_api_mappings_ids - planned_api_mappings_ids
         )
 
-        result_paths = [
-            "%s.base_path_mappings.%s" % (name, path_map)
-            for path_map in path_mappings_to_remove
+        result_api_mappings = [
+            "%s.api_mapping.%s" % (name, api_map)
+            for api_map in api_mappings_to_remove
         ]
-        return result_paths
+        return result_api_mappings
 
     def _determine_remaining(self, deployed):
         # type: (DeployedResources) -> List[str]
@@ -164,22 +164,27 @@ class ResourceSweeper(object):
             'message': msg
         }
 
-    def _delete_base_path_mappings(self,
-                                   domain_name,         # type: str
-                                   base_path_mapping    # type: Dict[str, Any]
-                                   ):
+    def _delete_api_mapping(self,
+                            domain_name,   # type: str
+                            api_mapping    # type: Dict[str, Any]
+                            ):
         # type: (...) -> ResourceValueType
+        if api_mapping['key'] == '/':
+            path_key = '(none)'
+        else:
+            path_key = api_mapping['key'].lstrip("/")
+
         params = {
             'domain_name': domain_name,
-            'base_path_id': base_path_mapping['id']
+            'path_key': path_key
         }
         msg = 'Deleting base path mapping from %s custom domain name: %s\n' % (
-            domain_name, base_path_mapping['key']
+            domain_name, api_mapping['key']
         )
         return {
             'instructions': (
                 models.APICall(
-                    method_name='delete_base_path_mapping',
+                    method_name='delete_api_mapping',
                     params=params,
                 ),
             ),
@@ -322,20 +327,20 @@ class ResourceSweeper(object):
             if message:
                 self.plan.messages[id(self.plan.instructions[-1])] = message
 
-    def _delete_domain_base_path_mappings(self, resource_values, name):
+    def _delete_domain_api_mappings(self, resource_values, name):
         # type: (Dict[str, Any], str) -> ResourceValueType
-        path_id = name.split('.')[-1]
+        path_key = name.split('.')[-1]
 
-        base_path_mapping = {
+        api_mapping = {
             k: v
-            for path_map in resource_values['base_path_mappings']
-            for k, v in path_map.items()
-            if path_map['id'] == path_id
+            for api_map in resource_values['api_mapping']
+            for k, v in api_map.items()
+            if api_map['key'] == path_key
         }  # type: Dict[str, str]
 
-        resource_data = self._delete_base_path_mappings(
+        resource_data = self._delete_api_mapping(
             resource_values['domain_name'],
-            base_path_mapping
+            api_mapping
         )
         return resource_data
 
@@ -350,8 +355,8 @@ class ResourceSweeper(object):
             resource_type = resource_values['resource_type']
             handler_args = [resource_values]  # type: HandlerArgsType
             insert = False
-            if 'base_path_mappings' in name:
-                resource_type = 'domain_base_path_mappings'
+            if 'api_mapping' in name:
+                resource_type = 'domain_api_mappings'
                 handler_args.append(name)
                 insert = True
 

@@ -569,6 +569,7 @@ class DeploymentReporter(object):
     _SORT_ORDER = {
         'rest_api': 100,
         'websocket_api': 100,
+        'domain_name': 100
     }
     # The default is chosen to sort before the rest_api
     _DEFAULT_ORDERING = 50
@@ -600,6 +601,14 @@ class DeploymentReporter(object):
         # type: (Dict[str, Any], List[str]) -> None
         report.append(
             '  - Websocket API URL: %s' % resource['websocket_api_url'])
+
+    def _report_domain_name(self, resource, report):
+        # type: (Dict[str, Any], List[str]) -> None
+        report.append(
+            '  - Custom domain name: %s/%s' % (
+                resource['hosted_zone_id'], resource['domain_name']
+            )
+        )
 
     def _report_lambda_function(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None

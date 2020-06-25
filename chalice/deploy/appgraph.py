@@ -9,8 +9,10 @@ from chalice.config import Config  # noqa
 from chalice import app
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.deploy import models
-from chalice.deploy.models import DomainName, BasePathMappings
+from chalice.deploy.models import DomainName, ApiMapping
 from chalice.utils import UI  # noqa
+
+StrMapAny = Dict[str, Any]
 
 
 class ChaliceBuildError(Exception):
@@ -47,48 +49,49 @@ class ApplicationGraphBuilder(object):
         return models.Application(stage_name, resources)
 
     def _create_custom_domain_name(self,
-                                   api_type,            # type: str
-                                   domain_name_data,    # type: Dict[str, Any]
-                                   stage_name           # type: str
+                                   api_type,                # type: str
+                                   domain_name_data,        # type: StrMapAny
+                                   endpoint_configuration,  # type: str
+                                   api_gateway_stage,       # type: str
                                    ):
-        # type: (...) -> List[models.ManagedModel]
-        path_mappings = domain_name_data.get("base_path_mappings")
-        if not path_mappings:
-            path_mappings = ['(none)']
+        # type: (...) -> models.DomainName
+        api_mapping = domain_name_data.get("url_prefixes")
+        if not api_mapping:
+            api_mapping = ['(none)']
 
-        path_mappings_resources = self._create_base_path_mappings(
-            path_mappings, stage_name
+        api_mapping_resources = self._create_api_mapping(
+            api_mapping, api_gateway_stage
         )
         domain_name = self._create_domain_name_model(
             api_type,
             domain_name_data,
-            path_mappings_resources
+            endpoint_configuration,
+            api_mapping_resources
         )
         return domain_name
 
-    def _create_base_path_mappings(self,
-                                   base_path_mappings,      # type: List[str]
-                                   stage                    # type: str
-                                   ):
-        # type: (...) -> List[models.BasePathMappings]
+    def _create_api_mapping(self,
+                            api_mapping,      # type: List[str]
+                            stage             # type: str
+                            ):
+        # type: (...) -> List[models.ApiMapping]
         resources = []
-        for path_mapping in base_path_mappings:
+        for key in api_mapping:
             resources.append(
-                self._create_base_path_mapping_model(path_mapping,
-                                                     stage)
+                self._create_api_mapping_model(key, stage)
             )
         return resources
 
-    def _create_base_path_mapping_model(self,
-                                        path,         # type: str
-                                        stage         # type: str
-                                        ):
-        # type: (...) -> models.BasePathMappings
-        if path == '/':
-            path = '(none)'
-        return models.BasePathMappings(
-            resource_name='base_path_mappings',
-            base_path=path,
+    def _create_api_mapping_model(self,
+                                  key,         # type: str
+                                  stage        # type: str
+                                  ):
+        # type: (...) -> models.ApiMapping
+        if key == '/':
+            key = '(none)'
+        return models.ApiMapping(
+            resource_name='api_mapping',
+            mapping_key=key,
             stage=stage
         )
 
@@ -169,9 +172,12 @@ class ApplicationGraphBuilder(object):
                     config.project_dir, '.chalice', policy_path))
 
         custom_domain_name = None
-        if config.api_gateway_domain_name:
+        if config.api_gateway_custom_domain:
             custom_domain_name = self._create_custom_domain_name(
-                "HTTP", config.api_gateway_domain_name, stage_name
+                "HTTP",
+                config.api_gateway_custom_domain,
+                config.api_gateway_endpoint_type,
+                config.api_gateway_stage,
             )
 
         return models.RestAPI(
@@ -187,7 +193,7 @@ class ApplicationGraphBuilder(object):
         )
 
     def _get_default_private_api_policy(self, config):
-        # type: (Config) -> Dict[str, Any]
+        # type: (Config) -> StrMapAny
         statements = [{
             "Effect": "Allow",
             "Principal": "*",
@@ -238,7 +244,8 @@ class ApplicationGraphBuilder(object):
             custom_domain_name = self._create_custom_domain_name(
                 "WEBSOCKET",
                 config.websocket_api_domain_name,
-                stage_name
+                config.api_gateway_endpoint_type,
+                config.api_gateway_stage,
             )
 
         return models.WebsocketAPI(
@@ -315,12 +322,13 @@ class ApplicationGraphBuilder(object):
         return scheduled_event
 
     def _create_domain_name_model(self,
-                                  protocol,             # type: str
-                                  data,                 # type: Dict[str, Any]
-                                  base_path_mappings    # type: List[BasePathMappings]
+                                  protocol,        # type: str
+                                  data,            # type: StrMapAny
+                                  endpoint_type,   # type: str
+                                  api_mapping      # type: List[ApiMapping]
                                   ):
         # type: (...) -> DomainName
-        default_name = 'rest_api_domain_name'
+        default_name = 'api_gateway_custom_domain'
         resource_name_map = {
             'HTTP': default_name,
             'WEBSOCKET': 'websocket_api_domain_name'
@@ -329,14 +337,13 @@ class ApplicationGraphBuilder(object):
         domain_name = DomainName(
             protocol=protocol,
             resource_name=resource_name_map.get(protocol, default_name),
-            domain_name=data['name'],
+            domain_name=data['domain_name'],
             security_policy=data['security_policy'],
-            endpoint_configuration=data['endpoint_configuration'],
+            endpoint_type=endpoint_type,
             certificate_arn=data.get('certificate_arn'),
-            hosted_zone_id=data.get('hosted_zone_id'),
             regional_certificate_arn=data.get('regional_certificate_arn'),
             tags=data.get('tags'),
-            base_path_mappings=base_path_mappings
+            api_mapping=api_mapping
         )
         return domain_name
 
@@ -625,7 +632,7 @@ class GraphPrettyPrint(object):
             lines.append(current)
 
     def _get_filtered_params(self, model):
-        # type: (models.Model) -> Dict[str, Any]
+        # type: (models.Model) -> StrMapAny
         dependencies = model.dependencies()
         filtered = asdict(
             model, filter=lambda _, v: v not in dependencies and v)
