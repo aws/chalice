@@ -227,13 +227,29 @@ Scopes
 -------------------------
 
 OAuth 2.0 and OpenID Connect (OIDC) scopes can be used to implement access
-controls in your Chalice app. In Chalice, all scopes are configured per-route
-and specified using the ``scopes`` kwarg to an ``@app.route()`` call.
+controls in your Chalice app. Scopes are supported when using the Cognito
+Authorizer, Custom Authorizers, and Built-In Authorizers.
 
 To integrate Scopes with a Cognito Authorizer in Chalice, you'll need to have
 an existing `Cognito user pools`_ and `Cognito resource server`_ configured.
 Scopes for Cognito Authorizers need to include the full identifier
 which is ``resourceServerIdentifier/scopeName``.
+
+Scopes can be configured per-authorizer using the ``scopes`` attribute.
+
+.. code-block:: python
+
+    from chalice import CognitoUserPoolAuthorizer
+
+    authorizer = CognitoUserPoolAuthorizer(
+        'MyPool', provider_arns=['arn:aws:cognito:...:userpool/name'],
+        scopes=["https://mychaliceapp.example.com/todos.read"])
+
+    @app.route('/user-pools', methods=['GET'], authorizer=authorizer)
+    def authenticated():
+        return {"success": True}
+
+Scopes can be configured per-route for an Authorizer using ``with_scopes``.
 
 .. code-block:: python
 
@@ -242,13 +258,16 @@ which is ``resourceServerIdentifier/scopeName``.
     authorizer = CognitoUserPoolAuthorizer(
         'MyPool', provider_arns=['arn:aws:cognito:...:userpool/name'])
 
-    @app.route('/user-pools', methods=['GET'], authorizer=authorizer, scopes=["https://mychaliceapp.example.com/todos.read"])
+    @app.route(
+        '/user-pools',
+        methods=['GET'],
+        authorizer=authorizer.with_scopes(["https://mychaliceapp.example.com/todos.read"]))
     def authenticated():
         return {"success": True}
 
-Scopes can also be used with custom authorizers. The custom authorizer will
-need to inspect the access token to determine if access should be granted
-based on the scopes configured for the route.
+Scopes can also be used with custom authorizers and built-in authorizers.
+These authorizers will need to inspect the access token to determine if access
+should be granted based on the scopes configured for the authorizer and route.
 
 
 .. _IAM permissions: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html

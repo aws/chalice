@@ -150,11 +150,8 @@ class SwaggerGenerator(object):
             # file.
             current.setdefault('security', []).append({'api_key': []})
         if view.authorizer:
-            scopes = []  # type: List[str]
-            if view.scopes:
-                scopes = view.scopes
             current.setdefault('security', []).append(
-                {view.authorizer.name: scopes})
+                {view.authorizer.name: view.authorizer.scopes})
         if view.view_args:
             self._add_view_args(current, view.view_args)
         return current

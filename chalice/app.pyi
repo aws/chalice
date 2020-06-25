@@ -25,7 +25,9 @@ _BUILTIN_AUTH_FUNC = Callable[
 
 class Authorizer:
     name = ... # type: str
+    scopes = ... # type: List[str]
     def to_swagger(self) -> Dict[str, Any]: ...
+    def with_scopes(self, scopes: List[str]) -> Authorizer: ...
 
 
 class CognitoUserPoolAuthorizer(Authorizer): ...
@@ -96,7 +98,6 @@ class RouteEntry(object):
     content_types = ... # type: List[str]
     view_args = ... # type: List[str]
     cors = ... # type: CORSConfig
-    scopes = ... # type: List[str]
 
     def __init__(self,
                  view_function: Callable[..., Any],
@@ -105,7 +106,6 @@ class RouteEntry(object):
                  method: str,
                  api_key_required: Optional[bool]=None,
                  content_types: Optional[List[str]]=None,
-                 scopes: Optional[List[str]]=None,
                  authorizer: Optional[Union[Authorizer,
                                             ChaliceAuthorizer]]=None,
                  cors: Union[bool, CORSConfig]=False) -> None: ...
@@ -195,7 +195,9 @@ class Chalice(DecoratorAPI):
 class ChaliceAuthorizer(object):
     name = ... # type: str
     func = ... # type: _BUILTIN_AUTH_FUNC
+    scopes = ... # type: List[str]
     config = ... # type: BuiltinAuthConfig
+    def with_scopes(self, scopes: List[str]) -> ChaliceAuthorizer: ...
 
 
 class BuiltinAuthConfig(object):
