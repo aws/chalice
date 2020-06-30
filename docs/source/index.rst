@@ -80,6 +80,15 @@ Upgrade Notes
    upgrading
 
 
+FAQ
+---
+
+.. toctree::
+   :maxdepth: 1
+
+   faq
+
+
 Indices and tables
 ==================
 

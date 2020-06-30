@@ -70,6 +70,9 @@
     <link rel="stylesheet" href="{{ pathto('_static/bootstrap-reboot.css', 1) }}" type="text/css" />
     {{ super() }}
     <link rel="stylesheet" href="{{ pathto('_static/custom-tabs.css', 1) }}" type="text/css" />
+    {% if pagename == "index" %}
+    <link rel="stylesheet" href="{{ pathto('_static/asciinema-player.css', 1) }}" type="text/css" />
+    {% endif %}
 {% endblock -%}
 
 <div id="site-container">
