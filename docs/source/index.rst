@@ -1,3 +1,5 @@
+AWS Chalice
+===========
 
 .. image:: ./img/chalice-logo-whitespace.png
    :alt: Chalice Logo
