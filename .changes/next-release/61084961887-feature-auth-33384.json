@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "auth",
+  "description": "Add support for oauth scopes on routes (#1444)."
+}
