@@ -314,6 +314,45 @@ without modification back to API Gateway.</p>
 <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html">Use API Gateway Custom Authorizers</a>
 page in the API Gateway user guide.</p>
 </div>
+<div class="section" id="scopes">
+<h2>Scopes<a class="headerlink" href="#scopes" title="Permalink to this headline">¶</a></h2>
+<p>OAuth 2.0 and OpenID Connect (OIDC) scopes can be used to implement access
+controls in your Chalice app. Scopes are supported when using the Cognito
+Authorizer, Custom Authorizers, and Built-In Authorizers.</p>
+<p>To integrate Scopes with a Cognito Authorizer in Chalice, you’ll need to have
+an existing <a class="reference external" href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html">Cognito user pools</a> and <a class="reference external" href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html">Cognito resource server</a> configured.
+Scopes for Cognito Authorizers need to include the full identifier
+which is <code class="docutils literal notranslate"><span class="pre">resourceServerIdentifier/scopeName</span></code>.</p>
+<p>Scopes can be configured per-authorizer using the <code class="docutils literal notranslate"><span class="pre">scopes</span></code> attribute.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CognitoUserPoolAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
+    <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">],</span>
+    <span class="n">scopes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;https://mychaliceapp.example.com/todos.read&quot;</span><span class="p">])</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Scopes can be configured per-route for an Authorizer using <code class="docutils literal notranslate"><span class="pre">with_scopes</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CognitoUserPoolAuthorizer</span>
+
+<span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
+    <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
+
+<span class="nd">@app.route</span><span class="p">(</span>
+    <span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span>
+    <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span>
+    <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="o">.</span><span class="n">with_scopes</span><span class="p">([</span><span class="s2">&quot;https://mychaliceapp.example.com/todos.read&quot;</span><span class="p">]))</span>
+<span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Scopes can also be used with custom authorizers and built-in authorizers.
+These authorizers will need to inspect the access token to determine if access
+should be granted based on the scopes configured for the authorizer and route.</p>
+</div>
 </div>
 
 
@@ -342,6 +381,7 @@ page in the API Gateway user guide.</p>
 <li><a class="reference internal" href="#amazon-cognito-user-pools">Amazon Cognito User Pools</a></li>
 <li><a class="reference internal" href="#custom-authorizers">Custom Authorizers</a></li>
 <li><a class="reference internal" href="#built-in-authorizers">Built-in Authorizers</a></li>
+<li><a class="reference internal" href="#scopes">Scopes</a></li>
 </ul>
 </li>
 </ul>
