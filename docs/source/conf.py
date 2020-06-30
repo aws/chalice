@@ -52,7 +52,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Python Serverless Microframework for AWS'
+project = u'AWS Chalice'
 copyright = u'2016, James Saryerwinnie'
 author = u'James Saryerwinnie'
 
