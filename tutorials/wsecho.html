@@ -1,0 +1,345 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Echo Server Example &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Chat Server Example" href="wschat.html" />
+    <link rel="prev" title="REST API Tutorial" href="basicrestapi.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Tutorials</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="echo-server-example">
+<h1>Echo Server Example<a class="headerlink" href="#echo-server-example" title="Permalink to this headline">¶</a></h1>
+<p>An echo server is a simple server that echos any message it receives back to
+the client that sent it.</p>
+<p>First install a copy of Chalice in a fresh environment, create a new project
+and cd into the directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -U chalice
+$ chalice new-project echo-server
+$ cd echo-server
+</pre></div>
+</div>
+<p>Our Chalice application will need boto3 as a dependency for both API Gateway
+to send websocket messages. Let’s add a boto3 to the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>
+file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ echo &quot;boto3&gt;=1.9.91&quot; &gt; requirements.txt
+</pre></div>
+</div>
+<p>Now that the requirement has been added. Let’s install it locally since our
+next script will need it as well:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -r requirements.txt
+</pre></div>
+</div>
+<p>Next replace the contents of the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file with the code below.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
+
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">WebsocketDisconnectedError</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;echo-server&quot;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span>
+<span class="p">])</span>
+
+
+<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">connection_id</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="n">WebsocketDisconnectedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">pass</span>  <span class="c1"># Disconnected so we can&#39;t send the message back.</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<p>Stepping through this app line by line, the first thing to note is that we
+need to import and instantiate a boto3 session. This session is manually
+assigned to <code class="docutils literal notranslate"><span class="pre">app.websocket_api.session</span></code>.
+This is needed because in order to send websocket responses to API Gateway we
+need to construct a boto3 client. Chalice does not take a direct dependency
+on boto3 or botocore, so we need to provide the Session ourselves.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Next we enable the experimental feature <code class="docutils literal notranslate"><span class="pre">WEBSOCKETS</span></code>. Websockets are an
+experimental feature and are subject to API changes. This includes all aspects
+of the Websocket API exposted in Chalice. Including any public members of
+<code class="docutils literal notranslate"><span class="pre">app.websocket_api</span></code>, and the three decorators <code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code>,
+<code class="docutils literal notranslate"><span class="pre">on_ws_message</span></code>, and <code class="docutils literal notranslate"><span class="pre">on_ws_disconnect</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>To register a websocket handler, and cause Chalice to deploy an
+API Gateway Websocket API we use the <code class="docutils literal notranslate"><span class="pre">app.on_ws_message()</span></code> decorator.
+The event parameter here is a wrapper object with some convenience
+parameters attached. The most useful are <code class="docutils literal notranslate"><span class="pre">event.connection_id</span></code> and
+<code class="docutils literal notranslate"><span class="pre">event.body</span></code>. The <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> is an API Gateway specific identifier
+that allows you to refer to the connection that sent the message. The <code class="docutils literal notranslate"><span class="pre">body</span></code>
+is the content of the message.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+</pre></div>
+</div>
+<p>Since this is an echo server, the message handler simply reads the content it
+received on the socket, and rewrites it back to the same socket. To send a
+message to a socket we call <code class="docutils literal notranslate"><span class="pre">app.websocket_api.send(connection_id,</span> <span class="pre">message)</span></code>.
+In this case, we just use the same <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> we got the message from,
+and use the <code class="docutils literal notranslate"><span class="pre">body</span></code> we got from the event as the <code class="docutils literal notranslate"><span class="pre">message</span></code> to send.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+    <span class="n">connection_id</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span>
+    <span class="n">message</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
+ <span class="p">)</span>
+</pre></div>
+</div>
+<p>Finally, we catch the exception <code class="docutils literal notranslate"><span class="pre">WebsocketDisconnectedError</span></code> which is raised
+by <code class="docutils literal notranslate"><span class="pre">app.websocket_api.send</span></code> if the provided <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> is not
+connected anymore. In our case this doesn’t really matter since we don’t have
+anything tracking our connections. The error has a <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> property
+that contains the offending connection id.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">except</span> <span class="n">WebsocketDisconnectedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">pass</span>  <span class="c1"># Disconnected so we can&#39;t send the message back.</span>
+</pre></div>
+</div>
+<p>Now that we understand the code, lets deploy it with <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
+  Creating deployment package.
+  Creating IAM role: echo-server-dev
+  Creating lambda function: echo-server-dev-websocket_message
+  Creating websocket api: echo-server-dev-websocket-api
+  Resources deployed:
+    - Lambda ARN: arn:aws:lambda:region:0123456789:function:echo-server-dev-websocket_message
+    - Websocket API URL: wss://{websocket_api_id}.execute-api.region.amazonaws.com/api/
+</pre></div>
+</div>
+<p>To test out the echo server we will use the  <code class="docutils literal notranslate"><span class="pre">websocket-client</span></code> package. You
+install it from PyPI:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install websocket-client
+</pre></div>
+</div>
+<p>After deploying the Chalice app the output will contain a URL for connecting
+to the websocket API labeled: <code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">Websocket</span> <span class="pre">API</span> <span class="pre">URL:</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">websocket-client</span></code> package installs a command line tool called <code class="docutils literal notranslate"><span class="pre">wsdump.py</span></code>
+which can be used to test websocket echo server:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ wsdump.py wss://{websocket_api_id}.execute-api.region.amazonaws.com/api/
+Press Ctrl+C to quit
+&gt; foo
+&lt; foo
+&gt; bar
+&lt; bar
+&gt; foo bar baz
+&lt; foo bar baz
+&gt;
+</pre></div>
+</div>
+<p>Every message sent to the server (lines that start with <code class="docutils literal notranslate"><span class="pre">&gt;</span></code>) result in a
+message sent to us (lines that start with <code class="docutils literal notranslate"><span class="pre">&lt;</span></code>) with the same content.</p>
+<p>If something goes wrong, you can check the chalice error logs using the
+following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice logs -n websocket_message
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If you encounter an Internal Server Error here it is likely that you forgot
+to include <code class="docutils literal notranslate"><span class="pre">boto3&gt;=1.9.91</span></code> in the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file.</p>
+</div>
+<p>To tear down the example. Just run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice delete
+  Deleting Websocket API: {websocket_api_id}
+  Deleting function: arn:aws:lambda:us-west-2:0123456789:function:echo-server-dev-websocket_message
+  Deleting IAM role: echo-server-dev
+</pre></div>
+</div>
+<div class="section" id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>In this tutorial, we created an echo server with websockets.
+If you’d like to try something more ambitious, you can follow our
+tutorial for creating a sample <a class="reference internal" href="wschat.html"><span class="doc">Chat application with websocket</span></a>.</p>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="basicrestapi.html" title="previous chapter" class="previous-page clearfix hidden-xs">← REST API Tutorial</a>
+                        
+                        <a href="wschat.html" title="next chapter" class="next-page clearfix">Chat Server Example →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="basicrestapi.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="wschat.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Echo Server Example</a><ul>
+<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>

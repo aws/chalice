@@ -6,11 +6,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Getting Started &#8212; Python Serverless Microframework for AWS 1.15.1 documentation</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
+    <title>AWS Chalice &#8212; AWS Chalice</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/custom-tabs.css" type="text/css" />
+    
+    <link rel="stylesheet" href="_static/asciinema-player.css" type="text/css" />
+    
 
     
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -77,7 +80,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Quickstart and Tutorial" href="quickstart.html" />
+    <link rel="next" title="Quickstart" href="quickstart.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
   
@@ -181,6 +184,79 @@
         </div>
     </div>
 
+    <div class="quickstart-vid">
+        <div class="width-wrapper">
+            <div class="splash-row">
+                <div class="splash-column-one-third">
+                    <span>
+                    <img id="quickstart-img" src="_static/img/speed.svg" alt="Quickstart" />
+                    <h2 id="quickstart-title">Up and running in minutes</h2>
+                    </span>
+                    <p>Chalice lets you quickly create and deploy python applications that use
+            AWS Lambda.  Using the Chalice CLI, you can have a REST API deployed to
+            Amazon API Gateway and AWS Lambda in minutes.
+            </p>
+                </div>
+                <div class="splash-column-two-third">
+                <asciinema-player preload=1 speed=1.2 idle-time-limit=1.2 src="_static/casts/chalice-quickstart.cast"></asciinema-player>
+            <script src="_static/asciinema-player.js"></script>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="width-wrapper">
+	<h2>Features</h2>
+        <div class="splash-row">
+            <div class="splash-column">
+                <h2>Native python packaging</h2>
+                <p class="feature-desc">Chalice has built-in support for python packaging tools.
+                    It will automatically package your application and install
+                    3rd party dependencies specified in your requirements.txt file.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>AWS SAM and Terraform integration</h2>
+                <p class="feature-desc">
+                    You can use Chalice's included deployer that's built
+                    using the AWS SDK for Python (boto3) or you can have
+                    Chalice generate packages that can be deployed with
+                    AWS CloudFormation or Terraform.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>CI/CD pipeline generation</h2>
+                <p class="feature-desc">Automatically generate a deployment pipeline that's
+                   built with AWS CodePipeline and AWS CodeBuild.
+                   Deploy your application whenever you push changes
+                   to your Git repository.
+                </p>
+	        </div>
+        </div>
+        <div class="splash-row">
+            <div class="splash-column">
+                <h2>Local testing support</h2>
+                <p class="feature-desc">Test your REST API using the local test server.  This gives
+                    you a quicker feedback loop and let's you test your code
+                    before deploying to AWS.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>Websocket APIs</h2>
+                <p class="feature-desc">Create Websocket APIs with API Gateway.
+                    Includes runtime APIs to send messages back to connected clients.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>Automatic policy generation</h2>
+                <p class="feature-desc">
+                    Automatically generate policies for your application based on
+                    scanning your source code.
+                </p>
+	        </div>
+        </div>
+    </div>
     <!-- Decide if we want the FAQ on the landing page or a separate page.
     <div class="faq">
         <div class="width-wrapper">

@@ -1,3 +1,5 @@
+AWS Chalice
+===========
 
 .. image:: ./img/chalice-logo-whitespace.png
    :alt: Chalice Logo
@@ -44,6 +46,15 @@ Getting Started
    quickstart
 
 
+Tutorials
+---------
+
+.. toctree::
+   :maxdepth: 2
+
+   tutorials/index
+
+
 Topics
 ------
 
@@ -62,14 +73,6 @@ API Reference
    api
 
 
-Tutorials
----------
-
-.. toctree::
-   :maxdepth: 2
-
-   tutorials/index
-
 Upgrade Notes
 -------------
 
@@ -77,6 +80,15 @@ Upgrade Notes
    :maxdepth: 2
 
    upgrading
+
+
+FAQ
+---
+
+.. toctree::
+   :maxdepth: 1
+
+   faq
 
 
 Indices and tables

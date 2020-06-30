@@ -1,0 +1,1084 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Chat Server Example &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Event Sources Tutorial" href="events.html" />
+    <link rel="prev" title="Echo Server Example" href="wsecho.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../topics/index.html">Topics</a></li>
+                <li class="site-page"><a href="../api.html">API Reference</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Tutorials</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="chat-server-example">
+<h1>Chat Server Example<a class="headerlink" href="#chat-server-example" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This example is for illustration purposes and does not represent best
+practices.</p>
+</div>
+<p>A simple chat server example application. This example will walk through
+deploying a chat application with separate chat rooms and nicknames. It uses
+a DynamoDB table to store state like connection IDs between websocket messages.</p>
+<p>First install a copy of Chalice in a fresh environment, create a new project
+and cd into the directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -U chalice
+$ chalice new-project chalice-chat-example
+$ cd chalice-chat-example
+</pre></div>
+</div>
+<p>Our Chalice application will need boto3 as a dependency for both DynamoDB
+access and in order to communicate back with API Gateway to send websocket
+messages. Let’s add a boto3 to the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ echo &quot;boto3&gt;=1.9.91&quot; &gt; requirements.txt
+</pre></div>
+</div>
+<p>Now that the requirement has been added. Let’s install it locally since our
+next script will need it as well:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -r requirements.txt
+</pre></div>
+</div>
+<p>Unlike our previous example where we used <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, we will use
+<code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> to create a CloudFormation template. The AWS CLI will be
+used to deploy the template. To install the AWS CLI run the command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -U awscli
+</pre></div>
+</div>
+<p>Starting in Chalice 1.10, the package command has a <code class="docutils literal notranslate"><span class="pre">--merge-template</span></code>
+argument that allows us to merge in a custom JSON file to the generated
+CloudFormation template. Since Chalice does not have any built-in support for
+DynamoDB currently, we will make a <code class="docutils literal notranslate"><span class="pre">resources.json</span></code> file with the DynamoDB
+definition. The template file will set the environment variable TABLE in all
+our Lambda functions as a CloudFormatiion reference to the DynamoDB table.
+Finally, the template will also override our IAM policy with a custom one to
+allow all the DynamoDB operations our application will need.</p>
+<p>Below is the JSON file that contains all of our custom Cloudformation.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">resources.json</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;Resources&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;ChaliceChatTable&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;Type&quot;</span> <span class="p">:</span> <span class="s2">&quot;AWS::DynamoDB::Table&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;Properties&quot;</span> <span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;AttributeDefinitions&quot;</span> <span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span> <span class="s2">&quot;PK&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span> <span class="s2">&quot;S&quot;</span>
+          <span class="p">},</span>
+          <span class="p">{</span>
+            <span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span> <span class="s2">&quot;SK&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span> <span class="s2">&quot;S&quot;</span>
+          <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;KeySchema&quot;</span> <span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;PK&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;HASH&quot;</span>
+          <span class="p">},{</span>
+            <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;SK&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;RANGE&quot;</span>
+          <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;GlobalSecondaryIndexes&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="nt">&quot;IndexName&quot;</span> <span class="p">:</span> <span class="s2">&quot;ReverseLookup&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;KeySchema&quot;</span> <span class="p">:</span> <span class="p">[</span>
+              <span class="p">{</span>
+                <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;SK&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;HASH&quot;</span>
+              <span class="p">},</span>
+              <span class="p">{</span>
+                <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;PK&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;RANGE&quot;</span>
+              <span class="p">}</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;Projection&quot;</span> <span class="p">:</span> <span class="p">{</span>
+              <span class="nt">&quot;ProjectionType&quot;</span><span class="p">:</span> <span class="s2">&quot;ALL&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+              <span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;ProvisionedThroughput&quot;</span> <span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+          <span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span>
+        <span class="p">},</span>
+        <span class="nt">&quot;TableName&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChat&quot;</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;WebsocketConnect&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChatTable&quot;</span><span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;WebsocketMessage&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChatTable&quot;</span><span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;WebsocketDisconnect&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChatTable&quot;</span><span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nt">&quot;DefaultRole&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;Type&quot;</span><span class="p">:</span> <span class="s2">&quot;AWS::IAM::Role&quot;</span><span class="p">,</span>
+      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;AssumeRolePolicyDocument&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="nt">&quot;Version&quot;</span><span class="p">:</span> <span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span>
+          <span class="nt">&quot;Statement&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+              <span class="nt">&quot;Sid&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+              <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+              <span class="nt">&quot;Principal&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;Service&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda.amazonaws.com&quot;</span>
+              <span class="p">},</span>
+              <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="s2">&quot;sts:AssumeRole&quot;</span>
+            <span class="p">}</span>
+          <span class="p">]</span>
+        <span class="p">},</span>
+        <span class="nt">&quot;Policies&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="p">{</span>
+            <span class="nt">&quot;PolicyName&quot;</span><span class="p">:</span> <span class="s2">&quot;DefaultRolePolicy&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;PolicyDocument&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="nt">&quot;Version&quot;</span><span class="p">:</span> <span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span>
+              <span class="nt">&quot;Statement&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                  <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+                  <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;logs:CreateLogGroup&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;logs:CreateLogStream&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;logs:PutLogEvents&quot;</span>
+                  <span class="p">],</span>
+                  <span class="nt">&quot;Resource&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:logs:*:*:*&quot;</span>
+                <span class="p">},</span>
+                <span class="p">{</span>
+                  <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+                  <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;execute-api:ManageConnections&quot;</span>
+                  <span class="p">],</span>
+                  <span class="nt">&quot;Resource&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:execute-api:*:*:*/@connections/*&quot;</span>
+                <span class="p">},</span>
+                <span class="p">{</span>
+                  <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+                  <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;dynamodb:DeleteItem&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;dynamodb:PutItem&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;dynamodb:GetItem&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;dynamodb:UpdateItem&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;dynamodb:Query&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;dynamodb:Scan&quot;</span>
+                  <span class="p">],</span>
+                  <span class="nt">&quot;Resource&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                      <span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}&quot;</span>
+                    <span class="p">},</span>
+                    <span class="p">{</span>
+                      <span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup&quot;</span>
+                    <span class="p">}</span>
+                  <span class="p">]</span>
+                <span class="p">}</span>
+              <span class="p">]</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">]</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>The current directory layout should now look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tree -a .
+.
+├── .chalice
+│   └── config.json
+├── .gitignore
+├── app.py
+├── resources.json
+└── requirements.txt
+
+1 directory, 5 files
+</pre></div>
+</div>
+<p>Next let’s fill out the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file since it is pretty simple. Most of this
+example code is contained in the <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code> directory.</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">chalice-chat-example/app.py</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
+
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="kn">from</span> <span class="nn">chalicelib</span> <span class="kn">import</span> <span class="n">Storage</span>
+<span class="kn">from</span> <span class="nn">chalicelib</span> <span class="kn">import</span> <span class="n">Sender</span>
+<span class="kn">from</span> <span class="nn">chalicelib</span> <span class="kn">import</span> <span class="n">Handler</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;chalice-chat-example&quot;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span>
+<span class="p">])</span>
+
+<span class="n">STORAGE</span> <span class="o">=</span> <span class="n">Storage</span><span class="o">.</span><span class="n">from_env</span><span class="p">()</span>
+<span class="n">SENDER</span> <span class="o">=</span> <span class="n">Sender</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">STORAGE</span><span class="p">)</span>
+<span class="n">HANDLER</span> <span class="o">=</span> <span class="n">Handler</span><span class="p">(</span><span class="n">STORAGE</span><span class="p">,</span> <span class="n">SENDER</span><span class="p">)</span>
+
+
+<span class="nd">@app.on_ws_connect</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">STORAGE</span><span class="o">.</span><span class="n">create_connection</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+
+
+<span class="nd">@app.on_ws_disconnect</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">STORAGE</span><span class="o">.</span><span class="n">delete_connection</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+
+
+<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">HANDLER</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Similar to the previous example. We need to use <code class="docutils literal notranslate"><span class="pre">boto3</span></code> to construct a
+Session and pass it to <code class="docutils literal notranslate"><span class="pre">app.websocket_api.session</span></code>. We opt into the
+usage of the <code class="docutils literal notranslate"><span class="pre">WEBSOCKET</span></code> experimental feature. Most of the actual work is
+done in some classes that we import from <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code>. These classes are
+detailed below, and the various parts are explained in comments and doc
+strings. In addition to the previous example, we register a handler for
+<code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code> and <code class="docutils literal notranslate"><span class="pre">on_ws_disconnect</span></code> to handle events from API gateway
+when a new socket is trying to connect, or an existing socket is disconnected.</p>
+<p>Finally before being able to deploy and test the app out, we need to fill out
+the chalicelib directory. This is the bulk of the app and it is explained
+inline in comments. Create a new directory called <code class="docutils literal notranslate"><span class="pre">chalicelib</span></code> and inside
+that directory create an <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> file and fill it out with the
+following file.</p>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text">chalice-chat-example/chalicelib/__init__.py</span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">from</span> <span class="nn">boto3.dynamodb.conditions</span> <span class="kn">import</span> <span class="n">Key</span>
+
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">WebsocketDisconnectedError</span>
+
+
+<span class="k">class</span> <span class="nc">Storage</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An abstraction to interact with the DynamoDB Table.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize Storage object</span>
+
+<span class="sd">        :param table: A boto3 dynamodb Table resource object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">table</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_env</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create table from the environment.</span>
+
+<span class="sd">        The environment variable TABLE is present for a deployed application</span>
+<span class="sd">        since it is set in all of the Lambda functions by a CloudFormation</span>
+<span class="sd">        reference. We default to &#39;&#39;, which will happen when we run</span>
+<span class="sd">        ``chalice package`` since it loads the application, and no</span>
+<span class="sd">        environment variable has been set. For local testing, a value should</span>
+<span class="sd">        be manually set in the environment if &#39;&#39; will not suffice.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">table_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TABLE&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s1">&#39;dynamodb&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new connection object in the dtabase.</span>
+
+<span class="sd">        When a new connection is created, we create a stub for</span>
+<span class="sd">        it in the table. The stub uses a primary key of the</span>
+<span class="sd">        connection_id and a sort key of username_. This translates</span>
+<span class="sd">        to a connection with an unset username. The first message</span>
+<span class="sd">        sent over the wire from the connection is to be used as the</span>
+<span class="sd">        username, and this entry will be re-written.</span>
+
+<span class="sd">        :param connection_id: The connection id to write to</span>
+<span class="sd">            the table.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
+            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;PK&#39;</span><span class="p">:</span> <span class="n">connection_id</span><span class="p">,</span>
+                <span class="s1">&#39;SK&#39;</span><span class="p">:</span> <span class="s1">&#39;username_&#39;</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_username</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">old_name</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the username.</span>
+
+<span class="sd">        The SK entry that goes with this connection id that starts</span>
+<span class="sd">        with username_ is taken to be the username. The previous</span>
+<span class="sd">        entry needs to be deleted, and a new entry needs to be</span>
+<span class="sd">        written.</span>
+
+<span class="sd">        :param connection_id: Connection id of the user trying to</span>
+<span class="sd">            change their name.</span>
+
+<span class="sd">        :param old_name: The original username. Since this is part of</span>
+<span class="sd">            the key, it needs to be deleted and re-created rather than</span>
+<span class="sd">            updated.</span>
+
+<span class="sd">        :param username: The new username the user wants.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span>
+            <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;PK&#39;</span><span class="p">:</span> <span class="n">connection_id</span><span class="p">,</span>
+                <span class="s1">&#39;SK&#39;</span><span class="p">:</span> <span class="s1">&#39;username_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">old_name</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
+            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;PK&#39;</span><span class="p">:</span> <span class="n">connection_id</span><span class="p">,</span>
+                <span class="s1">&#39;SK&#39;</span><span class="p">:</span> <span class="s1">&#39;username_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">username</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">list_rooms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a list of all rooms that exist.</span>
+
+<span class="sd">        Scan through the table looking for SKs that start with room_</span>
+<span class="sd">        which indicates a room that a user is in. Collect a unique set</span>
+<span class="sd">        of those and return them.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">scan</span><span class="p">()</span>
+        <span class="n">rooms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;SK&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]</span>
+                     <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;SK&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;room_&#39;</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">rooms</span>
+
+    <span class="k">def</span> <span class="nf">set_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">room</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the room a user is currently in.</span>
+
+<span class="sd">        The room a user is in is in the form of an SK that starts with</span>
+<span class="sd">        room_ prefix.</span>
+
+<span class="sd">        :param connection_id: The connection id to move to a room.</span>
+
+<span class="sd">        :param room: The room name to join.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
+            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;PK&#39;</span><span class="p">:</span> <span class="n">connection_id</span><span class="p">,</span>
+                <span class="s1">&#39;SK&#39;</span><span class="p">:</span> <span class="s1">&#39;room_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">room</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">remove_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">room</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove a user from a room.</span>
+
+<span class="sd">        The room a user is in is in the form of an SK that starts with</span>
+<span class="sd">        room_ prefix. To leave a room we need to delete this entry.</span>
+
+<span class="sd">        :param connection_id: The connection id to move to a room.</span>
+
+<span class="sd">        :param room: The room name to join.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span>
+            <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;PK&#39;</span><span class="p">:</span> <span class="n">connection_id</span><span class="p">,</span>
+                <span class="s1">&#39;SK&#39;</span><span class="p">:</span> <span class="s1">&#39;room_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">room</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_connection_ids_by_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">room</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find all connection ids that go to a room.</span>
+
+<span class="sd">        This is needed whenever we broadcast to a room. We collect all</span>
+<span class="sd">        their connection ids so we can send messages to them. We use a</span>
+<span class="sd">        ReverseLookup table here which inverts the PK, SK relationship</span>
+<span class="sd">        creating a partition called room_{room}. Everything in that</span>
+<span class="sd">        partition is a connection in the room.</span>
+
+<span class="sd">        :param room: Room name to get all connection ids from.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+            <span class="n">IndexName</span><span class="o">=</span><span class="s1">&#39;ReverseLookup&#39;</span><span class="p">,</span>
+            <span class="n">KeyConditionExpression</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">Key</span><span class="p">(</span><span class="s1">&#39;SK&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="s1">&#39;room_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">room</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">Select</span><span class="o">=</span><span class="s1">&#39;ALL_ATTRIBUTES&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;PK&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">delete_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete a connection.</span>
+
+<span class="sd">        Called when a connection is disconnected and all its entries need</span>
+<span class="sd">        to be deleted.</span>
+
+<span class="sd">        :param connection_id: The connection partition to delete from</span>
+<span class="sd">            the table.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+                <span class="n">KeyConditionExpression</span><span class="o">=</span><span class="p">(</span>
+                    <span class="n">Key</span><span class="p">(</span><span class="s1">&#39;PK&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">connection_id</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">Select</span><span class="o">=</span><span class="s1">&#39;ALL_ATTRIBUTES&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span>
+                    <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s1">&#39;PK&#39;</span><span class="p">:</span> <span class="n">connection_id</span><span class="p">,</span>
+                        <span class="s1">&#39;SK&#39;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;SK&#39;</span><span class="p">],</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_record_by_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all the properties associated with a connection.</span>
+
+<span class="sd">        Each connection_id creates a partition in the table with multiple</span>
+<span class="sd">        SK entries. Each SK entry is in the format {property}_{value}.</span>
+<span class="sd">        This method reads all those records from the database and puts them</span>
+<span class="sd">        all into dictionary and returns it.</span>
+
+<span class="sd">        :param connection_id: The connection to get properties for.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+            <span class="n">KeyConditionExpression</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">Key</span><span class="p">(</span><span class="s1">&#39;PK&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">connection_id</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">Select</span><span class="o">=</span><span class="s1">&#39;ALL_ATTRIBUTES&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;SK&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;SK&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+
+<span class="k">class</span> <span class="nc">Sender</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class to send messages over websockets.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">storage</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a sender object.</span>
+
+<span class="sd">        :param app: A Chalice application object.</span>
+
+<span class="sd">        :param storage: A Storage object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span> <span class="o">=</span> <span class="n">app</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span> <span class="o">=</span> <span class="n">storage</span>
+
+    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Send a message over a websocket.</span>
+
+<span class="sd">        :param connection_id: API Gateway Connection ID to send a</span>
+<span class="sd">            message to.</span>
+
+<span class="sd">        :param message: The message to send to the connection.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Call the chalice websocket api send method</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">WebsocketDisconnectedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># If the websocket has been closed, we delete the connection</span>
+            <span class="c1"># from our database.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">delete_connection</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">broadcast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_ids</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;&quot;Send a message to multiple connections.</span>
+
+<span class="sd">        :param connection_id: A list of API Gateway Connection IDs to</span>
+<span class="sd">            send the message to.</span>
+
+<span class="sd">        :param message: The message to send to the connections.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">cid</span> <span class="ow">in</span> <span class="n">connection_ids</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">cid</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">Handler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Handler object that handles messages received from a websocket.</span>
+
+<span class="sd">    This class implements the bulk of our app behavior.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a Handler object.</span>
+
+<span class="sd">        :param storage: Storage object to interact with database.</span>
+
+<span class="sd">        :param sender: Sender object to send messages to websockets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span> <span class="o">=</span> <span class="n">storage</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span> <span class="o">=</span> <span class="n">sender</span>
+        <span class="c1"># Command table to translate a string command name into a</span>
+        <span class="c1"># method to call.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_command_table</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;help&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_help</span><span class="p">,</span>
+            <span class="s1">&#39;nick&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nick</span><span class="p">,</span>
+            <span class="s1">&#39;join&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_join</span><span class="p">,</span>
+            <span class="s1">&#39;room&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_room</span><span class="p">,</span>
+            <span class="s1">&#39;quit&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quit</span><span class="p">,</span>
+            <span class="s1">&#39;ls&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Entry point for our application.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param message: Message we got from the connection.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># First look the user up in the database and get a record for it.</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_record_by_connection</span><span class="p">(</span><span class="n">connection_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="c1"># If the user does not have a username, we assume that the message</span>
+            <span class="c1"># is the username they want and we call _handle_login_message.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_login_message</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Otherwise we assume the user is logged in. So we call</span>
+            <span class="c1"># a method to handle the message. We pass along the</span>
+            <span class="c1"># record we loaded from the database so we don&#39;t need to</span>
+            <span class="c1"># again.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_message</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_handle_login_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Handle a login message.</span>
+
+<span class="sd">        The message is the username to give the user. Re-write the</span>
+<span class="sd">        database entry for this user to reset their username from &#39;&#39;</span>
+<span class="sd">        to {message}. Once that is done send a message back to the user</span>
+<span class="sd">        to confirm the name choice. Also send a /help prompt.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">set_username</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">connection_id</span><span class="p">,</span>
+            <span class="s1">&#39;Using nickname: </span><span class="si">%s</span><span class="se">\n</span><span class="s1">Type /help for list of commands.&#39;</span> <span class="o">%</span> <span class="n">message</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_handle_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;&quot;Handle a message from a connected and logged in user.</span>
+
+<span class="sd">        If the message starts with a / it&#39;s a command. Otherwise its a</span>
+<span class="sd">        text message to send to all rooms in the room.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param message: Message we got from the connection.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_command</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">record</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_text</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_handle_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Handle a command message.</span>
+
+<span class="sd">        Check the command name and look it up in our command table.</span>
+<span class="sd">        If there is an entry, we call that method and pass along</span>
+<span class="sd">        the connection_id, arguments, and the loaded record.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param message: Message we got from the connection.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+        <span class="n">command_name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">command_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">command</span><span class="p">:</span>
+            <span class="n">command</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If no command method is found, send an error message</span>
+            <span class="c1"># back to the user.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="p">(</span>
+                <span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Unknown command: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">command_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_handle_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Handle a raw text message.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param message: Message we got from the connection.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;room&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">record</span><span class="p">:</span>
+            <span class="c1"># If the user is not in a room send them an error message</span>
+            <span class="c1"># and return early.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+                <span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Cannot send message if not in chatroom.&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="c1"># Collect a list of connection_ids in the same room as the message</span>
+        <span class="c1"># sender.</span>
+        <span class="n">connection_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_connection_ids_by_room</span><span class="p">(</span>
+            <span class="n">record</span><span class="p">[</span><span class="s1">&#39;room&#39;</span><span class="p">])</span>
+        <span class="c1"># Prefix the message with the sender&#39;s name.</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span> <span class="n">message</span><span class="p">)</span>
+        <span class="c1"># Broadcast the new message to everyone in the room.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">connection_ids</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_message</span><span class="p">,</span> <span class="n">_record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Send the help message.</span>
+
+<span class="sd">        Build a help message and send back to the same connection.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">connection_id</span><span class="p">,</span>
+            <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+                <span class="s1">&#39;Commands available:&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /help&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Display this message.&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /join {chat_room_name}&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Join a chatroom named {chat_room_name}.&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /nick {nickname}&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Change your name to {nickname}. If no {nickname}&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          is provided then your current name will be printed&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /room&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Print out the name of the room you are currently &#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          in.&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /ls&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          If you are in a room, list all users also in the&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          room. Otherwise, list all rooms.&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /quit&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Leave current room.&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;If you are in a room, raw text messages that do not start &#39;</span><span class="p">,</span>
+                <span class="s1">&#39;with a / will be sent to everyone else in the room.&#39;</span><span class="p">,</span>
+            <span class="p">]),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_nick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Change or check nickname (username).</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param args: Argument list that came after the command.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
+            <span class="c1"># If a nickname argument was not provided, we just want to</span>
+            <span class="c1"># report the current nickname to the user.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+                <span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Current nickname: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">])</span>
+            <span class="k">return</span>
+        <span class="c1"># The first argument is assumed to be the new desired nickname.</span>
+        <span class="n">nick</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Change the username from record[&#39;username&#39;] to nick in the storage</span>
+        <span class="c1"># layer.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">set_username</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span> <span class="n">nick</span><span class="p">)</span>
+        <span class="c1"># Send a message to the requestor to confirm the nickname change.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Nickname is: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">nick</span><span class="p">)</span>
+        <span class="c1"># Get the room the user is in.</span>
+        <span class="n">room</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;room&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">room</span><span class="p">:</span>
+            <span class="c1"># If the user was in a room, announce to the room they have</span>
+            <span class="c1"># changed their name. Don&#39;t send this me sage to the user since</span>
+            <span class="c1"># they already got a name change message.</span>
+            <span class="n">room_connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_connection_ids_by_room</span><span class="p">(</span><span class="n">room</span><span class="p">)</span>
+            <span class="n">room_connections</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">connection_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span>
+                <span class="n">room_connections</span><span class="p">,</span>
+                <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> is now known as </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span> <span class="n">nick</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Join a chat room.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param args: Argument list. The first argument should be the</span>
+<span class="sd">           name of the room to join.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the room name to join.</span>
+        <span class="n">room</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Call quit to leave the current room we are in if there is any.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quit</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+        <span class="c1"># Get a list of connections in the target chat room.</span>
+        <span class="n">room_connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_connection_ids_by_room</span><span class="p">(</span><span class="n">room</span><span class="p">)</span>
+        <span class="c1"># Join the target chat room.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">set_room</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">room</span><span class="p">)</span>
+        <span class="c1"># Send a message to the requestor that they have joined the room.</span>
+        <span class="c1"># At the same time send an announcement to everyone who was already</span>
+        <span class="c1"># in the room to alert them of the new user.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Joined chat room &quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">room</span><span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> joined room.&#39;</span> <span class="o">%</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">room_connections</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Report the name of the current room.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;room&#39;</span> <span class="ow">in</span> <span class="n">record</span><span class="p">:</span>
+            <span class="c1"># If the user is in a room send them the name back.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;room&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If the user is not in a room. Tell them so, and how to</span>
+            <span class="c1"># join a room.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+                <span class="n">connection_id</span><span class="p">,</span>
+                <span class="s1">&#39;Not currently in a room. Type /join {room_name} to do so.&#39;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Quit from a room.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;room&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">record</span><span class="p">:</span>
+            <span class="c1"># If the user is not in a room there is nothing to do.</span>
+            <span class="k">return</span>
+        <span class="c1"># Find the current room name, and delete that entry from</span>
+        <span class="c1"># the database.</span>
+        <span class="n">room_name</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;room&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">remove_room</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">room_name</span><span class="p">)</span>
+        <span class="c1"># Send a message to the user to inform them they left the room.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Left chat room &quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">room_name</span><span class="p">)</span>
+        <span class="c1"># Tell everyone in the room that the user has left.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_connection_ids_by_room</span><span class="p">(</span><span class="n">room_name</span><span class="p">),</span>
+            <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> left room.&#39;</span> <span class="o">%</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show a context dependent listing.</span>
+
+<span class="sd">        :param connection_id: Connection id that the message came from.</span>
+
+<span class="sd">        :param record: A data record about the sender.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">room</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;room&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">room</span><span class="p">:</span>
+            <span class="c1"># If the user is in a room, get a listing of everyone</span>
+            <span class="c1"># in the room.</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_record_by_connection</span><span class="p">(</span><span class="n">c_id</span><span class="p">)[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">c_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">get_connection_ids_by_room</span><span class="p">(</span><span class="n">room</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If they are not in a room. Get a listing of all rooms</span>
+            <span class="c1"># currently open.</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">list_rooms</span><span class="p">()</span>
+        <span class="c1"># Send the result list back to the requestor.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>The final directory layout should be</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tree -a .
+.
+├── .chalice
+│   ├── config.json
+├── .gitignore
+├── app.py
+├── chalicelib
+│   └── __init__.py
+├── resources.json
+└── requirements.txt
+
+2 directories, 6 files
+</pre></div>
+</div>
+<p>Deploying our app with CloudFormation requires 3 steps. First we use Chalice
+to package our app into a JSON CloudFormation template:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice package --merge-template resources.json out
+</pre></div>
+</div>
+<p>This will result in a new directory called <code class="docutils literal notranslate"><span class="pre">out</span></code> being created, inside which
+there is a <code class="docutils literal notranslate"><span class="pre">sam.json</span></code> file. This template contains our Chalice app as a
+CloudFormation template, merged with our <code class="docutils literal notranslate"><span class="pre">resources.json</span></code> template.</p>
+<p>Next we use the AWS CLI to package this template, and prepare it for
+deployment. In order for this to work you will need to replace <code class="docutils literal notranslate"><span class="pre">$BUCKET</span></code>
+with the name of a bucket you control:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation package  --template-file out/sam.json \
+    --s3-bucket $BUCKET --output-template-file out/template.yml
+</pre></div>
+</div>
+<p>Once this is complete, a new template should be located at <code class="docutils literal notranslate"><span class="pre">out/template.yml</span></code>
+this is the final CloudFormation template which is ready for deployment.
+Deploying it with the AWS CLI can be done with the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation deploy --template-file out/template.yml \
+    --stack-name ChaliceChat --capabilities CAPABILITY_IAM
+</pre></div>
+</div>
+<p>This command should wait awhile, and once it exits the app should be ready. To
+get the websocket connection URL, we can use the AWS CLI again to check the
+stack output <code class="docutils literal notranslate"><span class="pre">WebsocketConnectEndpointURL</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation describe-stacks --stack-name ChaliceChat \
+    --query &quot;Stacks[0].Outputs[?OutputKey==&#39;WebsocketConnectEndpointURL&#39;].OutputValue&quot; \
+    --output text
+wss://{id}.execute-api.{region}.amazonaws.com/api/
+</pre></div>
+</div>
+<p>Once deployed we can take the result of the previous command and connect to it
+using <code class="docutils literal notranslate"><span class="pre">wsdump.py</span></code>. Below is a sample of two running clients, the first
+message sent to the server is used as the client’s username.</p>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">client-1</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ wsdump.py wss://<span class="o">{</span>id<span class="o">}</span>.execute-api.<span class="o">{</span>region<span class="o">}</span>.amazonaws.com/api/
+Press Ctrl+C to quit
+&gt; John
+&lt; Using nickname: John
+Type /help <span class="k">for</span> list of commands.
+&gt; /help
+&lt; Commands available:
+    /help
+          Display this message.
+    /join <span class="o">{</span>chat_room_name<span class="o">}</span>
+          Join a chatroom named <span class="o">{</span>chat_room_name<span class="o">}</span>.
+    /nick <span class="o">{</span>nickname<span class="o">}</span>
+          Change your name to <span class="o">{</span>nickname<span class="o">}</span>. If no <span class="o">{</span>nickname<span class="o">}</span>
+          is provided <span class="k">then</span> your current name will be printed
+    /room
+          Print out the name of the room you are currently
+          in.
+    /ls
+          If you are in a room, list all users also in the
+          room. Otherwise, list all rooms.
+    /quit
+          Leave current room.
+
+If you are in a room, raw text messages that <span class="k">do</span> not start
+with a / will be sent to everyone <span class="k">else</span> in the room.
+&gt; /join chalice
+&lt; Joined chat room <span class="s2">&quot;chalice&quot;</span>
+&lt; Jenny joined room.
+&gt; Hi
+&lt; John: Hi
+&lt; Jenny is now known as JennyJones.
+&gt; /quit
+&lt; Left chat room <span class="s2">&quot;chalice&quot;</span>
+&gt; /ls
+&lt; chalice
+&gt; Ctrl-D
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text">client-2</span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ wsdump.py wss://<span class="o">{</span>id<span class="o">}</span>.execute-api.<span class="o">{</span>region<span class="o">}</span>.amazonaws.com/api/
+Press Ctrl+C to quit
+&gt; Jenny
+&lt; Using nickname: Jenny
+Type /help <span class="k">for</span> list of commands.
+&gt; /help
+&lt; Commands available:
+    /help
+          Display this message.
+    /join <span class="o">{</span>chat_room_name<span class="o">}</span>
+          Join a chatroom named <span class="o">{</span>chat_room_name<span class="o">}</span>.
+    /nick <span class="o">{</span>nickname<span class="o">}</span>
+          Change your name to <span class="o">{</span>nickname<span class="o">}</span>. If no <span class="o">{</span>nickname<span class="o">}</span>
+          is provided <span class="k">then</span> your current name will be printed
+    /room
+          Print out the name of the room you are currently
+          in.
+    /ls
+          If you are in a room, list all users also in the
+          room. Otherwise, list all rooms.
+    /quit
+          Leave current room.
+
+If you are in a room, raw text messages that <span class="k">do</span> not start
+with a / will be sent to everyone <span class="k">else</span> in the room.
+&gt; /join chalice
+&lt; Joined chat room <span class="s2">&quot;chalice&quot;</span>
+&gt; /ls
+&lt; John
+Jenny
+&lt; John: Hi
+&gt; /nick JennyJones
+&lt; Nickname is: JennyJones
+&lt; John left room.
+&gt; /ls
+&lt; JennyJones
+&gt; /room
+&lt; chalice
+&gt; /nick
+&lt; Current nickname: JennyJones
+&gt; Ctrl-D
+</pre></div>
+</div>
+</div>
+<p>To delete the resources you can run use the AWS CLI to delete the stack:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation delete-stack --stack-name ChaliceChat
+</pre></div>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="wsecho.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Echo Server Example</a>
+                        
+                        <a href="events.html" title="next chapter" class="next-page clearfix">Event Sources Tutorial →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="wsecho.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="events.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Chat Server Example</a></li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>

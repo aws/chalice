@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Search &#8212; AWS Chalice</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
+    <title>Frequently Asked Questions &#8212; AWS Chalice</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -18,7 +18,6 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/searchtools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -78,18 +77,12 @@
     </script>
     
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="#" />
-  <script type="text/javascript">
-    jQuery(function() { Search.loadIndex("searchindex.js"); });
-  </script>
-  
-  <script type="text/javascript" id="searchindexloader"></script>
-  
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Upgrade Notes" href="upgrading.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
   
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
 
 
   </head><body>
@@ -108,7 +101,7 @@
                 <li class="site-page"><a href="api.html">API Reference</a></li>
                 <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
                 <li class="site-search hidden-sm">
-                    <form action="#" method="get">
+                    <form action="search.html" method="get">
                         <input type="hidden" name="check_keywords" value="yes" />
                         <input type="hidden" name="area" value="default" />
                         <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
@@ -125,32 +118,67 @@
                 <article id="document-body">
                     
                     
-  <h1 id="search-documentation">Search</h1>
-  <div id="fallback" class="admonition warning">
-  <script type="text/javascript">$('#fallback').hide();</script>
-  <p>
-    Please activate JavaScript to enable the search
-    functionality.
-  </p>
-  </div>
-  <p>
-    From here you can search these documents. Enter your search
-    words into the box below and click "search". Note that the search
-    function will automatically search for all of the words. Pages
-    containing fewer words won't appear in the result list.
-  </p>
-  <form action="" method="get">
-    <input type="text" name="q" value="" />
-    <input type="submit" value="search" />
-    <span id="search-progress" style="padding-left: 10px"></span>
-  </form>
-  
-  <div id="search-results">
-  
-  </div>
+  <div class="section" id="frequently-asked-questions">
+<h1>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this headline">¶</a></h1>
+<p><strong>Q: What is AWS Chalice?</strong></p>
+<p>AWS Chalice is a framework for writing serverless apps in python.
+It consists of a CLI, a declarative python API for connecting
+events to AWS Lambda functions, and a runtime component that
+provides APIs accessible to your Lambda functions.</p>
+<p><strong>Q: Why should I use AWS Chalice?</strong></p>
+<p>Chalice is designed for a seamless getting started experience
+that can get you up and running quickly.  It handles all the
+boilerplate and low level details of creating a serverless
+application, allowing you to focus on the business logic
+of your application.  It also provides deep integration with
+various AWS services allowing you to take advantage of the
+features available in each service.</p>
+<p><strong>Q: How does Chalice compare to AWS SAM and the AWS CDK?</strong></p>
+<p>Chalice is designed to work together with AWS SAM.
+SAM focus on provisioning the resources needed
+for your application, and not necessarily on the application code
+itself.  Chalice provides a set of APIs to help you write your
+application code, including a routing layer for REST and Websocket
+APIs, and decorators to connect various AWS event sources to
+Lambda functions.  It then can integrate with AWS SAM by offloading
+the deployment to AWS CloudFormation.</p>
+<p><strong>Q: How does Chalice compare to other similiar frameworks?</strong></p>
+<p>The biggest difference between Chalice and other frameworks is that Chalice
+is focused on using a familiar, decorator-based API to write serverless
+python applications that run on AWS Lambda.  Its goal is to make writing and
+deploying these types of applications as simple as possible specifically for
+Python developers.  It was designed from the ground up to run in a
+serverless environment.</p>
+<p>To achieve this goal, it has to make certain tradeoffs.  Chalice makes
+assumptions about how applications will be deployed, and it has restrictions on
+how an application can be structured.  The feature set is purposefully small.</p>
+</div>
+
 
                     
-                </article></div>
+                    <section class="relations">
+                        
+                        <a href="upgrading.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Upgrade Notes</a>
+                        
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="upgrading.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Frequently Asked Questions</a></li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
         </section>
         
     
