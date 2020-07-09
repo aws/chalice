@@ -1,5 +1,6 @@
 import io
 import os
+import ntpath
 import zipfile
 import json
 import contextlib
@@ -99,6 +100,16 @@ def serialize_to_json(data):
 
     """
     return json.dumps(data, indent=2, separators=(',', ': ')) + '\n'
+
+
+def windows_path_to_posix(path):
+    # type: (str) -> str
+    return re.sub(
+        "^([A-Za-z])+:",
+        lambda match:
+            "/" + match.group().replace(":", "").lower(),
+        ntpath.abspath(path).replace("\\", "/"),
+    )
 
 
 class ChaliceZipFile(zipfile.ZipFile):

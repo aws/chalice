@@ -9,6 +9,7 @@ with open('README.rst') as readme_file:
 install_requires = [
     'click>=7,<8.0',
     'botocore>=1.12.86,<2.0.0',
+    'docker>=4.0,<5.0',
     'typing==3.6.4;python_version<"3.7"',
     'mypy-extensions==0.4.3',
     'six>=1.10.0,<2.0.0',
