@@ -320,8 +320,26 @@ class LocalGatewayAuthorizer(object):
                     and "authorization" in lambda_event["headers"]:
                 token = lambda_event["headers"]["authorization"]
                 claims = self._decode_jwt_payload(token)
+
+                try:
+                    cognito_username = claims["cognito:username"]
+                except KeyError:
+                    # If a key error is raised when trying to get the cognito
+                    # username then it is a machine-to-machine communication.
+                    # This kind of cognito authorization flow is not
+                    # supported in local mode. We can ignore it here to allow
+                    # users to test their code local with a different cognito
+                    # authorization flow.
+                    warnings.warn(
+                        '%s for machine-to-machine communicaiton is not '
+                        'supported in local mode. All requests made against '
+                        'a route will be authorized to allow local testing.'
+                        % authorizer.__class__.__name__
+                    )
+                    return lambda_event, lambda_context
+
                 auth_result = {"context": {"claims": claims},
-                               "principalId": claims["cognito:username"]}
+                               "principalId": cognito_username}
                 lambda_event = self._update_lambda_event(lambda_event,
                                                          auth_result)
         if not isinstance(authorizer, ChaliceAuthorizer):

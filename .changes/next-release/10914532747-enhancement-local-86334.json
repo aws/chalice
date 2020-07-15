@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "local",
+  "description": "Avoid error from cognito client credentials in local authorizer (#1447)"
+}
