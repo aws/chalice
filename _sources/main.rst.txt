@@ -1,0 +1,3 @@
+:orphan:
+
+.. include:: ./index.rst

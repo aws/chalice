@@ -1,0 +1,277 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Documentation &#8212; AWS Chalice</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="index.html">
+		  <span class="logo-icon"><img src="_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="#">Documentation</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    
+  <div class="section" id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#credentials">Credentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#creating-your-project">Creating Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#deploying">Deploying</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#cleaning-up">Cleaning Up</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="tutorials">
+<h2>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/index.html#rest-api-tutorials">Rest API Tutorials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/index.html#websocket-tutorials">Websocket Tutorials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/index.html#event-source-tutorials">Event Source Tutorials</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="topics">
+<h2>Topics<a class="headerlink" href="#topics" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="topics/index.html">Topics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="topics/routing.html">Routing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/views.html">Views</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/configfile.html">Configuration File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/multifile.html">Multifile Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/logging.html">Logging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/sdks.html">SDK Generation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/stages.html">Chalice Stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/packaging.html">App Packaging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/pyversion.html">Python Version Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/pyversion.html#changing-python-runtime-versions">Changing Python Runtime Versions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cfn.html">AWS CloudFormation Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/tf.html">Terraform Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/authorizers.html">Authorization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/events.html">Lambda Event Sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/purelambda.html">Pure Lambda Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/blueprints.html">Blueprints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/websockets.html">Websockets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/cd.html">Continuous Deployment (CD)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topics/experimental.html">Experimental APIs</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Chalice</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#request">Request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#response">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#authorization">Authorization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#built-in-authorizers">Built-in Authorizers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#apigateway">APIGateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#websocketapi">WebsocketAPI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#cors">CORS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#event-sources">Event Sources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#blueprints">Blueprints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#websockets">Websockets</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="sample-apps">
+<h2>Sample Apps<a class="headerlink" href="#sample-apps" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="samples/index.html">Sample Applications</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="samples/media-query/index.html">Media Query Application</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="upgrade-notes">
+<h2>Upgrade Notes<a class="headerlink" href="#upgrade-notes" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="upgrading.html">Upgrade Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v1-2-0">1.2.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#b2">1.0.0b2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#b1">1.0.0b1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-9-0">0.9.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-8-1">0.8.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-7-0">0.7.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrading.html#v0-6-0">0.6.0</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="faq">
+<h2>FAQ<a class="headerlink" href="#faq" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Documentation</a><ul>
+<li><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li><a class="reference internal" href="#tutorials">Tutorials</a></li>
+<li><a class="reference internal" href="#topics">Topics</a></li>
+<li><a class="reference internal" href="#api-reference">API Reference</a></li>
+<li><a class="reference internal" href="#sample-apps">Sample Apps</a></li>
+<li><a class="reference internal" href="#upgrade-notes">Upgrade Notes</a></li>
+<li><a class="reference internal" href="#faq">FAQ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>

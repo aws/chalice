@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Python Version Support &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    <title>Sample Applications &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -78,8 +78,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="AWS CloudFormation Support" href="cfn.html" />
-    <link rel="prev" title="App Packaging" href="packaging.html" />
+    <link rel="next" title="Media Query Application" href="media-query/index.html" />
+    <link rel="prev" title="Chalice" href="../api.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
   
@@ -117,126 +117,23 @@
             <div class="width-wrapper flex">
                 <article id="document-body">
                     
-                    <ul class="rel-parents">
-                    <li><a href="index.html" accesskey="U">Topics</a></li>
-                    </ul>
                     
-                    
-  <div class="section" id="python-version-support">
-<h1>Python Version Support<a class="headerlink" href="#python-version-support" title="Permalink to this headline">¶</a></h1>
-<p>Chalice supports all versions of python supported by AWS Lambda, which is
-currently <code class="docutils literal notranslate"><span class="pre">python2.7</span></code> and <code class="docutils literal notranslate"><span class="pre">python3.6</span></code>.</p>
-<p>Chalice will automatically pick which version of python to use for Lambda
-based on the major version of python you are using.  You don’t have to
-explicitly configure which version of python you want to use. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python --version
-Python 3.6.1
-$ chalice new-project test-versions
-$ cd test-versions
-$ chalice package test-package
-$ grep -C 3 python test-package/sam.json
-    &quot;APIHandler&quot;: {
-      &quot;Type&quot;: &quot;AWS::Serverless::Function&quot;,
-      &quot;Properties&quot;: {
-        &quot;Runtime&quot;: &quot;python3.6&quot;,
-        &quot;Handler&quot;: &quot;app.app&quot;,
-        &quot;CodeUri&quot;: &quot;./deployment.zip&quot;,
-        &quot;Events&quot;: {
-
-# Similarly, if we were to run &quot;chalice deploy&quot; we&#39;d
-# use python3.6 for the runtime.
-$ chalice --debug deploy
-Initiating first time deployment...
-Deploying to: dev
-...
-&quot;Runtime&quot;:&quot;python3.6&quot;
-...
-https://rest-api-id.execute-api.us-west-2.amazonaws.com/api/
-</pre></div>
+  <div class="section" id="sample-applications">
+<h1>Sample Applications<a class="headerlink" href="#sample-applications" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="media-query/index.html">Media Query Application</a></li>
+</ul>
 </div>
-<p>In the example above, we’re using python 3.6.1 so chalice automatically
-selects the <code class="docutils literal notranslate"><span class="pre">python3.6</span></code> runtime for lambda.  If we were using python 2.7.11,
-chalice would automatically select <code class="docutils literal notranslate"><span class="pre">python2.7</span></code> as the runtime.</p>
-<p>Chalice will emit a warning if the minor version does not match a python
-version supported by Lambda.  Chalice will select the closest Lambda version
-in this scenario, as shown in the table below.</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="49%" />
-<col width="51%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Local Python Version</th>
-<th class="head">Lambda Python Runtime</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr class="row-even"><td>python2.7.10</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-odd"><td>python2.7.11</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-even"><td>python2.7.12</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-odd"><td>python2.7.13</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-even"><td>python3.3.6</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-odd"><td>python3.4.6</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-even"><td>python3.5.3</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-odd"><td>python3.6.0</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-even"><td>python3.6.1</td>
-<td>python3.6</td>
-</tr>
-</tbody>
-</table>
-<p>We strongly encourage you to develop your application using the same
-major/minor version of python you plan on using on AWS Lambda.</p>
-</div>
-<div class="section" id="changing-python-runtime-versions">
-<h1>Changing Python Runtime Versions<a class="headerlink" href="#changing-python-runtime-versions" title="Permalink to this headline">¶</a></h1>
-<p>The version of the python runtime to use in AWS Lambda can be reconfigured
-whenever you deploy your chalice app.  This allows you to migrate to python3
-in AWS Lambda by creating a new virtual environment that uses python3.
-For example, suppose you have an existing chalice app that uses python2:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python --version
-Python 2.7.12
-$ chalice deploy
-...
-https://endpoint/api
-</pre></div>
-</div>
-<p>To upgrade the application to use python3, create a python3 virtual environment
-and redeploy.</p>
-<dl class="docutils">
-<dt>::</dt>
-<dd>$ deactivate
-$ python3 -m venv /tmp/venv3
-$ source /tmp/venv3/bin/activate
-$ python –version
-Python 3.6.1
-$ chalice deploy
-…</dd>
-</dl>
 </div>
 
 
                     
                     <section class="relations">
                         
-                        <a href="packaging.html" title="previous chapter" class="previous-page clearfix hidden-xs">← App Packaging</a>
+                        <a href="../api.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Chalice</a>
                         
-                        <a href="cfn.html" title="next chapter" class="next-page clearfix">AWS CloudFormation Support →</a>
+                        <a href="media-query/index.html" title="next chapter" class="next-page clearfix">Media Query Application →</a>
                     </section>
                     
                 </article><aside id="right-column" class="side-column hidden-sm">
@@ -245,14 +142,13 @@ $ chalice deploy
                             
                             <section class="next-previous">
                                 
-                                <a href="packaging.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                <a href="../api.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
                                 
-                                <a href="cfn.html" title="next chapter" class="next-page clearfix">Next →</a>
+                                <a href="media-query/index.html" title="next chapter" class="next-page clearfix">Next →</a>
                             </section>
                             
                             <ul>
-<li><a class="reference internal" href="#">Python Version Support</a></li>
-<li><a class="reference internal" href="#changing-python-runtime-versions">Changing Python Runtime Versions</a></li>
+<li><a class="reference internal" href="#">Sample Applications</a></li>
 </ul>
 
                         </section>

@@ -640,7 +640,7 @@ table.highlighttable {
   overflow: auto;
   display: block;
   border: none;
-  background-color: #f6f8fa;
+  background-color: #f1f1f1;
 }
 
 .highlighttable pre {
