@@ -1,0 +1,51 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:Query"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:*:*:table/media-query-*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "rekognition:DetectLabels",
+        "rekognition:StartLabelDetection",
+        "rekognition:GetLabelDetection"
+      ],
+      "Resource": "*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+         "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::media-query*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+         "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/media-query-*",
+      "Effect": "Allow"
+    }
+  ]
+}

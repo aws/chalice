@@ -1,0 +1,104 @@
+{
+  "Outputs": {
+    "MediaBucketName": {
+      "Value": {
+        "Ref": "MediaBucket"
+      }
+    },
+    "MediaTableName": {
+      "Value": {
+        "Ref": "MediaTable"
+      }
+    },
+    "VideoTopicArn": {
+      "Value": {
+        "Ref": "VideoTopic"
+      }
+    },
+    "VideoTopicName": {
+      "Value": {
+        "Fn::GetAtt": [
+          "VideoTopic",
+          "TopicName"
+        ]
+      }
+    },
+    "VideoRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "VideoRole",
+          "Arn"
+        ]
+      }
+    }
+  },
+  "Resources": {
+    "MediaBucket": {
+      "Type": "AWS::S3::Bucket"
+    },
+    "MediaTable": {
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "name",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "name",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      },
+      "Type": "AWS::DynamoDB::Table"
+    },
+    "VideoTopic": {
+      "Type": "AWS::SNS::Topic"
+    },
+    "VideoRole": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Principal": {
+                "Service": [
+                  "rekognition.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "RekognitionPublish",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sns:Publish"
+                  ],
+                  "Resource": [
+                    {
+                      "Ref": "VideoTopic"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    }
+  }
+}
