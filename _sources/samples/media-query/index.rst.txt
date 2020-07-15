@@ -26,14 +26,13 @@ The final component is the REST API.  This allows users to query for
 labels associated with the media that has been uploaded.
 
 You can find the full source code for this application in our
-`samples directory on GitHub <https://github.com/aws-samples/chalice-workshop/tree/master/code/media-query/final>`__.
+`samples directory on GitHub <https://github.com/aws/chalice/tree/master/docs/source/samples/media-query/code/>`__.
 
 ::
 
     $ git clone git://github.com/aws/chalice
     $ cd chalice/docs/source/samples/media-query/code
 
-.. change once deployed: `samples directory on GitHub <https://github.com/aws/chalice/tree/master/docs/source/samples/media-query/code/>`__.
 
 We'll now walk through the architecture of the application, how to
 deploy and use the application, and go over the application code.
