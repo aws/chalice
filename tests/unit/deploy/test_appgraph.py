@@ -161,33 +161,29 @@ class TestApplicationGraphBuilder(object):
 
     def test_can_build_app_with_domain_name(self, sample_app):
         domain_name = {
-            'domain_name': 'test_domain_name',
-            'security_policy': 'TLS_1_0',
-            'endpoint_configuration': {
-                'types': [
-                    'REGIONAL'
-                ]
-            },
-            'regional_certificate_arn': 'certificate_arn',
+            'domain_name': 'example.com',
+            'tls_version': 'TLS_1_0',
+            'certificate_arn': 'certificate_arn',
             'tags': {
                 'some_key1': 'some_value1',
                 'some_key2': 'some_value2'
             },
-            'url_prefixes': ['/']
+            'url_prefix': '/'
         }
         config = self.create_config(sample_app,
                                     app_name='rest-api-app',
-                                    api_gateway_endpoint_type='PRIVATE',
-                                    api_gateway_endpoint_vpce='vpce-abc123',
+                                    api_gateway_endpoint_type='REGIONAL',
                                     api_gateway_custom_domain=domain_name,
                                     )
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
         rest_api = application.resources[0]
         assert isinstance(rest_api, models.RestAPI)
-        domain_name = rest_api.custom_domain_name
+        domain_name = rest_api.domain_name
+        api_mapping = domain_name.api_mapping
         assert isinstance(domain_name, models.DomainName)
-        assert len(domain_name.api_mapping) == 1
+        assert isinstance(api_mapping, models.APIMapping)
+        assert api_mapping.mount_path == '(none)'
 
     def test_can_build_lambda_function_app_with_vpc_config(
             self, sample_app_lambda_only
@@ -496,10 +492,9 @@ class TestApplicationGraphBuilder(object):
     def test_can_create_websocket_api_with_domain_name(self,
                                                        sample_websocket_app):
         domain_name = {
-            'domain_name': 'test_domain_name',
-            'security_policy': 'TLS_1_2',
-            'endpoint_type': 'REGIONAL',
-            'regional_certificate_arn': 'certificate_arn',
+            'domain_name': 'example.com',
+            'tls_version': 'TLS_1_2',
+            'certificate_arn': 'certificate_arn',
             'tags': {
                 'tag_key1': 'tag_value1',
                 'tag_key2': 'tag_value2'
@@ -514,10 +509,10 @@ class TestApplicationGraphBuilder(object):
         websocket_api = application.resources[0]
         assert isinstance(websocket_api, models.WebsocketAPI)
 
-        domain_name = websocket_api.custom_domain_name
+        domain_name = websocket_api.domain_name
         assert isinstance(domain_name, models.DomainName)
-        assert len(domain_name.api_mapping) == 1
-        assert domain_name.api_mapping[0].mapping_key == '(none)'
+        assert isinstance(domain_name.api_mapping, models.APIMapping)
+        assert domain_name.api_mapping.mount_path == '(none)'
 
     def test_can_create_websocket_app_missing_connect(
             self, websocket_app_without_connect):

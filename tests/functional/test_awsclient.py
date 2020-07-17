@@ -656,40 +656,9 @@ class TestCreateDomainName(object):
             'endpoint_type': 'REGIONAL',
             'security_policy': 'TLS_1_0',
             'certificate_arn': 'certificate_arn',
-            'regional_certificate_arn': None,
             'tags': None
         }
         with pytest.raises(ValueError):
-            awsclient.create_domain_name(**params)
-
-    def test_create_domain_name_failed(self, stubbed_session):
-        stubbed_session.stub('apigateway') \
-            .create_domain_name(
-            domainName='test_domain',
-            endpointConfiguration={
-                'types': ['EDGE']
-            },
-            securityPolicy=123,
-            tags={
-                'some_key1': 'some_value1',
-                'some_key2': 'some_value2'
-            },
-            certificateArn='certificate_arn',
-        ).raises_error(
-            error_code='ParamValidationError',
-            message='Parameter validation failed'
-        )
-        awsclient = TypedAWSClient(stubbed_session)
-        params = {
-            'protocol': 'HTTP',
-            'domain_name': 'test_domain',
-            'endpoint_type': 'REGIONAL',
-            'security_policy': 123,
-            'certificate_arn': 'certificate_arn',
-            'regional_certificate_arn': None,
-            'tags': None,
-        }
-        with pytest.raises(botocore.exceptions.ParamValidationError):
             awsclient.create_domain_name(**params)
 
     def test_create_rest_api_domain_name(self, stubbed_session):
@@ -729,7 +698,7 @@ class TestCreateDomainName(object):
             domain_name='test_domain',
             endpoint_type='REGIONAL',
             security_policy='TLS_1_0',
-            regional_certificate_arn='certificate_arn',
+            certificate_arn='certificate_arn',
             tags={
               'some_key1': 'some_value1',
               'some_key2': 'some_value2'
@@ -840,7 +809,7 @@ class TestCreateDomainName(object):
             domain_name='test_websocket_domain',
             endpoint_type='REGIONAL',
             security_policy='TLS_1_2',
-            regional_certificate_arn='certificate_arn',
+            certificate_arn='certificate_arn',
             tags={
               'some_key1': 'some_value1',
               'some_key2': 'some_value2'
@@ -861,7 +830,6 @@ class TestCreateDomainName(object):
             endpoint_type='EDGE',
             security_policy='TLS_1_2',
             certificate_arn='certificate_arn',
-            regional_certificate_arn=None,
             tags={
               'some_key1': 'some_value1',
               'some_key2': 'some_value2'
@@ -945,7 +913,7 @@ class TestCreateDomainName(object):
                 domain_name='test_websocket_domain',
                 endpoint_type='REGIONAL',
                 security_policy='TLS_1_2',
-                regional_certificate_arn='certificate_arn',
+                certificate_arn='certificate_arn',
                 tags={
                     'some_key1': 'some_value1',
                     'some_key2': 'some_value2'
@@ -994,7 +962,7 @@ class TestUpdateDomainName(object):
             domain_name='test_domain',
             endpoint_type='REGIONAL',
             security_policy='TLS_1_2',
-            regional_certificate_arn='certificate_arn',
+            certificate_arn='certificate_arn',
         ) == {
            'domain_name': 'test_domain',
            'endpoint_configuration': 'REGIONAL',
@@ -1027,7 +995,7 @@ class TestUpdateDomainName(object):
                 domain_name='unknown_domain',
                 endpoint_type='REGIONAL',
                 security_policy='TLS_1_2',
-                regional_certificate_arn='certificate_arn',
+                certificate_arn='certificate_arn',
             )
 
     def test_update_domain_v2_name_max_retries(self, stubbed_session):
@@ -1058,7 +1026,7 @@ class TestUpdateDomainName(object):
                 domain_name='test_domain',
                 endpoint_type='REGIONAL',
                 security_policy='TLS_1_2',
-                regional_certificate_arn='certificate_arn',
+                certificate_arn='certificate_arn',
                 tags={
                     'some_key1': 'some_value1',
                     'some_key2': 'some_value2'
@@ -1073,7 +1041,7 @@ class TestUpdateDomainName(object):
                 domain_name='unknown_domain',
                 endpoint_type='REGIONAL',
                 security_policy='TLS_1_2',
-                regional_certificate_arn='certificate_arn',
+                certificate_arn='certificate_arn',
             )
         assert str(err.value) == 'Unsupported protocol value.'
 
@@ -1081,7 +1049,8 @@ class TestUpdateDomainName(object):
         awsclient = TypedAWSClient(stubbed_session)
         patch_operations = awsclient.get_custom_domain_patch_operations(
             security_policy='TLS_1_0',
-            certificate_arn='certificate_arn'
+            certificate_arn='certificate_arn',
+            endpoint_type='EDGE',
         )
         assert patch_operations == [
             {
@@ -1103,7 +1072,8 @@ class TestUpdateDomainName(object):
         awsclient = TypedAWSClient(stubbed_session)
         patch_operations = awsclient.get_custom_domain_patch_operations(
             security_policy='TLS_1_2',
-            regional_certificate_arn='regional_certificate_arn'
+            certificate_arn='regional_certificate_arn',
+            endpoint_type='REGIONAL',
         )
         assert patch_operations == [
             {
@@ -1179,7 +1149,7 @@ class TestUpdateDomainName(object):
             domain_name='test_domain',
             endpoint_type='REGIONAL',
             security_policy='TLS_1_2',
-            regional_certificate_arn='regional_certificate_arn',
+            certificate_arn='regional_certificate_arn',
         ) == {
             'domain_name': 'test_domain',
             'endpoint_configuration': {
@@ -1363,7 +1333,7 @@ class TestDeleteDomainName(object):
                 message='Too Many Requests'
             )
         stubbed_session.activate_stubs()
-        awsclient = TypedAWSClient(stubbed_session)
+        awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(botocore.exceptions.ClientError):
             awsclient.delete_domain_name(domain_name='test_domain')
 

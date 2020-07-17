@@ -9,7 +9,6 @@ from chalice.config import Config  # noqa
 from chalice import app
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.deploy import models
-from chalice.deploy.models import DomainName, ApiMapping
 from chalice.utils import UI  # noqa
 
 StrMapAny = Dict[str, Any]
@@ -48,51 +47,36 @@ class ApplicationGraphBuilder(object):
             resources.append(websocket_api)
         return models.Application(stage_name, resources)
 
-    def _create_custom_domain_name(self,
-                                   api_type,                # type: str
-                                   domain_name_data,        # type: StrMapAny
-                                   endpoint_configuration,  # type: str
-                                   api_gateway_stage,       # type: str
-                                   ):
+    def _create_custom_domain_name(
+            self,
+            api_type,                # type: models.APIType
+            domain_name_data,        # type: StrMapAny
+            endpoint_configuration,  # type: str
+            api_gateway_stage,       # type: str
+    ):
         # type: (...) -> models.DomainName
-        api_mapping = domain_name_data.get("url_prefixes")
-        if not api_mapping:
-            api_mapping = ['(none)']
-
-        api_mapping_resources = self._create_api_mapping(
-            api_mapping, api_gateway_stage
-        )
+        url_prefix = domain_name_data.get("url_prefix", '(none)')
+        api_mapping_model = self._create_api_mapping_model(
+            url_prefix, api_gateway_stage)
         domain_name = self._create_domain_name_model(
             api_type,
             domain_name_data,
             endpoint_configuration,
-            api_mapping_resources
+            api_mapping_model
         )
         return domain_name
-
-    def _create_api_mapping(self,
-                            api_mapping,      # type: List[str]
-                            stage             # type: str
-                            ):
-        # type: (...) -> List[models.ApiMapping]
-        resources = []
-        for key in api_mapping:
-            resources.append(
-                self._create_api_mapping_model(key, stage)
-            )
-        return resources
 
     def _create_api_mapping_model(self,
                                   key,         # type: str
                                   stage        # type: str
                                   ):
-        # type: (...) -> models.ApiMapping
+        # type: (...) -> models.APIMapping
         if key == '/':
             key = '(none)'
-        return models.ApiMapping(
+        return models.APIMapping(
             resource_name='api_mapping',
-            mapping_key=key,
-            stage=stage
+            mount_path=key,
+            api_gateway_stage=stage
         )
 
     def _create_lambda_event_resources(self, config, deployment, stage_name):
@@ -174,7 +158,7 @@ class ApplicationGraphBuilder(object):
         custom_domain_name = None
         if config.api_gateway_custom_domain:
             custom_domain_name = self._create_custom_domain_name(
-                "HTTP",
+                models.APIType.HTTP,
                 config.api_gateway_custom_domain,
                 config.api_gateway_endpoint_type,
                 config.api_gateway_stage,
@@ -189,7 +173,7 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
             authorizers=authorizers,
             policy=policy,
-            custom_domain_name=custom_domain_name
+            domain_name=custom_domain_name
         )
 
     def _get_default_private_api_policy(self, config):
@@ -242,7 +226,7 @@ class ApplicationGraphBuilder(object):
         custom_domain_name = None
         if config.websocket_api_domain_name:
             custom_domain_name = self._create_custom_domain_name(
-                "WEBSOCKET",
+                models.APIType.WEBSOCKET,
                 config.websocket_api_domain_name,
                 config.api_gateway_endpoint_type,
                 config.api_gateway_stage,
@@ -257,7 +241,7 @@ class ApplicationGraphBuilder(object):
             routes=[h.route_key_handled for h
                     in config.chalice_app.websocket_handlers.values()],
             api_gateway_stage=config.api_gateway_stage,
-            custom_domain_name=custom_domain_name
+            domain_name=custom_domain_name
         )
 
     def _create_cwe_subscription(
@@ -322,26 +306,24 @@ class ApplicationGraphBuilder(object):
         return scheduled_event
 
     def _create_domain_name_model(self,
-                                  protocol,        # type: str
+                                  protocol,        # type: models.APIType
                                   data,            # type: StrMapAny
                                   endpoint_type,   # type: str
-                                  api_mapping      # type: List[ApiMapping]
+                                  api_mapping      # type: models.APIMapping
                                   ):
-        # type: (...) -> DomainName
+        # type: (...) -> models.DomainName
         default_name = 'api_gateway_custom_domain'
         resource_name_map = {
             'HTTP': default_name,
             'WEBSOCKET': 'websocket_api_domain_name'
         }  # type: Dict[str, str]
 
-        domain_name = DomainName(
+        domain_name = models.DomainName(
             protocol=protocol,
-            resource_name=resource_name_map.get(protocol, default_name),
+            resource_name=resource_name_map.get(protocol.value, default_name),
             domain_name=data['domain_name'],
-            security_policy=data['security_policy'],
-            endpoint_type=endpoint_type,
-            certificate_arn=data.get('certificate_arn'),
-            regional_certificate_arn=data.get('regional_certificate_arn'),
+            tls_version=models.TLSVersion.create(data.get('tls_version', '')),
+            certificate_arn=data['certificate_arn'],
             tags=data.get('tags'),
             api_mapping=api_mapping
         )

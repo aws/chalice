@@ -7,7 +7,6 @@ Topics
    routing
    views
    configfile
-   custom_domain_name
    multifile
    logging
    sdks
@@ -22,4 +21,5 @@ Topics
    blueprints
    websockets
    cd
+   domainname
    experimental

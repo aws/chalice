@@ -890,7 +890,7 @@ class TestDeploymentReporter(object):
         self.reporter = DeploymentReporter(ui=self.ui)
 
     def test_can_generate_report(self):
-        certificat_arn = "arn:aws:acm:us-east-1:account_id:" \
+        certificate_arn = "arn:aws:acm:us-east-1:account_id:" \
                          "certificate/e2600f49-f6b7-4105-aaf6-63b2f018a030"
         deployed_values = {
             "resources": [
@@ -915,7 +915,8 @@ class TestDeploymentReporter(object):
                 {"name": "api_gateway_custom_domain",
                  "resource_type": "domain_name",
                  "hosted_zone_id": "A1FDTDATADATA0",
-                 "certificate_arn": certificat_arn,
+                 "certificate_arn": certificate_arn,
+                 "alias_domain_name": "alias.domain.com",
                  "security_policy": "TLS_1_0",
                  "domain_name": "api.domain",
                  "api_mapping": [
@@ -932,7 +933,9 @@ class TestDeploymentReporter(object):
             "  - Lambda ARN: lambda-arn-dev\n"
             "  - Rest API URL: https://host/api\n"
             "  - Websocket API URL: wss://host/api\n"
-            "  - Custom domain name: A1FDTDATADATA0/api.domain\n"
+            "  - Custom domain name:\n"
+            "      HostedZoneId: A1FDTDATADATA0\n"
+            "      AliasDomainName: alias.domain.com\n"
         )
 
     def test_can_display_report(self):

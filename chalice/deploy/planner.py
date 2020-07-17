@@ -26,11 +26,11 @@ class RemoteState(object):
 
     def _cache_key(self, resource):
         # type: (models.ManagedModel) -> CacheTuples
-        if isinstance(resource, models.ApiMapping):
+        if isinstance(resource, models.APIMapping):
             return (
                 resource.resource_type,
                 resource.resource_name,
-                resource.mapping_key
+                resource.mount_path
             )
         return resource.resource_type, resource.resource_name
 
@@ -110,8 +110,8 @@ class RemoteState(object):
             return False
 
     def _resource_exists_apimapping(self, resource, domain_name):
-        # type: (models.ApiMapping, str) -> bool
-        map_key = resource.mapping_key
+        # type: (models.APIMapping, str) -> bool
+        map_key = resource.mount_path
         if map_key == '(none)':
             map_key = ''
         elif map_key.startswith('/'):
@@ -121,7 +121,7 @@ class RemoteState(object):
 
     def _resource_exists_domainname(self, resource):
         # type: (models.DomainName) -> bool
-        if resource.protocol == "WEBSOCKET":
+        if resource.protocol == models.APIType.WEBSOCKET:
             return self._client.domain_name_exists_v2(
                 resource.domain_name)
         return self._client.domain_name_exists(resource.domain_name)
@@ -185,17 +185,17 @@ class PlanStage(object):
     # to know about every type of resource.
 
     def _add_apimapping_plan(self,
-                             resource,    # type: models.ApiMapping
+                             resource,    # type: models.APIMapping
                              domain_name  # type: models.DomainName
                              ):
         # type: (...) -> Sequence[InstructionMsg]
         api_calls = []  # type: List[InstructionMsg]
         params = {
             'domain_name': domain_name.domain_name,
-            'path_key': resource.mapping_key,
-            'stage': resource.stage
+            'path_key': resource.mount_path,
+            'stage': resource.api_gateway_stage
         }  # type: Dict[str, Any]
-        if domain_name.protocol == 'WEBSOCKET':
+        if domain_name.protocol == models.APIType.WEBSOCKET:
             params['api_id'] = Variable('websocket_api_id')
             variable_name = 'websocket_api_mapping'
             api_call = models.APICall(
@@ -216,9 +216,9 @@ class PlanStage(object):
                 resource, domain_name.domain_name
         ):
             path_to_print = '/'
-            if resource.mapping_key != '(none)' and \
-                    not resource.mapping_key.startswith("/"):
-                path_to_print = '/%s' % resource.mapping_key
+            if resource.mount_path != '(none)' and \
+                    not resource.mount_path.startswith("/"):
+                path_to_print = '/%s' % resource.mount_path
             api_calls.extend([
                 (api_call, "Creating api mapping: %s\n" % path_to_print),
                 models.StoreMultipleValue(
@@ -238,10 +238,10 @@ class PlanStage(object):
             )
             for api_mapping in deployed['api_mapping']:
 
-                mapping_key = api_mapping['key'].lstrip('/')
-                if not mapping_key:
-                    mapping_key = '(none)'
-                if mapping_key != resource.mapping_key:
+                mount_path = api_mapping['key'].lstrip('/')
+                if not mount_path:
+                    mount_path = '(none)'
+                if mount_path != resource.mount_path:
                     continue
 
                 api_calls.extend([
@@ -258,19 +258,19 @@ class PlanStage(object):
                 ])
         return api_calls
 
-    def _add_domainname_plan(self, resource):
-        # type: (models.DomainName) -> Sequence[InstructionMsg]
+    def _add_domainname_plan(self, resource, endpoint_type):
+        # type: (models.DomainName, str) -> Sequence[InstructionMsg]
         api_calls = []  # type: List[InstructionMsg]
 
         params = {
-            'protocol': resource.protocol,
+            'protocol': resource.protocol.value,
             'tags': resource.tags,
+            'endpoint_type': endpoint_type,
             'domain_name': resource.domain_name,
-            'endpoint_type': resource.endpoint_type,
-            'security_policy': resource.security_policy,
-            'certificate_arn': resource.certificate_arn,
-            'regional_certificate_arn': resource.regional_certificate_arn,
         }
+        params['certificate_arn'] = resource.certificate_arn
+        if resource.tls_version is not None:
+            params['security_policy'] = resource.tls_version.value
 
         if not self._remote_state.resource_exists(resource):
             domain_name_api_call = (
@@ -304,6 +304,17 @@ class PlanStage(object):
                 resource_name=resource.resource_name,
                 name='hosted_zone_id',
                 variable_name='hosted_zone_id'
+            ),
+            models.StoreValue(
+                name='alias_domain_name',
+                value=KeyDataVariable(resource.resource_name,
+                                      'alias_domain_name')
+            ),
+            models.RecordResourceVariable(
+                resource_type='domain_name',
+                resource_name=resource.resource_name,
+                name='alias_domain_name',
+                variable_name='alias_domain_name'
             ),
             models.StoreValue(
                 name='certificate_arn',
@@ -1003,9 +1014,9 @@ class PlanStage(object):
 
         ws_plan = shared_plan_preamble + main_plan + shared_plan_epilogue
 
-        if resource.custom_domain_name:
+        if resource.domain_name:
             custom_domain_plan = self._add_custom_domain_plan(
-                resource.custom_domain_name
+                resource.domain_name, 'REGIONAL',
             )
             ws_plan += custom_domain_plan
 
@@ -1149,29 +1160,25 @@ class PlanStage(object):
 
         plan.extend(shared_plan_epilogue)
 
-        if resource.custom_domain_name:
+        if resource.domain_name:
             custom_domain_plan = self._add_custom_domain_plan(
-                resource.custom_domain_name
+                resource.domain_name, resource.endpoint_type
             )
             plan += custom_domain_plan
 
         return plan
 
-    def _add_custom_domain_plan(self, resource):
-        # type: (models.DomainName) -> Sequence[InstructionMsg]
+    def _add_custom_domain_plan(self, resource, endpoint_type):
+        # type: (models.DomainName, str) -> Sequence[InstructionMsg]
         result = []  # type: List[InstructionMsg]
         custom_domain_plan = self._add_domainname_plan(
-            resource
+            resource, endpoint_type
         )
         result += custom_domain_plan
-        if resource.api_mapping:
-            api_mapping_plan = []  # type: List[InstructionMsg]
-            for api_map in resource.api_mapping:
-                api_map_plan = self._add_apimapping_plan(
-                    api_map, resource
-                )
-                api_mapping_plan += api_map_plan
-            result += api_mapping_plan
+        api_mapping_plan = self._add_apimapping_plan(
+            resource.api_mapping, resource
+        )
+        result += api_mapping_plan
         return result
 
     def _get_role_arn(self, resource):

@@ -605,8 +605,10 @@ class DeploymentReporter(object):
     def _report_domain_name(self, resource, report):
         # type: (Dict[str, Any], List[str]) -> None
         report.append(
-            '  - Custom domain name: %s/%s' % (
-                resource['hosted_zone_id'], resource['domain_name']
+            '  - Custom domain name:\n'
+            '      HostedZoneId: %s\n'
+            '      AliasDomainName: %s' % (
+                resource['hosted_zone_id'], resource['alias_domain_name']
             )
         )
 

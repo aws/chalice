@@ -17,6 +17,25 @@ class RoleTraits(enum.Enum):
     VPC_NEEDED = 'vpc_needed'
 
 
+class APIType(enum.Enum):
+    WEBSOCKET = 'WEBSOCKET'
+    HTTP = 'HTTP'
+
+
+class TLSVersion(enum.Enum):
+    TLS_1_0 = 'TLS_1_0'
+    TLS_1_1 = 'TLS_1_1'
+    TLS_1_2 = 'TLS_1_2'
+
+    @classmethod
+    def create(cls, str_version):
+        # type: (str) -> Opt[TLSVersion]
+        for version in cls:
+            if version.value == str_version:
+                return version
+        return None
+
+
 Type = TypeVar('Type')
 DV = Union[Placeholder, Type]
 StrMap = Dict[str, str]
@@ -206,24 +225,25 @@ class ScheduledEvent(CloudWatchEventBase):
 
 
 @attrs
-class ApiMapping(ManagedModel):
+class APIMapping(ManagedModel):
     resource_type = 'api_mapping'
-    mapping_key = attrib()          # type: str
-    stage = attrib()                # type: str
+    mount_path = attrib()          # type: str
+    api_gateway_stage = attrib()   # type: str
 
 
 @attrs
 class DomainName(ManagedModel):
     resource_type = 'domain_name'
-    domain_name = attrib()                           # type: str
-    protocol = attrib()                              # type: str
-    endpoint_type = attrib()                         # type: str
-    security_policy = attrib()                       # type: str
-    api_mapping = attrib()                           # type: List[ApiMapping]
-    certificate_arn = attrib(default=None)           # type: Opt[str]
-    regional_certificate_arn = attrib(default=None)  # type: Opt[str]
-    hosted_zone_id = attrib(default=None)            # type: Opt[str]
-    tags = attrib(default=None)                     # type: Opt[Dict[str, Any]]
+    domain_name = attrib()              # type: str
+    protocol = attrib()                 # type: APIType
+    api_mapping = attrib()              # type: APIMapping
+    certificate_arn = attrib()          # type: str
+    tags = attrib(default=None)         # type: Opt[Dict[str, Any]]
+    tls_version = attrib(default=None)  # type: Opt[TLSVersion]
+
+    def dependencies(self):
+        # type: () -> List[Model]
+        return [self.api_mapping]
 
 
 @attrs
@@ -236,34 +256,40 @@ class RestAPI(ManagedModel):
     lambda_function = attrib()                   # type: LambdaFunction
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
-    custom_domain_name = attrib(default=None)    # type: Opt[DomainName]
+    domain_name = attrib(default=None)    # type: Opt[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
-        return cast(List[Model], [self.lambda_function] + self.authorizers)
+        resources = []  # type: List[Model]
+        resources.extend([self.lambda_function] + self.authorizers)
+        if self.domain_name is not None:
+            resources.append(self.domain_name)
+        return cast(List[Model], resources)
 
 
 @attrs
 class WebsocketAPI(ManagedModel):
     resource_type = 'websocket_api'
-    name = attrib()                             # type: str
-    api_gateway_stage = attrib()                # type: str
-    routes = attrib()                           # type: List[str]
-    connect_function = attrib()                 # type: Opt[LambdaFunction]
-    message_function = attrib()                 # type: Opt[LambdaFunction]
-    disconnect_function = attrib()              # type: Opt[LambdaFunction]
-    custom_domain_name = attrib(default=None)   # type: Opt[DomainName]
+    name = attrib()                     # type: str
+    api_gateway_stage = attrib()        # type: str
+    routes = attrib()                   # type: List[str]
+    connect_function = attrib()         # type: Opt[LambdaFunction]
+    message_function = attrib()         # type: Opt[LambdaFunction]
+    disconnect_function = attrib()      # type: Opt[LambdaFunction]
+    domain_name = attrib(default=None)  # type: Opt[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
-        functions = []  # type: List[Model]
+        resources = []  # type: List[Model]
+        if self.domain_name is not None:
+            resources.append(self.domain_name)
         if self.connect_function is not None:
-            functions.append(self.connect_function)
+            resources.append(self.connect_function)
         if self.message_function is not None:
-            functions.append(self.message_function)
+            resources.append(self.message_function)
         if self.disconnect_function is not None:
-            functions.append(self.disconnect_function)
-        return functions
+            resources.append(self.disconnect_function)
+        return resources
 
 
 @attrs

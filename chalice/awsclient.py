@@ -243,7 +243,7 @@ class TypedAWSClient(object):
 
     def create_api_mapping(self,
                            domain_name,  # type: str
-                           path_key,  # type: str
+                           path_key,     # type: str
                            api_id,       # type: str
                            stage         # type: str
                            ):
@@ -258,7 +258,7 @@ class TypedAWSClient(object):
 
     def create_base_path_mapping(self,
                                  domain_name,    # type: str
-                                 path_key,  # type: str
+                                 path_key,       # type: str
                                  api_id,         # type: str
                                  stage           # type: str
                                  ):
@@ -298,13 +298,12 @@ class TypedAWSClient(object):
         return api_mapping
 
     def create_domain_name(self,
-                           protocol,                       # type: str
-                           domain_name,                    # type: str
-                           endpoint_type,                  # type: str
-                           security_policy,                # type: str
-                           certificate_arn=None,           # type: str
-                           regional_certificate_arn=None,  # type: str
-                           tags=None,                      # type: StrMap
+                           protocol,              # type: str
+                           domain_name,           # type: str
+                           endpoint_type,         # type: str
+                           certificate_arn,       # type: str
+                           security_policy=None,  # type: Optional[str]
+                           tags=None,             # type: StrMap
                            ):
         # type: (...) -> Dict[str, Any]
         if protocol == 'HTTP':
@@ -313,23 +312,23 @@ class TypedAWSClient(object):
                 'endpointConfiguration': {
                     'types': [endpoint_type],
                 },
-                'securityPolicy': security_policy
             }
-            if certificate_arn:
+            if security_policy is not None:
+                kwargs['securityPolicy'] = security_policy
+            if endpoint_type == 'EDGE':
                 kwargs['certificateArn'] = certificate_arn
-            if regional_certificate_arn:
-                kwargs['regionalCertificateArn'] = regional_certificate_arn
-            if tags:
+            else:
+                kwargs['regionalCertificateArn'] = certificate_arn
+            if tags is not None:
                 kwargs['tags'] = tags
             created_domain_name = self._create_domain_name(kwargs)
         elif protocol == 'WEBSOCKET':
             kwargs = self.get_custom_domain_params_v2(
-                domain_name,
-                endpoint_type,
-                security_policy,
-                certificate_arn,
-                regional_certificate_arn,
-                tags
+                domain_name=domain_name,
+                endpoint_type=endpoint_type,
+                security_policy=security_policy,
+                certificate_arn=certificate_arn,
+                tags=tags
             )
             created_domain_name = self._create_domain_name_v2(kwargs)
         else:
@@ -363,6 +362,10 @@ class TypedAWSClient(object):
         else:
             domain_name['certificate_arn'] = result['certificateArn']
 
+        if result.get('regionalDomainName') is not None:
+            domain_name['alias_domain_name'] = result['regionalDomainName']
+        else:
+            domain_name['alias_domain_name'] = result['distributionDomainName']
         return domain_name
 
     def _create_domain_name_v2(self, api_args):
@@ -472,14 +475,11 @@ class TypedAWSClient(object):
             self,
             domain_name,                    # type: str
             endpoint_type,                  # type: str
-            security_policy,                # type: str
-            certificate_arn=None,           # type: Optional[str]
-            regional_certificate_arn=None,  # type: Optional[str]
+            certificate_arn,           # type: str
+            security_policy=None,                # type: Optional[str]
             tags=None,                      # type: StrMap
     ):
         # type: (...) -> Dict[str, Any]
-        if endpoint_type == 'REGIONAL':
-            certificate_arn = regional_certificate_arn
         kwargs = {
             'DomainName': domain_name,
             'DomainNameConfigurations': [{
@@ -495,58 +495,56 @@ class TypedAWSClient(object):
         return kwargs
 
     def get_custom_domain_patch_operations(self,
-                                           security_policy,
-                                           certificate_arn=None,
-                                           regional_certificate_arn=None,
+                                           certificate_arn,
+                                           endpoint_type,
+                                           security_policy=None,
                                            ):
         # type: (str, Optional[str], Optional[str]) -> List[Dict[str, str]]
-        patch_operations = [
-            {
+        patch_operations = []
+        if security_policy is not None:
+            patch_operations.append({
                 'op': 'replace',
                 'path': '/securityPolicy',
                 'value': security_policy,
-            },
-        ]
-        if certificate_arn:
+            })
+        if endpoint_type == 'EDGE':
             patch_operations.append({
                 'op': 'replace',
                 'path': '/certificateArn',
                 'value': certificate_arn,
             })
-        if regional_certificate_arn:
+        else:
             patch_operations.append({
                 'op': 'replace',
                 'path': '/regionalCertificateArn',
-                'value': regional_certificate_arn,
+                'value': certificate_arn,
             })
         return patch_operations
 
     def update_domain_name(self,
-                           protocol,                       # type: str
-                           domain_name,                    # type: str
-                           endpoint_type,                  # type: str
-                           security_policy,                # type: str
-                           certificate_arn=None,           # type: str
-                           regional_certificate_arn=None,  # type: str
-                           tags=None,                      # type: StrMap
+                           protocol,                  # type: str
+                           domain_name,               # type: str
+                           endpoint_type,             # type: str
+                           certificate_arn,           # type: str
+                           security_policy=None,      # type: Optional[str]
+                           tags=None,                 # type: StrMap
                            ):
         # type: (...) -> Dict[str, Any]
         if protocol == 'HTTP':
             patch_operations = self.get_custom_domain_patch_operations(
-                security_policy,
                 certificate_arn,
-                regional_certificate_arn,
+                endpoint_type,
+                security_policy,
             )
             updated_domain_name = self._update_domain_name(
                 domain_name, patch_operations
             )
         elif protocol == 'WEBSOCKET':
             kwargs = self.get_custom_domain_params_v2(
-                domain_name,
-                endpoint_type,
-                security_policy,
-                certificate_arn,
-                regional_certificate_arn,
+                domain_name=domain_name,
+                endpoint_type=endpoint_type,
+                security_policy=security_policy,
+                certificate_arn=certificate_arn,
             )
             updated_domain_name = self._update_domain_name_v2(kwargs)
         else:
@@ -623,6 +621,11 @@ class TypedAWSClient(object):
             domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
         else:
             domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
+
+        if result.get('regionalDomainName') is not None:
+            domain_name['alias_domain_name'] = result['regionalDomainName']
+        else:
+            domain_name['alias_domain_name'] = result['distributionDomainName']
         return domain_name
 
     def _update_domain_name_v2(self, api_args):
