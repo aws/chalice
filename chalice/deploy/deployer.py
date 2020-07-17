@@ -103,6 +103,7 @@ from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
 from chalice.constants import VPC_ATTACH_POLICY
 from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
+from chalice.constants import DEFAULT_TLS_VERSION
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy import models
@@ -395,10 +396,12 @@ class BaseDeployStep(object):
 
 class InjectDefaults(BaseDeployStep):
     def __init__(self, lambda_timeout=DEFAULT_LAMBDA_TIMEOUT,
-                 lambda_memory_size=DEFAULT_LAMBDA_MEMORY_SIZE):
-        # type: (int, int) -> None
+                 lambda_memory_size=DEFAULT_LAMBDA_MEMORY_SIZE,
+                 tls_version=DEFAULT_TLS_VERSION):
+        # type: (int, int, str) -> None
         self._lambda_timeout = lambda_timeout
         self._lambda_memory_size = lambda_memory_size
+        self._tls_version = DEFAULT_TLS_VERSION
 
     def handle_lambdafunction(self, config, resource):
         # type: (Config, models.LambdaFunction) -> None
@@ -406,6 +409,12 @@ class InjectDefaults(BaseDeployStep):
             resource.timeout = self._lambda_timeout
         if resource.memory_size is None:
             resource.memory_size = self._lambda_memory_size
+
+    def handle_domainname(self, config, resource):
+        # type: (Config, models.DomainName) -> None
+        if resource.tls_version is None:
+            resource.tls_version = models.TLSVersion.create(
+                DEFAULT_TLS_VERSION)
 
 
 class DeploymentPackager(BaseDeployStep):

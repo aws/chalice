@@ -65,7 +65,7 @@ class TestApplicationGraphBuilder(object):
                       api_gateway_endpoint_vpce=None,
                       api_gateway_policy_file=None,
                       api_gateway_custom_domain=None,
-                      websocket_api_domain_name=None,
+                      websocket_api_custom_domain=None,
                       project_dir='.'):
         kwargs = {
             'chalice_app': app,
@@ -76,7 +76,7 @@ class TestApplicationGraphBuilder(object):
             'api_gateway_endpoint_type': api_gateway_endpoint_type,
             'api_gateway_endpoint_vpce': api_gateway_endpoint_vpce,
             'api_gateway_custom_domain': api_gateway_custom_domain,
-            'websocket_api_domain_name': websocket_api_domain_name,
+            'websocket_api_custom_domain': websocket_api_custom_domain,
         }
         if iam_role_arn is not None:
             # We want to use an existing role.
@@ -503,7 +503,7 @@ class TestApplicationGraphBuilder(object):
         config = self.create_config(sample_websocket_app,
                                     app_name='websocket-app',
                                     autogen_policy=True,
-                                    websocket_api_domain_name=domain_name)
+                                    websocket_api_custom_domain=domain_name)
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
         websocket_api = application.resources[0]

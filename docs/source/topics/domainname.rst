@@ -17,8 +17,8 @@ Configure custom domain name for REST API
 
 To create custom domain name for REST API only config.json should be modified.
 
-If `.chalice/config.json` contains `api_gateway_custom_domain` field,
-then while `chalice deploy` command is running, the custom domain
+If ``.chalice/config.json`` contains ``api_gateway_custom_domain`` field,
+then while ``chalice deploy`` command is running, the custom domain
 name will be created.
 
 .. code-block:: json
@@ -29,9 +29,9 @@ name will be created.
                 "api_gateway_stage": "api",
                 "api_gateway_custom_domain": {
                     "domain_name": "api.example.com",
-                    "security_policy": "TLS 1.2|TLS 1.0",
+                    "tls_version": "TLS_1_2|TLS_1_0",
                     "certificate_arn": "arn:aws:acm:example",
-                    "url_prefixes": ["foo", "bar"],
+                    "url_prefix": "foo",
                     "tags": {
                         "key": "tag1",
                         "key1": "tag2"
@@ -46,7 +46,7 @@ Configure custom domain name for Websocket
 
 To create custom domain name for REST API only config.json should be modified.
 
-If `.chalice/config.json` contains `websocket_api_domain_name` field,
+If ``.chalice/config.json`` contains the ``websocket_api_custom_domain`` field,
 then while `chalice deploy` command is running, the custom domain name
 will be created.
 
@@ -56,11 +56,11 @@ will be created.
         "stages": {
             "dev": {
                 "api_gateway_stage": "api",
-                "websocket_api_domain_name": {
+                "websocket_api_custom_domain": {
                     "domain_name": "api.example.com",
-                    "security_policy": "TLS 1.2|TLS 1.0",
+                    "tls_version": "TLS_1_2|TLS_1_0",
                     "certificate_arn": "arn:aws:acm:example",
-                    "url_prefixes": ["foo", "bar"],
+                    "url_prefix": "foo",
                     "tags": {
                         "key": "tag1",
                         "key1": "tag2"
@@ -77,17 +77,20 @@ Fields description
 
     Custom domain name (api.example.com). Must match the domain registered
     with AWS Route53
-- security_policy:
+
+- tls_version:
 
     The Transport Layer Security (TLS) version of the security policy for
     this domain name. The valid values are TLS_1_0 and TLS_1_2.
+
 - certificate_arn:
 
     the arn of AWS-managed certificate for current domain name.
-- url_prefixes:
 
-    (optional) a list of Api mappings keys. A custom domain name plus a
-    url_prefixes (BasePathMapping) specification identifies a deployed
+- url_prefix:
+
+    (optional) A custom domain name plus a
+    url_prefix (BasePathMapping) specification identifies a deployed
     RestApi in a given stage. With custom domain names, you can set up your
     API's hostname, and choose a base path (for example, `myservice`) to
     map the alternative URL to your API
@@ -99,6 +102,7 @@ Fields description
     Specify as `/` - the same as `(none)` -  means that callers haven't
     to specify a base path name after the domain name.
     If `/` won't be specified, it will be created by default.
+
 - tags:
 
     (optional) a dictionary of tags associated with a domain name.

@@ -224,10 +224,10 @@ class ApplicationGraphBuilder(object):
             )
 
         custom_domain_name = None
-        if config.websocket_api_domain_name:
+        if config.websocket_api_custom_domain:
             custom_domain_name = self._create_custom_domain_name(
                 models.APIType.WEBSOCKET,
-                config.websocket_api_domain_name,
+                config.websocket_api_custom_domain,
                 config.api_gateway_endpoint_type,
                 config.api_gateway_stage,
             )
@@ -315,7 +315,7 @@ class ApplicationGraphBuilder(object):
         default_name = 'api_gateway_custom_domain'
         resource_name_map = {
             'HTTP': default_name,
-            'WEBSOCKET': 'websocket_api_domain_name'
+            'WEBSOCKET': 'websocket_api_custom_domain'
         }  # type: Dict[str, str]
 
         domain_name = models.DomainName(

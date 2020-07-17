@@ -150,8 +150,8 @@ A mapping of key value pairs. Next keys should be present:
 See `AWS Custom Domain names setup`_.
 
 
-``websocket_api_domain_name``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``websocket_api_custom_domain``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A mapping of key value pairs. Next keys should be present:
 
@@ -377,8 +377,8 @@ In the ``dev`` stage, chalice will automatically create ``custom domain name``
 with specified ``url_prefixes`` that should contain information about
 `AWS Api Mapping key`_.
 
-If there is Websocket API ``websocket_api_domain_name`` should be used instead
-of ``api_gateway_custom_domain``.
+If there is Websocket API ``websocket_api_custom_domain`` should be used
+instead of ``api_gateway_custom_domain``.
 
 IAM Roles and Policies
 ~~~~~~~~~~~~~~~~~~~~~~

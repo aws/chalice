@@ -606,6 +606,21 @@ class TestDefaultsInjector(object):
         assert function.timeout == 1
         assert function.memory_size == 1
 
+    def test_default_tls_version_on_domain_name(self):
+        injector = InjectDefaults(tls_version='TLS_1_2')
+        domain_name = models.DomainName(
+            resource_name='my_domain_name',
+            domain_name='example.com',
+            protocol=models.APIType.HTTP,
+            certificate_arn='myarn',
+            api_mapping=models.APIMapping(resource_name='mymapping',
+                                          mount_path='(none)',
+                                          api_gateway_stage='api')
+        )
+        config = Config.create()
+        injector.handle(config, domain_name)
+        assert domain_name.tls_version == models.TLSVersion.TLS_1_2
+
 
 class TestPolicyGeneratorStage(object):
     def setup_method(self):

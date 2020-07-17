@@ -311,6 +311,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                     },
                 }
             }
+        self._add_domain_name(resource, template)
         self._inject_restapi_outputs(template)
 
     def _inject_restapi_outputs(self, template):
@@ -467,6 +468,7 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
         }
 
+        self._add_websocket_domain_name(resource, template)
         self._inject_websocketapi_outputs(template)
 
     def _inject_websocketapi_outputs(self, template):
@@ -594,6 +596,81 @@ class SAMTemplateGenerator(TemplateGenerator):
                     },
                     'BatchSize': resource.batch_size,
                 }
+            }
+        }
+
+    def _generate_apimapping(self, resource, template):
+        # type: (models.APIMapping, Dict[str, Any]) -> None
+        pass
+
+    def _generate_domainname(self, resource, template):
+        # type: (models.DomainName, Dict[str, Any]) -> None
+        pass
+
+    def _add_domain_name(self, resource, template):
+        # type: (models.RestAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+        endpoint_type = resource.endpoint_type
+        cfn_name = to_cfn_resource_name(domain_name.resource_name)
+        properties = {
+            'DomainName': domain_name.domain_name,
+            'EndpointConfiguration': {
+                'Types': [endpoint_type],
+            }
+        }  # type: Dict[str, Any]
+        if endpoint_type == 'EDGE':
+            properties['CertificateArn'] = domain_name.certificate_arn
+        else:
+            properties['RegionalCertificateArn'] = domain_name.certificate_arn
+        if domain_name.tls_version is not None:
+            properties['SecurityPolicy'] = domain_name.tls_version.value
+        if domain_name.tags:
+            properties['Tags'] = [
+                {'Key': key, 'Value': value}
+                for key, value in sorted(domain_name.tags.items())
+            ]
+        template['Resources'][cfn_name] = {
+            'Type': 'AWS::ApiGateway::DomainName',
+            'Properties': properties
+        }
+        template['Resources'][cfn_name + 'Mapping'] = {
+            'Type': 'AWS::ApiGateway::BasePathMapping',
+            'Properties': {
+                'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
+                'RestApiId': {'Ref': 'RestAPI'},
+                'BasePath': domain_name.api_mapping.mount_path,
+                'Stage': {'Ref': 'RestAPI.Stage'},
+            }
+        }
+
+    def _add_websocket_domain_name(self, resource, template):
+        # type: (models.WebsocketAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+        cfn_name = to_cfn_resource_name(domain_name.resource_name)
+        properties = {
+            'DomainName': domain_name.domain_name,
+            'DomainNameConfigurations': [
+                {'CertificateArn': domain_name.certificate_arn,
+                 'EndpointType': 'REGIONAL'},
+            ]
+        }
+        if domain_name.tags:
+            properties['Tags'] = domain_name.tags
+        template['Resources'][cfn_name] = {
+            'Type': 'AWS::ApiGatewayV2::DomainName',
+            'Properties': properties,
+        }
+        template['Resources'][cfn_name + 'Mapping'] = {
+            'Type': 'AWS::ApiGatewayV2::ApiMapping',
+            'Properties': {
+                'DomainName': {'Ref': cfn_name},
+                'ApiId': {'Ref': 'WebsocketAPI'},
+                'ApiMappingKey': domain_name.api_mapping.mount_path,
+                'Stage': {'Ref': 'WebsocketAPIStage'},
             }
         }
 
@@ -912,6 +989,46 @@ class TerraformGenerator(TemplateGenerator):
                         "${aws_api_gateway_rest_api.%s.execution_arn}" % (
                             resource.resource_name) + "/*")
             }
+        self._add_domain_name(resource, template)
+
+    def _add_domain_name(self, resource, template):
+        # type: (models.RestAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+        endpoint_type = resource.endpoint_type
+        properties = {
+            'domain_name': domain_name.domain_name,
+            'endpoint_configuration': {'types': [endpoint_type]},
+        }
+        if endpoint_type == 'EDGE':
+            properties['certificate_arn'] = domain_name.certificate_arn
+        else:
+            properties[
+                'regional_certificate_arn'] = domain_name.certificate_arn
+        if domain_name.tls_version is not None:
+            properties['security_policy'] = domain_name.tls_version.value
+        if domain_name.tags:
+            properties['tags'] = domain_name.tags
+        template['resource']['aws_api_gateway_domain_name'] = {
+            domain_name.resource_name: properties
+        }
+        template['resource']['aws_api_gateway_base_path_mapping'] = {
+            domain_name.resource_name + '_mapping': {
+                'stage_name': resource.api_gateway_stage,
+                'domain_name': domain_name.domain_name,
+                'api_id': '${aws_api_gateway_rest_api.%s.id}' % (
+                    resource.resource_name)
+            }
+        }
+
+    def _generate_apimapping(self, resource, template):
+        # type: (models.APIMapping, Dict[str, Any]) -> None
+        pass
+
+    def _generate_domainname(self, resource, template):
+        # type: (models.DomainName, Dict[str, Any]) -> None
+        pass
 
 
 class AppPackager(object):

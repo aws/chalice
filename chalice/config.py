@@ -179,9 +179,9 @@ class Config(object):
                                   varies_per_chalice_stage=True)
 
     @property
-    def websocket_api_domain_name(self):
+    def websocket_api_custom_domain(self):
         # type: () -> StrMap
-        return self._chain_lookup('websocket_api_domain_name',
+        return self._chain_lookup('websocket_api_custom_domain',
                                   varies_per_chalice_stage=True)
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,

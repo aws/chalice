@@ -71,7 +71,7 @@ def create_http_domain_name():
 def create_websocket_domain_name():
     return models.DomainName(
         protocol=models.APIType.WEBSOCKET,
-        resource_name='websocket_api_domain_name',
+        resource_name='websocket_api_custom_domain',
         domain_name='example.com',
         tls_version=models.TLSVersion.TLS_1_0,
         api_mapping=create_api_mapping(),
@@ -1880,7 +1880,7 @@ class TestRemoteState(object):
     def test_websocket_domain_name_exists(self):
         domain_name = self.create_domain_name()
         domain_name.protocol = models.APIType.WEBSOCKET
-        domain_name.resource_name = 'websocket_api_domain_name'
+        domain_name.resource_name = 'websocket_api_custom_domain'
         self.client.domain_name_exists_v2.return_value = True
         assert self.remote_state.resource_exists(domain_name)
 
@@ -1907,7 +1907,7 @@ class TestRemoteState(object):
         assert not self.remote_state.resource_exists(domain_name)
 
         domain_name.protocol = models.APIType.WEBSOCKET
-        domain_name.resource_name = 'websocket_api_domain_name'
+        domain_name.resource_name = 'websocket_api_custom_domain'
         self.client.domain_name_exists_v2.return_value = False
         assert not self.remote_state.resource_exists(domain_name)
 

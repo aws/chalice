@@ -678,7 +678,7 @@ class TestCreateDomainName(object):
                 'domainName': 'test_domain',
                 'regionalCertificateName': 'certificate_name',
                 'regionalCertificateArn': 'certificate_arn',
-                'regionalDomainName': 'domain_name',
+                'regionalDomainName': 'regional_domain_name',
                 'regionalHostedZoneId': 'hosted_zone_id',
                 'endpointConfiguration': {
                     'types': ['REGIONAL'],
@@ -709,6 +709,7 @@ class TestCreateDomainName(object):
                 'types': ['REGIONAL'],
             },
             'security_policy': 'TLS_1_0',
+            'alias_domain_name': 'regional_domain_name',
             'hosted_zone_id': 'hosted_zone_id',
             'certificate_arn': 'certificate_arn'
         }
@@ -735,7 +736,7 @@ class TestCreateDomainName(object):
                 'endpointConfiguration': {
                     'types': ['EDGE'],
                 },
-                'distributionDomainName': 'test_domain',
+                'distributionDomainName': 'dist_test_domain',
                 'distributionHostedZoneId': 'hosted_zone_id',
                 'domainNameStatus': 'AVAILABLE',
                 'domainNameStatusMessage': 'string',
@@ -764,11 +765,12 @@ class TestCreateDomainName(object):
             },
             'security_policy': 'TLS_1_0',
             'hosted_zone_id': 'hosted_zone_id',
+            'alias_domain_name': 'dist_test_domain',
             'certificate_arn': 'certificate_arn'
         }
         stubbed_session.verify_stubs()
 
-    def test_create_websocket_api_domain_name(self, stubbed_session):
+    def test_create_websocket_api_custom_domain(self, stubbed_session):
         stubbed_session.stub('apigatewayv2') \
             .create_domain_name(
                 DomainName='test_websocket_domain',
@@ -1105,6 +1107,7 @@ class TestUpdateDomainName(object):
         ).returns({
             'domainName': 'test_domain',
             'regionalHostedZoneId': 'hosted_zone_id',
+            'regionalDomainName': 'regional_domain_name',
             'regionalCertificateArn': 'old_regional_certificate_arn',
             'endpointConfiguration': {
                 'types': [
@@ -1128,6 +1131,7 @@ class TestUpdateDomainName(object):
             'domainName': 'test_domain',
             'regionalHostedZoneId': 'hosted_zone_id',
             'regionalCertificateArn': 'regional_certificate_arn',
+            'regionalDomainName': 'regional_domain_name',
             'endpointConfiguration': {
                 'types': [
                     'REGIONAL',
@@ -1157,6 +1161,7 @@ class TestUpdateDomainName(object):
                     'REGIONAL',
                 ],
             },
+            'alias_domain_name': 'regional_domain_name',
             'security_policy': 'TLS_1_2',
             'hosted_zone_id': 'hosted_zone_id',
             'certificate_arn': 'regional_certificate_arn'
@@ -1181,6 +1186,7 @@ class TestUpdateDomainName(object):
             'domainName': 'test_domain',
             'distributionHostedZoneId': 'hosted_zone_id',
             'certificateArn': 'old_certificate_arn',
+            'distributionDomainName': 'dist_domain_name',
             'endpointConfiguration': {
                 'types': [
                     'EDGE',
@@ -1202,6 +1208,7 @@ class TestUpdateDomainName(object):
         ).returns({
             'domainName': 'test_domain',
             'distributionHostedZoneId': 'hosted_zone_id',
+            'distributionDomainName': 'dist_domain_name',
             'certificateArn': 'certificate_arn',
             'endpointConfiguration': {
                 'types': [
@@ -1226,15 +1233,16 @@ class TestUpdateDomainName(object):
             security_policy='TLS_1_0',
             certificate_arn='certificate_arn',
         ) == {
-           'domain_name': 'test_domain',
-           'endpoint_configuration': {
-                'types': [
-                    'EDGE',
-                ],
-            },
-           'security_policy': 'TLS_1_0',
-           'hosted_zone_id': 'hosted_zone_id',
-           'certificate_arn': 'certificate_arn'
+            'domain_name': 'test_domain',
+            'endpoint_configuration': {
+                 'types': [
+                     'EDGE',
+                 ],
+             },
+            'security_policy': 'TLS_1_0',
+            'alias_domain_name': 'dist_domain_name',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn'
         }
         stubbed_session.verify_stubs()
 
