@@ -1,0 +1,275 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Custom Domain Name &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Experimental APIs" href="experimental.html" />
+    <link rel="prev" title="Continuous Deployment (CD)" href="cd.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="../tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../main.html">Documentation</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="custom-domain-name">
+<h1>Custom Domain Name<a class="headerlink" href="#custom-domain-name" title="Permalink to this headline">¶</a></h1>
+<p>Custom domain names are simpler and more intuitive URLs
+that you can provide to your API users.
+With custom domain names, you can set up your API’s hostname,
+and choose a base path to map the alternative URL to your API.</p>
+<p>AWS-managed certificate is required to configure custom domain name
+for REST API or for Websocket. See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains-prerequisites.html">Get certificate in AWS Certificate Manager</a></p>
+<p>Custom domain name can be configured per stage.</p>
+<div class="section" id="configure-custom-domain-name-for-rest-api">
+<h2>Configure custom domain name for REST API<a class="headerlink" href="#configure-custom-domain-name-for-rest-api" title="Permalink to this headline">¶</a></h2>
+<p>To create custom domain name for REST API only config.json should be modified.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> contains <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code> field,
+then while <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command is running, the custom domain
+name will be created.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;api_gateway_custom_domain&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;domain_name&quot;</span><span class="p">:</span> <span class="s2">&quot;api.example.com&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;tls_version&quot;</span><span class="p">:</span> <span class="s2">&quot;TLS_1_2|TLS_1_0&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:acm:example&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;url_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="nt">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;tag1&quot;</span><span class="p">,</span>
+                    <span class="nt">&quot;key1&quot;</span><span class="p">:</span> <span class="s2">&quot;tag2&quot;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="configure-custom-domain-name-for-websocket">
+<h2>Configure custom domain name for Websocket<a class="headerlink" href="#configure-custom-domain-name-for-websocket" title="Permalink to this headline">¶</a></h2>
+<p>To create custom domain name for REST API only config.json should be modified.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> contains the <code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code> field,
+then while <cite>chalice deploy</cite> command is running, the custom domain name
+will be created.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;websocket_api_custom_domain&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;domain_name&quot;</span><span class="p">:</span> <span class="s2">&quot;api.example.com&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;tls_version&quot;</span><span class="p">:</span> <span class="s2">&quot;TLS_1_2|TLS_1_0&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:acm:example&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;url_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="nt">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;tag1&quot;</span><span class="p">,</span>
+                    <span class="nt">&quot;key1&quot;</span><span class="p">:</span> <span class="s2">&quot;tag2&quot;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fields-description">
+<h2>Fields description<a class="headerlink" href="#fields-description" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">domain_name:</p>
+<blockquote>
+<div><p>Custom domain name (api.example.com). Must match the domain registered
+with AWS Route53</p>
+</div></blockquote>
+</li>
+<li><p class="first">tls_version:</p>
+<blockquote>
+<div><p>The Transport Layer Security (TLS) version of the security policy for
+this domain name. The valid values are TLS_1_0 and TLS_1_2.</p>
+</div></blockquote>
+</li>
+<li><p class="first">certificate_arn:</p>
+<blockquote>
+<div><p>the arn of AWS-managed certificate for current domain name.</p>
+</div></blockquote>
+</li>
+<li><p class="first">url_prefix:</p>
+<blockquote>
+<div><p>(optional) A custom domain name plus a
+url_prefix (BasePathMapping) specification identifies a deployed
+RestApi in a given stage. With custom domain names, you can set up your
+API’s hostname, and choose a base path (for example, <cite>myservice</cite>) to
+map the alternative URL to your API
+(for example <code class="docutils literal notranslate"><span class="pre">https://api.example.com/myservice</span></code>).
+If you don’t set any Api mapping keys under a custom domain name,
+the resulting API’s base URL is the same as the custom domain
+(for example <code class="docutils literal notranslate"><span class="pre">https://api.example.com</span></code>).
+In this case, the custom domain name can’t support more than one API.
+Specify as <cite>/</cite> - the same as <cite>(none)</cite> -  means that callers haven’t
+to specify a base path name after the domain name.
+If <cite>/</cite> won’t be specified, it will be created by default.</p>
+</div></blockquote>
+</li>
+<li><p class="first">tags:</p>
+<blockquote>
+<div><p>(optional) a dictionary of tags associated with a domain name.</p>
+</div></blockquote>
+</li>
+</ul>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="cd.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Continuous Deployment (CD)</a>
+                        
+                        <a href="experimental.html" title="next chapter" class="next-page clearfix">Experimental APIs →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="cd.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="experimental.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Custom Domain Name</a><ul>
+<li><a class="reference internal" href="#configure-custom-domain-name-for-rest-api">Configure custom domain name for REST API</a></li>
+<li><a class="reference internal" href="#configure-custom-domain-name-for-websocket">Configure custom domain name for Websocket</a></li>
+<li><a class="reference internal" href="#fields-description">Fields description</a></li>
+</ul>
+</li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>
