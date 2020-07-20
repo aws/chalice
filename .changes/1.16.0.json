@@ -1,0 +1,25 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "local",
+      "description": "Avoid error from cognito client credentials in local authorizer (#1447)"
+    },
+    {
+      "type": "bugfix",
+      "category": "package",
+      "description": "Traverse symlinks to directories when packaging the vendor directory (#583)."
+    },
+    {
+      "type": "feature",
+      "category": "DomainName",
+      "description": "Add support for custom domain names to REST/WebSocket APIs (#1194)"
+    },
+    {
+      "type": "feature",
+      "category": "auth",
+      "description": "Add support for oauth scopes on routes (#1444)."
+    }
+  ]
+}

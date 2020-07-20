@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "package",
-  "description": "Traverse symlinks to directories when packaging the vendor directory (#583)."
-}

@@ -1,5 +1,0 @@
-{
-  "type": "feature",
-  "category": "DomainName",
-  "description": "Add support for custom domain names to REST/WebSocket APIs (#1194)"
-}
