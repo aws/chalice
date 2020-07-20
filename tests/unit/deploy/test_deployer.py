@@ -606,6 +606,21 @@ class TestDefaultsInjector(object):
         assert function.timeout == 1
         assert function.memory_size == 1
 
+    def test_default_tls_version_on_domain_name(self):
+        injector = InjectDefaults(tls_version='TLS_1_2')
+        domain_name = models.DomainName(
+            resource_name='my_domain_name',
+            domain_name='example.com',
+            protocol=models.APIType.HTTP,
+            certificate_arn='myarn',
+            api_mapping=models.APIMapping(resource_name='mymapping',
+                                          mount_path='(none)',
+                                          api_gateway_stage='api')
+        )
+        config = Config.create()
+        injector.handle(config, domain_name)
+        assert domain_name.tls_version == models.TLSVersion.TLS_1_2
+
 
 class TestPolicyGeneratorStage(object):
     def setup_method(self):
@@ -890,6 +905,8 @@ class TestDeploymentReporter(object):
         self.reporter = DeploymentReporter(ui=self.ui)
 
     def test_can_generate_report(self):
+        certificate_arn = "arn:aws:acm:us-east-1:account_id:" \
+                         "certificate/e2600f49-f6b7-4105-aaf6-63b2f018a030"
         deployed_values = {
             "resources": [
                 {"role_name": "james2-dev",
@@ -910,6 +927,18 @@ class TestDeploymentReporter(object):
                  "websocket_api_id": "websocket_api_id",
                  "websocket_api_url": "wss://host/api",
                  "resource_type": "websocket_api"},
+                {"name": "api_gateway_custom_domain",
+                 "resource_type": "domain_name",
+                 "hosted_zone_id": "A1FDTDATADATA0",
+                 "certificate_arn": certificate_arn,
+                 "alias_domain_name": "alias.domain.com",
+                 "security_policy": "TLS_1_0",
+                 "domain_name": "api.domain",
+                 "api_mapping": [
+                     {
+                         "key": "/test1"
+                     }
+                 ]}
             ],
         }
         report = self.reporter.generate_report(deployed_values)
@@ -919,6 +948,9 @@ class TestDeploymentReporter(object):
             "  - Lambda ARN: lambda-arn-dev\n"
             "  - Rest API URL: https://host/api\n"
             "  - Websocket API URL: wss://host/api\n"
+            "  - Custom domain name:\n"
+            "      HostedZoneId: A1FDTDATADATA0\n"
+            "      AliasDomainName: alias.domain.com\n"
         )
 
     def test_can_display_report(self):

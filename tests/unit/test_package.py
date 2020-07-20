@@ -670,6 +670,60 @@ class TestTerraformTemplate(TemplateTestBase):
         # Should mention you can use `chalice deploy`.
         assert 'chalice deploy' in str(excinfo.value)
 
+    def test_can_generate_custom_domain_name(self, sample_app):
+        config = Config.create(
+            chalice_app=sample_app,
+            project_dir='.',
+            api_gateway_stage='api',
+            api_gateway_endpoint_type='EDGE',
+            api_gateway_custom_domain={
+                "certificate_arn": "my_cert_arn",
+                "domain_name": "example.com",
+                "tls_version": "TLS_1_2",
+                "tags": {"foo": "bar"},
+            }
+        )
+        template = self.generate_template(config, 'dev')
+        assert template['resource']['aws_api_gateway_domain_name'][
+            'api_gateway_custom_domain'] == {
+                'domain_name': 'example.com',
+                'certificate_arn': 'my_cert_arn',
+                'security_policy': 'TLS_1_2',
+                'endpoint_configuration': {'types': ['EDGE']},
+                'tags': {'foo': 'bar'},
+        }
+        assert template['resource']['aws_api_gateway_base_path_mapping'][
+            'api_gateway_custom_domain_mapping'] == {
+                'api_id': '${aws_api_gateway_rest_api.rest_api.id}',
+                'stage_name': 'api',
+                'domain_name': 'example.com',
+        }
+
+    def test_can_generate_domain_for_regional_endpoint(self, sample_app):
+        config = Config.create(
+            chalice_app=sample_app,
+            project_dir='.',
+            api_gateway_stage='api',
+            api_gateway_endpoint_type='REGIONAL',
+            api_gateway_custom_domain={
+                "certificate_arn": "my_cert_arn",
+                "domain_name": "example.com",
+            }
+        )
+        template = self.generate_template(config, 'dev')
+        assert template['resource']['aws_api_gateway_domain_name'][
+            'api_gateway_custom_domain'] == {
+                'domain_name': 'example.com',
+                'regional_certificate_arn': 'my_cert_arn',
+                'endpoint_configuration': {'types': ['REGIONAL']},
+        }
+        assert template['resource']['aws_api_gateway_base_path_mapping'][
+            'api_gateway_custom_domain_mapping'] == {
+                'api_id': '${aws_api_gateway_rest_api.rest_api.id}',
+                'stage_name': 'api',
+                'domain_name': 'example.com',
+        }
+
 
 class TestSAMTemplate(TemplateTestBase):
 
@@ -1257,6 +1311,121 @@ class TestSAMTemplate(TemplateTestBase):
                     },
                     'BatchSize': 5,
                 },
+            }
+        }
+
+    def test_can_generate_custom_domain_name(self, sample_app):
+        config = Config.create(
+            chalice_app=sample_app,
+            project_dir='.',
+            api_gateway_stage='api',
+            api_gateway_endpoint_type='EDGE',
+            api_gateway_custom_domain={
+                "certificate_arn": "my_cert_arn",
+                "domain_name": "example.com",
+                "tls_version": "TLS_1_2",
+                "tags": {"foo": "bar", "bar": "baz"},
+            }
+        )
+        template = self.generate_template(config, 'dev')
+        domain = template['Resources']['ApiGatewayCustomDomain']
+        mapping = template['Resources']['ApiGatewayCustomDomainMapping']
+        assert domain == {
+            'Type': 'AWS::ApiGateway::DomainName',
+            'Properties': {
+                'CertificateArn': 'my_cert_arn',
+                'DomainName': 'example.com',
+                'SecurityPolicy': 'TLS_1_2',
+                'EndpointConfiguration': {
+                    'Types': ['EDGE']
+                },
+                'Tags': [
+                    {'Key': 'bar',
+                     'Value': 'baz'},
+                    {'Key': 'foo',
+                     'Value': 'bar'}
+                ]
+            }
+        }
+        assert mapping == {
+            'Type': 'AWS::ApiGateway::BasePathMapping',
+            'Properties': {
+                'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
+                'RestApiId': {'Ref': 'RestAPI'},
+                'Stage': {'Ref': 'RestAPI.Stage'},
+                'BasePath': '(none)',
+            }
+        }
+
+    def test_can_generate_domain_for_regional_endpoint(self, sample_app):
+        config = Config.create(
+            chalice_app=sample_app,
+            project_dir='.',
+            api_gateway_stage='api',
+            api_gateway_endpoint_type='REGIONAL',
+            api_gateway_custom_domain={
+                "certificate_arn": "my_cert_arn",
+                "domain_name": "example.com",
+            }
+        )
+        template = self.generate_template(config, 'dev')
+        domain = template['Resources']['ApiGatewayCustomDomain']
+        mapping = template['Resources']['ApiGatewayCustomDomainMapping']
+        assert domain == {
+            'Type': 'AWS::ApiGateway::DomainName',
+            'Properties': {
+                'RegionalCertificateArn': 'my_cert_arn',
+                'DomainName': 'example.com',
+                'EndpointConfiguration': {
+                    'Types': ['REGIONAL']
+                }
+            }
+        }
+        assert mapping == {
+            'Type': 'AWS::ApiGateway::BasePathMapping',
+            'Properties': {
+                'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
+                'RestApiId': {'Ref': 'RestAPI'},
+                'Stage': {'Ref': 'RestAPI.Stage'},
+                'BasePath': '(none)',
+            }
+        }
+
+    def test_can_generate_domain_for_ws_endpoint(self, sample_websocket_app):
+        config = Config.create(
+            chalice_app=sample_websocket_app,
+            project_dir='.',
+            api_gateway_stage='api',
+            websocket_api_custom_domain={
+                "certificate_arn": "my_cert_arn",
+                "domain_name": "example.com",
+                'tags': {'foo': 'bar', 'bar': 'baz'},
+            }
+        )
+        template = self.generate_template(config, 'dev')
+        domain = template['Resources']['WebsocketApiCustomDomain']
+        mapping = template['Resources']['WebsocketApiCustomDomainMapping']
+        assert domain == {
+            'Type': 'AWS::ApiGatewayV2::DomainName',
+            'Properties': {
+                'DomainName': 'example.com',
+                'DomainNameConfigurations': [
+                    {'CertificateArn': 'my_cert_arn',
+                     'EndpointType': 'REGIONAL'},
+                ],
+                'Tags': {
+                    'foo': 'bar',
+                    'bar': 'baz'
+                },
+            }
+        }
+        assert mapping == {
+            'Type': 'AWS::ApiGatewayV2::ApiMapping',
+            'Properties': {
+                'DomainName': {'Ref': 'WebsocketApiCustomDomain'},
+                'ApiId': {'Ref': 'WebsocketAPI'},
+                'Stage': {'Ref': 'WebsocketAPIStage'},
+                'ApiMappingKey': '(none)',
             }
         }
 

@@ -13,21 +13,29 @@ from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 
 InstructionMsg = Union[models.Instruction, Tuple[models.Instruction, str]]
 MarkedResource = Dict[str, List[models.RecordResource]]
+CacheTuples = Union[Tuple[str, str, str], Tuple[str, str]]
+ApiMap = Union[models.RestAPI, models.WebsocketAPI]
 
 
 class RemoteState(object):
     def __init__(self, client, deployed_resources):
         # type: (TypedAWSClient, DeployedResources) -> None
         self._client = client
-        self._cache = {}  # type: Dict[Tuple[str, str], bool]
+        self._cache = {}  # type: Dict[CacheTuples, bool]
         self._deployed_resources = deployed_resources
 
     def _cache_key(self, resource):
-        # type: (models.ManagedModel) -> Tuple[str, str]
-        return (resource.resource_type, resource.resource_name)
+        # type: (models.ManagedModel) -> CacheTuples
+        if isinstance(resource, models.APIMapping):
+            return (
+                resource.resource_type,
+                resource.resource_name,
+                resource.mount_path
+            )
+        return resource.resource_type, resource.resource_name
 
     def resource_deployed_values(self, resource):
-        # type: (models.ManagedModel) -> Dict[str, str]
+        # type: (models.ManagedModel) -> Dict[str, Any]
         try:
             return self._deployed_resources.resource_values(
                 resource.resource_name)
@@ -47,8 +55,8 @@ class RemoteState(object):
         raise ValueError("Deployed values for resource does not exist: %s"
                          % resource.resource_name)
 
-    def resource_exists(self, resource):
-        # type: (models.ManagedModel) -> bool
+    def resource_exists(self, resource, *args):
+        # type: (models.ManagedModel, Optional[Any]) -> bool
         key = self._cache_key(resource)
         if key in self._cache:
             return self._cache[key]
@@ -58,7 +66,7 @@ class RemoteState(object):
         except AttributeError:
             raise ValueError("RemoteState received an unsupported resource: %s"
                              % resource.resource_type)
-        result = handler(resource)
+        result = handler(resource, *args)
         self._cache[key] = result
         return result
 
@@ -100,6 +108,23 @@ class RemoteState(object):
             return True
         except ResourceDoesNotExistError:
             return False
+
+    def _resource_exists_apimapping(self, resource, domain_name):
+        # type: (models.APIMapping, str) -> bool
+        map_key = resource.mount_path
+        if map_key == '(none)':
+            map_key = ''
+        elif map_key.startswith('/'):
+            map_key = map_key.lstrip('/')
+
+        return self._client.api_mapping_exists(domain_name, map_key)
+
+    def _resource_exists_domainname(self, resource):
+        # type: (models.DomainName) -> bool
+        if resource.protocol == models.APIType.WEBSOCKET:
+            return self._client.domain_name_exists_v2(
+                resource.domain_name)
+        return self._client.domain_name_exists(resource.domain_name)
 
     def _resource_exists_restapi(self, resource):
         # type: (models.RestAPI) -> bool
@@ -158,6 +183,169 @@ class PlanStage(object):
     # TODO: This code will likely be refactored and pulled into
     # per-resource classes so the PlanStage object doesn't need
     # to know about every type of resource.
+
+    def _add_apimapping_plan(self,
+                             resource,    # type: models.APIMapping
+                             domain_name  # type: models.DomainName
+                             ):
+        # type: (...) -> Sequence[InstructionMsg]
+        api_calls = []  # type: List[InstructionMsg]
+        params = {
+            'domain_name': domain_name.domain_name,
+            'path_key': resource.mount_path,
+            'stage': resource.api_gateway_stage
+        }  # type: Dict[str, Any]
+        if domain_name.protocol == models.APIType.WEBSOCKET:
+            params['api_id'] = Variable('websocket_api_id')
+            variable_name = 'websocket_api_mapping'
+            api_call = models.APICall(
+                method_name='create_api_mapping',
+                params=params,
+                output_var='api_mapping'
+            )
+        else:
+            params['api_id'] = Variable('rest_api_id')
+            variable_name = 'rest_api_mapping'
+            api_call = models.APICall(
+                method_name='create_base_path_mapping',
+                params=params,
+                output_var='api_mapping'
+            )
+
+        if not self._remote_state.resource_exists(
+                resource, domain_name.domain_name
+        ):
+            path_to_print = '/'
+            if resource.mount_path != '(none)' and \
+                    not resource.mount_path.startswith("/"):
+                path_to_print = '/%s' % resource.mount_path
+            api_calls.extend([
+                (api_call, "Creating api mapping: %s\n" % path_to_print),
+                models.StoreMultipleValue(
+                    name=variable_name,
+                    value=[Variable('api_mapping')]
+                ),
+                models.RecordResourceVariable(
+                    resource_type='domain_name',
+                    resource_name=domain_name.resource_name,
+                    name='api_mapping',
+                    variable_name=variable_name
+                ),
+            ])
+        else:
+            deployed = self._remote_state.resource_deployed_values(
+                domain_name
+            )
+            for api_mapping in deployed['api_mapping']:
+
+                mount_path = api_mapping['key'].lstrip('/')
+                if not mount_path:
+                    mount_path = '(none)'
+                if mount_path != resource.mount_path:
+                    continue
+
+                api_calls.extend([
+                    models.StoreMultipleValue(
+                        name=variable_name,
+                        value=[api_mapping]
+                    ),
+                    models.RecordResourceVariable(
+                        resource_type='domain_name',
+                        resource_name=domain_name.resource_name,
+                        name='api_mapping',
+                        variable_name=variable_name
+                    ),
+                ])
+        return api_calls
+
+    def _add_domainname_plan(self, resource, endpoint_type):
+        # type: (models.DomainName, str) -> Sequence[InstructionMsg]
+        api_calls = []  # type: List[InstructionMsg]
+
+        params = {
+            'protocol': resource.protocol.value,
+            'tags': resource.tags,
+            'endpoint_type': endpoint_type,
+            'domain_name': resource.domain_name,
+        }
+        params['certificate_arn'] = resource.certificate_arn
+        if resource.tls_version is not None:
+            params['security_policy'] = resource.tls_version.value
+
+        if not self._remote_state.resource_exists(resource):
+            domain_name_api_call = (
+                models.APICall(
+                    method_name='create_domain_name',
+                    params=params,
+                    output_var=resource.resource_name
+                ),
+                "Creating custom domain name: %s\n" % resource.domain_name
+            )
+
+        else:
+            domain_name_api_call = (
+                models.APICall(
+                    method_name='update_domain_name',
+                    params=params,
+                    output_var=resource.resource_name
+                ),
+                "Updating custom domain name: %s\n" % resource.domain_name
+            )
+
+        api_calls.extend([
+            domain_name_api_call,
+            models.StoreValue(
+                name='hosted_zone_id',
+                value=KeyDataVariable(resource.resource_name,
+                                      'hosted_zone_id')
+            ),
+            models.RecordResourceVariable(
+                resource_type='domain_name',
+                resource_name=resource.resource_name,
+                name='hosted_zone_id',
+                variable_name='hosted_zone_id'
+            ),
+            models.StoreValue(
+                name='alias_domain_name',
+                value=KeyDataVariable(resource.resource_name,
+                                      'alias_domain_name')
+            ),
+            models.RecordResourceVariable(
+                resource_type='domain_name',
+                resource_name=resource.resource_name,
+                name='alias_domain_name',
+                variable_name='alias_domain_name'
+            ),
+            models.StoreValue(
+                name='certificate_arn',
+                value=KeyDataVariable(resource.resource_name,
+                                      'certificate_arn')
+            ),
+            models.RecordResourceVariable(
+                resource_type='domain_name',
+                resource_name=resource.resource_name,
+                name='certificate_arn',
+                variable_name='certificate_arn'
+            ),
+            models.StoreValue(
+                name='security_policy',
+                value=KeyDataVariable(resource.resource_name,
+                                      'security_policy')
+            ),
+            models.RecordResourceVariable(
+                resource_type='domain_name',
+                resource_name=resource.resource_name,
+                name='security_policy',
+                variable_name='security_policy'
+            ),
+            models.RecordResourceValue(
+                resource_type='domain_name',
+                resource_name=resource.resource_name,
+                name='domain_name',
+                value=resource.domain_name
+            )
+        ])
+        return api_calls
 
     def _plan_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> Sequence[InstructionMsg]
@@ -823,7 +1011,16 @@ class PlanStage(object):
             main_plan += self._inject_websocket_integrations(configs)
             for route_key in routes:
                 main_plan += [self._create_route_for_key(route_key)]
-        return shared_plan_preamble + main_plan + shared_plan_epilogue
+
+        ws_plan = shared_plan_preamble + main_plan + shared_plan_epilogue
+
+        if resource.domain_name:
+            custom_domain_plan = self._add_custom_domain_plan(
+                resource.domain_name, 'REGIONAL',
+            )
+            ws_plan += custom_domain_plan
+
+        return ws_plan
 
     def _plan_restapi(self, resource):
         # type: (models.RestAPI) -> Sequence[InstructionMsg]
@@ -962,7 +1159,27 @@ class PlanStage(object):
             ]
 
         plan.extend(shared_plan_epilogue)
+
+        if resource.domain_name:
+            custom_domain_plan = self._add_custom_domain_plan(
+                resource.domain_name, resource.endpoint_type
+            )
+            plan += custom_domain_plan
+
         return plan
+
+    def _add_custom_domain_plan(self, resource, endpoint_type):
+        # type: (models.DomainName, str) -> Sequence[InstructionMsg]
+        result = []  # type: List[InstructionMsg]
+        custom_domain_plan = self._add_domainname_plan(
+            resource, endpoint_type
+        )
+        result += custom_domain_plan
+        api_mapping_plan = self._add_apimapping_plan(
+            resource.api_mapping, resource
+        )
+        result += api_mapping_plan
+        return result
 
     def _get_role_arn(self, resource):
         # type: (models.IAMRole) -> Union[str, Variable]
@@ -1025,3 +1242,22 @@ class PlanEncoder(json.JSONEncoder):
         if isinstance(o, StringFormat):
             return o.template
         return o
+
+
+class KeyDataVariable(object):
+    def __init__(self, name, key):
+        # type: (str, str) -> None
+        self.name = name
+        self.key = key
+
+    def __repr__(self):
+        # type: () -> str
+        return 'KeyDataVariable("%s", "%s")' % (self.name, self.key)
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return (
+            isinstance(other, KeyDataVariable) and
+            self.name == other.name and
+            self.key == other.key
+        )

@@ -572,6 +572,35 @@ def test_deployed_resource_does_not_exist():
         deployed.resource_values('bar')
 
 
+def test_deployed_api_mapping_resource():
+    deployed = DeployedResources(
+        {'resources': [
+            {'name': 'foo'},
+            {
+                "name": "api_gateway_custom_domain",
+                "resource_type": "domain_name",
+                "api_mapping": [
+                    {
+                        "key": "path_key"
+                    }
+                ]
+            }
+        ]}
+    )
+
+    name = 'api_gateway_custom_domain.api_mapping.path_key'
+    result = deployed.resource_values(name)
+    assert result == {
+        "name": "api_gateway_custom_domain",
+        "resource_type": "domain_name",
+        "api_mapping": [
+            {
+                "key": "path_key"
+            }
+        ]
+    }
+
+
 def test_deployed_resource_exists():
     deployed = DeployedResources(
         {'resources': [{'name': 'foo'}]}

@@ -1,27 +1,6 @@
-from pytest import fixture
 from attr import evolve
 
 from chalice.deploy import models
-
-
-@fixture
-def lambda_function():
-    return models.LambdaFunction(
-        resource_name='foo',
-        function_name='app-stage-foo',
-        deployment_package=None,
-        environment_variables={},
-        runtime='python2.7',
-        handler='app.app',
-        tags={},
-        timeout=None,
-        memory_size=None,
-        role=models.PreCreatedIAMRole(role_arn='foobar'),
-        security_group_ids=[],
-        subnet_ids=[],
-        layers=[],
-        reserved_concurrency=None,
-    )
 
 
 def test_can_instantiate_empty_application():
