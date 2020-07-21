@@ -128,7 +128,7 @@ You'll now need to register the ``"NameServers"`` shown in the output above
 with your domain registrar.
 
 
-Creating an ACM Certificate 
+Creating an ACM Certificate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now that we have our hosted zone, we'll need to create an ACM certificate
@@ -184,7 +184,8 @@ Next we'll create a CNAME record for
 ``_1234567891234567897eb5512d9fb554.chalice-demo-app.com.`` with a value of
 ``_123456789123456789e7495341c27cd1.jfrzftwwjs.acm-validations.aws.``::
 
-    $ aws route53 change-resource-record-sets --hosted-zone-id $OUR_HOSTED_ZONE_ID --change-batch \
+    $ aws route53 change-resource-record-sets \
+        --hosted-zone-id $OUR_HOSTED_ZONE_ID --change-batch \
     '{
       "Changes": [
         {
@@ -198,7 +199,7 @@ Next we'll create a CNAME record for
         }
       ]
     }'
-    
+
     # Command output:
     {
         "ChangeInfo": {
@@ -297,7 +298,7 @@ of ``chalice deploy`` above.
         }
       ]
     }'
-    
+
     # Command output:
     {
         "ChangeInfo": {
@@ -332,10 +333,7 @@ Next Steps
 ----------
 
 For more information on configuring custom domains, check out our
-`topic guide <https://aws.github.io/chalice/topics/domainname.html>`__
-on custom domains as well as the config file
-reference for the
-`api_gateway_custom_domain <https://aws.github.io/chalice/topics/configfile.html#api-gateway-custom-domain>`__
-and the
-`websocket_api_custom_domain <https://aws.github.io/chalice/topics/configfile.html#websocket-api-custom-domain>`__
-options.
+:doc:`topic guide <../topics/domainname>` on custom domains as well
+as the config file reference for the
+:ref:`custom-domain-config-options` and the
+:ref:`custom-domain-ws-config-options` options.

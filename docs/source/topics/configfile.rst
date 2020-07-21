@@ -135,35 +135,77 @@ seconds.
 A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See `AWS Lambda Layers Configuration`_.
 
+.. _custom-domain-config-options:
+
 ``api_gateway_custom_domain``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A mapping of key value pairs. Next keys should be present:
+A mapping of key value pairs. The following are required keys when
+specifying an ``api_gateway_custom_domain``:
 
-- domain_name - Custom domain name (api.example.com)
-- security_policy - The Transport Layer Security (TLS) version
-                    of the security policy for this domain name.
-- certificate_arn - the arn of AWS-managed certificate for current domain name.
-- url_prefixes - (optional) a list of Api mappings keys.
-- tags - (optional) a dictionary of tags.
+- ``domain_name``: The custom domain name to associated with the REST API
+  (api.example.com)
+- ``certificate_arn``: the ARN of ACM certificate for the current domain name.
+  If you're using a ``REGIONAL`` endpoint type for your API, the ACM
+  certificate **must** be in the same region as your API.  If you're using an
+  ``EDGE`` endpoint type, the certificate must be in ``us-east-1``.
 
-See `AWS Custom Domain names setup`_.
+You can also provide the following optional configuration:
 
+- ``tls_version`` - The Transport Layer Security (TLS) version of the security
+  policy for this domain name.  Defaults to ``TLS_1_2``, you an also provide
+  ``TLS_1_0`` for REST APIs.
+- ``url_prefix`` - A custom domain name plus a url_prefix (BasePathMapping)
+  specification identifies a deployed REST API in a given stage. With custom
+  domain names, you can set up your API's hostname, and choose a base path (for
+  example, `myservice`) to map the alternative URL to your API (for example
+  ``https://api.example.com/myservice``).  If you don't set any ``url_prefix``,
+  the resulting API's base URL is the same as the custom domain (for example
+  ``https://api.example.com/``).
+- tags - A dictionary of tags with the keys being the tag key, and the values
+  being the value for the tag.
+
+See the :doc:`domainname` documentation for more information on configuring
+your Chalice application with a custom domain name.
+
+See `AWS Custom Domain names setup`_ for the API Gateway documentation on
+configuring a custom domain name.
+
+.. _custom-domain-ws-config-options:
 
 ``websocket_api_custom_domain``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A mapping of key value pairs. Next keys should be present:
+A mapping of key value pairs. The following are required keys when
+specifying a ``websocket_api_custom_domain``:
 
-- domain_name - Custom domain name (api.example.com)
-- security_policy - The Transport Layer Security (TLS) version of
-                    the security policy for this domain name.
-- certificate_arn - the arn of AWS-managed certificate for current domain name.
-- url_prefixes - (optional) a list of Api mappings keys.
-- tags - (optional) a dictionary of tags.
+- ``domain_name``: The custom domain name to associated with the REST API
+  (api.example.com)
+- ``certificate_arn``: the ARN of ACM certificate for the current domain name.
+  If you're using a ``REGIONAL`` endpoint type for your API, the ACM
+  certificate **must** be in the same region as your API.  If you're using an
+  ``EDGE`` endpoint type, the certificate must be in ``us-east-1``.
 
-See `AWS Custom Domain names setup`_.
+You can also provide the following optional configuration:
 
+- ``tls_version`` - The Transport Layer Security (TLS) version of the security
+  policy for this domain name.  Defaults to ``TLS_1_2``, you an also provide
+  ``TLS_1_0`` for REST APIs.
+- ``url_prefix`` - A custom domain name plus a url_prefix (BasePathMapping)
+  specification identifies a deployed REST API in a given stage. With custom
+  domain names, you can set up your API's hostname, and choose a base path (for
+  example, `myservice`) to map the alternative URL to your API (for example
+  ``https://api.example.com/myservice``).  If you don't set any ``url_prefix``,
+  the resulting API's base URL is the same as the custom domain (for example
+  ``https://api.example.com/``).
+- tags - A dictionary of tags with the keys being the tag key, and the values
+  being the value for the tag.
+
+See the :doc:`domainname` documentation for more information on configuring
+your Chalice application with a custom domain name.
+
+See `AWS Custom Domain names setup`_ for the API Gateway documentation on
+configuring a custom domain name.
 
 ``manage_iam_role``
 ~~~~~~~~~~~~~~~~~~~
