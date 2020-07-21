@@ -8,6 +8,7 @@ Rest API Tutorials
    :maxdepth: 2
 
    basicrestapi
+   customdomain
 
 
 .. _websocket-tutorial:
