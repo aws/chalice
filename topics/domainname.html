@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Custom Domain Name &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    <title>Custom Domain Names &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -122,21 +122,46 @@
                     </ul>
                     
                     
-  <div class="section" id="custom-domain-name">
-<h1>Custom Domain Name<a class="headerlink" href="#custom-domain-name" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="custom-domain-names">
+<h1>Custom Domain Names<a class="headerlink" href="#custom-domain-names" title="Permalink to this headline">¶</a></h1>
 <p>Custom domain names are simpler and more intuitive URLs
 that you can provide to your API users.
 With custom domain names, you can set up your API’s hostname,
 and choose a base path to map the alternative URL to your API.</p>
-<p>AWS-managed certificate is required to configure custom domain name
-for REST API or for Websocket. See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains-prerequisites.html">Get certificate in AWS Certificate Manager</a></p>
-<p>Custom domain name can be configured per stage.</p>
+<p>You must have an AWS managed certificate created or imported through
+AWS Certificate Manager (ACM) in order to configure a custom domain name
+for REST and WebSocket APIs.
+See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains-prerequisites.html">Get certificate in AWS Certificate Manager</a>
+for more information.</p>
+<p>Custom domain name can be configured per Chalice stage.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This document describes the configuration option and process
+needed to configure a custom domain with your Chalice application.
+If you’d like a step-by-step example that walks you through configuring
+a custom domain for a Chalice app using Amazon Route53 and ACM, see
+the <a class="reference internal" href="../tutorials/customdomain.html"><span class="doc">Custom Domain Names</span></a> tutorial.</p>
+</div>
+<p>There are two steps to configuring a custom domain name.  First you must
+configure your Chalice app such that it creates the necessary resources
+and configuration when provisioning your REST or WebSocket APIs.  This
+is explained in the next two sections below.
+Then you must configure your DNS configuration to point your custom domain
+name to the domain name created by API Gateway.  This is explained in the
+<a class="reference internal" href="#dns-last-config"><span class="std std-ref">DNS Configuration</span></a> section below.</p>
 <div class="section" id="configure-custom-domain-name-for-rest-api">
 <h2>Configure custom domain name for REST API<a class="headerlink" href="#configure-custom-domain-name-for-rest-api" title="Permalink to this headline">¶</a></h2>
-<p>To create custom domain name for REST API only config.json should be modified.</p>
-<p>If <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> contains <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code> field,
-then while <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command is running, the custom domain
-name will be created.</p>
+<p>To create custom domain name for REST API, add the
+<code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code> configuration option to your
+<code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file.  You must specify the <code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>,
+which is the ARN of your ACM certificate associated with your domain as
+well as your <code class="docutils literal notranslate"><span class="pre">domain_name</span></code>.  The remaining fields are optional and
+may be omitted.  By default TLS 1.2 is used for your endpoint unless
+otherwise specified.</p>
+<p>Below is an example of all the configuration options you can specify
+when configuring a custom domain.  They are explained in the
+<a class="reference internal" href="configfile.html#custom-domain-config-options"><span class="std std-ref">api_gateway_custom_domain</span></a> section of the <a class="reference internal" href="configfile.html"><span class="doc">Configuration File</span></a>
+documentation.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -158,11 +183,14 @@ name will be created.</p>
 </div>
 </div>
 <div class="section" id="configure-custom-domain-name-for-websocket">
-<h2>Configure custom domain name for Websocket<a class="headerlink" href="#configure-custom-domain-name-for-websocket" title="Permalink to this headline">¶</a></h2>
-<p>To create custom domain name for REST API only config.json should be modified.</p>
-<p>If <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> contains the <code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code> field,
-then while <cite>chalice deploy</cite> command is running, the custom domain name
-will be created.</p>
+<h2>Configure custom domain name for WebSocket<a class="headerlink" href="#configure-custom-domain-name-for-websocket" title="Permalink to this headline">¶</a></h2>
+<p>To create custom domain name for WebSocket API, add the
+<code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code> configuration option to your
+<code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file.</p>
+<p>Below is an example of all the configuration options you can specify when
+configuring a custom domain for a WebSocket API.  They are explained in the
+<a class="reference internal" href="configfile.html#custom-domain-ws-config-options"><span class="std std-ref">websocket_api_custom_domain</span></a> section of the <a class="reference internal" href="configfile.html"><span class="doc">Configuration File</span></a>
+documentation.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -183,49 +211,37 @@ will be created.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="fields-description">
-<h2>Fields description<a class="headerlink" href="#fields-description" title="Permalink to this headline">¶</a></h2>
-<ul>
-<li><p class="first">domain_name:</p>
-<blockquote>
-<div><p>Custom domain name (api.example.com). Must match the domain registered
-with AWS Route53</p>
-</div></blockquote>
-</li>
-<li><p class="first">tls_version:</p>
-<blockquote>
-<div><p>The Transport Layer Security (TLS) version of the security policy for
-this domain name. The valid values are TLS_1_0 and TLS_1_2.</p>
-</div></blockquote>
-</li>
-<li><p class="first">certificate_arn:</p>
-<blockquote>
-<div><p>the arn of AWS-managed certificate for current domain name.</p>
-</div></blockquote>
-</li>
-<li><p class="first">url_prefix:</p>
-<blockquote>
-<div><p>(optional) A custom domain name plus a
-url_prefix (BasePathMapping) specification identifies a deployed
-RestApi in a given stage. With custom domain names, you can set up your
-API’s hostname, and choose a base path (for example, <cite>myservice</cite>) to
-map the alternative URL to your API
-(for example <code class="docutils literal notranslate"><span class="pre">https://api.example.com/myservice</span></code>).
-If you don’t set any Api mapping keys under a custom domain name,
-the resulting API’s base URL is the same as the custom domain
-(for example <code class="docutils literal notranslate"><span class="pre">https://api.example.com</span></code>).
-In this case, the custom domain name can’t support more than one API.
-Specify as <cite>/</cite> - the same as <cite>(none)</cite> -  means that callers haven’t
-to specify a base path name after the domain name.
-If <cite>/</cite> won’t be specified, it will be created by default.</p>
-</div></blockquote>
-</li>
-<li><p class="first">tags:</p>
-<blockquote>
-<div><p>(optional) a dictionary of tags associated with a domain name.</p>
-</div></blockquote>
-</li>
-</ul>
+<div class="section" id="dns-configuration">
+<span id="dns-last-config"></span><h2>DNS Configuration<a class="headerlink" href="#dns-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Chalice only configures your API Gateway API with the necessary resources
+and configuration so a custom domain can be used.  It does not alter any
+existing DNS records you have associated with your domain name.  After you’ve
+deployed your Chalice app with the configuration options described above,
+you’ll need to modify your DNS records to point to your API Gateway API
+using the web interface or API of your domain registrar associated with
+your domain name.  When you run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> with a custom domain
+configured, there will be two new fields in the output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
+Creating deployment package.
+Updating policy for IAM role: customdomain-dev
+Updating lambda function: customdomain-dev
+Updating rest API
+Creating custom domain name: api.chalice-demo-app.com
+Creating api mapping: /
+Resources deployed:
+  - Lambda ARN: arn:aws:lambda:us-west-2:0123456789:function:customdomain-dev
+  - Rest API URL: https://qxea58abcd.execute-api.us-west-2.amazonaws.com/api/
+  - Custom domain name:
+      HostedZoneId: Z1UJRXOUMOOFQ8
+      AliasDomainName: d-6vj4cynstd.execute-api.us-west-2.amazonaws.com
+</pre></div>
+</div>
+<p>If you’re using Route53 to manage your hosted zone, you’ll need to create
+an Alias record using the <code class="docutils literal notranslate"><span class="pre">HostedZoneId</span></code> and <code class="docutils literal notranslate"><span class="pre">AliasDomainName</span></code> specified
+in the output of <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.  If you’re using a third party domain
+registrar, you’ll need to create a CNAME record to the <code class="docutils literal notranslate"><span class="pre">AliasDomainName</span></code>.
+If you’d like a step-by-step example of how to do this with Route53, see
+the <a class="reference internal" href="../tutorials/customdomain.html"><span class="doc">Custom Domain Names</span></a> tutorial.</p>
 </div>
 </div>
 
@@ -250,10 +266,10 @@ If <cite>/</cite> won’t be specified, it will be created by default.</p>
                             </section>
                             
                             <ul>
-<li><a class="reference internal" href="#">Custom Domain Name</a><ul>
+<li><a class="reference internal" href="#">Custom Domain Names</a><ul>
 <li><a class="reference internal" href="#configure-custom-domain-name-for-rest-api">Configure custom domain name for REST API</a></li>
-<li><a class="reference internal" href="#configure-custom-domain-name-for-websocket">Configure custom domain name for Websocket</a></li>
-<li><a class="reference internal" href="#fields-description">Fields description</a></li>
+<li><a class="reference internal" href="#configure-custom-domain-name-for-websocket">Configure custom domain name for WebSocket</a></li>
+<li><a class="reference internal" href="#dns-configuration">DNS Configuration</a></li>
 </ul>
 </li>
 </ul>

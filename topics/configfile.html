@@ -231,36 +231,68 @@ seconds.</p>
 per Lambda function. See <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html">AWS Lambda Layers Configuration</a>.</p>
 </div>
 <div class="section" id="api-gateway-custom-domain">
-<h3><code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code><a class="headerlink" href="#api-gateway-custom-domain" title="Permalink to this headline">¶</a></h3>
-<p>A mapping of key value pairs. Next keys should be present:</p>
+<span id="custom-domain-config-options"></span><h3><code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code><a class="headerlink" href="#api-gateway-custom-domain" title="Permalink to this headline">¶</a></h3>
+<p>A mapping of key value pairs. The following are required keys when
+specifying an <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code>:</p>
 <ul class="simple">
-<li>domain_name - Custom domain name (api.example.com)</li>
-<li><dl class="first docutils">
-<dt>security_policy - The Transport Layer Security (TLS) version</dt>
-<dd>of the security policy for this domain name.</dd>
-</dl>
-</li>
-<li>certificate_arn - the arn of AWS-managed certificate for current domain name.</li>
-<li>url_prefixes - (optional) a list of Api mappings keys.</li>
-<li>tags - (optional) a dictionary of tags.</li>
+<li><code class="docutils literal notranslate"><span class="pre">domain_name</span></code>: The custom domain name to associated with the REST API
+(api.example.com)</li>
+<li><code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>: the ARN of ACM certificate for the current domain name.
+If you’re using a <code class="docutils literal notranslate"><span class="pre">REGIONAL</span></code> endpoint type for your API, the ACM
+certificate <strong>must</strong> be in the same region as your API.  If you’re using an
+<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the certificate must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.</li>
 </ul>
-<p>See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">AWS Custom Domain names setup</a>.</p>
+<p>You can also provide the following optional configuration:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
+policy for this domain name.  Defaults to <code class="docutils literal notranslate"><span class="pre">TLS_1_2</span></code>, you an also provide
+<code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</li>
+<li><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
+specification identifies a deployed REST API in a given stage. With custom
+domain names, you can set up your API’s hostname, and choose a base path (for
+example, <cite>myservice</cite>) to map the alternative URL to your API (for example
+<code class="docutils literal notranslate"><span class="pre">https://api.example.com/myservice</span></code>).  If you don’t set any <code class="docutils literal notranslate"><span class="pre">url_prefix</span></code>,
+the resulting API’s base URL is the same as the custom domain (for example
+<code class="docutils literal notranslate"><span class="pre">https://api.example.com/</span></code>).</li>
+<li>tags - A dictionary of tags with the keys being the tag key, and the values
+being the value for the tag.</li>
+</ul>
+<p>See the <a class="reference internal" href="domainname.html"><span class="doc">Custom Domain Names</span></a> documentation for more information on configuring
+your Chalice application with a custom domain name.</p>
+<p>See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">AWS Custom Domain names setup</a> for the API Gateway documentation on
+configuring a custom domain name.</p>
 </div>
 <div class="section" id="websocket-api-custom-domain">
-<h3><code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code><a class="headerlink" href="#websocket-api-custom-domain" title="Permalink to this headline">¶</a></h3>
-<p>A mapping of key value pairs. Next keys should be present:</p>
+<span id="custom-domain-ws-config-options"></span><h3><code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code><a class="headerlink" href="#websocket-api-custom-domain" title="Permalink to this headline">¶</a></h3>
+<p>A mapping of key value pairs. The following are required keys when
+specifying a <code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code>:</p>
 <ul class="simple">
-<li>domain_name - Custom domain name (api.example.com)</li>
-<li><dl class="first docutils">
-<dt>security_policy - The Transport Layer Security (TLS) version of</dt>
-<dd>the security policy for this domain name.</dd>
-</dl>
-</li>
-<li>certificate_arn - the arn of AWS-managed certificate for current domain name.</li>
-<li>url_prefixes - (optional) a list of Api mappings keys.</li>
-<li>tags - (optional) a dictionary of tags.</li>
+<li><code class="docutils literal notranslate"><span class="pre">domain_name</span></code>: The custom domain name to associated with the REST API
+(api.example.com)</li>
+<li><code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>: the ARN of ACM certificate for the current domain name.
+If you’re using a <code class="docutils literal notranslate"><span class="pre">REGIONAL</span></code> endpoint type for your API, the ACM
+certificate <strong>must</strong> be in the same region as your API.  If you’re using an
+<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the certificate must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.</li>
 </ul>
-<p>See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">AWS Custom Domain names setup</a>.</p>
+<p>You can also provide the following optional configuration:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
+policy for this domain name.  Defaults to <code class="docutils literal notranslate"><span class="pre">TLS_1_2</span></code>, you an also provide
+<code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</li>
+<li><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
+specification identifies a deployed REST API in a given stage. With custom
+domain names, you can set up your API’s hostname, and choose a base path (for
+example, <cite>myservice</cite>) to map the alternative URL to your API (for example
+<code class="docutils literal notranslate"><span class="pre">https://api.example.com/myservice</span></code>).  If you don’t set any <code class="docutils literal notranslate"><span class="pre">url_prefix</span></code>,
+the resulting API’s base URL is the same as the custom domain (for example
+<code class="docutils literal notranslate"><span class="pre">https://api.example.com/</span></code>).</li>
+<li>tags - A dictionary of tags with the keys being the tag key, and the values
+being the value for the tag.</li>
+</ul>
+<p>See the <a class="reference internal" href="domainname.html"><span class="doc">Custom Domain Names</span></a> documentation for more information on configuring
+your Chalice application with a custom domain name.</p>
+<p>See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">AWS Custom Domain names setup</a> for the API Gateway documentation on
+configuring a custom domain name.</p>
 </div>
 <div class="section" id="manage-iam-role">
 <h3><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code><a class="headerlink" href="#manage-iam-role" title="Permalink to this headline">¶</a></h3>

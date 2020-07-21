@@ -1,0 +1,488 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Custom Domain Names &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Echo Server Example" href="wsecho.html" />
+    <link rel="prev" title="REST API Tutorial" href="basicrestapi.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../main.html">Documentation</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Tutorials</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="custom-domain-names">
+<h1>Custom Domain Names<a class="headerlink" href="#custom-domain-names" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial, we’re going to create a REST API and associate our own custom
+domain with this REST API.  This allows us to not use the auto-generated domain
+name that API Gateway automatically creates when we deploy our REST API.</p>
+<div class="section" id="installation-and-configuration">
+<h2>Installation and Configuration<a class="headerlink" href="#installation-and-configuration" title="Permalink to this headline">¶</a></h2>
+<p>If you haven’t already setup and configured Chalice, see the
+<a class="reference internal" href="../quickstart.html"><span class="doc">Quickstart</span></a> for a step by step guide.  You can run these commands
+to create a basic Chalice app:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 --version
+Python 3.7.3
+$ python3 -m venv venv37
+$ . venv37/bin/activate
+$ python3 -m pip install chalice
+$ chalice new-project customdomain
+$ cd customdomain
+</pre></div>
+</div>
+</div>
+<div class="section" id="configure-and-deploy-a-regional-endpoint">
+<h2>Configure and Deploy a REGIONAL Endpoint<a class="headerlink" href="#configure-and-deploy-a-regional-endpoint" title="Permalink to this headline">¶</a></h2>
+<p>Before we configure a custom domain for our REST API, we’ll deploy
+our REST API so we can see the auto-generated domain name that API Gateway
+creates for us.</p>
+<p>First, we’ll change our endpoint type from EDGE (the default) to REGIONAL.
+Update your <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file so it looks like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cat .chalice/config.json
+{
+  &quot;version&quot;: &quot;2.0&quot;,
+  &quot;app_name&quot;: &quot;customdomain&quot;,
+  &quot;api_gateway_endpoint_type&quot;: &quot;REGIONAL&quot;,
+  &quot;stages&quot;: {
+    &quot;dev&quot;: {
+      &quot;api_gateway_stage&quot;: &quot;api&quot;
+    }
+  }
+}
+</pre></div>
+</div>
+<p>Now we’ll deploy our application.  Note the URL that’s printed when
+your application is deployed.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
+Creating deployment package.
+Creating IAM role: customdomain-dev
+Creating lambda function: customdomain-dev
+Creating Rest API
+Resources deployed:
+  - Lambda ARN: arn:aws:lambda:us-west-2:12345:function:customdomain-dev
+  - Rest API URL: https://qxea58abcd.execute-api.us-west-2.amazonaws.com/api/
+</pre></div>
+</div>
+<p>You now have an API up and running using API Gateway and Lambda:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ curl https://qxea58abcd.execute-api.us-west-2.amazonaws.com/api/
+{&quot;hello&quot;: &quot;world&quot;}
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">qxea58abcd.execute-api.us-west-2.amazonaws.com</span></code> domain name was
+auto-generated by API Gateway.  Replacing this domain name with our own
+custom domain name allows us to use simpler and more intuitive URLs that
+we can provide to our API users.</p>
+</div>
+<div class="section" id="configuring-a-custom-domain">
+<h2>Configuring a Custom Domain<a class="headerlink" href="#configuring-a-custom-domain" title="Permalink to this headline">¶</a></h2>
+<p>In this tutorial, we’re using Amazon Route53 to manage our DNS configuration.
+If you’re using a third-party domain registrar, the steps will be similar, but
+you will have to create your DNS records using your provider’s web interface or
+API.</p>
+<p>For this tutorial, we’ll configure the domain <code class="docutils literal notranslate"><span class="pre">chalice-demo-app.com</span></code>.  Be
+sure to replace this value with your own domain name.</p>
+<div class="section" id="creating-a-hosted-zone">
+<h3>Creating a Hosted Zone<a class="headerlink" href="#creating-a-hosted-zone" title="Permalink to this headline">¶</a></h3>
+<p>First, we’ll need to create a hosted zone in Route 53.  If you already have
+a hosted zone created for your domain, you can skip this step.</p>
+<p>We’ll be using the AWS CLI V2 to configure our domain.  You can follow
+the
+<a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html">installation instructions</a>
+if you don’t have the AWS CLI installed.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws route53 create-hosted-zone --name chalice-demo-app.com --caller-reference 12345
+{
+    &quot;Location&quot;: &quot;https://route53.amazonaws.com/2013-04-01/hostedzone/ZABCDEFGABCDEFGLDO822&quot;,
+    &quot;HostedZone&quot;: {
+        &quot;Id&quot;: &quot;/hostedzone/ZABCDEFGABCDEFGLDO822&quot;,
+        &quot;Name&quot;: &quot;chalice-demo-app.com.&quot;,
+        &quot;CallerReference&quot;: &quot;12345&quot;,
+        &quot;Config&quot;: {
+            &quot;PrivateZone&quot;: false
+        },
+        &quot;ResourceRecordSetCount&quot;: 2
+    },
+    &quot;ChangeInfo&quot;: {
+        &quot;Id&quot;: &quot;/change/C07395431VDLB0CY65VP&quot;,
+        &quot;Status&quot;: &quot;PENDING&quot;,
+        &quot;SubmittedAt&quot;: &quot;2020-07-21T17:13:54.709000+00:00&quot;
+    },
+    &quot;DelegationSet&quot;: {
+        &quot;NameServers&quot;: [
+            &quot;ns-123.awsdns-31.net&quot;,
+            &quot;ns-123.awsdns-05.com&quot;,
+            &quot;ns-123.awsdns-09.org&quot;,
+            &quot;ns-123.awsdns-40.co.uk&quot;
+        ]
+    }
+}
+</pre></div>
+</div>
+<p>You’ll need to save the value of the hosted zone id for later.
+From the output above the line <code class="docutils literal notranslate"><span class="pre">&quot;Id&quot;:</span> <span class="pre">&quot;/hostedzone/ZABCDEFGABCDEFGLDO822&quot;,</span></code>
+contains our hosted zone id of <code class="docutils literal notranslate"><span class="pre">ZABCDEFGABCDEFGLDO822</span></code>.  We’ll refer
+to this value as <code class="docutils literal notranslate"><span class="pre">$OUR_HOSTED_ZONE_ID</span></code> later.</p>
+<p>You’ll now need to register the <code class="docutils literal notranslate"><span class="pre">&quot;NameServers&quot;</span></code> shown in the output above
+with your domain registrar.</p>
+</div>
+<div class="section" id="creating-an-acm-certificate">
+<h3>Creating an ACM Certificate<a class="headerlink" href="#creating-an-acm-certificate" title="Permalink to this headline">¶</a></h3>
+<p>Now that we have our hosted zone, we’ll need to create an ACM certificate
+associated with this domain.  This is the SSL/TLS certificate that will be
+used when requests are made to our custom domain.  In this example, we’ll
+create a wildcard certificate for <code class="docutils literal notranslate"><span class="pre">*.chalice-demo-app.com</span></code>.  Note that
+we’re creating a <code class="docutils literal notranslate"><span class="pre">REGIONAL</span></code> endpoint type for our REST API, which means
+that our ACM certificate <strong>must</strong> be in the same region as our REST API.
+In this example, we’re using <code class="docutils literal notranslate"><span class="pre">us-west-2</span></code>.  If you’re using the default
+<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the ACM cert must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.  You can
+explicitly specify the region using the <code class="docutils literal notranslate"><span class="pre">--region</span></code> CLI parameter if needed.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws acm request-certificate --domain-name &quot;*.chalice-demo-app.com&quot; \
+    --validation-method DNS --idempotency-token 12345 \
+    --options CertificateTransparencyLoggingPreference=DISABLED
+{
+    &quot;CertificateArn&quot;: &quot;arn:aws:acm:us-west-2:0123456789:certificate/578efbda-6bc7-4ae2-9964-6e6c3f58008b&quot;
+}
+</pre></div>
+</div>
+<p>Save the value of <code class="docutils literal notranslate"><span class="pre">CertificateArn</span></code> shown in the output above.  We’ll
+need this value when we configure our app to use this custom domain.</p>
+<p>Before we can use this certificate, we need to validate this certificate.
+This process demonstrates that we own or control the domain name associated
+with the certificate.
+In the command above, we used the <code class="docutils literal notranslate"><span class="pre">--validation-method</span> <span class="pre">DNS</span></code>, which
+requires us to add CNAME records to validate we control our domain name.
+ACM supports both <a class="reference external" href="https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-validate-dns.html">DNS validation</a>
+as well as <a class="reference external" href="https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-validate-email.html">email validation</a>.</p>
+<p>To validate our domain, we’ll now create the necessary CNAME records in our
+hosted zone using the Route53 API.  First, we need to retrieve the values
+for our CNAME record.  Be sure to replace the value of <code class="docutils literal notranslate"><span class="pre">--certificate-arn</span></code>
+with your own certificate ARN in the command below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws acm describe-certificate --certificate-arn arn:aws:acm:us-west-2:0123456789:certificate/578efbda-6bc7-4ae2-9964-6e6c3f58008b \
+    --query Certificate.DomainValidationOptions[0]
+{
+    &quot;DomainName&quot;: &quot;*.chalice-demo-app.com&quot;,
+    &quot;ValidationDomain&quot;: &quot;*.chalice-demo-app.com&quot;,
+    &quot;ValidationStatus&quot;: &quot;PENDING_VALIDATION&quot;,
+    &quot;ResourceRecord&quot;: {
+        &quot;Name&quot;: &quot;_1234567891234567897eb5512d9fb554.chalice-demo-app.com.&quot;,
+        &quot;Type&quot;: &quot;CNAME&quot;,
+        &quot;Value&quot;: &quot;_123456789123456789e7495341c27cd1.jfrzftwwjs.acm-validations.aws.&quot;
+    },
+    &quot;ValidationMethod&quot;: &quot;DNS&quot;
+}
+</pre></div>
+</div>
+<p>Next we’ll create a CNAME record for
+<code class="docutils literal notranslate"><span class="pre">_1234567891234567897eb5512d9fb554.chalice-demo-app.com.</span></code> with a value of
+<code class="docutils literal notranslate"><span class="pre">_123456789123456789e7495341c27cd1.jfrzftwwjs.acm-validations.aws.</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws route53 change-resource-record-sets \
+    --hosted-zone-id $OUR_HOSTED_ZONE_ID --change-batch \
+&#39;{
+  &quot;Changes&quot;: [
+    {
+      &quot;Action&quot;: &quot;CREATE&quot;,
+      &quot;ResourceRecordSet&quot;: {
+        &quot;Name&quot;: &quot;_0073e080112eb8de8c7eb5512d9fb554.chalice-demo-app.com.&quot;,
+        &quot;Type&quot;: &quot;CNAME&quot;,
+        &quot;TTL&quot;: 300,
+        &quot;ResourceRecords&quot;: [{&quot;Value&quot;: &quot;_6e560a5a9831aad210e7495341c27cd1.jfrzftwwjs.acm-validations.aws.&quot;}]
+      }
+    }
+  ]
+}&#39;
+
+# Command output:
+{
+    &quot;ChangeInfo&quot;: {
+        &quot;Id&quot;: &quot;/change/C0339874QPDDRA8TKT7U&quot;,
+        &quot;Status&quot;: &quot;PENDING&quot;,
+        &quot;SubmittedAt&quot;: &quot;2020-07-21T17:36:39.902000+00:00&quot;
+    }
+}
+</pre></div>
+</div>
+<p>It will take a few minutes before ACM validates your domain.  You can
+move on to the next steps, or if you’d like to wait until the domain is
+validated you can use the CLI’s <code class="docutils literal notranslate"><span class="pre">certificate-validated</span></code> waiter, which
+will block until the ACM certificate is validated:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws acm wait certificate-validated \
+    --certificate-arn arn:aws:acm:us-west-2:0123456789:certificate/578efbda-6bc7-4ae2-9964-6e6c3f58008b
+</pre></div>
+</div>
+</div>
+<div class="section" id="chalice-app-configuration">
+<h3>Chalice App Configuration<a class="headerlink" href="#chalice-app-configuration" title="Permalink to this headline">¶</a></h3>
+<p>Now that we have our hosted zone and ACM certificate created, we can configure
+our Chalice application with our custom domain.  To do so we need to add
+<a class="reference external" href="https://aws.github.io/chalice/topics/configfile.html#api-gateway-custom-domain">api_gateway_custom_domain</a>
+configuration option and specify our ACM certificate ARN as well as the our
+custom domain name.  You’re <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file should look like
+this:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;customdomain&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;api_gateway_endpoint_type&quot;</span><span class="p">:</span> <span class="s2">&quot;REGIONAL&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;api_gateway_custom_domain&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;domain_name&quot;</span><span class="p">:</span> <span class="s2">&quot;api.chalice-demo-app.com&quot;</span><span class="p">,</span>
+        <span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:acm:us-west-2:0123456789:certificate/578efbda-6bc7-4ae2-9964-6e6c3f58008b&quot;</span>
+      <span class="p">},</span>
+      <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>We we rerun the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command you’ll notice there’s a new
+<code class="docutils literal notranslate"><span class="pre">Custom</span> <span class="pre">domain</span> <span class="pre">name:</span></code> line in the output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
+Creating deployment package.
+Updating policy for IAM role: customdomain-dev
+Updating lambda function: customdomain-dev
+Updating rest API
+Creating custom domain name: api.chalice-demo-app.com
+Creating api mapping: /
+Resources deployed:
+  - Lambda ARN: arn:aws:lambda:us-west-2:0123456789:function:customdomain-dev
+  - Rest API URL: https://qxea58abcd.execute-api.us-west-2.amazonaws.com/api/
+  - Custom domain name:
+      HostedZoneId: Z1UJRXOUMOOFQ8
+      AliasDomainName: d-6vj4cynstd.execute-api.us-west-2.amazonaws.com
+</pre></div>
+</div>
+<p>Now that we’ve configured our Chalice app with our custom domain, there’s one
+step left.  We need to update our DNS configuration to point to our REST API.</p>
+<p>To do this, we’ll use the values of <code class="docutils literal notranslate"><span class="pre">HostedZoneId</span></code> and <code class="docutils literal notranslate"><span class="pre">AliasDomainName</span></code>
+in the output above to create an alias record in our hosted zone.</p>
+</div>
+<div class="section" id="alias-record-configuration">
+<h3>Alias Record Configuration<a class="headerlink" href="#alias-record-configuration" title="Permalink to this headline">¶</a></h3>
+<p>You can run the following command to create an alias record to your REST API.
+Note that there are two different hosted zone id values here.  The value
+specified as the <code class="docutils literal notranslate"><span class="pre">--hosted-zone-id</span></code> value is the ID of our hosted zone
+ID (<code class="docutils literal notranslate"><span class="pre">$OUR_HOSTED_ZONE_ID</span></code>) that we created earlier in this example.
+The value of the <code class="docutils literal notranslate"><span class="pre">HostedZoneId</span></code> in the <code class="docutils literal notranslate"><span class="pre">AliasTarget</span></code> section is the
+value of the <code class="docutils literal notranslate"><span class="pre">HostedZoneId</span></code> generated by API Gateway shown in the output
+of <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> above.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws route53 change-resource-record-sets --hosted-zone-id ZABCDEFGABCDEFGLDO822 --change-batch \
+&#39;{
+  &quot;Changes&quot;: [
+    {
+      &quot;Action&quot;: &quot;CREATE&quot;,
+      &quot;ResourceRecordSet&quot;: {
+        &quot;Name&quot;: &quot;api.chalice-demo-app.com&quot;,
+        &quot;Type&quot;: &quot;A&quot;,
+        &quot;AliasTarget&quot;: {
+          &quot;DNSName&quot;: &quot;d-6vj4cynstd.execute-api.us-west-2.amazonaws.com&quot;,
+          &quot;HostedZoneId&quot;: &quot;Z1UJRXOUMOOFQ8&quot;,
+          &quot;EvaluateTargetHealth&quot;: false
+        }
+      }
+    }
+  ]
+}&#39;
+
+# Command output:
+{
+    &quot;ChangeInfo&quot;: {
+        &quot;Id&quot;: &quot;/change/C0539657Y0HMX8XBC5EH&quot;,
+        &quot;Status&quot;: &quot;PENDING&quot;,
+        &quot;SubmittedAt&quot;: &quot;2020-07-21T17:52:34.935000+00:00&quot;
+    }
+}
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="verification">
+<h2>Verification<a class="headerlink" href="#verification" title="Permalink to this headline">¶</a></h2>
+<p>Our Chalice application is now configured to use our custom domain.
+We can verify this by making a request to our custom domain.  In this
+example, this is <code class="docutils literal notranslate"><span class="pre">api.chalice-demo-app.com</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ curl -i https://api.chalice-demo-app.com/
+HTTP/1.1 200 OK
+Date: Tue, 21 Jul 2020 17:56:00 GMT
+Content-Type: application/json
+Content-Length: 17
+Connection: keep-alive
+x-amzn-RequestId: 9f33fbb9-6b10-469e-827f-f287199c9bc5
+x-amz-apigw-id: QCPXoEwPIAMFi8Q=
+X-Amzn-Trace-Id: Root=1-5f172c30-dccc232932a16a539dfc01b9;Sampled=0
+
+{&quot;hello&quot;:&quot;world&quot;}
+</pre></div>
+</div>
+</div>
+<div class="section" id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>For more information on configuring custom domains, check out our
+<a class="reference internal" href="../topics/domainname.html"><span class="doc">topic guide</span></a> on custom domains as well
+as the config file reference for the
+<a class="reference internal" href="../topics/configfile.html#custom-domain-config-options"><span class="std std-ref">api_gateway_custom_domain</span></a> and the
+<a class="reference internal" href="../topics/configfile.html#custom-domain-ws-config-options"><span class="std std-ref">websocket_api_custom_domain</span></a> options.</p>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="basicrestapi.html" title="previous chapter" class="previous-page clearfix hidden-xs">← REST API Tutorial</a>
+                        
+                        <a href="wsecho.html" title="next chapter" class="next-page clearfix">Echo Server Example →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="basicrestapi.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="wsecho.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Custom Domain Names</a><ul>
+<li><a class="reference internal" href="#installation-and-configuration">Installation and Configuration</a></li>
+<li><a class="reference internal" href="#configure-and-deploy-a-regional-endpoint">Configure and Deploy a REGIONAL Endpoint</a></li>
+<li><a class="reference internal" href="#configuring-a-custom-domain">Configuring a Custom Domain</a><ul>
+<li><a class="reference internal" href="#creating-a-hosted-zone">Creating a Hosted Zone</a></li>
+<li><a class="reference internal" href="#creating-an-acm-certificate">Creating an ACM Certificate</a></li>
+<li><a class="reference internal" href="#chalice-app-configuration">Chalice App Configuration</a></li>
+<li><a class="reference internal" href="#alias-record-configuration">Alias Record Configuration</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#verification">Verification</a></li>
+<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>
