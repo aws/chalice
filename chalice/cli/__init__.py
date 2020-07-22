@@ -20,9 +20,9 @@ from typing import Dict, Any, Optional  # noqa
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
+from chalice.awsclient import ResourceDoesNotExistError
 from chalice.awsclient import ReadTimeout
 from chalice.cli.factory import CLIFactory
-from chalice.cli.factory import NoSuchFunctionError
 from chalice.config import Config  # noqa
 from chalice.logs import display_logs, LogRetrieveOptions
 from chalice.utils import create_zip_file
@@ -123,11 +123,23 @@ def cli(ctx, project_dir, debug=False):
 @click.option('--autoreload/--no-autoreload',
               default=True,
               help='Automatically restart server when code changes.')
+@click.option('--use-container/--no-container',
+              default=False,
+              help='Use local AWS Lambda containers to emulate the Lambda'
+                   ' deployment environment.')
 @click.pass_context
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
-          autoreload=True):
-    # type: (click.Context, str, int, str, bool) -> None
+          autoreload=True, use_container=False):
+    # type: (click.Context, str, int, str, bool, bool) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
+    if use_container:    # todo: or option from from config file
+        run_proxy_server(factory, host, port, stage)
+    else:
+        run_rest_server(factory, host, port, stage, autoreload)
+
+
+def run_rest_server(factory, host, port, stage, autoreload):
+    # type: (CLIFactory, str, int, str, bool) -> None
     from chalice.cli import reloader
     # We don't create the server here because that will bind the
     # socket and we only want to do this in the worker process.
@@ -170,6 +182,25 @@ def run_local_server(factory, host, port, stage):
     # type: (CLIFactory, str, int, str) -> None
     server = create_local_server(factory, host, port, stage)
     server.serve_forever()
+
+
+def run_proxy_server(factory, host, port, stage):
+    # type: (CLIFactory, str, int, str) -> None
+    config = factory.create_config_obj(
+        chalice_stage_name=stage
+    )
+    ui = UI()
+    # Check that `chalice deploy` would let us deploy these routes, otherwise
+    # there is no point in testing locally.
+    routes = config.chalice_app.routes
+    validate_routes(routes)
+    image_builder = factory.create_lambda_image_builder(ui)
+    resource_manager = factory.create_container_proxy_resource_manager(
+        config, ui, image_builder)
+    server_runner = factory.create_proxy_server_runner(config, stage, host,
+                                                       port, resource_manager,
+                                                       use_container=True)
+    server_runner.run()
 
 
 @cli.command()
@@ -300,9 +331,16 @@ def appgraph(ctx, autogen_policy, profile, api_gateway_stage, stage):
               help=('Name of the Chalice stage to deploy to. '
                     'Specifying a new chalice stage will create '
                     'an entirely new set of AWS resources.'))
+@click.option('--endpoint-url', metavar='ENDPOINT_URL', default=None,
+              help='The endpoint url to use for invoking.')
+@click.option('--local', 'local_endpoint', metavar="LOCAL",
+              is_flag=True, default=False,
+              help=('Use the default local Lambda endpoint (localhost:8000). '
+                    'This option takes precedence over endpoint-url '
+                    'if both are specified.'))
 @click.pass_context
-def invoke(ctx, name, profile, stage):
-    # type: (click.Context, str, str, str) -> None
+def invoke(ctx, name, profile, stage, endpoint_url, local_endpoint):
+    # type: (click.Context, str, str, str, str, bool) -> None
     """Invoke the deployed lambda function NAME.
 
     Reads payload from STDIN.
@@ -310,13 +348,17 @@ def invoke(ctx, name, profile, stage):
     factory = ctx.obj['factory']  # type: CLIFactory
     factory.profile = profile
 
+    if local_endpoint:
+        endpoint_url = "http://localhost:8000"
+
     try:
-        invoke_handler = factory.create_lambda_invoke_handler(name, stage)
+        invoke_handler = factory.create_lambda_invoke_handler(
+            name, stage, endpoint_url=endpoint_url)
         payload = factory.create_stdin_reader().read()
         invoke_handler.invoke(payload)
-    except NoSuchFunctionError as e:
+    except ResourceDoesNotExistError:
         err = click.ClickException(
-            "could not find a lambda function named %s." % e.name)
+            "could not find a Lambda function named %s." % name)
         err.exit_code = 2
         raise err
     except botocore.exceptions.ClientError as e:

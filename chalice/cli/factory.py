@@ -6,15 +6,19 @@ import logging
 import functools
 
 import click
+import requests
 from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
-from typing import Any, Optional, Dict, MutableMapping, cast  # noqa
+from typing import Any, Optional, List, Dict, MutableMapping, cast  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.awsclient import TypedAWSClient
 from chalice.app import Chalice  # noqa
 from chalice.config import Config
 from chalice.config import DeployedResources  # noqa
+from chalice.docker import LayerDownloader, LambdaImageBuilder
+from chalice.local import (ProxyServerRunner, ContainerProxyResourceManager,
+                           ContainerProxyHandler)
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.package import PackageOptions
@@ -25,10 +29,15 @@ from chalice.logs import LogRetriever, LogEventGenerator
 from chalice.logs import FollowLogEventGenerator
 from chalice.logs import BaseLogEventGenerator
 from chalice import local
-from chalice.utils import UI  # noqa
+from chalice.utils import UI, OSUtils  # noqa
 from chalice.utils import PipeReader  # noqa
 from chalice.deploy import deployer  # noqa
 from chalice.deploy import validate
+from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
+from chalice.deploy.models import LambdaFunction
+from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
+from chalice.deploy.packager import (LambdaDeploymentPackager,
+                                     PipRunner, SubprocessPip)
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import LambdaInvoker
 from chalice.invoke import LambdaResponseFormatter
@@ -36,6 +45,7 @@ from chalice.invoke import LambdaResponseFormatter
 
 OptStr = Optional[str]
 OptInt = Optional[int]
+LambdaList = List[LambdaFunction]
 
 
 def create_botocore_session(profile=None, debug=False,
@@ -213,16 +223,10 @@ class CLIFactory(object):
         reader = PipeReader(stream)
         return reader
 
-    def create_lambda_invoke_handler(self, name, stage):
-        # type: (str, str) -> LambdaInvokeHandler
+    def create_lambda_invoke_handler(self, name, stage, endpoint_url=None):
+        # type: (str, str, OptStr) -> LambdaInvokeHandler
         config = self.create_config_obj(stage)
-        deployed = config.deployed_resources(stage)
-        try:
-            resource = deployed.resource_values(name)
-            arn = resource['lambda_arn']
-        except (KeyError, ValueError):
-            raise NoSuchFunctionError(name)
-
+        function_name = "%s-%s-%s" % (config.app_name, stage, name)
         function_scoped_config = config.scope(stage, name)
         # The session for max retries needs to be set to 0 for invoking a
         # lambda function because in the case of a timeout or other retriable
@@ -232,8 +236,8 @@ class CLIFactory(object):
             max_retries=0,
         )
 
-        client = TypedAWSClient(session)
-        invoker = LambdaInvoker(arn, client)
+        client = TypedAWSClient(session, endpoint_url=endpoint_url)
+        invoker = LambdaInvoker(function_name, client)
 
         handler = LambdaInvokeHandler(
             invoker,
@@ -300,6 +304,46 @@ class CLIFactory(object):
     def create_local_server(self, app_obj, config, host, port):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer
         return local.create_local_server(app_obj, config, host, port)
+
+    def create_lambda_image_builder(self, ui):
+        # type: (UI) -> LambdaImageBuilder
+        layer_downloader = LayerDownloader()
+        image_builder = LambdaImageBuilder(ui, layer_downloader)
+        return image_builder
+
+    def create_container_proxy_resource_manager(
+            self,
+            config,             # type: Config
+            ui,                 # type: UI
+            image_builder       # type: LambdaImageBuilder
+    ):
+        # type: (...) -> ContainerProxyResourceManager
+        osutils = OSUtils()
+        pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
+                               osutils=osutils)
+        dependency_builder = PipDependencyBuilder(osutils=osutils,
+                                                  pip_runner=pip_runner)
+        packager = LambdaDeploymentPackager(osutils, dependency_builder, ui)
+        return local.create_container_proxy_resource_manager(
+            config, ui, osutils, packager, image_builder)
+
+    def create_proxy_server_runner(
+            self,
+            config,              # type: Config
+            stage,               # type: str
+            host,                # type: str
+            port,                # type: int
+            resource_manager,    # type: ContainerProxyResourceManager
+            use_container        # type: bool
+    ):
+        # type: (...) -> ProxyServerRunner
+        session = requests.Session()
+        app_graph_builder = ApplicationGraphBuilder()
+        dependency_builder = DependencyBuilder()
+        proxy_handler = ContainerProxyHandler(session)
+        return local.create_proxy_server_runner(
+            config, stage, host, port, app_graph_builder,
+            dependency_builder, resource_manager, proxy_handler)
 
     def create_package_options(self):
         # type: () -> PackageOptions

@@ -55,7 +55,6 @@ def websocket_app_without_disconnect():
 
 
 class TestApplicationGraphBuilder(object):
-
     def create_config(self, app, app_name='lambda-only',
                       iam_role_arn=None, policy_file=None,
                       api_gateway_stage='api',
@@ -439,13 +438,13 @@ class TestApplicationGraphBuilder(object):
             steps=[
                 PolicyGenerator(osutils=OSUtils(), policy_gen=None)
             ]
-         )
+        )
         application = application_builder.build(config, stage_name='dev')
         build_stage.execute(config, application.resources)
         rest_api = application.resources[0]
         assert rest_api.policy.document == {
-                'Version': '2012-10-17', 'Statement': []
-            }
+            'Version': '2012-10-17', 'Statement': []
+        }
 
     def test_can_build_rest_api(self, sample_app):
         config = self.create_config(sample_app,

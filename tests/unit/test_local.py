@@ -3,6 +3,7 @@ import json
 import decimal
 import pytest
 import mock
+import requests
 from pytest import fixture
 from six import BytesIO
 from six.moves.BaseHTTPServer import HTTPServer
@@ -13,6 +14,9 @@ from chalice import Response
 from chalice import IAMAuthorizer
 from chalice import CognitoUserPoolAuthorizer
 from chalice.config import Config
+from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
+from chalice.deploy.models import LambdaFunction, Application
+from chalice.docker import LambdaContainer
 from chalice.local import LambdaContext
 from chalice.local import LocalARNBuilder
 from chalice.local import LocalGateway
@@ -21,6 +25,11 @@ from chalice.local import NotAuthorizedError
 from chalice.local import ForbiddenError
 from chalice.local import InvalidAuthorizerError
 from chalice.local import LocalDevServer
+from chalice.local import LambdaProxyServer
+from chalice.local import ProxyServerRunner
+from chalice.local import ContainerProxyResourceManager
+from chalice.local import ContainerProxyHandler
+from chalice.local import ResourceNotFoundError
 
 
 AWS_REQUEST_ID_PATTERN = re.compile(
@@ -154,6 +163,10 @@ def sample_app():
                         headers={
                             'Set-Cookie': ['CookieA=ValueA', 'CookieB=ValueB']
                         })
+
+    @demo.lambda_function()
+    def myfunction():
+        return {'lambda': 'function'}
 
     return demo
 
@@ -1138,3 +1151,231 @@ class TestLocalDevServer(object):
         )
 
         assert server.server.daemon_threads
+
+
+class TestLambdaProxyServer(object):
+    def test_create_proxy_server_accepts_and_forwards_args(self, sample_app):
+        provided_args = []
+
+        def args_recorder(*args):
+            provided_args[:] = list(args)
+
+        server = LambdaProxyServer(
+            Config(), '0.0.0.0', 8000, None,
+            server_cls=args_recorder,
+        )
+
+        assert server.host == '0.0.0.0'
+        assert server.port == 8000
+        assert provided_args[0] == ('0.0.0.0', 8000)
+
+
+class TestProxyServerRunner(object):
+    def test_run_creates_and_cleans_up_resources(self):
+
+        class DummyServer():
+            def __init__(self, *args):
+                pass
+
+            def serve_forever(self):
+                pass
+
+        config = Config()
+        session = mock.Mock(spec=requests.Session)
+        app_graph_builder = mock.Mock(spec=ApplicationGraphBuilder)
+        app_graph = mock.Mock(spec=Application)
+        app_graph_builder.build.return_value = app_graph
+        dependency_builder = mock.Mock(spec=DependencyBuilder)
+        lambda1 = LambdaFunction(None, 'function1', None, None,
+                                 None, None, None, None, None,
+                                 None, None, None, None, None)
+        lambda2 = LambdaFunction(None, 'function2', None, None,
+                                 None, None, None, None, None,
+                                 None, None, None, None, None)
+        dependency_builder.list_dependencies_by_type.return_value = [lambda1,
+                                                                     lambda2]
+        resource_manager = mock.Mock(spec=ContainerProxyResourceManager)
+        resources = {}
+        resource_manager.build_resources.return_value = resources
+        handler = ContainerProxyHandler(session)
+        server_cls = DummyServer
+
+        runner = ProxyServerRunner(config, 'stage', 'host', 8000,
+                                   app_graph_builder, dependency_builder,
+                                   resource_manager, handler,
+                                   server_cls=server_cls)
+        runner.run()
+
+        app_graph_builder.build.assert_called_with(config, 'stage')
+        dependency_builder.list_dependencies_by_type\
+            .assert_called_with(app_graph, LambdaFunction)
+        resource_manager.build_resources.assert_called_with([lambda1,
+                                                             lambda2])
+        resource_manager.cleanup.assert_called_once()
+
+
+class TestContainerProxyHandler:
+    @fixture
+    def mock_container(self):
+        container = mock.Mock(spec=LambdaContainer)
+        container.api_port = 1000
+        return container
+
+    @fixture
+    def mock_session(self):
+        mock_session = mock.Mock(spec=requests.Session)
+        response = mock.Mock(spec=requests.Response)
+        response.headers = {"goodbye": "world",
+                            "Content-Length": 500}
+        response.text = "response body"
+        response.status_code = 200
+        mock_session.post.return_value = response
+        return mock_session
+
+    @fixture
+    def handler(self, mock_container, mock_session):
+        container_map = {
+            "app.handler": mock_container
+        }
+        return ContainerProxyHandler(mock_session, container_map=container_map)
+
+    def test_handle_invoke_runs_container_if_not_created(self, handler,
+                                                         mock_container,
+                                                         mock_session):
+        mock_container.is_created.return_value = False
+
+        handler.handle_invoke_function("/path/path", {}, "body", "app.handler")
+        mock_container.run.assert_called_once()
+
+    def test_handle_invoke_forwards_request_to_correct_url(self, handler,
+                                                           mock_session):
+        headers = {"hello": "world"}
+        url = "http://localhost:1000/path/path"
+        handler.handle_invoke_function("/path/path", headers,
+                                       "body", "app.handler")
+        assert mock_session.headers == headers
+        mock_session.post.assert_called_with(url, data="body")
+
+    def test_handle_invoke_response_is_forwarded(self, handler,
+                                                 mock_session):
+        proxy_response = handler.handle_invoke_function("/path/path", {},
+                                                        "body", "app.handler")
+        assert proxy_response.status_code == 200
+        assert proxy_response.headers == {"goodbye": "world"}
+        assert proxy_response.body == "response body"
+
+    def test_handle_invoke_convert_none_body_to_empty(self, handler,
+                                                      mock_session):
+        headers = {"hello": "world"}
+        url = "http://localhost:1000/path/path"
+        handler.handle_invoke_function("/path/path", headers,
+                                       None, "app.handler")
+        mock_session.post.assert_called_with(url, data=b'{}')
+
+    def test_handle_invoke_other_error(self, handler,
+                                       mock_session):
+        mock_session.post.side_effect = IndexError()
+        with pytest.raises(IndexError):
+            handler.handle_invoke_function("/path/path", {},
+                                           "body", "app.handler")
+
+    def test_handle_invoke_empty_function_raises_error(self, handler):
+        with pytest.raises(ResourceNotFoundError):
+            handler.handle_invoke_function("/path/path", {},
+                                           "body", "")
+
+    def test_handle_invoke_no_matching_container_raises_error(self, handler):
+        with pytest.raises(ResourceNotFoundError):
+            handler.handle_invoke_function("/path/path", {},
+                                           "body", "helloworld")
+
+
+class ProxyStubbedHandler(local.ProxyRequestHandler):
+    requestline = ''
+    request_version = 'HTTP/1.1'
+
+    def setup(self):
+        self.rfile = BytesIO()
+        self.wfile = BytesIO()
+        self.requestline = ''
+
+    def finish(self):
+        pass
+
+
+@fixture
+def container_proxy_handler():
+    handler = mock.Mock(spec=ContainerProxyHandler)
+    handler.handle_invoke_function.return_value = Response(
+        '{"hello": "world"}', {"response": "headers"}, 200
+    )
+    return handler
+
+
+@fixture
+def proxy_handler(sample_app, container_proxy_handler):
+    config = Config(chalice_stage='dev', config_from_disk={
+        'app_name': 'demo-app'
+    })
+    proxy_handler = ProxyStubbedHandler(
+        None, ('127.0.0.1', 2000), None, config=config,
+        proxy_handler=container_proxy_handler)
+    proxy_handler.sample_app = sample_app
+    return proxy_handler
+
+
+def set_current_proxy_request(proxy_handler, method, path, headers=None):
+    if headers is None:
+        headers = {'content-type': 'application/json'}
+    proxy_handler.command = method
+    proxy_handler.path = path
+    proxy_handler.headers = headers
+
+
+def test_proxy_handler_handles_invoke_function(proxy_handler,
+                                               container_proxy_handler):
+    path = '/2015-03-31/functions/demo-app-dev-myfunction/invocations'
+    headers = {
+        'content-type': 'application/json',
+        'content-length': 18
+    }
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers=headers)
+    proxy_handler.rfile.write(b'{"hello": "world"}')
+    proxy_handler.rfile.seek(0)
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    container_proxy_handler.handle_invoke_function.assert_called_with(
+        path, headers, body, 'demo-app-dev-myfunction')
+    assert b'200 OK' in status_line
+    assert body == b'{"hello": "world"}'
+
+
+def test_proxy_handler_handles_invalid_invoke_function(
+        proxy_handler, container_proxy_handler):
+    path = '/2015-03-31/functions/demo-app-dev-myfunction/invocations'
+    error_headers = {
+        'content-type': 'application/json',
+        'content-length': 18
+    }
+    error_body = b'{"Message": 'b'"Function not found."}'
+    error = ResourceNotFoundError(headers=error_headers, body=error_body)
+    container_proxy_handler.handle_invoke_function.side_effect = error
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers=error_headers)
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    assert b'404 Not Found' in status_line
+    assert body == error_body

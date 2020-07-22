@@ -47,15 +47,15 @@ class LambdaInvokeHandler(object):
 
 
 class LambdaInvoker(object):
-    def __init__(self, lambda_arn, client):
+    def __init__(self, function_name, client):
         # type: (str, TypedAWSClient) -> None
-        self._lambda_arn = lambda_arn
+        self._function_name = function_name
         self._client = client
 
     def invoke(self, payload=None):
         # type: (OptStr) -> Dict[str, Any]
         return self._client.invoke_function(
-            self._lambda_arn,
+            self._function_name,
             payload=payload
         )
 

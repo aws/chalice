@@ -10,12 +10,16 @@ import subprocess
 from contextlib import contextmanager
 
 import pytest
+import mock
 import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 from chalice import app
-from chalice.local import create_local_server
+from chalice.deploy.models import LambdaFunction
+from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.docker import LambdaImageBuilder
+from chalice.local import create_local_server, ContainerProxyResourceManager
 from chalice.config import Config
 from chalice.utils import OSUtils
 
@@ -318,3 +322,47 @@ def test_can_reload_server(unused_tcp_port, basic_app, http_session):
             assert http_session.json_get(url) == {'version': 'reloaded'}
         finally:
             p.terminate()
+
+
+def test_container_proxy_resource_manager_build_and_cleanup(basic_app):
+    class DummyLambda(LambdaFunction):
+        def __init__(self, handler, function_name):
+            self.handler = handler
+            self.function_name = function_name
+
+    with cd(basic_app):
+        config = mock.Mock(spec=Config)
+        config.project_dir = basic_app
+        config.lambda_python_version = 'python'
+        osutils = mock.Mock(spec=OSUtils)
+        osutils.joinpath.return_value = 'path'
+        packager = mock.Mock(spec=LambdaDeploymentPackager)
+        image_builder = mock.Mock(spec=LambdaImageBuilder)
+        resource_manager = ContainerProxyResourceManager(
+            config, None, osutils, packager, image_builder)
+
+        containers = resource_manager.build_resources([DummyLambda("1", "a"),
+                                                       DummyLambda("2", "b")])
+        files = os.listdir(basic_app)
+        temp_dir_filter = list(filter(lambda x: '.tmp' in x, files))
+        assert len(temp_dir_filter) == 1
+        temp_dir = temp_dir_filter[0]
+        temp_dir_path = os.path.join(basic_app, temp_dir)
+        assert os.path.isdir(temp_dir_path)
+        packager.create_deployment_package.assert_called_with(basic_app,
+                                                              'python',
+                                                              'path')
+        osutils.extract_zipfile.assert_called_with('path', temp_dir_path)
+        image_builder.build.assert_called_with('python', [])
+        assert len(containers) == 2
+
+        resource_manager.cleanup()
+        files = os.listdir(basic_app)
+        assert temp_dir not in files
+
+
+def test_container_proxy_resource_manager_cleanup_nothing_no_errors():
+    resource_manager = ContainerProxyResourceManager(
+        None, None, None, None, None
+    )
+    resource_manager.cleanup()

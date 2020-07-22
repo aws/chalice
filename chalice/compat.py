@@ -106,6 +106,13 @@ if os.name == 'nt':
         'pip.wheel.SETUPTOOLS_SHIM = """%s""";'
     ) % _SETUPTOOLS_SHIM
     pip_no_compile_c_env_vars = {}  # type: Dict[str, Any]
+
+    # Mounting a windows directory in a Docker container requires a
+    # posix-style path, i.e. /c/users/documents/
+    def posix_path(path):
+        # type: (str) -> str
+        from chalice.utils import windows_path_to_posix
+        return windows_path_to_posix(path)
 else:
     # posix
     # On posix systems setuptools/distutils uses the CC env variable to
@@ -118,6 +125,11 @@ else:
     pip_no_compile_c_env_vars = {
         'CC': '/var/false'
     }
+
+    # No need to make any changes to mount a directory in a Docker container
+    def posix_path(path):
+        # type: (str) -> str
+        return path
 
 
 if six.PY3:

@@ -1,7 +1,7 @@
 import json
 import os
 
-from typing import cast
+from typing import cast, TypeVar, Type
 from typing import Dict, List, Tuple, Any, Set, Optional, Text, Union  # noqa
 from attr import asdict
 
@@ -12,6 +12,9 @@ from chalice.deploy import models
 from chalice.utils import UI  # noqa
 
 StrMapAny = Dict[str, Any]
+
+
+MT = TypeVar('MT', bound='models.Model')
 
 
 class ChaliceBuildError(Exception):
@@ -556,6 +559,7 @@ class ApplicationGraphBuilder(object):
 
 
 class DependencyBuilder(object):
+
     def __init__(self):
         # type: () -> None
         pass
@@ -579,6 +583,12 @@ class DependencyBuilder(object):
         # when we add a resource to the ordered list.
         if id(resource) not in [id(r) for r in ordered]:
             ordered.append(resource)
+
+    def list_dependencies_by_type(self, graph, model_cls):
+        # type: (models.Model, Type[MT]) -> List[MT]
+        filtered = [d for d in self.build_dependencies(graph)
+                    if isinstance(d, model_cls)]    # type: List[MT]
+        return filtered
 
 
 class GraphPrettyPrint(object):

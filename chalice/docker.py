@@ -1,5 +1,7 @@
 """Docker integration for local testing."""
 from __future__ import absolute_import
+
+import time
 from enum import Enum
 import logging
 
@@ -18,6 +20,10 @@ from chalice.utils import UI
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class ContainerException(Exception):
+    pass
 
 
 class Container(object):
@@ -89,7 +95,7 @@ class Container(object):
         try:
             self._docker_container.remove(force=True)
         except docker.errors.NotFound:
-            self._ui.write("Container {} does not exist, skipping deletion"
+            self._ui.write("Container {} does not exist, skipping deletion\n"
                            .format(self._docker_container.id))
         except docker.errors.APIError as ex:
             # Ignore exception thrown when removal is already in progress
@@ -174,10 +180,10 @@ class LambdaImageBuilder(object):
         try:
             self._docker_client.images.get(base_image_name)
         except docker.errors.ImageNotFound:
-            self._ui.write("Docker Image {} not found, pulling image..."
+            self._ui.write("Docker Image {} not found, pulling image...\n"
                            .format(base_image_name))
             self._ui.write("This may take a few minutes but will only be run" +
-                           "during the initial setup.")
+                           " during the initial setup.\n")
             self._docker_client.images.pull(self._DOCKER_LAMBDA_REPO_NAME,
                                             tag=runtime)
 
@@ -188,8 +194,10 @@ class LambdaImageBuilder(object):
 class LambdaContainer(Container):
     _WORKING_DIR = "/var/task"
     _ENV_VAR_STAY_OPEN = "DOCKER_LAMBDA_STAY_OPEN"
-    _ENV_VAR_API_PORT = "DOCKER_LAMBDA_API_PORT"
-    _ENV_VAR_RUNTIME_PORT = "DOCKER_LAMBDA_RUNTIME_PORT"
+    _LAMBDA_API_PORT = 9001
+
+    _DEFAULT_STARTUP_TIMEOUT = 3.0
+    _DEFAULT_STARTUP_POLL_INTERVAL = 1.0
 
     def __init__(
             self,
@@ -201,18 +209,26 @@ class LambdaContainer(Container):
             env_vars=None,          # type: Optional[Dict[str, Any]]
             memory_limit_mb=128,    # type: int
             stay_open=False,        # type: bool
+            startup_timeout=None,   # type: float
+            poll_interval=None,     # type: float
             docker_client=None      # type: docker.client
     ):
         # type: (...) -> None
         if env_vars is None:
             env_vars = {}
+        if startup_timeout is None:
+            startup_timeout = self._DEFAULT_STARTUP_TIMEOUT
+        if poll_interval is None:
+            poll_interval = self._DEFAULT_STARTUP_POLL_INTERVAL
 
-        ports = {port: port}
+        self.api_port = port
+        self._startup_timeout = startup_timeout
+        self._poll_interval = poll_interval
+
+        ports = {self._LAMBDA_API_PORT: port}
         cmd = [handler]
         env_vars.update({
             self._ENV_VAR_STAY_OPEN: stay_open,
-            self._ENV_VAR_API_PORT: port,
-            self._ENV_VAR_RUNTIME_PORT: port,
         })
 
         super(LambdaContainer, self).__init__(
@@ -226,3 +242,22 @@ class LambdaContainer(Container):
             env_vars=env_vars,
             docker_client=docker_client,
         )
+
+    def wait_for_initialize(self):
+        # type: () -> None
+        if self._docker_container is None:
+            return
+        elapsed_time = 0
+        initialized = False
+        while not initialized and elapsed_time < self._startup_timeout:
+            logs = self._docker_container.attach(stdout=True,
+                                                 stream=False,
+                                                 logs=True)
+            if 'Lambda API listening on port' in logs:
+                initialized = True
+            else:
+                time.sleep(self._poll_interval)
+                elapsed_time = elapsed_time + self._poll_interval
+        if not initialized:
+            raise ContainerException(
+                'Timeout: Lambda container failed to start API server.')

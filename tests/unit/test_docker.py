@@ -1,7 +1,6 @@
 import sys
 
 import pytest
-import mock
 from mock import Mock, call
 import docker
 from docker.errors import NotFound, APIError, ImageNotFound
@@ -16,7 +15,15 @@ from chalice.utils import UI
 
 @pytest.fixture
 def mock_docker_container():
-    return Mock(spec=docker.models.containers.Container)
+    mock_docker_container = Mock(spec=docker.models.containers.Container)
+    output_iterator = [
+        (b"stdout1", None),
+        (None, b"stderr1"),
+        (b"stdout2", b"stderr2"),
+        (b"Lambda API listening on port 9001...", None),
+        (None, None)]
+    mock_docker_container.attach.return_value = output_iterator
+    return mock_docker_container
 
 
 @pytest.fixture
@@ -39,7 +46,7 @@ class TestContainer(object):
         )
 
     def test_run_container_with_required_values(self, mock_docker_client,
-                                                   mock_docker_container):
+                                                mock_docker_container):
         image = "image"
         cmd = ["cmd1", "cmd2"]
         working_dir = "/dir/dir/dir"
@@ -73,7 +80,7 @@ class TestContainer(object):
         )
 
     def test_run_container_with_all_values(self, mock_docker_client,
-                                              mock_docker_container):
+                                           mock_docker_container):
         image = "image"
         cmd = ["cmd1", "cmd2"]
         working_dir = "/dir/dir/dir"
@@ -163,12 +170,6 @@ class TestContainer(object):
                                    mock_docker_container):
         sample_container.run()
 
-        mock_output = Mock(spec=docker.types.CancellableStream)
-        mock_output.__iter__ = Mock(spec=[].__iter__, return_value=iter([]))
-        mock_docker_container.attach.return_value = mock_output
-        sample_container._write_container_output = \
-            mock.create_autospec(sample_container._write_container_output)
-
         mock_stdout = Mock(spec=sys.stdout)
         mock_stderr = Mock(spec=sys.stderr)
 
@@ -178,8 +179,10 @@ class TestContainer(object):
         mock_docker_container.attach.assert_called_with(stream=True,
                                                         logs=True,
                                                         demux=True)
-        sample_container._write_container_output\
-            .assert_called_with(mock_output, mock_stdout, mock_stderr)
+        mock_stdout.write.assert_has_calls(
+            [call("stdout1"), call("stdout2"),
+             call("Lambda API listening on port 9001...")])
+        mock_stderr.write.assert_has_calls([call("stderr1"), call("stderr2")])
 
     def test_stream_logs_to_output_no_streams(self,
                                               mock_docker_client,
@@ -191,51 +194,25 @@ class TestContainer(object):
 
         mock_docker_container.attach.assert_not_called()
 
-    def test_write_container_output(self, sample_container):
-        output_iterator = [
-            (b"stdout1", None),
-            (None, b"stderr1"),
-            (b"stdout2", b"stderr2"),
-            (None, None)]
+    def test_stream_logs_to_output_only_stdout(self, sample_container):
+        sample_container.run()
 
         mock_stdout = Mock(spec=sys.stdout)
+
+        sample_container.stream_logs_to_output(stdout=mock_stdout)
+
+        mock_stdout.write.assert_has_calls(
+            [call("stdout1"), call("stdout2"),
+             call("Lambda API listening on port 9001...")])
+
+    def test_stream_logs_to_output_only_stderr(self, sample_container):
+        sample_container.run()
+
         mock_stderr = Mock(spec=sys.stderr)
 
-        sample_container._write_container_output(output_iterator, stdout=mock_stdout,
-                                          stderr=mock_stderr)
-
-        mock_stdout.write.assert_has_calls([call("stdout1"), call("stdout2")])
-        mock_stderr.write.assert_has_calls([call("stderr1"), call("stderr2")])
-
-    def test_write_container_output_only_stdout(self, sample_container):
-        output_iterator = [
-            (b"stdout1", None),
-            (None, b"stderr1"),
-            (b"stdout2", b"stderr2"),
-            (None, None)]
-
-        mock_stdout = Mock(spec=sys.stdout)
-        mock_stderr = Mock(spec=sys.stderr)
-
-        sample_container._write_container_output(output_iterator, stdout=mock_stdout)
-
-        mock_stdout.write.assert_has_calls([call("stdout1"), call("stdout2")])
-        mock_stderr.assert_not_called()
-
-    def test_write_container_output_only_stderr(self, sample_container):
-        output_iterator = [
-            (b"stdout1", None),
-            (None, b"stderr1"),
-            (b"stdout2", b"stderr2"),
-            (None, None)]
-
-        mock_stdout = Mock(spec=sys.stdout)
-        mock_stderr = Mock(spec=sys.stderr)
-
-        sample_container._write_container_output(output_iterator, stderr=mock_stderr)
+        sample_container.stream_logs_to_output(stderr=mock_stderr)
 
         mock_stderr.write.assert_has_calls([call("stderr1"), call("stderr2")])
-        mock_stdout.assert_not_called()
 
     def test_is_created(self, sample_container):
         assert sample_container.is_created() is False
@@ -279,8 +256,20 @@ class TestLambdaImageBuilder(object):
 
 
 class TestLambda(object):
+    @pytest.fixture
+    def lambda_container(self, mock_docker_client):
+
+        return LambdaContainer(
+            ui=None,
+            port=8000,
+            handler='handler',
+            code_dir='/dir/',
+            image='image',
+            docker_client=mock_docker_client,
+        )
+
     def test_run_lambda_container(self, mock_docker_client,
-                                     mock_docker_container):
+                                  mock_docker_container):
         ui = Mock(spec=UI)
         port = 8001
         handler = "hello"
@@ -296,8 +285,6 @@ class TestLambda(object):
 
         expected_env_vars = {
             "DOCKER_LAMBDA_STAY_OPEN": stay_open,
-            "DOCKER_LAMBDA_API_PORT": port,
-            "DOCKER_LAMBDA_RUNTIME_PORT": port,
             "var1": 1,
             "var2": False,
             "var3": "hello",
@@ -322,6 +309,8 @@ class TestLambda(object):
             docker_client=mock_docker_client,
         )
 
+        assert lambda_container.api_port == port
+
         lambda_container.run()
 
         mock_docker_client.containers.run.assert_called_with(
@@ -331,14 +320,14 @@ class TestLambda(object):
             volumes=expected_volumes,
             mem_limit="{}m".format(memory_limit_mb),
             environment=expected_env_vars,
-            ports={port: port},
+            ports={9001: port},
             detach=True,
             tty=False,
             use_config_proxy=True,
         )
 
     def test_run_lambda_container_only_required(self, mock_docker_client,
-                                                   mock_docker_container):
+                                                mock_docker_container):
         ui = Mock(spec=UI)
         port = 8001
         handler = "hello"
@@ -347,8 +336,6 @@ class TestLambda(object):
 
         expected_env_vars = {
             "DOCKER_LAMBDA_STAY_OPEN": False,
-            "DOCKER_LAMBDA_API_PORT": port,
-            "DOCKER_LAMBDA_RUNTIME_PORT": port,
         }
 
         expected_volumes = {
@@ -367,6 +354,8 @@ class TestLambda(object):
             docker_client=mock_docker_client,
         )
 
+        assert lambda_container.api_port == port
+
         lambda_container.run()
 
         mock_docker_client.containers.run.assert_called_with(
@@ -376,8 +365,23 @@ class TestLambda(object):
             volumes=expected_volumes,
             mem_limit="{}m".format(128),
             environment=expected_env_vars,
-            ports={port: port},
+            ports={9001: port},
             detach=True,
             tty=False,
             use_config_proxy=True,
         )
+
+    def test_wait_for_initialize(self, lambda_container,
+                                 mock_docker_container):
+        mock_docker_container.attach.return_value = \
+            "Lambda API listening on port 9001"
+        lambda_container.run()
+        lambda_container.wait_for_initialize()
+        mock_docker_container.attach.assert_called_with(stream=False,
+                                                        logs=True,
+                                                        stdout=True)
+
+    def test_wait_for_initialize_not_running(self, lambda_container,
+                                             mock_docker_container):
+        lambda_container.wait_for_initialize()
+        mock_docker_container.attach.assert_not_called()
