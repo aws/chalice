@@ -2,7 +2,7 @@ Python Version Support
 ======================
 
 Chalice supports all versions of python supported by AWS Lambda, which is
-currently ``python2.7`` and ``python3.6``.
+currently ``python2.7`` and ``python3.8``.
 
 Chalice will automatically pick which version of python to use for Lambda
 based on the major version of python you are using.  You don't have to
@@ -37,23 +37,25 @@ In the example above, we're using python 3.6.1 so chalice automatically
 selects the ``python3.6`` runtime for lambda.  If we were using python 2.7.11,
 chalice would automatically select ``python2.7`` as the runtime.
 
+Since AWS Lambda does not support python 3.3.x, 3.4.x or 3.5.x, Chalice would
+automatically select ``python3.6`` as the closest.
+
 Chalice will emit a warning if the minor version does not match a python
 version supported by Lambda.  Chalice will select the closest Lambda version
 in this scenario, as shown in the table below.
 
-====================      =====================
-Local Python Version      Lambda Python Runtime
-====================      =====================
-python2.7.10               python2.7
-python2.7.11               python2.7
-python2.7.12               python2.7
-python2.7.13               python2.7
-python3.3.6                python3.6
-python3.4.6                python3.6
-python3.5.3                python3.6
-python3.6.0                python3.6
-python3.6.1                python3.6
-====================      =====================
+=========================               =====================
+Local Python Version                    Lambda Python Runtime
+=========================               =====================
+python2.7.10-python2.7.13               python2.7
+python3.3.6                             python3.6
+python3.4.6                             python3.6
+python3.5.3                             python3.6
+python3.6.0                             python3.6
+python3.6.1                             python3.6
+python3.7.0-python3.7.8                 python3.7
+python3.8.0-python3.8.5                 python3.8
+=========================               =====================
 
 We strongly encourage you to develop your application using the same
 major/minor version of python you plan on using on AWS Lambda.
