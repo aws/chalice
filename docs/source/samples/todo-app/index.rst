@@ -9,9 +9,7 @@ with JWT.  AWS services covered include AWS Lambda, Amazon API Gateway, Amazon
 DynamoDB, AWS CodeBuild, and AWS Systems Manager.
 
 You can find the full source code for this application in our
-`samples directory on GitHub <https://github.com/aws/chalice/tree/master/docs/source/samples/>`__.
-
-.. `samples directory on GitHub <https://github.com/aws/chalice/tree/master/docs/source/samples/todo-app/code/>`__.
+`samples directory on GitHub <https://github.com/aws/chalice/tree/master/docs/source/samples/todo-app/code/>`__.
 
 ::
 
