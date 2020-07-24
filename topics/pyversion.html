@@ -125,7 +125,9 @@
   <div class="section" id="python-version-support">
 <h1>Python Version Support<a class="headerlink" href="#python-version-support" title="Permalink to this headline">¶</a></h1>
 <p>Chalice supports all versions of python supported by AWS Lambda, which is
-currently <code class="docutils literal notranslate"><span class="pre">python2.7</span></code> and <code class="docutils literal notranslate"><span class="pre">python3.6</span></code>.</p>
+currently Python 2.7 and Python 3.6 and greater.  You can see the list of
+supported python versions for Lambda in their
+<a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html">docs</a>.</p>
 <p>Chalice will automatically pick which version of python to use for Lambda
 based on the major version of python you are using.  You don’t have to
 explicitly configure which version of python you want to use. For example:</p>
@@ -157,49 +159,11 @@ https://rest-api-id.execute-api.us-west-2.amazonaws.com/api/
 <p>In the example above, we’re using python 3.6.1 so chalice automatically
 selects the <code class="docutils literal notranslate"><span class="pre">python3.6</span></code> runtime for lambda.  If we were using python 2.7.11,
 chalice would automatically select <code class="docutils literal notranslate"><span class="pre">python2.7</span></code> as the runtime.</p>
+<p>Since AWS Lambda does not support python 3.3.x, 3.4.x or 3.5.x, Chalice would
+automatically select <code class="docutils literal notranslate"><span class="pre">python3.6</span></code> as the closest.</p>
 <p>Chalice will emit a warning if the minor version does not match a python
 version supported by Lambda.  Chalice will select the closest Lambda version
 in this scenario, as shown in the table below.</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="49%" />
-<col width="51%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Local Python Version</th>
-<th class="head">Lambda Python Runtime</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr class="row-even"><td>python2.7.10</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-odd"><td>python2.7.11</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-even"><td>python2.7.12</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-odd"><td>python2.7.13</td>
-<td>python2.7</td>
-</tr>
-<tr class="row-even"><td>python3.3.6</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-odd"><td>python3.4.6</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-even"><td>python3.5.3</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-odd"><td>python3.6.0</td>
-<td>python3.6</td>
-</tr>
-<tr class="row-even"><td>python3.6.1</td>
-<td>python3.6</td>
-</tr>
-</tbody>
-</table>
 <p>We strongly encourage you to develop your application using the same
 major/minor version of python you plan on using on AWS Lambda.</p>
 </div>
@@ -218,16 +182,15 @@ https://endpoint/api
 </div>
 <p>To upgrade the application to use python3, create a python3 virtual environment
 and redeploy.</p>
-<dl class="docutils">
-<dt>::</dt>
-<dd>$ deactivate
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ deactivate
 $ python3 -m venv /tmp/venv3
 $ source /tmp/venv3/bin/activate
-$ python –version
+$ python --version
 Python 3.6.1
 $ chalice deploy
-…</dd>
-</dl>
+...
+</pre></div>
+</div>
 </div>
 
 

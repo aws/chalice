@@ -2,7 +2,9 @@ Python Version Support
 ======================
 
 Chalice supports all versions of python supported by AWS Lambda, which is
-currently ``python2.7`` and ``python3.6``.
+currently Python 2.7 and Python 3.6 and greater.  You can see the list of
+supported python versions for Lambda in their
+`docs <https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html>`__.
 
 Chalice will automatically pick which version of python to use for Lambda
 based on the major version of python you are using.  You don't have to
@@ -37,23 +39,12 @@ In the example above, we're using python 3.6.1 so chalice automatically
 selects the ``python3.6`` runtime for lambda.  If we were using python 2.7.11,
 chalice would automatically select ``python2.7`` as the runtime.
 
+Since AWS Lambda does not support python 3.3.x, 3.4.x or 3.5.x, Chalice would
+automatically select ``python3.6`` as the closest.
+
 Chalice will emit a warning if the minor version does not match a python
 version supported by Lambda.  Chalice will select the closest Lambda version
 in this scenario, as shown in the table below.
-
-====================      =====================
-Local Python Version      Lambda Python Runtime
-====================      =====================
-python2.7.10               python2.7
-python2.7.11               python2.7
-python2.7.12               python2.7
-python2.7.13               python2.7
-python3.3.6                python3.6
-python3.4.6                python3.6
-python3.5.3                python3.6
-python3.6.0                python3.6
-python3.6.1                python3.6
-====================      =====================
 
 We strongly encourage you to develop your application using the same
 major/minor version of python you plan on using on AWS Lambda.
@@ -77,6 +68,7 @@ To upgrade the application to use python3, create a python3 virtual environment
 and redeploy.
 
 ::
+
     $ deactivate
     $ python3 -m venv /tmp/venv3
     $ source /tmp/venv3/bin/activate
