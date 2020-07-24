@@ -98,6 +98,8 @@ you use the ``CustomAuthorizer`` class:
         return {"success": True}
 
 
+.. _builtin-authorizers:
+
 Built-in Authorizers
 --------------------
 
