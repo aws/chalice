@@ -234,7 +234,7 @@ class CodeBuild(BaseResource):
                             "Effect": "Allow",
                             "Principal": {
                                 "Service": [
-                                    "codebuild.amazonaws.com"
+                                    {'Fn::Sub': 'codebuild.${AWS::URLSuffix}'}
                                 ]
                             }
                         }
@@ -307,7 +307,8 @@ class CodePipeline(BaseResource):
                             "Effect": "Allow",
                             "Principal": {
                                 "Service": [
-                                    "cloudformation.amazonaws.com"
+                                    {'Fn::Sub':
+                                     'cloudformation.${AWS::URLSuffix}'}
                                 ]
                             }
                         }
@@ -541,7 +542,8 @@ class CodePipeline(BaseResource):
                             "Effect": "Allow",
                             "Principal": {
                                 "Service": [
-                                    "codepipeline.amazonaws.com"
+                                    {'Fn::Sub': 'codepipeline'
+                                                '.${AWS::URLSuffix}'}
                                 ]
                             }
                         }

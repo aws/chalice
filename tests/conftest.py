@@ -132,7 +132,7 @@ class ChaliceStubber(Stubber):
         """Adds a custom exception to the response queue
 
         :type method: str
-        :param method: Thhe name of the service method to raise the error
+        :param method: The name of the service method to raise the error
             on.
 
         :type error: Exception

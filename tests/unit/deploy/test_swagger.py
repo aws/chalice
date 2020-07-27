@@ -12,7 +12,10 @@ from pytest import fixture
 def swagger_gen():
     return SwaggerGenerator(
         region='us-west-2',
-        deployed_resources={'api_handler_arn': 'lambda_arn'})
+        deployed_resources={
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn'
+        })
 
 
 def test_can_add_binary_media_types(swagger_gen):
@@ -141,7 +144,8 @@ def test_apigateway_integration_generation(sample_app, swagger_gen):
     assert apig_integ['type'] == 'aws_proxy'
     assert apig_integ['uri'] == (
         "arn:aws:apigateway:us-west-2:lambda:path"
-        "/2015-03-31/functions/lambda_arn/invocations"
+        "/2015-03-31/functions/"
+        "arn:aws:lambda:mars-west-1:123456789:function:lambda_arn/invocations"
     )
     assert 'responses' in apig_integ
     responses = apig_integ['responses']
@@ -626,11 +630,13 @@ def test_builtin_auth(sample_app):
     swagger_gen = SwaggerGenerator(
         region='us-west-2',
         deployed_resources={
-            'api_handler_arn': 'lambda_arn',
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
                 'api-dev-myauth': {
-                    'arn': 'auth_arn',
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
                     'type': 'authorizer',
                 }
             }
@@ -661,7 +667,9 @@ def test_builtin_auth(sample_app):
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/auth_arn/invocations'),
+                              '/2015-03-31/functions/arn:aws:lambda:'
+                              'mars-west-1:123456789:function:auth_arn'
+                              '/invocations'),
         }
     }
 
@@ -670,11 +678,13 @@ def test_builtin_auth_with_scopes(sample_app):
     swagger_gen = SwaggerGenerator(
         region='us-west-2',
         deployed_resources={
-            'api_handler_arn': 'lambda_arn',
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
                 'api-dev-myauth': {
-                    'arn': 'auth_arn',
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
                     'type': 'authorizer',
                 }
             }
@@ -709,8 +719,10 @@ def test_builtin_auth_with_scopes(sample_app):
             'type': 'token',
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
-            'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/auth_arn/invocations'),
+            'authorizerUri': ('arn:aws:apigateway:us-west-2:'
+                              'lambda:path/2015-03-31/functions'
+                              '/arn:aws:lambda:mars-west-1:123456789:'
+                              'function:auth_arn/invocations'),
         }
     }
 
@@ -719,11 +731,13 @@ def test_will_default_to_function_name_for_auth(sample_app):
     swagger_gen = SwaggerGenerator(
         region='us-west-2',
         deployed_resources={
-            'api_handler_arn': 'lambda_arn',
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
                 'api-dev-auth': {
-                    'arn': 'auth_arn',
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
                     'type': 'authorizer',
                 }
             }
@@ -754,7 +768,9 @@ def test_will_default_to_function_name_for_auth(sample_app):
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/auth_arn/invocations'),
+                              '/2015-03-31/functions/'
+                              'arn:aws:lambda:mars-west-1:123456789:function'
+                              ':auth_arn/invocations'),
         }
     }
 
@@ -863,8 +879,9 @@ def test_will_custom_auth_with_cfn(sample_app):
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': {
                 'Fn::Sub': (
-                    'arn:aws:apigateway:${AWS::Region}:lambda:path'
-                    '/2015-03-31/functions/${Auth.Arn}/invocations'
+                    'arn:${AWS::Partition}:apigateway:${AWS::Region}'
+                    ':lambda:path/2015-03-31/functions/'
+                    '${Auth.Arn}/invocations'
                 )
             }
         }

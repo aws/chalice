@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines
+import re
 import json
 from collections import OrderedDict
 
@@ -454,10 +455,37 @@ class PlanStage(object):
         varname = '%s_role_arn' % resource.role_name
         if not role_exists:
             return [
+                models.BuiltinFunction(
+                    'service_principal',
+                    ['lambda'],
+                    output_var='lambda_service_principal',
+                ),
+                models.JPSearch('principal',
+                                input_var='lambda_service_principal',
+                                output_var='lambda_principal'),
+                models.StoreValue(
+                    name='lambda_principal',
+                    value=StringFormat('{lambda_principal}',
+                                       ['lambda_principal']),
+                ),
+                models.StoreValue(
+                    name='lambda_trust_policy',
+                    value={
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                            "Sid": "",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": Variable('lambda_principal')
+                            },
+                            "Action": "sts:AssumeRole"
+                        }]
+                    },
+                ),
                 (models.APICall(
                     method_name='create_role',
                     params={'name': resource.role_name,
-                            'trust_policy': resource.trust_policy,
+                            'trust_policy': Variable('lambda_trust_policy'),
                             'policy': document},
                     output_var=varname,
                 ), "Creating IAM role: %s\n" % resource.role_name),
@@ -507,7 +535,7 @@ class PlanStage(object):
         subscribe_varname = '%s_subscription_arn' % resource.resource_name
 
         instruction_for_topic_arn = []  # type: List[InstructionMsg]
-        if resource.topic.startswith('arn:aws:sns:'):
+        if re.match(r"^arn:aws[a-z\-]*:sns:", resource.topic):
             instruction_for_topic_arn += [
                 models.StoreValue(
                     name=topic_arn_varname,
@@ -530,13 +558,16 @@ class PlanStage(object):
                 models.JPSearch('region',
                                 input_var='parsed_lambda_arn',
                                 output_var='region_name'),
+                models.JPSearch('partition',
+                                input_var='parsed_lambda_arn',
+                                output_var='partition'),
                 models.StoreValue(
                     name=topic_arn_varname,
                     value=StringFormat(
-                        'arn:aws:sns:{region_name}:{account_id}:%s' % (
+                        'arn:{partition}:sns:{region_name}:{account_id}:%s' % (
                             resource.topic
                         ),
-                        ['region_name', 'account_id'],
+                        ['partition', 'region_name', 'account_id'],
                     ),
                 ),
             ]
@@ -633,13 +664,16 @@ class PlanStage(object):
             models.JPSearch('region',
                             input_var='parsed_lambda_arn',
                             output_var='region_name'),
+            models.JPSearch('partition',
+                            input_var='parsed_lambda_arn',
+                            output_var='partition'),
             models.StoreValue(
                 name=queue_arn_varname,
                 value=StringFormat(
-                    'arn:aws:sqs:{region_name}:{account_id}:%s' % (
+                    'arn:{partition}:sqs:{region_name}:{account_id}:%s' % (
                         resource.queue
                     ),
-                    ['region_name', 'account_id'],
+                    ['partition', 'region_name', 'account_id'],
                 ),
             ),
         ]  # type: List[InstructionMsg]
@@ -834,11 +868,11 @@ class PlanStage(object):
                 models.StoreValue(
                     name='websocket-%s-integration-lambda-path' % key,
                     value=StringFormat(
-                        'arn:aws:apigateway:{region_name}:lambda:path/'
-                        '2015-03-31/functions/arn:aws:lambda:{region_name}:'
-                        '{account_id}:function:%s/'
-                        'invocations' % config['name'],
-                        ['region_name', 'account_id'],
+                        'arn:{partition}:apigateway:{region_name}:lambda:path/'
+                        '2015-03-31/functions/arn:{partition}'
+                        ':lambda:{region_name}:{account_id}:function'
+                        ':%s/invocations' % config['name'],
+                        ['partition', 'region_name', 'account_id'],
                     ),
                 ),
             )
@@ -895,6 +929,12 @@ class PlanStage(object):
             models.JPSearch('region',
                             input_var='parsed_lambda_arn',
                             output_var='region_name'),
+            models.JPSearch('partition',
+                            input_var='parsed_lambda_arn',
+                            output_var='partition'),
+            models.JPSearch('dns_suffix',
+                            input_var='parsed_lambda_arn',
+                            output_var='dns_suffix'),
         ]  # type: List[InstructionMsg]
 
         # There's also a set of instructions that are needed
@@ -905,8 +945,8 @@ class PlanStage(object):
                 name='websocket_api_url',
                 value=StringFormat(
                     'wss://{websocket_api_id}.execute-api.{region_name}'
-                    '.amazonaws.com/%s/' % resource.api_gateway_stage,
-                    ['websocket_api_id', 'region_name'],
+                    '.{dns_suffix}/%s/' % resource.api_gateway_stage,
+                    ['websocket_api_id', 'region_name', 'dns_suffix'],
                 ),
             ),
             models.RecordResourceVariable(
@@ -1047,6 +1087,12 @@ class PlanStage(object):
             models.JPSearch('region',
                             input_var='parsed_lambda_arn',
                             output_var='region_name'),
+            models.JPSearch('partition',
+                            input_var='parsed_lambda_arn',
+                            output_var='partition'),
+            models.JPSearch('dns_suffix',
+                            input_var='parsed_lambda_arn',
+                            output_var='dns_suffix'),
             # The swagger doc uses the 'api_handler_lambda_arn'
             # var name so we need to make sure we populate this variable
             # before importing the rest API.
@@ -1086,8 +1132,8 @@ class PlanStage(object):
                 name='rest_api_url',
                 value=StringFormat(
                     'https://{rest_api_id}.execute-api.{region_name}'
-                    '.amazonaws.com/%s/' % resource.api_gateway_stage,
-                    ['rest_api_id', 'region_name'],
+                    '.{dns_suffix}/%s/' % resource.api_gateway_stage,
+                    ['rest_api_id', 'region_name', 'dns_suffix'],
                 ),
             ),
             models.RecordResourceVariable(

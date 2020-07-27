@@ -123,9 +123,34 @@ class Executor(BaseExecutor):
             value = resolved_args[0]
             parts = value.split(':')
             result = {
+                'partition': parts[1],
                 'service': parts[2],
                 'region': parts[3],
                 'account_id': parts[4],
+                'dns_suffix': self._client.endpoint_dns_suffix(parts[2],
+                                                               parts[3])
+            }
+            self.variables[instruction.output_var] = result
+        elif instruction.function_name == 'interrogate_profile':
+            region = self._client.region_name
+            result = {
+                'partition': self._client.partition_name,
+                'region': region,
+                'dns_suffix': self._client.endpoint_dns_suffix('apigateway',
+                                                               region)
+            }
+            self.variables[instruction.output_var] = result
+        elif instruction.function_name == 'service_principal':
+            resolved_args = self._variable_resolver.resolve_variables(
+                instruction.args, self.variables)
+            service_name = resolved_args[0]
+            region_name = self._client.region_name
+            dns_suffix = self._client.endpoint_dns_suffix(service_name,
+                                                          region_name)
+            result = {
+                'principal': self._client.service_principal(service_name,
+                                                            region_name,
+                                                            dns_suffix)
             }
             self.variables[instruction.output_var] = result
         else:
@@ -196,7 +221,6 @@ class VariableResolver(object):
 # The dev commands don't have any backwards compatibility guarantees
 # so we can alter this output as needed.
 class DisplayOnlyExecutor(BaseExecutor):
-
     # Max length of bytes object before we truncate with '<bytes>'
     _MAX_BYTE_LENGTH = 30
     _LINE_VERTICAL = u'\u2502'

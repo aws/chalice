@@ -189,8 +189,8 @@ def test_can_write_swagger_model(runner):
                                 }
                             },
                             "uri": (
-                                "arn:aws:apigateway:{region_name}:lambda:"
-                                "path/2015-03-31/functions/"
+                                "arn:{partition}:apigateway:{region_name}"
+                                ":lambda:path/2015-03-31/functions/"
                                 "{api_handler_lambda_arn}/invocations"
                             ),
                             "passthroughBehavior": "when_no_match",
@@ -228,7 +228,7 @@ def test_can_write_swagger_model(runner):
         }
 
 
-def test_can_package_command(runner):
+def test_can_package_command(runner, mock_cli_factory):
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
