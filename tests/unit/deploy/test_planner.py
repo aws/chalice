@@ -450,7 +450,7 @@ class TestPlanCreateUpdateDomainName(BasePlannerTests):
             )
         ]
         # create domain name
-        self.assert_apicall_equals(plan[11], expected[0])
+        self.assert_apicall_equals(plan[13], expected[0])
         msg = 'Creating custom domain name: example.com\n'
         assert list(self.last_plan.messages.values())[-2] == msg
 

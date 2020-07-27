@@ -667,7 +667,9 @@ def test_builtin_auth(sample_app):
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/auth_arn/invocations'),
+                              '/2015-03-31/functions/arn:aws:lambda:'
+                              'mars-west-1:123456789:function:auth_arn'
+                              '/invocations'),
         }
     }
 
@@ -676,11 +678,13 @@ def test_builtin_auth_with_scopes(sample_app):
     swagger_gen = SwaggerGenerator(
         region='us-west-2',
         deployed_resources={
-            'api_handler_arn': 'lambda_arn',
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
                 'api-dev-myauth': {
-                    'arn': 'auth_arn',
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
                     'type': 'authorizer',
                 }
             }
@@ -715,10 +719,10 @@ def test_builtin_auth_with_scopes(sample_app):
             'type': 'token',
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
-            'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/'
-                              'arn:aws:lambda:mars-west-1:123456789:function'
-                              ':auth_arn/invocations'),
+            'authorizerUri': ('arn:aws:apigateway:us-west-2:'
+                              'lambda:path/2015-03-31/functions'
+                              '/arn:aws:lambda:mars-west-1:123456789:'
+                              'function:auth_arn/invocations'),
         }
     }
 

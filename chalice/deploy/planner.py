@@ -1,14 +1,16 @@
 # pylint: disable=too-many-lines
-import json
 import re
+import json
 from collections import OrderedDict
+
 from typing import List, Dict, Any, Optional, Union, Tuple, Set, cast  # noqa
 from typing import Sequence  # noqa
 
-from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
 from chalice.config import Config, DeployedResources  # noqa
-from chalice.deploy import models
 from chalice.utils import OSUtils  # noqa
+from chalice.deploy import models
+from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError  # noqa
+
 
 InstructionMsg = Union[models.Instruction, Tuple[models.Instruction, str]]
 MarkedResource = Dict[str, List[models.RecordResource]]
@@ -166,8 +168,8 @@ class PlanStage(object):
         return models.Plan(plan, messages)
 
     def _add_result_to_plan(self,
-                            result,  # type: Sequence[InstructionMsg]
-                            plan,  # type: List[models.Instruction]
+                            result,    # type: Sequence[InstructionMsg]
+                            plan,      # type: List[models.Instruction]
                             messages,  # type: Dict[int, str]
                             ):
         # type: (...) -> None

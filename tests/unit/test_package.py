@@ -278,12 +278,16 @@ class TemplateTestBase(object):
         m_client = mock.Mock(wraps=client, spec=TypedAWSClient)
         type(m_client).region_name = mock.PropertyMock(
             return_value='us-west-2')
-        options = PackageOptions(m_client)
-        self.template_gen = self.template_gen_factory(Config(), options)
+        self.pkg_options = PackageOptions(m_client)
+        self.template_gen = self.template_gen_factory(
+            Config(), self.pkg_options)
 
-    def generate_template(self, config, options, chalice_stage_name):
+    def generate_template(self, config, chalice_stage_name='dev',
+                          options=None):
         resources = self.resource_builder.construct_resources(
             config, chalice_stage_name)
+        if options is None:
+            options = self.pkg_options
         return self.template_gen_factory(config, options).generate(resources)
 
     def lambda_function(self):
@@ -336,9 +340,10 @@ class TestTerraformTemplate(TemplateTestBase):
         }
     }
 
-    def generate_template(self, config, options, chalice_stage_name):
+    def generate_template(self, config, chalice_stage_name='dev',
+                          options=None):
         resources = self.resource_builder.construct_resources(
-            config, 'dev')
+            config, chalice_stage_name)
 
         # Patch up resources that have mocks (due to build stage)
         # that we need to serialize to json.
@@ -360,6 +365,8 @@ class TestTerraformTemplate(TemplateTestBase):
             elif isinstance(r, models.FileBasedIAMPolicy):
                 r.document = self.EmptyPolicy
 
+        if options is None:
+            options = self.pkg_options
         return self.template_gen_factory(config, options).generate(resources)
 
     def get_function(self, template):
@@ -460,8 +467,7 @@ class TestTerraformTemplate(TemplateTestBase):
             'description': 'description',
         }
 
-    def test_can_generate_rest_api(self, sample_app_with_auth,
-                                   stubbed_session):
+    def test_can_generate_rest_api(self, sample_app_with_auth):
         config = Config.create(chalice_app=sample_app_with_auth,
                                project_dir='.',
                                minimum_compression_size=8192,
@@ -469,8 +475,7 @@ class TestTerraformTemplate(TemplateTestBase):
                                api_gateway_endpoint_vpce='vpce-abc123',
                                app_name='sample_app',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         resources = template['resource']
         # Lambda function should be created.
         assert resources['aws_lambda_function']
@@ -535,8 +540,7 @@ class TestTerraformTemplate(TemplateTestBase):
                 'value': '${aws_api_gateway_deployment.rest_api.invoke_url}'}
         }
 
-    def test_can_package_s3_event_handler_with_tf_ref(self, sample_app,
-                                                      stubbed_session):
+    def test_can_package_s3_event_handler_with_tf_ref(self, sample_app):
         @sample_app.on_s3_event(
             bucket='${aws_s3_bucket.my_data_bucket.id}')
         def handler(event):
@@ -545,8 +549,7 @@ class TestTerraformTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         assert template['resource']['aws_s3_bucket_notification'][
                    'my_data_bucket_notify'] == {
                    'bucket': '${aws_s3_bucket.my_data_bucket.id}',
@@ -557,21 +560,18 @@ class TestTerraformTemplate(TemplateTestBase):
                    }]
                }
 
-    def test_can_generate_chalice_terraform_static_data(self, sample_app,
-                                                        stubbed_session):
+    def test_can_generate_chalice_terraform_static_data(self, sample_app):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                app_name='myfoo',
                                api_gateway_stage='dev')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         assert template['data']['null_data_source']['chalice']['inputs'] == {
             'app': 'myfoo',
             'stage': 'dev'
         }
 
-    def test_can_package_s3_event_handler_sans_filters(self, sample_app,
-                                                       stubbed_session):
+    def test_can_package_s3_event_handler_sans_filters(self, sample_app):
         @sample_app.on_s3_event(bucket='foo')
         def handler(event):
             pass
@@ -579,8 +579,7 @@ class TestTerraformTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         assert template['resource']['aws_s3_bucket_notification'][
                    'foo_notify'] == {
                    'bucket': 'foo',
@@ -591,7 +590,7 @@ class TestTerraformTemplate(TemplateTestBase):
                    }]
                }
 
-    def test_can_package_s3_event_handler(self, sample_app, stubbed_session):
+    def test_can_package_s3_event_handler(self, sample_app):
         @sample_app.on_s3_event(
             bucket='foo', prefix='incoming', suffix='.csv')
         def handler(event):
@@ -601,8 +600,7 @@ class TestTerraformTemplate(TemplateTestBase):
                                project_dir='.',
                                app_name='sample_app',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         assert template['resource']['aws_lambda_permission'][
                    'handler-s3event'] == {
                    'action': 'lambda:InvokeFunction',
@@ -624,7 +622,7 @@ class TestTerraformTemplate(TemplateTestBase):
                    }]
                }
 
-    def test_can_package_sns_handler(self, sample_app, stubbed_session):
+    def test_can_package_sns_handler(self, sample_app):
         @sample_app.on_sns_message(topic='foo')
         def handler(event):
             pass
@@ -632,8 +630,7 @@ class TestTerraformTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
 
         assert template['resource']['aws_sns_topic_subscription'][
                    'handler-sns-subscription'] == {
@@ -645,7 +642,7 @@ class TestTerraformTemplate(TemplateTestBase):
                    'endpoint': '${aws_lambda_function.handler.arn}'
                }
 
-    def test_can_package_sns_arn_handler(self, sample_app, stubbed_session):
+    def test_can_package_sns_arn_handler(self, sample_app):
         arn = 'arn:aws:sns:space-leo-1:1234567890:foo'
 
         @sample_app.on_sns_message(topic=arn)
@@ -656,8 +653,7 @@ class TestTerraformTemplate(TemplateTestBase):
                                project_dir='.',
                                app_name='sample_app',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
 
         assert template['resource']['aws_sns_topic_subscription'][
                    'handler-sns-subscription'] == {
@@ -674,7 +670,7 @@ class TestTerraformTemplate(TemplateTestBase):
                    'source_arn': 'arn:aws:sns:space-leo-1:1234567890:foo'
                }
 
-    def test_can_package_sqs_handler(self, sample_app, stubbed_session):
+    def test_can_package_sqs_handler(self, sample_app):
         @sample_app.on_sqs_message(queue='foo', batch_size=5)
         def handler(event):
             pass
@@ -683,8 +679,7 @@ class TestTerraformTemplate(TemplateTestBase):
                                project_dir='.',
                                app_name='sample_app',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
 
         assert template['resource'][
                    'aws_lambda_event_source_mapping'][
@@ -697,15 +692,13 @@ class TestTerraformTemplate(TemplateTestBase):
                    'batch_size': 5
                }
 
-    def test_package_websocket_with_error_message(self, sample_websocket_app,
-                                                  stubbed_session):
+    def test_package_websocket_with_error_message(self, sample_websocket_app):
         config = Config.create(chalice_app=sample_websocket_app,
                                project_dir='.',
                                app_name='sample_app',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
         with pytest.raises(NotImplementedError) as excinfo:
-            self.generate_template(config, options, 'dev')
+            self.generate_template(config)
 
         # Should mention the decorator name.
         assert 'Websocket decorators' in str(excinfo.value)
@@ -725,7 +718,7 @@ class TestTerraformTemplate(TemplateTestBase):
                 "tags": {"foo": "bar"},
             }
         )
-        template = self.generate_template(config, 'dev')
+        template = self.generate_template(config)
         assert template['resource']['aws_api_gateway_domain_name'][
             'api_gateway_custom_domain'] == {
                 'domain_name': 'example.com',
@@ -752,7 +745,7 @@ class TestTerraformTemplate(TemplateTestBase):
                 "domain_name": "example.com",
             }
         )
-        template = self.generate_template(config, 'dev')
+        template = self.generate_template(config)
         assert template['resource']['aws_api_gateway_domain_name'][
             'api_gateway_custom_domain'] == {
                 'domain_name': 'example.com',
@@ -775,8 +768,7 @@ class TestSAMTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         # Verify the basic structure is in place.  The specific parts
         # are validated in other tests.
         assert template['AWSTemplateFormatVersion'] == '2010-09-09'
@@ -975,21 +967,18 @@ class TestSAMTemplate(TemplateTestBase):
                                project_dir='.',
                                api_gateway_stage='api',
                                )
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         resources = template['Resources']
         assert 'MinimumCompressionSize' not in \
             resources['RestAPI']['Properties']
 
-    def test_can_generate_rest_api(self, sample_app_with_auth,
-                                   stubbed_session):
+    def test_can_generate_rest_api(self, sample_app_with_auth):
         config = Config.create(chalice_app=sample_app_with_auth,
                                project_dir='.',
                                api_gateway_stage='api',
                                minimum_compression_size=100,
                                )
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         resources = template['Resources']
         # Lambda function should be created.
         assert resources['APIHandler']['Type'] == 'AWS::Serverless::Function'
@@ -1060,21 +1049,18 @@ class TestSAMTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_websocket_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         resources = template['Resources']
 
         # Check that the template's deployment only depends on the one route.
         depends_on = resources['WebsocketAPIDeployment'].pop('DependsOn')
         assert [route] == depends_on
 
-    def test_generate_websocket_api(self, sample_websocket_app,
-                                    stubbed_session):
+    def test_generate_websocket_api(self, sample_websocket_app):
         config = Config.create(chalice_app=sample_websocket_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(TypedAWSClient(stubbed_session))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         resources = template['Resources']
 
         assert resources['WebsocketAPI']['Type'] == 'AWS::ApiGatewayV2::Api'
@@ -1254,8 +1240,7 @@ class TestSAMTemplate(TemplateTestBase):
                                project_dir='.',
                                autogen_policy=True,
                                api_gateway_stage='api')
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         roles = [resource for resource in template['Resources'].values()
                  if resource['Type'] == 'AWS::IAM::Role']
         assert len(roles) == 1
@@ -1280,8 +1265,7 @@ class TestSAMTemplate(TemplateTestBase):
                                api_gateway_stage='api',
                                security_group_ids=['sg1', 'sg2'],
                                subnet_ids=['sn1', 'sn2'])
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         resources = template['Resources'].values()
         lambda_fns = [resource for resource in resources
                       if resource['Type'] == 'AWS::Serverless::Function']
@@ -1301,7 +1285,7 @@ class TestSAMTemplate(TemplateTestBase):
                                api_gateway_stage='api')
         options = PackageOptions(mock.Mock(spec=TypedAWSClient))
         with pytest.raises(NotImplementedError) as excinfo:
-            self.generate_template(config, options, 'dev')
+            self.generate_template(config, 'dev', options)
         # Should mention the decorator name.
         assert '@app.on_s3_event' in str(excinfo.value)
         # Should mention you can use `chalice deploy`.
@@ -1315,8 +1299,7 @@ class TestSAMTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         sns_handler = template['Resources']['Handler']
         assert sns_handler['Properties']['Events'] == {
             'HandlerSnsSubscription': {
@@ -1342,8 +1325,7 @@ class TestSAMTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         sns_handler = template['Resources']['Handler']
         assert sns_handler['Properties']['Events'] == {
             'HandlerSnsSubscription': {
@@ -1362,8 +1344,7 @@ class TestSAMTemplate(TemplateTestBase):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
                                api_gateway_stage='api')
-        options = PackageOptions(mock.Mock(spec=TypedAWSClient))
-        template = self.generate_template(config, options, 'dev')
+        template = self.generate_template(config)
         sns_handler = template['Resources']['Handler']
         assert sns_handler['Properties']['Events'] == {
             'HandlerSqsEventSource': {
@@ -1393,7 +1374,7 @@ class TestSAMTemplate(TemplateTestBase):
                 "tags": {"foo": "bar", "bar": "baz"},
             }
         )
-        template = self.generate_template(config, 'dev')
+        template = self.generate_template(config)
         domain = template['Resources']['ApiGatewayCustomDomain']
         mapping = template['Resources']['ApiGatewayCustomDomainMapping']
         assert domain == {
@@ -1434,7 +1415,7 @@ class TestSAMTemplate(TemplateTestBase):
                 "domain_name": "example.com",
             }
         )
-        template = self.generate_template(config, 'dev')
+        template = self.generate_template(config)
         domain = template['Resources']['ApiGatewayCustomDomain']
         mapping = template['Resources']['ApiGatewayCustomDomainMapping']
         assert domain == {
@@ -1468,7 +1449,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'tags': {'foo': 'bar', 'bar': 'baz'},
             }
         )
-        template = self.generate_template(config, 'dev')
+        template = self.generate_template(config)
         domain = template['Resources']['WebsocketApiCustomDomain']
         mapping = template['Resources']['WebsocketApiCustomDomainMapping']
         assert domain == {

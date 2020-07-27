@@ -1,36 +1,38 @@
-import functools
-import importlib
-import json
-import logging
-import os
 import sys
-from typing import Any, Optional, Dict, MutableMapping, cast  # noqa
+import os
+import json
+import importlib
+import logging
+import functools
 
 import click
 from botocore.config import Config as BotocoreConfig
 from botocore.session import Session
+from typing import Any, Optional, Dict, MutableMapping, cast  # noqa
 
 from chalice import __version__ as chalice_version
-from chalice import local
-from chalice.app import Chalice  # noqa
 from chalice.awsclient import TypedAWSClient
+from chalice.app import Chalice  # noqa
 from chalice.config import Config
 from chalice.config import DeployedResources  # noqa
+from chalice.package import create_app_packager
+from chalice.package import AppPackager  # noqa
+from chalice.package import PackageOptions
+from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.constants import DEFAULT_ENDPOINT_TYPE
-from chalice.constants import DEFAULT_STAGE_NAME
+from chalice.logs import LogRetriever, LogEventGenerator
+from chalice.logs import FollowLogEventGenerator
+from chalice.logs import BaseLogEventGenerator
+from chalice import local
+from chalice.utils import UI  # noqa
+from chalice.utils import PipeReader  # noqa
 from chalice.deploy import deployer  # noqa
 from chalice.deploy import validate
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import LambdaInvoker
 from chalice.invoke import LambdaResponseFormatter
-from chalice.logs import BaseLogEventGenerator
-from chalice.logs import FollowLogEventGenerator
-from chalice.logs import LogRetriever, LogEventGenerator
-from chalice.package import AppPackager  # noqa
-from chalice.package import create_app_packager, PackageOptions
-from chalice.utils import PipeReader  # noqa
-from chalice.utils import UI  # noqa
+
 
 OptStr = Optional[str]
 OptInt = Optional[int]

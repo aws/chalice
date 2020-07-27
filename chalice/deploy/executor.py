@@ -1,9 +1,9 @@
-import pprint
 import re
-from typing import Dict, List, Any  # noqa
+import pprint
 
 import jmespath
 from attr import asdict
+from typing import Dict, List, Any  # noqa
 
 from chalice.deploy import models # noqa
 from chalice.awsclient import TypedAWSClient  # noqa

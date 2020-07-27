@@ -13,39 +13,29 @@ As a side benefit, I can also add type annotations to
 this class to get improved type checking across chalice.
 
 """
-import json
+# pylint: disable=too-many-lines
 import os
-import re
-import shutil
-import tempfile
 import time
-import uuid
-import zipfile
-from collections import OrderedDict
+import tempfile
 from datetime import datetime
+import zipfile
+import shutil
+import json
+import re
+import uuid
+from collections import OrderedDict
 from typing import Any, Optional, Dict, Callable, List, Iterator, Iterable, \
-    IO, Union  # noqa
+    Sequence, IO  # noqa
 
 import botocore.session  # noqa
-from botocore.exceptions import ClientError
 from botocore.loaders import create_loader
+from botocore.exceptions import ClientError
 from botocore.utils import datetime2timestamp
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
 from mypy_extensions import TypedDict
-from typing import (  # noqa
-    Any,
-    Sequence,
-    Optional,
-    Dict,
-    Callable,
-    List,
-    Iterable,
-    Iterator,
-    IO
-)
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
@@ -107,9 +97,9 @@ class DeploymentPackageTooLargeError(LambdaClientError):
 
 class LambdaErrorContext(object):
     def __init__(self,
-                 function_name,  # type: str
+                 function_name,       # type: str
                  client_method_name,  # type: str
-                 deployment_size,  # type: int
+                 deployment_size,     # type: int
                  ):
         # type: (...) -> None
         self.function_name = function_name
@@ -128,15 +118,12 @@ class TypedAWSClient(object):
         self._session = session
         self._sleep = sleep
         self._client_cache = {}  # type: Dict[str, Any]
-
-        # establish the endpoint resolver using the botocore loader api
-        # in order to determine partition and endpoint information
         loader = create_loader('data_loader')
         endpoints = loader.load_data('endpoints')
         self._endpoint_resolver = EndpointResolver(endpoints)
 
     def resolve_endpoint(self, service, region):
-        # type: (str, str) -> Union[OrderedDict[str, Any], None]
+        # type: (str, str) -> Optional[OrderedDict[str, Any]]
         """Find details of an endpoint based on the service and region.
 
         This utilizes the botocore EndpointResolver in order to find details on
@@ -146,7 +133,7 @@ class TypedAWSClient(object):
         return self._endpoint_resolver.construct_endpoint(service, region)
 
     def endpoint_from_arn(self, arn):
-        # type: (str) -> Union[OrderedDict[str, Any], None]
+        # type: (str) -> Optional[OrderedDict[str, Any]]
         """Find details for the endpoint associated with a resource ARN.
 
         This allows the an endpoint to be discerned based on an ARN.  This
@@ -333,18 +320,18 @@ class TypedAWSClient(object):
         return vpc_config
 
     def create_function(self,
-                        function_name,  # type: str
-                        role_arn,  # type: str
-                        zip_contents,  # type: str
-                        runtime,  # type: str
-                        handler,  # type: str
+                        function_name,               # type: str
+                        role_arn,                    # type: str
+                        zip_contents,                # type: str
+                        runtime,                     # type: str
+                        handler,                     # type: str
                         environment_variables=None,  # type: StrMap
-                        tags=None,  # type: StrMap
-                        timeout=None,  # type: OptInt
-                        memory_size=None,  # type: OptInt
-                        security_group_ids=None,  # type: OptStrList
-                        subnet_ids=None,  # type: OptStrList
-                        layers=None,  # type: OptStrList
+                        tags=None,                   # type: StrMap
+                        timeout=None,                # type: OptInt
+                        memory_size=None,            # type: OptInt
+                        security_group_ids=None,     # type: OptStrList
+                        subnet_ids=None,             # type: OptStrList
+                        layers=None,                 # type: OptStrList
                         ):
         # type: (...) -> str
         kwargs = {
@@ -603,11 +590,11 @@ class TypedAWSClient(object):
 
     def get_custom_domain_params_v2(
             self,
-            domain_name,                    # type: str
-            endpoint_type,                  # type: str
-            certificate_arn,           # type: str
-            security_policy=None,                # type: Optional[str]
-            tags=None,                      # type: StrMap
+            domain_name,           # type: str
+            endpoint_type,         # type: str
+            certificate_arn,       # type: str
+            security_policy=None,  # type: Optional[str]
+            tags=None,             # type: StrMap
     ):
         # type: (...) -> Dict[str, Any]
         kwargs = {
@@ -806,17 +793,17 @@ class TypedAWSClient(object):
         client.delete_base_path_mapping(**params)
 
     def update_function(self,
-                        function_name,  # type: str
-                        zip_contents,  # type: str
+                        function_name,               # type: str
+                        zip_contents,                # type: str
                         environment_variables=None,  # type: StrMap
-                        runtime=None,  # type: OptStr
-                        tags=None,  # type: StrMap
-                        timeout=None,  # type: OptInt
-                        memory_size=None,  # type: OptInt
-                        role_arn=None,  # type: OptStr
-                        subnet_ids=None,  # type: OptStrList
-                        security_group_ids=None,  # type: OptStrList
-                        layers=None,  # type: OptStrList
+                        runtime=None,                # type: OptStr
+                        tags=None,                   # type: StrMap
+                        timeout=None,                # type: OptInt
+                        memory_size=None,            # type: OptInt
+                        role_arn=None,               # type: OptStr
+                        subnet_ids=None,             # type: OptStrList
+                        security_group_ids=None,     # type: OptStrList
+                        layers=None,                 # type: OptStrList
                         ):
         # type: (...) -> Dict[str, Any]
         """Update a Lambda function's code and configuration.
@@ -1266,7 +1253,7 @@ class TypedAWSClient(object):
         return datetime.utcfromtimestamp(integer_timestamp / 1000.0)
 
     def filter_log_events(self,
-                          log_group_name,  # type: str
+                          log_group_name,   # type: str
                           start_time=None,  # type: Optional[datetime]
                           next_token=None,  # type: Optional[str]
                           ):
