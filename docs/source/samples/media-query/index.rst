@@ -8,6 +8,10 @@ to create an image processing pipeline.  It takes as input any image or video
 and it will identify objects, people, text, scenes, and activities.  This
 results of this analysis can then be queried with a REST API.
 
+.. image:: docs/assets/appexample.jpg
+  :width: 100%
+  :alt: Application Example
+
 There are several components of this application.  The first part is an image
 processing pipeline.  The application is registered to automatically process
 any media that's uploaded to an Amazon S3 bucket.  The application will then
