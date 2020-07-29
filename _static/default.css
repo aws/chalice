@@ -225,6 +225,16 @@ h7 {
   margin-top: 2em;
 }
 
+.splash-box {
+  border: 1px solid #859191;
+  padding: 20px;
+  margin: 25px;
+}
+
+.splash-clickable {
+  text-decoration: none;
+}
+
 #splash .splash-column {
   margin-top: 0;
 }

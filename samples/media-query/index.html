@@ -78,8 +78,8 @@
     
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Upgrade Notes" href="../../upgrading.html" />
-    <link rel="prev" title="Todo Application" href="../todo-app/index.html" />
+    <link rel="next" title="Todo Application" href="../todo-app/index.html" />
+    <link rel="prev" title="Sample Applications" href="../index.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../../_static/fonts/open-sans/stylesheet.css" />
   
@@ -98,6 +98,7 @@
             <ul id="page-navigation">
                 <li class="site-page first"><a href="../../quickstart.html">Quick Start</a></li>
                 <li class="site-page"><a href="../../tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../index.html">Samples</a></li>
                 <li class="site-page"><a href="../../main.html">Documentation</a></li>
                 <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
                 <li class="site-search hidden-sm">
@@ -128,6 +129,7 @@
 to create an image processing pipeline.  It takes as input any image or video
 and it will identify objects, people, text, scenes, and activities.  This
 results of this analysis can then be queried with a REST API.</p>
+<a class="reference internal image-reference" href="../../_images/appexample.jpg"><img alt="Application Example" src="../../_images/appexample.jpg" style="width: 100%;" /></a>
 <p>There are several components of this application.  The first part is an image
 processing pipeline.  The application is registered to automatically process
 any media that’s uploaded to an Amazon S3 bucket.  The application will then
@@ -163,7 +165,7 @@ the deployment process, then walk through the main sections of the code.</p>
 <div class="section" id="architecture">
 <h2>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h2>
 <p>Below is the architecture for the application.</p>
-<a class="reference internal image-reference" href="../../_images/architecture.jpg"><img alt="Architecture diagram" src="../../_images/architecture.jpg" style="width: 100%;" /></a>
+<a class="reference internal image-reference" href="../../_images/architecture.png"><img alt="Architecture diagram" src="../../_images/architecture.png" style="width: 100%;" /></a>
 <p>The main components of the application are as follows:</p>
 <ul class="simple">
 <li><code class="docutils literal notranslate"><span class="pre">handle_object_created</span></code>: A Lambda function that is triggered when an
@@ -187,15 +189,34 @@ received HTTP request and return the results to the user through API Gateway.</l
 </div>
 <div class="section" id="deployment">
 <h2>Deployment<a class="headerlink" href="#deployment" title="Permalink to this headline">¶</a></h2>
-<p>To deploy the application, first install the necessary requirements and
-install the AWS CLI:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -r requirements.txt
-$ pip install awscli
+<p>First, we’ll setup our development environment by cloning the Chalice
+GitHub repository and copying the sample code in a new directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone git://github.com/aws/chalice
+$ mkdir /tmp/demo
+$ cp -r chalice/docs/source/samples/media-query/code/ /tmp/demo/media-query
+$ cd /tmp/demo/media-query/
 </pre></div>
 </div>
-<p>Then use the AWS CLI to deploy a CloudFormation stack containing the S3 bucket,
-DynamoDB table, and SNS topic needed to run this application:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation deploy --template-file resources.json --stack-name media-query --capabilities CAPABILITY_IAM
+<p>Next configure a virtual environment that uses Python 3.  In this example
+we’re using Python 3.7.</p>
+<dl class="docutils">
+<dt>::</dt>
+<dd>$ python3 -m venv /tmp/venv37
+$ . /tmp/venv37/bin/activate</dd>
+</dl>
+<p>To deploy the application, first install the necessary requirements and
+install Chalice:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install -r requirements.txt
+$ pip install chalice
+</pre></div>
+</div>
+<p>We’ll also be using the AWS CLI to help deploy our application, you can
+follow the <a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html">installation instructions</a>
+if you don’t have the AWS CLI installed.</p>
+<p>Next, we’ll use the AWS CLI to deploy a CloudFormation stack containing the S3
+bucket, DynamoDB table, and SNS topic needed to run this application:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation deploy --template-file resources.json \
+    --stack-name media-query --capabilities CAPABILITY_IAM
 </pre></div>
 </div>
 <p>Record the deployed resources as environment variables in the Chalice
@@ -203,7 +224,8 @@ application by running the <cite>recordresources.py</cite> script:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python recordresources.py --stack-name media-query
 </pre></div>
 </div>
-<p>Once those resources are created and recorded, deploy the Chalice application:</p>
+<p>You can see these values by looking at the <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file.
+Once those resources are created and recorded, deploy the Chalice application:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 </pre></div>
 </div>
@@ -558,7 +580,7 @@ Amazon API Gateway and defines two routes: <code class="docutils literal notrans
 return all the media files that have been analyzed so far.  Request
 <code class="docutils literal notranslate"><span class="pre">/{name}</span></code>, where <code class="docutils literal notranslate"><span class="pre">{name}</span></code> is the name of the media file that was uploaded
 to S3 will return the detected labels for that single resource.  This is
-equivalend to a “Get” API call.</p>
+equivalent to a “Get” API call.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">This sample application returns all analyzed media files in its
@@ -679,9 +701,9 @@ delete: s3://media-query-mediabucket-4b1h8anboxpa/sample.mp4
                     
                     <section class="relations">
                         
-                        <a href="../todo-app/index.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Todo Application</a>
+                        <a href="../index.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Sample Applications</a>
                         
-                        <a href="../../upgrading.html" title="next chapter" class="next-page clearfix">Upgrade Notes →</a>
+                        <a href="../todo-app/index.html" title="next chapter" class="next-page clearfix">Todo Application →</a>
                     </section>
                     
                 </article><aside id="right-column" class="side-column hidden-sm">
@@ -690,9 +712,9 @@ delete: s3://media-query-mediabucket-4b1h8anboxpa/sample.mp4
                             
                             <section class="next-previous">
                                 
-                                <a href="../todo-app/index.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                <a href="../index.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
                                 
-                                <a href="../../upgrading.html" title="next chapter" class="next-page clearfix">Next →</a>
+                                <a href="../todo-app/index.html" title="next chapter" class="next-page clearfix">Next →</a>
                             </section>
                             
                             <ul>

@@ -8,6 +8,10 @@ to create an image processing pipeline.  It takes as input any image or video
 and it will identify objects, people, text, scenes, and activities.  This
 results of this analysis can then be queried with a REST API.
 
+.. image:: docs/assets/appexample.jpg
+  :width: 100%
+  :alt: Application Example
+
 There are several components of this application.  The first part is an image
 processing pipeline.  The application is registered to automatically process
 any media that's uploaded to an Amazon S3 bucket.  The application will then
@@ -54,7 +58,7 @@ Architecture
 
 Below is the architecture for the application.
 
-.. image:: docs/assets/architecture.jpg
+.. image:: docs/assets/architecture.png
   :width: 100%
   :alt: Architecture diagram
 
@@ -85,17 +89,37 @@ The main components of the application are as follows:
 Deployment
 ==========
 
+First, we'll setup our development environment by cloning the Chalice
+GitHub repository and copying the sample code in a new directory::
+
+    $ git clone git://github.com/aws/chalice
+    $ mkdir /tmp/demo
+    $ cp -r chalice/docs/source/samples/media-query/code/ /tmp/demo/media-query
+    $ cd /tmp/demo/media-query/
+
+Next configure a virtual environment that uses Python 3.  In this example
+we're using Python 3.7.
+
+::
+  $ python3 -m venv /tmp/venv37
+  $ . /tmp/venv37/bin/activate
+
 To deploy the application, first install the necessary requirements and
-install the AWS CLI::
+install Chalice::
 
   $ pip install -r requirements.txt
-  $ pip install awscli
+  $ pip install chalice
 
 
-Then use the AWS CLI to deploy a CloudFormation stack containing the S3 bucket,
-DynamoDB table, and SNS topic needed to run this application::
+We'll also be using the AWS CLI to help deploy our application, you can
+follow the `installation instructions <https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html>`__
+if you don't have the AWS CLI installed.
 
-  $ aws cloudformation deploy --template-file resources.json --stack-name media-query --capabilities CAPABILITY_IAM
+Next, we'll use the AWS CLI to deploy a CloudFormation stack containing the S3
+bucket, DynamoDB table, and SNS topic needed to run this application::
+
+  $ aws cloudformation deploy --template-file resources.json \
+      --stack-name media-query --capabilities CAPABILITY_IAM
 
 
 Record the deployed resources as environment variables in the Chalice
@@ -103,6 +127,7 @@ application by running the `recordresources.py` script::
 
   $ python recordresources.py --stack-name media-query
 
+You can see these values by looking at the ``.chalice/config.json`` file.
 Once those resources are created and recorded, deploy the Chalice application::
 
   $ chalice deploy
@@ -396,7 +421,7 @@ Requesting the root URL of ``/`` is equivalent to a "List" API call that will
 return all the media files that have been analyzed so far.  Request
 ``/{name}``, where ``{name}`` is the name of the media file that was uploaded
 to S3 will return the detected labels for that single resource.  This is
-equivalend to a "Get" API call.
+equivalent to a "Get" API call.
 
 .. note::
   This sample application returns all analyzed media files in its

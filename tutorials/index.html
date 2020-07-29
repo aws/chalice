@@ -98,6 +98,7 @@
             <ul id="page-navigation">
                 <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
                 <li class="site-page"><a href="#">Tutorials</a></li>
+                <li class="site-page"><a href="../samples/index.html">Samples</a></li>
                 <li class="site-page"><a href="../main.html">Documentation</a></li>
                 <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
                 <li class="site-search hidden-sm">
@@ -120,57 +121,42 @@
                     
   <div class="section" id="tutorials">
 <h1>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this headline">¶</a></h1>
+<p>These step-by-step tutorials show you how to use various features of Chalice.
+These are perfect if you’re new to Chalice and want to learn what Chalice can
+do.  If you want more complete, real-world examples, you can check out
+our <a class="reference internal" href="../samples/index.html"><span class="doc">Sample Applications</span></a>.</p>
 <div class="section" id="rest-api-tutorials">
 <h2>Rest API Tutorials<a class="headerlink" href="#rest-api-tutorials" title="Permalink to this headline">¶</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="basicrestapi.html">REST API Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#installation-and-configuration">Installation and Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#url-parameters">URL Parameters</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#error-messages">Error Messages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#additional-routing">Additional Routing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#request-metadata">Request Metadata</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#request-content-types">Request Content Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#customizing-the-http-response">Customizing the HTTP Response</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#gzip-compression-for-json">GZIP compression for JSON</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basicrestapi.html#cors-support">CORS Support</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="customdomain.html">Custom Domain Names</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="customdomain.html#installation-and-configuration">Installation and Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="customdomain.html#configure-and-deploy-a-regional-endpoint">Configure and Deploy a REGIONAL Endpoint</a></li>
-<li class="toctree-l2"><a class="reference internal" href="customdomain.html#configuring-a-custom-domain">Configuring a Custom Domain</a></li>
-<li class="toctree-l2"><a class="reference internal" href="customdomain.html#verification">Verification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="customdomain.html#next-steps">Next Steps</a></li>
-</ul>
-</li>
-</ul>
-</div>
+<dl class="docutils">
+<dt><a class="reference internal" href="basicrestapi.html"><span class="doc">REST API Tutorial</span></a></dt>
+<dd>This tutorial walks you through creating a REST API in
+Chalice.  It covers features such as routing, URL parameters, error handling,
+etc.</dd>
+<dt><a class="reference internal" href="customdomain.html"><span class="doc">Custom Domain Names</span></a></dt>
+<dd>In this tutorial, we show you how to configure
+a REST API with your own custom domain name.</dd>
+</dl>
 </div>
 <div class="section" id="websocket-tutorials">
 <span id="websocket-tutorial"></span><h2>Websocket Tutorials<a class="headerlink" href="#websocket-tutorials" title="Permalink to this headline">¶</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="wsecho.html">Echo Server Example</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="wsecho.html#next-steps">Next Steps</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="wschat.html">Chat Server Example</a></li>
-</ul>
-</div>
+<dl class="docutils">
+<dt><a class="reference internal" href="wsecho.html"><span class="doc">Echo Server Example</span></a></dt>
+<dd>Learn the basics of creating websocket APIs in Chalice.  This tutorial
+creates an echo server that echoes back any message that the client sends to
+the websocket server.</dd>
+<dt><a class="reference internal" href="wschat.html"><span class="doc">Chat Server Example</span></a></dt>
+<dd>In this more complete example, learn how to create a basic chat application
+based on websockets.</dd>
+</dl>
 </div>
 <div class="section" id="event-source-tutorials">
 <h2>Event Source Tutorials<a class="headerlink" href="#event-source-tutorials" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt><a class="reference internal" href="events.html"><span class="doc">Event Sources Tutorial</span></a></dt>
+<dd>This tutorial shows you how to create an event handler
+that’s triggered whenever a message is published to an SNS topic.</dd>
+</dl>
 <div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="events.html">Event Sources Tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="events.html#installation-and-configuration">Installation and Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="events.html#amazon-sns-topics">Amazon SNS Topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="events.html#next-steps">Next Steps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="events.html#cleaning-up">Cleaning Up</a></li>
-</ul>
-</li>
-</ul>
 </div>
 </div>
 </div>

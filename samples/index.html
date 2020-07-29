@@ -78,7 +78,7 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Todo Application" href="todo-app/index.html" />
+    <link rel="next" title="Media Query Application" href="media-query/index.html" />
     <link rel="prev" title="Chalice" href="../api.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
@@ -98,6 +98,7 @@
             <ul id="page-navigation">
                 <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
                 <li class="site-page"><a href="../tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="#">Samples</a></li>
                 <li class="site-page"><a href="../main.html">Documentation</a></li>
                 <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
                 <li class="site-search hidden-sm">
@@ -120,11 +121,26 @@
                     
   <div class="section" id="sample-applications">
 <h1>Sample Applications<a class="headerlink" href="#sample-applications" title="Permalink to this headline">¶</a></h1>
+<p>Below are a collection of Chalice sample applications.  They
+show you how you can write more real-world serverless applications.
+The code for all of these sample applications is available in
+the <a class="reference external" href="https://github.com/aws/chalice/tree/master/docs/source/samples">Chalice repository on GitHub</a>.</p>
+<p>For each of these sample apps, we’ll cover what is does,
+the architecture of the app, how to deploy and test the app,
+and we’ll walk through the key parts of the application code.</p>
+<dl class="docutils">
+<dt><a class="reference internal" href="todo-app/index.html"><span class="doc">Todo Application</span></a></dt>
+<dd>This app is a REST API that manages Todo
+items.  These items are stored in an Amazon DynamoDB database.
+The REST API is protected with JWT auth.  We show you how to
+implement auth and login with Chalice’s <a class="reference internal" href="../topics/authorizers.html#builtin-authorizers"><span class="std std-ref">Built-in Authorizers</span></a>.</dd>
+<dt><a class="reference internal" href="media-query/index.html"><span class="doc">Media Query Application</span></a></dt>
+<dd>This app shows how to create an image
+processing pipeline that can analyze images and videos to detect
+real world objects.  The results of this analysis are then
+stored in a database and exposed through a queryable REST API.</dd>
+</dl>
 <div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="todo-app/index.html">Todo Application</a></li>
-<li class="toctree-l1"><a class="reference internal" href="media-query/index.html">Media Query Application</a></li>
-</ul>
 </div>
 </div>
 
@@ -134,7 +150,7 @@
                         
                         <a href="../api.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Chalice</a>
                         
-                        <a href="todo-app/index.html" title="next chapter" class="next-page clearfix">Todo Application →</a>
+                        <a href="media-query/index.html" title="next chapter" class="next-page clearfix">Media Query Application →</a>
                     </section>
                     
                 </article><aside id="right-column" class="side-column hidden-sm">
@@ -145,7 +161,7 @@
                                 
                                 <a href="../api.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
                                 
-                                <a href="todo-app/index.html" title="next chapter" class="next-page clearfix">Next →</a>
+                                <a href="media-query/index.html" title="next chapter" class="next-page clearfix">Next →</a>
                             </section>
                             
                             <ul>
