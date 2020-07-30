@@ -537,7 +537,6 @@ class LocalGateway(object):
         lambda_event, lambda_context = self._authorizer.authorize(
             path, lambda_event, lambda_context)
         response = self._app_object(lambda_event, lambda_context)
-        response = self._handle_binary(response)
         return response
 
     def _autogen_options_headers(self, lambda_event):
@@ -565,13 +564,6 @@ class LocalGateway(object):
             'Access-Control-Allow-Methods': '%s' % ','.join(route_methods)
         })
         return cors_headers
-
-    def _handle_binary(self, response):
-        # type: (Dict[str,Any]) -> Dict[str,Any]
-        if response.get('isBase64Encoded'):
-            body = base64.b64decode(response['body'])
-            response['body'] = body
-        return response
 
 
 class ChaliceRequestHandler(BaseHTTPRequestHandler):
@@ -606,10 +598,18 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             status_code = response['statusCode']
             headers = response['headers'].copy()
             headers.update(response['multiValueHeaders'])
+            response = self._handle_binary(response)
             body = response['body']
             self._send_http_response(status_code, headers, body)
         except LocalGatewayException as e:
             self._send_error_response(e)
+
+    def _handle_binary(self, response):
+        # type: (Dict[str,Any]) -> Dict[str,Any]
+        if response.get('isBase64Encoded'):
+            body = base64.b64decode(response['body'])
+            response['body'] = body
+        return response
 
     def _send_error_response(self, error):
         # type: (LocalGatewayException) -> None
