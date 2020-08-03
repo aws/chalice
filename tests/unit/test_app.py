@@ -2073,12 +2073,12 @@ def test_can_call_current_app_on_blueprint_when_mounted(create_event):
 
     @bp.route('/appname')
     def appname():
-        return {"name": bp.current_app.app_name}
+        return {'name': bp.current_app.app_name}
 
     myapp.register_blueprint(bp)
     event = create_event('/appname', 'GET', {})
     response = json_response_body(myapp(event, context=None))
-    assert response == {"name": "myapp"}
+    assert response == {'name': 'myapp'}
 
 def test_can_call_lambda_context_on_blueprint_when_mounted(create_event):
     myapp = app.Chalice('myapp')
