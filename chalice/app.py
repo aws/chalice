@@ -760,6 +760,7 @@ class _HandlerRegistration(object):
         self.event_sources = []
         self.pure_lambda_functions = []
         self.api = APIGateway()
+        self.handler_map = {}
 
     def _do_register_handler(self, handler_type, name, user_handler,
                              wrapped_handler, kwargs, options=None):
@@ -785,6 +786,7 @@ class _HandlerRegistration(object):
             wrapped_handler=wrapped_handler,
             kwargs=kwargs,
         )
+        self.handler_map[name] = wrapped_handler
 
     def _attach_websocket_handler(self, handler):
         route_key = handler.route_key_handled

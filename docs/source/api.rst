@@ -1237,3 +1237,167 @@ Websockets
      not JSON parsable then using this attribute will raise a ``ValueError``.
 
   See :doc:`topics/websockets` for more information.
+
+
+.. _testing-api:
+
+Testing
+=======
+
+.. class:: Client(app, stage_name='dev', project_dir='.')
+
+  A test client used to write tests for Chalice apps.  It allows you to
+  test Lambda function invocation as well as REST APIs.  Depending
+  on what you want to test, you'll access the various attributes
+  of this class.  You can use this class as a context manager.
+  When entering the context manager, any environment variables
+  specified for your function will be set.  The original environment
+  variables are put back when the block is exited:
+
+  .. code-block:: python
+
+     from chalice.test import Client
+
+     with Client(app) as client:
+         result = client.http.post("/my-data")
+
+  See the :doc:`topics/testing` documentation for more details on testing
+  your Chalice app.
+
+  .. attribute:: lambda_
+
+     Returns the Lambda test client :class:`TestLambdaClient`.
+
+  .. attribute:: http
+
+     Returns the test client for REST APIs :class:`TestHTTPClient`.
+
+  .. attribute:: events
+
+     Returns the test client for generating Lambda events
+     :class:`TestEventsClient`.
+
+.. class:: TestLambdaClient(import_name)
+
+   Test client for invoking Lambda functions.  This class should not be
+   instantiated directly, and instead should be accessed via the
+   ``Client.lambda_`` attribute:
+
+   .. code-block:: python
+
+      @app.lambda_function()
+      def myfunction(event, context):
+          return {"hello": "world"}
+
+      with Client(app) as client:
+          result = client.lambda_.invoke("myfunction")
+          assert result.payload == {"hello": "world"}
+
+   .. method:: invoke(function_name, payload=None)
+
+      Invoke a Lambda function by name.  The name should match
+      the resource name of the function.  This is typically the
+      name of the python function unless an explicit ``name=``
+      kwarg is provided when registering the function.
+
+      Returns an :class:`InvokeResponse` instance.
+
+
+.. class:: TestHTTPClient(import_name)
+
+   Test client for REST APIs.  This class should not be
+   instantiated directly, and instead should be accessed via the
+   ``Client.http`` attribute:
+
+   .. code-block:: python
+
+      with Client(app) as client:
+          response = client.http.get("/my-route")
+
+   .. method:: request(method, path, headers=None, body=b'')
+
+      Makes a test HTTP request to your REST API.  Returns
+      an :class:`HTTPResponse`.  You can also use the methods below
+      to make a request with a specific HTTP method instead of using
+      this method directly, e.g. ``client.http.get("/foo")`` instead
+      of ``client.http.request("GET", "/foo")``.
+
+   .. method:: get(path, \*\*kwargs)
+
+      Makes an HTTP GET request.
+
+   .. method:: post(path, \*\*kwargs)
+
+      Makes an HTTP POST request.
+
+   .. method:: put(path, \*\*kwargs)
+
+      Makes an HTTP PUT request.
+
+   .. method:: patch(path, \*\*kwargs)
+
+      Makes an HTTP PATCH request.
+
+   .. method:: options(path, \*\*kwargs)
+
+      Makes an HTTP OPTIONS request.
+
+   .. method:: delete(path, \*\*kwargs)
+
+      Makes an HTTP DELETE request.
+
+   .. method:: head(path, \*\*kwargs)
+
+      Makes an HTTP HEAD request.
+
+
+.. class:: TestEventsClient(import_name)
+
+   Test client for generating Lambda events.  This class should not be
+   instantiated directly, and instead should be accessed via the
+   ``Client.events`` attribute:
+
+   .. code-block:: python
+
+      with Client(app) as client:
+          result = client.lambda_.invoke(
+              "my_sns_handler",
+              client.events.generate_sns_event("Hello world")
+          )
+
+   .. method:: generate_sns_event(message, subject='')
+
+      Generates a sample SNS event.
+
+   .. method:: generate_s3_event(message, subject='')
+
+      Generates a sample S3 event.
+
+   .. method:: generate_sqs_event(message, subject='')
+
+      Generates a sample SQS event.
+
+   .. method:: generate_cw_event(message, subject='')
+
+      Generates a sample CloudWatch event.
+
+
+.. class:: HTTPResponse()
+
+  .. attribute:: body
+
+     The body of the HTTP response, in ``bytes``.
+
+  .. attribute:: headers
+
+     A dictionary of HTTP headers in the resopnse.
+
+  .. attribute:: status_code
+
+     The status code of the HTTP response.
+
+.. class:: InvokeResponse(payload)
+
+  .. attribute:: payload
+
+     The response payload of Lambda invocation.

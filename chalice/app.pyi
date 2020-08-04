@@ -178,6 +178,7 @@ class Chalice(DecoratorAPI):
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
     event_sources = ... # type: List[BaseEventSourceConfig]
     pure_lambda_functions = ... # type: List[LambdaFunction]
+    handler_map = ... # type: Dict[str, Callable]
     # Used for feature flag validation
     _features_used = ... # type: Set[str]
     experimental_feature_flags = ... # type: Set[str]
