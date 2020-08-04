@@ -1270,7 +1270,7 @@ Testing
 
   .. attribute:: http
 
-     Returns the test client for REST APIs :class:`TestHTTPCLient`.
+     Returns the test client for REST APIs :class:`TestHTTPClient`.
 
   .. attribute:: events
 
@@ -1303,7 +1303,7 @@ Testing
       Returns an :class:`InvokeResponse` instance.
 
 
-.. class:: TestHTTPCLient(import_name)
+.. class:: TestHTTPClient(import_name)
 
    Test client for REST APIs.  This class should not be
    instantiated directly, and instead should be accessed via the

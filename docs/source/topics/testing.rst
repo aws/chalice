@@ -29,7 +29,18 @@ given this sample app:
        return {'event': event}
 
 
-Here's how you can test these functions with the test client:
+Here's how you can test these functions with the test client.  In our
+example, we'll be using `pytest <https://docs.pytest.org/en/stable/>`__,
+but the Chalice test client will work with any testing framework.
+We'll create a new ``tests/`` directory and create a ``tests/__init__.py``
+and a ``tests/test_app.py`` file.
+
+::
+
+    $ mkdir tests
+    $ touch tests/{__init__.py,test_app.py}
+
+The ``tests/test_app.py`` file should have the following contents:
 
 .. code-block:: python
 
@@ -46,6 +57,20 @@ Here's how you can test these functions with the test client:
            result = client.lambda_.invoke(
                'bar', {'my': 'event'})
            assert result.payload == {'event': {'my': 'event'}}
+
+Now we can run our tests with ``pytest``::
+
+    $ pip install pytest
+    $ py.test tests/test_app.py
+    ========================= test session starts ==========================
+    platform darwin -- Python 3.7.3, pytest-5.3.1, py-1.5.3, pluggy-0.12.0
+    rootdir: /tmp/testclient
+    plugins: hypothesis-4.43.1, cov-2.8.1
+    collected 2 items
+
+    test_app.py ..                                                            [100%]
+
+    ========================= 2 passed in 0.32s ============================
 
 For testing Lambda functions that are connected to specific events,
 you can use the :attr:`Client.events` attribute to generate
@@ -212,7 +237,7 @@ You can also test builtin authorizers with the test client:
 Testing Boto3 Client Calls
 --------------------------
 
-If you're event handlers are making AWS API calls using boto3 or botocore,
+If your event handlers are making AWS API calls using boto3 or botocore,
 you can use the `botocore stubber
 <https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html>`__
 to test your API calls.  For example, suppose we have an app that makes an
