@@ -77,6 +77,7 @@ class LocalARNBuilder(object):
         # with a '//'.
         if path != '/':
             path = path[1:]
+        path = path.split('?')[0]
         return self.ARN_FORMAT.format(
             region=self.LOCAL_REGION,
             account_id=self.LOCAL_ACCOUNT_ID,
