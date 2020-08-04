@@ -1,0 +1,472 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Testing &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Chalice" href="../api.html" />
+    <link rel="prev" title="Experimental APIs" href="experimental.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="../tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../samples/index.html">Samples</a></li>
+                <li class="site-page"><a href="../main.html">Documentation</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="testing">
+<h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
+<p>Chalice provides a <a class="reference internal" href="../api.html#testing-api"><span class="std std-ref">test client</span></a> in <code class="docutils literal notranslate"><span class="pre">chalice.test</span></code> that
+you can use to test your Chalice applications.  This client lets you invoke
+Lambda function and event handlers directly, as well as test your REST APIs.</p>
+<div class="section" id="lambda-functions">
+<h2>Lambda Functions<a class="headerlink" href="#lambda-functions" title="Permalink to this headline">¶</a></h2>
+<p>To test lambda functions, use the
+<a class="reference internal" href="../api.html#TestLambdaClient.invoke" title="TestLambdaClient.invoke"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Client.lambda_.invoke</span></code></a> method.  The
+test client is intended to be used as a context manager.  For example,
+given this sample app:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;event&#39;</span><span class="p">:</span> <span class="n">event</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Here’s how you can test these functions with the test client.  In our
+example, we’ll be using <a class="reference external" href="https://docs.pytest.org/en/stable/">pytest</a>,
+but the Chalice test client will work with any testing framework.
+We’ll create a new <code class="docutils literal notranslate"><span class="pre">tests/</span></code> directory and create a <code class="docutils literal notranslate"><span class="pre">tests/__init__.py</span></code>
+and a <code class="docutils literal notranslate"><span class="pre">tests/test_app.py</span></code> file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir tests
+$ touch tests/{__init__.py,test_app.py}
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">tests/test_app.py</span></code> file should have the following contents:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">app</span>
+
+<span class="k">def</span> <span class="nf">test_foo_function</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">test_bar_function</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
+            <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;my&#39;</span><span class="p">:</span> <span class="s1">&#39;event&#39;</span><span class="p">})</span>
+        <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;event&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;my&#39;</span><span class="p">:</span> <span class="s1">&#39;event&#39;</span><span class="p">}}</span>
+</pre></div>
+</div>
+<p>Now we can run our tests with <code class="docutils literal notranslate"><span class="pre">pytest</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install pytest
+$ py.test tests/test_app.py
+========================= test session starts ==========================
+platform darwin -- Python 3.7.3, pytest-5.3.1, py-1.5.3, pluggy-0.12.0
+rootdir: /tmp/testclient
+plugins: hypothesis-4.43.1, cov-2.8.1
+collected 2 items
+
+test_app.py ..                                                            [100%]
+
+========================= 2 passed in 0.32s ============================
+</pre></div>
+</div>
+<p>For testing Lambda functions that are connected to specific events,
+you can use the <a class="reference internal" href="../api.html#Client.events" title="Client.events"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Client.events</span></code></a> attribute to generate
+sample events.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">}</span>
+
+<span class="c1"># Test code</span>
+
+<span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+
+<span class="k">def</span> <span class="nf">test_sns_handler</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
+            <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">generate_sns_event</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;hello world&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;hello world&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="environment-variables">
+<h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
+<p>The Chalice test client will also configure any environment variables you
+have configured with your Lambda functions in your <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>
+file.  For example, suppose you had these config file:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;testenv&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;prod&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;MY_ENV_VAR&quot;</span><span class="p">:</span> <span class="s2">&quot;TOP LEVEL&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;lambda_functions&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;bar&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="nt">&quot;MY_ENV_VAR&quot;</span><span class="p">:</span> <span class="s2">&quot;OVERRIDE&quot;</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>These sets a <code class="docutils literal notranslate"><span class="pre">MY_ENV_VAR</span></code> environment variable for the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage.
+The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function overrides this environment variable with its own
+custom value.  To test this, we need to specify the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage when
+we create our test client:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;MY_ENV_VAR&#39;</span><span class="p">)}</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;MY_ENV_VAR&#39;</span><span class="p">)}</span>
+
+ <span class="c1"># Test code</span>
+<span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+
+<span class="k">def</span> <span class="nf">test_foo_function</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">stage_name</span><span class="o">=</span><span class="s1">&#39;prod&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;TOP LEVEL&#39;</span><span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">test_bar_function</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s1">&#39;bar&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;OVERRIDE&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="rest-apis">
+<h2>REST APIs<a class="headerlink" href="#rest-apis" title="Permalink to this headline">¶</a></h2>
+<p>You can test your REST API with the Chalice test client using the
+<a class="reference internal" href="../api.html#Client.http" title="Client.http"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Client.http</span></code></a> attribute.  For example, given this REST API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>You can test this route with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">app</span>
+
+ <span class="k">def</span> <span class="nf">test_index</span><span class="p">():</span>
+     <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+         <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">json_body</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>If you want to access the response body’s raw bytes, you can use the
+<code class="docutils literal notranslate"><span class="pre">body</span></code> attribute:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">app</span>
+
+ <span class="k">def</span> <span class="nf">test_index</span><span class="p">():</span>
+     <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+         <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">==</span> <span class="n">b</span><span class="s1">&#39;{&quot;hello&quot;:&quot;world&quot;}&#39;</span>
+</pre></div>
+</div>
+<p>You can also test builtin authorizers with the test client:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.authorizer</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">myauth</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">token</span> <span class="o">==</span> <span class="s1">&#39;allow&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">([</span><span class="s1">&#39;*&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">([],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;noone&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">myauth</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">needs_auth</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+
+<span class="c1">#  Test code:</span>
+<span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+
+ <span class="k">def</span> <span class="nf">test_needs_auth</span><span class="p">():</span>
+     <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+         <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+             <span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s1">&#39;allow&#39;</span><span class="p">})</span>
+         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">json_body</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+         <span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+             <span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span>
+             <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s1">&#39;deny&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="testing-boto3-client-calls">
+<h2>Testing Boto3 Client Calls<a class="headerlink" href="#testing-boto3-client-calls" title="Permalink to this headline">¶</a></h2>
+<p>If your event handlers are making AWS API calls using boto3 or botocore,
+you can use the <a class="reference external" href="https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html">botocore stubber</a>
+to test your API calls.  For example, suppose we have an app that makes an
+API call to Amazon Rekognition whenever an object is uploaded to S3:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">boto3</span>
+
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;testclient&#39;</span><span class="p">)</span>
+<span class="n">_REKOGNITION_CLIENT</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+<span class="k">def</span> <span class="nf">get_rekognition_client</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">_REKOGNITION_CLIENT</span>
+    <span class="k">if</span> <span class="n">_REKOGNITION_CLIENT</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">_REKOGNITION_CLIENT</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;rekognition&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_REKOGNITION_CLIENT</span>
+
+
+<span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span>
+                 <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:*&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">handle_object_created</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">get_rekognition_client</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">detect_labels</span><span class="p">(</span>
+        <span class="n">Image</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;S3Object&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;Bucket&#39;</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span>
+                <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+        <span class="n">MinConfidence</span><span class="o">=</span><span class="mf">50.0</span>
+    <span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span><span class="p">[</span><span class="s1">&#39;Name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Labels&#39;</span><span class="p">]]</span>
+    <span class="c1"># In the real app we&#39;d now do something with these labels</span>
+    <span class="c1"># (e.g. store than in a database so we can query them later).</span>
+    <span class="k">return</span> <span class="n">labels</span>
+</pre></div>
+</div>
+<p>To test this, we’ll combine the botocore stubber and the Chalice test client:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">import</span> <span class="nn">app</span>
+
+<span class="kn">from</span> <span class="nn">botocore.stub</span> <span class="kn">import</span> <span class="n">Stubber</span>
+
+<span class="k">def</span> <span class="nf">test_calls_rekognition</span><span class="p">():</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">get_rekognition_client</span><span class="p">()</span>
+    <span class="n">stub</span> <span class="o">=</span> <span class="n">Stubber</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
+    <span class="n">stub</span><span class="o">.</span><span class="n">add_response</span><span class="p">(</span>
+        <span class="s1">&#39;detect_labels&#39;</span><span class="p">,</span>
+        <span class="n">expected_params</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;Image&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;S3Object&#39;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">&#39;Bucket&#39;</span><span class="p">:</span> <span class="s1">&#39;mybucket&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;mykey&#39;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;MinConfidence&#39;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">service_response</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;Labels&#39;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Dog&#39;</span><span class="p">,</span> <span class="s1">&#39;Confidence&#39;</span><span class="p">:</span> <span class="mf">75.0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Mountain&#39;</span><span class="p">,</span> <span class="s1">&#39;Confidence&#39;</span><span class="p">:</span> <span class="mf">80.0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Snow&#39;</span><span class="p">,</span> <span class="s1">&#39;Confidence&#39;</span><span class="p">:</span> <span class="mf">85.0</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">with</span> <span class="n">stub</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">generate_s3_event</span><span class="p">(</span>
+                <span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;mykey&#39;</span><span class="p">)</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s1">&#39;handle_object_created&#39;</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;Dog&#39;</span><span class="p">,</span> <span class="s1">&#39;Mountain&#39;</span><span class="p">,</span> <span class="s1">&#39;Snow&#39;</span><span class="p">]</span>
+        <span class="n">stub</span><span class="o">.</span><span class="n">assert_no_pending_responses</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In the testcase above, we first tell the stubber what API call we’re expecting,
+along with the parameters we’ll send and the response we expect back from the
+Rekognition service.  Next we use the <code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">stub:</span></code> line to activate our stubs.
+This also ensures that when our test exits that we’ll deactive the stubs for
+this client.  Now we the <code class="docutils literal notranslate"><span class="pre">client.lambda_.invoke</span></code> method is called, our
+stubbed client will return the preconfigured response data instead of making
+an actual API call to the Rekognition service.</p>
+</div>
+<div class="section" id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>For reference documentation on the methods and attributes of the Chalice test
+client, see the <a class="reference internal" href="../api.html#testing-api"><span class="std std-ref">test client</span></a> section in the API
+documentation.</p>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="experimental.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Experimental APIs</a>
+                        
+                        <a href="../api.html" title="next chapter" class="next-page clearfix">Chalice →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="experimental.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="../api.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Testing</a><ul>
+<li><a class="reference internal" href="#lambda-functions">Lambda Functions</a><ul>
+<li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#rest-apis">REST APIs</a></li>
+<li><a class="reference internal" href="#testing-boto3-client-calls">Testing Boto3 Client Calls</a></li>
+<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>

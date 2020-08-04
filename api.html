@@ -79,7 +79,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Sample Applications" href="samples/index.html" />
-    <link rel="prev" title="Experimental APIs" href="topics/experimental.html" />
+    <link rel="prev" title="Testing" href="topics/testing.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
   
@@ -1591,12 +1591,218 @@ not JSON parsable then using this attribute will raise a <code class="docutils l
 </dd></dl>
 
 </div>
+<div class="section" id="testing">
+<span id="testing-api"></span><h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="Client">
+<em class="property">class </em><code class="descname">Client</code><span class="sig-paren">(</span><em>app</em>, <em>stage_name='dev'</em>, <em>project_dir='.'</em><span class="sig-paren">)</span><a class="headerlink" href="#Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>A test client used to write tests for Chalice apps.  It allows you to
+test Lambda function invocation as well as REST APIs.  Depending
+on what you want to test, you’ll access the various attributes
+of this class.  You can use this class as a context manager.
+When entering the context manager, any environment variables
+specified for your function will be set.  The original environment
+variables are put back when the block is exited:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+
+<span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/my-data&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="topics/testing.html"><span class="doc">Testing</span></a> documentation for more details on testing
+your Chalice app.</p>
+<dl class="attribute">
+<dt id="Client.lambda_">
+<code class="descname">lambda_</code><a class="headerlink" href="#Client.lambda_" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Lambda test client <a class="reference internal" href="#TestLambdaClient" title="TestLambdaClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">TestLambdaClient</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Client.http">
+<code class="descname">http</code><a class="headerlink" href="#Client.http" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the test client for REST APIs <a class="reference internal" href="#TestHTTPClient" title="TestHTTPClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">TestHTTPClient</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Client.events">
+<code class="descname">events</code><a class="headerlink" href="#Client.events" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the test client for generating Lambda events
+<a class="reference internal" href="#TestEventsClient" title="TestEventsClient"><code class="xref py py-class docutils literal notranslate"><span class="pre">TestEventsClient</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="TestLambdaClient">
+<em class="property">class </em><code class="descname">TestLambdaClient</code><span class="sig-paren">(</span><em>import_name</em><span class="sig-paren">)</span><a class="headerlink" href="#TestLambdaClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test client for invoking Lambda functions.  This class should not be
+instantiated directly, and instead should be accessed via the
+<code class="docutils literal notranslate"><span class="pre">Client.lambda_</span></code> attribute:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="s2">&quot;world&quot;</span><span class="p">}</span>
+
+<span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s2">&quot;myfunction&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="s2">&quot;world&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="TestLambdaClient.invoke">
+<code class="descname">invoke</code><span class="sig-paren">(</span><em>function_name</em>, <em>payload=None</em><span class="sig-paren">)</span><a class="headerlink" href="#TestLambdaClient.invoke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Invoke a Lambda function by name.  The name should match
+the resource name of the function.  This is typically the
+name of the python function unless an explicit <code class="docutils literal notranslate"><span class="pre">name=</span></code>
+kwarg is provided when registering the function.</p>
+<p>Returns an <a class="reference internal" href="#InvokeResponse" title="InvokeResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">InvokeResponse</span></code></a> instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="TestHTTPClient">
+<em class="property">class </em><code class="descname">TestHTTPClient</code><span class="sig-paren">(</span><em>import_name</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test client for REST APIs.  This class should not be
+instantiated directly, and instead should be accessed via the
+<code class="docutils literal notranslate"><span class="pre">Client.http</span></code> attribute:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/my-route&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="TestHTTPClient.request">
+<code class="descname">request</code><span class="sig-paren">(</span><em>method</em>, <em>path</em>, <em>headers=None</em>, <em>body=b''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes a test HTTP request to your REST API.  Returns
+an <a class="reference internal" href="#HTTPResponse" title="HTTPResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">HTTPResponse</span></code></a>.  You can also use the methods below
+to make a request with a specific HTTP method instead of using
+this method directly, e.g. <code class="docutils literal notranslate"><span class="pre">client.http.get(&quot;/foo&quot;)</span></code> instead
+of <code class="docutils literal notranslate"><span class="pre">client.http.request(&quot;GET&quot;,</span> <span class="pre">&quot;/foo&quot;)</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP GET request.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.post">
+<code class="descname">post</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.post" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP POST request.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.put">
+<code class="descname">put</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP PUT request.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.patch">
+<code class="descname">patch</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.patch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP PATCH request.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.options">
+<code class="descname">options</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.options" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP OPTIONS request.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP DELETE request.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestHTTPClient.head">
+<code class="descname">head</code><span class="sig-paren">(</span><em>path</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.head" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an HTTP HEAD request.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="TestEventsClient">
+<em class="property">class </em><code class="descname">TestEventsClient</code><span class="sig-paren">(</span><em>import_name</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test client for generating Lambda events.  This class should not be
+instantiated directly, and instead should be accessed via the
+<code class="docutils literal notranslate"><span class="pre">Client.events</span></code> attribute:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
+        <span class="s2">&quot;my_sns_handler&quot;</span><span class="p">,</span>
+        <span class="n">client</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">generate_sns_event</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="TestEventsClient.generate_sns_event">
+<code class="descname">generate_sns_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_sns_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a sample SNS event.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestEventsClient.generate_s3_event">
+<code class="descname">generate_s3_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_s3_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a sample S3 event.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestEventsClient.generate_sqs_event">
+<code class="descname">generate_sqs_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_sqs_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a sample SQS event.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestEventsClient.generate_cw_event">
+<code class="descname">generate_cw_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_cw_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a sample CloudWatch event.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="HTTPResponse">
+<em class="property">class </em><code class="descname">HTTPResponse</code><a class="headerlink" href="#HTTPResponse" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="HTTPResponse.body">
+<code class="descname">body</code><a class="headerlink" href="#HTTPResponse.body" title="Permalink to this definition">¶</a></dt>
+<dd><p>The body of the HTTP response, in <code class="docutils literal notranslate"><span class="pre">bytes</span></code>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="HTTPResponse.headers">
+<code class="descname">headers</code><a class="headerlink" href="#HTTPResponse.headers" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dictionary of HTTP headers in the resopnse.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="HTTPResponse.status_code">
+<code class="descname">status_code</code><a class="headerlink" href="#HTTPResponse.status_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>The status code of the HTTP response.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="InvokeResponse">
+<em class="property">class </em><code class="descname">InvokeResponse</code><span class="sig-paren">(</span><em>payload</em><span class="sig-paren">)</span><a class="headerlink" href="#InvokeResponse" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="InvokeResponse.payload">
+<code class="descname">payload</code><a class="headerlink" href="#InvokeResponse.payload" title="Permalink to this definition">¶</a></dt>
+<dd><p>The response payload of Lambda invocation.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 
 
                     
                     <section class="relations">
                         
-                        <a href="topics/experimental.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Experimental APIs</a>
+                        <a href="topics/testing.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Testing</a>
                         
                         <a href="samples/index.html" title="next chapter" class="next-page clearfix">Sample Applications →</a>
                     </section>
@@ -1607,7 +1813,7 @@ not JSON parsable then using this attribute will raise a <code class="docutils l
                             
                             <section class="next-previous">
                                 
-                                <a href="topics/experimental.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                <a href="topics/testing.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
                                 
                                 <a href="samples/index.html" title="next chapter" class="next-page clearfix">Next →</a>
                             </section>
@@ -1626,6 +1832,7 @@ not JSON parsable then using this attribute will raise a <code class="docutils l
 <li><a class="reference internal" href="#event-sources">Event Sources</a></li>
 <li><a class="reference internal" href="#blueprints">Blueprints</a></li>
 <li><a class="reference internal" href="#websockets">Websockets</a></li>
+<li><a class="reference internal" href="#testing">Testing</a></li>
 </ul>
 
                         </section>

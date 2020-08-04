@@ -128,6 +128,7 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
+ | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#J"><strong>J</strong></a>
@@ -193,9 +194,11 @@
 </li>
       <li><a href="api.html#Blueprint">Blueprint (built-in class)</a>
 </li>
-      <li><a href="api.html#Response.body">body (Response attribute)</a>
+      <li><a href="api.html#HTTPResponse.body">body (HTTPResponse attribute)</a>
 
       <ul>
+        <li><a href="api.html#Response.body">(Response attribute)</a>
+</li>
         <li><a href="api.html#SQSRecord.body">(SQSRecord attribute)</a>
 </li>
         <li><a href="api.html#WebsocketEvent.body">(WebsocketEvent attribute)</a>
@@ -212,6 +215,8 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#Chalice">Chalice (built-in class)</a>
+</li>
+      <li><a href="api.html#Client">Client (built-in class)</a>
 </li>
       <li><a href="api.html#close">close()</a>
 </li>
@@ -265,6 +270,8 @@
 </li>
       <li><a href="api.html#APIGateway.default_binary_types">default_binary_types (APIGateway attribute)</a>
 </li>
+      <li><a href="api.html#TestHTTPClient.delete">delete() (TestHTTPClient method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#CloudWatchEvent.detail">detail (CloudWatchEvent attribute)</a>
@@ -283,7 +290,27 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#Client.events">events (Client attribute)</a>
+</li>
       <li><a href="api.html#CORSConfig.expose_headers">expose_headers (CORSConfig attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#TestEventsClient.generate_cw_event">generate_cw_event() (TestEventsClient method)</a>
+</li>
+      <li><a href="api.html#TestEventsClient.generate_s3_event">generate_s3_event() (TestEventsClient method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#TestEventsClient.generate_sns_event">generate_sns_event() (TestEventsClient method)</a>
+</li>
+      <li><a href="api.html#TestEventsClient.generate_sqs_event">generate_sqs_event() (TestEventsClient method)</a>
+</li>
+      <li><a href="api.html#TestHTTPClient.get">get() (TestHTTPClient method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -291,20 +318,28 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#TestHTTPClient.head">head() (TestHTTPClient method)</a>
+</li>
       <li><a href="api.html#CognitoUserPoolAuthorizer.header">header (CognitoUserPoolAuthorizer attribute)</a>
 
       <ul>
         <li><a href="api.html#CustomAuthorizer.header">(CustomAuthorizer attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#Request.headers">headers (Request attribute)</a>
+      <li><a href="api.html#HTTPResponse.headers">headers (HTTPResponse attribute)</a>
 
       <ul>
+        <li><a href="api.html#Request.headers">(Request attribute)</a>
+</li>
         <li><a href="api.html#Response.headers">(Response attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#Client.http">http (Client attribute)</a>
+</li>
+      <li><a href="api.html#HTTPResponse">HTTPResponse (built-in class)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -313,9 +348,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#IAMAuthorizer">IAMAuthorizer (built-in class)</a>
 </li>
+      <li><a href="api.html#info">info()</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#info">info()</a>
+      <li><a href="api.html#TestLambdaClient.invoke">invoke() (TestLambdaClient method)</a>
+</li>
+      <li><a href="api.html#InvokeResponse">InvokeResponse (built-in class)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -343,10 +382,12 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#Chalice.lambda_context">lambda_context (Chalice attribute)</a>
+      <li><a href="api.html#Client.lambda_">lambda_ (Client attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#Chalice.lambda_context">lambda_context (Chalice attribute)</a>
+</li>
       <li><a href="api.html#Chalice.lambda_function">lambda_function() (Chalice method)</a>
 </li>
   </ul></td>
@@ -391,15 +432,17 @@
 </li>
       <li><a href="api.html#Chalice.on_sns_message">on_sns_message() (Chalice method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#Chalice.on_sqs_message">on_sqs_message() (Chalice method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#Chalice.on_ws_connect">on_ws_connect() (Chalice method)</a>
 </li>
       <li><a href="api.html#Chalice.on_ws_disconnect">on_ws_disconnect() (Chalice method)</a>
 </li>
       <li><a href="api.html#Chalice.on_ws_message">on_ws_message() (Chalice method)</a>
+</li>
+      <li><a href="api.html#TestHTTPClient.options">options() (TestHTTPClient method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -407,13 +450,21 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#TestHTTPClient.patch">patch() (TestHTTPClient method)</a>
+</li>
       <li><a href="api.html#AuthRoute.path">path (AuthRoute attribute)</a>
+</li>
+      <li><a href="api.html#InvokeResponse.payload">payload (InvokeResponse attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#TestHTTPClient.post">post() (TestHTTPClient method)</a>
+</li>
       <li><a href="api.html#AuthResponse.principal_id">principal_id (AuthResponse attribute)</a>
 </li>
       <li><a href="api.html#CognitoUserPoolAuthorizer.provider_arns">provider_arns (CognitoUserPoolAuthorizer attribute)</a>
+</li>
+      <li><a href="api.html#TestHTTPClient.put">put() (TestHTTPClient method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -442,6 +493,8 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#Request">Request (built-in class)</a>
+</li>
+      <li><a href="api.html#TestHTTPClient.request">request() (TestHTTPClient method)</a>
 </li>
       <li><a href="api.html#CloudWatchEvent.resources">resources (CloudWatchEvent attribute)</a>
 </li>
@@ -479,8 +532,12 @@
 </li>
       <li><a href="api.html#Request.stage_vars">stage_vars (Request attribute)</a>
 </li>
-      <li><a href="api.html#Response.status_code">status_code (Response attribute)</a>
+      <li><a href="api.html#HTTPResponse.status_code">status_code (HTTPResponse attribute)</a>
+
+      <ul>
+        <li><a href="api.html#Response.status_code">(Response attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api.html#SNSEvent.subject">subject (SNSEvent attribute)</a>
 </li>
   </ul></td>
@@ -489,6 +546,12 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#TestEventsClient">TestEventsClient (built-in class)</a>
+</li>
+      <li><a href="api.html#TestHTTPClient">TestHTTPClient (built-in class)</a>
+</li>
+      <li><a href="api.html#TestLambdaClient">TestLambdaClient (built-in class)</a>
+</li>
       <li><a href="api.html#CloudWatchEvent.time">time (CloudWatchEvent attribute)</a>
 </li>
       <li><a href="api.html#CloudWatchEvent.to_dict">to_dict() (CloudWatchEvent method)</a>
