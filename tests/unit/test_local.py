@@ -999,9 +999,11 @@ class TestArnBuilder(object):
         assert arn == built_arn
 
     def test_build_arn_with_query_params(self, arn_builder):
-        arn = 'arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b/api/*/resource'
+        arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b/api/'
+               '*/resource')
         built_arn = arn_builder.build_arn('*', '/resource?foo=bar')
         assert arn == built_arn
+
 
 @pytest.mark.parametrize('arn,pattern', [
     ('mars-west-2:123456789012:ymy8tbxw7b/api/GET/foo',
