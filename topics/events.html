@@ -177,7 +177,7 @@ and <code class="docutils literal notranslate"><span class="pre">every_two_hours
 <div class="section" id="cloudwatch-events">
 <span id="cwe-events"></span><h2>CloudWatch Events<a class="headerlink" href="#cloudwatch-events" title="Permalink to this headline">¶</a></h2>
 <p>You can configure a lambda function to subscribe to
-any <cite>CloudWatch Event &lt;https://amzn.to/2SCgWA6&gt;</cite>.</p>
+any <a class="reference external" href="https://amzn.to/2SCgWA6">CloudWatch Event</a>.</p>
 <p>To subscribe to a CloudWatch Event in chalice, you use the
 <code class="docutils literal notranslate"><span class="pre">&#64;app.on_cw_event()</span></code> decorator.  Let’s look at an example.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
@@ -190,8 +190,8 @@ any <cite>CloudWatch Event &lt;https://amzn.to/2SCgWA6&gt;</cite>.</p>
 <p>In this example, we have a single lambda function that we subscribe to all
 events from the AWS Code Commit service. The first parameter to the decorator
 is the event pattern that will be used to filter the events sent to the function.</p>
-<p>See the CloudWatch Event pattern docs for additional syntax and examples
-<a class="reference external" href="https://amzn.to/2OlqZso">https://amzn.to/2OlqZso</a></p>
+<p>See the <a class="reference external" href="https://amzn.to/2OlqZso">CloudWatch Event pattern docs</a>
+for additional syntax and examples.</p>
 <p>The function you decorate must accept a single argument,
 which will be of type <a class="reference internal" href="../api.html#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code></a>.</p>
 </div>

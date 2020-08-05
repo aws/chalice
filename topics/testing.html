@@ -129,7 +129,7 @@
 you can use to test your Chalice applications.  This client lets you invoke
 Lambda function and event handlers directly, as well as test your REST APIs.</p>
 <div class="section" id="lambda-functions">
-<h2>Lambda Functions<a class="headerlink" href="#lambda-functions" title="Permalink to this headline">¶</a></h2>
+<span id="testing-lambda-functions"></span><h2>Lambda Functions<a class="headerlink" href="#lambda-functions" title="Permalink to this headline">¶</a></h2>
 <p>To test lambda functions, use the
 <a class="reference internal" href="../api.html#TestLambdaClient.invoke" title="TestLambdaClient.invoke"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Client.lambda_.invoke</span></code></a> method.  The
 test client is intended to be used as a context manager.  For example,
@@ -185,6 +185,11 @@ test_app.py ..                                                            [100%]
 
 ========================= 2 passed in 0.32s ============================
 </pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">See the <a class="reference internal" href="#testing-pytest-fixtures"><span class="std std-ref">Pytest Fixtures</span></a> section for how to use pytest
+fixtures with the Chalice test client.</p>
 </div>
 <p>For testing Lambda functions that are connected to specific events,
 you can use the <a class="reference internal" href="../api.html#Client.events" title="Client.events"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Client.events</span></code></a> attribute to generate
@@ -330,7 +335,7 @@ we create our test client:</p>
 </div>
 </div>
 <div class="section" id="testing-boto3-client-calls">
-<h2>Testing Boto3 Client Calls<a class="headerlink" href="#testing-boto3-client-calls" title="Permalink to this headline">¶</a></h2>
+<span id="id1"></span><h2>Testing Boto3 Client Calls<a class="headerlink" href="#testing-boto3-client-calls" title="Permalink to this headline">¶</a></h2>
 <p>If your event handlers are making AWS API calls using boto3 or botocore,
 you can use the <a class="reference external" href="https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html">botocore stubber</a>
 to test your API calls.  For example, suppose we have an app that makes an
@@ -414,6 +419,91 @@ this client.  Now we the <code class="docutils literal notranslate"><span class=
 stubbed client will return the preconfigured response data instead of making
 an actual API call to the Rekognition service.</p>
 </div>
+<div class="section" id="pytest-fixtures">
+<span id="testing-pytest-fixtures"></span><h2>Pytest Fixtures<a class="headerlink" href="#pytest-fixtures" title="Permalink to this headline">¶</a></h2>
+<p>Both the Botocore stubber and the Chalice test client are used within
+a context manager.  In our previous example, this resulted in multiple
+levels of nesting, which is required for every test we write.  If you’re
+using pytest as your test framework, you can create
+<a class="reference external" href="https://docs.pytest.org/en/stable/fixture.html">test fixtures</a> to
+reduce the boiler plate code.  Let’s rewrite several of these tests to use
+pytest fixtures.</p>
+<p>First we’ll create a test fixture for the Chalice test client:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">app</span>
+<span class="kn">from</span> <span class="nn">pytest</span> <span class="kn">import</span> <span class="n">fixture</span>
+<span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+
+<span class="nd">@fixture</span>
+<span class="k">def</span> <span class="nf">test_client</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">client</span>
+</pre></div>
+</div>
+<p>Now our original tests for the <code class="docutils literal notranslate"><span class="pre">foo</span></code> and <code class="docutils literal notranslate"><span class="pre">bar</span></code> Lambda functions
+from the <a class="reference internal" href="#testing-lambda-functions"><span class="std std-ref">Lambda Functions</span></a> section can be rewritten
+to use this fixture:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">test_foo_function</span><span class="p">(</span><span class="n">test_client</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">test_client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">test_bar_function</span><span class="p">(</span><span class="n">test_client</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">test_client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
+        <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;my&#39;</span><span class="p">:</span> <span class="s1">&#39;event&#39;</span><span class="p">})</span>
+    <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;event&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;my&#39;</span><span class="p">:</span> <span class="s1">&#39;event&#39;</span><span class="p">}}</span>
+</pre></div>
+</div>
+<p>We can also create a fixture for the botocore stubber.  This allows us
+to rewrite the <code class="docutils literal notranslate"><span class="pre">test_calls_rekognition()</span></code> test from the
+<a class="reference internal" href="#testing-boto3-client-calls"><span class="std std-ref">previous section</span></a> in a more simplified
+manner.  Below is the entire test file using both the botocore and Chalice
+test client fixtures:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">app</span>
+<span class="kn">from</span> <span class="nn">pytest</span> <span class="kn">import</span> <span class="n">fixture</span>
+<span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
+
+
+<span class="nd">@fixture</span>
+<span class="k">def</span> <span class="nf">test_client</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">client</span>
+
+
+<span class="nd">@fixture</span>
+<span class="k">def</span> <span class="nf">rekognition_stub</span><span class="p">():</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">get_rekognition_client</span><span class="p">()</span>
+    <span class="n">stub</span> <span class="o">=</span> <span class="n">Stubber</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">stub</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">stub</span>
+
+
+<span class="k">def</span> <span class="nf">test_calls_rekognition</span><span class="p">(</span><span class="n">test_client</span><span class="p">,</span> <span class="n">rekognition_stub</span><span class="p">):</span>
+    <span class="n">rekognition_stub</span><span class="o">.</span><span class="n">add_response</span><span class="p">(</span>
+        <span class="s1">&#39;detect_labels&#39;</span><span class="p">,</span>
+        <span class="n">expected_params</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;Image&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;S3Object&#39;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">&#39;Bucket&#39;</span><span class="p">:</span> <span class="s1">&#39;mybucket&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;mykey&#39;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;MinConfidence&#39;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">service_response</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;Labels&#39;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Dog&#39;</span><span class="p">,</span> <span class="s1">&#39;Confidence&#39;</span><span class="p">:</span> <span class="mf">75.0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Mountain&#39;</span><span class="p">,</span> <span class="s1">&#39;Confidence&#39;</span><span class="p">:</span> <span class="mf">80.0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;Snow&#39;</span><span class="p">,</span> <span class="s1">&#39;Confidence&#39;</span><span class="p">:</span> <span class="mf">85.0</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">event</span> <span class="o">=</span> <span class="n">test_client</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">generate_s3_event</span><span class="p">(</span>
+        <span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;mykey&#39;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">test_client</span><span class="o">.</span><span class="n">lambda_</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="s1">&#39;handle_object_created&#39;</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;Dog&#39;</span><span class="p">,</span> <span class="s1">&#39;Mountain&#39;</span><span class="p">,</span> <span class="s1">&#39;Snow&#39;</span><span class="p">]</span>
+    <span class="n">stub</span><span class="o">.</span><span class="n">assert_no_pending_responses</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
 <p>For reference documentation on the methods and attributes of the Chalice test
@@ -450,6 +540,7 @@ documentation.</p>
 </li>
 <li><a class="reference internal" href="#rest-apis">REST APIs</a></li>
 <li><a class="reference internal" href="#testing-boto3-client-calls">Testing Boto3 Client Calls</a></li>
+<li><a class="reference internal" href="#pytest-fixtures">Pytest Fixtures</a></li>
 <li><a class="reference internal" href="#next-steps">Next Steps</a></li>
 </ul>
 </li>
