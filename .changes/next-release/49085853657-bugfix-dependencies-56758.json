@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "dependencies",
-  "description": "Fix error when using old versions of click by requiring >=7"
-}

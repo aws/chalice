@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "local",
-  "description": "Fix local mode builtin authorizer not stripping query string from URL (#1470)"
-}

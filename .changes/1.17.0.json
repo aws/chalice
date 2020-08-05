@@ -1,0 +1,25 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Testing",
+      "description": "Add Chalice test client (#1468)"
+    },
+    {
+      "type": "enhancement",
+      "category": "regions",
+      "description": "Add support for non `aws` partitions including aws-cn and aws-us-gov (#792)."
+    },
+    {
+      "type": "bugfix",
+      "category": "dependencies",
+      "description": "Fix error when using old versions of click by requiring >=7"
+    },
+    {
+      "type": "bugfix",
+      "category": "local",
+      "description": "Fix local mode builtin authorizer not stripping query string from URL (#1470)"
+    }
+  ]
+}

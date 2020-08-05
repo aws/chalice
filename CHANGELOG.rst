@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+1.17.0
+======
+
+* feature:Testing:Add Chalice test client (#1468)
+* enhancement:regions:Add support for non `aws` partitions including aws-cn and aws-us-gov (#792).
+* bugfix:dependencies:Fix error when using old versions of click by requiring >=7
+* bugfix:local:Fix local mode builtin authorizer not stripping query string from URL (#1470)
+
+
 1.16.0
 ======
 
