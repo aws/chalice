@@ -25,6 +25,8 @@ from chalice.app import (
     BadRequestError,
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
+    RequestAuthorizerIdentitySources,
+    RequestAuthorizerRequest
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -1175,6 +1177,112 @@ def test_can_return_auth_dict_directly():
     actual = builtin_auth(event, None)
     assert actual == response
 
+def test_can_handle_request_auth():
+    demo = app.Chalice('request-auth')
+
+    @demo.request_authorizer(identity_sources=RequestAuthorizerIdentitySources(headers=['Authorization']))
+
+    def my_auth(auth_request):
+        pass
+
+    @demo.route('/', authorizer=my_auth)
+    def index_view():
+        return {}
+
+    assert len(demo.builtin_auth_handlers) == 1
+    authorizer = demo.builtin_auth_handlers[0]
+    assert isinstance(authorizer, app.BuiltinAuthConfig)
+    assert authorizer.name == 'my_auth'
+    assert authorizer.handler_string == 'app.my_auth'
+
+def test_request_auth_can_transform_event():
+    event = {
+        'type': 'REQUEST',
+        'identitySources': 'method.request.header.Authorization',
+        'methodArn': 'arn:aws:execute-api:...:foo',
+        'headers': {
+            'Authorization': "test"
+        },
+        'queryStringParameters': {
+            "queryparam": 'test'
+        },
+        'stageVariables': {
+            "stage": "test"
+        },
+        "requestContext": {
+            "context": "test"
+        }
+    }
+    auth_app = app.Chalice('request-auth')
+
+    request = []
+
+    @auth_app.request_authorizer(RequestAuthorizerIdentitySources(headers=['Authorization']))
+    def request_auth(auth_request):
+        request.append(auth_request)
+
+    request_auth(event, None)
+
+    assert len(request) == 1
+    transformed = request[0]
+    assert transformed.auth_type == 'REQUEST'
+    assert transformed.headers == {'Authorization': 'test'}
+    assert transformed.query_string_parameters == {'queryparam': 'test'}
+    assert transformed.stage_variables == {'stage': 'test'}
+    assert transformed.request_context == {'context': "test"}
+    assert transformed.method_arn == 'arn:aws:execute-api:...:foo'
+
+def test_can_return_request_auth_dict_directly():
+    # A user can bypass our AuthResponse and return the auth response
+    # dict that API gateway expects.
+    event = {
+        'type': 'REQUEST',
+        'identitySources': 'method.request.header.Authorization',
+        'methodArn': 'arn:aws:execute-api:...:foo',
+        'headers': {
+            'Authorization': "test"
+        },
+        'queryStringParameters': {
+            "queryparam": 'test'
+        },
+        'stageVariables': {
+            "stage": "test"
+        },
+        "requestContext": {
+            "context": "test"
+        }
+    }
+    auth_app = app.Chalice('request-auth')
+
+    response = {
+        'context': {'foo': 'bar'},
+        'principalId': 'user',
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': []
+        }
+    }
+
+    @auth_app.request_authorizer(identity_sources=RequestAuthorizerIdentitySources(headers=['Authorization']))
+    def request_auth(auth_request):
+        return response
+
+    actual = request_auth(event, None)
+    assert actual == response
+
+def test_can_specify_extra_request_auth_attributes():
+    auth_app = app.Chalice('builtin-auth')
+
+    @auth_app.request_authorizer(
+        identity_sources=RequestAuthorizerIdentitySources(headers=['Authorization']),
+        ttl_seconds=10,
+        execution_role='arn:my-role')
+    def request_auth(auth_request):
+        pass
+
+    handler = auth_app.builtin_auth_handlers[0]
+    assert handler.ttl_seconds == 10
+    assert handler.execution_role == 'arn:my-role'
 
 def test_can_specify_extra_auth_attributes():
     auth_app = app.Chalice('builtin-auth')
@@ -1193,6 +1301,23 @@ def test_validation_raised_on_unknown_kwargs():
 
     with pytest.raises(TypeError):
         @auth_app.authorizer(this_is_an_unknown_kwarg=True)
+        def builtin_auth(auth_request):
+            pass
+
+def test_request_authorizer_validation_raised_on_unknown_kwargs():
+    auth_app = app.Chalice('builtin-auth')
+
+    with pytest.raises(TypeError):
+        @auth_app.request_authorizer(this_is_an_unknown_kwarg=True)
+        def builtin_auth(auth_request):
+            pass
+
+
+def test_request_authorizer_validation_raised_on_no_identity_sources():
+    auth_app = app.Chalice('builtin-auth')
+
+    with pytest.raises(ValueError):
+        @auth_app.request_authorizer(identity_sources=RequestAuthorizerIdentitySources())
         def builtin_auth(auth_request):
             pass
 
@@ -1251,11 +1376,37 @@ def test_auth_response_serialization():
     }
 
 
+def test_request_authorizer_response_serialization():
+    method_arn = "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth"
+    request = app.RequestAuthorizerRequest('REQUEST', method_arn, None, ['Testing'], None, None)
+    response = app.AuthResponse(routes=['/needs/auth'], principal_id='foo')
+    response_dict = response.to_dict(request)
+    expected = [method_arn.replace('GET', '*')]
+    assert response_dict == {
+        'context': {},
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': [
+                {
+                    'Action': 'execute-api:Invoke',
+                    'Resource': expected,
+                    'Effect': 'Allow'
+                }
+            ]
+        },
+        'context': {},
+        'principalId': 'foo',
+    }
+
 def test_auth_response_can_include_context(auth_request):
     response = app.AuthResponse(['/foo'], 'principal', {'foo': 'bar'})
     serialized = response.to_dict(auth_request)
     assert serialized['context'] == {'foo': 'bar'}
 
+def test_request_authorizer_response_can_include_context(auth_request):
+    response = app.AuthResponse(['/foo'], 'principal', {'foo': 'bar'})
+    serialized = response.to_dict(auth_request)
+    assert serialized['context'] == {'foo': 'bar'}
 
 def test_can_use_auth_routes_instead_of_strings(auth_request):
     expected = [
@@ -1276,7 +1427,6 @@ def test_can_use_auth_routes_instead_of_strings(auth_request):
             'Resource': expected,
         }]
     }
-
 
 def test_auth_response_wildcard(auth_request):
     response = app.AuthResponse(

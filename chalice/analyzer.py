@@ -660,7 +660,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
 
 class AppViewTransformer(ast.NodeTransformer):
     _CHALICE_DECORATORS = [
-        'route', 'authorizer', 'lambda_function',
+        'route', 'authorizer', 'request_authorizer', 'lambda_function',
         'schedule', 'on_s3_event', 'on_sns_message',
         'on_sqs_message', 'on_ws_connect', 'on_ws_message',
         'on_ws_disconnect',

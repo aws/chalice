@@ -107,7 +107,8 @@ class RouteEntry(object):
                  api_key_required: Optional[bool]=None,
                  content_types: Optional[List[str]]=None,
                  authorizer: Optional[Union[Authorizer,
-                                            ChaliceAuthorizer]]=None,
+                                            ChaliceAuthorizer,
+                                            ChaliceRequestPayloadAuthorizer]]=None,
                  cors: Union[bool, CORSConfig]=False) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
@@ -136,6 +137,12 @@ class DecoratorAPI(object):
                    ttl_seconds: Optional[int]=None,
                    execution_role: Optional[str]=None,
                    name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def request_authorizer(self,
+               identity_sources: RequestAuthorizerIdentitySources,
+               ttl_seconds: Optional[int]=None,
+               execution_role: Optional[str]=None,
+               name: Optional[str]=None) -> Callable[..., Any]: ...
 
     def on_s3_event(self,
                     bucket: str,
@@ -198,6 +205,15 @@ class ChaliceAuthorizer(object):
     scopes = ... # type: List[str]
     config = ... # type: BuiltinAuthConfig
     def with_scopes(self, scopes: List[str]) -> ChaliceAuthorizer: ...
+
+
+class ChaliceRequestPayloadAuthorizer(ChaliceAuthorizer):
+    name = ... # type: str
+    func = ... # type: _BUILTIN_AUTH_FUNC
+    scopes = ... # type: List[str]
+    config = ... # type: BuiltinAuthConfig
+    def with_scopes(self, scopes: List[str]) -> ChaliceRequestPayloadAuthorizer: ...
+    def stringify_identity_sources(self) -> str: ...
 
 
 class BuiltinAuthConfig(object):
@@ -284,3 +300,9 @@ class CloudWatchEventConfig(BaseEventSourceConfig):
 class Blueprint(DecoratorAPI):
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
+
+class RequestAuthorizerIdentitySources(object):
+    headers= ... # type: Optional[List[str]]=None
+    query_strings=... # type: Optional[List[str]]=None
+    stage_variables=... # type: Optional[List[str]]=None
+    context=... # type: Optional[List[str]]=None
