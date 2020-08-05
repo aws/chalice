@@ -5,6 +5,8 @@ Chalice provides a :ref:`test client <testing-api>` in ``chalice.test`` that
 you can use to test your Chalice applications.  This client lets you invoke
 Lambda function and event handlers directly, as well as test your REST APIs.
 
+.. _testing-lambda-functions:
+
 Lambda Functions
 ----------------
 
@@ -71,6 +73,10 @@ Now we can run our tests with ``pytest``::
     test_app.py ..                                                            [100%]
 
     ========================= 2 passed in 0.32s ============================
+
+.. note::
+   See the :ref:`testing-pytest-fixtures` section for how to use pytest
+   fixtures with the Chalice test client.
 
 For testing Lambda functions that are connected to specific events,
 you can use the :attr:`Client.events` attribute to generate
@@ -234,6 +240,8 @@ You can also test builtin authorizers with the test client:
                 headers={'Authorization': 'deny'}).status_code == 403
 
 
+.. _testing-boto3-client-calls:
+
 Testing Boto3 Client Calls
 --------------------------
 
@@ -325,6 +333,101 @@ This also ensures that when our test exits that we'll deactive the stubs for
 this client.  Now we the ``client.lambda_.invoke`` method is called, our
 stubbed client will return the preconfigured response data instead of making
 an actual API call to the Rekognition service.
+
+
+.. _testing-pytest-fixtures:
+
+Pytest Fixtures
+---------------
+
+Both the Botocore stubber and the Chalice test client are used within
+a context manager.  In our previous example, this resulted in multiple
+levels of nesting, which is required for every test we write.  If you're
+using pytest as your test framework, you can create
+`test fixtures <https://docs.pytest.org/en/stable/fixture.html>`__ to
+reduce the boiler plate code.  Let's rewrite several of these tests to use
+pytest fixtures.
+
+First we'll create a test fixture for the Chalice test client:
+
+.. code-block:: python
+
+    import app
+    from pytest import fixture
+    from chalice.test import Client
+
+    @fixture
+    def test_client():
+        with Client(app.app) as client:
+            yield client
+
+Now our original tests for the ``foo`` and ``bar`` Lambda functions
+from the :ref:`testing-lambda-functions` section can be rewritten
+to use this fixture:
+
+.. code-block:: python
+
+   def test_foo_function(test_client):
+       result = test_client.lambda_.invoke('foo')
+       assert result.payload == {'hello': 'world'}
+
+   def test_bar_function(test_client):
+       result = test_client.lambda_.invoke(
+           'bar', {'my': 'event'})
+       assert result.payload == {'event': {'my': 'event'}}
+
+We can also create a fixture for the botocore stubber.  This allows us
+to rewrite the ``test_calls_rekognition()`` test from the
+:ref:`previous section <testing-boto3-client-calls>` in a more simplified
+manner.  Below is the entire test file using both the botocore and Chalice
+test client fixtures:
+
+.. code-block:: python
+
+    import app
+    from pytest import fixture
+    from chalice.test import Client
+
+
+    @fixture
+    def test_client():
+        with Client(app.app) as client:
+            yield client
+
+
+    @fixture
+    def rekognition_stub():
+        client = app.get_rekognition_client()
+        stub = Stubber(client)
+        with stub:
+            yield stub
+
+
+    def test_calls_rekognition(test_client, rekognition_stub):
+        rekognition_stub.add_response(
+            'detect_labels',
+            expected_params={
+                'Image': {
+                    'S3Object': {
+                        'Bucket': 'mybucket',
+                        'Name': 'mykey',
+                    }
+                },
+                'MinConfidence': 50.0,
+            },
+            service_response={
+                'Labels': [
+                    {'Name': 'Dog', 'Confidence': 75.0},
+                    {'Name': 'Mountain', 'Confidence': 80.0},
+                    {'Name': 'Snow', 'Confidence': 85.0},
+                ]
+            },
+        )
+        event = test_client.events.generate_s3_event(
+            bucket='mybucket', key='mykey')
+        response = test_client.lambda_.invoke('handle_object_created', event)
+        assert response.payload == ['Dog', 'Mountain', 'Snow']
+        stub.assert_no_pending_responses()
 
 
 Next Steps
