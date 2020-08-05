@@ -1286,7 +1286,7 @@ class ChaliceRequestPayloadAuthorizer(ChaliceAuthorizer):
     def stringify_identity_sources(self):
         prefixes = {
             'headers': 'method.request.header',
-            'querystring': 'method.request.querystring',
+            'query_params': 'method.request.querystring',
             'stage_variable': 'stageVariables',
             'request_context': 'context'
         }
@@ -1316,11 +1316,11 @@ class ChaliceRequestPayloadAuthorizer(ChaliceAuthorizer):
 
 
 class RequestAuthorizerIdentitySources:
-    def __init__(self, headers=None, querystring=None, stage_variables=None, context=None):
-        if not any([headers, querystring, stage_variables, context]):
+    def __init__(self, headers=None, query_params=None, stage_variables=None, context=None):
+        if not any([headers, query_params, stage_variables, context]):
             raise ValueError('Must provide at least one identity source')  # TODO BETTER MESSAGE
         self.headers = headers
-        self.querystring = querystring
+        self.query_params = query_params
         self.stage_variables = stage_variables
         self.context = context
 
@@ -1337,7 +1337,7 @@ class RequestAuthorizerRequest(object):
         self.auth_type = auth_type
         self.method_arn = method_arn
         self.headers = headers
-        self.query_string_parameters = query_string_parameters
+        self.query_params = query_string_parameters
         self.stage_variables = stage_variables
         self.request_context = reqest_context
 
