@@ -1333,13 +1333,13 @@ class AuthRequest(object):
 
 
 class RequestAuthorizerRequest(object):
-    def __init__(self, auth_type, method_arn, headers, query_string_parameters, stage_variables, reqest_context):
+    def __init__(self, auth_type, method_arn, headers, query_params, stage_variables, request_context):
         self.auth_type = auth_type
         self.method_arn = method_arn
         self.headers = headers
-        self.query_params = query_string_parameters
+        self.query_params = query_params
         self.stage_variables = stage_variables
-        self.request_context = reqest_context
+        self.request_context = request_context
 
 
 class AuthResponse(object):

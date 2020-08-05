@@ -481,7 +481,10 @@ class LocalGatewayAuthorizer(object):
         authorizer_event['path'] = None
         authorizer_event['httpMethod'] = None
         authorizer_event['headers'] = lambda_event['headers']
-        authorizer_event['queryStringParameters'] = lambda_event.get('multiValueQueryStringParameters', {})
+        authorizer_event['queryStringParameters'] = {
+            key: value[-1]
+            for key, value in lambda_event['multiValueQueryStringParameters'].items()
+        }
         authorizer_event['pathParameters'] = lambda_event['pathParameters']
         authorizer_event['stageVariables'] = lambda_event['stageVariables']
         authorizer_event['requestContext'] = lambda_event['requestContext']
