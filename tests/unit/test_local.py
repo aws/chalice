@@ -951,6 +951,27 @@ class TestLocalBuiltinAuthorizers(object):
         principal_id = event['requestContext']['authorizer']['principalId']
         assert principal_id == 'janedoe'
 
+    def test_does_authorize_unsupported_cognito_token(self,
+                                                      lambda_context_args,
+                                                      demo_app_auth,
+                                                      create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/cognito'
+        event = create_event(path, 'GET', {})
+        event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tL3VzLWVhc3QtMV9leGFtcGxlIiwiZXhwIjoxNTg0NzIzNjE2LCJnaXZlbl9uYW1lIjoiSmFuZSIsImlhdCI6MTUwMDAwOTQwMCwiZW1haWwiOiJqYW5lZG9lQGV4YW1wbGUuY29tIiwianRpIjoiZDdlMTEzM2EtMWUzYS00MjMxLWFlN2ItMjhkODVlZTBiMTRkIn0.SN5n-A3kxboNYg0sGIOipVUksCdn6xRJmAK9kSZof10"  # noqa
+        context = LambdaContext(*lambda_context_args)
+        with pytest.warns(None) as recorded_warnings:
+            new_event, new_context = authorizer.authorize(path, event, context)
+        assert event == new_event
+        assert context == new_context
+        assert len(recorded_warnings) == 1
+        warning = recorded_warnings[0]
+        assert issubclass(warning.category, UserWarning)
+        assert ('CognitoUserPoolAuthorizer for machine-to-machine '
+                'communicaiton is not supported in local mode. All requests '
+                'made against a route will be authorized to allow local '
+                'testing.') in str(warning.message)
+
 
 class TestArnBuilder(object):
     def test_can_create_basic_arn(self, arn_builder):
@@ -975,6 +996,12 @@ class TestArnBuilder(object):
         arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b'
                '/api/*/resource')
         built_arn = arn_builder.build_arn('*', '/resource')
+        assert arn == built_arn
+
+    def test_build_arn_with_query_params(self, arn_builder):
+        arn = ('arn:aws:execute-api:mars-west-1:123456789012:ymy8tbxw7b/api/'
+               '*/resource')
+        built_arn = arn_builder.build_arn('*', '/resource?foo=bar')
         assert arn == built_arn
 
 

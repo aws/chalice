@@ -8,10 +8,11 @@ import json
 import traceback
 import decimal
 import base64
+import copy
 from collections import defaultdict
 
 
-__version__ = '1.15.1'
+__version__ = '1.17.0'
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
@@ -221,9 +222,13 @@ class CaseInsensitiveMapping(Mapping):
 
 class Authorizer(object):
     name = ''
+    scopes = []
 
     def to_swagger(self):
         raise NotImplementedError("to_swagger")
+
+    def with_scopes(self, scopes):
+        raise NotImplementedError("with_scopes")
 
 
 class IAMAuthorizer(Authorizer):
@@ -232,6 +237,7 @@ class IAMAuthorizer(Authorizer):
 
     def __init__(self):
         self.name = 'sigv4'
+        self.scopes = []
 
     def to_swagger(self):
         return {
@@ -241,12 +247,16 @@ class IAMAuthorizer(Authorizer):
             'x-amazon-apigateway-authtype': 'awsSigv4',
         }
 
+    def with_scopes(self, scopes):
+        raise NotImplementedError("with_scopes")
+
 
 class CognitoUserPoolAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'cognito_user_pools'
 
-    def __init__(self, name, provider_arns, header='Authorization'):
+    def __init__(self, name, provider_arns, header='Authorization',
+                 scopes=None):
         self.name = name
         self._header = header
         if not isinstance(provider_arns, list):
@@ -257,6 +267,7 @@ class CognitoUserPoolAuthorizer(Authorizer):
                 "provider_arns should be a list of ARNs, received: %s"
                 % provider_arns)
         self._provider_arns = provider_arns
+        self.scopes = scopes or []
 
     def to_swagger(self):
         return {
@@ -270,18 +281,24 @@ class CognitoUserPoolAuthorizer(Authorizer):
             }
         }
 
+    def with_scopes(self, scopes):
+        authorizer_with_scopes = copy.deepcopy(self)
+        authorizer_with_scopes.scopes = scopes
+        return authorizer_with_scopes
+
 
 class CustomAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'custom'
 
     def __init__(self, name, authorizer_uri, ttl_seconds=300,
-                 header='Authorization', invoke_role_arn=None):
+                 header='Authorization', invoke_role_arn=None, scopes=None):
         self.name = name
         self._header = header
         self._authorizer_uri = authorizer_uri
         self._ttl_seconds = ttl_seconds
         self._invoke_role_arn = invoke_role_arn
+        self.scopes = scopes or []
 
     def to_swagger(self):
         swagger = {
@@ -299,6 +316,11 @@ class CustomAuthorizer(Authorizer):
             swagger['x-amazon-apigateway-authorizer'][
                 'authorizerCredentials'] = self._invoke_role_arn
         return swagger
+
+    def with_scopes(self, scopes):
+        authorizer_with_scopes = copy.deepcopy(self)
+        authorizer_with_scopes.scopes = scopes
+        return authorizer_with_scopes
 
 
 class CORSConfig(object):
@@ -738,6 +760,7 @@ class _HandlerRegistration(object):
         self.event_sources = []
         self.pure_lambda_functions = []
         self.api = APIGateway()
+        self.handler_map = {}
 
     def _do_register_handler(self, handler_type, name, user_handler,
                              wrapped_handler, kwargs, options=None):
@@ -763,6 +786,7 @@ class _HandlerRegistration(object):
             wrapped_handler=wrapped_handler,
             kwargs=kwargs,
         )
+        self.handler_map[name] = wrapped_handler
 
     def _attach_websocket_handler(self, handler):
         route_key = handler.route_key_handled
@@ -1185,9 +1209,10 @@ class BuiltinAuthConfig(object):
 # we would need more research to know for sure.  For now, this is a
 # special cased runtime class that knows about its config.
 class ChaliceAuthorizer(object):
-    def __init__(self, name, func):
+    def __init__(self, name, func, scopes=None):
         self.name = name
         self.func = func
+        self.scopes = scopes or []
         # This is filled in during the @app.authorizer()
         # processing.
         self.config = None
@@ -1203,6 +1228,11 @@ class ChaliceAuthorizer(object):
         return AuthRequest(event['type'],
                            event['authorizationToken'],
                            event['methodArn'])
+
+    def with_scopes(self, scopes):
+        authorizer_with_scopes = copy.deepcopy(self)
+        authorizer_with_scopes.scopes = scopes
+        return authorizer_with_scopes
 
 
 class AuthRequest(object):

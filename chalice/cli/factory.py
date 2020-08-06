@@ -17,6 +17,7 @@ from chalice.config import Config
 from chalice.config import DeployedResources  # noqa
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
+from chalice.package import PackageOptions
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.constants import DEFAULT_ENDPOINT_TYPE
@@ -75,6 +76,7 @@ def _inject_large_request_body_filter():
 
 class NoSuchFunctionError(Exception):
     """The specified function could not be found."""
+
     def __init__(self, name):
         # type: (str) -> None
         self.name = name
@@ -185,11 +187,11 @@ class CLIFactory(object):
         except ValueError:
             raise UnknownConfigFileVersion(string_version)
 
-    def create_app_packager(self, config, package_format, template_format,
-                            merge_template=None):
-        # type: (Config, str, str, OptStr) -> AppPackager
+    def create_app_packager(self, config, options, package_format,
+                            template_format, merge_template=None):
+        # type: (Config, PackageOptions, str, str, OptStr) -> AppPackager
         return create_app_packager(
-            config, package_format, template_format,
+            config, options, package_format, template_format,
             merge_template=merge_template)
 
     def create_log_retriever(self, session, lambda_arn, follow_logs):
@@ -298,3 +300,10 @@ class CLIFactory(object):
     def create_local_server(self, app_obj, config, host, port):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer
         return local.create_local_server(app_obj, config, host, port)
+
+    def create_package_options(self):
+        # type: () -> PackageOptions
+        """Create the package options that are required to target regions."""
+        s = Session(profile=self.profile)
+        client = TypedAWSClient(session=s)
+        return PackageOptions(client)

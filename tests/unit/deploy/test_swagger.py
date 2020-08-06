@@ -12,7 +12,10 @@ from pytest import fixture
 def swagger_gen():
     return SwaggerGenerator(
         region='us-west-2',
-        deployed_resources={'api_handler_arn': 'lambda_arn'})
+        deployed_resources={
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn'
+        })
 
 
 def test_can_add_binary_media_types(swagger_gen):
@@ -141,7 +144,8 @@ def test_apigateway_integration_generation(sample_app, swagger_gen):
     assert apig_integ['type'] == 'aws_proxy'
     assert apig_integ['uri'] == (
         "arn:aws:apigateway:us-west-2:lambda:path"
-        "/2015-03-31/functions/lambda_arn/invocations"
+        "/2015-03-31/functions/"
+        "arn:aws:lambda:mars-west-1:123456789:function:lambda_arn/invocations"
     )
     assert 'responses' in apig_integ
     responses = apig_integ['responses']
@@ -430,6 +434,69 @@ def test_can_use_authorizer_object_with_role_arn(sample_app, swagger_gen):
     }
 
 
+def test_can_use_authorizer_object_scopes(sample_app, swagger_gen):
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization',
+        invoke_role_arn='role-arn', scopes=["write:test", "read:test"])
+
+    @sample_app.route('/auth', authorizer=authorizer)
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{
+        'MyAuth': ["write:test", "read:test"]
+    }]
+    security_definitions = doc['securityDefinitions']
+    assert 'MyAuth' in security_definitions
+    assert security_definitions['MyAuth'] == {
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'in': 'header',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'authorizerUri': 'auth-uri',
+            'type': 'token',
+            'authorizerResultTtlInSeconds': 300,
+            'authorizerCredentials': 'role-arn'
+        }
+    }
+
+
+def test_can_use_authorizer_object_with_scopes(sample_app, swagger_gen):
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization',
+        invoke_role_arn='role-arn')
+
+    @sample_app.route(
+        '/auth',
+        authorizer=authorizer.with_scopes(["write:test", "read:test"])
+    )
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{
+        'MyAuth': ["write:test", "read:test"]
+    }]
+    security_definitions = doc['securityDefinitions']
+    assert 'MyAuth' in security_definitions
+    assert security_definitions['MyAuth'] == {
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'in': 'header',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'authorizerUri': 'auth-uri',
+            'type': 'token',
+            'authorizerResultTtlInSeconds': 300,
+            'authorizerCredentials': 'role-arn'
+        }
+    }
+
+
 def test_can_use_api_key_and_authorizers(sample_app, swagger_gen):
     authorizer = CustomAuthorizer(
         'MyAuth', authorizer_uri='auth-uri', header='Authorization')
@@ -443,6 +510,26 @@ def test_can_use_api_key_and_authorizers(sample_app, swagger_gen):
     assert single_method.get('security') == [
         {'api_key': []},
         {'MyAuth': []},
+    ]
+
+
+def test_can_use_api_key_and_authorizers_with_scopes(sample_app, swagger_gen):
+    authorizer = CustomAuthorizer(
+        'MyAuth', authorizer_uri='auth-uri', header='Authorization')
+
+    @sample_app.route(
+        '/auth',
+        authorizer=authorizer.with_scopes(["write:test", "read:test"]),
+        api_key_required=True
+    )
+    def auth():
+        return {'foo': 'bar'}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [
+        {'api_key': []},
+        {'MyAuth': ["write:test", "read:test"]},
     ]
 
 
@@ -491,6 +578,36 @@ def test_can_use_cognito_auth_object(sample_app, swagger_gen):
     }
 
 
+def test_can_use_cognito_auth_object_with_scopes(sample_app, swagger_gen):
+    authorizer = CognitoUserPoolAuthorizer('MyUserPool',
+                                           header='Authorization',
+                                           provider_arns=['myarn'])
+
+    @sample_app.route(
+        '/api-key-required',
+        authorizer=authorizer.with_scopes(["write:test", "read:test"])
+    )
+    def foo():
+        return {}
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/api-key-required']['get']
+    assert single_method.get('security') == [{
+        'MyUserPool': ["write:test", "read:test"]
+    }]
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions'].get('MyUserPool') == {
+        'in': 'header',
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'x-amazon-apigateway-authtype': 'cognito_user_pools',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'cognito_user_pools',
+            'providerARNs': ['myarn']
+        }
+    }
+
+
 def test_auth_defined_for_multiple_methods(sample_app, swagger_gen):
     authorizer = CognitoUserPoolAuthorizer('MyUserPool',
                                            header='Authorization',
@@ -513,11 +630,13 @@ def test_builtin_auth(sample_app):
     swagger_gen = SwaggerGenerator(
         region='us-west-2',
         deployed_resources={
-            'api_handler_arn': 'lambda_arn',
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
                 'api-dev-myauth': {
-                    'arn': 'auth_arn',
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
                     'type': 'authorizer',
                 }
             }
@@ -535,6 +654,8 @@ def test_builtin_auth(sample_app):
         pass
 
     doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{'myauth': []}]
     assert 'securityDefinitions' in doc
     assert doc['securityDefinitions']['myauth'] == {
         'in': 'header',
@@ -546,7 +667,62 @@ def test_builtin_auth(sample_app):
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/auth_arn/invocations'),
+                              '/2015-03-31/functions/arn:aws:lambda:'
+                              'mars-west-1:123456789:function:auth_arn'
+                              '/invocations'),
+        }
+    }
+
+
+def test_builtin_auth_with_scopes(sample_app):
+    swagger_gen = SwaggerGenerator(
+        region='us-west-2',
+        deployed_resources={
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
+            'api_handler_name': 'api-dev',
+            'lambda_functions': {
+                'api-dev-myauth': {
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
+                    'type': 'authorizer',
+                }
+            }
+        }
+    )
+
+    @sample_app.authorizer(name='myauth',
+                           ttl_seconds=10,
+                           execution_role='arn:role')
+    def auth(auth_request):
+        pass
+
+    @sample_app.route(
+        '/auth',
+        authorizer=auth.with_scopes(["write:test", "read:test"])
+    )
+    def foo():
+        pass
+
+    doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{
+        'myauth': ["write:test", "read:test"]
+    }]
+    assert 'securityDefinitions' in doc
+    assert doc['securityDefinitions']['myauth'] == {
+        'in': 'header',
+        'name': 'Authorization',
+        'type': 'apiKey',
+        'x-amazon-apigateway-authtype': 'custom',
+        'x-amazon-apigateway-authorizer': {
+            'type': 'token',
+            'authorizerCredentials': 'arn:role',
+            'authorizerResultTtlInSeconds': 10,
+            'authorizerUri': ('arn:aws:apigateway:us-west-2:'
+                              'lambda:path/2015-03-31/functions'
+                              '/arn:aws:lambda:mars-west-1:123456789:'
+                              'function:auth_arn/invocations'),
         }
     }
 
@@ -555,11 +731,13 @@ def test_will_default_to_function_name_for_auth(sample_app):
     swagger_gen = SwaggerGenerator(
         region='us-west-2',
         deployed_resources={
-            'api_handler_arn': 'lambda_arn',
+            'api_handler_arn': 'arn:aws:lambda:mars-west-1:123456789'
+                               ':function:lambda_arn',
             'api_handler_name': 'api-dev',
             'lambda_functions': {
                 'api-dev-auth': {
-                    'arn': 'auth_arn',
+                    'arn': 'arn:aws:lambda:mars-west-1:123456789'
+                           ':function:auth_arn',
                     'type': 'authorizer',
                 }
             }
@@ -577,6 +755,8 @@ def test_will_default_to_function_name_for_auth(sample_app):
         pass
 
     doc = swagger_gen.generate_swagger(sample_app)
+    single_method = doc['paths']['/auth']['get']
+    assert single_method.get('security') == [{'auth': []}]
     assert 'securityDefinitions' in doc
     assert doc['securityDefinitions']['auth'] == {
         'in': 'header',
@@ -588,7 +768,9 @@ def test_will_default_to_function_name_for_auth(sample_app):
             'authorizerCredentials': 'arn:role',
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': ('arn:aws:apigateway:us-west-2:lambda:path'
-                              '/2015-03-31/functions/auth_arn/invocations'),
+                              '/2015-03-31/functions/'
+                              'arn:aws:lambda:mars-west-1:123456789:function'
+                              ':auth_arn/invocations'),
         }
     }
 
@@ -697,8 +879,9 @@ def test_will_custom_auth_with_cfn(sample_app):
             'authorizerResultTtlInSeconds': 10,
             'authorizerUri': {
                 'Fn::Sub': (
-                    'arn:aws:apigateway:${AWS::Region}:lambda:path'
-                    '/2015-03-31/functions/${Auth.Arn}/invocations'
+                    'arn:${AWS::Partition}:apigateway:${AWS::Region}'
+                    ':lambda:path/2015-03-31/functions/'
+                    '${Auth.Arn}/invocations'
                 )
             }
         }

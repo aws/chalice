@@ -69,19 +69,110 @@
         </div>
     </div>
 
-    <!-- Decide if we want the FAQ on the landing page or a separate page.
-    <div class="faq">
+    <div class="quickstart-vid">
         <div class="width-wrapper">
-            <h2 class="faq-heading">FAQs</h2>
-
-            <h2>Why should I use Chalice?</h2>
-            <p></p>
-
-            <h2>How does Chalice compare to SAM?</h2>
-            <p></p>
+            <div class="splash-row">
+                <div class="splash-column-one-third">
+                    <span>
+                    <img id="quickstart-img" src="{{ pathto('_static/img/speed.svg', 1) }}" alt="Quickstart" />
+                    <h2 id="quickstart-title">Up and running in minutes</h2>
+                    </span>
+                    <p>Chalice lets you quickly create and deploy python applications that use
+            AWS Lambda.  Using the Chalice CLI, you can have a REST API deployed to
+            Amazon API Gateway and AWS Lambda in minutes.
+            </p>
+                </div>
+                <div class="splash-column-two-third">
+                <asciinema-player preload=1 speed=1.2 idle-time-limit=1.2 src="{{ pathto('_static/casts/chalice-quickstart.cast', 1) }}"></asciinema-player>
+            <script src="{{ pathto('_static/asciinema-player.js', 1) }}"></script>
+                </div>
+            </div>
+            </div>
         </div>
     </div>
-    -->
+
+    <div class="width-wrapper">
+	<h2>Features</h2>
+        <div class="splash-row">
+            <div class="splash-column">
+                <h2>Native python packaging</h2>
+                <p class="feature-desc">Chalice has built-in support for python packaging tools.
+                    It will automatically package your application and install
+                    3rd party dependencies specified in your requirements.txt file.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>AWS SAM and Terraform integration</h2>
+                <p class="feature-desc">
+                    You can use Chalice's included deployer that's built
+                    using the AWS SDK for Python (boto3) or you can have
+                    Chalice generate packages that can be deployed with
+                    AWS CloudFormation or Terraform.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>CI/CD pipeline generation</h2>
+                <p class="feature-desc">Automatically generate a deployment pipeline that's
+                   built with AWS CodePipeline and AWS CodeBuild.
+                   Deploy your application whenever you push changes
+                   to your Git repository.
+                </p>
+	        </div>
+        </div>
+        <div class="splash-row">
+            <div class="splash-column">
+                <h2>Local testing support</h2>
+                <p class="feature-desc">Test your REST API using the local test server.  This gives
+                    you a quicker feedback loop and let's you test your code
+                    before deploying to AWS.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>Websocket APIs</h2>
+                <p class="feature-desc">Create Websocket APIs with API Gateway.
+                    Includes runtime APIs to send messages back to connected clients.
+                </p>
+	        </div>
+            <div class="splash-column">
+                <h2>Automatic policy generation</h2>
+                <p class="feature-desc">
+                    Automatically generate policies for your application based on
+                    scanning your source code.
+                </p>
+	        </div>
+        </div>
+    </div>
+    <div class="faq">
+        <div class="width-wrapper">
+            <h2 class="faq-heading">Learning Resources</h2>
+            <div class="splash-row">
+                <div class="splash-column splash-box">
+                    <h2>Tutorials</h2>
+		    <p>See step-by-step tutorials that show you how to use various
+		    features of Chalice.  These are designed to quickly
+		    get you up and running if you're new to Chalice.  These
+		    are perfect for new users of Chalice.
+		    </p>
+	            <a href="{{ pathto('tutorials/index') }}" class="splash-clickable">
+                    See more.
+                    </a>
+		</div>
+                <div class="splash-column splash-box">
+                    <h2>Sample Applications</h2>
+		    <p>Our sample applications are complete examples
+		      that are larger in scope than our tutorials.  Learn
+		      how you can combine multiple features of Chalice
+		      to create more real-world serverless applications.  We walk through
+		      the architecture, deployment, and code for all
+		      of our sample applications.
+		    </p>
+		    <a href="{{ pathto('samples/index') }}" class="splash-clickable">
+                    See more.
+                    </a>
+		</div>
+	    </div>
+        </div>
+    </div>
     <div class="width-wrapper">
         <section class="relations">
         <a class="next-page clearfix" href="{{ pathto('quickstart')}}">Quick start -&gt;</a>

@@ -2,7 +2,7 @@ import json
 import os
 
 from typing import cast
-from typing import Dict, List, Tuple, Any, Set, Optional, Text  # noqa
+from typing import Dict, List, Tuple, Any, Set, Optional, Text, Union  # noqa
 from attr import asdict
 
 from chalice.config import Config  # noqa
@@ -10,6 +10,8 @@ from chalice import app
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
+
+StrMapAny = Dict[str, Any]
 
 
 class ChaliceBuildError(Exception):
@@ -36,13 +38,46 @@ class ApplicationGraphBuilder(object):
         resources.extend(event_resources)
         if config.chalice_app.routes:
             rest_api = self._create_rest_api_model(
-                config, deployment, stage_name)
+                config, deployment, stage_name
+            )
             resources.append(rest_api)
         if config.chalice_app.websocket_handlers:
             websocket_api = self._create_websocket_api_model(
                 config, deployment, stage_name)
             resources.append(websocket_api)
         return models.Application(stage_name, resources)
+
+    def _create_custom_domain_name(
+            self,
+            api_type,                # type: models.APIType
+            domain_name_data,        # type: StrMapAny
+            endpoint_configuration,  # type: str
+            api_gateway_stage,       # type: str
+    ):
+        # type: (...) -> models.DomainName
+        url_prefix = domain_name_data.get("url_prefix", '(none)')
+        api_mapping_model = self._create_api_mapping_model(
+            url_prefix, api_gateway_stage)
+        domain_name = self._create_domain_name_model(
+            api_type,
+            domain_name_data,
+            endpoint_configuration,
+            api_mapping_model
+        )
+        return domain_name
+
+    def _create_api_mapping_model(self,
+                                  key,         # type: str
+                                  stage        # type: str
+                                  ):
+        # type: (...) -> models.APIMapping
+        if key == '/':
+            key = '(none)'
+        return models.APIMapping(
+            resource_name='api_mapping',
+            mount_path=key,
+            api_gateway_stage=stage
+        )
 
     def _create_lambda_event_resources(self, config, deployment, stage_name):
         # type: (Config, models.DeploymentPackage, str) -> List[models.Model]
@@ -120,6 +155,15 @@ class ApplicationGraphBuilder(object):
                 filename=os.path.join(
                     config.project_dir, '.chalice', policy_path))
 
+        custom_domain_name = None
+        if config.api_gateway_custom_domain:
+            custom_domain_name = self._create_custom_domain_name(
+                models.APIType.HTTP,
+                config.api_gateway_custom_domain,
+                config.api_gateway_endpoint_type,
+                config.api_gateway_stage,
+            )
+
         return models.RestAPI(
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
@@ -128,16 +172,17 @@ class ApplicationGraphBuilder(object):
             api_gateway_stage=config.api_gateway_stage,
             lambda_function=lambda_function,
             authorizers=authorizers,
-            policy=policy
+            policy=policy,
+            domain_name=custom_domain_name
         )
 
     def _get_default_private_api_policy(self, config):
-        # type: (Config) -> Dict[str, Any]
+        # type: (Config) -> StrMapAny
         statements = [{
             "Effect": "Allow",
             "Principal": "*",
             "Action": "execute-api:Invoke",
-            "Resource": "arn:aws:execute-api:*:*:*",
+            "Resource": "arn:*:execute-api:*:*:*",
             "Condition": {
                 "StringEquals": {
                     "aws:SourceVpce": config.api_gateway_endpoint_vpce
@@ -178,6 +223,15 @@ class ApplicationGraphBuilder(object):
                 handler_name=handler_string, stage_name=stage_name
             )
 
+        custom_domain_name = None
+        if config.websocket_api_custom_domain:
+            custom_domain_name = self._create_custom_domain_name(
+                models.APIType.WEBSOCKET,
+                config.websocket_api_custom_domain,
+                config.api_gateway_endpoint_type,
+                config.api_gateway_stage,
+            )
+
         return models.WebsocketAPI(
             name='%s-%s-websocket-api' % (config.app_name, stage_name),
             resource_name='websocket_api',
@@ -187,6 +241,7 @@ class ApplicationGraphBuilder(object):
             routes=[h.route_key_handled for h
                     in config.chalice_app.websocket_handlers.values()],
             api_gateway_stage=config.api_gateway_stage,
+            domain_name=custom_domain_name
         )
 
     def _create_cwe_subscription(
@@ -249,6 +304,30 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
         )
         return scheduled_event
+
+    def _create_domain_name_model(self,
+                                  protocol,        # type: models.APIType
+                                  data,            # type: StrMapAny
+                                  endpoint_type,   # type: str
+                                  api_mapping      # type: models.APIMapping
+                                  ):
+        # type: (...) -> models.DomainName
+        default_name = 'api_gateway_custom_domain'
+        resource_name_map = {
+            'HTTP': default_name,
+            'WEBSOCKET': 'websocket_api_custom_domain'
+        }  # type: Dict[str, str]
+
+        domain_name = models.DomainName(
+            protocol=protocol,
+            resource_name=resource_name_map.get(protocol.value, default_name),
+            domain_name=data['domain_name'],
+            tls_version=models.TLSVersion.create(data.get('tls_version', '')),
+            certificate_arn=data['certificate_arn'],
+            tags=data.get('tags'),
+            api_mapping=api_mapping
+        )
+        return domain_name
 
     def _create_lambda_model(self,
                              config,        # type: Config
@@ -535,7 +614,7 @@ class GraphPrettyPrint(object):
             lines.append(current)
 
     def _get_filtered_params(self, model):
-        # type: (models.Model) -> Dict[str, Any]
+        # type: (models.Model) -> StrMapAny
         dependencies = model.dependencies()
         filtered = asdict(
             model, filter=lambda _, v: v not in dependencies and v)

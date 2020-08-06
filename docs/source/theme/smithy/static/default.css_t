@@ -64,7 +64,7 @@ h1, h2, h3, h4, h5, h6, h7 {
 }
 
 h2, h3, h4, h5, h6, h7 {
-  margin-top: 2em;
+  margin-top: 1.25em;
 }
 
 h1 {
@@ -225,8 +225,36 @@ h7 {
   margin-top: 2em;
 }
 
+.splash-box {
+  border: 1px solid #859191;
+  padding: 20px;
+  margin: 25px;
+}
+
+.splash-clickable {
+  text-decoration: none;
+}
+
 #splash .splash-column {
   margin-top: 0;
+}
+
+.splash-column-one-third {
+  display: flex;
+  flex-direction: column;
+  justify-content: top;
+  width: 40%;
+  padding: 0 20px;
+  margin-top: 2em;
+}
+
+.splash-column-two-third {
+  display: flex;
+  flex-direction: column;
+  justify-content: top;
+  width: 60%;
+  padding: 0 20px;
+  margin-top: 2em;
 }
 
 .splash-column h2,
@@ -236,6 +264,23 @@ h7 {
   font-size: 1.25em;
   text-align: left;
   border: none;
+}
+
+.quickstart-vid {
+  background: #2BBA9C1A;
+  padding-bottom: 64px;
+}
+
+#quickstart-img {
+  width: 15%;
+  padding-top: 20px;
+  padding-right: 24px;
+  float: left;
+}
+
+#quickstart-title {
+  position: relative;
+  padding-top: 24px;
 }
 
 .faq .faq-heading {
@@ -249,6 +294,11 @@ h7 {
   margin: 0 0 1rem 0;
 }
 
+.splash-column-one-third h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.50em;
+}
+
 #splash pre {
   position: relative;
 }
@@ -260,6 +310,10 @@ h7 {
   right: 0.5em;
   font-size: 12px;
   color: #999;
+}
+
+.feature-desc {
+  font-size: 14px;
 }
 
 /* ----- Visual separations ------ */
@@ -596,7 +650,7 @@ table.highlighttable {
   overflow: auto;
   display: block;
   border: none;
-  background-color: #f6f8fa;
+  background-color: #f1f1f1;
 }
 
 .highlighttable pre {

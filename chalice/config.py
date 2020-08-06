@@ -74,13 +74,14 @@ class Config(object):
     """
 
     def __init__(self,
-                 chalice_stage=DEFAULT_STAGE_NAME,
-                 function_name=DEFAULT_HANDLER_NAME,
-                 user_provided_params=None,
-                 config_from_disk=None,
-                 default_params=None,
-                 layers=None):
-        # type: (str, str, StrMap, StrMap, StrMap, List[str]) -> None
+                 chalice_stage=DEFAULT_STAGE_NAME,      # type: str
+                 function_name=DEFAULT_HANDLER_NAME,    # type: str
+                 user_provided_params=None,             # type: StrMap
+                 config_from_disk=None,                 # type: StrMap
+                 default_params=None,                   # type: StrMap
+                 layers=None,                           # type: List[str]
+                 ):
+        # type: (...) -> None
         #: Params that a user provided explicitly,
         #: typically via the command line.
         self.chalice_stage = chalice_stage
@@ -170,6 +171,18 @@ class Config(object):
         return self._chain_lookup('layers',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
+
+    @property
+    def api_gateway_custom_domain(self):
+        # type: () -> StrMap
+        return self._chain_lookup('api_gateway_custom_domain',
+                                  varies_per_chalice_stage=True)
+
+    @property
+    def websocket_api_custom_domain(self):
+        # type: () -> StrMap
+        return self._chain_lookup('websocket_api_custom_domain',
+                                  varies_per_chalice_stage=True)
 
     def _chain_lookup(self, name, varies_per_chalice_stage=False,
                       varies_per_function=False):
@@ -461,7 +474,10 @@ class DeployedResources(object):
         return cls({'resources': [], 'schema_version': '2.0'})
 
     def resource_values(self, name):
-        # type: (str) -> Dict[str, str]
+        # type: (str) -> Dict[str, Any]
+        if 'api_mapping' in name:
+            name = name.split('.')[0]
+
         try:
             return self._deployed_values_by_name[name]
         except KeyError:

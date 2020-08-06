@@ -25,7 +25,9 @@ _BUILTIN_AUTH_FUNC = Callable[
 
 class Authorizer:
     name = ... # type: str
+    scopes = ... # type: List[str]
     def to_swagger(self) -> Dict[str, Any]: ...
+    def with_scopes(self, scopes: List[str]) -> Authorizer: ...
 
 
 class CognitoUserPoolAuthorizer(Authorizer): ...
@@ -176,6 +178,7 @@ class Chalice(DecoratorAPI):
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
     event_sources = ... # type: List[BaseEventSourceConfig]
     pure_lambda_functions = ... # type: List[LambdaFunction]
+    handler_map = ... # type: Dict[str, Callable]
     # Used for feature flag validation
     _features_used = ... # type: Set[str]
     experimental_feature_flags = ... # type: Set[str]
@@ -193,7 +196,9 @@ class Chalice(DecoratorAPI):
 class ChaliceAuthorizer(object):
     name = ... # type: str
     func = ... # type: _BUILTIN_AUTH_FUNC
+    scopes = ... # type: List[str]
     config = ... # type: BuiltinAuthConfig
+    def with_scopes(self, scopes: List[str]) -> ChaliceAuthorizer: ...
 
 
 class BuiltinAuthConfig(object):

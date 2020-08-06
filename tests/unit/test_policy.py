@@ -31,7 +31,7 @@ def test_app_policy_generator_vpc_policy():
                     'logs:CreateLogStream',
                     'logs:PutLogEvents'],
          'Effect': 'Allow',
-         'Resource': 'arn:aws:logs:*:*:*'},
+         'Resource': 'arn:*:logs:*:*:*'},
         {'Action': ['ec2:CreateNetworkInterface',
                     'ec2:DescribeNetworkInterfaces',
                     'ec2:DetachNetworkInterface',

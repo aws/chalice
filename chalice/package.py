@@ -3,10 +3,12 @@
 import copy
 import json
 import os
+import re
 
 import six
 from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
+
 import yaml
 from yaml.scanner import ScannerError
 from yaml.nodes import Node, ScalarNode, SequenceNode
@@ -16,6 +18,7 @@ from chalice.deploy.swagger import (
 from chalice.utils import (
     OSUtils, UI, serialize_to_json, to_cfn_resource_name
 )
+from chalice.awsclient import TypedAWSClient # noqa
 from chalice.config import Config  # noqa
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
@@ -24,9 +27,9 @@ from chalice.deploy.deployer import create_build_stage
 
 
 def create_app_packager(
-        config, package_format='cloudformation',
+        config, options, package_format='cloudformation',
         template_format='json', merge_template=None):
-    # type: (Config, str, str, Optional[str]) -> AppPackager
+    # type: (Config, PackageOptions, str, str, Optional[str]) -> AppPackager
     osutils = OSUtils()
     ui = UI()
     application_builder = ApplicationGraphBuilder()
@@ -54,11 +57,11 @@ def create_app_packager(
                 merger=TemplateDeepMerger(),
                 template_serializer=template_serializer,
                 merge_template=merge_template)])
-        generator = SAMTemplateGenerator(config)
+        generator = SAMTemplateGenerator(config, options)
     else:
         build_stage = create_build_stage(
             osutils, ui, TerraformSwaggerGenerator())
-        generator = TerraformGenerator(config)
+        generator = TerraformGenerator(config, options)
         post_processors.append(
             TerraformCodeLocationPostProcessor(osutils=osutils))
 
@@ -79,6 +82,20 @@ class UnsupportedFeatureError(Exception):
 
 class DuplicateResourceNameError(Exception):
     pass
+
+
+class PackageOptions(object):
+    def __init__(self, client):
+        # type: (TypedAWSClient) -> None
+        self._client = client  # type: TypedAWSClient
+
+    def service_principal(self, service):
+        # type: (str) -> str
+        dns_suffix = self._client.endpoint_dns_suffix(service,
+                                                      self._client.region_name)
+        return self._client.service_principal(service,
+                                              self._client.region_name,
+                                              dns_suffix)
 
 
 class ResourceBuilder(object):
@@ -105,9 +122,10 @@ class TemplateGenerator(object):
 
     template_file = None  # type: str
 
-    def __init__(self, config):
-        # type: (Config) -> None
+    def __init__(self, config, options):
+        # type: (Config, PackageOptions) -> None
         self._config = config
+        self._options = options
 
     def dispatch(self, resource, template):
         # type: (models.Model, Dict[str, Any]) -> None
@@ -141,7 +159,6 @@ class TemplateGenerator(object):
 
 
 class SAMTemplateGenerator(TemplateGenerator):
-
     _BASE_TEMPLATE = {
         'AWSTemplateFormatVersion': '2010-09-09',
         'Transform': 'AWS::Serverless-2016-10-31',
@@ -151,9 +168,9 @@ class SAMTemplateGenerator(TemplateGenerator):
 
     template_file = "sam"
 
-    def __init__(self, config):
-        # type: (Config) -> None
-        super(SAMTemplateGenerator, self).__init__(config)
+    def __init__(self, config, options):
+        # type: (Config, PackageOptions) -> None
+        super(SAMTemplateGenerator, self).__init__(config, options)
         self._seen_names = set([])  # type: Set[str]
 
     def generate(self, resources):
@@ -284,11 +301,11 @@ class SAMTemplateGenerator(TemplateGenerator):
             'Properties': {
                 'FunctionName': {'Ref': 'APIHandler'},
                 'Action': 'lambda:InvokeFunction',
-                'Principal': 'apigateway.amazonaws.com',
+                'Principal': self._options.service_principal('apigateway'),
                 'SourceArn': {
                     'Fn::Sub': [
-                        ('arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}'
-                         ':${RestAPIId}/*'),
+                        ('arn:${AWS::Partition}:execute-api:${AWS::Region}'
+                         ':${AWS::AccountId}:${RestAPIId}/*'),
                         {'RestAPIId': {'Ref': 'RestAPI'}},
                     ]
                 },
@@ -301,16 +318,18 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Properties': {
                     'FunctionName': {'Fn::GetAtt': [auth_cfn_name, 'Arn']},
                     'Action': 'lambda:InvokeFunction',
-                    'Principal': 'apigateway.amazonaws.com',
+                    'Principal': self._options.service_principal('apigateway'),
                     'SourceArn': {
                         'Fn::Sub': [
-                            ('arn:aws:execute-api:${AWS::Region}:'
-                             '${AWS::AccountId}:${RestAPIId}/*'),
+                            ('arn:${AWS::Partition}:execute-api'
+                             ':${AWS::Region}:${AWS::AccountId}'
+                             ':${RestAPIId}/*'),
                             {'RestAPIId': {'Ref': 'RestAPI'}},
                         ]
                     },
                 }
             }
+        self._add_domain_name(resource, template)
         self._inject_restapi_outputs(template)
 
     def _inject_restapi_outputs(self, template):
@@ -342,7 +361,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                     'https://${RestAPI}.execute-api.${AWS::Region}'
                     # The api_gateway_stage is filled in when
                     # the template is built.
-                    '.amazonaws.com/%s/'
+                    '.${AWS::URLSuffix}/%s/'
                 ) % stage_name
             }
         }
@@ -360,10 +379,11 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'IntegrationUri': {
                     'Fn::Sub': [
                         (
-                            'arn:aws:apigateway:${AWS::Region}:lambda:path/'
-                            '2015-03-31/functions/arn:aws:lambda:'
-                            '${AWS::Region}:' '${AWS::AccountId}:function:'
-                            '${WebsocketHandler}/invocations'
+                            'arn:${AWS::Partition}:apigateway:${AWS::Region}'
+                            ':lambda:path/2015-03-31/functions/arn'
+                            ':${AWS::Partition}:lambda:${AWS::Region}'
+                            ':${AWS::AccountId}:function'
+                            ':${WebsocketHandler}/invocations'
                         ),
                         {'WebsocketHandler': {'Ref': websocket_handler}}
                     ],
@@ -379,10 +399,11 @@ class SAMTemplateGenerator(TemplateGenerator):
             'Properties': {
                 'FunctionName': {'Ref': websocket_handler},
                 'Action': 'lambda:InvokeFunction',
-                'Principal': 'apigateway.amazonaws.com',
+                'Principal': self._options.service_principal('apigateway'),
                 'SourceArn': {
                     'Fn::Sub': [
-                        ('arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}'
+                        ('arn:${AWS::Partition}:execute-api'
+                         ':${AWS::Region}:${AWS::AccountId}'
                          ':${WebsocketAPIId}/*'),
                         {'WebsocketAPIId': api_ref},
                     ],
@@ -467,6 +488,7 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
         }
 
+        self._add_websocket_domain_name(resource, template)
         self._inject_websocketapi_outputs(template)
 
     def _inject_websocketapi_outputs(self, template):
@@ -514,7 +536,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                     'wss://${WebsocketAPI}.execute-api.${AWS::Region}'
                     # The api_gateway_stage is filled in when
                     # the template is built.
-                    '.amazonaws.com/%s/'
+                    '.${AWS::URLSuffix}/%s/'
                 ) % stage_name
             }
         }
@@ -528,6 +550,8 @@ class SAMTemplateGenerator(TemplateGenerator):
         # type: (models.ManagedIAMRole, Dict[str, Any]) -> None
         role_cfn_name = self._register_cfn_resource_name(
             resource.resource_name)
+        resource.trust_policy['Statement'][0]['Principal']['Service'] = \
+            self._options.service_principal('lambda')
         template['Resources'][role_cfn_name] = {
             'Type': 'AWS::IAM::Role',
             'Properties': {
@@ -557,12 +581,13 @@ class SAMTemplateGenerator(TemplateGenerator):
         sns_cfn_name = self._register_cfn_resource_name(
             resource.resource_name)
 
-        if resource.topic.startswith('arn:aws:sns:'):
+        if re.match(r"^arn:aws[a-z\-]*:sns:", resource.topic):
             topic_arn = resource.topic  # type: Union[str, Dict[str, str]]
         else:
             topic_arn = {
                 'Fn::Sub': (
-                    'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:%s' %
+                    'arn:${AWS::Partition}:sns'
+                    ':${AWS::Region}:${AWS::AccountId}:%s' %
                     resource.topic
                 )
             }
@@ -588,12 +613,88 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Properties': {
                     'Queue': {
                         'Fn::Sub': (
-                            'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:%s' %
+                            'arn:${AWS::Partition}:sqs:${AWS::Region}'
+                            ':${AWS::AccountId}:%s' %
                             resource.queue
                         )
                     },
                     'BatchSize': resource.batch_size,
                 }
+            }
+        }
+
+    def _generate_apimapping(self, resource, template):
+        # type: (models.APIMapping, Dict[str, Any]) -> None
+        pass
+
+    def _generate_domainname(self, resource, template):
+        # type: (models.DomainName, Dict[str, Any]) -> None
+        pass
+
+    def _add_domain_name(self, resource, template):
+        # type: (models.RestAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+        endpoint_type = resource.endpoint_type
+        cfn_name = to_cfn_resource_name(domain_name.resource_name)
+        properties = {
+            'DomainName': domain_name.domain_name,
+            'EndpointConfiguration': {
+                'Types': [endpoint_type],
+            }
+        }  # type: Dict[str, Any]
+        if endpoint_type == 'EDGE':
+            properties['CertificateArn'] = domain_name.certificate_arn
+        else:
+            properties['RegionalCertificateArn'] = domain_name.certificate_arn
+        if domain_name.tls_version is not None:
+            properties['SecurityPolicy'] = domain_name.tls_version.value
+        if domain_name.tags:
+            properties['Tags'] = [
+                {'Key': key, 'Value': value}
+                for key, value in sorted(domain_name.tags.items())
+            ]
+        template['Resources'][cfn_name] = {
+            'Type': 'AWS::ApiGateway::DomainName',
+            'Properties': properties
+        }
+        template['Resources'][cfn_name + 'Mapping'] = {
+            'Type': 'AWS::ApiGateway::BasePathMapping',
+            'Properties': {
+                'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
+                'RestApiId': {'Ref': 'RestAPI'},
+                'BasePath': domain_name.api_mapping.mount_path,
+                'Stage': {'Ref': 'RestAPI.Stage'},
+            }
+        }
+
+    def _add_websocket_domain_name(self, resource, template):
+        # type: (models.WebsocketAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+        cfn_name = to_cfn_resource_name(domain_name.resource_name)
+        properties = {
+            'DomainName': domain_name.domain_name,
+            'DomainNameConfigurations': [
+                {'CertificateArn': domain_name.certificate_arn,
+                 'EndpointType': 'REGIONAL'},
+            ]
+        }
+        if domain_name.tags:
+            properties['Tags'] = domain_name.tags
+        template['Resources'][cfn_name] = {
+            'Type': 'AWS::ApiGatewayV2::DomainName',
+            'Properties': properties,
+        }
+        template['Resources'][cfn_name + 'Mapping'] = {
+            'Type': 'AWS::ApiGatewayV2::ApiMapping',
+            'Properties': {
+                'DomainName': {'Ref': cfn_name},
+                'ApiId': {'Ref': 'WebsocketAPI'},
+                'ApiMappingKey': domain_name.api_mapping.mount_path,
+                'Stage': {'Ref': 'WebsocketAPIStage'},
             }
         }
 
@@ -610,7 +711,6 @@ class SAMTemplateGenerator(TemplateGenerator):
 
 
 class TerraformGenerator(TemplateGenerator):
-
     template_file = "chalice.tf"
 
     def generate(self, resources):
@@ -627,6 +727,7 @@ class TerraformGenerator(TemplateGenerator):
             },
             'data': {
                 'aws_caller_identity': {'chalice': {}},
+                'aws_partition': {'chalice': {}},
                 'aws_region': {'chalice': {}},
                 'null_data_source': {
                     'chalice': {
@@ -651,6 +752,7 @@ class TerraformGenerator(TemplateGenerator):
     def _arnref(self, arn_template, **kw):
         # type: (str, str) -> str
         d = dict(
+            partition='${data.aws_partition.chalice.partition}',
             region='${data.aws_region.chalice.name}',
             account_id='${data.aws_caller_identity.chalice.account_id}')
         d.update(kw)
@@ -658,17 +760,21 @@ class TerraformGenerator(TemplateGenerator):
 
     def _generate_managediamrole(self, resource, template):
         # type: (models.ManagedIAMRole, Dict[str, Any]) -> None
+
+        resource.trust_policy['Statement'][0]['Principal']['Service'] = \
+            self._options.service_principal('lambda')
+
         template['resource'].setdefault('aws_iam_role', {})[
             resource.resource_name] = {
-                'name': resource.role_name,
-                'assume_role_policy': json.dumps(resource.trust_policy)
+            'name': resource.role_name,
+            'assume_role_policy': json.dumps(resource.trust_policy)
         }
 
         template['resource'].setdefault('aws_iam_role_policy', {})[
             resource.resource_name] = {
-                'name': resource.resource_name + 'Policy',
-                'policy': json.dumps(resource.policy.document),
-                'role': '${aws_iam_role.%s.id}' % resource.resource_name,
+            'name': resource.resource_name + 'Policy',
+            'policy': json.dumps(resource.policy.document),
+            'role': '${aws_iam_role.%s.id}' % resource.resource_name,
         }
 
     def _generate_websocketapi(self, resource, template):
@@ -706,28 +812,29 @@ class TerraformGenerator(TemplateGenerator):
             bucket_name = resource.bucket
         template['resource'].setdefault(
             'aws_s3_bucket_notification', {}).setdefault(
-                bucket_name + '_notify',
-                {'bucket': resource.bucket}).setdefault(
-                    'lambda_function', []).append(bnotify)
+            bucket_name + '_notify',
+            {'bucket': resource.bucket}).setdefault(
+            'lambda_function', []).append(bnotify)
 
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name] = {
-                'statement_id': resource.resource_name,
-                'action': 'lambda:InvokeFunction',
-                'function_name': resource.lambda_function.function_name,
-                'principal': 's3.amazonaws.com',
-                'source_arn': 'arn:aws:s3:::%s' % resource.bucket
+            'statement_id': resource.resource_name,
+            'action': 'lambda:InvokeFunction',
+            'function_name': resource.lambda_function.function_name,
+            'principal': self._options.service_principal('s3'),
+            'source_arn': 'arn:*:s3:::%s' % resource.bucket
         }
 
     def _generate_sqseventsource(self, resource, template):
         # type: (models.SQSEventSource, Dict[str, Any]) -> None
         template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
             resource.resource_name] = {
-                'event_source_arn': self._arnref(
-                    "arn:aws:sqs:%(region)s:%(account_id)s:%(queue)s",
-                    queue=resource.queue),
-                'batch_size': resource.batch_size,
-                'function_name': resource.lambda_function.function_name,
+            'event_source_arn': self._arnref(
+                "arn:%(partition)s:sqs:%(region)s"
+                ":%(account_id)s:%(queue)s",
+                queue=resource.queue),
+            'batch_size': resource.batch_size,
+            'function_name': resource.lambda_function.function_name,
         }
 
     def _generate_snslambdasubscription(self, resource, template):
@@ -737,21 +844,21 @@ class TerraformGenerator(TemplateGenerator):
             topic_arn = resource.topic
         else:
             topic_arn = self._arnref(
-                'arn:aws:sns:%(region)s:%(account_id)s:%(topic)s',
+                'arn:%(partition)s:sns:%(region)s:%(account_id)s:%(topic)s',
                 topic=resource.topic)
 
         template['resource'].setdefault('aws_sns_topic_subscription', {})[
             resource.resource_name] = {
-                'topic_arn': topic_arn,
-                'protocol': 'lambda',
-                'endpoint': self._fref(resource.lambda_function)
+            'topic_arn': topic_arn,
+            'protocol': 'lambda',
+            'endpoint': self._fref(resource.lambda_function)
         }
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name] = {
-                'function_name': resource.lambda_function.function_name,
-                'action': 'lambda:InvokeFunction',
-                'principal': 'sns.amazonaws.com',
-                'source_arn': topic_arn
+            'function_name': resource.lambda_function.function_name,
+            'action': 'lambda:InvokeFunction',
+            'principal': self._options.service_principal('sns'),
+            'source_arn': topic_arn
         }
 
     def _generate_cloudwatchevent(self, resource, template):
@@ -759,9 +866,9 @@ class TerraformGenerator(TemplateGenerator):
 
         template['resource'].setdefault(
             'aws_cloudwatch_event_rule', {})[
-                resource.resource_name] = {
-                    'name': resource.resource_name,
-                    'event_pattern': resource.event_pattern
+            resource.resource_name] = {
+            'name': resource.resource_name,
+            'event_pattern': resource.event_pattern
         }
         self._cwe_helper(resource, template)
 
@@ -770,10 +877,10 @@ class TerraformGenerator(TemplateGenerator):
 
         template['resource'].setdefault(
             'aws_cloudwatch_event_rule', {})[
-                resource.resource_name] = {
-                    'name': resource.resource_name,
-                    'schedule_expression': resource.schedule_expression,
-                    'description': resource.rule_description,
+            resource.resource_name] = {
+            'name': resource.resource_name,
+            'schedule_expression': resource.schedule_expression,
+            'description': resource.rule_description,
         }
         self._cwe_helper(resource, template)
 
@@ -781,20 +888,20 @@ class TerraformGenerator(TemplateGenerator):
         # type: (models.CloudWatchEventBase, Dict[str, Any]) -> None
         template['resource'].setdefault(
             'aws_cloudwatch_event_target', {})[
-                resource.resource_name] = {
-                    'rule': '${aws_cloudwatch_event_rule.%s.name}' % (
-                        resource.resource_name),
-                    'target_id': resource.resource_name,
-                    'arn': self._fref(resource.lambda_function)
+            resource.resource_name] = {
+            'rule': '${aws_cloudwatch_event_rule.%s.name}' % (
+                resource.resource_name),
+            'target_id': resource.resource_name,
+            'arn': self._fref(resource.lambda_function)
         }
         template['resource'].setdefault(
             'aws_lambda_permission', {})[
-                resource.resource_name] = {
-                    'function_name': resource.lambda_function.function_name,
-                    'action': 'lambda:InvokeFunction',
-                    'principal': 'events.amazonaws.com',
-                    'source_arn': "${aws_cloudwatch_event_rule.%s.arn}" % (
-                        resource.resource_name)
+            resource.resource_name] = {
+            'function_name': resource.lambda_function.function_name,
+            'action': 'lambda:InvokeFunction',
+            'principal': self._options.service_principal('events'),
+            'source_arn': "${aws_cloudwatch_event_rule.%s.arn}" % (
+                resource.resource_name)
         }
 
     def _generate_lambdafunction(self, resource, template):
@@ -845,82 +952,123 @@ class TerraformGenerator(TemplateGenerator):
         swagger_doc = cast(Dict, resource.swagger_doc)
         template['data'].setdefault(
             'template_file', {}).setdefault(
-                'chalice_api_swagger', {})['template'] = json.dumps(
-                    swagger_doc)
+            'chalice_api_swagger', {})['template'] = json.dumps(
+            swagger_doc)
 
         template['resource'].setdefault('aws_api_gateway_rest_api', {})[
             resource.resource_name] = {
-                'body': '${data.template_file.chalice_api_swagger.rendered}',
-                # Terraform will diff explicitly configured attributes
-                # to the current state of the resource. Attributes configured
-                # via swagger on the REST api need to be duplicated here, else
-                # terraform will set them back to empty.
-                'name': swagger_doc['info']['title'],
-                'binary_media_types': swagger_doc[
-                    'x-amazon-apigateway-binary-media-types'],
-                'endpoint_configuration': {'types': [resource.endpoint_type]}
+            'body': '${data.template_file.chalice_api_swagger.rendered}',
+            # Terraform will diff explicitly configured attributes
+            # to the current state of the resource. Attributes configured
+            # via swagger on the REST api need to be duplicated here, else
+            # terraform will set them back to empty.
+            'name': swagger_doc['info']['title'],
+            'binary_media_types': swagger_doc[
+                'x-amazon-apigateway-binary-media-types'],
+            'endpoint_configuration': {'types': [resource.endpoint_type]}
         }
 
         if 'x-amazon-apigateway-policy' in swagger_doc:
             template['resource'][
                 'aws_api_gateway_rest_api'][
-                    resource.resource_name]['policy'] = json.dumps(
-                        swagger_doc['x-amazon-apigateway-policy'])
+                resource.resource_name]['policy'] = json.dumps(
+                swagger_doc['x-amazon-apigateway-policy'])
         if resource.minimum_compression.isdigit():
             template['resource'][
                 'aws_api_gateway_rest_api'][
-                    resource.resource_name][
-                        'minimum_compression_size'] = int(
-                            resource.minimum_compression)
+                resource.resource_name][
+                'minimum_compression_size'] = int(
+                resource.minimum_compression)
 
         template['resource'].setdefault('aws_api_gateway_deployment', {})[
             resource.resource_name] = {
-                'stage_name': resource.api_gateway_stage,
-                # Ensure that the deployment gets redeployed if we update
-                # the swagger description for the api by using its checksum
-                # in the stage description.
-                'stage_description': (
-                    "${md5(data.template_file.chalice_api_swagger.rendered)}"),
-                'rest_api_id': '${aws_api_gateway_rest_api.%s.id}' % (
-                    resource.resource_name),
-                'lifecycle': {'create_before_destroy': True}
+            'stage_name': resource.api_gateway_stage,
+            # Ensure that the deployment gets redeployed if we update
+            # the swagger description for the api by using its checksum
+            # in the stage description.
+            'stage_description': (
+                "${md5(data.template_file.chalice_api_swagger.rendered)}"),
+            'rest_api_id': '${aws_api_gateway_rest_api.%s.id}' % (
+                resource.resource_name),
+            'lifecycle': {'create_before_destroy': True}
         }
 
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name + '_invoke'] = {
-                'function_name': resource.lambda_function.function_name,
-                'action': 'lambda:InvokeFunction',
-                'principal': 'apigateway.amazonaws.com',
-                'source_arn':
-                    "${aws_api_gateway_rest_api.%s.execution_arn}/*" % (
-                        resource.resource_name)
+            'function_name': resource.lambda_function.function_name,
+            'action': 'lambda:InvokeFunction',
+            'principal': self._options.service_principal('apigateway'),
+            'source_arn':
+                "${aws_api_gateway_rest_api.%s.execution_arn}/*" % (
+                    resource.resource_name)
         }
 
         template.setdefault('output', {})[
             'EndpointURL'] = {
-                'value': '${aws_api_gateway_deployment.%s.invoke_url}' % (
-                    resource.resource_name)
+            'value': '${aws_api_gateway_deployment.%s.invoke_url}' % (
+                resource.resource_name)
         }
 
         for auth in resource.authorizers:
             template['resource']['aws_lambda_permission'][
                 auth.resource_name + '_invoke'] = {
-                    'function_name': auth.function_name,
-                    'action': 'lambda:InvokeFunction',
-                    'principal': 'apigateway.amazonaws.com',
-                    'source_arn': (
-                        "${aws_api_gateway_rest_api.%s.execution_arn}" % (
-                            resource.resource_name) + "/*")
+                'function_name': auth.function_name,
+                'action': 'lambda:InvokeFunction',
+                'principal': self._options.service_principal('apigateway'),
+                'source_arn': (
+                    "${aws_api_gateway_rest_api.%s.execution_arn}" % (
+                        resource.resource_name) + "/*"
+                )
             }
+        self._add_domain_name(resource, template)
+
+    def _add_domain_name(self, resource, template):
+        # type: (models.RestAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+        endpoint_type = resource.endpoint_type
+        properties = {
+            'domain_name': domain_name.domain_name,
+            'endpoint_configuration': {'types': [endpoint_type]},
+        }
+        if endpoint_type == 'EDGE':
+            properties['certificate_arn'] = domain_name.certificate_arn
+        else:
+            properties[
+                'regional_certificate_arn'] = domain_name.certificate_arn
+        if domain_name.tls_version is not None:
+            properties['security_policy'] = domain_name.tls_version.value
+        if domain_name.tags:
+            properties['tags'] = domain_name.tags
+        template['resource']['aws_api_gateway_domain_name'] = {
+            domain_name.resource_name: properties
+        }
+        template['resource']['aws_api_gateway_base_path_mapping'] = {
+            domain_name.resource_name + '_mapping': {
+                'stage_name': resource.api_gateway_stage,
+                'domain_name': domain_name.domain_name,
+                'api_id': '${aws_api_gateway_rest_api.%s.id}' % (
+                    resource.resource_name)
+            }
+        }
+
+    def _generate_apimapping(self, resource, template):
+        # type: (models.APIMapping, Dict[str, Any]) -> None
+        pass
+
+    def _generate_domainname(self, resource, template):
+        # type: (models.DomainName, Dict[str, Any]) -> None
+        pass
 
 
 class AppPackager(object):
     def __init__(self,
-                 templater,            # type: TemplateGenerator
-                 resource_builder,     # type: ResourceBuilder
-                 post_processor,       # type: TemplatePostProcessor
+                 templater,  # type: TemplateGenerator
+                 resource_builder,  # type: ResourceBuilder
+                 post_processor,  # type: TemplatePostProcessor
                  template_serializer,  # type: TemplateSerializer
-                 osutils,              # type: OSUtils
+                 osutils,  # type: OSUtils
                  ):
         # type: (...) -> None
         self._templater = templater
@@ -1013,8 +1161,8 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
 
 class TemplateMergePostProcessor(TemplatePostProcessor):
     def __init__(self,
-                 osutils,              # type: OSUtils
-                 merger,               # type: TemplateMerger
+                 osutils,  # type: OSUtils
+                 merger,  # type: TemplateMerger
                  template_serializer,  # type: TemplateSerializer
                  merge_template=None,  # type: Optional[str]
                  ):
@@ -1070,7 +1218,7 @@ class TemplateDeepMerger(TemplateMerger):
     def _merge(self, file_template, chalice_template):
         # type: (Any, Any) -> Any
         if isinstance(file_template, dict) and \
-           isinstance(chalice_template, dict):
+                isinstance(chalice_template, dict):
             return self._merge_dict(file_template, chalice_template)
         return file_template
 
@@ -1083,7 +1231,6 @@ class TemplateDeepMerger(TemplateMerger):
 
 
 class TemplateSerializer(object):
-
     file_extension = ''
 
     def load_template(self, file_contents, filename=''):
@@ -1096,7 +1243,6 @@ class TemplateSerializer(object):
 
 
 class JSONTemplateSerializer(TemplateSerializer):
-
     file_extension = 'json'
 
     def serialize_template(self, contents):
@@ -1113,7 +1259,6 @@ class JSONTemplateSerializer(TemplateSerializer):
 
 
 class YAMLTemplateSerializer(TemplateSerializer):
-
     file_extension = 'yaml'
 
     @classmethod

@@ -11,6 +11,8 @@ import tarfile
 from datetime import datetime, timedelta
 import subprocess
 
+
+from collections import OrderedDict # noqa
 import click
 from typing import IO, Dict, List, Any, Tuple, Iterator, BinaryIO, Text  # noqa
 from typing import Optional, Union  # noqa
@@ -20,7 +22,6 @@ import dateutil.parser
 from dateutil.tz import tzutc
 
 from chalice.constants import WELCOME_PROMPT
-
 
 OptInt = Optional[int]
 OptStr = Optional[str]
@@ -256,9 +257,9 @@ class OSUtils(object):
         # type: (str) -> str
         return os.path.join(*args)
 
-    def walk(self, path):
-        # type: (str) -> Iterator[Tuple[str, List[str], List[str]]]
-        return os.walk(path)
+    def walk(self, path, followlinks=False):
+        # type: (str, bool) -> Iterator[Tuple[str, List[str], List[str]]]
+        return os.walk(path, followlinks=followlinks)
 
     def copytree(self, source, destination):
         # type: (str, str) -> None

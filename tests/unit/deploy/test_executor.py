@@ -9,13 +9,14 @@ from chalice.deploy.executor import Executor, UnresolvedValueError, \
 from chalice.deploy.models import APICall, RecordResourceVariable, \
     RecordResourceValue, StoreValue, JPSearch, BuiltinFunction, Instruction, \
     CopyVariable
-from chalice.deploy.planner import Variable, StringFormat
+from chalice.deploy.planner import Variable, StringFormat, KeyDataVariable
 from chalice.utils import UI
 
 
 class TestExecutor(object):
     def setup_method(self):
         self.mock_client = mock.Mock(spec=TypedAWSClient)
+        self.mock_client.endpoint_dns_suffix.return_value = 'amazonaws.com'
         self.ui = mock.Mock(spec=UI)
         self.executor = Executor(self.mock_client, self.ui)
 
@@ -42,6 +43,25 @@ class TestExecutor(object):
         self.execute([apicall])
 
         assert self.executor.variables['my_variable_name'] == 'myrole:arn'
+
+    def test_can_store_multiple_value(self):
+        instruction = models.StoreMultipleValue(
+            name='list_data',
+            value=['first_elem']
+        )
+
+        self.execute([instruction])
+        assert self.executor.variables['list_data'] == ['first_elem']
+
+        instruction = models.StoreMultipleValue(
+            name='list_data',
+            value=['second_elem']
+        )
+
+        self.execute([instruction])
+        assert self.executor.variables['list_data'] == [
+            'first_elem', 'second_elem'
+        ]
 
     def test_can_reference_stored_results_in_api_calls(self):
         params = {
@@ -190,9 +210,48 @@ class TestExecutor(object):
             )
         ])
         assert self.executor.variables['result'] == {
+            'partition': 'aws',
             'account_id': '123',
             'region': 'us-west-2',
-            'service': 'lambda'
+            'service': 'lambda',
+            'dns_suffix': 'amazonaws.com'
+        }
+
+    def test_built_in_function_interrogate_profile(self):
+        self.mock_client.region_name = 'us-west-2'
+        self.mock_client.partition_name = 'aws'
+        self.execute([
+            BuiltinFunction(
+                function_name='interrogate_profile',
+                args=[],
+                output_var='result',
+            )
+        ])
+        assert self.executor.variables['result'] == {
+            'partition': 'aws',
+            'region': 'us-west-2',
+            'dns_suffix': 'amazonaws.com'
+        }
+
+    def test_built_in_function_service_principal(self):
+        self.mock_client.region_name = 'us-west-2'
+        self.mock_client.partition_name = 'aws'
+        self.mock_client.service_principal.return_value = \
+            'apigateway.amazonaws.com'
+        self.execute([
+            BuiltinFunction(
+                function_name='service_principal',
+                args=['apigateway'],
+                output_var='result',
+            )
+        ])
+
+        self.mock_client.service_principal \
+            .assert_called_once_with('apigateway',
+                                     'us-west-2',
+                                     'amazonaws.com')
+        assert self.executor.variables['result'] == {
+            'principal': 'apigateway.amazonaws.com'
         }
 
     def test_errors_out_on_unknown_function(self):
@@ -398,3 +457,15 @@ class TestResolveVariables(object):
                 }
             }
         }
+
+    def test_can_handle_dict_value_by_key(self):
+        variables = {
+            'domain_name': {
+                'base_path_mapping': {
+                    'path': '/'
+                }
+            }
+        }
+        assert self.resolve_vars(
+            KeyDataVariable('domain_name', 'base_path_mapping'), variables
+        ) == {'path': '/'}

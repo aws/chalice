@@ -70,6 +70,9 @@
     <link rel="stylesheet" href="{{ pathto('_static/bootstrap-reboot.css', 1) }}" type="text/css" />
     {{ super() }}
     <link rel="stylesheet" href="{{ pathto('_static/custom-tabs.css', 1) }}" type="text/css" />
+    {% if pagename == "index" %}
+    <link rel="stylesheet" href="{{ pathto('_static/asciinema-player.css', 1) }}" type="text/css" />
+    {% endif %}
 {% endblock -%}
 
 <div id="site-container">
@@ -86,8 +89,8 @@
             <ul id="page-navigation">
                 <li class="site-page first"><a href="{{ pathto('quickstart') }}">Quick Start</a></li>
                 <li class="site-page"><a href="{{ pathto('tutorials/index') }}">Tutorials</a></li>
-                <li class="site-page"><a href="{{ pathto('topics/index') }}">Topics</a></li>
-                <li class="site-page"><a href="{{ pathto('api') }}">API Reference</a></li>
+                <li class="site-page"><a href="{{ pathto('samples/index') }}">Samples</a></li>
+                <li class="site-page"><a href="{{ pathto('main') }}">Documentation</a></li>
                 <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
                 <li class="site-search hidden-sm">
                     <form action="{{ pathto('search') }}" method="get">

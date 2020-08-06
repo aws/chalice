@@ -46,6 +46,7 @@ GITIGNORE = """\
 DEFAULT_STAGE_NAME = 'dev'
 DEFAULT_APIGATEWAY_STAGE_NAME = 'api'
 DEFAULT_ENDPOINT_TYPE = 'EDGE'
+DEFAULT_TLS_VERSION = 'TLS_1_2'
 
 DEFAULT_LAMBDA_TIMEOUT = 60
 DEFAULT_LAMBDA_MEMORY_SIZE = 128
@@ -78,7 +79,7 @@ CLOUDWATCH_LOGS = {
         "logs:CreateLogStream",
         "logs:PutLogEvents"
     ],
-    "Resource": "arn:aws:logs:*:*:*"
+    "Resource": "arn:*:logs:*:*:*"
 }
 
 
@@ -113,7 +114,7 @@ CODEBUILD_POLICY = {
                 "s3:GetObjectVersion",
                 "s3:PutObject"
             ],
-            "Resource": "arn:aws:s3:::*",
+            "Resource": "arn:*:s3:::*",
             "Effect": "Allow"
         }
     ]
@@ -247,5 +248,5 @@ POST_TO_WEBSOCKET_CONNECTION_POLICY = {
     "Action": [
         "execute-api:ManageConnections"
     ],
-    "Resource": "arn:aws:execute-api:*:*:*/@connections/*"
+    "Resource": "arn:*:execute-api:*:*:*/@connections/*"
 }

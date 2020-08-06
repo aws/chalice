@@ -11,6 +11,7 @@ from chalice.deploy.deployer import Deployer, DeploymentReporter
 from chalice.config import Config
 from chalice.config import DeployedResources
 from chalice import local
+from chalice.package import PackageOptions
 from chalice.utils import UI
 from chalice import Chalice
 from chalice.logs import LogRetriever
@@ -299,3 +300,8 @@ def test_does_raise_not_found_error_when_resource_is_not_lambda(clifactory):
     with pytest.raises(factory.NoSuchFunctionError) as e:
         clifactory.create_lambda_invoke_handler('foobar', stage)
     assert e.value.name == 'foobar'
+
+
+def test_can_create_package_options(clifactory):
+    options = clifactory.create_package_options()
+    assert isinstance(options, PackageOptions)

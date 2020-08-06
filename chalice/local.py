@@ -77,6 +77,7 @@ class LocalARNBuilder(object):
         # with a '//'.
         if path != '/':
             path = path[1:]
+        path = path.split('?')[0]
         return self.ARN_FORMAT.format(
             region=self.LOCAL_REGION,
             account_id=self.LOCAL_ACCOUNT_ID,
@@ -320,8 +321,26 @@ class LocalGatewayAuthorizer(object):
                     and "authorization" in lambda_event["headers"]:
                 token = lambda_event["headers"]["authorization"]
                 claims = self._decode_jwt_payload(token)
+
+                try:
+                    cognito_username = claims["cognito:username"]
+                except KeyError:
+                    # If a key error is raised when trying to get the cognito
+                    # username then it is a machine-to-machine communication.
+                    # This kind of cognito authorization flow is not
+                    # supported in local mode. We can ignore it here to allow
+                    # users to test their code local with a different cognito
+                    # authorization flow.
+                    warnings.warn(
+                        '%s for machine-to-machine communicaiton is not '
+                        'supported in local mode. All requests made against '
+                        'a route will be authorized to allow local testing.'
+                        % authorizer.__class__.__name__
+                    )
+                    return lambda_event, lambda_context
+
                 auth_result = {"context": {"claims": claims},
-                               "principalId": claims["cognito:username"]}
+                               "principalId": cognito_username}
                 lambda_event = self._update_lambda_event(lambda_event,
                                                          auth_result)
         if not isinstance(authorizer, ChaliceAuthorizer):
@@ -519,7 +538,6 @@ class LocalGateway(object):
         lambda_event, lambda_context = self._authorizer.authorize(
             path, lambda_event, lambda_context)
         response = self._app_object(lambda_event, lambda_context)
-        response = self._handle_binary(response)
         return response
 
     def _autogen_options_headers(self, lambda_event):
@@ -547,13 +565,6 @@ class LocalGateway(object):
             'Access-Control-Allow-Methods': '%s' % ','.join(route_methods)
         })
         return cors_headers
-
-    def _handle_binary(self, response):
-        # type: (Dict[str,Any]) -> Dict[str,Any]
-        if response.get('isBase64Encoded'):
-            body = base64.b64decode(response['body'])
-            response['body'] = body
-        return response
 
 
 class ChaliceRequestHandler(BaseHTTPRequestHandler):
@@ -588,10 +599,18 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             status_code = response['statusCode']
             headers = response['headers'].copy()
             headers.update(response['multiValueHeaders'])
+            response = self._handle_binary(response)
             body = response['body']
             self._send_http_response(status_code, headers, body)
         except LocalGatewayException as e:
             self._send_error_response(e)
+
+    def _handle_binary(self, response):
+        # type: (Dict[str,Any]) -> Dict[str,Any]
+        if response.get('isBase64Encoded'):
+            body = base64.b64decode(response['body'])
+            response['body'] = body
+        return response
 
     def _send_error_response(self, error):
         # type: (LocalGatewayException) -> None
