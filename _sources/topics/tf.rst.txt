@@ -112,6 +112,7 @@ Now we can deploy our app using the ``terraform apply`` command::
   Outputs:
 
   EndpointURL = https://7bnxriulj5.execute-api.us-east-1.amazonaws.com/dev
+  RestApiId = 7bnxriulj5
 
 This will take a minute to complete, but once it's done, the endpoint url
 will be available as an output which we can then curl::
