@@ -537,7 +537,9 @@ class TestTerraformTemplate(TemplateTestBase):
         # a Rest API.
         assert template['output'] == {
             'EndpointURL': {
-                'value': '${aws_api_gateway_deployment.rest_api.invoke_url}'}
+                'value': '${aws_api_gateway_deployment.rest_api.invoke_url}'},
+            'RestAPIId': {
+                'value': '${aws_api_gateway_rest_api.rest_api.id}'}
         }
 
     def test_can_package_s3_event_handler_with_tf_ref(self, sample_app):

@@ -1008,6 +1008,11 @@ class TerraformGenerator(TemplateGenerator):
             'value': '${aws_api_gateway_deployment.%s.invoke_url}' % (
                 resource.resource_name)
         }
+        template.setdefault('output', {})[
+            'RestAPIId'] = {
+            'value': '${aws_api_gateway_rest_api.%s.id}' % (
+                resource.resource_name)
+        }
 
         for auth in resource.authorizers:
             template['resource']['aws_lambda_permission'][
