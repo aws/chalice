@@ -212,6 +212,20 @@ def demo_app_auth():
         else:
             return app.AuthResponse(routes=[], principal_id='user')
 
+    @demo.request_authorizer(identity_sources={"headers": ["Authorization"]})
+    def demo_request_auth_headers(auth_request):
+        if auth_request.headers.get('Authorization') == "allow":
+            return app.AuthResponse(routes=['/secret-request-headers'], principal_id='user')
+        else:
+            return app.AuthResponse(routes=[], principal_id='user')
+
+    @demo.request_authorizer(identity_sources={"query_params": ["test"]})
+    def demo_request_auth_query_params(auth_request):
+        if auth_request.query_params.get('test') == "allow":
+            return app.AuthResponse(routes=['/secret-request-query-params*'], principal_id='user')  # todo fix this after merge
+        else:
+            return app.AuthResponse(routes=[], principal_id='user')
+
     @demo.authorizer()
     def resource_auth(auth_request):
         token = auth_request.token
@@ -275,6 +289,14 @@ def demo_app_auth():
 
     @demo.route('/none', authorizer=demo_authorizer_returns_none)
     def none_auth():
+        return {}
+
+    @demo.route('/secret-request-headers', authorizer=demo_request_auth_headers)
+    def request_auth_headers():
+        return {}
+
+    @demo.route('/secret-request-query-params', authorizer=demo_request_auth_query_params)
+    def request_auth_headers():
         return {}
 
     return demo
@@ -781,6 +803,79 @@ class TestLocalGateway(object):
         with pytest.raises(InvalidAuthorizerError):
             gateway.handle_request(
                 'GET', '/none', {'Authorization': 'foobarbaz'}, '')
+
+    def test_does_throw_unauthorized_when_no_header_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers', {}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_does_throw_unauthorized_when_wrong_header_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers', {"Foo": "Bar"}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_does_throw_forbidden_when_wrong_value_header_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(ForbiddenError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers', {"Authorization": "foo"}, '')
+        exception_body = str(ei.value.body)
+
+    def test_request_authorizer_validates_headers(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        response = gateway.handle_request(
+            'GET', '/secret-request-headers', {'Authorization': 'allow'}, '')
+
+    def test_does_throw_unauthorized_when_no_query_params_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers', {}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_does_throw_unauthorized_when_wrong_query_param_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers?foo=bar', {}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_does_throw_unauthorized_when_wrong_value_query_param_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers?test=bar', {}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_does_throw_unauthorized_when_no_value_query_param_for_request_auth(
+            self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        with pytest.raises(NotAuthorizedError) as ei:
+            gateway.handle_request(
+                'GET', '/secret-request-headers?test', {}, '')
+        exception_body = str(ei.value.body)
+        assert '{"message":"Unauthorized"}' in exception_body
+
+    def test_request_authorizer_validates_query_params(self, demo_app_auth):
+        gateway = LocalGateway(demo_app_auth, Config())
+        response = gateway.handle_request(
+            'GET', '/secret-request-query-params?test=allow', {}, '')
+
 
     def test_can_deny_route_with_variables(self, demo_app_auth):
         gateway = LocalGateway(demo_app_auth, Config())

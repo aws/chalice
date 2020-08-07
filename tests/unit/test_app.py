@@ -25,7 +25,6 @@ from chalice.app import (
     BadRequestError,
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
-    RequestAuthorizerIdentitySources,
     RequestAuthorizerRequest
 )
 from chalice import __version__ as chalice_version
@@ -1180,7 +1179,7 @@ def test_can_return_auth_dict_directly():
 def test_can_handle_request_auth():
     demo = app.Chalice('request-auth')
 
-    @demo.request_authorizer(identity_sources=RequestAuthorizerIdentitySources(headers=['Authorization']))
+    @demo.request_authorizer(identity_sources={"headers": ['Authorization']})
 
     def my_auth(auth_request):
         pass
@@ -1217,7 +1216,7 @@ def test_request_auth_can_transform_event():
 
     request = []
 
-    @auth_app.request_authorizer(RequestAuthorizerIdentitySources(headers=['Authorization']))
+    @auth_app.request_authorizer({"headers": ['Authorization']})
     def request_auth(auth_request):
         request.append(auth_request)
 
@@ -1226,8 +1225,8 @@ def test_request_auth_can_transform_event():
     assert len(request) == 1
     transformed = request[0]
     assert transformed.auth_type == 'REQUEST'
-    assert transformed.headers == {'Authorization': 'test'}
-    assert transformed.query_string_parameters == {'queryparam': 'test'}
+    assert transformed.headers == app.CaseInsensitiveMapping({'Authorization': 'test'})
+    assert transformed.query_params == {'queryparam': 'test'}
     assert transformed.stage_variables == {'stage': 'test'}
     assert transformed.request_context == {'context': "test"}
     assert transformed.method_arn == 'arn:aws:execute-api:...:foo'
@@ -1263,7 +1262,7 @@ def test_can_return_request_auth_dict_directly():
         }
     }
 
-    @auth_app.request_authorizer(identity_sources=RequestAuthorizerIdentitySources(headers=['Authorization']))
+    @auth_app.request_authorizer(identity_sources={"headers": ['Authorization']})
     def request_auth(auth_request):
         return response
 
@@ -1274,7 +1273,7 @@ def test_can_specify_extra_request_auth_attributes():
     auth_app = app.Chalice('builtin-auth')
 
     @auth_app.request_authorizer(
-        identity_sources=RequestAuthorizerIdentitySources(headers=['Authorization']),
+        identity_sources={"headers": ['Authorization']},
         ttl_seconds=10,
         execution_role='arn:my-role')
     def request_auth(auth_request):
@@ -1317,7 +1316,7 @@ def test_request_authorizer_validation_raised_on_no_identity_sources():
     auth_app = app.Chalice('builtin-auth')
 
     with pytest.raises(ValueError):
-        @auth_app.request_authorizer(identity_sources=RequestAuthorizerIdentitySources())
+        @auth_app.request_authorizer(identity_sources={})
         def builtin_auth(auth_request):
             pass
 

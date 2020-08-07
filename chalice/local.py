@@ -27,7 +27,7 @@ from typing import (
     Union,
 )  # noqa
 
-from chalice.app import Chalice  # noqa
+from chalice.app import Chalice, CaseInsensitiveMapping  # noqa
 from chalice.app import CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer  # noqa
 from chalice.app import ChaliceRequestPayloadAuthorizer
@@ -186,7 +186,7 @@ class LambdaEventConverter(object):
                 },
                 'path': path.split('?')[0],
             },
-            'headers': dict(headers),
+            'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,
             'stageVariables': {},
         }
@@ -405,9 +405,9 @@ class LocalGatewayAuthorizer(object):
             'request_context': 'requestContext'
         }
         sources = authorizer.config.identity_sources
-        for source in vars(sources):
-            if getattr(sources, source):
-                for key in getattr(sources, source):
+        for source, names in sources.items():
+            if names:
+                for key in names:
                     if key not in event[event_keys.get(source)]:
                         raise NotAuthorizedError(
                             {'x-amzn-RequestId': lambda_context.aws_request_id,
@@ -480,14 +480,17 @@ class LocalGatewayAuthorizer(object):
         authorizer_event['resource'] = None
         authorizer_event['path'] = None
         authorizer_event['httpMethod'] = None
-        authorizer_event['headers'] = lambda_event['headers']
-        authorizer_event['queryStringParameters'] = {
-            key: value[-1]
-            for key, value in lambda_event['multiValueQueryStringParameters'].items()
-        }
+        authorizer_event['headers'] = CaseInsensitiveMapping(lambda_event['headers'])
         authorizer_event['pathParameters'] = lambda_event['pathParameters']
         authorizer_event['stageVariables'] = lambda_event['stageVariables']
         authorizer_event['requestContext'] = lambda_event['requestContext']
+        authorizer_event['queryStringParameters'] = {}
+        if lambda_event.get('multiValueQueryStringParameters'):
+            authorizer_event['queryStringParameters'] = {
+                key: value[-1]
+                for key, value in lambda_event.get(
+                    'multiValueQueryStringParameters').items()
+            }
         return authorizer_event
 
     def _decode_jwt_payload(self, jwt):
