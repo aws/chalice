@@ -295,10 +295,10 @@ class Config(object):
         # type: () -> bool
         v = self._chain_lookup('automatic_layer',
                                varies_per_chalice_stage=True,
-                               varies_per_function=True)
+                               varies_per_function=False)
         if v is None:
-            return True
-        return bool(v)
+            return False
+        return v
 
     @property
     def iam_role_arn(self):

@@ -20,7 +20,7 @@ def create_function_resource(name, function_name=None,
                              runtime='python2.7', handler='app.app',
                              tags=None, timeout=60,
                              memory_size=128, deployment_package=None,
-                             role=None, layers=None):
+                             role=None, layers=None, managed_layer=None):
     if function_name is None:
         function_name = 'appname-dev-%s' % name
     if environment_variables is None:
@@ -46,7 +46,19 @@ def create_function_resource(name, function_name=None,
         subnet_ids=[],
         layers=layers,
         reserved_concurrency=None,
+        managed_layer=managed_layer,
     )
+
+
+def create_managed_layer():
+    layer = models.LambdaLayer(
+        resource_name='layer',
+        layer_name='bar',
+        runtime='python2.7',
+        deployment_package=models.DeploymentPackage(
+            filename='foo')
+    )
+    return layer
 
 
 def create_api_mapping():
@@ -155,6 +167,13 @@ class BasePlannerTests(object):
         planner = PlanStage(self.remote_state, self.osutils)
         self.last_plan = planner.execute([resource])
         return self.last_plan.instructions
+
+    def filter_api_calls(self, plan):
+        api_calls = []
+        for instruction in plan:
+            if isinstance(instruction, models.APICall):
+                api_calls.append(instruction)
+        return api_calls
 
 
 class TestPlanManagedRole(BasePlannerTests):
@@ -574,7 +593,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': [Variable('layer_version_arn')]
+                'layers': [],
             },
         ),
             models.APICall(
@@ -596,10 +615,22 @@ class TestPlanLambdaFunction(BasePlannerTests):
 
     def test_create_function_with_layers(self):
         layers = ['arn:aws:lambda:us-east-1:111:layer:test_layer:1']
-        function = create_function_resource('function_name', layers=layers)
+        function = create_function_resource(
+            'function_name', layers=layers,
+            managed_layer=create_managed_layer()
+        )
         self.remote_state.declare_no_resources_exists()
-        plan = self.determine_plan(function)
+        plan = self.filter_api_calls(
+            self.determine_plan(function.managed_layer))
+        plan.extend(self.filter_api_calls(self.determine_plan(function)))
         expected = [models.APICall(
+            method_name='publish_layer',
+            params={
+                'layer_name': 'bar',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7'}
+        ),
+            models.APICall(
             method_name='create_function',
             params={
                 'function_name': 'appname-dev-function_name',
@@ -627,11 +658,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
         # create_function
         self.assert_apicall_equals(plan[0], expected[0])
         # delete_function_concurrency
-        self.assert_apicall_equals(plan[2], expected[1])
-
-        assert list(self.last_plan.messages.values()) == [
-            'Creating lambda function: appname-dev-function_name\n',
-        ]
+        self.assert_apicall_equals(plan[1], expected[1])
 
     def test_can_update_lambda_function_code(self):
         function = create_function_resource('function_name')
@@ -651,7 +678,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'timeout': 60,
             'security_group_ids': [],
             'subnet_ids': [],
-            'layers': [Variable('layer_version_arn')]
+            'layers': [],
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -675,6 +702,27 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'Updating lambda function: appname-dev-function_name\n',
         ]
 
+    def test_can_update_lambda_function_with_managed_layer(self):
+        function = create_function_resource(
+            'function_name',
+            managed_layer=create_managed_layer(),
+        )
+        copy_of_function = attr.evolve(function)
+        self.remote_state.declare_resource_exists(copy_of_function)
+        copy_of_layer = attr.evolve(function.managed_layer)
+        self.remote_state.declare_resource_exists(
+            copy_of_layer,
+            layer_version_arn='arn:bar:4'
+        )
+        plan = self.determine_plan(function.managed_layer)
+        plan.extend(self.determine_plan(function))
+        self.assert_apicall_equals(plan[0], models.APICall(
+            method_name='delete_layer_version',
+            params={'layer_version_arn': 'arn:bar:4'},
+        ))
+        assert plan[3].method_name == 'update_function'
+        assert plan[3].params['layers'] == [Variable('layer_version_arn')]
+
     def test_can_create_function_with_reserved_concurrency(self):
         function = create_function_resource('function_name')
         function.reserved_concurrency = 5
@@ -694,7 +742,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': [Variable('layer_version_arn')]
+                'layers': [],
             },
         ),
             models.APICall(

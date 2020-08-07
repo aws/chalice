@@ -356,6 +356,7 @@ class PlanStage(object):
                 value=resource.domain_name
             )
         ])
+        return api_calls
 
     def _plan_lambdalayer(self, resource):
         # type: (models.LambdaLayer) -> Sequence[InstructionMsg]
@@ -364,10 +365,16 @@ class PlanStage(object):
         filename = cast(str, resource.deployment_package.filename)
 
         # Automatically clean up old layer versions.
-        # https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
+        # See:
+        # https://docs.aws.amazon.com/lambda/latest/dg/API_DeleteLayerVersion.html
         msg = 'Creating'
         if self._remote_state.resource_exists(resource):
             state = self._remote_state.resource_deployed_values(resource)
+            # Deleting a layer version won't break functions still using it.
+            # From the doc link above:
+            #
+            # "To avoid breaking functions, a copy of the version remains in
+            # Lambda until no functions refer to it."
             api_calls.append(
                 models.APICall(
                     method_name='delete_layer_version',
@@ -427,11 +434,13 @@ class PlanStage(object):
                 % resource.function_name
             )
 
-        layers = [Variable('layer_version_arn')]  # type: List[Any]
+        api_calls = []  # type: List[InstructionMsg]
+        layers = []  # type: List[Any]
+        if resource.managed_layer is not None:
+            layers.append(Variable('layer_version_arn'))
         if resource.layers:
             layers.extend(resource.layers)
 
-        api_calls = []  # type: List[InstructionMsg]
         if not self._remote_state.resource_exists(resource):
             params = {
                 'function_name': resource.function_name,

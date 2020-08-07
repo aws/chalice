@@ -8,7 +8,6 @@ from typing import ( # noqa
     Sequence,
     cast,
 )
-from typing import List, Dict, Tuple  # noqa
 
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy import models
@@ -208,14 +207,18 @@ class ResourceSweeper(object):
         }
 
     def _delete_lambda_layer(self, resource_values):
-        # type: (Dict[str, str]) -> Tuple[List[models.APICall], Dict[int, str]]
+        # type: (Dict[str, str]) -> ResourceValueType
         apicall = models.APICall(
             method_name='delete_layer_version',
             params={'layer_version_arn': resource_values[
                 'layer_version_arn']})
-        return [apicall], {
-            id(apicall): "Deleting layer version: %s\n" % resource_values[
-                'layer_version_arn']}
+        return {
+            'instructions': (apicall,),
+            'message': (
+                "Deleting layer version: %s\n"
+                % resource_values['layer_version_arn']
+            )
+        }
 
     def _delete_iam_role(self, resource_values):
         # type: (Dict[str, Any]) -> ResourceValueType

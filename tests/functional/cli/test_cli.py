@@ -274,7 +274,7 @@ def test_can_package_with_single_file(runner):
         assert os.path.isfile('package.zip')
         with zipfile.ZipFile('package.zip', 'r') as f:
             assert sorted(f.namelist()) == [
-                'deployment.zip', 'layer-deployment.zip', 'sam.json']
+                'deployment.zip', 'sam.json']
 
 
 def test_package_terraform_err_with_single_file_or_merge(runner):
