@@ -325,6 +325,11 @@ class Config(object):
         return self._chain_merge('environment_variables')
 
     @property
+    def stage_variables(self):
+        # type: () -> Dict[str, str]
+        return self._chain_merge('stage_variables')
+
+    @property
     def tags(self):
         # type: () -> Dict[str, str]
         tags = self._chain_merge('tags')

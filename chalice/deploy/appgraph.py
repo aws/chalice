@@ -163,10 +163,7 @@ class ApplicationGraphBuilder(object):
                 config.api_gateway_endpoint_type,
                 config.api_gateway_stage,
             )
-        stage_variables = self._get_stage_variables(
-            config,
-            stage_name
-        )
+        stage_variables = config.stage_variables
 
         return models.RestAPI(
             resource_name='rest_api',

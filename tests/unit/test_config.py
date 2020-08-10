@@ -363,6 +363,33 @@ def test_env_vars_chain_merge():
         'shared_stage_key': 'from-stage',
     }
 
+def test_stage_vars_chain_merge():
+    config_from_disk = {
+        'stage_variables': {
+            'top_level': 'foo',
+            'shared_stage_key': 'from-top',
+            'shared_stage': 'from-top',
+        },
+        'stages': {
+            'prod': {
+                'stage_variables': {
+                    'stage_var': 'bar',
+                    'shared_stage_key': 'from-stage',
+                    'shared_stage': 'from-stage',
+                },
+            }
+        }
+    }
+    c = Config('prod', config_from_disk=config_from_disk)
+    resolved = c.stage_variables
+    assert resolved == {
+        'top_level': 'foo',
+        'stage_var': 'bar',
+        'shared_stage': 'from-stage',
+        'shared_stage_key': 'from-stage',
+    }
+
+
 
 def test_can_load_python_version():
     c = Config('dev')

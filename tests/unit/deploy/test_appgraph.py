@@ -66,11 +66,13 @@ class TestApplicationGraphBuilder(object):
                       api_gateway_policy_file=None,
                       api_gateway_custom_domain=None,
                       websocket_api_custom_domain=None,
-                      project_dir='.'):
+                      project_dir='.',
+                      stage_variables=None):
         kwargs = {
             'chalice_app': app,
             'app_name': app_name,
             'project_dir': project_dir,
+            'stage_variables': stage_variables if stage_variables else {},
             'api_gateway_stage': api_gateway_stage,
             'api_gateway_policy_file': api_gateway_policy_file,
             'api_gateway_endpoint_type': api_gateway_endpoint_type,
@@ -405,6 +407,24 @@ class TestApplicationGraphBuilder(object):
         # The swagger document is validated elsewhere so we just
         # make sure it looks right.
         assert rest_api.swagger_doc == models.Placeholder.BUILD_STAGE
+
+    def test_can_build_rest_api_with_stage_vars(self, sample_app):
+        config = self.create_config(sample_app,
+                                    app_name='sample-app',
+                                    autogen_policy=True,
+                                    stage_variables={"test": "test"}
+                                    )
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        rest_api = application.resources[0]
+        assert isinstance(rest_api, models.RestAPI)
+        assert rest_api.resource_name == 'rest_api'
+        assert rest_api.api_gateway_stage == 'api'
+        assert rest_api.lambda_function.resource_name == 'api_handler'
+        assert rest_api.lambda_function.function_name == 'sample-app-dev'
+        assert rest_api.stage_variables == {"test": "test"}
+
 
     def test_can_build_rest_api_with_authorizer(self, sample_app_with_auth):
         config = self.create_config(sample_app_with_auth,
