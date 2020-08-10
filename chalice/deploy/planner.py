@@ -1108,6 +1108,16 @@ class PlanStage(object):
             'value': resource.minimum_compression}
         ]  # type: List[Dict]
 
+        deploy_rest_api_params = {
+            'rest_api_id': Variable('rest_api_id'),
+            'api_gateway_stage': resource.api_gateway_stage
+        }
+
+        if resource.stage_variables:
+            deploy_rest_api_params.update(
+                {'stage_variables': resource.stage_variables}
+            )
+
         shared_plan_epilogue = [
             models.APICall(
                 method_name='update_rest_api',
@@ -1125,9 +1135,7 @@ class PlanStage(object):
             ),
             models.APICall(
                 method_name='deploy_rest_api',
-                params={'rest_api_id': Variable('rest_api_id'),
-                        'api_gateway_stage': resource.api_gateway_stage,
-                        'stage_variables': resource.stage_variables}
+                params=deploy_rest_api_params
             ),
             models.StoreValue(
                 name='rest_api_url',

@@ -363,6 +363,7 @@ def test_env_vars_chain_merge():
         'shared_stage_key': 'from-stage',
     }
 
+
 def test_stage_vars_chain_merge():
     config_from_disk = {
         'stage_variables': {
@@ -388,7 +389,6 @@ def test_stage_vars_chain_merge():
         'shared_stage': 'from-stage',
         'shared_stage_key': 'from-stage',
     }
-
 
 
 def test_can_load_python_version():

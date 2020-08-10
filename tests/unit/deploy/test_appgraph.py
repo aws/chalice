@@ -425,7 +425,6 @@ class TestApplicationGraphBuilder(object):
         assert rest_api.lambda_function.function_name == 'sample-app-dev'
         assert rest_api.stage_variables == {"test": "test"}
 
-
     def test_can_build_rest_api_with_authorizer(self, sample_app_with_auth):
         config = self.create_config(sample_app_with_auth,
                                     app_name='rest-api-app',

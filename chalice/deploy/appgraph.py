@@ -163,7 +163,8 @@ class ApplicationGraphBuilder(object):
                 config.api_gateway_endpoint_type,
                 config.api_gateway_stage,
             )
-        stage_variables = config.stage_variables
+
+        stage_variables = config.stage_variables or None
 
         return models.RestAPI(
             resource_name='rest_api',
@@ -192,15 +193,6 @@ class ApplicationGraphBuilder(object):
             }
         }]
         return {"Version": "2012-10-17", "Statement": statements}
-
-    def _get_stage_variables(self, config, stage_name):
-        # type: (Config, str) -> dict
-        stage_variables = config.config_from_disk.get('stage_variables', {})
-        stage_variables_for_stage = config.config_from_disk[
-            'stages'][stage_name].get('stage_variables', {})
-        stage_variables.update(stage_variables_for_stage)
-        return stage_variables
-
 
     def _create_websocket_api_model(
             self,
