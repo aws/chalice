@@ -257,6 +257,7 @@ class RestAPI(ManagedModel):
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
     domain_name = attrib(default=None)    # type: Opt[DomainName]
+    stage_variables = attrib(default=None)  # type: Opt[Dict[str, Any]]
 
     def dependencies(self):
         # type: () -> List[Model]

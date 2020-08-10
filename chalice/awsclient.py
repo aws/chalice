@@ -1038,12 +1038,14 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             raise ResourceDoesNotExistError(rest_api_id)
 
-    def deploy_rest_api(self, rest_api_id, api_gateway_stage):
-        # type: (str, str) -> None
+    def deploy_rest_api(self, rest_api_id, api_gateway_stage, stage_variables=None):
+        # type: (str, str, Optional[dict]) -> None
         client = self._client('apigateway')
+        stage_variables = stage_variables if stage_variables else {}
         client.create_deployment(
             restApiId=rest_api_id,
             stageName=api_gateway_stage,
+            variables=stage_variables
         )
 
     def add_permission_for_apigateway(self, function_name,

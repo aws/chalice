@@ -1126,7 +1126,8 @@ class PlanStage(object):
             models.APICall(
                 method_name='deploy_rest_api',
                 params={'rest_api_id': Variable('rest_api_id'),
-                        'api_gateway_stage': resource.api_gateway_stage},
+                        'api_gateway_stage': resource.api_gateway_stage,
+                        'stage_variables': resource.stage_variables}
             ),
             models.StoreValue(
                 name='rest_api_url',
