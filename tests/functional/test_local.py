@@ -335,8 +335,8 @@ def test_container_proxy_resource_manager_build_and_cleanup(basic_app):
         config.project_dir = basic_app
         config.lambda_python_version = 'python'
         osutils = mock.Mock(spec=OSUtils)
-        osutils.joinpath.return_value = 'path'
         packager = mock.Mock(spec=LambdaDeploymentPackager)
+        packager.create_deployment_package.return_value = 'path'
         image_builder = mock.Mock(spec=LambdaImageBuilder)
         resource_manager = ContainerProxyResourceManager(
             config, None, osutils, packager, image_builder)
@@ -350,8 +350,7 @@ def test_container_proxy_resource_manager_build_and_cleanup(basic_app):
         temp_dir_path = os.path.join(basic_app, temp_dir)
         assert os.path.isdir(temp_dir_path)
         packager.create_deployment_package.assert_called_with(basic_app,
-                                                              'python',
-                                                              'path')
+                                                              'python')
         osutils.extract_zipfile.assert_called_with('path', temp_dir_path)
         image_builder.build.assert_called_with('python', [])
         assert len(containers) == 2

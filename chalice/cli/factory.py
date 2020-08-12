@@ -18,7 +18,8 @@ from chalice.config import Config
 from chalice.config import DeployedResources  # noqa
 from chalice.docker import LayerDownloader, LambdaImageBuilder
 from chalice.local import (ProxyServerRunner, ContainerProxyResourceManager,
-                           ContainerProxyHandler)
+                           ContainerProxyHandler, ContainerFunctionCaller,
+                           LocalGateway)
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.package import PackageOptions
@@ -82,15 +83,6 @@ def _inject_large_request_body_filter():
     # type: () -> None
     log = logging.getLogger('botocore.endpoint')
     log.addFilter(LargeRequestBodyFilter())
-
-
-class NoSuchFunctionError(Exception):
-    """The specified function could not be found."""
-
-    def __init__(self, name):
-        # type: (str) -> None
-        self.name = name
-        super(NoSuchFunctionError, self).__init__()
 
 
 class UnknownConfigFileVersion(Exception):
@@ -340,7 +332,12 @@ class CLIFactory(object):
         session = requests.Session()
         app_graph_builder = ApplicationGraphBuilder()
         dependency_builder = DependencyBuilder()
-        proxy_handler = ContainerProxyHandler(session)
+        function_caller = ContainerFunctionCaller(config, session)
+        local_gateway = LocalGateway(config.chalice_app, config,
+                                     function_caller)
+        proxy_handler = ContainerProxyHandler(session,
+                                              function_caller,
+                                              local_gateway)
         return local.create_proxy_server_runner(
             config, stage, host, port, app_graph_builder,
             dependency_builder, resource_manager, proxy_handler)

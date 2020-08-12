@@ -345,11 +345,70 @@ class LambdaContext(object):
 LocalAuthPair = Tuple[EventType, LambdaContext]
 
 
-class LocalGatewayAuthorizer(object):
-    """A class for running user defined authorizers in local mode."""
+class LocalFunctionCaller(object):
     def __init__(self, app_object):
         # type: (Chalice) -> None
         self._app_object = app_object
+
+    def call_rest_api(self, event, context):
+        # type: (EventType, LambdaContext) -> ResponseType
+        return self._app_object(event, context)
+
+    def call_authorizer(self, authorizer, event, context):
+        # type: (Any, EventType, LambdaContext) -> ResponseType
+        return authorizer(event, context)
+
+
+class ContainerFunctionCaller(object):
+    def __init__(self, config, session, container_map=None):
+        # type: (Config, requests.Session, ContainerMap) -> None
+        self._config = config
+        self._container_map = {} if container_map is None else container_map
+        self._session = session
+
+    def call_rest_api(self, event, context):
+        # type: (EventType, LambdaContext) -> ResponseType
+        function_name = "%s-%s" % (self._config.app_name,
+                                   self._config.chalice_stage)
+        response = self._get_container_response(function_name, event)
+        return response
+
+    def call_authorizer(self, authorizer, event, context):
+        # type: (Any, EventType, LambdaContext) -> ResponseType
+        # Authorizer had to be made into an Any type since mypy couldn't
+        # detect that app.ChaliceAuthorizer was callable.
+        function_name = "%s-%s-%s" % (self._config.app_name,
+                                      self._config.chalice_stage,
+                                      authorizer.name)
+        response = self._get_container_response(function_name, event)
+        return response
+
+    def _get_container_response(self, function_name, event):
+        # type: (str, EventType) -> ResponseType
+        container = self._container_map[function_name]
+        if not container.is_created():
+            container.run()
+            container.wait_for_initialize()
+        url = "http://localhost:" + str(container.api_port) + \
+              "/2015-03-31/functions/function-name/invocations"
+        json_event = json.dumps(event)
+        response = self._session.post(url, data=json_event)
+        return json.loads(response.text)
+
+    def update_container_map(self, container_map):
+        # type: (ContainerMap) -> None
+        self._container_map.update(container_map)
+
+
+FunctionCaller = Union[LocalFunctionCaller, ContainerFunctionCaller]
+
+
+class LocalGatewayAuthorizer(object):
+    """A class for running user defined authorizers in local mode."""
+    def __init__(self, app_object, function_caller):
+        # type: (Chalice, FunctionCaller) -> None
+        self._app_object = app_object
+        self._function_caller = function_caller
         self._arn_builder = LocalARNBuilder()
 
     def authorize(self, raw_path, lambda_event, lambda_context):
@@ -404,7 +463,9 @@ class LocalGatewayAuthorizer(object):
         arn = self._arn_builder.build_arn(method, raw_path)
         auth_event = self._prepare_authorizer_event(arn, lambda_event,
                                                     lambda_context)
-        auth_result = authorizer(auth_event, lambda_context)
+        auth_result = self._function_caller.call_authorizer(authorizer,
+                                                            auth_event,
+                                                            lambda_context)
         if auth_result is None:
             raise InvalidAuthorizerError(
                 {'x-amzn-RequestId': lambda_context.aws_request_id,
@@ -494,15 +555,16 @@ class LocalGatewayAuthorizer(object):
 
 class LocalGateway(object):
     """A class for faking the behavior of API Gateway."""
-    def __init__(self, app_object, config):
-        # type: (Chalice, Config) -> None
+    def __init__(self, app_object, config, function_caller):
+        # type: (Chalice, Config, FunctionCaller) -> None
         self._app_object = app_object
         self._config = config
+        self._function_caller = function_caller
         self.event_converter = LambdaEventConverter(
             RouteMatcher(list(app_object.routes)),
             self._app_object.api.binary_types
         )
-        self._authorizer = LocalGatewayAuthorizer(app_object)
+        self._authorizer = LocalGatewayAuthorizer(app_object, function_caller)
 
     def _generate_lambda_context(self):
         # type: () -> LambdaContext
@@ -584,7 +646,8 @@ class LocalGateway(object):
         # 401 will be sent back over the wire.
         lambda_event, lambda_context = self._authorizer.authorize(
             path, lambda_event, lambda_context)
-        response = self._app_object(lambda_event, lambda_context)
+        response = self._function_caller.call_rest_api(lambda_event,
+                                                       lambda_context)
         return response
 
     def _autogen_options_headers(self, lambda_event):
@@ -620,7 +683,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, server, app_object, config):
         # type: (bytes, Tuple[str, int], HTTPServer, Chalice, Config) -> None
-        self.local_gateway = LocalGateway(app_object, config)
+        function_caller = LocalFunctionCaller(app_object)
+        self.local_gateway = LocalGateway(app_object, config, function_caller)
         BaseHTTPRequestHandler.__init__(
             self, request, client_address, server)  # type: ignore
 
@@ -866,8 +930,16 @@ class ProxyRequestHandler(ChaliceRequestHandler):
         try:
             response = None
             if function is None:
-                response = self._handler.handle_rest_api(self.path,
-                                                         headers, body)
+                prefix = '/' + self._config.api_gateway_stage
+                if self.path.startswith(prefix):
+                    response = self._handler.handle_rest_api(
+                        self.command, self.path[len(prefix):], headers, body)
+                else:
+                    raise ForbiddenError(
+                        {'x-amzn-RequestId': str(uuid.uuid4()),
+                         'x-amzn-ErrorType': 'ForbiddenException'},
+                        (b'{"Message": '
+                         b'"Forbidden"}'))
             else:
                 function_name = function.group(1)
                 response = self._handler.handle_invoke_function(
@@ -882,19 +954,41 @@ class ProxyRequestHandler(ChaliceRequestHandler):
 
 
 class ContainerProxyHandler(object):
-    def __init__(self, session, container_map=None):
-        # type: (requests.Session, Optional[ContainerMap]) -> None
+    def __init__(self,
+                 session,               # type: requests.Session
+                 function_caller,       # type: ContainerFunctionCaller
+                 local_gateway,         # type: LocalGateway
+                 container_map=None     # type: Optional[ContainerMap]
+                 ):
+        # type: (...) -> None
         self._session = session
         self._container_map = {} if container_map is None else container_map
+        self._function_caller = function_caller
+        self._local_gateway = local_gateway
 
     def add_resources(self, container_map):
         # type: (ContainerMap) -> None
         self._container_map.update(container_map)
+        self._function_caller.update_container_map(container_map)
 
-    def handle_rest_api(self, path, headers, body):
-        # type: (str, HeaderType, Optional[str]) -> Response
-        # todo: implementation
-        raise ForbiddenError({})
+    def handle_rest_api(self, method, path, headers, body):
+        # type: (str, str, HeaderType, Optional[str]) -> Response
+        if path == '':
+            path = '/'
+        try:
+            response = self._local_gateway.handle_request(
+                method=method,
+                path=path,
+                headers=headers,
+                body=body
+            )
+            status_code = response['statusCode']
+            headers = response['headers'].copy()
+            headers.update(response['multiValueHeaders'])
+            body = response['body']
+            return Response(body, headers, status_code)
+        except LocalGatewayException as e:
+            return Response(e.body, e.headers, e.CODE)
 
     def handle_invoke_function(self, path, headers, body, function_name):
         # type: (str, HeaderType, Optional[str], str) -> Response
@@ -972,11 +1066,9 @@ class ContainerProxyResourceManager(object):
         # type: () -> str
         tempdir = tempfile.mkdtemp(dir=self._config.project_dir,
                                    prefix='.tmp')
-        package_path = self._osutils.joinpath(tempdir, "package.zip")
         python_version = self._config.lambda_python_version
-        self._packager.create_deployment_package(self._config.project_dir,
-                                                 python_version,
-                                                 package_path)
+        package_path = self._packager.create_deployment_package(
+            self._config.project_dir, python_version)
         self._osutils.extract_zipfile(package_path, tempdir)
         return tempdir
 

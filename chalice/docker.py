@@ -253,7 +253,7 @@ class LambdaContainer(Container):
             logs = self._docker_container.attach(stdout=True,
                                                  stream=False,
                                                  logs=True)
-            if 'Lambda API listening on port' in logs:
+            if b'Lambda API listening on port' in logs:
                 initialized = True
             else:
                 time.sleep(self._poll_interval)

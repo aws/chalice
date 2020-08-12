@@ -46,7 +46,7 @@ class TestLambdaContainer(object):
 
     def test_wait_for_initialize_timeout(self, lambda_container,
                                          mock_docker_container):
-        attach_wrapper = self.AttachWrapper(['hello world'])
+        attach_wrapper = self.AttachWrapper([b'hello world'])
         mock_docker_container.attach = attach_wrapper.attach
         lambda_container.run()
         start_time = time.time()
@@ -57,8 +57,8 @@ class TestLambdaContainer(object):
 
     def test_wait_for_initialize_success(self, lambda_container,
                                          mock_docker_container):
-        attach_wrapper = self.AttachWrapper(['hello world',
-                                             'Lambda API listening on port 6'])
+        attach_wrapper = self.AttachWrapper(
+            [b'hello world', b'Lambda API listening on port 6'])
         mock_docker_container.attach = attach_wrapper.attach
         lambda_container.run()
         lambda_container.wait_for_initialize()

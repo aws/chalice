@@ -374,7 +374,7 @@ class TestLambda(object):
     def test_wait_for_initialize(self, lambda_container,
                                  mock_docker_container):
         mock_docker_container.attach.return_value = \
-            "Lambda API listening on port 9001"
+            b"Lambda API listening on port 9001"
         lambda_container.run()
         lambda_container.wait_for_initialize()
         mock_docker_container.attach.assert_called_with(stream=False,

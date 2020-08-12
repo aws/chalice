@@ -285,9 +285,11 @@ def test_can_create_lambda_invoke_handler_with_url(clifactory):
                                                       endpoint_url='hello')
     assert isinstance(invoker, LambdaInvokeHandler)
 
+
 def test_can_create_package_options(clifactory):
     options = clifactory.create_package_options()
     assert isinstance(options, PackageOptions)
+
 
 def test_can_create_lambda_image_builder(clifactory):
     image_builder = clifactory.create_lambda_image_builder(UI())
