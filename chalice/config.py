@@ -291,6 +291,16 @@ class Config(object):
                                   varies_per_function=True)
 
     @property
+    def automatic_layer(self):
+        # type: () -> bool
+        v = self._chain_lookup('automatic_layer',
+                               varies_per_chalice_stage=True,
+                               varies_per_function=False)
+        if v is None:
+            return False
+        return v
+
+    @property
     def iam_role_arn(self):
         # type: () -> str
         return self._chain_lookup('iam_role_arn',

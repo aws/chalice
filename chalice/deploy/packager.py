@@ -4,11 +4,13 @@ import inspect
 import re
 import subprocess
 import logging
+import functools
 from email.parser import FeedParser
 from email.message import Message  # noqa
 from zipfile import ZipFile  # noqa
 
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
+from typing import Iterator  # noqa
 from typing import Dict, MutableMapping, AnyStr  # noqa
 from chalice.compat import pip_import_string
 from chalice.compat import pip_no_compile_c_env_vars
@@ -53,7 +55,11 @@ class PackageDownloadError(Exception):
     """Generic networking error during a package download."""
 
 
-class LambdaDeploymentPackager(object):
+class EmptyPackageError(Exception):
+    """A deployment package cannot be an empty zip file."""
+
+
+class BaseLambdaDeploymentPackager(object):
     _CHALICE_LIB_DIR = 'chalicelib'
     _VENDOR_DIR = 'vendor'
 
@@ -70,48 +76,17 @@ class LambdaDeploymentPackager(object):
         self._dependency_builder = dependency_builder
         self._ui = ui
 
+    def create_deployment_package(self, project_dir, python_version):
+        # type: (str, str) -> str
+        raise NotImplementedError("create_deployment_package")
+
     def _get_requirements_filename(self, project_dir):
         # type: (str) -> str
         # Gets the path to a requirements.txt file out of a project dir path
         return self._osutils.joinpath(project_dir, 'requirements.txt')
 
-    def create_deployment_package(self, project_dir, python_version,
-                                  package_filename=None):
-        # type: (str, str, Optional[str]) -> str
-        msg = "Creating deployment package."
-        self._ui.write("%s\n" % msg)
-        logger.debug(msg)
-        # Now we need to create a zip file and add in the site-packages
-        # dir first, followed by the app_dir contents next.
-        deployment_package_filename = self.deployment_package_filename(
-            project_dir, python_version)
-        if package_filename is None:
-            package_filename = deployment_package_filename
-        requirements_filepath = self._get_requirements_filename(project_dir)
-        with self._osutils.tempdir() as site_packages_dir:
-            try:
-                abi = self._RUNTIME_TO_ABI[python_version]
-                self._dependency_builder.build_site_packages(
-                    abi, requirements_filepath, site_packages_dir)
-            except MissingDependencyError as e:
-                missing_packages = '\n'.join([p.identifier for p
-                                              in e.missing])
-                self._ui.write(
-                    MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
-            dirname = self._osutils.dirname(
-                self._osutils.abspath(package_filename))
-            if not self._osutils.directory_exists(dirname):
-                self._osutils.makedirs(dirname)
-            with self._osutils.open_zip(package_filename, 'w',
-                                        self._osutils.ZIP_DEFLATED) as z:
-                self._add_py_deps(z, site_packages_dir)
-                self._add_app_files(z, project_dir)
-                self._add_vendor_files(z, self._osutils.joinpath(
-                    project_dir, self._VENDOR_DIR))
-        return package_filename
-
-    def _add_vendor_files(self, zipped, dirname):
-        # type: (ZipFile, str) -> None
+    def _add_vendor_files(self, zipped, dirname, prefix=''):
+        # type: (ZipFile, str, str) -> None
         if not self._osutils.directory_exists(dirname):
             return
         prefix_len = len(dirname) + 1
@@ -120,6 +95,8 @@ class LambdaDeploymentPackager(object):
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
+                if prefix:
+                    zip_path = self._osutils.joinpath(prefix, zip_path)
                 zipped.write(full_path, zip_path)
 
     def deployment_package_filename(self, project_dir, python_version):
@@ -132,17 +109,24 @@ class LambdaDeploymentPackager(object):
         # to the end of the filename since the the dependencies may not change
         # but if the python version changes then the dependencies need to be
         # re-downloaded since they will not be compatible.
+        return self._deployment_package_filename(project_dir, python_version)
+
+    def _deployment_package_filename(self, project_dir, python_version,
+                                     prefix=''):
+        # type: (str, str, str) -> str
         requirements_filename = self._get_requirements_filename(project_dir)
         hash_contents = self._hash_project_dir(
-            requirements_filename, self._osutils.joinpath(project_dir,
-                                                          self._VENDOR_DIR))
-        filename = '%s-%s.zip' % (hash_contents, python_version)
+            requirements_filename,
+            self._osutils.joinpath(project_dir, self._VENDOR_DIR),
+            project_dir
+        )
+        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
         deployment_package_filename = self._osutils.joinpath(
             project_dir, '.chalice', 'deployments', filename)
         return deployment_package_filename
 
-    def _add_py_deps(self, zip_fileobj, deps_dir):
-        # type: (ZipFile, str) -> None
+    def _add_py_deps(self, zip_fileobj, deps_dir, prefix=''):
+        # type: (ZipFile, str, str) -> None
         prefix_len = len(deps_dir) + 1
         for root, dirnames, filenames in self._osutils.walk(deps_dir):
             if root == deps_dir and 'chalice' in dirnames:
@@ -152,32 +136,44 @@ class LambdaDeploymentPackager(object):
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
+                if prefix:
+                    zip_path = self._osutils.joinpath(prefix, zip_path)
                 zip_fileobj.write(full_path, zip_path)
 
     def _add_app_files(self, zip_fileobj, project_dir):
         # type: (ZipFile, str) -> None
+        for full_path, zip_path in self._iter_app_filenames(project_dir):
+            zip_fileobj.write(full_path, zip_path)
+
+    def _iter_app_filenames(self, project_dir):
+        # type: (str) -> Iterator[Tuple[str, str]]
         chalice_router = inspect.getfile(app)
         if chalice_router.endswith('.pyc'):
             chalice_router = chalice_router[:-1]
-        zip_fileobj.write(chalice_router, 'chalice/app.py')
+        yield (chalice_router, 'chalice/app.py')
 
         chalice_init = inspect.getfile(chalice)
         if chalice_init.endswith('.pyc'):
             chalice_init = chalice_init[:-1]
-        zip_fileobj.write(chalice_init, 'chalice/__init__.py')
+        yield (chalice_init, 'chalice/__init__.py')
+        yield (self._osutils.joinpath(project_dir, 'app.py'), 'app.py')
+        for filename in self._iter_chalice_lib_if_needed(project_dir):
+            yield filename
 
-        zip_fileobj.write(self._osutils.joinpath(project_dir, 'app.py'),
-                          'app.py')
-        self._add_chalice_lib_if_needed(project_dir, zip_fileobj)
-
-    def _hash_project_dir(self, requirements_filename, vendor_dir):
-        # type: (str, str) -> str
+    def _hash_project_dir(self, requirements_filename, vendor_dir,
+                          project_dir):
+        # type: (str, str, str) -> str
         if not self._osutils.file_exists(requirements_filename):
             contents = b''
         else:
             contents = self._osutils.get_file_contents(
                 requirements_filename, binary=True)
         h = hashlib.md5(contents)
+        for filename, _ in self._iter_app_filenames(project_dir):
+            with self._osutils.open(filename, 'rb') as f:
+                reader = functools.partial(f.read, 1024 * 1024)
+                for chunk in iter(reader, b''):
+                    h.update(chunk)
         if self._osutils.directory_exists(vendor_dir):
             self._hash_vendor_dir(vendor_dir, h)
         return h.hexdigest()
@@ -198,8 +194,8 @@ class LambdaDeploymentPackager(object):
                     # infer the types.  So the compromise here is to
                     # just write it the idiomatic way and have pylint
                     # ignore this warning.
-                    # pylint: disable=cell-var-from-loop
-                    for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                    reader = functools.partial(f.read, 1024 * 1024)
+                    for chunk in iter(reader, b''):
                         md5.update(chunk)
 
     def inject_latest_app(self, deployment_package_filename, project_dir):
@@ -244,8 +240,8 @@ class LambdaDeploymentPackager(object):
         return filename == 'app.py' or filename.startswith(
             ('chalicelib/', 'chalice/'))
 
-    def _add_chalice_lib_if_needed(self, project_dir, zip_fileobj):
-        # type: (str, ZipFile) -> None
+    def _iter_chalice_lib_if_needed(self, project_dir):
+        # type: (str) -> Iterator[Tuple[str, str]]
         libdir = self._osutils.joinpath(project_dir, self._CHALICE_LIB_DIR)
         if self._osutils.directory_exists(libdir):
             for rootdir, _, filenames in self._osutils.walk(libdir):
@@ -254,7 +250,169 @@ class LambdaDeploymentPackager(object):
                     zip_path = self._osutils.joinpath(
                         self._CHALICE_LIB_DIR,
                         fullpath[len(libdir) + 1:])
-                    zip_fileobj.write(fullpath, zip_path)
+                    yield (fullpath, zip_path)
+
+    def _create_output_dir_if_needed(self, package_filename):
+        # type: (str) -> None
+        dirname = self._osutils.dirname(
+            self._osutils.abspath(package_filename))
+        if not self._osutils.directory_exists(dirname):
+            self._osutils.makedirs(dirname)
+
+    def _build_python_dependencies(self, python_version, requirements_filepath,
+                                   site_packages_dir):
+        # type: (str, str, str) -> None
+        try:
+            abi = self._RUNTIME_TO_ABI[python_version]
+            self._dependency_builder.build_site_packages(
+                abi, requirements_filepath, site_packages_dir)
+        except MissingDependencyError as e:
+            missing_packages = '\n'.join([p.identifier for p in e.missing])
+            self._ui.write(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
+
+
+class LambdaDeploymentPackager(BaseLambdaDeploymentPackager):
+    def create_deployment_package(self, project_dir, python_version):
+        # type: (str, str) -> str
+        msg = "Creating deployment package."
+        self._ui.write("%s\n" % msg)
+        logger.debug(msg)
+        package_filename = self.deployment_package_filename(
+            project_dir, python_version)
+        if self._osutils.file_exists(package_filename):
+            self._ui.write("Reusing existing deployment package.\n")
+            return package_filename
+        self._create_output_dir_if_needed(package_filename)
+        with self._osutils.tempdir() as tmpdir:
+            requirements_filepath = self._get_requirements_filename(
+                project_dir)
+            self._build_python_dependencies(python_version,
+                                            requirements_filepath,
+                                            site_packages_dir=tmpdir)
+            with self._osutils.open_zip(package_filename, 'w',
+                                        self._osutils.ZIP_DEFLATED) as z:
+                self._add_py_deps(z, deps_dir=tmpdir)
+                self._add_app_files(z, project_dir)
+                self._add_vendor_files(z, self._osutils.joinpath(
+                    project_dir, self._VENDOR_DIR))
+        return package_filename
+
+
+class AppOnlyDeploymentPackager(BaseLambdaDeploymentPackager):
+    def create_deployment_package(self, project_dir, python_version):
+        # type: (str, str) -> str
+        msg = "Creating app deployment package."
+        self._ui.write("%s\n" % msg)
+        logger.debug(msg)
+        package_filename = self.deployment_package_filename(project_dir,
+                                                            python_version)
+        if self._osutils.file_exists(package_filename):
+            self._ui.write("  Reusing existing app deployment package.\n")
+            return package_filename
+        self._create_output_dir_if_needed(package_filename)
+        with self._osutils.open_zip(package_filename, 'w',
+                                    self._osutils.ZIP_DEFLATED) as z:
+            self._add_app_files(z, project_dir)
+        return package_filename
+
+    def deployment_package_filename(self, project_dir, python_version):
+        # type: (str, str) -> str
+        return self._deployment_package_filename(project_dir, python_version,
+                                                 prefix='appcode-')
+
+    def _deployment_package_filename(self, project_dir, python_version,
+                                     prefix=''):
+        # type: (str, str, str) -> str
+        h = hashlib.md5(b'')
+        for filename, _ in self._iter_app_filenames(project_dir):
+            with self._osutils.open(filename, 'rb') as f:
+                reader = functools.partial(f.read, 1024 * 1024)
+                for chunk in iter(reader, b''):
+                    h.update(chunk)
+        digest = h.hexdigest()
+        filename = '%s%s-%s.zip' % (prefix, digest, python_version)
+        deployment_package_filename = self._osutils.joinpath(
+            project_dir, '.chalice', 'deployments', filename)
+        return deployment_package_filename
+
+
+class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
+
+    # A Lambda layer will unzip into the /opt directory instead of
+    # the current working directory of the function.  This means
+    # in order for our python dependencies to work we need.
+    _PREFIX = 'python/lib/%s/site-packages'
+
+    def create_deployment_package(self, project_dir, python_version):
+        # type: (str, str) -> str
+        msg = "Creating shared layer deployment package."
+        self._ui.write("%s\n" % msg)
+        logger.debug(msg)
+        package_filename = self.deployment_package_filename(
+            project_dir, python_version)
+        self._create_output_dir_if_needed(package_filename)
+        if self._osutils.file_exists(package_filename):
+            self._ui.write(
+                "  Reusing existing shared layer deployment package.\n")
+            return package_filename
+        with self._osutils.tempdir() as tmpdir:
+            requirements_filepath = self._get_requirements_filename(
+                project_dir)
+            self._build_python_dependencies(python_version,
+                                            requirements_filepath,
+                                            site_packages_dir=tmpdir)
+            with self._osutils.open_zip(package_filename, 'w',
+                                        self._osutils.ZIP_DEFLATED) as z:
+                prefix = self._PREFIX % python_version
+                self._add_py_deps(z, deps_dir=tmpdir, prefix=prefix)
+                self._add_vendor_files(z, self._osutils.joinpath(
+                    project_dir, self._VENDOR_DIR), prefix=prefix)
+        self._check_valid_package(package_filename)
+        return package_filename
+
+    def _check_valid_package(self, package_filename):
+        # type: (str) -> None
+        # Lambda does not allow empty deployment packages, so if there are no
+        # requirements.txt deps or anything in vendor/, we need to let the
+        # call know that we couldn't generate a useful deployment package
+        # for them.  The caller will then need make the appropriate adjustments
+        # i.e remove that LambdaLayer model from the app.
+        with self._osutils.open_zip(package_filename,
+                                    'r', self._osutils.ZIP_DEFLATED) as z:
+            total_size = sum([f.file_size for f in z.infolist()])
+            # We have to check the total archive size, Lambda will still error
+            # out if you have a zip file with all empty files.  It's not enough
+            # to check if the zipfile is empty.
+            if not total_size > 0:
+                # We want to make sure we remove any deployment packages we
+                # know are invalid, we don't want them being used as cache
+                # hits in subsequent create_deployment_package() requests.
+                self._osutils.remove_file(package_filename)
+                raise EmptyPackageError(package_filename)
+
+    def deployment_package_filename(self, project_dir, python_version):
+        # type: (str, str) -> str
+        return self._deployment_package_filename(project_dir, python_version,
+                                                 prefix='managed-layer-')
+
+    def _deployment_package_filename(self, project_dir, python_version,
+                                     prefix=''):
+        # type: (str, str, str) -> str
+        requirements_filename = self._get_requirements_filename(project_dir)
+        if not self._osutils.file_exists(requirements_filename):
+            contents = b''
+        else:
+            contents = self._osutils.get_file_contents(
+                requirements_filename, binary=True)
+        h = hashlib.md5(contents)
+        vendor_dir = self._osutils.joinpath(project_dir, self._VENDOR_DIR)
+        if self._osutils.directory_exists(vendor_dir):
+            self._hash_vendor_dir(vendor_dir, h)
+        hash_contents = h.hexdigest()
+        filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
+        deployment_package_filename = self._osutils.joinpath(
+            project_dir, '.chalice', 'deployments', filename)
+        return deployment_package_filename
 
 
 class DependencyBuilder(object):

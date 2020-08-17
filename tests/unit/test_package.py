@@ -308,6 +308,14 @@ class TemplateTestBase(object):
             reserved_concurrency=None,
         )
 
+    def managed_layer(self):
+        return models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(filename='layer.zip')
+        )
+
 
 class TestPackageOptions(object):
 
@@ -414,6 +422,24 @@ class TestTerraformTemplate(TemplateTestBase):
         template = self.template_gen.generate([function])
         tf_resource = self.get_function(template)
         assert tf_resource['layers'] == layers
+
+    def test_adds_managed_layer_when_provided(self):
+        function = self.lambda_function()
+        function.layers = ['arn://layer1', 'arn://layer2']
+        function.managed_layer = self.managed_layer()
+        template = self.template_gen.generate(
+            [function.managed_layer, function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['layers'] == [
+            '${aws_lambda_layer_version.layer.arn}',
+            'arn://layer1',
+            'arn://layer2',
+        ]
+        assert template['resource']['aws_lambda_layer_version']['layer'] == {
+            'layer_name': 'bar',
+            'compatible_runtimes': ['python2.7'],
+            'filename': 'layer.zip',
+        }
 
     def test_adds_reserved_concurrency_when_provided(self, sample_app):
         function = self.lambda_function()
@@ -769,6 +795,7 @@ class TestSAMTemplate(TemplateTestBase):
     def test_sam_generates_sam_template_basic(self, sample_app):
         config = Config.create(chalice_app=sample_app,
                                project_dir='.',
+                               automatic_layer=True,
                                api_gateway_stage='api')
         template = self.generate_template(config)
         # Verify the basic structure is in place.  The specific parts
@@ -778,11 +805,33 @@ class TestSAMTemplate(TemplateTestBase):
         assert 'Outputs' in template
         assert 'Resources' in template
         assert list(sorted(template['Resources'])) == [
-            'APIHandler', 'APIHandlerInvokePermission',
+            'APIHandler',
+            'APIHandlerInvokePermission',
             # This casing on the ApiHandlerRole name is unfortunate, but the 3
             # other resources in this list are hardcoded from the old deployer.
             'ApiHandlerRole',
-            'RestAPI',
+            'ManagedLayer',
+            'RestAPI'
+        ]
+
+    def test_can_generate_lambda_layer_if_configured(self, sample_app):
+        config = Config.create(chalice_app=sample_app,
+                               app_name='testapp',
+                               project_dir='.',
+                               automatic_layer=True,
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        managed_layer = template['Resources']['ManagedLayer']
+        assert managed_layer == {
+            'Type': 'AWS::Serverless::LayerVersion',
+            'Properties': {
+                'CompatibleRuntimes': [config.lambda_python_version],
+                'LayerName': 'testapp-dev-managed-layer',
+                'ContentUri': models.Placeholder.BUILD_STAGE,
+            }
+        }
+        assert template['Resources']['APIHandler']['Properties']['Layers'] == [
+            {'Ref': 'ManagedLayer'}
         ]
 
     def test_supports_precreated_role(self):

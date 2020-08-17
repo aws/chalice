@@ -22,6 +22,7 @@ class ApplicationGraphBuilder(object):
     def __init__(self):
         # type: () -> None
         self._known_roles = {}  # type: Dict[str, models.IAMRole]
+        self._managed_layer = None  # type: Optional[models.LambdaLayer]
 
     def build(self, config, stage_name):
         # type: (Config, str) -> models.Application
@@ -349,6 +350,21 @@ class ApplicationGraphBuilder(object):
         )
         return resource
 
+    def _get_managed_lambda_layer(self, config):
+        # type: (Config) -> Optional[models.LambdaLayer]
+        if not config.automatic_layer:
+            return None
+        if self._managed_layer is None:
+            self._managed_layer = models.LambdaLayer(
+                resource_name='managed-layer',
+                layer_name='%s-%s-%s' % (
+                    config.app_name, config.chalice_stage, 'managed-layer'),
+                runtime=config.lambda_python_version,
+                deployment_package=models.DeploymentPackage(
+                    models.Placeholder.BUILD_STAGE)
+            )
+        return self._managed_layer
+
     def _get_role_reference(self, config, stage_name, function_name):
         # type: (Config, str, str) -> models.IAMRole
         role = self._create_role_reference(config, stage_name, function_name)
@@ -458,7 +474,8 @@ class ApplicationGraphBuilder(object):
             security_group_ids=security_group_ids,
             subnet_ids=subnet_ids,
             reserved_concurrency=config.reserved_concurrency,
-            layers=lambda_layers
+            layers=lambda_layers,
+            managed_layer=self._get_managed_lambda_layer(config),
         )
         self._inject_role_traits(function, role)
         return function

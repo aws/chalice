@@ -206,6 +206,20 @@ class ResourceSweeper(object):
             'message': msg
         }
 
+    def _delete_lambda_layer(self, resource_values):
+        # type: (Dict[str, str]) -> ResourceValueType
+        apicall = models.APICall(
+            method_name='delete_layer_version',
+            params={'layer_version_arn': resource_values[
+                'layer_version_arn']})
+        return {
+            'instructions': (apicall,),
+            'message': (
+                "Deleting layer version: %s\n"
+                % resource_values['layer_version_arn']
+            )
+        }
+
     def _delete_iam_role(self, resource_values):
         # type: (Dict[str, Any]) -> ResourceValueType
         return {
