@@ -231,11 +231,12 @@ seconds.</p>
 <p>A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html">AWS Lambda Layers Configuration</a>.</p>
 </div>
-<div class="section" id="automatic-layers">
-<span id="automatic-layer-option"></span><h3><code class="docutils literal notranslate"><span class="pre">automatic_layers</span></code><a class="headerlink" href="#automatic-layers" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="automatic-layer">
+<span id="automatic-layer-option"></span><h3><code class="docutils literal notranslate"><span class="pre">automatic_layer</span></code><a class="headerlink" href="#automatic-layer" title="Permalink to this headline">¶</a></h3>
 <p>Indicates whether chalice will automatically construct a single
 stage layer for all Lambda functions with requirements.txt libraries and
-vendored libraries.  Boolean value defaults to <code class="docutils literal notranslate"><span class="pre">false</span></code> if not specified.</p>
+vendored libraries.  Boolean value defaults to <code class="docutils literal notranslate"><span class="pre">false</span></code> if not specified.
+See <a class="reference internal" href="packaging.html#package-3rd-party"><span class="std std-ref">3rd Party Packages</span></a> for more information.</p>
 </div>
 <div class="section" id="api-gateway-custom-domain">
 <span id="custom-domain-config-options"></span><h3><code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code><a class="headerlink" href="#api-gateway-custom-domain" title="Permalink to this headline">¶</a></h3>
@@ -690,7 +691,7 @@ value <code class="docutils literal notranslate"><span class="pre">mytable</span
 <li><a class="reference internal" href="#lambda-memory-size"><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code></a></li>
 <li><a class="reference internal" href="#lambda-timeout"><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code></a></li>
 <li><a class="reference internal" href="#layers"><code class="docutils literal notranslate"><span class="pre">layers</span></code></a></li>
-<li><a class="reference internal" href="#automatic-layers"><code class="docutils literal notranslate"><span class="pre">automatic_layers</span></code></a></li>
+<li><a class="reference internal" href="#automatic-layer"><code class="docutils literal notranslate"><span class="pre">automatic_layer</span></code></a></li>
 <li><a class="reference internal" href="#api-gateway-custom-domain"><code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code></a></li>
 <li><a class="reference internal" href="#websocket-api-custom-domain"><code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code></a></li>
 <li><a class="reference internal" href="#manage-iam-role"><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code></a></li>

@@ -139,12 +139,13 @@ per Lambda function. See `AWS Lambda Layers Configuration`_.
 
 .. _automatic-layer-option:
 
-``automatic_layers``
+``automatic_layer``
 ~~~~~~~~~~~~~~~~~~~~
 
 Indicates whether chalice will automatically construct a single
 stage layer for all Lambda functions with requirements.txt libraries and
 vendored libraries.  Boolean value defaults to ``false`` if not specified.
+See :ref:`package-3rd-party` for more information.
 
 
 .. _custom-domain-config-options:
