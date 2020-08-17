@@ -525,6 +525,12 @@ footer {
   border-bottom: none;
 }
 
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* ----- Tables ------ */
 
 table {

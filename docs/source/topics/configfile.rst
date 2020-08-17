@@ -136,6 +136,9 @@ A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See `AWS Lambda Layers Configuration`_.
 
 
+
+.. _automatic-layer-option:
+
 ``automatic_layers``
 ~~~~~~~~~~~~~~~~~~~~
 
