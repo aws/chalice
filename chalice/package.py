@@ -1202,7 +1202,8 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
         # type: (Dict[str, Any], Config, str, str) -> None
 
         copied = False
-        for r in template['resource'].get('aws_lambda_function', {}).values():
+        resources = template['resource']
+        for r in resources.get('aws_lambda_function', {}).values():
             if not copied:
                 asset_path = os.path.join(outdir, 'deployment.zip')
                 self._osutils.copy(r['filename'], asset_path)
@@ -1210,6 +1211,15 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
             r['filename'] = "${path.module}/deployment.zip"
             r['source_code_hash'] = \
                 '${filebase64sha256("${path.module}/deployment.zip")}'
+        copied = False
+        for r in resources.get('aws_lambda_layer_version', {}).values():
+            if not copied:
+                asset_path = os.path.join(outdir, 'layer-deployment.zip')
+                self._osutils.copy(r['filename'], asset_path)
+                copied = True
+            r['filename'] = "${path.module}/layer-deployment.zip"
+            r['source_code_hash'] = \
+                '${filebase64sha256("${path.module}/layer-deployment.zip")}'
 
 
 class TemplateMergePostProcessor(TemplatePostProcessor):

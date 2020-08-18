@@ -998,6 +998,43 @@ def test_will_create_outdir_if_needed(tmpdir, stubbed_session):
     assert 'sam.json' in contents
 
 
+def test_includes_layer_package_with_sam(tmpdir, stubbed_session):
+    appdir = _create_app_structure(tmpdir)
+    appdir.mkdir('vendor').join('hello').write('hello\n')
+    outdir = str(appdir.join('outdir'))
+    default_params = {'autogen_policy': True}
+    config = Config.create(project_dir=str(appdir),
+                           chalice_app=sample_app(),
+                           automatic_layer=True,
+                           **default_params)
+    options = PackageOptions(TypedAWSClient(session=stubbed_session))
+    p = package.create_app_packager(config, options)
+    p.package_app(config, str(outdir), 'dev')
+    contents = os.listdir(str(outdir))
+    assert 'deployment.zip' in contents
+    assert 'layer-deployment.zip' in contents
+    assert 'sam.json' in contents
+
+
+def test_includes_layer_package_with_terraform(tmpdir, stubbed_session):
+    appdir = _create_app_structure(tmpdir)
+    appdir.mkdir('vendor').join('hello').write('hello\n')
+    outdir = str(appdir.join('outdir'))
+    default_params = {'autogen_policy': True}
+    config = Config.create(project_dir=str(appdir),
+                           chalice_app=sample_app(),
+                           automatic_layer=True,
+                           **default_params)
+    options = PackageOptions(TypedAWSClient(session=stubbed_session))
+    p = package.create_app_packager(config, options,
+                                    package_format='terraform')
+    p.package_app(config, str(outdir), 'dev')
+    contents = os.listdir(str(outdir))
+    assert 'deployment.zip' in contents
+    assert 'layer-deployment.zip' in contents
+    assert 'chalice.tf.json' in contents
+
+
 class TestSubprocessPip(object):
     def test_can_invoke_pip(self):
         pip = SubprocessPip()
