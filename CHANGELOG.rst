@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.18.0
+======
+
+* feature:Packaging:Add support for automatic layer creation (#1485, #1001)
+
+
 1.17.0
 ======
 
