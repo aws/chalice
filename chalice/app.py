@@ -893,6 +893,7 @@ class _HandlerRegistration(object):
         actual_kwargs = kwargs.copy()
         ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
         execution_role = actual_kwargs.pop('execution_role', None)
+        actual_kwargs.pop('url_prefix', None)
         if actual_kwargs:
             raise TypeError(
                 'TypeError: authorizer() got unexpected keyword '
