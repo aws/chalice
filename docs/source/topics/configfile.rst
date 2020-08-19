@@ -93,6 +93,15 @@ level key, the stage specific environment variables will be merged into the top
 level keys.  See the examples section below for a concrete example.
 
 
+``stage_variables``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A mapping of key value pairs. Stage variables will be added to API Gateway stage
+variables and thus be exposed in the incoming requests. Stage variables can be added
+to configuration file both on root the level and the stage level. Mechanism of variable
+resolving on specific stages is the same as for environment variables.
+
+
 ``iam_policy_file``
 ~~~~~~~~~~~~~~~~~~~
 
