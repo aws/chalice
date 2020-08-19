@@ -213,7 +213,10 @@ are supported.  If you only wanted to support <code class="docutils literal notr
 would specify <code class="docutils literal notranslate"><span class="pre">methods=['POST']</span></code>.  If you support multiple HTTP
 methods in a single view function (<code class="docutils literal notranslate"><span class="pre">methods=['GET',</span> <span class="pre">'POST']</span></code>), you
 can check the <a class="reference internal" href="#Request.method" title="Request.method"><code class="xref py py-attr docutils literal notranslate"><span class="pre">app.current_request.method</span></code></a>
-attribute to see which HTTP method was used when making the request.</li>
+attribute to see which HTTP method was used when making the request.
+You can provide any HTTP method supported by API Gateway, which
+includes: <code class="docutils literal notranslate"><span class="pre">GET</span></code>, <code class="docutils literal notranslate"><span class="pre">POST</span></code>, <code class="docutils literal notranslate"><span class="pre">PUT</span></code>, <code class="docutils literal notranslate"><span class="pre">PATCH</span></code>, <code class="docutils literal notranslate"><span class="pre">HEAD</span></code>,
+<code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code>, and <code class="docutils literal notranslate"><span class="pre">DELETE</span></code>.</li>
 <li><strong>name</strong> (<em>str</em>) – Optional parameter to specify the name of the view
 function.  You generally do not need to set this value.  The name
 of the view function is used as the default value for the view name.</li>
