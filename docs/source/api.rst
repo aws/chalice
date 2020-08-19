@@ -82,6 +82,9 @@ Chalice
         methods in a single view function (``methods=['GET', 'POST']``), you
         can check the :attr:`app.current_request.method <Request.method>`
         attribute to see which HTTP method was used when making the request.
+        You can provide any HTTP method supported by API Gateway, which
+        includes: ``GET``, ``POST``, ``PUT``, ``PATCH``, ``HEAD``,
+        ``OPTIONS``, and ``DELETE``.
 
       :param str name: Optional parameter to specify the name of the view
         function.  You generally do not need to set this value.  The name
