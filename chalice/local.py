@@ -162,12 +162,13 @@ class LambdaEventConverter(object):
     LOCAL_SOURCE_IP = '127.0.0.1'
 
     """Convert an HTTP request to an event dict used by lambda."""
-    def __init__(self, route_matcher, binary_types=None):
-        # type: (RouteMatcher, List[str]) -> None
+    def __init__(self, route_matcher, binary_types=None, stage_variables=None):
+        # type: (RouteMatcher, List[str], Dict[str, str]) -> None
         self._route_matcher = route_matcher
         if binary_types is None:
             binary_types = []
         self._binary_types = binary_types
+        self._stage_variables = stage_variables or {}
 
     def _is_binary(self, headers):
         # type: (Dict[str,Any]) -> bool
@@ -187,7 +188,7 @@ class LambdaEventConverter(object):
             },
             'headers': {k.lower(): v for k, v in headers.items()},
             'pathParameters': view_route.captured,
-            'stageVariables': {},
+            'stageVariables': self._stage_variables,
         }
         if view_route.query_params:
             event['multiValueQueryStringParameters'] = view_route.query_params
@@ -452,7 +453,8 @@ class LocalGateway(object):
         self._config = config
         self.event_converter = LambdaEventConverter(
             RouteMatcher(list(app_object.routes)),
-            self._app_object.api.binary_types
+            self._app_object.api.binary_types,
+            self._config.stage_variables
         )
         self._authorizer = LocalGatewayAuthorizer(app_object)
 

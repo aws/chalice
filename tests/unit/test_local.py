@@ -599,6 +599,35 @@ def test_can_create_lambda_event():
         'stageVariables': {},
     }
 
+def test_can_create_lambda_event_with_stage_vars():
+    converter = local.LambdaEventConverter(
+        local.RouteMatcher(['/foo/bar', '/foo/{capture}']),
+        None,
+        {
+            "stage_variable": "test"
+        })
+    event = converter.create_lambda_event(
+        method='GET',
+        path='/foo/other',
+        headers={'content-type': 'application/json'}
+    )
+    assert event == {
+        'requestContext': {
+            'httpMethod': 'GET',
+            'resourcePath': '/foo/{capture}',
+            'path': '/foo/other',
+            'identity': {
+                'sourceIp': local.LambdaEventConverter.LOCAL_SOURCE_IP
+            },
+        },
+        'headers': {'content-type': 'application/json'},
+        'pathParameters': {'capture': 'other'},
+        'multiValueQueryStringParameters': None,
+        'body': None,
+        'stageVariables': {"stage_variable": "test"},
+    }
+
+
 
 def test_parse_query_string():
     converter = local.LambdaEventConverter(
