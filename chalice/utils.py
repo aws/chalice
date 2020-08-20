@@ -323,6 +323,10 @@ class OSUtils(object):
         # type: () -> int
         return subprocess.PIPE
 
+    def basename(self, path):
+        # type: (str) -> str
+        return os.path.basename(path)
+
 
 def getting_started_prompt(prompter):
     # type: (Any) -> bool

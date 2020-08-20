@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import sys
 import hashlib
 import inspect
@@ -57,6 +58,14 @@ class PackageDownloadError(Exception):
 
 class EmptyPackageError(Exception):
     """A deployment package cannot be an empty zip file."""
+
+
+class UnsupportedPackageError(Exception):
+    """Unable to parse package metadata."""
+    def __init__(self, package_name):
+        # type: (str) -> None
+        super(UnsupportedPackageError, self).__init__(
+            'Unable to retrieve name/version for package: %s' % package_name)
 
 
 class BaseLambdaDeploymentPackager(object):
@@ -816,7 +825,7 @@ class SDistMetadataFetcher(object):
         parser.feed(data)
         return parser.close()
 
-    def _generate_egg_info(self, package_dir):
+    def _get_pkg_info_filepath(self, package_dir):
         # type: (str) -> str
         setup_py = self._osutils.joinpath(package_dir, 'setup.py')
         script = self._SETUPTOOLS_SHIM % setup_py
@@ -827,10 +836,23 @@ class SDistMetadataFetcher(object):
         self._osutils.makedirs(egg_info_dir)
         p = subprocess.Popen(cmd, cwd=package_dir,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p.communicate()
+        _, stderr = p.communicate()
+        if p.returncode != 0:
+            logger.debug("Non zero rc (%s) from the setup.py egg_info "
+                         "command: %s", p.returncode, stderr)
         info_contents = self._osutils.get_directory_contents(egg_info_dir)
-        pkg_info_path = self._osutils.joinpath(
-            egg_info_dir, info_contents[0], 'PKG-INFO')
+        if info_contents:
+            pkg_info_path = self._osutils.joinpath(
+                egg_info_dir, info_contents[0], 'PKG-INFO')
+        else:
+            # This might be a pep 517 package in which case this PKG-INFO file
+            # should be available right in the top level irectory of the sdist
+            # in the case where the egg_info command fails.
+            logger.debug("Using fallback location for PKG-INFO file in "
+                         "package directory: %s", package_dir)
+            pkg_info_path = self._osutils.joinpath(package_dir, 'PKG-INFO')
+        if not self._osutils.file_exists(pkg_info_path):
+            raise UnsupportedPackageError(self._osutils.basename(package_dir))
         return pkg_info_path
 
     def _unpack_sdist_into_dir(self, sdist_path, unpack_dir):
@@ -849,7 +871,7 @@ class SDistMetadataFetcher(object):
         # type: (str) -> Tuple[str, str]
         with self._osutils.tempdir() as tempdir:
             package_dir = self._unpack_sdist_into_dir(sdist_path, tempdir)
-            pkg_info_filepath = self._generate_egg_info(package_dir)
+            pkg_info_filepath = self._get_pkg_info_filepath(package_dir)
             metadata = self._parse_pkg_info_file(pkg_info_filepath)
             name = metadata['Name']
             version = metadata['Version']
