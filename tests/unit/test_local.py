@@ -599,6 +599,7 @@ def test_can_create_lambda_event():
         'stageVariables': {},
     }
 
+
 def test_can_create_lambda_event_with_stage_vars():
     converter = local.LambdaEventConverter(
         local.RouteMatcher(['/foo/bar', '/foo/{capture}']),
@@ -626,7 +627,6 @@ def test_can_create_lambda_event_with_stage_vars():
         'body': None,
         'stageVariables': {"stage_variable": "test"},
     }
-
 
 
 def test_parse_query_string():
