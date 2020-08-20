@@ -231,6 +231,23 @@ class Config(object):
                 final.update(value)
         return final
 
+    def _chain_merge_skip_lambda(self, name):
+        # type: (str) -> Dict[str, Any]
+        # Merge without lambda function specific key
+        search_dicts = [
+            self._default_params,
+            self._config_from_disk,
+            self._config_from_disk.get('stages', {}).get(
+                self.chalice_stage, {}),
+            self._user_provided_params
+        ]
+        final = {}
+        for cfg_dict in search_dicts:
+            value = cfg_dict.get(name, {})
+            if isinstance(value, dict):
+                final.update(value)
+        return final
+
     @property
     def config_file_version(self):
         # type: () -> str
@@ -327,7 +344,7 @@ class Config(object):
     @property
     def stage_variables(self):
         # type: () -> Dict[str, str]
-        return self._chain_merge('stage_variables')
+        return self._chain_merge_skip_lambda('stage_variables')
 
     @property
     def tags(self):
