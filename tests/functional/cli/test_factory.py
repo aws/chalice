@@ -12,7 +12,6 @@ from chalice.config import Config
 from chalice.config import DeployedResources
 from chalice import local
 from chalice.package import PackageOptions
-from chalice.docker import LambdaImageBuilder
 from chalice.local import ContainerProxyResourceManager, ProxyServerRunner
 from chalice.utils import UI
 from chalice import Chalice
@@ -291,24 +290,17 @@ def test_can_create_package_options(clifactory):
     assert isinstance(options, PackageOptions)
 
 
-def test_can_create_lambda_image_builder(clifactory):
-    image_builder = clifactory.create_lambda_image_builder(UI())
-    assert isinstance(image_builder, LambdaImageBuilder)
-
-
 def test_can_create_container_proxy_resource_manager(clifactory):
     config = clifactory.create_config_obj(chalice_stage_name='dev')
-    image_builder = clifactory.create_lambda_image_builder(UI())
     resource_manager = clifactory.create_container_proxy_resource_manager(
-        config, UI(), image_builder)
+        config)
     assert isinstance(resource_manager, ContainerProxyResourceManager)
 
 
 def test_can_create_proxy_server_runner(clifactory):
     config = clifactory.create_config_obj(chalice_stage_name='dev')
-    image_builder = clifactory.create_lambda_image_builder(UI())
     resource_manager = clifactory.create_container_proxy_resource_manager(
-        config, UI(), image_builder)
+        config)
     server_runner = clifactory.create_proxy_server_runner(
         config, 'dev', 'localhost', 8000, resource_manager, True)
     assert isinstance(server_runner, ProxyServerRunner)

@@ -6,24 +6,23 @@ This is intended only for local development purposes.
 # pylint: disable=too-many-lines
 from __future__ import print_function
 import contextlib
+import hashlib
 import logging
 import re
-import shutil
 import threading
 import time
 import uuid
 import base64
 import functools
 import warnings
-import tempfile
 import socket
 from collections import namedtuple
 import json
-import requests
-
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.socketserver import ThreadingMixIn
+import requests
+
 from typing import (
     List,
     Any,
@@ -43,12 +42,13 @@ from chalice.app import Request  # noqa
 from chalice.app import Response
 from chalice.app import AuthResponse  # noqa
 from chalice.app import BuiltinAuthConfig  # noqa
+from chalice.awsclient import TypedAWSClient
 from chalice.config import Config  # noqa
 from chalice.deploy.appgraph import DependencyBuilder, ApplicationGraphBuilder
 from chalice.deploy.models import LambdaFunction
-
+from chalice.deploy.packager import BaseLambdaDeploymentPackager
+from chalice.deploy.packager import LayerDeploymentPackager
 from chalice.compat import urlparse, parse_qs, posix_path
-from chalice.deploy.packager import LambdaDeploymentPackager
 from chalice.docker import LambdaContainer, LambdaImageBuilder
 from chalice.utils import UI, OSUtils
 
@@ -80,7 +80,7 @@ def create_container_proxy_resource_manager(
         config,            # type: Config
         ui,                # type: UI
         osutils,           # type: OSUtils
-        packager,          # type: LambdaDeploymentPackager
+        packager,          # type: DockerPackager
         image_builder,     # type: LambdaImageBuilder
 ):
     # type: (...) -> ContainerProxyResourceManager
@@ -917,6 +917,7 @@ class ProxyRequestHandler(ChaliceRequestHandler):
                  proxy_handler      # type: ContainerProxyHandler
                  ):
         # type: (...) -> None
+        # pylint: disable=non-parent-init-called
         self._config = config
         self._handler = proxy_handler
         BaseHTTPRequestHandler.__init__(
@@ -1019,12 +1020,128 @@ class ContainerProxyHandler(object):
                 function_name.encode('ascii'))
 
 
+class LambdaLayerDownloader(object):
+    def __init__(self, config, ui, lambda_client, osutils, session):
+        # type: (Config, UI, TypedAWSClient, OSUtils, requests.Session) -> None
+        self._config = config
+        self._ui = ui
+        self._lambda_client = lambda_client
+        self._osutils = osutils
+        self._session = session
+
+    def download_all(self, layer_arns, cache_dir):
+        # type: (List[str], str) -> List[str]
+        return [self.download(layer, cache_dir) for layer in layer_arns]
+
+    def download(self, layer_arn, cache_dir):
+        # type: (str, str) -> str
+        layer_path = self._get_layer_path(layer_arn, cache_dir)
+        if self._is_downloaded(layer_path):
+            LOGGER.debug("Layer %s is already downloaded, skipping download.",
+                         layer_arn)
+            return layer_path
+        layer = self._lambda_client.get_layer_version(layer_arn)
+        try:
+            uri = layer["Content"]["Location"]
+        except KeyError:
+            raise ValueError("Invalid layer arn: %s" % layer_arn)
+        self._ui.write("Downloading layer %s...\n" % layer_arn)
+        get_request = self._session.get(uri, stream=True)
+        with open(layer_path, "wb") as local_layer_file:
+            for data in get_request.iter_content(chunk_size=None):
+                local_layer_file.write(data)
+        return layer_path
+
+    def _get_layer_path(self, layer_arn, cache_dir):
+        # type: (str, str) -> str
+        filename = 'layer-%s-%s.zip' \
+                   % (hashlib.md5(layer_arn.encode('utf-8')).hexdigest(),
+                      self._config.lambda_python_version)
+        layer_path = self._osutils.joinpath(cache_dir, filename)
+        return layer_path
+
+    def _is_downloaded(self, layer_path):
+        # type: (str) -> bool
+        return self._osutils.file_exists(layer_path)
+
+
+class DockerPackager(object):
+    def __init__(self,
+                 config,            # type: Config
+                 osutils,           # type: OSUtils
+                 app_packager,      # type: BaseLambdaDeploymentPackager
+                 layer_packager,    # type: LayerDeploymentPackager
+                 layer_downloader   # type: LambdaLayerDownloader
+                 ):
+        self._config = config
+        self._osutils = osutils
+        self._app_packager = app_packager
+        self._layer_packager = layer_packager
+        self._layer_downloader = layer_downloader
+
+    def package_app(self):
+        # type: () -> str
+        project_dir = self._config.project_dir
+        python_version = self._config.lambda_python_version
+        app_file = self._app_packager.create_deployment_package(
+            project_dir, python_version)
+        filename = app_file[:-4]
+        dir_path = self._osutils.joinpath(self._cache_directory(), filename)
+        if self._osutils.directory_exists(dir_path):
+            return dir_path
+        self._osutils.makedirs(dir_path)
+        self._osutils.extract_zipfile(app_file, dir_path)
+        return dir_path
+
+    def package_layers(self, lambda_functions):
+        # type: (List[LambdaFunction]) -> Dict[str, str]
+        if self._config.automatic_layer:
+            auto_layer_path = self._layer_packager.create_deployment_package(
+                self._config.project_dir, self._config.lambda_python_version)
+        else:
+            auto_layer_path = ''
+        layer_dir_map = {}
+        for function in lambda_functions:
+            stage = self._config.chalice_stage
+            scoped_config = self._config.scope(stage, function.resource_name)
+            layer_dir = self.create_layer_directory(scoped_config.layers,
+                                                    auto_layer_path)
+            layer_dir_map[function.function_name] = layer_dir
+        return layer_dir_map
+
+    def create_layer_directory(self, layer_arns, auto_layer_path):
+        # type: (List[str], str) -> str
+        layers_id = (auto_layer_path + ' '.join(layer_arns)).encode("utf-8")
+        dir_name = "layers-%s-%s" % (hashlib.md5(layers_id).hexdigest(),
+                                     self._config.lambda_python_version)
+        cache_dir = self._cache_directory()
+        dir_path = self._osutils.joinpath(cache_dir, dir_name)
+        if self._osutils.directory_exists(dir_path):
+            return dir_path
+        self._osutils.makedirs(dir_path)
+        if auto_layer_path != '':
+            self._osutils.extract_zipfile(auto_layer_path, dir_path)
+        layer_files = self._layer_downloader.download_all(layer_arns,
+                                                          cache_dir)
+        for layer_file in layer_files:
+            self._osutils.extract_zipfile(layer_file, dir_path)
+        return dir_path
+
+    def _cache_directory(self):
+        # type: () -> str
+        cache_dir = self._osutils.joinpath(self._config.project_dir,
+                                           '.chalice', 'deployments')
+        if not self._osutils.directory_exists(cache_dir):
+            self._osutils.makedirs(cache_dir)
+        return cache_dir
+
+
 class ContainerProxyResourceManager(object):
     def __init__(self,
                  config,            # type: Config
                  ui,                # type: UI
                  osutils,           # type: OSUtils
-                 packager,          # type: LambdaDeploymentPackager
+                 packager,          # type: DockerPackager
                  image_builder,     # type: LambdaImageBuilder
                  ):
         # type: (...) -> None
@@ -1034,56 +1151,50 @@ class ContainerProxyResourceManager(object):
         self._packager = packager
         self._image_builder = image_builder
 
-        self._packaged_dir = ''
         self._container_map = {}    # type: ContainerMap
 
     def build_resources(self, lambda_functions):
         # type: (List[LambdaFunction]) -> ContainerMap
-        _packaged_dir = self._package_app_for_mounting()
-        mount_dir = posix_path(_packaged_dir)
+        app_dir = self._packager.package_app()
+        layer_dirs = self._packager.package_layers(lambda_functions)
         python_version = self._config.lambda_python_version
-        lambda_image = self._image_builder.build(python_version, [])
+        lambda_image = self._image_builder.build(python_version)
         container_map = self._create_containers(
-            lambda_image, lambda_functions, mount_dir)
+            lambda_image, lambda_functions, app_dir, layer_dirs)
         self._container_map = container_map
-        self._packaged_dir = _packaged_dir
         return container_map
 
     def cleanup(self):
         # type: () -> None
-        # Delete Docker containers and mounted directory
-        if len(self._container_map) > 0:
-            for key in self._container_map:
-                try:
-                    self._container_map[key].delete()
-                except Exception as ex:
-                    LOGGER.debug("Failed to delete Docker container")
-                    LOGGER.exception(ex)
-        if self._packaged_dir != '':
-            shutil.rmtree(self._packaged_dir)
+        for _, container in self._container_map.items():
+            try:
+                container.delete()
+            except Exception as ex:
+                LOGGER.debug("Failed to delete Docker container")
+                LOGGER.exception(ex)
 
-    def _package_app_for_mounting(self):
-        # type: () -> str
-        tempdir = tempfile.mkdtemp(dir=self._config.project_dir,
-                                   prefix='.tmp')
-        python_version = self._config.lambda_python_version
-        package_path = self._packager.create_deployment_package(
-            self._config.project_dir, python_version)
-        self._osutils.extract_zipfile(package_path, tempdir)
-        return tempdir
-
-    def _create_containers(self, lambda_image, lambda_functions, path):
-        # type: (str, List[LambdaFunction], str) -> ContainerMap
-        env_vars = self._config.environment_variables
-        memory_limit = self._config.lambda_memory_size
+    def _create_containers(self,
+                           lambda_image,    # type: str
+                           functions,       # type: List[LambdaFunction]
+                           app_dir,         # type: str
+                           layer_dir_map    # type: Dict[str, str]
+                           ):
+        # type: (...) -> ContainerMap
         container_map = {}
-        for function in lambda_functions:
+        self._ui.write("Creating Docker containers.\n")
+        for function in functions:
+            config = self._config.scope(self._config.chalice_stage,
+                                        function.resource_name)
+            layers_dir = layer_dir_map[function.function_name]
             container_port = self._unused_tcp_port()
+            env_vars = config.environment_variables
+            memory_limit = config.lambda_memory_size
             container_map[function.function_name] = \
                 LambdaContainer(ui=self._ui,
                                 port=container_port,
                                 handler=function.handler,
-                                code_dir=path,
+                                code_dir=posix_path(app_dir),
+                                layers_dir=posix_path(layers_dir),
                                 image=lambda_image,
                                 env_vars=env_vars,
                                 memory_limit_mb=memory_limit,
@@ -1092,6 +1203,7 @@ class ContainerProxyResourceManager(object):
 
     def _unused_tcp_port(self):
         # type: () -> int
+        # pylint: disable=no-member
         with contextlib.closing(socket.socket()) as sock:
             sock.bind(('127.0.0.1', 0))
             return sock.getsockname()[1]

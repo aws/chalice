@@ -31,7 +31,6 @@ def test_run_proxy_server_creates_necessary_resources():
     factory.create_container_proxy_resource_manager.return_value = 5
     factory.create_proxy_server_runner.return_value = server_runner
     cli.run_proxy_server(factory, 'localhost', 8000, 'local_test')
-    factory.create_lambda_image_builder.assert_called_once()
     factory.create_container_proxy_resource_manager.assert_called_once()
     factory.create_proxy_server_runner.assert_called_with(
         config, 'local_test', 'localhost', 8000, 5, use_container=True)

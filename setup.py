@@ -13,7 +13,7 @@ install_requires = [
     'requests>=2.20.0,<3.0.0',
     'typing==3.6.4;python_version<"3.7"',
     'mypy-extensions==0.4.3',
-    'six>=1.10.0,<2.0.0',
+    'six>=1.12.0,<2.0.0',
     'pip>=9,<20.3',
     'attrs>=19.3.0,<20.0.0',
     'enum-compat>=0.0.2',

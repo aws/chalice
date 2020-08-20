@@ -189,14 +189,11 @@ def run_proxy_server(factory, host, port, stage):
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
-    ui = UI()
     # Check that `chalice deploy` would let us deploy these routes, otherwise
     # there is no point in testing locally.
     routes = config.chalice_app.routes
     validate_routes(routes)
-    image_builder = factory.create_lambda_image_builder(ui)
-    resource_manager = factory.create_container_proxy_resource_manager(
-        config, ui, image_builder)
+    resource_manager = factory.create_container_proxy_resource_manager(config)
     server_runner = factory.create_proxy_server_runner(config, stage, host,
                                                        port, resource_manager,
                                                        use_container=True)

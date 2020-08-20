@@ -88,10 +88,20 @@ class TestContainer(object):
         memory_limit_mb = 6
         exposed_ports = {8000: 8000}
         env_vars = {"hello": "world"}
+        other_volumes = {
+            "some/dir": {
+                "bind": "dir/in/container",
+                "mode": "ro,delegated"
+            }
+        }
 
         expected_volumes = {
             host_dir: {
                 "bind": working_dir,
+                "mode": "ro,delegated"
+            },
+            "some/dir": {
+                "bind": "dir/in/container",
                 "mode": "ro,delegated"
             }
         }
@@ -102,6 +112,7 @@ class TestContainer(object):
             cmd,
             working_dir,
             host_dir,
+            other_volumes=other_volumes,
             memory_limit_mb=memory_limit_mb,
             exposed_ports=exposed_ports,
             env_vars=env_vars,
@@ -224,7 +235,6 @@ class TestLambdaImageBuilder(object):
     @pytest.fixture
     def sample_image_builder(self, mock_docker_client):
         return LambdaImageBuilder(Mock(spec=UI()),
-                                  "layer_downloader",
                                   docker_client=mock_docker_client)
 
     def test_build_have_base_image(self, mock_docker_client,
@@ -233,7 +243,7 @@ class TestLambdaImageBuilder(object):
         mock_docker_client.images.get.return_value = \
             Mock(spec=docker.models.images.Image)
 
-        image_name = sample_image_builder.build("python3.7", [])
+        image_name = sample_image_builder.build("python3.7")
 
         mock_docker_client.images.get.assert_called_with(expected_image_name)
         assert image_name == expected_image_name
@@ -244,7 +254,7 @@ class TestLambdaImageBuilder(object):
         expected_image_name = "lambci/lambda:python3.7"
         mock_docker_client.images.get.side_effect = ImageNotFound("msg")
 
-        image_name = sample_image_builder.build("python3.7", [])
+        image_name = sample_image_builder.build("python3.7")
 
         mock_docker_client.images.pull\
             .assert_called_with("lambci/lambda", tag="python3.7")
@@ -252,7 +262,7 @@ class TestLambdaImageBuilder(object):
 
     def test_build_unsupported_runtime(self, sample_image_builder):
         with pytest.raises(ValueError):
-            sample_image_builder.build("dummy_runtime", [])
+            sample_image_builder.build("dummy_runtime")
 
 
 class TestLambda(object):
@@ -264,6 +274,7 @@ class TestLambda(object):
             port=8000,
             handler='handler',
             code_dir='/dir/',
+            layers_dir=None,
             image='image',
             docker_client=mock_docker_client,
         )
@@ -274,6 +285,7 @@ class TestLambda(object):
         port = 8001
         handler = "hello"
         code_dir = "/dir/dir/dir"
+        layers_dir = "/some/dir"
         image = "image_str"
         memory_limit_mb = 6
         stay_open = True
@@ -294,6 +306,10 @@ class TestLambda(object):
             code_dir: {
                 "bind": "/var/task",
                 "mode": "ro,delegated",
+            },
+            layers_dir: {
+                "bind": "/opt",
+                "mode": "ro,delegated"
             }
         }
 
@@ -302,6 +318,7 @@ class TestLambda(object):
             port=port,
             handler=handler,
             code_dir=code_dir,
+            layers_dir=layers_dir,
             image=image,
             env_vars=env_vars,
             memory_limit_mb=memory_limit_mb,
@@ -350,6 +367,7 @@ class TestLambda(object):
             port=port,
             handler=handler,
             code_dir=code_dir,
+            layers_dir=None,
             image=image,
             docker_client=mock_docker_client,
         )

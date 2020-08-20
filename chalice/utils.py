@@ -1,6 +1,5 @@
 import io
 import os
-import ntpath
 import zipfile
 import json
 import contextlib
@@ -11,7 +10,7 @@ import sys
 import tarfile
 from datetime import datetime, timedelta
 import subprocess
-
+import ntpath
 
 from collections import OrderedDict # noqa
 import click

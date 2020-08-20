@@ -16,13 +16,16 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 from chalice import app
+from chalice.awsclient import TypedAWSClient
 from chalice.deploy.models import LambdaFunction
 from chalice.deploy.packager import LambdaDeploymentPackager
+from chalice.deploy.packager import LayerDeploymentPackager
 from chalice.docker import LambdaImageBuilder
-from chalice.local import create_local_server, ContainerProxyResourceManager
+from chalice.local import create_local_server, DockerPackager
+from chalice.local import ContainerProxyResourceManager
+from chalice.local import LambdaLayerDownloader
 from chalice.config import Config
-from chalice.utils import OSUtils
-
+from chalice.utils import OSUtils, UI
 
 APPS_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_APP_DIR = os.path.join(APPS_DIR, 'envapp')
@@ -324,44 +327,361 @@ def test_can_reload_server(unused_tcp_port, basic_app, http_session):
             p.terminate()
 
 
-def test_container_proxy_resource_manager_build_and_cleanup(basic_app):
+def test_container_proxy_resource_manager_build(basic_app, config):
     class DummyLambda(LambdaFunction):
         def __init__(self, handler, function_name):
             self.handler = handler
             self.function_name = function_name
+            self.resource_name = function_name
 
+    ui = mock.Mock(spec=UI)
+    osutils = mock.Mock(spec=OSUtils)
+    packager = mock.Mock(spec=DockerPackager)
+    image_builder = mock.Mock(spec=LambdaImageBuilder)
+    packager.package_layers.return_value = {
+        "a": "/path/a",
+        "b": "/path/b"
+    }
     with cd(basic_app):
-        config = mock.Mock(spec=Config)
-        config.project_dir = basic_app
-        config.lambda_python_version = 'python'
-        osutils = mock.Mock(spec=OSUtils)
-        packager = mock.Mock(spec=LambdaDeploymentPackager)
-        packager.create_deployment_package.return_value = 'path'
-        image_builder = mock.Mock(spec=LambdaImageBuilder)
         resource_manager = ContainerProxyResourceManager(
-            config, None, osutils, packager, image_builder)
+            config, ui, osutils, packager, image_builder)
+        lambda_functions = [DummyLambda("1", "a"), DummyLambda("2", "b")]
+        containers = resource_manager.build_resources(lambda_functions)
 
-        containers = resource_manager.build_resources([DummyLambda("1", "a"),
-                                                       DummyLambda("2", "b")])
-        files = os.listdir(basic_app)
-        temp_dir_filter = list(filter(lambda x: '.tmp' in x, files))
-        assert len(temp_dir_filter) == 1
-        temp_dir = temp_dir_filter[0]
-        temp_dir_path = os.path.join(basic_app, temp_dir)
-        assert os.path.isdir(temp_dir_path)
-        packager.create_deployment_package.assert_called_with(basic_app,
-                                                              'python')
-        osutils.extract_zipfile.assert_called_with('path', temp_dir_path)
-        image_builder.build.assert_called_with('python', [])
+        packager.package_app.assert_called_with()
+        packager.package_layers.assert_called_with(lambda_functions)
+        image_builder.build.assert_called_with(config.lambda_python_version)
         assert len(containers) == 2
-
-        resource_manager.cleanup()
-        files = os.listdir(basic_app)
-        assert temp_dir not in files
+        assert 'a' in containers
+        assert 'b' in containers
 
 
 def test_container_proxy_resource_manager_cleanup_nothing_no_errors():
+    config = Config(config_from_disk={"project_dir": "path"})
+    osutils = mock.Mock(spec=OSUtils)
     resource_manager = ContainerProxyResourceManager(
-        None, None, None, None, None
+        config, None, osutils, None, None
     )
     resource_manager.cleanup()
+
+
+class TestLambdaLayerDownloader(object):
+    @pytest.fixture
+    def lambda_client(self):
+        client = mock.Mock(spec=TypedAWSClient)
+        client.get_layer_version.return_value = {
+            "Content": {
+                "Location": "uri"
+            }
+        }
+        return client
+
+    @pytest.fixture
+    def osutils(self):
+        osutils = mock.Mock(spec=OSUtils)
+        osutils.joinpath = os.path.join
+        osutils.file_exists.return_value = False
+        return osutils
+
+    @pytest.fixture
+    def session(self):
+        session = mock.Mock(spec=requests.Session)
+        session.get.return_value.iter_content.return_value = []
+        return session
+
+    @pytest.fixture
+    def layer_downloader(self, config, lambda_client, osutils, session):
+        ui = mock.Mock(spec=UI)
+        layer_downloader = LambdaLayerDownloader(config, ui, lambda_client,
+                                                 osutils, session)
+        return layer_downloader
+
+    def test_layer_downloader_download_all(self, osutils, lambda_client,
+                                           session, layer_downloader,
+                                           basic_app, config):
+        layer_arns = {"arn1", "arn2", "arn3"}
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, "cache")
+            os.mkdir(cache_dir)
+            paths = layer_downloader.download_all(layer_arns, cache_dir)
+            files = os.listdir(cache_dir)
+            for file in files:
+                assert file.startswith("layer-")
+                python_version = config.lambda_python_version
+                assert file.endswith("-" + python_version + ".zip")
+                assert os.path.join(cache_dir, file) in paths
+            assert len(files) == len(layer_arns)
+        assert osutils.file_exists.call_count == len(layer_arns)
+        assert lambda_client.get_layer_version.call_count == len(layer_arns)
+        assert session.get.call_count == len(layer_arns)
+        assert len(paths) == len(layer_arns)
+
+    def test_layer_downloader_download_one(self, osutils, lambda_client,
+                                           session, layer_downloader,
+                                           basic_app, config):
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, "cache")
+            os.mkdir(cache_dir)
+            path = layer_downloader.download("layer", cache_dir)
+            files = os.listdir(cache_dir)
+            assert len(files) == 1
+            file = files[0]
+            assert file.startswith("layer-")
+            python_version = config.lambda_python_version
+            assert file.endswith("-" + python_version + ".zip")
+            assert os.path.join(cache_dir, file) == path
+        osutils.file_exists.assert_called_once()
+        lambda_client.get_layer_version.assert_called_once()
+        session.get.assert_called_once()
+
+    def test_layer_downloader_ignores_cached(self, osutils, lambda_client,
+                                             session, layer_downloader,
+                                             basic_app):
+        osutils.file_exists.return_value = True
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, "cache")
+            os.mkdir(cache_dir)
+            osutils.file_exists.return_value = True
+            layer_downloader.download("hello", cache_dir)
+            files = os.listdir(cache_dir)
+            assert len(files) == 0
+        osutils.file_exists.assert_called_once()
+        lambda_client.get_layer_version.assert_not_called()
+        session.get.assert_not_called()
+
+    def test_layer_downloader_download_invalid_arn_raises_error(
+            self, lambda_client, layer_downloader, basic_app):
+        lambda_client.get_layer_version.return_value = {}
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, "cache")
+            os.mkdir(cache_dir)
+            with pytest.raises(ValueError) as e:
+                layer_downloader.download("hello", cache_dir)
+            files = os.listdir(cache_dir)
+            assert len(files) == 0
+        assert "Invalid layer arn" in str(e.value)
+
+
+class TestDockerPackager(object):
+    @pytest.fixture
+    def config(self, basic_app):
+        config = Config(
+            config_from_disk={
+                'project_dir': basic_app,
+                'layers': ['hello', 'world', 'layers']
+            }
+        )
+
+        def dummy_scope(stage, function):
+            return config
+        config.scope = dummy_scope
+        return config
+
+    @pytest.fixture
+    def autolayer_config(self, basic_app):
+        config = Config(
+            config_from_disk={
+                'project_dir': basic_app,
+                'layers': ['hello', 'world', 'layers'],
+                'automatic_layer': True
+            }
+        )
+
+        def dummy_scope(stage, function):
+            return config
+        config.scope = dummy_scope
+        return config
+
+    @pytest.fixture
+    def layer_downloader(self):
+        layer_downloader = mock.Mock(spec=LambdaLayerDownloader)
+        layer_downloader.download_all.return_value = [
+            'hello.zip', 'world.zip', 'layers.zip'
+        ]
+        return layer_downloader
+
+    @pytest.fixture
+    def app_packager(self):
+        app_packager = mock.Mock(spec=LambdaDeploymentPackager)
+        app_packager.create_deployment_package.return_value = "app.zip"
+        return app_packager
+
+    @pytest.fixture
+    def layer_packager(self):
+        layer_packager = mock.Mock(spec=LayerDeploymentPackager)
+        layer_packager.create_deployment_package.return_value = "layer.zip"
+        return layer_packager
+
+    @pytest.fixture
+    def docker_packager(self, config, osutils, app_packager,
+                        layer_packager, layer_downloader):
+        return DockerPackager(config, osutils, app_packager,
+                              layer_packager, layer_downloader)
+
+    @pytest.fixture
+    def osutils(self):
+        osutils = mock.Mock(spec=OSUtils)
+        osutils.joinpath = os.path.join
+        osutils.makedirs = os.makedirs
+        osutils.directory_exists.return_value = False
+        osutils.file_exists.return_value = False
+        return osutils
+
+    class DummyLambda(LambdaFunction):
+        def __init__(self, handler, function_name):
+            self.handler = handler
+            self.function_name = function_name
+            self.resource_name = function_name
+
+    def test_package_app_not_existing(self, basic_app, osutils, config,
+                                      app_packager, docker_packager):
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, ".chalice", "deployments")
+            path = docker_packager.package_app()
+            files = os.listdir(cache_dir)
+            assert "app" in files
+            expected_path = os.path.join(cache_dir, "app")
+            assert path == expected_path
+            assert osutils.extract_zipfile.called_with("app", expected_path)
+        python_version = config.lambda_python_version
+        app_packager.create_deployment_package.assert_called_with(
+            basic_app, python_version)
+
+    def test_package_app_already_exists(self, basic_app, osutils, config,
+                                        app_packager, docker_packager):
+        osutils.directory_exists.return_value = True
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, ".chalice", "deployments")
+            os.makedirs(cache_dir)
+            path = docker_packager.package_app()
+            files = os.listdir(cache_dir)
+            assert len(files) == 0
+            expected_path = os.path.join(cache_dir, "app")
+            assert path == expected_path
+        osutils.extract_zipfile.assert_not_called()
+
+    def test_package_layers_no_auto_layer(self, basic_app, osutils, config,
+                                          layer_packager, docker_packager):
+        osutils.directory_exists = os.path.isdir
+        with cd(basic_app):
+            prefix = os.path.join(basic_app, ".chalice",
+                                  "deployments", "layers-")
+            lambdas = [
+                self.DummyLambda("1", "a"),
+                self.DummyLambda("2", "b"),
+                self.DummyLambda("3", "c"),
+            ]
+            path_map = docker_packager.package_layers(lambdas)
+            assert len(path_map) == 3
+            assert path_map["a"] == path_map["b"] == path_map["c"]
+            assert path_map["a"].startswith(prefix)
+            python_version = config.lambda_python_version
+            assert path_map["a"].endswith("-" + python_version)
+        layer_packager.create_deployment_package.assert_not_called()
+
+    def test_package_layers_with_auto_layer(self, basic_app, osutils,
+                                            autolayer_config, app_packager,
+                                            layer_packager, layer_downloader):
+
+        docker_packager = DockerPackager(autolayer_config, osutils,
+                                         app_packager, layer_packager,
+                                         layer_downloader)
+        with cd(basic_app):
+            docker_packager.package_layers([self.DummyLambda("1", "a")])
+        python_version = autolayer_config.lambda_python_version
+        layer_packager.create_deployment_package.assert_called_with(
+            basic_app, python_version)
+
+    def test_create_layer_directory_not_existing(self, basic_app, config,
+                                                 docker_packager, osutils,
+                                                 layer_downloader):
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, ".chalice", "deployments")
+            layer_arns = ["arn1", "arn2", "arn3"]
+            path = docker_packager.create_layer_directory(layer_arns, "/path")
+            files = os.listdir(cache_dir)
+            assert len(files) == 1
+            assert files[0].startswith("layers")
+            python_version = config.lambda_python_version
+            assert files[0].endswith("-" + python_version)
+            expected_path = os.path.join(cache_dir, files[0])
+            assert path == expected_path
+            unzip_calls = [
+                mock.call("/path", path),
+                mock.call("hello.zip", path),
+                mock.call("world.zip", path),
+                mock.call("layers.zip", path)
+            ]
+            osutils.extract_zipfile.assert_has_calls(unzip_calls)
+            assert osutils.extract_zipfile.call_count == 4
+            layer_downloader.download_all.assert_called_with(layer_arns,
+                                                             cache_dir)
+
+    def test_create_layer_directory_already_exists(self, basic_app, config,
+                                                   docker_packager, osutils,
+                                                   layer_downloader):
+        osutils.directory_exists.return_value = True
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, ".chalice", "deployments")
+            os.makedirs(cache_dir)
+            layer_arns = ["arn1", "arn2", "arn3"]
+            path = docker_packager.create_layer_directory(layer_arns, "/path")
+            files = os.listdir(cache_dir)
+            assert len(files) == 0
+            expected_prefix = os.path.join(cache_dir, "layers-")
+            assert path.startswith(expected_prefix)
+            python_version = config.lambda_python_version
+            assert path.endswith("-" + python_version)
+        osutils.extract_zipfile.assert_not_called()
+
+    def test_create_layer_directory_no_autolayer(self, basic_app, config,
+                                                 docker_packager, osutils,
+                                                 layer_downloader):
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, ".chalice", "deployments")
+            layer_arns = ["arn1", "arn2", "arn3"]
+            path = docker_packager.create_layer_directory(layer_arns, "")
+            files = os.listdir(cache_dir)
+            assert len(files) == 1
+            assert files[0].startswith("layers")
+            python_version = config.lambda_python_version
+            assert files[0].endswith("-" + python_version)
+            expected_path = os.path.join(cache_dir, files[0])
+            assert path == expected_path
+            unzip_calls = [
+                mock.call("hello.zip", path),
+                mock.call("world.zip", path),
+                mock.call("layers.zip", path)
+            ]
+            osutils.extract_zipfile.assert_has_calls(unzip_calls)
+            assert osutils.extract_zipfile.call_count == 3
+            layer_downloader.download_all.assert_called_with(layer_arns,
+                                                             cache_dir)
+
+    def test_create_layer_directory_different_output_on_autolayer_mismatch(
+            self, basic_app, docker_packager, osutils):
+        osutils.directory_exists = os.path.isdir
+        with cd(basic_app):
+            layer_arns = ["arn1", "arn2", "arn3"]
+            path1 = docker_packager.create_layer_directory(layer_arns, "")
+            path2 = docker_packager.create_layer_directory(layer_arns, "path")
+            assert path1 != path2
+
+    def test_create_layer_directory_does_not_raise_filename_too_long(
+            self, basic_app, layer_downloader, docker_packager, osutils):
+        with cd(basic_app):
+            cache_dir = os.path.join(basic_app, ".chalice", "deployments")
+            filename = "zip" * 25
+            layer_arns = [filename, filename, filename, filename, filename]
+            docker_packager.create_layer_directory(layer_arns, "/path")
+            files = os.listdir(cache_dir)
+            assert len(files) == 1
+            assert files[0].startswith("layers-")
+
+    def test_creates_cache_dir_if_nonexistent(
+            self, osutils, docker_packager, basic_app):
+        osutils.directory_exists.return_value = False
+        with cd(basic_app):
+            docker_packager.package_app()
+            chalice_dir = os.path.join(basic_app, ".chalice")
+            assert 'deployments' in os.listdir(chalice_dir)

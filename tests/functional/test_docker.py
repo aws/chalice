@@ -28,6 +28,7 @@ class TestLambdaContainer(object):
             port=8000,
             handler='handler',
             code_dir='/dir/',
+            layers_dir=None,
             image='image',
             startup_timeout=1.0,
             poll_interval=0.5,

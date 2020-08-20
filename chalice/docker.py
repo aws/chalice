@@ -14,6 +14,7 @@ from typing import (
     Any,
     Optional,
     IO,
+    cast
 )
 
 from chalice.utils import UI
@@ -38,6 +39,7 @@ class Container(object):
         memory_limit_mb=None,   # type: int
         exposed_ports=None,     # type: Dict[int, int]
         env_vars=None,          # type: Dict[str, Any]
+        other_volumes=None,     # type: Dict[str, Dict[str, str]]
         docker_client=None      # type: docker.client
     ):
         # type: (...) -> None
@@ -49,6 +51,7 @@ class Container(object):
         self._memory_limit_mb = memory_limit_mb
         self._exposed_ports = exposed_ports
         self._env_vars = env_vars
+        self._other_volumes = other_volumes
 
         self._docker_client = docker_client or docker.from_env()
         self._docker_container = None
@@ -75,14 +78,18 @@ class Container(object):
             "detach": True,
         }
 
-        if self._env_vars:
+        if self._env_vars is not None:
             kwargs["environment"] = self._env_vars
 
-        if self._exposed_ports:
+        if self._exposed_ports is not None:
             kwargs["ports"] = self._exposed_ports
 
-        if self._memory_limit_mb:
+        if self._memory_limit_mb is not None:
             kwargs["mem_limit"] = "{}m".format(self._memory_limit_mb)
+
+        if self._other_volumes is not None:
+            volumes = cast(Dict[str, Dict[str, str]], kwargs["volumes"])
+            volumes.update(self._other_volumes)
 
         self._docker_container = self._docker_client.containers\
             .run(self._image, **kwargs)
@@ -136,18 +143,6 @@ class Container(object):
         return self._docker_container is not None
 
 
-class Layer(object):
-    pass
-
-
-class LayerDownloader(object):
-    pass
-
-
-class ImageBuildException(Exception):
-    pass
-
-
 class Runtime(Enum):
     python27 = "python2.7"
     python36 = "python3.6"
@@ -164,14 +159,13 @@ class Runtime(Enum):
 class LambdaImageBuilder(object):
     _DOCKER_LAMBDA_REPO_NAME = "lambci/lambda"
 
-    def __init__(self, ui, layer_downloader, docker_client=None):
-        # type: (UI, LayerDownloader, docker.client) -> None
+    def __init__(self, ui, docker_client=None):
+        # type: (UI, docker.client) -> None
         self._ui = ui
-        self.layer_downloader = layer_downloader
         self._docker_client = docker_client or docker.from_env()
 
-    def build(self, runtime, layers):
-        # type: (str, List[Layer]) -> str
+    def build(self, runtime):
+        # type: (str) -> str
         if not Runtime.has_value(runtime):
             raise ValueError("Unsupported Lambda runtime {}".format(runtime))
 
@@ -186,13 +180,12 @@ class LambdaImageBuilder(object):
                            " during the initial setup.\n")
             self._docker_client.images.pull(self._DOCKER_LAMBDA_REPO_NAME,
                                             tag=runtime)
-
         return base_image_name
-        # todo: if layers are specified, download layers and build new image
 
 
 class LambdaContainer(Container):
     _WORKING_DIR = "/var/task"
+    _LAYERS_DIR = "/opt"
     _ENV_VAR_STAY_OPEN = "DOCKER_LAMBDA_STAY_OPEN"
     _LAMBDA_API_PORT = 9001
 
@@ -205,6 +198,7 @@ class LambdaContainer(Container):
             port,                   # type: int
             handler,                # type: Optional[str]
             code_dir,               # type: str
+            layers_dir,             # type: Optional[str]
             image,                  # type: str
             env_vars=None,          # type: Optional[Dict[str, Any]]
             memory_limit_mb=128,    # type: int
@@ -226,20 +220,26 @@ class LambdaContainer(Container):
         self._poll_interval = poll_interval
 
         ports = {self._LAMBDA_API_PORT: port}
-        cmd = [handler]
         env_vars.update({
             self._ENV_VAR_STAY_OPEN: stay_open,
         })
+        layer_volume = {
+            layers_dir: {
+                "bind": self._LAYERS_DIR,
+                "mode": "ro,delegated",
+            }
+        } if layers_dir is not None else None
 
         super(LambdaContainer, self).__init__(
             ui,
             image,
-            cmd,
+            [handler],
             self._WORKING_DIR,
             code_dir,
             memory_limit_mb=memory_limit_mb,
             exposed_ports=ports,
             env_vars=env_vars,
+            other_volumes=layer_volume,
             docker_client=docker_client,
         )
 

@@ -16,10 +16,10 @@ from chalice.awsclient import TypedAWSClient
 from chalice.app import Chalice  # noqa
 from chalice.config import Config
 from chalice.config import DeployedResources  # noqa
-from chalice.docker import LayerDownloader, LambdaImageBuilder
+from chalice.docker import LambdaImageBuilder
 from chalice.local import (ProxyServerRunner, ContainerProxyResourceManager,
                            ContainerProxyHandler, ContainerFunctionCaller,
-                           LocalGateway)
+                           LocalGateway, LambdaLayerDownloader, DockerPackager)
 from chalice.package import create_app_packager
 from chalice.package import AppPackager  # noqa
 from chalice.package import PackageOptions
@@ -38,6 +38,8 @@ from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
 from chalice.deploy.models import LambdaFunction
 from chalice.deploy.packager import DependencyBuilder as PipDependencyBuilder
 from chalice.deploy.packager import (LambdaDeploymentPackager,
+                                     AppOnlyDeploymentPackager,
+                                     LayerDeploymentPackager,
                                      PipRunner, SubprocessPip)
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import LambdaInvoker
@@ -297,25 +299,29 @@ class CLIFactory(object):
         # type: (Chalice, Config, str, int) -> local.LocalDevServer
         return local.create_local_server(app_obj, config, host, port)
 
-    def create_lambda_image_builder(self, ui):
-        # type: (UI) -> LambdaImageBuilder
-        layer_downloader = LayerDownloader()
-        image_builder = LambdaImageBuilder(ui, layer_downloader)
-        return image_builder
-
     def create_container_proxy_resource_manager(
             self,
             config,             # type: Config
-            ui,                 # type: UI
-            image_builder       # type: LambdaImageBuilder
     ):
         # type: (...) -> ContainerProxyResourceManager
+        ui = UI()
         osutils = OSUtils()
         pip_runner = PipRunner(pip=SubprocessPip(osutils=osutils),
                                osutils=osutils)
-        dependency_builder = PipDependencyBuilder(osutils=osutils,
-                                                  pip_runner=pip_runner)
-        packager = LambdaDeploymentPackager(osutils, dependency_builder, ui)
+        dep_builder = PipDependencyBuilder(osutils=osutils,
+                                           pip_runner=pip_runner)
+        packager_class = AppOnlyDeploymentPackager if config.automatic_layer \
+            else LambdaDeploymentPackager
+        app_packager = packager_class(osutils, dep_builder, ui)
+        layer_packager = LayerDeploymentPackager(osutils, dep_builder, ui)
+        image_builder = LambdaImageBuilder(ui)
+        botocore_session = create_botocore_session(profile=self.profile)
+        client = TypedAWSClient(session=botocore_session)
+        session = requests.Session()
+        layer_downloader = LambdaLayerDownloader(config, ui, client,
+                                                 osutils, session)
+        packager = DockerPackager(config, osutils, app_packager,
+                                  layer_packager, layer_downloader)
         return local.create_container_proxy_resource_manager(
             config, ui, osutils, packager, image_builder)
 
