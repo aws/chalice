@@ -323,6 +323,28 @@ class CustomAuthorizer(Authorizer):
         return authorizer_with_scopes
 
 
+class BuiltinAuthorizer(object):
+    def __init__(self, name, func, scopes=None):
+        self.name = name
+        self.func = func
+        self.scopes = scopes or []
+        # This is filled in during the @app.authorizer()
+        # processing.
+        self.config = None
+
+    def __call__(self, event, context):
+        auth_request = self._transform_event(event)
+        result = self.func(auth_request)
+        if isinstance(result, AuthResponse):
+            return result.to_dict(auth_request)
+        return result
+
+    def with_scopes(self, scopes):
+        authorizer_with_scopes = copy.deepcopy(self)
+        authorizer_with_scopes.scopes = scopes
+        return authorizer_with_scopes
+
+
 class CORSConfig(object):
     """A cors configuration to attach to a route."""
 
@@ -626,6 +648,17 @@ class DecoratorAPI(object):
             }
         )
 
+    def request_authorizer(self, identity_sources, ttl_seconds=None, execution_role=None, name=None):
+        return self._create_registration_function(
+            handler_type='request_authorizer',
+            name=name,
+            registration_kwargs={
+                'ttl_seconds': ttl_seconds,
+                'execution_role': execution_role,
+                'identity_sources': identity_sources
+            }
+        )
+
     def on_s3_event(self, bucket, events=None,
                     prefix=None, suffix=None, name=None):
         return self._create_registration_function(
@@ -744,6 +777,8 @@ class DecoratorAPI(object):
             # Authorizer is special cased and doesn't quite fit the
             # EventSourceHandler pattern.
             return ChaliceAuthorizer(handler_name, user_handler)
+        if handler_type == 'request_authorizer':
+            return ChaliceRequestPayloadAuthorizer(handler_name, user_handler)
         return user_handler
 
     def _register_handler(self, handler_type, name,
@@ -902,6 +937,30 @@ class _HandlerRegistration(object):
             handler_string=handler_string,
             ttl_seconds=ttl_seconds,
             execution_role=execution_role,
+        )
+        wrapped_handler.config = auth_config
+        self.builtin_auth_handlers.append(auth_config)
+
+    def _register_request_authorizer(self, name, handler_string, wrapped_handler,
+                             kwargs, **unused):
+        actual_kwargs = kwargs.copy()
+        ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
+        execution_role = actual_kwargs.pop('execution_role', None)
+        identity_sources = actual_kwargs.pop('identity_sources')
+        if not identity_sources or identity_sources == {}:
+            raise ValueError(
+                'ValueError: authorizer() must receive valid '
+                'identity_sources dictionary')  # todo better error msg
+        if actual_kwargs:
+            raise TypeError(
+                'TypeError: authorizer() got unexpected keyword '
+                'arguments: %s' % ', '.join(list(actual_kwargs)))
+        auth_config = BuiltinAuthConfig(
+            name=name,
+            handler_string=handler_string,
+            ttl_seconds=ttl_seconds,
+            execution_role=execution_role,
+            identity_sources=identity_sources
         )
         wrapped_handler.config = auth_config
         self.builtin_auth_handlers.append(auth_config)
@@ -1179,12 +1238,13 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
 
 class BuiltinAuthConfig(object):
     def __init__(self, name, handler_string, ttl_seconds=None,
-                 execution_role=None):
+                 execution_role=None, identity_sources=None):
         # We'd also support all the misc config options you can set.
         self.name = name
         self.handler_string = handler_string
         self.ttl_seconds = ttl_seconds
         self.execution_role = execution_role
+        self.identity_sources = identity_sources
 
 
 # ChaliceAuthorizer is unique in that the runtime component (the thing
@@ -1208,31 +1268,58 @@ class BuiltinAuthConfig(object):
 # I *think* we can refactor things to handle both of those issues but
 # we would need more research to know for sure.  For now, this is a
 # special cased runtime class that knows about its config.
-class ChaliceAuthorizer(object):
-    def __init__(self, name, func, scopes=None):
-        self.name = name
-        self.func = func
-        self.scopes = scopes or []
-        # This is filled in during the @app.authorizer()
-        # processing.
-        self.config = None
-
-    def __call__(self, event, context):
-        auth_request = self._transform_event(event)
-        result = self.func(auth_request)
-        if isinstance(result, AuthResponse):
-            return result.to_dict(auth_request)
-        return result
+class ChaliceAuthorizer(BuiltinAuthorizer):
 
     def _transform_event(self, event):
         return AuthRequest(event['type'],
                            event['authorizationToken'],
                            event['methodArn'])
 
-    def with_scopes(self, scopes):
-        authorizer_with_scopes = copy.deepcopy(self)
-        authorizer_with_scopes.scopes = scopes
-        return authorizer_with_scopes
+
+class ChaliceRequestPayloadAuthorizer(BuiltinAuthorizer):
+    _AUTH_TYPE = 'request'
+
+    def to_swagger(self):
+        swagger = {
+            'type': 'apiKey',
+            'name': "Unused",
+            'in': 'header',
+            'x-amazon-apigateway-authtype': self._AUTH_TYPE,
+            'x-amazon-apigateway-authorizer': {
+                'type': 'request',
+                'identitySource': self._stringify_identity_sources(),
+                'authorizerResultTtlInSeconds': 0
+            }
+        }
+        return swagger
+
+    def _transform_event(self, event):
+        request = RequestAuthorizerRequest(
+            event['type'],
+            event['methodArn'],
+            CaseInsensitiveMapping(event.get('headers', {})),
+            event.get('queryStringParameters', {}),
+            event.get('stageVariables', {}),
+            event.get('requestContext', {}),
+        )
+        return request
+
+    def _stringify_identity_sources(self):
+        prefixes = {
+            'headers': 'method.request.header',
+            'query_params': 'method.request.querystring',
+            'stage_variable': 'stageVariables',
+            'request_context': 'context'
+        }
+        result = ""
+        for source in vars(self.config.identity_sources):
+            prefix = prefixes.get(source)
+            if not getattr(self.config.identity_sources, source):
+                continue
+            for key in getattr(self.config.identity_sources, source):
+                src = ".".join([prefix, key])
+                result = src if result == "" else ", ".join([result, src])
+        return result
 
 
 class AuthRequest(object):
@@ -1240,6 +1327,16 @@ class AuthRequest(object):
         self.auth_type = auth_type
         self.token = token
         self.method_arn = method_arn
+
+
+class RequestAuthorizerRequest(object):
+    def __init__(self, auth_type, method_arn, headers, query_params, stage_variables, request_context):
+        self.auth_type = auth_type
+        self.method_arn = method_arn
+        self.headers = headers
+        self.query_params = query_params
+        self.stage_variables = stage_variables
+        self.request_context = request_context
 
 
 class AuthResponse(object):

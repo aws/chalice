@@ -474,6 +474,17 @@ class TestApplicationGraphBuilder(object):
         assert len(rest_api.authorizers) == 1
         assert isinstance(rest_api.authorizers[0], models.LambdaFunction)
 
+    def test_can_build_rest_api_with_request_authorizer(self, sample_app_with_request_auth):
+        config = self.create_config(sample_app_with_request_auth,
+                                    app_name='rest-api-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        rest_api = application.resources[0]
+        assert len(rest_api.authorizers) == 1
+        assert isinstance(rest_api.authorizers[0], models.LambdaFunction)
+
+
     def test_can_create_s3_event_handler(self, sample_s3_event_app):
         # TODO: don't require app name, get it from app obj.
         config = self.create_config(sample_s3_event_app,

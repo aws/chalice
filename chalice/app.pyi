@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Callable, Union, Optional, Set
+from typing import Dict, List, Any, Callable, Union, Optional, Set, TypedDict
 import logging
 from chalice.local import LambdaContext
 
@@ -20,7 +20,7 @@ class TooManyRequestsError(ChaliceViewError): ...
 
 ALL_ERRORS = ... # type: List[ChaliceViewError]
 _BUILTIN_AUTH_FUNC = Callable[
-    [AuthRequest], Union[AuthResponse, Dict[str, Any]]]
+    Union[AuthRequest, RequestAuthorizerRequest], Union[AuthResponse, Dict[str, Any]]]
 
 
 class Authorizer:
@@ -107,7 +107,8 @@ class RouteEntry(object):
                  api_key_required: Optional[bool]=None,
                  content_types: Optional[List[str]]=None,
                  authorizer: Optional[Union[Authorizer,
-                                            ChaliceAuthorizer]]=None,
+                                            ChaliceAuthorizer,
+                                            ChaliceRequestPayloadAuthorizer]]=None,
                  cors: Union[bool, CORSConfig]=False) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
@@ -136,6 +137,12 @@ class DecoratorAPI(object):
                    ttl_seconds: Optional[int]=None,
                    execution_role: Optional[str]=None,
                    name: Optional[str]=None) -> Callable[..., Any]: ...
+
+    def request_authorizer(self,
+               identity_sources: IdentitySources,
+               ttl_seconds: Optional[int]=None,
+               execution_role: Optional[str]=None,
+               name: Optional[str]=None) -> Callable[..., Any]: ...
 
     def on_s3_event(self,
                     bucket: str,
@@ -193,23 +200,43 @@ class Chalice(DecoratorAPI):
                                     function_args: Dict[str, Any]) -> Response: ...
 
 
-class ChaliceAuthorizer(object):
+class BuiltinAuthorizer(object):
     name = ... # type: str
     func = ... # type: _BUILTIN_AUTH_FUNC
     scopes = ... # type: List[str]
     config = ... # type: BuiltinAuthConfig
+
+
+class ChaliceAuthorizer(object):
     def with_scopes(self, scopes: List[str]) -> ChaliceAuthorizer: ...
+
+
+class ChaliceRequestPayloadAuthorizer(BuiltinAuthorizer):
+    def with_scopes(self, scopes: List[str]) -> ChaliceRequestPayloadAuthorizer: ...
+    def stringify_identity_sources(self) -> str: ...
 
 
 class BuiltinAuthConfig(object):
     name = ... # type: str
     handler_string = ... # type: str
+    ttl_seconds = ... # type: int
+    execution_role = ... # type: str
+    identity_sources = ... # type: dict
 
 
 class AuthRequest(object):
     auth_type = ... # type: str
     token = ... # type: str
     method_arn = ... # type: str
+
+
+class RequestAuthorizerRequest(object):
+    auth_type =  ... # type: str
+    method_arn =  ... # type: str
+    headers =  ... # type: Optional[Dict[str, str]]
+    query_params =  ... # type: Optional[Dict[str, str]]
+    stage_variables =  ... # type: Optional[Dict[str, str]]
+    request_context =  ... # type: Optional[Dict[str, str]]
 
 
 class AuthRoute(object):
@@ -285,3 +312,10 @@ class CloudWatchEventConfig(BaseEventSourceConfig):
 class Blueprint(DecoratorAPI):
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
+
+
+class IdentitySources(TypedDict):
+    headers = ... # type: Optional[List[str]]
+    query_strings = ... # type: Optional[List[str]]
+    stage_variables = ... # type: Optional[List[str]]
+    context = ... # type: Optional[List[str]]

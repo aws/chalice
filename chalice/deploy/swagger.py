@@ -3,7 +3,7 @@ import inspect
 
 from typing import Any, List, Dict, Optional, Union  # noqa
 
-from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
+from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig, ChaliceRequestPayloadAuthorizer  # noqa
 from chalice.app import ChaliceAuthorizer
 from chalice.deploy.planner import StringFormat
 from chalice.deploy.models import RestAPI  # noqa
@@ -78,7 +78,10 @@ class SwaggerGenerator(object):
 
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
-        if isinstance(authorizer, ChaliceAuthorizer):
+        if isinstance(authorizer, ChaliceRequestPayloadAuthorizer):
+            config = authorizer.to_swagger()
+            config['x-amazon-apigateway-authorizer']['authorizerUri'] = self._auth_uri(authorizer)
+        elif isinstance(authorizer, ChaliceAuthorizer):
             auth_config = authorizer.config
             config = {
                 'in': 'header',
@@ -97,6 +100,9 @@ class SwaggerGenerator(object):
                 api_gateway_authorizer['authorizerResultTtlInSeconds'] = \
                     auth_config.ttl_seconds
             config['x-amazon-apigateway-authorizer'] = api_gateway_authorizer
+        elif isinstance(authorizer, ChaliceRequestPayloadAuthorizer):
+            config = authorizer.to_swagger()
+            config['x-amazon-apigateway-authorizer']['authorizerUri'] = self._auth_uri(authorizer)
         else:
             config = authorizer.to_swagger()
         api_config.setdefault(

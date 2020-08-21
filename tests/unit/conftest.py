@@ -54,6 +54,20 @@ def sample_app_with_auth():
 
     return app
 
+@fixture
+def sample_app_with_request_auth():
+    app = Chalice('samplerequestauth')
+
+    @app.request_authorizer(name='myrequestauth', identity_sources={"headers": ['Test']})
+    def myrequestauth(auth_request):
+        pass
+
+    @app.route('/', authorizer=myrequestauth)
+    def foo():
+        return {}
+
+    return app
+
 
 @fixture
 def sample_app_schedule_only():
