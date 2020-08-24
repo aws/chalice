@@ -70,8 +70,9 @@ def get_client_calls_for_app(source_code):
 
     """
     parsed = parse_code(source_code)
-    parsed.parsed_ast = AppViewTransformer().visit(parsed.parsed_ast)
-    ast.fix_missing_locations(parsed.parsed_ast)
+    parsed.parsed_ast = ast.fix_missing_locations(
+        AppViewTransformer().visit(parsed.parsed_ast)
+    )
     t = SymbolTableTypeInfer(parsed)
     binder = t.bind_types()
     collector = APICallCollector(binder)
@@ -267,11 +268,15 @@ class ChainedSymbolTable(object):
         symbol = cast(TypedSymbol, self._local_table.lookup(name))
         symbol.inferred_type = inferred_type
 
-    def lookup_sub_namespace(self, name):
-        # type: (str) -> ChainedSymbolTable
+    def lookup_sub_namespace(self, name, lineno=None):
+        # type: (str, Optional[int]) -> ChainedSymbolTable
         for child in self._local_table.get_children():
             if child.get_name() == name:
-                return self.__class__(child, self._local_table)
+                if lineno is not None:
+                    if child.get_lineno() == lineno:
+                        return self.__class__(child, self._local_table)
+                else:
+                    return self.__class__(child, self._local_table)
         for child in self._global_table.get_children():
             if child.get_name() == name:
                 return self.__class__(child, self._global_table)
@@ -493,7 +498,8 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         # function, then we know that the inferred type for
         # calling the function is the .return_type type.
         function_name = node.func.id
-        sub_table = self._symbol_table.lookup_sub_namespace(function_name)
+        sub_table = self._symbol_table.lookup_sub_namespace(
+            function_name, node.lineno)
         ast_node = self._symbol_table.lookup_ast_node_for_symbol(
             function_name)
 
@@ -696,4 +702,10 @@ class AppViewTransformer(ast.NodeTransformer):
                 args=[], keywords=[], starargs=None, kwargs=None
             )
         )
+        # We're using the same line numbers as the original
+        # function definition so that way we can match up symbols
+        # (which have linenos with the corresponding functiondef)
+        # in the case that a symbol has multiple namespaces associated
+        # with it.
+        ast.copy_location(auto_invoke, node)
         return [node, auto_invoke]
