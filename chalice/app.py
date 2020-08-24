@@ -772,7 +772,7 @@ class _HandlerRegistration(object):
             if name_prefix is not None:
                 name = name_prefix + name
             url_prefix = options.get('url_prefix')
-            if url_prefix is not None:
+            if url_prefix is not None and handler_type == 'route':
                 # Move url_prefix into kwargs so only the
                 # route() handler gets a url_prefix kwarg.
                 kwargs['url_prefix'] = url_prefix
