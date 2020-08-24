@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.18.1
+======
+
+* bugfix:Packaging:Add fallback to retrieve name/version from sdist (#1486)
+* bugfix:Analyzer:Handle symbols with multiple (shadowed) namespaces (#1494)
+
+
 1.18.0
 ======
 

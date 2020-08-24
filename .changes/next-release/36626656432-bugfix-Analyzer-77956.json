@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Analyzer",
-  "description": "Handle symbols with multiple (shadowed) namespaces (#1494)"
-}
