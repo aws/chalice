@@ -2082,6 +2082,26 @@ def test_can_call_lambda_context_on_blueprint_when_mounted(create_event):
     assert response == {'context': 'foo'}
 
 
+def test_can_add_authorizer_with_url_prefix_and_routes():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @foo.authorizer()
+    def myauth(event):
+        pass
+
+    @foo.route('/foo', authorizer=myauth)
+    def routefoo():
+        pass
+
+    myapp.register_blueprint(foo, url_prefix='/bar')
+    assert len(myapp.builtin_auth_handlers) == 1
+    authorizer = myapp.builtin_auth_handlers[0]
+    assert isinstance(authorizer, app.BuiltinAuthConfig)
+    assert authorizer.name == 'myauth'
+    assert authorizer.handler_string == 'app.chalicelib.blueprints.foo.myauth'
+
+
 def test_runtime_error_if_current_request_access_on_non_registered_blueprint():
     bp = app.Blueprint('app.chalicelib.blueprints.foo')
     with pytest.raises(RuntimeError):
