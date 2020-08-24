@@ -846,7 +846,7 @@ class SDistMetadataFetcher(object):
                 egg_info_dir, info_contents[0], 'PKG-INFO')
         else:
             # This might be a pep 517 package in which case this PKG-INFO file
-            # should be available right in the top level irectory of the sdist
+            # should be available right in the top level directory of the sdist
             # in the case where the egg_info command fails.
             logger.debug("Using fallback location for PKG-INFO file in "
                          "package directory: %s", package_dir)

@@ -1236,7 +1236,6 @@ class TestSdistMetadataFetcher(object):
         pkg_info_file = (
             'Name: foo\n'
             'Version: 1.0\n'
-
         )
         with osutils.tempdir() as tempdir:
             filepath = self._write_fake_sdist(bad_setup_py, tempdir,
