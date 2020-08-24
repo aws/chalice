@@ -711,6 +711,44 @@ def test_can_analyze_transfer_manager_methods():
     """) == {'s3': set(['download_file'])}
 
 
+def test_can_handle_replacing_function_name():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='sqs-event')
+
+        def index():
+            pass
+
+        @app.on_sqs_message(queue='myqueue')
+        def index(event):
+            foo = boto3.client('s3').list_buckets()
+
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_handle_multiple_shadowing():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='sqs-event')
+
+        def index():
+            pass
+
+        @app.on_sqs_message(queue='myqueue')
+        def index(event):
+            foo = boto3.client('s3').list_buckets()
+
+        @app.on_s3_event(bucket='mybucket')
+        def index(event):
+            bar = boto3.client('s3').head_bucket(Bucket='foo')
+
+    """) == {'s3': set(['list_buckets', 'head_bucket'])}
+
+
 # def test_tuple_assignment():
 #     assert aws_calls("""\
 #         import boto3
