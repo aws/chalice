@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Packaging",
+  "description": "Add fallback to retrieve name/version from sdist (#1486)"
+}
