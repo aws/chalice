@@ -35,7 +35,7 @@ setup(
         'event-file-poller': ['watchdog==0.9.0'],
     },
     license="Apache License 2.0",
-    package_data={'chalice': ['*.json']},
+    package_data={'chalice': ['*.json', 'py.typed']},
     include_package_data=True,
     zip_safe=False,
     keywords='chalice',
