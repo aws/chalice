@@ -15,6 +15,7 @@ import six
 
 from chalice import app
 from chalice import NotFoundError
+from chalice.test import Client
 from chalice.app import (
     APIGateway,
     Request,
@@ -248,6 +249,74 @@ def sample_websocket_app():
         calls.append(('default', event))
 
     return demo, calls
+
+
+@fixture
+def sample_middleware_app():
+    demo = app.Chalice('app-name')
+    demo.calls = []
+
+    @demo.middleware('all')
+    def mymiddleware(event, get_response):
+        demo.calls.append({'type': 'all',
+                           'event': event.__class__.__name__})
+        return get_response(event)
+
+    @demo.middleware('s3')
+    def mymiddleware_s3(event, get_response):
+        demo.calls.append({'type': 's3',
+                           'event': event.__class__.__name__})
+        return get_response(event)
+
+    @demo.middleware('sns')
+    def mymiddleware_sns(event, get_response):
+        demo.calls.append({'type': 'sns',
+                           'event': event.__class__.__name__})
+        return get_response(event)
+
+    @demo.middleware('http')
+    def mymiddleware_http(event, get_response):
+        demo.calls.append({'type': 'http',
+                           'event': event.__class__.__name__})
+        return get_response(event)
+
+    @demo.middleware('websocket')
+    def mymiddleware_websocket(event, get_response):
+        demo.calls.append({'type': 'websocket',
+                           'event': event.__class__.__name__})
+        return get_response(event)
+
+    @demo.middleware('pure_lambda')
+    def mymiddleware_pure_lambda(event, get_response):
+        demo.calls.append({'type': 'pure_lambda',
+                           'event': event.__class__.__name__})
+        return get_response(event)
+
+    @demo.route('/')
+    def index():
+        return {}
+
+    @demo.on_s3_event(bucket='foo')
+    def s3_handler(event):
+        pass
+
+    @demo.on_sns_message(topic='foo')
+    def sns_handler(event):
+        pass
+
+    @demo.on_sqs_message(queue='foo')
+    def sqs_handler(event):
+        pass
+
+    @demo.lambda_function()
+    def lambda_handler(event, context):
+        pass
+
+    @demo.on_ws_message()
+    def ws_handler(event):
+        pass
+
+    return demo
 
 
 @fixture
@@ -1986,7 +2055,7 @@ def test_can_mount_lambda_functions_with_name_prefix():
 
     @foo.lambda_function()
     def myfunction(event, context):
-        return event, context
+        return event
 
     myapp.register_blueprint(foo, name_prefix='myprefix_')
     assert len(myapp.pure_lambda_functions) == 1
@@ -1995,7 +2064,11 @@ def test_can_mount_lambda_functions_with_name_prefix():
     assert lambda_function.handler_string == (
         'app.chalicelib.blueprints.foo.myfunction')
 
-    assert myfunction('foo', 'bar') == ('foo', 'bar')
+    with Client(myapp) as c:
+        response = c.lambda_.invoke(
+            'myprefix_myfunction', {'foo': 'bar'}
+        )
+    assert response.payload == {'foo': 'bar'}
 
 
 def test_can_mount_event_sources_with_blueprint():
@@ -2713,3 +2786,362 @@ def test_does_raise_on_invalid_json_wbsocket_body(create_websocket_event):
 
     event = create_websocket_event('$default', body='foo bar')
     demo(event, context=None)
+
+
+class TestMiddleware:
+    def test_middleware_basic_api(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('all')
+        def myhandler(event, get_response):
+            called.append({'name': 'myhandler', 'bucket': event.bucket})
+            return get_response(event)
+
+        @demo.middleware('all')
+        def myhandler2(event, get_response):
+            called.append({'name': 'myhandler2', 'bucket': event.bucket})
+            return get_response(event)
+
+        @demo.on_s3_event('mybucket')
+        def handler(event):
+            called.append({'name': 'main', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+        assert response.payload == {'bucket': 'mybucket'}
+        assert called == [
+            {'name': 'myhandler', 'bucket': 'mybucket'},
+            {'name': 'myhandler2', 'bucket': 'mybucket'},
+            {'name': 'main', 'bucket': 'mybucket'},
+        ]
+
+    def test_can_short_circuit_response(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('all')
+        def myhandler(event, get_response):
+            called.append({'name': 'myhandler', 'bucket': event.bucket})
+            return {'short-circuit': True}
+
+        @demo.middleware('all')
+        def myhandler2(event, get_response):
+            called.append({'name': 'myhandler2', 'bucket': event.bucket})
+            return get_response(event)
+
+        @demo.on_s3_event('mybucket')
+        def handler(event):
+            called.append({'name': 'main', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+        assert response.payload == {'short-circuit': True}
+        assert called == [
+            {'name': 'myhandler', 'bucket': 'mybucket'},
+        ]
+
+    def test_can_alter_response(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('all')
+        def myhandler(event, get_response):
+            called.append({'name': 'myhandler', 'bucket': event.bucket})
+            response = get_response(event)
+            response['myhandler'] = True
+            return response
+
+        @demo.middleware('all')
+        def myhandler2(event, get_response):
+            called.append({'name': 'myhandler2', 'bucket': event.bucket})
+            response = get_response(event)
+            response['myhandler2'] = True
+            return response
+
+        @demo.on_s3_event('mybucket')
+        def handler(event):
+            called.append({'name': 'main', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+        assert response.payload == {
+            'bucket': 'mybucket',
+            'myhandler': True,
+            'myhandler2': True,
+        }
+        assert called == [
+            {'name': 'myhandler', 'bucket': 'mybucket'},
+            {'name': 'myhandler2', 'bucket': 'mybucket'},
+            {'name': 'main', 'bucket': 'mybucket'},
+        ]
+
+    def test_can_change_order_of_definitions(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.on_s3_event('mybucket')
+        def handler(event):
+            called.append({'name': 'main', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        @demo.middleware('all')
+        def myhandler(event, get_response):
+            called.append({'name': 'myhandler', 'bucket': event.bucket})
+            response = get_response(event)
+            response['myhandler'] = True
+            return response
+
+        @demo.middleware('all')
+        def myhandler2(event, get_response):
+            called.append({'name': 'myhandler2', 'bucket': event.bucket})
+            response = get_response(event)
+            response['myhandler2'] = True
+            return response
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+        assert response.payload == {
+            'bucket': 'mybucket',
+            'myhandler': True,
+            'myhandler2': True,
+        }
+        assert called == [
+            {'name': 'myhandler', 'bucket': 'mybucket'},
+            {'name': 'myhandler2', 'bucket': 'mybucket'},
+            {'name': 'main', 'bucket': 'mybucket'},
+        ]
+
+    def test_can_use_middleware_for_pure_lambda(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            called.append({'name': 'mymiddleware', 'event': event.to_dict()})
+            return get_response(event)
+
+        @demo.lambda_function()
+        def myfunction(event, context):
+            called.append({'name': 'myfunction', 'event': event})
+            return {'foo': 'bar'}
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'myfunction', {'input-event': True}
+            )
+
+        assert response.payload == {'foo': 'bar'}
+        assert called == [
+            {'name': 'mymiddleware', 'event': {'input-event': True}},
+            {'name': 'myfunction', 'event': {'input-event': True}},
+        ]
+
+    def test_can_use_for_websocket_handlers(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            called.append({'name': 'mymiddleware', 'event': event.to_dict()})
+            return get_response(event)
+
+        @demo.on_ws_message()
+        def myfunction(event):
+            called.append({'name': 'myfunction', 'event': event.to_dict()})
+            return {'foo': 'bar'}
+
+        with Client(demo) as c:
+            event = {
+                'requestContext': {
+                    'domainName': 'example.com',
+                    'stage': 'dev',
+                    'connectionId': 'abcd',
+                },
+                'body': "body"
+            }
+            response = c.lambda_.invoke('myfunction', event)
+
+        assert response.payload == {'statusCode': 200}
+        assert called == [
+            {'name': 'mymiddleware', 'event': event},
+            {'name': 'myfunction', 'event': event},
+        ]
+
+    def test_can_use_rest_api_for_middleware(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            called.append({'name': 'mymiddleware', 'method': event.method})
+            response = get_response(event)
+            response.status_code = 201
+            return response
+
+        @demo.route('/')
+        def index():
+            called.append({'url': '/'})
+            return {'index': True}
+
+        @demo.route('/hello')
+        def hello():
+            called.append({'url': '/hello'})
+            return {'hello': True}
+
+        with Client(demo) as c:
+            assert c.http.get('/').json_body == {'index': True}
+            response = c.http.get('/hello')
+            assert response.json_body == {'hello': True}
+            # Verify middleware can alter the response.
+            assert response.status_code == 201
+
+        assert called == [
+            {'name': 'mymiddleware', 'method': 'GET'},
+            {'url': '/'},
+            {'name': 'mymiddleware', 'method': 'GET'},
+            {'url': '/hello'},
+        ]
+
+    def test_can_filter_middleware_registration(self, sample_middleware_app):
+        with Client(sample_middleware_app) as c:
+            c.http.get('/')
+            assert sample_middleware_app.calls == [
+                {'type': 'all', 'event': 'Request'},
+                {'type': 'http', 'event': 'Request'},
+            ]
+            sample_middleware_app.calls[:] = []
+            c.lambda_.invoke(
+                's3_handler', c.events.generate_s3_event('bucket', 'key'))
+            assert sample_middleware_app.calls == [
+                {'type': 'all', 'event': 'S3Event'},
+                {'type': 's3', 'event': 'S3Event'},
+            ]
+            sample_middleware_app.calls[:] = []
+            c.lambda_.invoke(
+                'sns_handler', c.events.generate_sns_event('topic', 'message'))
+            assert sample_middleware_app.calls == [
+                {'type': 'all', 'event': 'SNSEvent'},
+                {'type': 'sns', 'event': 'SNSEvent'},
+            ]
+            sample_middleware_app.calls[:] = []
+            c.lambda_.invoke(
+                'sqs_handler', c.events.generate_sns_event('queue', 'message'))
+            # There is no sqs specific middleware.
+            assert sample_middleware_app.calls == [
+                {'type': 'all', 'event': 'SQSEvent'},
+            ]
+            sample_middleware_app.calls[:] = []
+            c.lambda_.invoke('lambda_handler', {})
+            assert sample_middleware_app.calls == [
+                {'type': 'all', 'event': 'LambdaFunctionEvent'},
+                {'type': 'pure_lambda', 'event': 'LambdaFunctionEvent'},
+            ]
+            sample_middleware_app.calls[:] = []
+            c.lambda_.invoke('ws_handler', {
+                'requestContext': {
+                    'domainName': 'example.com',
+                    'stage': 'dev',
+                    'connectionId': 'abcd',
+                },
+                'body': "body"
+            })
+            assert sample_middleware_app.calls == [
+                {'type': 'all', 'event': 'WebsocketEvent'},
+                {'type': 'websocket', 'event': 'WebsocketEvent'},
+            ]
+
+    def test_can_register_middleware_on_blueprints(self):
+        demo = app.Chalice('app-name')
+        bp = app.Blueprint('bpmiddleware')
+        called = []
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            called.append({'name': 'fromapp', 'bucket': event.bucket})
+            return get_response(event)
+
+        @bp.middleware('all')
+        def bp_middleware(event, get_response):
+            called.append({'name': 'frombp', 'bucket': event.bucket})
+            return get_response(event)
+
+        @bp.on_s3_event('mybucket')
+        def bp_handler(event):
+            called.append({'name': 'bp_handler', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        @bp.route('/')
+        def index():
+            pass
+
+        @demo.on_s3_event('mybucket')
+        def handler(event):
+            called.append({'name': 'main', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        demo.register_blueprint(bp)
+
+        with Client(demo) as c:
+            # The order is particular here.  When we're invoking the lambda
+            # function from the "app" (demo) object, we expect
+            # the order to be mymiddleware, bp_middleware because mymiddleware
+            # is registered before the .register_blueprint().
+            response = c.lambda_.invoke(
+                'handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+            assert response.payload == {'bucket': 'mybucket'}
+            assert called == [
+                {'name': 'fromapp', 'bucket': 'mybucket'},
+                {'name': 'frombp', 'bucket': 'mybucket'},
+                {'name': 'main', 'bucket': 'mybucket'},
+            ]
+            called[:] = []
+            response = c.lambda_.invoke(
+                'bp_handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+            assert response.payload == {'bucket': 'mybucket'}
+            assert called == [
+                {'name': 'fromapp', 'bucket': 'mybucket'},
+                {'name': 'frombp', 'bucket': 'mybucket'},
+                {'name': 'bp_handler', 'bucket': 'mybucket'},
+            ]
+
+    def test_blueprint_gets_middlware_added(self):
+        demo = app.Chalice('app-name')
+        bp = app.Blueprint('bpmiddleware')
+        called = []
+
+        @bp.middleware('all')
+        def bp_middleware(event, get_response):
+            called.append({'name': 'frombp', 'bucket': 'mybucket'})
+            return get_response(event)
+
+        @demo.on_s3_event('mybucket')
+        def handler(event):
+            called.append({'name': 'main', 'bucket': event.bucket})
+            return {'bucket': event.bucket}
+
+        demo.register_blueprint(bp)
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'handler', c.events.generate_s3_event('mybucket', 'key')
+            )
+
+        assert response.payload == {'bucket': 'mybucket'}
+        assert called == [
+            {'name': 'frombp', 'bucket': 'mybucket'},
+            {'name': 'main', 'bucket': 'mybucket'},
+        ]

@@ -68,7 +68,7 @@ def error_response(message, error_code, http_status_code, headers=None):
     response = Response(body=body, status_code=http_status_code,
                         headers=headers)
 
-    return response.to_dict()
+    return response
 
 
 def _matches_content_type(content_type, valid_content_types):
@@ -617,6 +617,12 @@ class WebsocketAPI(object):
 
 
 class DecoratorAPI(object):
+    def middleware(self, event_type):
+        def _middleware_wrapper(func):
+            self._register_middleware(func, event_type)
+            return func
+        return _middleware_wrapper
+
     def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
         return self._create_registration_function(
             handler_type='authorizer',
@@ -725,10 +731,31 @@ class DecoratorAPI(object):
             'on_sqs_message': SQSEvent,
             'on_cw_event': CloudWatchEvent,
             'schedule': CloudWatchEvent,
+            'lambda_function': LambdaFunctionEvent,
+        }
+        middleware_mapping = {
+            'on_s3_event': 's3',
+            'on_sns_message': 'sns',
+            'on_sqs_message': 'sqs',
+            'on_cw_event': 'cloudwatch',
+            'schedule': 'scheduled',
+            'lambda_function': 'pure_lambda',
         }
         if handler_type in event_classes:
+            if handler_type == 'lambda_function':
+                # We have to wrap existing @app.lambda_function()
+                # handlers for backwards compat reasons so we can
+                # preserve the `def handler(event, context): ...`
+                # interface.  However we need a consistent interface
+                # for middleware so we have to wrap the event
+                # here.
+                user_handler = PureLambdaWrapper(user_handler)
             return EventSourceHandler(
-                user_handler, event_classes[handler_type])
+                user_handler, event_classes[handler_type],
+                middleware_handlers=self._get_middleware_handlers(
+                    event_type=middleware_mapping[handler_type],
+                )
+            )
 
         websocket_event_classes = [
             'on_ws_connect',
@@ -738,7 +765,9 @@ class DecoratorAPI(object):
         if handler_type in websocket_event_classes:
             return WebsocketEventSourceHandler(
                 user_handler, WebsocketEvent,
-                self.websocket_api  # pylint: disable=no-member
+                self.websocket_api,  # pylint: disable=no-member
+                middleware_handlers=self._get_middleware_handlers(
+                    event_type='websocket')
             )
         if handler_type == 'authorizer':
             # Authorizer is special cased and doesn't quite fit the
@@ -746,9 +775,15 @@ class DecoratorAPI(object):
             return ChaliceAuthorizer(handler_name, user_handler)
         return user_handler
 
+    def _get_middleware_handlers(self, event_type):
+        raise NotImplementedError("_get_middleware_handlers")
+
     def _register_handler(self, handler_type, name,
                           user_handler, wrapped_handler, kwargs, options=None):
         raise NotImplementedError("_register_handler")
+
+    def _register_middleware(self, func, event_type):
+        raise NotImplementedError("_register_middleware")
 
 
 class _HandlerRegistration(object):
@@ -761,6 +796,10 @@ class _HandlerRegistration(object):
         self.pure_lambda_functions = []
         self.api = APIGateway()
         self.handler_map = {}
+        self.middleware_handlers = []
+
+    def _register_middleware(self, func, event_type):
+        self.middleware_handlers.append((func, event_type))
 
     def _do_register_handler(self, handler_type, name, user_handler,
                              wrapped_handler, kwargs, options=None):
@@ -1021,6 +1060,8 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
+    # These are defined here on the Chalice class because we want all the
+    # feature flag tracking to live in Chalice and not the DecoratorAPI.
     def _register_on_ws_connect(self, name, user_handler, handler_string,
                                 kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
@@ -1039,142 +1080,29 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         super(Chalice, self)._register_on_ws_disconnect(
             name, user_handler, handler_string, kwargs, **unused)
 
+    def _get_middleware_handlers(self, event_type):
+        # We're returning a generator here because we want to defer the
+        # collection of all middleware until as last as possible (when
+        # then handler is actually invoked).  This lets us pick up any
+        # middleware that's registered after a handler has been defined,
+        # which is the behavior you'd expect.
+        return (func for func, filter_type in self.middleware_handlers if
+                filter_type in [event_type, 'all'])
+
     def __call__(self, event, context):
-        # This is what's invoked via lambda.
-        # Sometimes the event can be something that's not
-        # what we specified in our request_template mapping.
-        # When that happens, we want to give a better error message here.
-        resource_path = event.get('requestContext', {}).get('resourcePath')
-        if resource_path is None:
-            return error_response(error_code='InternalServerError',
-                                  message='Unknown request.',
-                                  http_status_code=500)
-        http_method = event['requestContext']['httpMethod']
-        if resource_path not in self.routes:
-            raise ChaliceError("No view function for: %s" % resource_path)
-        if http_method not in self.routes[resource_path]:
-            return error_response(
-                error_code='MethodNotAllowedError',
-                message='Unsupported method: %s' % http_method,
-                http_status_code=405)
-        route_entry = self.routes[resource_path][http_method]
-        view_function = route_entry.view_function
-        function_args = {name: event['pathParameters'][name]
-                         for name in route_entry.view_args}
+        # For legacy reasons, we can't move the Rest API handler entry
+        # point away from this Chalice.__call__ method . However, we can
+        # try to extract as much as logic as possible to a separate handler
+        # class we can call.  That way it's still structured somewhat similar
+        # to the other event handlers which makes it more manageable to
+        # implement shared functionality (e.g. middleware).
         self.lambda_context = context
-        self.current_request = Request(
-            event['multiValueQueryStringParameters'],
-            event['headers'],
-            event['pathParameters'],
-            event['requestContext']['httpMethod'],
-            event['body'],
-            event['requestContext'],
-            event['stageVariables'],
-            event.get('isBase64Encoded', False)
+        handler = RestAPIEventHandler(
+            self.routes, self.api, self.log, self.debug,
+            middleware_handlers=self._get_middleware_handlers('http'),
         )
-        # We're getting the CORS headers before validation to be able to
-        # output desired headers with
-        cors_headers = None
-        if self._cors_enabled_for_route(route_entry):
-            cors_headers = self._get_cors_headers(route_entry.cors)
-        # We're doing the header validation after creating the request
-        # so can leverage the case insensitive dict that the Request class
-        # uses for headers.
-        if route_entry.content_types:
-            content_type = self.current_request.headers.get(
-                'content-type', 'application/json')
-            if not _matches_content_type(content_type,
-                                         route_entry.content_types):
-                return error_response(
-                    error_code='UnsupportedMediaType',
-                    message='Unsupported media type: %s' % content_type,
-                    http_status_code=415,
-                    headers=cors_headers
-                )
-        response = self._get_view_function_response(view_function,
-                                                    function_args)
-        if cors_headers is not None:
-            self._add_cors_headers(response, cors_headers)
-
-        response_headers = CaseInsensitiveMapping(response.headers)
-        if not self._validate_binary_response(
-                self.current_request.headers, response_headers):
-            content_type = response_headers.get('content-type', '')
-            return error_response(
-                error_code='BadRequest',
-                message=('Request did not specify an Accept header with %s, '
-                         'The response has a Content-Type of %s. If a '
-                         'response has a binary Content-Type then the request '
-                         'must specify an Accept header that matches.'
-                         % (content_type, content_type)),
-                http_status_code=400,
-                headers=cors_headers
-            )
-        response = response.to_dict(self.api.binary_types)
-        return response
-
-    def _validate_binary_response(self, request_headers, response_headers):
-        # Validates that a response is valid given the request. If the response
-        # content-type specifies a binary type, there must be an accept header
-        # that is a binary type as well.
-        request_accept_header = request_headers.get('accept')
-        response_content_type = response_headers.get(
-            'content-type', 'application/json')
-        response_is_binary = _matches_content_type(response_content_type,
-                                                   self.api.binary_types)
-        expects_binary_response = False
-        if request_accept_header is not None:
-            expects_binary_response = _matches_content_type(
-                request_accept_header, self.api.binary_types)
-        if response_is_binary and not expects_binary_response:
-            return False
-        return True
-
-    def _get_view_function_response(self, view_function, function_args):
-        try:
-            response = view_function(**function_args)
-            if not isinstance(response, Response):
-                response = Response(body=response)
-            self._validate_response(response)
-        except ChaliceViewError as e:
-            # Any chalice view error should propagate.  These
-            # get mapped to various HTTP status codes in API Gateway.
-            response = Response(body={'Code': e.__class__.__name__,
-                                      'Message': str(e)},
-                                status_code=e.STATUS_CODE)
-        except Exception:
-            headers = {}
-            self.log.error("Caught exception for %s", view_function,
-                           exc_info=True)
-            if self.debug:
-                # If the user has turned on debug mode,
-                # we'll let the original exception propagate so
-                # they get more information about what went wrong.
-                stack_trace = ''.join(traceback.format_exc())
-                body = stack_trace
-                headers['Content-Type'] = 'text/plain'
-            else:
-                body = {'Code': 'InternalServerError',
-                        'Message': 'An internal server error occurred.'}
-            response = Response(body=body, headers=headers, status_code=500)
-        return response
-
-    def _validate_response(self, response):
-        for header, value in response.headers.items():
-            if '\n' in value:
-                raise ChaliceError("Bad value for header '%s': %r" %
-                                   (header, value))
-
-    def _cors_enabled_for_route(self, route_entry):
-        return route_entry.cors is not None
-
-    def _get_cors_headers(self, cors):
-        return cors.get_access_control_headers()
-
-    def _add_cors_headers(self, response, cors_headers):
-        for name, value in cors_headers.items():
-            if name not in response.headers:
-                response.headers[name] = value
+        self.current_request = handler.create_request_object(event)
+        return handler(event, context)
 
 
 class BuiltinAuthConfig(object):
@@ -1448,31 +1376,241 @@ class WebsocketDisconnectConfig(BaseEventSourceConfig):
         self.handler_function = user_handler
 
 
-class EventSourceHandler(object):
+class PureLambdaWrapper(object):
+    def __init__(self, original_func):
+        self._original_func = original_func
 
-    def __init__(self, func, event_class):
+    def __call__(self, event):
+        # The @app.lambda_function() expects an event dict
+        # and a context argument so this class will is used to adapt
+        # from the Chalice single-arg style function (which is used
+        # in all the event handlers) to the low-level lambda api.
+        return self._original_func(event.to_dict(), event.context)
+
+
+class MiddlewareHandler(object):
+    def __init__(self, handler, next_handler):
+        self.handler = handler
+        self.next_handler = next_handler
+
+    def __call__(self, request):
+        return self.handler(request, self.next_handler)
+
+
+class BaseLambdaHandler(object):
+    def __call__(self, event, context):
+        pass
+
+    def _build_middleware_handlers(self, handlers, original_handler):
+        current = original_handler
+        for handler in reversed(list(handlers)):
+            current = MiddlewareHandler(handler=handler, next_handler=current)
+        return current
+
+
+class EventSourceHandler(BaseLambdaHandler):
+
+    def __init__(self, func, event_class, middleware_handlers=None):
         self.func = func
         self.event_class = event_class
+        if middleware_handlers is None:
+            middleware_handlers = []
+        self._middleware_handlers = middleware_handlers
+        self.handler = None
 
     def __call__(self, event, context):
         event_obj = self.event_class(event, context)
-        return self.func(event_obj)
+        if self.handler is None:
+            # Defer creating handlers so we have all middleware configured.
+            self.handler = self._build_middleware_handlers(
+                self._middleware_handlers, original_handler=self.func)
+        return self.handler(event_obj)
 
 
-class WebsocketEventSourceHandler(object):
-    def __init__(self, func, event_class, websocket_api):
+class WebsocketEventSourceHandler(EventSourceHandler):
+    def __init__(self, func, event_class, websocket_api,
+                 middleware_handlers=None):
         self.func = func
         self.event_class = event_class
         self.websocket_api = websocket_api
+        if middleware_handlers is None:
+            middleware_handlers = []
+        self._middleware_handlers = middleware_handlers
+        self.handler = None
 
     def __call__(self, event, context):
-        event_obj = self.event_class(event, context)
         self.websocket_api.configure(
-            event_obj.domain_name,
-            event_obj.stage,
+            event['requestContext']['domainName'],
+            event['requestContext']['stage'],
         )
-        self.func(event_obj)
+        super(WebsocketEventSourceHandler, self).__call__(event, context)
         return {'statusCode': 200}
+
+
+class RestAPIEventHandler(BaseLambdaHandler):
+    def __init__(self, route_table, api, log, debug, middleware_handlers=None):
+        self.routes = route_table
+        self.api = api
+        self.log = log
+        self.debug = debug
+        self.current_request = None
+        self.lambda_context = None
+        if middleware_handlers is None:
+            middleware_handlers = []
+        self._middleware_handlers = middleware_handlers
+
+    def create_request_object(self, event):
+        # For legacy reasons, there's some initial validation that takes
+        # place before we convert the input event to a python object.
+        # We don't do this in event handlers we added later, so we *should*
+        # be able to remove this code.  To be safe, we're keeping it in for
+        # now to minimize the potential for breaking changes.
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        if resource_path is not None:
+            self.current_request = Request(
+                event['multiValueQueryStringParameters'],
+                event['headers'],
+                event['pathParameters'],
+                event['requestContext']['httpMethod'],
+                event['body'],
+                event['requestContext'],
+                event['stageVariables'],
+                event.get('isBase64Encoded', False)
+            )
+            return self.current_request
+
+    def __call__(self, event, context):
+        def wrapped_event(request):
+            return self._main_rest_api_handler(event, context)
+
+        final_handler = self._build_middleware_handlers(
+            self._middleware_handlers,
+            original_handler=wrapped_event,
+        )
+        response = final_handler(self.current_request)
+        return response.to_dict(self.api.binary_types)
+
+    def _main_rest_api_handler(self, event, context):
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        if resource_path is None:
+            return error_response(error_code='InternalServerError',
+                                  message='Unknown request.',
+                                  http_status_code=500)
+        http_method = event['requestContext']['httpMethod']
+        if resource_path not in self.routes:
+            raise ChaliceError("No view function for: %s" % resource_path)
+        if http_method not in self.routes[resource_path]:
+            return error_response(
+                error_code='MethodNotAllowedError',
+                message='Unsupported method: %s' % http_method,
+                http_status_code=405)
+        route_entry = self.routes[resource_path][http_method]
+        view_function = route_entry.view_function
+        function_args = {name: event['pathParameters'][name]
+                         for name in route_entry.view_args}
+        self.lambda_context = context
+        # We're getting the CORS headers before validation to be able to
+        # output desired headers with
+        cors_headers = None
+        if self._cors_enabled_for_route(route_entry):
+            cors_headers = self._get_cors_headers(route_entry.cors)
+        # We're doing the header validation after creating the request
+        # so can leverage the case insensitive dict that the Request class
+        # uses for headers.
+        if route_entry.content_types:
+            content_type = self.current_request.headers.get(
+                'content-type', 'application/json')
+            if not _matches_content_type(content_type,
+                                         route_entry.content_types):
+                return error_response(
+                    error_code='UnsupportedMediaType',
+                    message='Unsupported media type: %s' % content_type,
+                    http_status_code=415,
+                    headers=cors_headers
+                )
+        response = self._get_view_function_response(view_function,
+                                                    function_args)
+        if cors_headers is not None:
+            self._add_cors_headers(response, cors_headers)
+
+        response_headers = CaseInsensitiveMapping(response.headers)
+        if not self._validate_binary_response(
+                self.current_request.headers, response_headers):
+            content_type = response_headers.get('content-type', '')
+            return error_response(
+                error_code='BadRequest',
+                message=('Request did not specify an Accept header with %s, '
+                         'The response has a Content-Type of %s. If a '
+                         'response has a binary Content-Type then the request '
+                         'must specify an Accept header that matches.'
+                         % (content_type, content_type)),
+                http_status_code=400,
+                headers=cors_headers
+            )
+        return response
+
+    def _validate_binary_response(self, request_headers, response_headers):
+        # Validates that a response is valid given the request. If the response
+        # content-type specifies a binary type, there must be an accept header
+        # that is a binary type as well.
+        request_accept_header = request_headers.get('accept')
+        response_content_type = response_headers.get(
+            'content-type', 'application/json')
+        response_is_binary = _matches_content_type(response_content_type,
+                                                   self.api.binary_types)
+        expects_binary_response = False
+        if request_accept_header is not None:
+            expects_binary_response = _matches_content_type(
+                request_accept_header, self.api.binary_types)
+        if response_is_binary and not expects_binary_response:
+            return False
+        return True
+
+    def _get_view_function_response(self, view_function, function_args):
+        try:
+            response = view_function(**function_args)
+            if not isinstance(response, Response):
+                response = Response(body=response)
+            self._validate_response(response)
+        except ChaliceViewError as e:
+            # Any chalice view error should propagate.  These
+            # get mapped to various HTTP status codes in API Gateway.
+            response = Response(body={'Code': e.__class__.__name__,
+                                      'Message': str(e)},
+                                status_code=e.STATUS_CODE)
+        except Exception:
+            headers = {}
+            self.log.error("Caught exception for %s", view_function,
+                           exc_info=True)
+            if self.debug:
+                # If the user has turned on debug mode,
+                # we'll let the original exception propagate so
+                # they get more information about what went wrong.
+                stack_trace = ''.join(traceback.format_exc())
+                body = stack_trace
+                headers['Content-Type'] = 'text/plain'
+            else:
+                body = {'Code': 'InternalServerError',
+                        'Message': 'An internal server error occurred.'}
+            response = Response(body=body, headers=headers, status_code=500)
+        return response
+
+    def _validate_response(self, response):
+        for header, value in response.headers.items():
+            if '\n' in value:
+                raise ChaliceError("Bad value for header '%s': %r" %
+                                   (header, value))
+
+    def _cors_enabled_for_route(self, route_entry):
+        return route_entry.cors is not None
+
+    def _get_cors_headers(self, cors):
+        return cors.get_access_control_headers()
+
+    def _add_cors_headers(self, response, cors_headers):
+        for name, value in cors_headers.items():
+            if name not in response.headers:
+                response.headers[name] = value
 
 
 # These classes contain all the event types that are passed
@@ -1490,6 +1628,22 @@ class BaseLambdaEvent(object):
 
     def to_dict(self):
         return self._event_dict
+
+
+# This class is only used for middleware handlers because
+# we can't change the existing interface for @app.lambda_function().
+# This could be a Chalice 2.0 thing where we make all the decorators
+# have a consistent interface that takes a single event arg.
+class LambdaFunctionEvent(BaseLambdaEvent):
+    def __init__(self, event_dict, context):
+        self.event = event_dict
+        self.context = context
+
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def to_dict(self):
+        return self.event
 
 
 class CloudWatchEvent(BaseLambdaEvent):
@@ -1590,6 +1744,34 @@ class Blueprint(DecoratorAPI):
         for function in self._deferred_registrations:
             function(app, all_options)
 
+    # Note on blueprints implementation.  One option we have for implementing
+    # blueprints is to copy every decorator in our public API over to the
+    # Blueprints class.  Instead what we do is inherit from DecoratorAPI so we
+    # get new decorators for free.  The tradeoff is that need to add
+    # implementations of the internal methods used to manage handler
+    # registration that defer registration until we get an app object. While
+    # these methods are not public in the sense that we don't want users to
+    # call them, they're available for blueprints to use in order to avoid
+    # boilerplate code.
+    def _wrap_handler(self, handler_type, handler_name, user_handler):
+        # This deferred wrap handler will be called when we call
+        # Blueprint.register() and provide an app object.  Once
+        # we have access to an app, we can call the actual _wrap_handler
+        # which will have access to middleware.
+        def _defer_wrap_handler(app):
+            # pylint: disable=protected-access
+            return app._wrap_handler(handler_type, handler_name,
+                                     user_handler)
+        return _defer_wrap_handler
+
+    def _register_middleware(self, func, event_type):
+        self._deferred_registrations.append(
+            # pylint: disable=protected-access
+            lambda app, options: app._register_middleware(
+                func, event_type
+            )
+        )
+
     def _register_handler(self, handler_type, name, user_handler,
                           wrapped_handler, kwargs, options=None):
         # If we go through the public API (app.route, app.schedule, etc) then
@@ -1599,7 +1781,12 @@ class Blueprint(DecoratorAPI):
         self._deferred_registrations.append(
             # pylint: disable=protected-access
             lambda app, options: app._register_handler(
-                handler_type, name, user_handler, wrapped_handler,
+                handler_type, name, user_handler, wrapped_handler(app),
                 kwargs, options
             )
         )
+
+    def _get_middleware_handlers(self, event_type):
+        raise RuntimeError("Blueprints are unable to retrieve middleware "
+                           "handlers, must be registered to an app using "
+                           "register_blueprint()")
