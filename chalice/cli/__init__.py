@@ -15,7 +15,7 @@ import json
 
 import botocore.exceptions
 import click
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, cast  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
@@ -566,6 +566,10 @@ def package(ctx, single_file, stage, merge_template,
 
 
 @cli.command('generate-pipeline')
+@click.option('--pipeline-version',
+              default='v1',
+              type=click.Choice(['v1', 'v2']),
+              help='Which version of the pipeline template to generate.')
 @click.option('-i', '--codebuild-image',
               help=("Specify default codebuild image to use.  "
                     "This option must be provided when using a python "
@@ -589,8 +593,9 @@ def package(ctx, single_file, stage, merge_template,
                     "directory of your app."))
 @click.argument('filename')
 @click.pass_context
-def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
-    # type: (click.Context, str, str, str, str) -> None
+def generate_pipeline(ctx, pipeline_version, codebuild_image, source,
+                      buildspec_file, filename):
+    # type: (click.Context, str, str, str, str, str) -> None
     """Generate a cloudformation template for a starter CD pipeline.
 
     This command will write a starter cloudformation template to
@@ -609,12 +614,17 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
     from chalice import pipeline
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
-    p = pipeline.CreatePipelineTemplate()
+    p = cast(pipeline.BasePipelineTemplate, None)
+    if pipeline_version == 'v1':
+        p = pipeline.CreatePipelineTemplateLegacy()
+    else:
+        p = pipeline.CreatePipelineTemplateV2()
     params = pipeline.PipelineParameters(
         app_name=config.app_name,
         lambda_python_version=config.lambda_python_version,
         codebuild_image=codebuild_image,
         code_source=source,
+        pipeline_version=pipeline_version,
     )
     output = p.create_template(params)
     if buildspec_file:
