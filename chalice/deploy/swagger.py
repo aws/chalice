@@ -9,6 +9,10 @@ from chalice.deploy.planner import StringFormat
 from chalice.deploy.models import RestAPI  # noqa
 from chalice.utils import to_cfn_resource_name
 
+import textwrap
+import yaml
+
+
 
 class SwaggerGenerator(object):
 
@@ -20,10 +24,21 @@ class SwaggerGenerator(object):
         },
         'schemes': ['https'],
         'paths': {},
+        'parameters': {},
         'definitions': {
             'Empty': {
                 'type': 'object',
                 'title': 'Empty Schema',
+            },
+            'PingModel': {
+                'type': 'object',
+                'title': 'Ping Model',
+                'required': [],
+                'properties': {
+                    "age": {"type": "integer",
+                      "format": "int32"},
+                    "xyz":{"type":"string"}
+                }
             }
         }
     }  # type: Dict[str, Any]
@@ -37,10 +52,21 @@ class SwaggerGenerator(object):
         # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
+        self._add_shared_definitions_and_parameters(app, api)
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
         self._add_resource_policy(api, rest_api)
         return api
+
+    def _add_shared_definitions_and_parameters(self, app, api):
+        if hasattr(app, 'to_swagger'):
+            swagger_additions = app.to_swagger()
+            swagger_additions = yaml.load(textwrap.dedent(swagger_additions))
+            if 'definitions' in swagger_additions:
+                api['definitions'].update(swagger_additions['definitions'])
+            if 'parameters' in swagger_additions:
+                api['parameters'] = swagger_additions['parameters']
+            print(api['parameters'])
 
     def _add_resource_policy(self, api, rest_api):
         # type: (Dict[str, Any], Optional[RestAPI]) -> None
@@ -60,7 +86,7 @@ class SwaggerGenerator(object):
             cors_config = None
             methods_with_cors = []
             for http_method, view in methods.items():
-                current = self._generate_route_method(view)
+                current = self._generate_route_method(api, view)
                 if 'security' in current:
                     self._add_to_security_definition(
                         current['security'], api, view)
@@ -128,21 +154,27 @@ class SwaggerGenerator(object):
                 api_config.setdefault(
                     'securityDefinitions', {})[name] = swagger_snippet
 
-    def _generate_route_method(self, view):
-        # type: (RouteEntry) -> Dict[str, Any]
+    def _generate_route_method(self, api, view):
+        # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
         current = {
             'consumes': view.content_types,
             'produces': ['application/json'],
-            'responses': self._generate_precanned_responses(),
+            'responses': self._get_annotated_responses(api, view),
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
         docstring = inspect.getdoc(view.view_function)
+        swagger_additions = None
         if docstring:
             doc_lines = docstring.splitlines()
             current['summary'] = doc_lines[0]
             if len(doc_lines) > 1:
-                current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
+                if '---' in doc_lines:
+                    current['description'] = '\n'.join(doc_lines[1:doc_lines.index('---')]).strip('\n')
+                    swagger_additions = yaml.load('\n'.join(doc_lines[doc_lines.index('---') + 1:]))
+                    print(swagger_additions)
+                else:
+                    current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
         if view.api_key_required:
             # When this happens we also have to add the relevant portions
             # to the security definitions.  We have to someone indicate
@@ -154,7 +186,33 @@ class SwaggerGenerator(object):
                 {view.authorizer.name: view.authorizer.scopes})
         if view.view_args:
             self._add_view_args(current, view.view_args)
+        if swagger_additions is not None:
+            current.update(swagger_additions)
+            print(current)
         return current
+
+    
+    
+    def _get_annotated_responses(self, api, view):
+        # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
+        annotations = view.view_function.__annotations__
+        if 'return' in annotations:
+            return_type = annotations['return']
+            if hasattr(return_type, 'to_swagger'):
+                model_name = return_type.__name__
+                definition = return_type.to_swagger()
+                # print(return_type.__name__, definition)
+                if model_name not in api['definitions']:
+                    api['definitions'][model_name] = definition
+                return {
+                    '200': {
+                        'description': '200 response',
+                        'schema': {
+                            '$ref': f'#/definitions/{model_name}',
+                        }
+                    }
+                }
+        return self._generate_precanned_responses()
 
     def _generate_precanned_responses(self):
         # type: () -> Dict[str, Any]
