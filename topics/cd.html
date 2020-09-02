@@ -136,22 +136,53 @@ promote a build to production, or you can do so automatically. This model
 greatly simplifies managing what resources belong to your Chalice app as they
 are all stored in the Continuous Deployment pipeline.</p>
 <p>Chalice can generate a CloudFormation template that will create a starter CD
-pipeline. It contains a CodeCommit repo, a CodeBuild stage for
-packaging your chalice app, and a CodePipeline stage to deploy your
+pipeline. By default it contains an AWS CodeCommit repo, an AWS CodeBuild stage
+for packaging your chalice app, and an AWS CodePipeline stage to deploy your
 application using CloudFormation.</p>
+<p>You can also configure a source repository hosted on GitHub instead of
+a CodeCommit repository.</p>
+<div class="section" id="pipeline-template-versions">
+<h2>Pipeline Template Versions<a class="headerlink" href="#pipeline-template-versions" title="Permalink to this headline">¶</a></h2>
+<p>This starter pipeline template can be generated using the <code class="docutils literal notranslate"><span class="pre">generate-pipeline</span></code>
+command.  There are two versions of this pipeline.  The older <code class="docutils literal notranslate"><span class="pre">v1</span></code> template
+is the default (for backwards compatibility reasons), but the newer template
+version, <code class="docutils literal notranslate"><span class="pre">v2</span></code>, is recommended.  The version can be specified using the
+<code class="docutils literal notranslate"><span class="pre">--pipeline-version</span></code> option.  These are the differences between <code class="docutils literal notranslate"><span class="pre">v1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">v2</span></code> templates:</p>
+<ul class="simple">
+<li>The <code class="docutils literal notranslate"><span class="pre">v1</span></code> templates use version <code class="docutils literal notranslate"><span class="pre">0.1</span></code> of the CodeBuild buildspec, whereas
+<code class="docutils literal notranslate"><span class="pre">v2</span></code> uses <code class="docutils literal notranslate"><span class="pre">0.2</span></code> of the CodeBuild buildspec.  Buildspec <code class="docutils literal notranslate"><span class="pre">0.2</span></code> is the
+recommended version to use with CodeBuild.  See their
+<a class="reference external" href="https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html">documentation</a>
+for more information.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">v2</span></code> template uses <a class="reference external" href="https://aws.amazon.com/secrets-manager/">AWS Secrets Manager</a>
+to configure access to a GitHub repository.</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">v2</span></code> buildspec uses <a class="reference external" href="https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html#build-spec.phases.install.runtime-versions">runtime-versions</a>
+to configure which version of Python to use instead of a Python
+version specific CodeBuild image.  For <code class="docutils literal notranslate"><span class="pre">v2</span></code> templates the
+<code class="docutils literal notranslate"><span class="pre">aws/codebuild/amazonlinux2-x86_64-standard</span></code> image.</li>
+</ul>
+<p><strong>The v2 pipeline template requires Python 3.7 or higher.</strong> If you’re using
+Python versions less than 3.7 you must use the <code class="docutils literal notranslate"><span class="pre">v1</span></code> pipeline template.</p>
+</div>
 <div class="section" id="usage-example">
 <h2>Usage example<a class="headerlink" href="#usage-example" title="Permalink to this headline">¶</a></h2>
 <p>Setting up the deployment pipeline is a two step process. First use the
 <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">generate-pipeline</span></code> command to generate a base CloudFormation
 template. Second use the AWS CLI to deploy the CloudFormation template using
 the <code class="docutils literal notranslate"><span class="pre">aws</span> <span class="pre">cloudformation</span> <span class="pre">deploy</span></code> command. Below is an example.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice generate-pipeline pipeline.json
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice generate-pipeline --pipeline-version v2 pipeline.json
 $ aws cloudformation deploy --stack-name mystack
       --template-file pipeline.json --capabilities CAPABILITY_IAM
 Waiting for changeset to be created..
 Waiting for stack create/update to complete
 Successfully created/updated stack - mystack
 </pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">To configure your Chalice app to use a GitHub repository instead of
+CodeCommit see the <a class="reference internal" href="#cicd-github-repo"><span class="std std-ref">Configuring a GitHub Repository</span></a> section below.</p>
 </div>
 <p>Once the CloudFormation template has finished creating the stack, you will have
 several new AWS resources that make up a bare bones CD pipeline.</p>
@@ -177,9 +208,8 @@ application has been packaged in the CodeBuild stage.</li>
 </li>
 <li>Each resource is created with all the required IAM roles and policies.</li>
 </ul>
-</div>
 <div class="section" id="codecommit-repository">
-<h2>CodeCommit repository<a class="headerlink" href="#codecommit-repository" title="Permalink to this headline">¶</a></h2>
+<h3>CodeCommit repository<a class="headerlink" href="#codecommit-repository" title="Permalink to this headline">¶</a></h3>
 <p>The CodeCommit repository can be added as a git remote for deployment. This
 makes it easy to kick off deployments. The developer doing the deployment only
 needs to push the release code up to the CodeCommit repository master branch.
@@ -192,9 +222,15 @@ populate it with the Chalice application code. Permissions will also need to be
 set up, you can find the documentation on how to do that
 <a class="reference external" href="https://docs.aws.amazon.com/codebuild/latest/userguide/setting-up.html">here</a>
 .</p>
+<p>You can retrieve the CodeCommit clone URL by searching for the
+<code class="docutils literal notranslate"><span class="pre">SourceRepoURL</span></code> in the CloudFormation stack output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation describe-stacks --stack-name mysack \
+   --query &quot;Stacks[0].Outputs[?OutputKey==&#39;SourceRepoURL&#39;] | [0].OutputValue&quot;
+</pre></div>
+</div>
 </div>
 <div class="section" id="id1">
-<h2>CodePipeline<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<h3>CodePipeline<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <p>CodePipeline is the main coordinator between all the other resources. It
 watches for changes on the CodeCommit repository, and triggers builds in the
 CodeBuild project. If the build succeeds then it will start a CloudFormation
@@ -202,7 +238,7 @@ deployment of the built artifacts to a beta stage. This should be treated as
 a starting point, not a fully featured CD system.</p>
 </div>
 <div class="section" id="codebuild-build-script">
-<h2>CodeBuild build script<a class="headerlink" href="#codebuild-build-script" title="Permalink to this headline">¶</a></h2>
+<h3>CodeBuild build script<a class="headerlink" href="#codebuild-build-script" title="Permalink to this headline">¶</a></h3>
 <p>By default Chalice will create the CodeBuild project with a default buildspec
 that does the following.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">version</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span>
@@ -230,7 +266,7 @@ is the only artifact, and can be run by CodePipeline after the build has
 succeeded.</p>
 </div>
 <div class="section" id="deploying-to-beta-stage">
-<h2>Deploying to beta stage<a class="headerlink" href="#deploying-to-beta-stage" title="Permalink to this headline">¶</a></h2>
+<h3>Deploying to beta stage<a class="headerlink" href="#deploying-to-beta-stage" title="Permalink to this headline">¶</a></h3>
 <p>Once the CodeBuild stage has finished building the Chalice package and
 creating the <code class="docutils literal notranslate"><span class="pre">transformed.yaml</span></code>, CodePipeline will take these artifacts and
 use them to create or update the beta stage. The <code class="docutils literal notranslate"><span class="pre">transformed.yaml</span></code>
@@ -241,7 +277,7 @@ CodeBuild stage, so this is the only artifact we need.</p>
 is deployed and ready for testing.</p>
 </div>
 <div class="section" id="extending">
-<h2>Extending<a class="headerlink" href="#extending" title="Permalink to this headline">¶</a></h2>
+<h3>Extending<a class="headerlink" href="#extending" title="Permalink to this headline">¶</a></h3>
 <p>It is recommended to use this pipeline as a starting point. The default
 template does not run any tests on the Chalice app before deploying to beta.
 There is also no mechanism provided by Chalice for a production stage.
@@ -249,6 +285,68 @@ Ideally the CodeBuild stage would be used to run unit and functional tests
 before deploying to beta. After the beta stage is up, integration tests can be
 run against that endpoint, and if they all pass the beta stage could be
 promoted to a production stage using the CodePipleine manual approval feature.</p>
+</div>
+</div>
+<div class="section" id="configuring-a-github-repository">
+<span id="cicd-github-repo"></span><h2>Configuring a GitHub Repository<a class="headerlink" href="#configuring-a-github-repository" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a GitHub repository instead of a CodeCommit repo when
+setting up your deployment pipeline by specifying the <code class="docutils literal notranslate"><span class="pre">--source</span> <span class="pre">github</span></code>
+option.  When generating a CloudFormation template for a GitHub repository,
+there are several parameters that are added to your template that allow
+you to configure how to connect your GitHub repository with your CodePipeline.</p>
+<p>You must store your OAuth token that enables access to a GitHub repository
+in AWS Secrets Manager.  You then specify the secret name/id and the JSON
+key name as CloudFormation parameters.  This values default to a secret
+name of <code class="docutils literal notranslate"><span class="pre">GithubRepoAccess</span></code> and a JSON key name of <code class="docutils literal notranslate"><span class="pre">OAuthToken</span></code>.</p>
+<p>Below is an example of how to configure a GitHub repository as the
+source for your deployment pipeline.</p>
+<p>First create a <a class="reference external" href="https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token">GitHub token</a>
+that can be used in this template.  Next create a secret in AWS Secrets
+Manager.  You can either follow the documentation
+<a class="reference external" href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/manage_create-basic-secret.html">here</a>
+or use the AWS CLI or any AWS SDK.  For this example, we’ll use the AWS CLI
+to create our secret.  Create a file named <code class="docutils literal notranslate"><span class="pre">/tmp/secrets.json</span></code> with these
+contents:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;OAuthToken&quot;</span><span class="p">:</span> <span class="s2">&quot;abcdefghhijklmnop&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Be sure to replace the value of <code class="docutils literal notranslate"><span class="pre">OAuthToken</span></code> with the value of your GitHub
+token you created.  Next we can create the secret using this command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws secretsmanager create-secret --name GithubRepoAccess \
+  --description &quot;Token for Github Repo Access&quot; \
+  --secret-string file:///tmp/secrets.json
+</pre></div>
+</div>
+<p>Now we can generate our deployment pipeline:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws generate-pipeline --pipeline-version v2 \
+  --source github --buildspec-file buildspec.yml pipeline.json
+</pre></div>
+</div>
+<p>This will create two files, a <code class="docutils literal notranslate"><span class="pre">pipeline.json</span></code> file containing our
+deployment pipeline and a <code class="docutils literal notranslate"><span class="pre">buildspec.yml</span></code> file.  This buildspec file
+lets us update what commands should be run as part of our build process
+without having to redeploy our CloudFormation template.</p>
+<p>We now add and commit our changes to our repository.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git add buildspec.yml pipeline.json
+$ git commit -m &quot;Add deployment pipeline template&quot;
+$ git push
+</pre></div>
+</div>
+<p>Now we’re ready to deploy our CloudFormation template using the AWS CLI.  Be
+sure to replace the <code class="docutils literal notranslate"><span class="pre">GithubOwner</span></code> and <code class="docutils literal notranslate"><span class="pre">GithubRepoName</span></code> with your own
+values for your GitHub repository.  You’ll also need to specify the
+<code class="docutils literal notranslate"><span class="pre">GithubRepoSecretId</span></code> and <code class="docutils literal notranslate"><span class="pre">GithubRepoSecretJSONKey</span></code> if you used values
+other than the default vaues of <code class="docutils literal notranslate"><span class="pre">GithubRepoAccess</span></code> and <code class="docutils literal notranslate"><span class="pre">OAuthToken</span></code> when
+creating your secret in Secrets Manager.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation deploy --template-file pipeline.json \
+  --stack-name MyChaliceApp --parameter-overrides \
+  GithubOwner=repo-owner-name \
+  GithubRepoName=repo-name \
+  --capabilities CAPABILITY_IAM
+</pre></div>
+</div>
+<p>We’ve now created a dpeloyment pipeline that will automatically deploy our
+Chalice app whenever we push to our GitHub repository.</p>
 </div>
 </div>
 
@@ -274,12 +372,16 @@ promoted to a production stage using the CodePipleine manual approval feature.</
                             
                             <ul>
 <li><a class="reference internal" href="#">Continuous Deployment (CD)</a><ul>
-<li><a class="reference internal" href="#usage-example">Usage example</a></li>
+<li><a class="reference internal" href="#pipeline-template-versions">Pipeline Template Versions</a></li>
+<li><a class="reference internal" href="#usage-example">Usage example</a><ul>
 <li><a class="reference internal" href="#codecommit-repository">CodeCommit repository</a></li>
 <li><a class="reference internal" href="#id1">CodePipeline</a></li>
 <li><a class="reference internal" href="#codebuild-build-script">CodeBuild build script</a></li>
 <li><a class="reference internal" href="#deploying-to-beta-stage">Deploying to beta stage</a></li>
 <li><a class="reference internal" href="#extending">Extending</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configuring-a-github-repository">Configuring a GitHub Repository</a></li>
 </ul>
 </li>
 </ul>
