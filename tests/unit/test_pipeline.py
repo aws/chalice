@@ -7,7 +7,7 @@ from chalice.pipeline import InvalidCodeBuildPythonVersion, PipelineParameters
 
 @pytest.fixture
 def pipeline_gen():
-    return pipeline.CreatePipelineTemplate()
+    return pipeline.CreatePipelineTemplateLegacy()
 
 
 @pytest.fixture
@@ -15,10 +15,10 @@ def pipeline_params():
     return pipeline.PipelineParameters('appname', 'python2.7')
 
 
-class TestPipelineGen(object):
+class TestPipelineGenLegacy(object):
 
     def setup_method(self):
-        self.pipeline_gen = pipeline.CreatePipelineTemplate()
+        self.pipeline_gen = pipeline.CreatePipelineTemplateLegacy()
 
     def generate_template(self, app_name='appname',
                           lambda_python_version='python2.7',
@@ -77,10 +77,10 @@ class TestPipelineGen(object):
             'Category': 'Source',
             'Provider': 'GitHub',
             'Owner': 'ThirdParty',
-            'Version': 1,
+            'Version': '1',
         }
         assert action['RunOrder'] == 1
-        assert action['OutputArtifacts'] == {'Name': 'SourceRepo'}
+        assert action['OutputArtifacts'] == [{'Name': 'SourceRepo'}]
         assert action['Configuration'] == {
             'Owner': {'Ref': 'GithubOwner'},
             'Repo': {'Ref': 'GithubRepoName'},
@@ -88,6 +88,64 @@ class TestPipelineGen(object):
             'Branch': 'master',
             'PollForSourceChanges': True,
         }
+
+
+class TestPipelineGenV2(object):
+
+    def setup_method(self):
+        self.pipeline_gen = pipeline.CreatePipelineTemplateV2()
+
+    def generate_template(self, app_name='appname',
+                          lambda_python_version='python3.7',
+                          codebuild_image=None, code_source='github',
+                          pipeline_version='v2'):
+        params = PipelineParameters(
+            app_name=app_name,
+            lambda_python_version=lambda_python_version,
+            codebuild_image=codebuild_image,
+            code_source=code_source,
+            pipeline_version=pipeline_version,
+        )
+        template = self.pipeline_gen.create_template(params)
+        return template
+
+    def test_new_default_codebuild_image(self):
+        template = self.generate_template(app_name='app')
+        assert template['Parameters']['CodeBuildImage']['Default'] == (
+            "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+        )
+
+    def test_validate_python_versions(self):
+        with pytest.raises(InvalidCodeBuildPythonVersion):
+            self.generate_template(lambda_python_version='python2.7')
+
+    def test_uses_v2_codebuild_spec(self):
+        # The codebuild v2 spec is tested separately, we just need a
+        # sanity check to ensure we're using the v0.2 buildspec version.
+        template = self.generate_template(app_name='app')
+        codebuild_job = template['Resources']['AppPackageBuild']
+        assert "version: '0.2'" in codebuild_job[
+            'Properties']['Source']['BuildSpec']
+
+    def test_github_source_uses_secretsmanager_in_v2(self):
+        template = self.generate_template(code_source='github')
+        source_stage = template['Resources'][
+            'AppPipeline']['Properties']['Stages'][0]
+        assert source_stage['Name'] == 'Source'
+        oauth_token = source_stage['Actions'][0]['Configuration']['OAuthToken']
+        assert oauth_token == {
+            'Fn::Join': [
+                '', ['{{resolve:secretsmanager:',
+                     {'Ref': 'GithubRepoSecretId'},
+                     ':SecretString:',
+                     {'Ref': 'GithubRepoSecretJSONKey'},
+                     '}}']
+            ]
+        }
+        # We should also add these Refs to our Parameters.
+        params = template['Parameters']
+        assert 'GithubRepoSecretId' in params
+        assert 'GithubRepoSecretJSONKey' in params
 
 
 def test_source_repo_resource(pipeline_params):
@@ -179,6 +237,18 @@ def test_default_version_range_locks_minor_version():
     )
 
 
+def test_can_validate_python_version():
+    with pytest.raises(InvalidCodeBuildPythonVersion):
+        pipeline.PipelineParameters(
+            'myapp', lambda_python_version='bad-python-value'
+        )
+
+
+def test_can_extract_python_version():
+    assert pipeline.PipelineParameters('app', 'python3.7').py_major_minor == (
+        '3.7')
+
+
 def test_can_generate_github_source(pipeline_params):
     template = {}
     pipeline_params.code_source = 'github'
@@ -186,6 +256,14 @@ def test_can_generate_github_source(pipeline_params):
     cfn_params = template['Parameters']
     assert set(cfn_params) == set(['GithubOwner', 'GithubRepoName',
                                    'GithubPersonalToken'])
+
+
+def test_can_create_buildspec_v2():
+    params = pipeline.PipelineParameters('myapp', 'python3.7')
+    buildspec = pipeline.create_buildspec_v2(params)
+    assert buildspec['phases']['install']['runtime-versions'] == {
+        'python': '3.7',
+    }
 
 
 def test_build_extractor():
