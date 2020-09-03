@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.19.0
+======
+
+* feature:Pipeline:Add a new v2 template for the deployment pipeline CloudFormation template (#1506)
+
+
 1.18.1
 ======
 
