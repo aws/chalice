@@ -113,10 +113,15 @@ class TypedAWSClient(object):
     LAMBDA_CREATE_ATTEMPTS = 30
     DELAY_TIME = 5
 
-    def __init__(self, session, sleep=time.sleep):
-        # type: (botocore.session.Session, Callable[[int], None]) -> None
+    def __init__(self,
+                 session,               # type: botocore.session.Session
+                 sleep=time.sleep,      # type: Callable[[int], None]
+                 endpoint_url=None      # type: OptStr
+                 ):
+        # type: (...) -> None
         self._session = session
         self._sleep = sleep
+        self._endpoint_url = endpoint_url
         self._client_cache = {}  # type: Dict[str, Any]
         loader = create_loader('data_loader')
         endpoints = loader.load_data('endpoints')
@@ -575,9 +580,13 @@ class TypedAWSClient(object):
             kwargs['Payload'] = payload
 
         try:
-            return self._client('lambda').invoke(**kwargs)
+            lambda_client = self._client('lambda',
+                                         endpoint_url=self._endpoint_url)
+            return lambda_client.invoke(**kwargs)
         except RequestsReadTimeout as e:
             raise ReadTimeout(str(e))
+        except lambda_client.exceptions.ResourceNotFoundException:
+            raise ResourceDoesNotExistError(name)
 
     def _is_iam_role_related_error(self, error):
         # type: (botocore.exceptions.ClientError) -> bool
@@ -1319,11 +1328,11 @@ class TypedAWSClient(object):
         # type: (Dict[str, Any]) -> None
         response['events'] = list(self._iter_log_messages([response]))
 
-    def _client(self, service_name):
-        # type: (str) -> Any
+    def _client(self, service_name, endpoint_url=None):
+        # type: (str, Optional[str]) -> Any
         if service_name not in self._client_cache:
             self._client_cache[service_name] = self._session.create_client(
-                service_name)
+                service_name, endpoint_url=endpoint_url)
         return self._client_cache[service_name]
 
     def add_permission_for_authorizer(self, rest_api_id, function_arn,

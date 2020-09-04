@@ -3,7 +3,11 @@
 This is intended only for local development purposes.
 
 """
+# pylint: disable=too-many-lines
 from __future__ import print_function
+import contextlib
+import hashlib
+import logging
 import re
 import threading
 import time
@@ -11,12 +15,14 @@ import uuid
 import base64
 import functools
 import warnings
+import socket
 from collections import namedtuple
 import json
-
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.socketserver import ThreadingMixIn
+import requests
+
 from typing import (
     List,
     Any,
@@ -33,20 +39,29 @@ from chalice.app import ChaliceAuthorizer  # noqa
 from chalice.app import CognitoUserPoolAuthorizer  # noqa
 from chalice.app import RouteEntry  # noqa
 from chalice.app import Request  # noqa
+from chalice.app import Response
 from chalice.app import AuthResponse  # noqa
 from chalice.app import BuiltinAuthConfig  # noqa
+from chalice.awsclient import TypedAWSClient
 from chalice.config import Config  # noqa
-
-from chalice.compat import urlparse, parse_qs
-
+from chalice.deploy.appgraph import DependencyBuilder, ApplicationGraphBuilder
+from chalice.deploy.models import LambdaFunction
+from chalice.deploy.packager import BaseLambdaDeploymentPackager
+from chalice.deploy.packager import LayerDeploymentPackager
+from chalice.compat import urlparse, parse_qs, posix_path
+from chalice.docker import LambdaContainer, LambdaImageBuilder
+from chalice.utils import UI, OSUtils
 
 MatchResult = namedtuple('MatchResult', ['route', 'captured', 'query_params'])
 EventType = Dict[str, Any]
 ContextType = Dict[str, Any]
 HeaderType = Dict[str, Any]
 ResponseType = Dict[str, Any]
+ContainerMap = Dict[str, LambdaContainer]
 HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
+ProxyServerCls = Callable[..., 'LambdaProxyServer']
+LOGGER = logging.getLogger(__name__)
 
 
 class Clock(object):
@@ -59,6 +74,34 @@ def create_local_server(app_obj, config, host, port):
     # type: (Chalice, Config, str, int) -> LocalDevServer
     app_obj.__class__ = LocalChalice
     return LocalDevServer(app_obj, config, host, port)
+
+
+def create_container_proxy_resource_manager(
+        config,            # type: Config
+        ui,                # type: UI
+        osutils,           # type: OSUtils
+        packager,          # type: DockerPackager
+        image_builder,     # type: LambdaImageBuilder
+):
+    # type: (...) -> ContainerProxyResourceManager
+    return ContainerProxyResourceManager(config, ui, osutils,
+                                         packager, image_builder)
+
+
+def create_proxy_server_runner(
+        config,                 # type: Config
+        stage,                  # type: str
+        host,                   # type: str
+        port,                   # type: int
+        app_graph_builder,      # type: ApplicationGraphBuilder
+        dependency_builder,     # type: DependencyBuilder
+        resource_manager,       # type: ContainerProxyResourceManager
+        proxy_handler           # type: ContainerProxyHandler
+):
+    # type: (...) -> ProxyServerRunner
+    return ProxyServerRunner(config, stage, host, port,
+                             app_graph_builder, dependency_builder,
+                             resource_manager, proxy_handler)
 
 
 class LocalARNBuilder(object):
@@ -217,6 +260,10 @@ class InvalidAuthorizerError(LocalGatewayException):
     CODE = 500
 
 
+class ResourceNotFoundError(LocalGatewayException):
+    CODE = 404
+
+
 class ForbiddenError(LocalGatewayException):
     CODE = 403
 
@@ -298,11 +345,70 @@ class LambdaContext(object):
 LocalAuthPair = Tuple[EventType, LambdaContext]
 
 
-class LocalGatewayAuthorizer(object):
-    """A class for running user defined authorizers in local mode."""
+class LocalFunctionCaller(object):
     def __init__(self, app_object):
         # type: (Chalice) -> None
         self._app_object = app_object
+
+    def call_rest_api(self, event, context):
+        # type: (EventType, LambdaContext) -> ResponseType
+        return self._app_object(event, context)
+
+    def call_authorizer(self, authorizer, event, context):
+        # type: (Any, EventType, LambdaContext) -> ResponseType
+        return authorizer(event, context)
+
+
+class ContainerFunctionCaller(object):
+    def __init__(self, config, session, container_map=None):
+        # type: (Config, requests.Session, ContainerMap) -> None
+        self._config = config
+        self._container_map = {} if container_map is None else container_map
+        self._session = session
+
+    def call_rest_api(self, event, context):
+        # type: (EventType, LambdaContext) -> ResponseType
+        function_name = "%s-%s" % (self._config.app_name,
+                                   self._config.chalice_stage)
+        response = self._get_container_response(function_name, event)
+        return response
+
+    def call_authorizer(self, authorizer, event, context):
+        # type: (Any, EventType, LambdaContext) -> ResponseType
+        # Authorizer had to be made into an Any type since mypy couldn't
+        # detect that app.ChaliceAuthorizer was callable.
+        function_name = "%s-%s-%s" % (self._config.app_name,
+                                      self._config.chalice_stage,
+                                      authorizer.name)
+        response = self._get_container_response(function_name, event)
+        return response
+
+    def _get_container_response(self, function_name, event):
+        # type: (str, EventType) -> ResponseType
+        container = self._container_map[function_name]
+        if not container.is_created():
+            container.run()
+            container.wait_for_initialize()
+        url = "http://localhost:" + str(container.api_port) + \
+              "/2015-03-31/functions/function-name/invocations"
+        json_event = json.dumps(event)
+        response = self._session.post(url, data=json_event)
+        return json.loads(response.text)
+
+    def update_container_map(self, container_map):
+        # type: (ContainerMap) -> None
+        self._container_map.update(container_map)
+
+
+FunctionCaller = Union[LocalFunctionCaller, ContainerFunctionCaller]
+
+
+class LocalGatewayAuthorizer(object):
+    """A class for running user defined authorizers in local mode."""
+    def __init__(self, app_object, function_caller):
+        # type: (Chalice, FunctionCaller) -> None
+        self._app_object = app_object
+        self._function_caller = function_caller
         self._arn_builder = LocalARNBuilder()
 
     def authorize(self, raw_path, lambda_event, lambda_context):
@@ -357,7 +463,9 @@ class LocalGatewayAuthorizer(object):
         arn = self._arn_builder.build_arn(method, raw_path)
         auth_event = self._prepare_authorizer_event(arn, lambda_event,
                                                     lambda_context)
-        auth_result = authorizer(auth_event, lambda_context)
+        auth_result = self._function_caller.call_authorizer(authorizer,
+                                                            auth_event,
+                                                            lambda_context)
         if auth_result is None:
             raise InvalidAuthorizerError(
                 {'x-amzn-RequestId': lambda_context.aws_request_id,
@@ -447,15 +555,16 @@ class LocalGatewayAuthorizer(object):
 
 class LocalGateway(object):
     """A class for faking the behavior of API Gateway."""
-    def __init__(self, app_object, config):
-        # type: (Chalice, Config) -> None
+    def __init__(self, app_object, config, function_caller):
+        # type: (Chalice, Config, FunctionCaller) -> None
         self._app_object = app_object
         self._config = config
+        self._function_caller = function_caller
         self.event_converter = LambdaEventConverter(
             RouteMatcher(list(app_object.routes)),
             self._app_object.api.binary_types
         )
-        self._authorizer = LocalGatewayAuthorizer(app_object)
+        self._authorizer = LocalGatewayAuthorizer(app_object, function_caller)
 
     def _generate_lambda_context(self):
         # type: () -> LambdaContext
@@ -537,7 +646,8 @@ class LocalGateway(object):
         # 401 will be sent back over the wire.
         lambda_event, lambda_context = self._authorizer.authorize(
             path, lambda_event, lambda_context)
-        response = self._app_object(lambda_event, lambda_context)
+        response = self._function_caller.call_rest_api(lambda_event,
+                                                       lambda_context)
         return response
 
     def _autogen_options_headers(self, lambda_event):
@@ -573,7 +683,8 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, server, app_object, config):
         # type: (bytes, Tuple[str, int], HTTPServer, Chalice, Config) -> None
-        self.local_gateway = LocalGateway(app_object, config)
+        function_caller = LocalFunctionCaller(app_object)
+        self.local_gateway = LocalGateway(app_object, config, function_caller)
         BaseHTTPRequestHandler.__init__(
             self, request, client_address, server)  # type: ignore
 
@@ -743,3 +854,356 @@ class LocalChalice(Chalice):
     def current_request(self, value):  # type: ignore
         # type: (Request) -> None
         self._THREAD_LOCAL.current_request = value
+
+
+class LambdaProxyServer(LocalDevServer):
+    def __init__(self, config, host, port, proxy_handler,
+                 server_cls=ThreadedHTTPServer):
+        # type: (Config, str, int, ContainerProxyHandler, ServerCls) -> None
+        self.host = host
+        self.port = port
+        self._wrapped_handler = functools.partial(
+            ProxyRequestHandler, config=config, proxy_handler=proxy_handler)
+        self.server = server_cls((host, port), self._wrapped_handler)
+
+
+class ProxyServerRunner(object):
+    def __init__(self,
+                 config,                # type: Config
+                 stage,                 # type: str
+                 host,                  # type: str
+                 port,                  # type: int
+                 app_graph_builder,     # type: ApplicationGraphBuilder
+                 dependency_builder,    # type: DependencyBuilder
+                 resource_manager,      # type: ContainerProxyResourceManager
+                 proxy_handler,         # type: ContainerProxyHandler
+                 server_cls=LambdaProxyServer    # type: ProxyServerCls
+                 ):
+        # type: (...) -> None
+        self._config = config
+        self._stage = stage
+        self._host = host
+        self._port = port
+        self._app_graph_builder = app_graph_builder
+        self._dependency_builder = dependency_builder
+        self._resource_manager = resource_manager
+        self._proxy_handler = proxy_handler
+        self._server_cls = server_cls
+
+    def run(self):
+        # type: () -> None
+        app_graph = self._app_graph_builder.build(self._config, self._stage)
+        lambdas = self._dependency_builder\
+            .list_dependencies_by_type(app_graph, LambdaFunction)
+        resources = self._resource_manager.build_resources(lambdas)
+        self._proxy_handler.add_resources(resources)
+        server = self._server_cls(self._config, self._host,
+                                  self._port, self._proxy_handler)
+        try:
+            server.serve_forever()
+        finally:
+            self._resource_manager.cleanup()
+
+
+class ProxyRequestHandler(ChaliceRequestHandler):
+    """A class for mapping raw HTTP events to the correct functions."""
+    protocol_version = 'HTTP/1.1'
+
+    def __init__(self,
+                 request,           # type: bytes
+                 client_address,    # type: Tuple[str, int]
+                 server,            # type: HTTPServer
+                 config,            # type: Config
+                 proxy_handler      # type: ContainerProxyHandler
+                 ):
+        # type: (...) -> None
+        # pylint: disable=non-parent-init-called
+        self._config = config
+        self._handler = proxy_handler
+        BaseHTTPRequestHandler.__init__(
+            self, request, client_address, server)  # type: ignore
+
+    def _generic_handle(self):
+        # type: () -> None
+        function = re.match(r"^/\d{4}-\d{2}-\d{2}/functions/(.+)/invocations$",
+                            self.path)
+        headers, body = self._parse_payload()
+        try:
+            response = None
+            if function is None:
+                prefix = '/' + self._config.api_gateway_stage
+                if self.path.startswith(prefix):
+                    response = self._handler.handle_rest_api(
+                        self.command, self.path[len(prefix):], headers, body)
+                else:
+                    raise ForbiddenError(
+                        {'x-amzn-RequestId': str(uuid.uuid4()),
+                         'x-amzn-ErrorType': 'ForbiddenException'},
+                        (b'{"Message": '
+                         b'"Forbidden"}'))
+            else:
+                function_name = function.group(1)
+                response = self._handler.handle_invoke_function(
+                    self.path, headers, body, function_name)
+            self._send_http_response(response.status_code,
+                                     response.headers, response.body)
+        except LocalGatewayException as e:
+            self._send_error_response(e)
+
+    do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = do_PATCH = do_OPTIONS = \
+        _generic_handle
+
+
+class ContainerProxyHandler(object):
+    def __init__(self,
+                 session,               # type: requests.Session
+                 function_caller,       # type: ContainerFunctionCaller
+                 local_gateway,         # type: LocalGateway
+                 container_map=None     # type: Optional[ContainerMap]
+                 ):
+        # type: (...) -> None
+        self._session = session
+        self._container_map = {} if container_map is None else container_map
+        self._function_caller = function_caller
+        self._local_gateway = local_gateway
+
+    def add_resources(self, container_map):
+        # type: (ContainerMap) -> None
+        self._container_map.update(container_map)
+        self._function_caller.update_container_map(container_map)
+
+    def handle_rest_api(self, method, path, headers, body):
+        # type: (str, str, HeaderType, Optional[str]) -> Response
+        if path == '':
+            path = '/'
+        try:
+            response = self._local_gateway.handle_request(
+                method=method,
+                path=path,
+                headers=headers,
+                body=body
+            )
+            status_code = response['statusCode']
+            headers = response['headers'].copy()
+            headers.update(response['multiValueHeaders'])
+            body = response['body']
+            return Response(body, headers, status_code)
+        except LocalGatewayException as e:
+            return Response(e.body, e.headers, e.CODE)
+
+    def handle_invoke_function(self, path, headers, body, function_name):
+        # type: (str, HeaderType, Optional[str], str) -> Response
+        self._validate_function(function_name)
+        if body is None:
+            body = b'{}'
+        container = self._container_map[function_name]
+        if not container.is_created():
+            container.run()
+            container.wait_for_initialize()
+        url = "http://localhost:" + str(container.api_port) + path
+        self._session.headers = headers     # type: ignore
+        response = self._session.post(url, data=body)
+
+        status_code = response.status_code
+        headers = dict(response.headers)
+        headers.pop("Content-Length")
+        body = response.text
+        return Response(body, headers, status_code)
+
+    def _validate_function(self, function_name):
+        # type: (str) -> None
+        if function_name not in self._container_map:
+            raise ResourceNotFoundError(
+                {'x-amzn-RequestId': str(uuid.uuid4()),
+                 'x-amzn-ErrorType': 'ResourceNotFoundException'},
+                b'{"Message": 'b'"Function not found: %s"}' %
+                function_name.encode('ascii'))
+
+
+class LambdaLayerDownloader(object):
+    def __init__(self, config, ui, lambda_client, osutils, session):
+        # type: (Config, UI, TypedAWSClient, OSUtils, requests.Session) -> None
+        self._config = config
+        self._ui = ui
+        self._lambda_client = lambda_client
+        self._osutils = osutils
+        self._session = session
+
+    def download_all(self, layer_arns, cache_dir):
+        # type: (List[str], str) -> List[str]
+        return [self.download(layer, cache_dir) for layer in layer_arns]
+
+    def download(self, layer_arn, cache_dir):
+        # type: (str, str) -> str
+        layer_path = self._get_layer_path(layer_arn, cache_dir)
+        if self._is_downloaded(layer_path):
+            LOGGER.debug("Layer %s is already downloaded, skipping download.",
+                         layer_arn)
+            return layer_path
+        layer = self._lambda_client.get_layer_version(layer_arn)
+        try:
+            uri = layer["Content"]["Location"]
+        except KeyError:
+            raise ValueError("Invalid layer arn: %s" % layer_arn)
+        self._ui.write("Downloading layer %s...\n" % layer_arn)
+        get_request = self._session.get(uri, stream=True)
+        with open(layer_path, "wb") as local_layer_file:
+            for data in get_request.iter_content(chunk_size=None):
+                local_layer_file.write(data)
+        return layer_path
+
+    def _get_layer_path(self, layer_arn, cache_dir):
+        # type: (str, str) -> str
+        filename = 'layer-%s-%s.zip' \
+                   % (hashlib.md5(layer_arn.encode('utf-8')).hexdigest(),
+                      self._config.lambda_python_version)
+        layer_path = self._osutils.joinpath(cache_dir, filename)
+        return layer_path
+
+    def _is_downloaded(self, layer_path):
+        # type: (str) -> bool
+        return self._osutils.file_exists(layer_path)
+
+
+class DockerPackager(object):
+    def __init__(self,
+                 config,            # type: Config
+                 osutils,           # type: OSUtils
+                 app_packager,      # type: BaseLambdaDeploymentPackager
+                 layer_packager,    # type: LayerDeploymentPackager
+                 layer_downloader   # type: LambdaLayerDownloader
+                 ):
+        self._config = config
+        self._osutils = osutils
+        self._app_packager = app_packager
+        self._layer_packager = layer_packager
+        self._layer_downloader = layer_downloader
+
+    def package_app(self):
+        # type: () -> str
+        project_dir = self._config.project_dir
+        python_version = self._config.lambda_python_version
+        app_file = self._app_packager.create_deployment_package(
+            project_dir, python_version)
+        filename = app_file[:-4]
+        dir_path = self._osutils.joinpath(self._cache_directory(), filename)
+        if self._osutils.directory_exists(dir_path):
+            return dir_path
+        self._osutils.makedirs(dir_path)
+        self._osutils.extract_zipfile(app_file, dir_path)
+        return dir_path
+
+    def package_layers(self, lambda_functions):
+        # type: (List[LambdaFunction]) -> Dict[str, str]
+        if self._config.automatic_layer:
+            auto_layer_path = self._layer_packager.create_deployment_package(
+                self._config.project_dir, self._config.lambda_python_version)
+        else:
+            auto_layer_path = ''
+        layer_dir_map = {}
+        for function in lambda_functions:
+            stage = self._config.chalice_stage
+            scoped_config = self._config.scope(stage, function.resource_name)
+            layer_dir = self.create_layer_directory(scoped_config.layers,
+                                                    auto_layer_path)
+            layer_dir_map[function.function_name] = layer_dir
+        return layer_dir_map
+
+    def create_layer_directory(self, layer_arns, auto_layer_path):
+        # type: (List[str], str) -> str
+        layers_id = (auto_layer_path + ' '.join(layer_arns)).encode("utf-8")
+        dir_name = "layers-%s-%s" % (hashlib.md5(layers_id).hexdigest(),
+                                     self._config.lambda_python_version)
+        cache_dir = self._cache_directory()
+        dir_path = self._osutils.joinpath(cache_dir, dir_name)
+        if self._osutils.directory_exists(dir_path):
+            return dir_path
+        self._osutils.makedirs(dir_path)
+        if auto_layer_path != '':
+            self._osutils.extract_zipfile(auto_layer_path, dir_path)
+        layer_files = self._layer_downloader.download_all(layer_arns,
+                                                          cache_dir)
+        for layer_file in layer_files:
+            self._osutils.extract_zipfile(layer_file, dir_path)
+        return dir_path
+
+    def _cache_directory(self):
+        # type: () -> str
+        cache_dir = self._osutils.joinpath(self._config.project_dir,
+                                           '.chalice', 'deployments')
+        if not self._osutils.directory_exists(cache_dir):
+            self._osutils.makedirs(cache_dir)
+        return cache_dir
+
+
+class ContainerProxyResourceManager(object):
+    def __init__(self,
+                 config,            # type: Config
+                 ui,                # type: UI
+                 osutils,           # type: OSUtils
+                 packager,          # type: DockerPackager
+                 image_builder,     # type: LambdaImageBuilder
+                 ):
+        # type: (...) -> None
+        self._config = config
+        self._ui = ui
+        self._osutils = osutils
+        self._packager = packager
+        self._image_builder = image_builder
+
+        self._container_map = {}    # type: ContainerMap
+
+    def build_resources(self, lambda_functions):
+        # type: (List[LambdaFunction]) -> ContainerMap
+        app_dir = self._packager.package_app()
+        layer_dirs = self._packager.package_layers(lambda_functions)
+        python_version = self._config.lambda_python_version
+        lambda_image = self._image_builder.build(python_version)
+        container_map = self._create_containers(
+            lambda_image, lambda_functions, app_dir, layer_dirs)
+        self._container_map = container_map
+        return container_map
+
+    def cleanup(self):
+        # type: () -> None
+        for _, container in self._container_map.items():
+            try:
+                container.delete()
+            except Exception as ex:
+                LOGGER.debug("Failed to delete Docker container")
+                LOGGER.exception(ex)
+
+    def _create_containers(self,
+                           lambda_image,    # type: str
+                           functions,       # type: List[LambdaFunction]
+                           app_dir,         # type: str
+                           layer_dir_map    # type: Dict[str, str]
+                           ):
+        # type: (...) -> ContainerMap
+        container_map = {}
+        self._ui.write("Creating Docker containers.\n")
+        for function in functions:
+            config = self._config.scope(self._config.chalice_stage,
+                                        function.resource_name)
+            layers_dir = layer_dir_map[function.function_name]
+            container_port = self._unused_tcp_port()
+            env_vars = config.environment_variables
+            memory_limit = config.lambda_memory_size
+            container_map[function.function_name] = \
+                LambdaContainer(ui=self._ui,
+                                port=container_port,
+                                handler=function.handler,
+                                code_dir=posix_path(app_dir),
+                                layers_dir=posix_path(layers_dir),
+                                image=lambda_image,
+                                env_vars=env_vars,
+                                memory_limit_mb=memory_limit,
+                                stay_open=True)
+        return container_map
+
+    def _unused_tcp_port(self):
+        # type: () -> int
+        # pylint: disable=no-member
+        with contextlib.closing(socket.socket()) as sock:
+            sock.bind(('127.0.0.1', 0))
+            return sock.getsockname()[1]

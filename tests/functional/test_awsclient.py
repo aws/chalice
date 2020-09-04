@@ -1627,6 +1627,19 @@ class TestInvokeLambdaFunction(object):
         with pytest.raises(ReadTimeout):
             awsclient.invoke_function('name', payload=b'payload') == {}
 
+    def test_invoke_lambda_not_found_raises_correct_error(self,
+                                                          stubbed_session):
+        stubbed_session.stub('lambda').invoke(
+            FunctionName='name',
+            Payload=b'payload',
+            InvocationType='RequestResponse',
+        ).raises_error(error_code='ResourceNotFoundException',
+                       message='Unknown')
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        with pytest.raises(ResourceDoesNotExistError):
+            awsclient.invoke_function('name', payload=b'payload') == {}
+
 
 class TestCreateLambdaFunction(object):
     def test_create_function_succeeds_first_try(self, stubbed_session):

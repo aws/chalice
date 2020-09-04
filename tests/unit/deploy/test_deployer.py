@@ -38,7 +38,7 @@ from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanStage
 from chalice.deploy.planner import StringFormat
 from chalice.deploy.sweeper import ResourceSweeper
-from chalice.deploy.models import APICall
+from chalice.deploy.models import APICall, LambdaFunction
 from chalice.constants import VPC_ATTACH_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
@@ -255,6 +255,14 @@ class LeafResource(models.Model):
     name = attrib()
 
 
+class LambdaResource(models.LambdaFunction):
+    def __init__(self):
+        pass
+
+    def dependencies(self):
+        return []
+
+
 @fixture
 def mock_client():
     return mock.Mock(spec=TypedAWSClient)
@@ -338,6 +346,26 @@ class TestDependencyBuilder(object):
         dep_builder = DependencyBuilder()
         deps = dep_builder.build_dependencies(app)
         assert deps == [leaf, second_parent, first_parent]
+
+    def test_list_dependencies_by_type(self, sample_app_with_auth):
+        leaf = LeafResource(name='leaf')
+        first_lambda = LambdaResource()
+        leaf_lambda = LambdaResource()
+        shared_lambda = LambdaResource()
+        second_parent = FooResource(name='second', leaf=[leaf_lambda,
+                                                         shared_lambda])
+        first_parent = FooResource(name='first', leaf=[leaf, second_parent])
+        app = models.Application(stage='dev',
+                                 resources=[first_lambda,
+                                            first_parent,
+                                            shared_lambda])
+
+        dep_builder = DependencyBuilder()
+        lambdas = dep_builder\
+            .list_dependencies_by_type(app, LambdaFunction)
+        for function in lambdas:
+            assert isinstance(function, LambdaFunction)
+        assert len(lambdas) == 3
 
 
 class RoleTestCase(object):

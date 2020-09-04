@@ -12,6 +12,7 @@ from chalice.config import Config
 from chalice.config import DeployedResources
 from chalice import local
 from chalice.package import PackageOptions
+from chalice.local import ContainerProxyResourceManager, ProxyServerRunner
 from chalice.utils import UI
 from chalice import Chalice
 from chalice.logs import LogRetriever
@@ -30,6 +31,9 @@ def clifactory(tmpdir):
         '# Test app\n'
         'import chalice\n'
         'app = chalice.Chalice(app_name="test")\n'
+        '@app.lambda_function()\n'
+        'def myfunction(event, context):\n'
+        '    return {"hello": "world"}\n'
     )
     chalice_dir = appdir.mkdir('.chalice')
     chalice_dir.join('config.json').write('{}')
@@ -275,33 +279,28 @@ def test_can_create_lambda_invoke_handler(clifactory):
     assert isinstance(invoker, LambdaInvokeHandler)
 
 
-def test_does_raise_not_found_error_when_no_function_found(
-        clifactory, no_deployed_values):
-    with pytest.raises(factory.NoSuchFunctionError) as e:
-        clifactory.create_lambda_invoke_handler('function_name', 'stage')
-    assert e.value.name == 'function_name'
-
-
-def test_does_raise_not_found_error_when_resource_is_not_lambda(clifactory):
-    stage = 'dev'
-    deployed_dir = os.path.join(clifactory.project_dir, '.chalice', 'deployed')
-    os.mkdir(deployed_dir)
-    deployed_file = os.path.join(deployed_dir, '%s.json' % stage)
-    with open(deployed_file, 'w') as f:
-        f.write(json.dumps({
-            'resources': [
-                {
-                    'name': 'foobar',
-                    'resource_type': 'iam_role',
-                    'role_arn': 'bazbuz',
-                },
-            ], 'schema_version': '2.0'
-        }))
-    with pytest.raises(factory.NoSuchFunctionError) as e:
-        clifactory.create_lambda_invoke_handler('foobar', stage)
-    assert e.value.name == 'foobar'
+def test_can_create_lambda_invoke_handler_with_url(clifactory):
+    invoker = clifactory.create_lambda_invoke_handler('myfunction', 'dev',
+                                                      endpoint_url='hello')
+    assert isinstance(invoker, LambdaInvokeHandler)
 
 
 def test_can_create_package_options(clifactory):
     options = clifactory.create_package_options()
     assert isinstance(options, PackageOptions)
+
+
+def test_can_create_container_proxy_resource_manager(clifactory):
+    config = clifactory.create_config_obj(chalice_stage_name='dev')
+    resource_manager = clifactory.create_container_proxy_resource_manager(
+        config)
+    assert isinstance(resource_manager, ContainerProxyResourceManager)
+
+
+def test_can_create_proxy_server_runner(clifactory):
+    config = clifactory.create_config_obj(chalice_stage_name='dev')
+    resource_manager = clifactory.create_container_proxy_resource_manager(
+        config)
+    server_runner = clifactory.create_proxy_server_runner(
+        config, 'dev', 'localhost', 8000, resource_manager, True)
+    assert isinstance(server_runner, ProxyServerRunner)

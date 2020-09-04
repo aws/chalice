@@ -3,6 +3,7 @@ import json
 import decimal
 import pytest
 import mock
+import requests
 from pytest import fixture
 from six import BytesIO
 from six.moves.BaseHTTPServer import HTTPServer
@@ -12,8 +13,14 @@ from chalice import local, BadRequestError, CORSConfig
 from chalice import Response
 from chalice import IAMAuthorizer
 from chalice import CognitoUserPoolAuthorizer
+from chalice.app import ChaliceAuthorizer
 from chalice.config import Config
+from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
+from chalice.deploy.models import LambdaFunction, Application
+from chalice.docker import LambdaContainer
 from chalice.local import LambdaContext
+from chalice.local import ContainerFunctionCaller
+from chalice.local import LocalFunctionCaller
 from chalice.local import LocalARNBuilder
 from chalice.local import LocalGateway
 from chalice.local import LocalGatewayAuthorizer
@@ -21,6 +28,11 @@ from chalice.local import NotAuthorizedError
 from chalice.local import ForbiddenError
 from chalice.local import InvalidAuthorizerError
 from chalice.local import LocalDevServer
+from chalice.local import LambdaProxyServer
+from chalice.local import ProxyServerRunner
+from chalice.local import ContainerProxyResourceManager
+from chalice.local import ContainerProxyHandler
+from chalice.local import ResourceNotFoundError
 
 
 AWS_REQUEST_ID_PATTERN = re.compile(
@@ -154,6 +166,10 @@ def sample_app():
                         headers={
                             'Set-Cookie': ['CookieA=ValueA', 'CookieB=ValueB']
                         })
+
+    @demo.lambda_function()
+    def myfunction():
+        return {'lambda': 'function'}
 
     return demo
 
@@ -728,10 +744,24 @@ class TestLocalGateway(object):
         def index_view():
             return {'foo': 'bar'}
 
-        gateway = LocalGateway(demo, Config())
+        function_caller = LocalFunctionCaller(demo)
+        gateway = LocalGateway(demo, Config(), function_caller)
         response = gateway.handle_request('GET', '/', {}, '')
         body = json.loads(response['body'])
         assert body['foo'] == 'bar'
+
+    def test_invoke_calls_function_caller(self):
+        demo = app.Chalice('app-name')
+
+        @demo.route('/')
+        def index_view():
+            return {'foo': 'bar'}
+
+        function_caller = mock.Mock(spec=LocalFunctionCaller)
+        function_caller.call_rest_api.return_value.get.return_value = False
+        gateway = LocalGateway(demo, Config(), function_caller)
+        gateway.handle_request('GET', '/', {}, '')
+        function_caller.call_rest_api.assert_called_once()
 
     def test_does_populate_context(self):
         demo = app.Chalice('app-name')
@@ -752,7 +782,8 @@ class TestLocalGateway(object):
             'lambda_memory_size': 256,
         }
         config = Config(chalice_stage='api', config_from_disk=disk_config)
-        gateway = LocalGateway(demo, config)
+        function_caller = LocalFunctionCaller(demo)
+        gateway = LocalGateway(demo, config, function_caller)
         response = gateway.handle_request('GET', '/context', {}, '')
         body = json.loads(response['body'])
         assert body['name'] == 'api_handler'
@@ -763,33 +794,38 @@ class TestLocalGateway(object):
         assert AWS_REQUEST_ID_PATTERN.match(body['request_id'])
 
     def test_can_validate_route_with_variables(self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         response = gateway.handle_request(
             'GET', '/secret/foobar', {'Authorization': 'allow'}, '')
         json_body = json.loads(response['body'])
         assert json_body['secret'] == 'foobar'
 
     def test_can_allow_route_with_variables(self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         response = gateway.handle_request(
             'GET', '/resource/foobar', {'Authorization': 'allow'}, '')
         json_body = json.loads(response['body'])
         assert json_body['resource'] == 'foobar'
 
     def test_does_send_500_when_authorizer_returns_none(self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         with pytest.raises(InvalidAuthorizerError):
             gateway.handle_request(
                 'GET', '/none', {'Authorization': 'foobarbaz'}, '')
 
     def test_can_deny_route_with_variables(self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         with pytest.raises(ForbiddenError):
             gateway.handle_request(
                 'GET', '/resource/foobarbaz', {'Authorization': 'allow'}, '')
 
     def test_does_deny_unauthed_request(self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         with pytest.raises(ForbiddenError) as ei:
             gateway.handle_request(
                 'GET', '/index', {'Authorization': 'deny'}, '')
@@ -800,7 +836,8 @@ class TestLocalGateway(object):
 
     def test_does_throw_unauthorized_when_no_auth_token_present_on_valid_route(
             self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         with pytest.raises(NotAuthorizedError) as ei:
             gateway.handle_request(
                 'GET', '/index', {}, '')
@@ -809,7 +846,8 @@ class TestLocalGateway(object):
 
     def test_does_deny_with_forbidden_when_route_not_found(
             self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         with pytest.raises(ForbiddenError) as ei:
             gateway.handle_request('GET', '/badindex', {}, '')
         exception_body = str(ei.value.body)
@@ -817,7 +855,8 @@ class TestLocalGateway(object):
 
     def test_does_deny_with_forbidden_when_auth_token_present(
             self, demo_app_auth):
-        gateway = LocalGateway(demo_app_auth, Config())
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        gateway = LocalGateway(demo_app_auth, Config(), function_caller)
         with pytest.raises(ForbiddenError) as ei:
             gateway.handle_request('GET', '/badindex',
                                    {'Authorization': 'foobar'}, '')
@@ -834,7 +873,8 @@ class TestLocalBuiltinAuthorizers(object):
         # Ensures that / routes work since that is a special case in the
         # API Gateway arn generation where an extra / is appended to the end
         # of the arn.
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/'
         event = create_event(path, 'GET', {})
         event['headers']['authorization'] = 'allow'
@@ -851,7 +891,8 @@ class TestLocalBuiltinAuthorizers(object):
             return {}
 
         path = '/index'
-        authorizer = LocalGatewayAuthorizer(demo)
+        function_caller = LocalFunctionCaller(demo)
+        authorizer = LocalGatewayAuthorizer(demo, function_caller)
         original_event = create_event(path, 'GET', {})
         original_context = LambdaContext(*lambda_context_args)
         event, context = authorizer.authorize(
@@ -864,7 +905,8 @@ class TestLocalBuiltinAuthorizers(object):
     def test_does_raise_not_authorized_error(self, demo_app_auth,
                                              lambda_context_args,
                                              create_event):
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/index'
         event = create_event(path, 'GET', {})
         context = LambdaContext(*lambda_context_args)
@@ -873,7 +915,8 @@ class TestLocalBuiltinAuthorizers(object):
 
     def test_does_authorize_valid_requests(self, demo_app_auth,
                                            lambda_context_args, create_event):
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/index'
         event = create_event(path, 'GET', {})
         event['headers']['authorization'] = 'allow'
@@ -884,7 +927,8 @@ class TestLocalBuiltinAuthorizers(object):
     def test_does_authorize_unsupported_authorizer(self, demo_app_auth,
                                                    lambda_context_args,
                                                    create_event):
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/iam'
         event = create_event(path, 'GET', {})
         context = LambdaContext(*lambda_context_args)
@@ -902,7 +946,8 @@ class TestLocalBuiltinAuthorizers(object):
     def test_cannot_access_view_without_permission(self, demo_app_auth,
                                                    lambda_context_args,
                                                    create_event):
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/secret'
         event = create_event(path, 'GET', {})
         event['headers']['authorization'] = 'allow'
@@ -913,7 +958,8 @@ class TestLocalBuiltinAuthorizers(object):
     def test_can_understand_explicit_auth_policy(self, demo_app_auth,
                                                  lambda_context_args,
                                                  create_event):
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/explicit'
         event = create_event(path, 'GET', {})
         event['headers']['authorization'] = 'allow'
@@ -930,7 +976,8 @@ class TestLocalBuiltinAuthorizers(object):
         # account for the ability for a user to set an explicit deny policy.
         # It should behave exactly as not getting permission added with an
         # allow.
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/explicit'
         event = create_event(path, 'GET', {})
         context = LambdaContext(*lambda_context_args)
@@ -942,7 +989,8 @@ class TestLocalBuiltinAuthorizers(object):
         # Ensures that / routes work since that is a special case in the
         # API Gateway arn generation where an extra / is appended to the end
         # of the arn.
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/cognito'
         event = create_event(path, 'GET', {})
         event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tL3VzLWVhc3QtMV9leGFtcGxlIiwiY29nbml0bzp1c2VybmFtZSI6ImphbmVkb2UiLCJleHAiOjE1ODQ3MjM2MTYsImdpdmVuX25hbWUiOiJKYW5lIiwiaWF0IjoxNTAwMDA5NDAwLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJqdGkiOiJkN2UxMTMzYS0xZTNhLTQyMzEtYWU3Yi0yOGQ4NWVlMGIxNGQifQ.p35Yj9KJD5RbfPWGL08IJHgson8BhdGLPQqUOiF0-KM"  # noqa
@@ -955,7 +1003,8 @@ class TestLocalBuiltinAuthorizers(object):
                                                       lambda_context_args,
                                                       demo_app_auth,
                                                       create_event):
-        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        function_caller = LocalFunctionCaller(demo_app_auth)
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
         path = '/cognito'
         event = create_event(path, 'GET', {})
         event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tL3VzLWVhc3QtMV9leGFtcGxlIiwiZXhwIjoxNTg0NzIzNjE2LCJnaXZlbl9uYW1lIjoiSmFuZSIsImlhdCI6MTUwMDAwOTQwMCwiZW1haWwiOiJqYW5lZG9lQGV4YW1wbGUuY29tIiwianRpIjoiZDdlMTEzM2EtMWUzYS00MjMxLWFlN2ItMjhkODVlZTBiMTRkIn0.SN5n-A3kxboNYg0sGIOipVUksCdn6xRJmAK9kSZof10"  # noqa
@@ -971,6 +1020,19 @@ class TestLocalBuiltinAuthorizers(object):
                 'communicaiton is not supported in local mode. All requests '
                 'made against a route will be authorized to allow local '
                 'testing.') in str(warning.message)
+
+    def test_authorize_calls_function_caller(
+            self, demo_app_auth, lambda_context_args, create_event):
+        function_caller = mock.Mock(spec=LocalFunctionCaller)
+        function_caller.call_authorizer.return_value = None
+        authorizer = LocalGatewayAuthorizer(demo_app_auth, function_caller)
+        path = '/index'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        with pytest.raises(InvalidAuthorizerError):
+            authorizer.authorize(path, event, context)
+        function_caller.call_authorizer.assert_called_once()
 
 
 class TestArnBuilder(object):
@@ -1138,3 +1200,486 @@ class TestLocalDevServer(object):
         )
 
         assert server.server.daemon_threads
+
+
+class TestLambdaProxyServer(object):
+    def test_create_proxy_server_accepts_and_forwards_args(self, sample_app):
+        provided_args = []
+
+        def args_recorder(*args):
+            provided_args[:] = list(args)
+
+        server = LambdaProxyServer(
+            Config(), '0.0.0.0', 8000, None,
+            server_cls=args_recorder,
+        )
+
+        assert server.host == '0.0.0.0'
+        assert server.port == 8000
+        assert provided_args[0] == ('0.0.0.0', 8000)
+
+
+class TestProxyServerRunner(object):
+    def test_run_creates_and_cleans_up_resources(self):
+
+        class DummyServer():
+            def __init__(self, *args):
+                pass
+
+            def serve_forever(self):
+                pass
+
+        config = Config()
+        session = mock.Mock(spec=requests.Session)
+        app_graph_builder = mock.Mock(spec=ApplicationGraphBuilder)
+        app_graph = mock.Mock(spec=Application)
+        app_graph_builder.build.return_value = app_graph
+        dependency_builder = mock.Mock(spec=DependencyBuilder)
+        lambda1 = LambdaFunction(None, 'function1', None, None,
+                                 None, None, None, None, None,
+                                 None, None, None, None, None)
+        lambda2 = LambdaFunction(None, 'function2', None, None,
+                                 None, None, None, None, None,
+                                 None, None, None, None, None)
+        dependency_builder.list_dependencies_by_type.return_value = [lambda1,
+                                                                     lambda2]
+        resource_manager = mock.Mock(spec=ContainerProxyResourceManager)
+        resources = {}
+        resource_manager.build_resources.return_value = resources
+        function_caller = mock.Mock(spec=ContainerFunctionCaller)
+        local_gateway = mock.Mock(spec=LocalGateway)
+        handler = ContainerProxyHandler(session, function_caller,
+                                        local_gateway)
+        server_cls = DummyServer
+
+        runner = ProxyServerRunner(config, 'stage', 'host', 8000,
+                                   app_graph_builder, dependency_builder,
+                                   resource_manager, handler,
+                                   server_cls=server_cls)
+        runner.run()
+
+        app_graph_builder.build.assert_called_with(config, 'stage')
+        dependency_builder.list_dependencies_by_type\
+            .assert_called_with(app_graph, LambdaFunction)
+        resource_manager.build_resources.assert_called_with([lambda1,
+                                                             lambda2])
+        resource_manager.cleanup.assert_called_once()
+
+
+class TestContainerProxyHandler:
+    @fixture
+    def mock_container(self):
+        container = mock.Mock(spec=LambdaContainer)
+        container.api_port = 1000
+        return container
+
+    @fixture
+    def mock_session(self):
+        mock_session = mock.Mock(spec=requests.Session)
+        response = mock.Mock(spec=requests.Response)
+        response.headers = {"goodbye": "world",
+                            "Content-Length": 500}
+        response.text = "response body"
+        response.status_code = 200
+        mock_session.post.return_value = response
+        return mock_session
+
+    @fixture
+    def function_caller(self):
+        return mock.Mock(spec=ContainerFunctionCaller)
+
+    @fixture
+    def local_gateway(self):
+        local_gateway = mock.Mock(spec=LocalGateway)
+        local_gateway.handle_request.return_value = {
+            'statusCode': 200,
+            'headers': {'header': '1'},
+            'multiValueHeaders': {'headers': '2'},
+            'body': 'hello'
+        }
+        return local_gateway
+
+    @fixture
+    def handler(self, mock_container, mock_session,
+                function_caller, local_gateway):
+        container_map = {
+            "app.handler": mock_container
+        }
+        return ContainerProxyHandler(mock_session,
+                                     function_caller,
+                                     local_gateway,
+                                     container_map=container_map)
+
+    def test_add_resources(self, mock_container, function_caller):
+        container_map = {"hello": mock_container}
+        handler = ContainerProxyHandler(None, function_caller, None,
+                                        container_map=container_map)
+        update_map = {"new handler": mock_container}
+        handler.add_resources(update_map)
+        assert container_map == {
+            "hello": mock_container,
+            "new handler": mock_container
+        }
+        function_caller.update_container_map.assert_called_with(update_map)
+
+    def test_handle_invoke_reuses_existing_container(self, handler,
+                                                     mock_container):
+        mock_container.is_created.return_value = True
+
+        handler.handle_invoke_function("/path/path", {}, "body", "app.handler")
+        mock_container.run.assert_not_called()
+
+    def test_handle_invoke_runs_container_if_not_created(self, handler,
+                                                         mock_container):
+        mock_container.is_created.return_value = False
+
+        handler.handle_invoke_function("/path/path", {}, "body", "app.handler")
+        mock_container.run.assert_called_once()
+        mock_container.wait_for_initialize.assert_called_once()
+
+    def test_handle_invoke_forwards_request_to_correct_url(self, handler,
+                                                           mock_session):
+        headers = {"hello": "world"}
+        url = "http://localhost:1000/path/path"
+        handler.handle_invoke_function("/path/path", headers,
+                                       "body", "app.handler")
+        assert mock_session.headers == headers
+        mock_session.post.assert_called_with(url, data="body")
+
+    def test_handle_invoke_response_is_forwarded(self, handler,
+                                                 mock_session):
+        proxy_response = handler.handle_invoke_function("/path/path", {},
+                                                        "body", "app.handler")
+        assert proxy_response.status_code == 200
+        assert proxy_response.headers == {"goodbye": "world"}
+        assert proxy_response.body == "response body"
+
+    def test_handle_invoke_convert_none_body_to_empty(self, handler,
+                                                      mock_session):
+        headers = {"hello": "world"}
+        url = "http://localhost:1000/path/path"
+        handler.handle_invoke_function("/path/path", headers,
+                                       None, "app.handler")
+        mock_session.post.assert_called_with(url, data=b'{}')
+
+    def test_handle_invoke_other_error(self, handler,
+                                       mock_session):
+        mock_session.post.side_effect = IndexError()
+        with pytest.raises(IndexError):
+            handler.handle_invoke_function("/path/path", {},
+                                           "body", "app.handler")
+
+    def test_handle_invoke_empty_function_raises_error(self, handler):
+        with pytest.raises(ResourceNotFoundError):
+            handler.handle_invoke_function("/path/path", {},
+                                           "body", "")
+
+    def test_handle_invoke_no_matching_container_raises_error(self, handler):
+        with pytest.raises(ResourceNotFoundError):
+            handler.handle_invoke_function("/path/path", {},
+                                           "body", "helloworld")
+
+    def test_handle_rest_api_calls_local_gateway(self, handler, local_gateway):
+        response = handler.handle_rest_api(
+            'POST', '/hello', {'hello': 'world'}, 'hi')
+        local_gateway.handle_request.assert_called_with(
+            method='POST',
+            path='/hello',
+            headers={'hello': 'world'},
+            body='hi'
+        )
+        assert response.status_code == 200
+        assert response.body == 'hello'
+        assert response.headers == {'header': '1',
+                                    'headers': '2'}
+
+    def test_handle_rest_api_forwards_gateway_exception(self, handler,
+                                                        local_gateway):
+        error = ResourceNotFoundError(headers={'a': 'b'}, body='body')
+        local_gateway.handle_request.side_effect = error
+        response = handler.handle_rest_api(
+            'POST', '/hello', {'hello': 'world'}, 'hi')
+        assert response.status_code == 404
+        assert response.body == 'body'
+        assert response.headers == {'a': 'b'}
+
+    def test_handle_rest_api_routes_empty_path(self, handler, local_gateway):
+        handler.handle_rest_api('POST', '', {'hello': 'world'}, 'hi')
+        local_gateway.handle_request.assert_called_with(
+            method='POST',
+            path='/',
+            headers={'hello': 'world'},
+            body='hi'
+        )
+
+
+class ProxyStubbedHandler(local.ProxyRequestHandler):
+    requestline = ''
+    request_version = 'HTTP/1.1'
+
+    def setup(self):
+        self.rfile = BytesIO()
+        self.wfile = BytesIO()
+        self.requestline = ''
+
+    def finish(self):
+        pass
+
+
+@fixture
+def container_proxy_handler():
+    handler = mock.Mock(spec=ContainerProxyHandler)
+    handler.handle_invoke_function.return_value = Response(
+        '{"hello": "world"}', {"response": "headers"}, 200
+    )
+    handler.handle_rest_api.return_value = Response(
+        '{"goodbye": "world"}', {"response": "header"}, 200
+    )
+    return handler
+
+
+@fixture
+def proxy_handler(sample_app, container_proxy_handler):
+    config = Config(config_from_disk={
+        'api_gateway_stage': 'api'
+    })
+    proxy_handler = ProxyStubbedHandler(
+        None, ('127.0.0.1', 2000), None, config,
+        proxy_handler=container_proxy_handler)
+    proxy_handler.sample_app = sample_app
+    return proxy_handler
+
+
+def set_current_proxy_request(proxy_handler, method, path, headers=None):
+    if headers is None:
+        headers = {'content-type': 'application/json'}
+    proxy_handler.command = method
+    proxy_handler.path = path
+    proxy_handler.headers = headers
+
+
+def test_container_proxy_handler_handles_invoke_function(
+        proxy_handler, container_proxy_handler):
+    path = '/2015-03-31/functions/demo-app-dev-myfunction/invocations'
+    headers = {
+        'content-type': 'application/json',
+        'content-length': 18
+    }
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers=headers)
+    proxy_handler.rfile.write(b'{"hello": "world"}')
+    proxy_handler.rfile.seek(0)
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    container_proxy_handler.handle_invoke_function.assert_called_with(
+        path, headers, body, 'demo-app-dev-myfunction')
+    assert b'200 OK' in status_line
+    assert body == b'{"hello": "world"}'
+
+
+def test_container_proxy_handler_handles_invalid_invoke_function(
+        proxy_handler, container_proxy_handler):
+    path = '/2015-03-31/functions/demo-app-dev-myfunction/invocations'
+    error_headers = {
+        'content-type': 'application/json',
+        'content-length': 18
+    }
+    error_body = b'{"Message": 'b'"Function not found."}'
+    error = ResourceNotFoundError(headers=error_headers, body=error_body)
+    container_proxy_handler.handle_invoke_function.side_effect = error
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers=error_headers)
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    assert b'404 Not Found' in status_line
+    assert body == error_body
+
+
+def test_container_proxy_handler_handles_rest_api(
+        proxy_handler, container_proxy_handler):
+    path = '/api/hello_world'
+    headers = {
+        'content-type': 'application/json',
+        'content-length': 20
+    }
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers=headers)
+    proxy_handler.rfile.write(b'{"goodbye": "world"}')
+    proxy_handler.rfile.seek(0)
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    container_proxy_handler.handle_rest_api.assert_called_with(
+        'POST', '/hello_world', headers, body)
+    assert b'200 OK' in status_line
+    assert body == b'{"goodbye": "world"}'
+
+
+def test_container_proxy_handler_handles_invalid_rest_api(
+        proxy_handler, container_proxy_handler):
+    path = '/api/hello_world'
+    error_headers = {
+        'content-type': 'application/json',
+        'content-length': 18
+    }
+    error_body = \
+        b'{"Message": 'b'"User is not authorized to access this resource."}'
+    error = ForbiddenError(headers=error_headers, body=error_body)
+    container_proxy_handler.handle_rest_api.side_effect = error
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers=error_headers)
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    assert b'403 Forbidden' in status_line
+    assert body == error_body
+
+
+def test_container_proxy_handler_handles_invalid_path(
+        proxy_handler, container_proxy_handler):
+    path = '/hello'
+    set_current_proxy_request(proxy_handler, method='POST',
+                              path=path, headers={})
+
+    proxy_handler.do_POST()
+
+    raw_response = proxy_handler.wfile.getvalue()
+    raw_lines = raw_response.splitlines()
+    status_line = raw_lines[0]
+    body = raw_lines[-1]
+
+    assert b'403 Forbidden' in status_line
+    assert b'{"Message": "Forbidden"}' in body
+
+
+class TestLocalFunctionCaller(object):
+    def test_call_rest_api(self):
+        provided_args = []
+
+        def args_recorder(*args):
+            provided_args[:] = list(args)
+
+        function_caller = LocalFunctionCaller(args_recorder)
+        function_caller.call_rest_api("hello", "world")
+        assert provided_args == ["hello", "world"]
+
+    def test_call_authorizer(self):
+        provided_args = []
+
+        def args_recorder(*args):
+            provided_args[:] = list(args)
+
+        function_caller = LocalFunctionCaller(None)
+        function_caller.call_authorizer(args_recorder,
+                                        "hello", "world")
+        assert provided_args == ["hello", "world"]
+
+
+class TestContainerFunctionCaller(object):
+    @fixture
+    def mock_session(self):
+        mock_session = mock.Mock(spec=requests.Session)
+        response = mock.Mock(spec=requests.Response)
+        response.headers = {"goodbye": "world",
+                            "Content-Length": 500}
+        response.text = '{"response": "body"}'
+        response.status_code = 200
+        mock_session.post.return_value = response
+        return mock_session
+
+    @fixture
+    def rest_container(self):
+        container = mock.Mock(spec=LambdaContainer)
+        container.is_created.return_value = True
+        container.api_port = 9001
+        return container
+
+    @fixture
+    def auth_container(self):
+        container = mock.Mock(spec=LambdaContainer)
+        container.is_created.return_value = True
+        container.api_port = 9002
+        return container
+
+    @fixture
+    def function_caller(self, mock_session, rest_container, auth_container):
+        disk_config = {
+            'app_name': 'demo-app'
+        }
+        config = Config(chalice_stage='stage', config_from_disk=disk_config)
+        container_map = {'demo-app-stage': rest_container,
+                         'demo-app-stage-function': auth_container}
+        function_caller = ContainerFunctionCaller(config, mock_session,
+                                                  container_map=container_map)
+        return function_caller
+
+    def test_update_container_map(self):
+        container = mock.Mock(spec=LambdaContainer)
+        container_map = {"hello": container}
+        function_caller = ContainerFunctionCaller(None, None,
+                                                  container_map)
+        update_map = {"new handler": container}
+        function_caller.update_container_map(update_map)
+        assert container_map == {
+            "hello": container,
+            "new handler": container
+        }
+
+    def test_call_rest_api(self, function_caller, mock_session,
+                           rest_container):
+        response = function_caller.call_rest_api({'hello': 'world'}, None)
+        url = 'http://localhost:9001/2015-03-31/functions/' \
+              'function-name/invocations'
+        mock_session.post.assert_called_with(url, data='{"hello": "world"}')
+        rest_container.run.assert_not_called()
+        assert response == {'response': 'body'}
+
+    def test_call_authorizer(self, function_caller, mock_session,
+                             auth_container):
+        authorizer = ChaliceAuthorizer('function', None)
+        response = function_caller.call_authorizer(authorizer,
+                                                   {'hello': 'world'}, None)
+        url = 'http://localhost:9002/2015-03-31/functions/' \
+              'function-name/invocations'
+        mock_session.post.assert_called_with(url, data='{"hello": "world"}')
+        auth_container.run.assert_not_called()
+        assert response == {'response': 'body'}
+
+    def test_call_rest_api_runs_container_if_not_created(self, function_caller,
+                                                         rest_container):
+        rest_container.is_created.return_value = False
+
+        function_caller.call_rest_api(None, None)
+        rest_container.run.assert_called_once()
+        rest_container.wait_for_initialize.assert_called_once()
+
+    def test_call_authorizer_runs_container_if_not_created(
+            self, function_caller, auth_container):
+        auth_container.is_created.return_value = False
+
+        authorizer = ChaliceAuthorizer('function', None)
+        function_caller.call_authorizer(authorizer, None, None)
+        auth_container.run.assert_called_once()
+        auth_container.wait_for_initialize.assert_called_once()

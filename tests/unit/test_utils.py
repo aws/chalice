@@ -210,3 +210,13 @@ class TestTimestampUtils(object):
 def test_parse_iso8601_timestamp(timestamp, expected):
     timestamp_convert = utils.TimestampConverter()
     assert timestamp_convert.parse_iso8601_timestamp(timestamp) == expected
+
+
+def test_windows_path_to_posix():
+    input_path = "C:\\Users\\Username\\AppData\\Local\\Temp\\dir"
+    expected_path = "/c/Users/Username/AppData/Local/Temp/dir"
+    assert utils.windows_path_to_posix(input_path) == expected_path
+
+    input_path = "/not/a/windows/path"
+    expected_path = "/not/a/windows/path"
+    assert utils.windows_path_to_posix(input_path) == expected_path

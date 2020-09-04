@@ -8,7 +8,8 @@ from typing import Optional, Type, Generator, Dict, Any, List  # noqa
 
 from chalice import Chalice  # noqa
 from chalice.config import Config
-from chalice.local import LocalGateway, LambdaContext, LocalGatewayException
+from chalice.local import (LocalGateway, LambdaContext, LocalGatewayException,
+                           LocalFunctionCaller)
 from chalice.cli.factory import CLIFactory
 
 
@@ -104,7 +105,8 @@ class TestHTTPClient(BaseClient):
         # type: (Chalice, Config) -> None
         self._app = app
         self._config = config
-        self._local_gateway = LocalGateway(app, self._config)
+        function_caller = LocalFunctionCaller(app)
+        self._local_gateway = LocalGateway(app, self._config, function_caller)
 
     def request(self, method, path, headers=None, body=b''):
         # type: (str, str, Optional[Dict[str, str]], bytes) -> HTTPResponse

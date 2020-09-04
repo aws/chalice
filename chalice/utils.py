@@ -10,7 +10,7 @@ import sys
 import tarfile
 from datetime import datetime, timedelta
 import subprocess
-
+import ntpath
 
 from collections import OrderedDict # noqa
 import click
@@ -99,6 +99,16 @@ def serialize_to_json(data):
 
     """
     return json.dumps(data, indent=2, separators=(',', ': ')) + '\n'
+
+
+def windows_path_to_posix(path):
+    # type: (str) -> str
+    return re.sub(
+        "^([A-Za-z])+:",
+        lambda match:
+            "/" + match.group().replace(":", "").lower(),
+        ntpath.abspath(path).replace("\\", "/"),
+    )
 
 
 class ChaliceZipFile(zipfile.ZipFile):

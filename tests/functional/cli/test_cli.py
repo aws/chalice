@@ -18,7 +18,7 @@ from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.logs import LogRetriever, LogRetrieveOptions
 from chalice.invoke import LambdaInvokeHandler
 from chalice.invoke import UnhandledLambdaError
-from chalice.awsclient import ReadTimeout
+from chalice.awsclient import ReadTimeout, ResourceDoesNotExistError
 from chalice.deploy.validate import ExperimentalFeatureError
 
 
@@ -627,8 +627,8 @@ def test_invoke_does_raise_if_read_timeout(runner, mock_cli_factory):
 
 
 def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
-    mock_cli_factory.create_lambda_invoke_handler.side_effect = \
-        factory.NoSuchFunctionError('foo')
+    handler = mock_cli_factory.create_lambda_invoke_handler.return_value
+    handler.invoke.side_effect = ResourceDoesNotExistError()
     with runner.isolated_filesystem():
         cli.create_new_project_skeleton('testproject')
         os.chdir('testproject')
