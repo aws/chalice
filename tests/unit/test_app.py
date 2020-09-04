@@ -579,6 +579,26 @@ def test_json_body_available_with_right_content_type(create_event):
     assert result == {'foo': 'bar'}
 
 
+def test_json_body_available_with_csp_report_content_type(create_event):
+    demo = app.Chalice("demo-app")
+
+    @demo.route("/", methods=["POST"],
+                content_types=['application/csp-report', 'application/json'])
+    def index():
+        return demo.current_request.json_body
+
+    event = create_event(
+        "/",
+        "POST",
+        {},
+        content_type="application/csp-report")
+    event["body"] = json.dumps({"foo": "bar"})
+
+    result = demo(event, context=None)
+    result = json_response_body(result)
+    assert result == {"foo": "bar"}
+
+
 def test_json_body_none_with_malformed_json(create_event):
     demo = app.Chalice('demo-app')
 
