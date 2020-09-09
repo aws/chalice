@@ -29,16 +29,6 @@ class SwaggerGenerator(object):
             'Empty': {
                 'type': 'object',
                 'title': 'Empty Schema',
-            },
-            'PingModel': {
-                'type': 'object',
-                'title': 'Ping Model',
-                'required': [],
-                'properties': {
-                    "age": {"type": "integer",
-                      "format": "int32"},
-                    "xyz":{"type":"string"}
-                }
             }
         }
     }  # type: Dict[str, Any]
@@ -66,7 +56,6 @@ class SwaggerGenerator(object):
                 api['definitions'].update(swagger_additions['definitions'])
             if 'parameters' in swagger_additions:
                 api['parameters'] = swagger_additions['parameters']
-            print(api['parameters'])
 
     def _add_resource_policy(self, api, rest_api):
         # type: (Dict[str, Any], Optional[RestAPI]) -> None
@@ -100,7 +89,7 @@ class SwaggerGenerator(object):
             # entry's CORS configuration for the preflight setup.
             if cors_config is not None:
                 self._add_preflight_request(
-                    cors_config, methods_with_cors, swagger_for_path)
+                    cors_config, methods_with_cors, swagger_for_path, list(methods.values())[0])
 
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
@@ -172,7 +161,6 @@ class SwaggerGenerator(object):
                 if '---' in doc_lines:
                     current['description'] = '\n'.join(doc_lines[1:doc_lines.index('---')]).strip('\n')
                     swagger_additions = yaml.load('\n'.join(doc_lines[doc_lines.index('---') + 1:]))
-                    print(swagger_additions)
                 else:
                     current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
         if view.api_key_required:
@@ -187,8 +175,10 @@ class SwaggerGenerator(object):
         if view.view_args:
             self._add_view_args(current, view.view_args)
         if swagger_additions is not None:
+            if 'parameters' in swagger_additions and 'parameters' in current:
+                current['parameters'] = current['parameters'] + swagger_additions['parameters']
+                del swagger_additions['parameters']
             current.update(swagger_additions)
-            print(current)
         return current
 
     
@@ -201,7 +191,6 @@ class SwaggerGenerator(object):
             if hasattr(return_type, 'to_swagger'):
                 model_name = return_type.__name__
                 definition = return_type.to_swagger()
-                # print(return_type.__name__, definition)
                 if model_name not in api['definitions']:
                     api['definitions'][model_name] = definition
                 return {
@@ -259,7 +248,7 @@ class SwaggerGenerator(object):
             for name in view_args
         ]
 
-    def _add_preflight_request(self, cors, methods, swagger_for_path):
+    def _add_preflight_request(self, cors, methods, swagger_for_path, single_view):
         # type: (CORSConfig, List[str], Dict[str, Any]) -> None
         methods = methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
@@ -273,9 +262,15 @@ class SwaggerGenerator(object):
         response_params = {'method.response.header.%s' % k: "'%s'" % v for k, v
                            in response_params.items()}
 
+        params = [
+            {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
+            for name in single_view.view_args
+        ]
+
         options_request = {
             "consumes": ["application/json"],
             "produces": ["application/json"],
+            "parameters": params,
             "responses": {
                 "200": {
                     "description": "200 response",
