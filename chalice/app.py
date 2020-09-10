@@ -955,6 +955,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self.app_name = app_name
         self.websocket_api = WebsocketAPI()
         self.current_request = None
+        self.current_raw_event = None
         self.lambda_context = None
         self._debug = debug
         self.configure_logs = configure_logs
@@ -1072,6 +1073,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             event['stageVariables'],
             event.get('isBase64Encoded', False)
         )
+        self.current_raw_event = event
         # We're getting the CORS headers before validation to be able to
         # output desired headers with
         cors_headers = None
