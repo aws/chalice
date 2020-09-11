@@ -380,22 +380,25 @@ class CORSConfig(object):
 class Request(object):
     """The current request from API gateway."""
 
-    def __init__(self, query_params, headers, uri_params, method, body,
-                 context, stage_vars, is_base64_encoded):
+    def __init__(self, event_dict, lambda_context=None):
+        query_params = event_dict['multiValueQueryStringParameters']
         self.query_params = None if query_params is None \
             else MultiDict(query_params)
-        self.headers = CaseInsensitiveMapping(headers)
-        self.uri_params = uri_params
-        self.method = method
-        self._is_base64_encoded = is_base64_encoded
-        self._body = body
+        self.headers = CaseInsensitiveMapping(event_dict['headers'])
+        self.uri_params = event_dict['pathParameters']
+        self.method = event_dict['requestContext']['httpMethod']
+        self._is_base64_encoded = event_dict.get('isBase64Encoded', False)
+        self._body = event_dict['body']
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
         self._json_body = None
         self._raw_body = b''
-        self.context = context
-        self.stage_vars = stage_vars
+        self.context = event_dict['requestContext']
+        self.stage_vars = event_dict['stageVariables']
+        self.uri = event_dict['requestContext']['resourcePath']
+        self.lambda_context = lambda_context
+        self._event_dict = event_dict
 
     def _base64decode(self, encoded):
         if not isinstance(encoded, bytes):
@@ -434,6 +437,15 @@ class Request(object):
         if copied['query_params'] is not None:
             copied['query_params'] = dict(copied['query_params'])
         return copied
+
+    def to_original_event(self):
+        # To bring consistency with the BaseLambdaEvents, every
+        # input event should have access to the original event
+        # dictionary as an escape hatch to the underlying data
+        # in case something gets added and we haven't mapped it yet.
+        # We unfortunately already have a `to_dict()` method which is
+        # what other events use so we have to use a different method name.
+        return self._event_dict
 
 
 class Response(object):
@@ -1101,7 +1113,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             self.routes, self.api, self.log, self.debug,
             middleware_handlers=self._get_middleware_handlers('http'),
         )
-        self.current_request = handler.create_request_object(event)
+        self.current_request = handler.create_request_object(event, context)
         return handler(event, context)
 
 
@@ -1459,7 +1471,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
             middleware_handlers = []
         self._middleware_handlers = middleware_handlers
 
-    def create_request_object(self, event):
+    def create_request_object(self, event, context):
         # For legacy reasons, there's some initial validation that takes
         # place before we convert the input event to a python object.
         # We don't do this in event handlers we added later, so we *should*
@@ -1467,16 +1479,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         # now to minimize the potential for breaking changes.
         resource_path = event.get('requestContext', {}).get('resourcePath')
         if resource_path is not None:
-            self.current_request = Request(
-                event['multiValueQueryStringParameters'],
-                event['headers'],
-                event['pathParameters'],
-                event['requestContext']['httpMethod'],
-                event['body'],
-                event['requestContext'],
-                event['stageVariables'],
-                event.get('isBase64Encoded', False)
-            )
+            self.current_request = Request(event, context)
             return self.current_request
 
     def __call__(self, event, context):

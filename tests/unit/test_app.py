@@ -40,6 +40,7 @@ STR_TO_LIST_MAP = st.dictionaries(
 )
 HTTP_METHOD = st.sampled_from(['GET', 'POST', 'PUT', 'PATCH',
                                'OPTIONS', 'HEAD', 'DELETE'])
+URIS = st.sampled_from(['/', '/foo/bar'])
 HTTP_BODY = st.none() | st.text()
 HTTP_REQUEST = st.fixed_dictionaries({
     'query_params': STR_TO_LIST_MAP,
@@ -50,6 +51,19 @@ HTTP_REQUEST = st.fixed_dictionaries({
     'context': STR_MAP,
     'stage_vars': STR_MAP,
     'is_base64_encoded': st.booleans(),
+    'uri': URIS,
+})
+HTTP_REQUEST = st.fixed_dictionaries({
+    'multiValueQueryStringParameters': st.fixed_dictionaries({}),
+    'headers': STR_MAP,
+    'pathParameters': STR_MAP,
+    'requestContext': st.fixed_dictionaries({
+        'httpMethod': HTTP_METHOD,
+        'resourcePath': URIS,
+    }),
+    'body': HTTP_BODY,
+    'stageVariables': STR_MAP,
+    'isBase64Encoded': st.booleans(),
 })
 BINARY_TYPES = APIGateway().binary_types
 
@@ -140,10 +154,19 @@ def view_function():
 
 def create_request_with_content_type(content_type):
     body = '{"json": "body"}'
-    return app.Request(
-        {}, {'Content-Type': content_type}, {}, 'GET',
-        body, {}, {}, False
-    )
+    event = {
+        'multiValueQueryStringParameters': '',
+        'headers': {'Content-Type': content_type},
+        'pathParameters': {},
+        'requestContext': {
+            'httpMethod': 'GET',
+            'resourcePath': '/',
+        },
+        'body': body,
+        'stageVariables': {},
+        'isBase64Encoded': False,
+    }
+    return app.Request(event)
 
 
 def assert_response_body_is(response, body):
@@ -1675,37 +1698,40 @@ def test_internal_exception_debug_false(capsys, create_event):
 
 
 def test_raw_body_is_none_if_body_is_none():
-    misc_kwargs = {
-        'query_params': {},
+    event = {
+        'body': None,
+        'multiValueQueryStringParameters': '',
         'headers': {},
-        'uri_params': {},
-        'method': 'GET',
-        'context': {},
-        'stage_vars': {},
-        'is_base64_encoded': False,
+        'pathParameters': {},
+        'requestContext': {
+            'httpMethod': 'GET',
+            'resourcePath': '/',
+        },
+        'stageVariables': {},
+        'isBase64Encoded': False,
     }
-    request = app.Request(body=None, **misc_kwargs)
+    request = app.Request(event)
     assert request.raw_body == b''
 
 
-@given(http_request_kwargs=HTTP_REQUEST)
-def test_http_request_to_dict_is_json_serializable(http_request_kwargs):
+@given(http_request_event=HTTP_REQUEST)
+def test_http_request_to_dict_is_json_serializable(http_request_event):
     # We have to do some slight pre-preprocessing here
     # to maintain preconditions.  If the
     # is_base64_encoded arg is True, we'll
     # base64 encode the body.  We assume API Gateway
     # upholds this precondition.
-    is_base64_encoded = http_request_kwargs['is_base64_encoded']
+    is_base64_encoded = http_request_event['isBase64Encoded']
     if is_base64_encoded:
         # Confirmed that if you send an empty body,
         # API Gateway will always say the body is *not*
         # base64 encoded.
-        assume(http_request_kwargs['body'] is not None)
+        assume(http_request_event['body'] is not None)
         body = base64.b64encode(
-            http_request_kwargs['body'].encode('utf-8'))
-        http_request_kwargs['body'] = body.decode('ascii')
+            http_request_event['body'].encode('utf-8'))
+        http_request_event['body'] = body.decode('ascii')
 
-    request = Request(**http_request_kwargs)
+    request = Request(http_request_event)
     assert isinstance(request.raw_body, bytes)
     request_dict = request.to_dict()
     # We should always be able to dump the request dict
@@ -2818,6 +2844,28 @@ class TestMiddleware:
             {'name': 'myhandler2', 'bucket': 'mybucket'},
             {'name': 'main', 'bucket': 'mybucket'},
         ]
+
+    def test_can_access_original_event_and_context_in_http(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('http')
+        def myhandler(event, get_response):
+            called.append({'event': event})
+            return get_response(event)
+
+        @demo.route('/')
+        def index():
+            return {'hello': 'world'}
+
+        with Client(demo) as c:
+            response = c.http.get('/')
+        assert response.json_body == {'hello': 'world'}
+        actual_event = called[0]['event']
+        assert actual_event.uri == '/'
+        assert actual_event.lambda_context.function_name == 'api_handler'
+        assert actual_event.to_original_event()[
+            'requestContext']['resourcePath'] == '/'
 
     def test_can_short_circuit_response(self):
         demo = app.Chalice('app-name')
