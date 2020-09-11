@@ -9,6 +9,7 @@ import traceback
 import decimal
 import base64
 import copy
+import functools
 from collections import defaultdict
 
 
@@ -1793,3 +1794,36 @@ class Blueprint(DecoratorAPI):
         raise RuntimeError("Blueprints are unable to retrieve middleware "
                            "handlers, must be registered to an app using "
                            "register_blueprint()")
+
+
+# This class is used to convert any existing/3rd party decorators
+# that work directly on lambda functions with the original signature
+# of (event, context).  By using ConvertToMiddleware you can automatically
+# apply this decorator to every lambda function in a Chalice app.
+# Example:
+#
+# Before:
+#
+# @third_part.decorator
+# def some_lambda_function(event, context): pass
+#
+# Now:
+#
+# app.register_middleware(ConvertToMiddleware(third_party.decorator))
+#
+#
+class ConvertToMiddleware(object):
+    def __init__(self, lambda_wrapper):
+        self._wrapper = lambda_wrapper
+
+    def __call__(self, event, get_response):
+        original_event, context = self._extract_original_param(event)
+        @functools.wraps(self._wrapper)
+        def wrapped(original_event, context):
+            return get_response(event)
+        return self._wrapper(wrapped)(original_event, context)
+
+    def _extract_original_param(self, event):
+        if isinstance(event, Request):
+            return event.to_original_event(), event.lambda_context
+        return event.to_dict(), event.context

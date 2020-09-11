@@ -26,6 +26,7 @@ from chalice.app import (
     BadRequestError,
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
+    ConvertToMiddleware,
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -3220,3 +3221,36 @@ class TestMiddleware:
             {'name': 'myfunction', 'event': {'input-event': True}},
         ]
 
+    def test_can_convert_existing_lambda_decorator_to_middleware(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        def mydecorator(func):
+            def _wrapped(event, context):
+                called.append({'name': 'wrapped', 'event': event})
+                return func(event, context)
+            return _wrapped
+
+        @demo.middleware('all')
+        def second_middleware(event, get_response):
+            called.append({'name': 'second', 'event': event.to_dict()})
+            return get_response(event)
+
+        @demo.lambda_function()
+        def myfunction(event, context):
+            called.append({'name': 'myfunction', 'event': event})
+            return {'foo': 'bar'}
+
+        demo.register_middleware(ConvertToMiddleware(mydecorator))
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'myfunction', {'input-event': True}
+            )
+
+        assert response.payload == {'foo': 'bar'}
+        assert called == [
+            {'name': 'second', 'event': {'input-event': True}},
+            {'name': 'wrapped', 'event': {'input-event': True}},
+            {'name': 'myfunction', 'event': {'input-event': True}},
+        ]
