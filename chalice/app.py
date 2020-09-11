@@ -629,9 +629,9 @@ class WebsocketAPI(object):
 
 
 class DecoratorAPI(object):
-    def middleware(self, event_type):
+    def middleware(self, event_type='all'):
         def _middleware_wrapper(func):
-            self._register_middleware(func, event_type)
+            self.register_middleware(func, event_type)
             return func
         return _middleware_wrapper
 
@@ -794,8 +794,8 @@ class DecoratorAPI(object):
                           user_handler, wrapped_handler, kwargs, options=None):
         raise NotImplementedError("_register_handler")
 
-    def _register_middleware(self, func, event_type):
-        raise NotImplementedError("_register_middleware")
+    def register_middleware(self, func, event_type='all'):
+        raise NotImplementedError("register_middleware")
 
 
 class _HandlerRegistration(object):
@@ -810,7 +810,7 @@ class _HandlerRegistration(object):
         self.handler_map = {}
         self.middleware_handlers = []
 
-    def _register_middleware(self, func, event_type):
+    def register_middleware(self, func, event_type='all'):
         self.middleware_handlers.append((func, event_type))
 
     def _do_register_handler(self, handler_type, name, user_handler,
@@ -1767,10 +1767,10 @@ class Blueprint(DecoratorAPI):
                                      user_handler)
         return _defer_wrap_handler
 
-    def _register_middleware(self, func, event_type):
+    def register_middleware(self, func, event_type='all'):
         self._deferred_registrations.append(
             # pylint: disable=protected-access
-            lambda app, options: app._register_middleware(
+            lambda app, options: app.register_middleware(
                 func, event_type
             )
         )

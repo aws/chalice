@@ -3193,3 +3193,30 @@ class TestMiddleware:
             {'name': 'frombp', 'bucket': 'mybucket'},
             {'name': 'main', 'bucket': 'mybucket'},
         ]
+
+    def test_can_register_middleware_without_decorator(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        def mymiddleware(event, get_response):
+            called.append({'name': 'mymiddleware', 'event': event.to_dict()})
+            return get_response(event)
+
+        @demo.lambda_function()
+        def myfunction(event, context):
+            called.append({'name': 'myfunction', 'event': event})
+            return {'foo': 'bar'}
+
+        demo.register_middleware(mymiddleware, 'all')
+
+        with Client(demo) as c:
+            response = c.lambda_.invoke(
+                'myfunction', {'input-event': True}
+            )
+
+        assert response.payload == {'foo': 'bar'}
+        assert called == [
+            {'name': 'mymiddleware', 'event': {'input-event': True}},
+            {'name': 'myfunction', 'event': {'input-event': True}},
+        ]
+
