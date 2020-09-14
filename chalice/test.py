@@ -262,7 +262,7 @@ class TestEventsClient(BaseClient):
         return s3_event
 
     def generate_sqs_event(self, message_bodies, queue_name='queue-name'):
-        # type: (str, str) -> Dict[str, Any]
+        # type: (List[str], str) -> Dict[str, Any]
         records = [{
             'attributes': {
                 'ApproximateFirstReceiveTimestamp': '1530576251596',
