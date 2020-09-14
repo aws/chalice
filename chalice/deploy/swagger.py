@@ -49,8 +49,11 @@ class SwaggerGenerator(object):
         return api
 
     def _add_shared_definitions_and_parameters(self, app, api):
+        print('checking for extra swag')
         if hasattr(app, 'to_swagger'):
+            print('has swagger')
             swagger_additions = app.to_swagger()
+            print(swagger_additions)
             swagger_additions = yaml.load(textwrap.dedent(swagger_additions))
             if 'definitions' in swagger_additions:
                 api['definitions'].update(swagger_additions['definitions'])
