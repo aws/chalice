@@ -1575,6 +1575,15 @@ class Blueprint(DecoratorAPI):
         return self._current_app.current_request
 
     @property
+    def current_app(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.current_app if it's registered "
+                "to an app."
+            )
+        return self._current_app
+
+    @property
     def lambda_context(self):
         if self._current_app is None:
             raise RuntimeError(
