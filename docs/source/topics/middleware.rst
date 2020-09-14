@@ -52,7 +52,9 @@ Middleware must adhere to these requirements:
 * In order to invoke the next middleware in the chain and eventually call the
   actual Lambda handler, it must invoke ``get_response(event)``.
 * Middleware can short-circuit the request be returning its own response.
-  It does not have to invoke ``get_response(event)`` if not needed.
+  It does not have to invoke ``get_response(event)`` if not needed.  The
+  response type should match the response type of the underlying Lambda
+  handler.
 
 Below is the simplest middleware in Chalice that does nothing:
 
@@ -60,6 +62,8 @@ Below is the simplest middleware in Chalice that does nothing:
 
    @app.middleware('all')
    def noop_middleware(event, get_response):
+       # The `event` type will depend on what type of
+       # Lambda handler is being invoked.
        return get_response(event)
 
 
@@ -75,15 +79,66 @@ specify ``all``.  Below are the supported event types along with the
 corresponding type of event that will be provided to the middleware:
 
 * ``all`` - ``Any``
-* ``s3`` - ``chalice.S3Event``
-* ``sns`` - ``chalice.SNSEvent``
-* ``sqs`` - ``chalice.SQSEvent``
-* ``cloudwatch`` - ``chalice.CloudWatchEvent``
-* ``scheduled`` - ``chalice.CloudWatchEvent``
-* ``websocket`` - ``chalice.WebsocketEvent``
-* ``http`` - ``chalice.Request``
-* ``pure_lambda`` - ``chalice.LambdaFunctionEvent``
+* ``s3`` - :class:`S3Event`
+* ``sns`` - :class:`SNSEvent`
+* ``sqs`` - :class:`SQSEvent`
+* ``cloudwatch`` - :class:`CloudWatchEvent`
+* ``scheduled`` - :class:`CloudWatchEvent`
+* ``websocket`` - :class:`WebsocketEvent`
+* ``http`` - :class:`Request`
+* ``pure_lambda`` - :class:`LambdaFunctionEvent`
 
+.. note::
+   The ``chalice.LambdaFunctionEvent`` is the only case where the
+   event type for the middleware does not match the event type of the
+   corresponding Lambda handler.  For backwards compatibility reasons,
+   the existing signature of the ``@app.lambda_function()`` decorator
+   is preserved (it accepts an ``event`` and ``context``) whereas for
+   middleware, a consistent signature is needed, which is why the
+   ``chalice.LambdaFunctionEvent`` is used.
+
+You can also use the :meth:`Chalice.register_middleware` method, which
+has the same behavior as :meth:`Chalice.middleware` except you provide
+the middleware function as an argument instead of decorating a function.
+This is useful when you want to import third party functions and use
+them as middleware.
+
+.. code-block:: python
+
+    import thirdparty
+
+    app.register_middleware(thirdparty.func, 'all')
+
+You can also use the :class:`ConvertToMiddleware` class to convert an
+existing Lambda wrapper to middleware.  For example, if you had the
+following logging decorator:
+
+.. code-block:: python
+
+    def log_invocation(func):
+        def wrapper(event, context):
+            logger.debug("Before lambda function.")
+            response = func(event, context)
+            logger.debug("After lambda function.")
+        return wrapper
+
+    @app.lambda_function()
+    @log_invocation
+    def myfunction(event, context):
+        logger.debug("In myfunction().")
+
+
+Rather than decorate every Lambda function with the ``@log_invocation``
+decorator, you can instead use ``ConvertToMiddleware`` to automatically
+apply this wrapper to every Lambda function in your app.
+
+.. code-block:: python
+
+    app.register_middleware(ConvertToMiddleware(log_invoation))
+
+This is also useful to integrate with existing libraries that provide
+Lambda wrappers.  See :ref:`powertools-example` for a more complete
+example.
 
 Examples
 ========
@@ -121,7 +176,6 @@ a key in our Lambda response.
 .. code-block:: python
 
    import time
-   from chalice Response
 
    @app.middleware('pure_lambda')
    def inject_time(event, get_response):
@@ -130,3 +184,79 @@ a key in our Lambda response.
        total = time.time() - start
        response.setdefault('metadata', {})['duration'] = total
        return response
+
+
+.. _powertools-example:
+
+Integrating with AWS Lambda Powertools
+--------------------------------------
+
+`AWS Lambda Powertools
+<https://awslabs.github.io/aws-lambda-powertools-python/>`__ is a suite of
+utilities for AWS Lambda functions that makes tracing with AWS X-Ray,
+structured logging and creating custom metrics asynchronously easier.
+
+You can use Chalice middleware to easily integrate Lambda Powertools with
+your Chalice apps.  In this example, we'll use the
+`Logger
+<https://awslabs.github.io/aws-lambda-powertools-python/core/logger/>`__
+and `Tracer <https://awslabs.github.io/aws-lambda-powertools-python/core/tracer/>`__
+and convert them to Chalice middleware so they will be automatically applied
+to all Lambda functions in our application.
+
+
+.. code-block:: python
+
+    from chalice import Chalice
+    from chalice.app import ConvertToMiddleware
+
+    # First, instead of using Chalice's built in logger, we'll instead use
+    # the structured logger from powertools.  In addition to automatically
+    # injecting lambda context, let's say we also want to inject which
+    # route is being invoked.
+    from aws_lambda_powertools import Logger
+    from aws_lambda_powertools import Tracer
+
+    app = Chalice(app_name='chalice-powertools')
+
+
+    logger = Logger(service=app.app_name)
+    tracer = Tracer(service=app.app_name)
+    # This will automatically convert any decorator on a lambda function
+    # into middleware that will be connected to every lambda function
+    # in our app.  This lets us avoid decoratoring every lambda function
+    # with this behavior, but it also works in cases where we don't control
+    # the code (e.g. registering blueprints).
+    app.register_middleware(ConvertToMiddleware(logger.inject_lambda_context))
+    app.register_middleware(
+        ConvertToMiddleware(
+            tracer.capture_lambda_handler(capture_response=False))
+    )
+
+    # Here we're writing Chalice specific middleware where for any HTTP
+    # APIs, we want to add the request uri to our structured log message.
+    # This shows how we can combine both Chalice-style middleware with
+    # other existing tools.
+    @app.middleware('http')
+    def inject_route_info(event, get_response):
+        logger.structure_logs(append=True, request_uri=event.uri)
+        return get_response(event)
+
+
+    @app.route('/')
+    def index():
+        logger.info("In index() function, this will have a 'request_uri' key.")
+        return {'hello': 'world'}
+
+
+    @app.route('/foo/bar')
+    def foobar():
+        logger.info("In foobar() function")
+        return {'foo': 'bar'}
+
+
+    @app.lambda_function()
+    def myfunction(event, context):
+        logger.info("In myfunction().")
+        tracer.put_annotation(key="Status", value="SUCCESS")
+        return {}
