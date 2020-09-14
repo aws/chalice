@@ -708,3 +708,10 @@ def test_can_generate_appgraph(runner, mock_cli_factory):
         # Just sanity checking some of the output
         assert 'Application' in result.output
         assert 'RestAPI(' in result.output
+
+
+def test_chalice_cli_mode_env_var_always_set(runner):
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli.new_project, ['testproject'])
+        assert result.exit_code == 0
+        assert os.environ['CHALICE_CLI_MODE'] == 'true'

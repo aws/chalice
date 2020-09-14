@@ -109,10 +109,20 @@ def cli(ctx, project_dir, debug=False):
         project_dir = os.path.abspath(project_dir)
     if debug is True:
         _configure_logging(logging.DEBUG)
+    _configure_cli_env_vars()
     ctx.obj['project_dir'] = project_dir
     ctx.obj['debug'] = debug
     ctx.obj['factory'] = CLIFactory(project_dir, debug, environ=os.environ)
     os.chdir(project_dir)
+
+
+def _configure_cli_env_vars():
+    # type: () -> None
+    # This will set chalice specific env vars so users can detect if
+    # we're running a Chalice CLI command.  This is useful if you want
+    # conditional behavior only when we're actually running in Lambda
+    # in your app.py file.
+    os.environ['CHALICE_CLI_MODE'] = 'true'
 
 
 @cli.command()
