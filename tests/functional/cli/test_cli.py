@@ -714,4 +714,4 @@ def test_chalice_cli_mode_env_var_always_set(runner):
     with runner.isolated_filesystem():
         result = runner.invoke(cli.new_project, ['testproject'])
         assert result.exit_code == 0
-        assert os.environ['CHALICE_CLI_MODE'] == 'true'
+        assert os.environ['AWS_CHALICE_CLI_MODE'] == 'true'

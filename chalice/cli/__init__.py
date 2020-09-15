@@ -122,7 +122,7 @@ def _configure_cli_env_vars():
     # we're running a Chalice CLI command.  This is useful if you want
     # conditional behavior only when we're actually running in Lambda
     # in your app.py file.
-    os.environ['CHALICE_CLI_MODE'] = 'true'
+    os.environ['AWS_CHALICE_CLI_MODE'] = 'true'
 
 
 @cli.command()
