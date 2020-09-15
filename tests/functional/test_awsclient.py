@@ -50,6 +50,18 @@ def test_deploy_rest_api(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_defaults_to_false_if_none_deploy_rest_api(stubbed_session):
+    stub_client = stubbed_session.stub('apigateway')
+    stub_client.create_deployment(
+        restApiId='api_id', stageName='stage',
+        tracingEnabled=False).returns({})
+
+    stubbed_session.activate_stubs()
+    awsclient = TypedAWSClient(stubbed_session)
+    awsclient.deploy_rest_api('api_id', 'stage', None)
+    stubbed_session.verify_stubs()
+
+
 def test_put_role_policy(stubbed_session):
     stubbed_session.stub('iam').put_role_policy(
         RoleName='role_name',
