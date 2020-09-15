@@ -1,0 +1,412 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Middleware &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Chalice" href="../api.html" />
+    <link rel="prev" title="Testing" href="testing.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="../tutorials/index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../samples/index.html">Samples</a></li>
+                <li class="site-page"><a href="../main.html">Documentation</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Topics</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="middleware">
+<h1>Middleware<a class="headerlink" href="#middleware" title="Permalink to this headline">¶</a></h1>
+<p>Chalice provides numerous features and capabilities right out of the box, but
+there are often times where you’ll want to customize the behavior of Chalice
+for your specific needs.  You can accomplish this by using middleware, which
+lets you alter the request and response lifecycle.  Chalice middleware
+is a function that you register as part of your application that will
+automatically be invoked by Chalice whenever your Lambda functions are called.</p>
+<p>Below is an example of Chalice middleware:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demo-middleware&#39;</span><span class="p">)</span>
+
+<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">my_middleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Before calling my main Lambda function.&quot;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;After calling my main Lambda function.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">sns_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>In this example, our middleware is emitting a log message before and after
+our Lambda function has been invoked.  Because we specified an event type of
+<code class="docutils literal notranslate"><span class="pre">all</span></code>, the <code class="docutils literal notranslate"><span class="pre">my_middleware</span></code> function will be called when either our REST
+API’s <code class="docutils literal notranslate"><span class="pre">index()</span></code> or our <code class="docutils literal notranslate"><span class="pre">sns_handler()</span></code> Lambda function is invoked.</p>
+<div class="section" id="writing-middleware">
+<h2>Writing Middleware<a class="headerlink" href="#writing-middleware" title="Permalink to this headline">¶</a></h2>
+<p>Middleware must adhere to these requirements:</p>
+<ul class="simple">
+<li>Must be a callable object that accepts two parameters, an <code class="docutils literal notranslate"><span class="pre">event</span></code>, and
+a <code class="docutils literal notranslate"><span class="pre">get_response</span></code> function.  The <code class="docutils literal notranslate"><span class="pre">event</span></code> type will depend on what type
+of handlers the middleware has been registered for (see “Registering
+Middleware” below).</li>
+<li>Must return a response.  This will be the response that gets returned back
+to the caller.</li>
+<li>In order to invoke the next middleware in the chain and eventually call the
+actual Lambda handler, it must invoke <code class="docutils literal notranslate"><span class="pre">get_response(event)</span></code>.</li>
+<li>Middleware can short-circuit the request be returning its own response.
+It does not have to invoke <code class="docutils literal notranslate"><span class="pre">get_response(event)</span></code> if not needed.  The
+response type should match the response type of the underlying Lambda
+handler.</li>
+</ul>
+<p>Below is the simplest middleware in Chalice that does nothing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">noop_middleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="c1"># The `event` type will depend on what type of</span>
+    <span class="c1"># Lambda handler is being invoked.</span>
+    <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="registering-middleware">
+<h3>Registering Middleware<a class="headerlink" href="#registering-middleware" title="Permalink to this headline">¶</a></h3>
+<p>In order to register middleware, you use the <code class="docutils literal notranslate"><span class="pre">&#64;app.middleware()</span></code> decorator.
+This function accepts a single arg that specifies what type of Lambda function
+it wants to be registered for.  This allows you to apply middleware to only
+specific type of event handlers, e.g. only for REST APIs, or Websockets, or
+S3 event handlers.  To register middleware for all Lambda functions, you can
+specify <code class="docutils literal notranslate"><span class="pre">all</span></code>.  Below are the supported event types along with the
+corresponding type of event that will be provided to the middleware:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">all</span></code> - <code class="docutils literal notranslate"><span class="pre">Any</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">s3</span></code> - <a class="reference internal" href="../api.html#S3Event" title="S3Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">S3Event</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">sns</span></code> - <a class="reference internal" href="../api.html#SNSEvent" title="SNSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SNSEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">sqs</span></code> - <a class="reference internal" href="../api.html#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">cloudwatch</span></code> - <a class="reference internal" href="../api.html#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">scheduled</span></code> - <a class="reference internal" href="../api.html#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">websocket</span></code> - <a class="reference internal" href="../api.html#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">http</span></code> - <a class="reference internal" href="../api.html#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">pure_lambda</span></code> - <a class="reference internal" href="../api.html#LambdaFunctionEvent" title="LambdaFunctionEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">LambdaFunctionEvent</span></code></a></li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <code class="docutils literal notranslate"><span class="pre">chalice.LambdaFunctionEvent</span></code> is the only case where the
+event type for the middleware does not match the event type of the
+corresponding Lambda handler.  For backwards compatibility reasons,
+the existing signature of the <code class="docutils literal notranslate"><span class="pre">&#64;app.lambda_function()</span></code> decorator
+is preserved (it accepts an <code class="docutils literal notranslate"><span class="pre">event</span></code> and <code class="docutils literal notranslate"><span class="pre">context</span></code>) whereas for
+middleware, a consistent signature is needed, which is why the
+<code class="docutils literal notranslate"><span class="pre">chalice.LambdaFunctionEvent</span></code> is used.</p>
+</div>
+<p>You can also use the <a class="reference internal" href="../api.html#Chalice.register_middleware" title="Chalice.register_middleware"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.register_middleware()</span></code></a> method, which
+has the same behavior as <a class="reference internal" href="../api.html#Chalice.middleware" title="Chalice.middleware"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.middleware()</span></code></a> except you provide
+the middleware function as an argument instead of decorating a function.
+This is useful when you want to import third party functions and use
+them as middleware.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">thirdparty</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span><span class="n">thirdparty</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="s1">&#39;all&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also use the <a class="reference internal" href="../api.html#ConvertToMiddleware" title="ConvertToMiddleware"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvertToMiddleware</span></code></a> class to convert an
+existing Lambda wrapper to middleware.  For example, if you had the
+following logging decorator:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">log_invocation</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Before lambda function.&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;After lambda function.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wrapper</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@log_invocation</span>
+<span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;In myfunction().&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Rather than decorate every Lambda function with the <code class="docutils literal notranslate"><span class="pre">&#64;log_invocation</span></code>
+decorator, you can instead use <code class="docutils literal notranslate"><span class="pre">ConvertToMiddleware</span></code> to automatically
+apply this wrapper to every Lambda function in your app.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">ConvertToMiddleware</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span><span class="n">ConvertToMiddleware</span><span class="p">(</span><span class="n">log_invoation</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This is also useful to integrate with existing libraries that provide
+Lambda wrappers.  See <a class="reference internal" href="#powertools-example"><span class="std std-ref">Integrating with AWS Lambda Powertools</span></a> for a more complete
+example.</p>
+</div>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>Below are some examples of common middleware patterns.</p>
+<div class="section" id="short-circuiting-a-request">
+<h3>Short Circuiting a Request<a class="headerlink" href="#short-circuiting-a-request" title="Permalink to this headline">¶</a></h3>
+<p>In this example, we want to return a 400 bad response if a specific
+header is missing from a request.  Because this is HTTP specific, we only
+want to register this handler for our <code class="docutils literal notranslate"><span class="pre">http</span></code> event type.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="nn">Response</span>
+
+<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">require_header</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="c1"># From the list above, because this is an ``http`` event</span>
+    <span class="c1"># type, we know that event will be of type ``chalice.Request``.</span>
+    <span class="k">if</span> <span class="s1">&#39;X-Custom-Header&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">event</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
+            <span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+            <span class="n">body</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Error&quot;</span><span class="p">:</span> <span class="s2">&quot;Missing required &#39;X-Custom-Header&#39;&quot;</span><span class="p">})</span>
+    <span class="c1"># If the header exists then we&#39;ll defer to our normal request flow.</span>
+    <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="modifying-a-response">
+<h3>Modifying a Response<a class="headerlink" href="#modifying-a-response" title="Permalink to this headline">¶</a></h3>
+<p>In this example, we want to measure the processing time and inject it as
+a key in our Lambda response.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">time</span>
+
+<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;pure_lambda&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">inject_time</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">,</span> <span class="p">{})[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total</span>
+    <span class="k">return</span> <span class="n">response</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="integrating-with-aws-lambda-powertools">
+<span id="powertools-example"></span><h3>Integrating with AWS Lambda Powertools<a class="headerlink" href="#integrating-with-aws-lambda-powertools" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="https://awslabs.github.io/aws-lambda-powertools-python/">AWS Lambda Powertools</a> is a suite of
+utilities for AWS Lambda functions that makes tracing with AWS X-Ray,
+structured logging and creating custom metrics asynchronously easier.</p>
+<p>You can use Chalice middleware to easily integrate Lambda Powertools with
+your Chalice apps.  In this example, we’ll use the
+<a class="reference external" href="https://awslabs.github.io/aws-lambda-powertools-python/core/logger/">Logger</a>
+and <a class="reference external" href="https://awslabs.github.io/aws-lambda-powertools-python/core/tracer/">Tracer</a>
+and convert them to Chalice middleware so they will be automatically applied
+to all Lambda functions in our application.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="kn">from</span> <span class="nn">chalice.app</span> <span class="kn">import</span> <span class="n">ConvertToMiddleware</span>
+
+<span class="c1"># First, instead of using Chalice&#39;s built in logger, we&#39;ll instead use</span>
+<span class="c1"># the structured logger from powertools.  In addition to automatically</span>
+<span class="c1"># injecting lambda context, let&#39;s say we also want to inject which</span>
+<span class="c1"># route is being invoked.</span>
+<span class="kn">from</span> <span class="nn">aws_lambda_powertools</span> <span class="kn">import</span> <span class="n">Logger</span>
+<span class="kn">from</span> <span class="nn">aws_lambda_powertools</span> <span class="kn">import</span> <span class="n">Tracer</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;chalice-powertools&#39;</span><span class="p">)</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">Logger</span><span class="p">(</span><span class="n">service</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">app_name</span><span class="p">)</span>
+<span class="n">tracer</span> <span class="o">=</span> <span class="n">Tracer</span><span class="p">(</span><span class="n">service</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">app_name</span><span class="p">)</span>
+<span class="c1"># This will automatically convert any decorator on a lambda function</span>
+<span class="c1"># into middleware that will be connected to every lambda function</span>
+<span class="c1"># in our app.  This lets us avoid decoratoring every lambda function</span>
+<span class="c1"># with this behavior, but it also works in cases where we don&#39;t control</span>
+<span class="c1"># the code (e.g. registering blueprints).</span>
+<span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span><span class="n">ConvertToMiddleware</span><span class="p">(</span><span class="n">logger</span><span class="o">.</span><span class="n">inject_lambda_context</span><span class="p">))</span>
+<span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span>
+    <span class="n">ConvertToMiddleware</span><span class="p">(</span>
+        <span class="n">tracer</span><span class="o">.</span><span class="n">capture_lambda_handler</span><span class="p">(</span><span class="n">capture_response</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+<span class="p">)</span>
+
+<span class="c1"># Here we&#39;re writing Chalice specific middleware where for any HTTP</span>
+<span class="c1"># APIs, we want to add the request uri to our structured log message.</span>
+<span class="c1"># This shows how we can combine both Chalice-style middleware with</span>
+<span class="c1"># other existing tools.</span>
+<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">inject_route_info</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">structure_logs</span><span class="p">(</span><span class="n">append</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">request_uri</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In index() function, this will have a &#39;request_uri&#39; key.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">foobar</span><span class="p">():</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In foobar() function&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">}</span>
+
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In myfunction().&quot;</span><span class="p">)</span>
+    <span class="n">tracer</span><span class="o">.</span><span class="n">put_annotation</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;Status&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;SUCCESS&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="testing.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Testing</a>
+                        
+                        <a href="../api.html" title="next chapter" class="next-page clearfix">Chalice →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="testing.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="../api.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Middleware</a><ul>
+<li><a class="reference internal" href="#writing-middleware">Writing Middleware</a><ul>
+<li><a class="reference internal" href="#registering-middleware">Registering Middleware</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#short-circuiting-a-request">Short Circuiting a Request</a></li>
+<li><a class="reference internal" href="#modifying-a-response">Modifying a Response</a></li>
+<li><a class="reference internal" href="#integrating-with-aws-lambda-powertools">Integrating with AWS Lambda Powertools</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>

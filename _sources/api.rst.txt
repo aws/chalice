@@ -10,6 +10,11 @@ Chalice
      request using the ``current_request`` attribute which is an instance
      of the :class:`Request` class.
 
+   .. attribute:: app_name
+
+      The name of the Chalice app.  This corresponds to the value provided
+      when instantiating a ``Chalice`` object.
+
    .. attribute:: current_request
 
       An object of type :class:`Request`.  This value is only set when
@@ -378,6 +383,85 @@ Chalice
 
       see :doc:`topics/websockets` for more information.
 
+   .. method:: middleware(event_type='all')
+
+      Register a middleware with a Chalice application.
+      This decorator will register a function as Chalice middleware, which
+      will be automatically invoked as part of the request/response cycle for
+      a Lambda invocation.  You can provide the ``event_type`` argument to
+      indicate what type of lambda events you want to register with.  The
+      default value, ``all``, indicates that the middleware will be called
+      for all Lambda functions defined in your Chalice app.  Supported
+      values are:
+
+      * ``all`` - ``Any``
+      * ``s3`` - :class:`S3Event`
+      * ``sns`` - :class:`SNSEvent`
+      * ``sqs`` - :class:`SQSEvent`
+      * ``cloudwatch`` - :class:`CloudWatchEvent`
+      * ``scheduled`` - :class:`CloudWatchEvent`
+      * ``websocket`` - :class:`WebsocketEvent`
+      * ``http`` - :class:`Request`
+      * ``pure_lambda`` - :class:`LambdaFunctionEvent`
+
+      The decorated function must accept two arguments, ``event`` and
+      ``get_response``.  The ``event`` is the input event associated with
+      the Lambda invocation, and ``get_response`` is a callable that takes
+      an input event and will invoke the next middleware in the chain,
+      and eventually the original Lambda handler.  Below is a noop middleware
+      that shows the minimum needed to write middleware:
+
+      .. code-block:: python
+
+          @app.middleware('all')
+          def mymiddleware(event, get_response):
+              return get_response(event)
+
+      See :doc:`topics/middleware` for more information on writing middleware.
+
+   .. method:: register_middleware(func, event_type='all')
+
+      Register a middleware with a Chalice application.  This is the same
+      behavior as the :meth:`Chalice.middleware` decorator and is useful
+      if you want to register middleware for pre-existing functions:
+
+      .. code-block:: python
+
+          import thirdparty
+
+          app.register_middleware(thirdparty.func, 'all')
+
+.. class:: ConvertToMiddleware(lambda_wrapper)
+
+   This class is used to convert a function that wraps/proxies a Lambda
+   function into middleware.  This allows this wrapper to automatically
+   be applied to every function in your app.  For example, if you had the
+   following logging decorator:
+
+   .. code-block:: python
+
+       def log_invocation(func):
+           def wrapper(event, context):
+               logger.debug("Before lambda function.")
+               response = func(event, context)
+               logger.debug("After lambda function.")
+           return wrapper
+
+       @app.lambda_function()
+       @log_invocation
+       def myfunction(event, context):
+           logger.debug("In myfunction().")
+
+
+   Rather than decorate every Lambda function with the ``@log_invocation``
+   decorator, you can instead use ``ConvertToMiddleware`` to automatically
+   apply this wrapper to every Lambda function in your app.
+
+   .. code-block:: python
+
+       app.register_middleware(ConvertToMiddleware(log_invoation))
+
+
 Request
 =======
 
@@ -390,7 +474,7 @@ Request
 
       @app.route('/objects/{key}', methods=['GET', 'PUT'])
       def myobject(key):
-          request = app.current_request
+          request = app.current_request  # type: Request
           if request.method == 'PUT':
               # handle PUT request
               pass
@@ -398,6 +482,10 @@ Request
               # handle GET request
               pass
 
+
+  .. attribute:: uri
+
+     The URI of the HTTP request.
 
   .. attribute:: query_params
 
@@ -435,6 +523,12 @@ Request
   .. attribute:: stage_vars
 
      A dict of configuration for the API Gateway stage.
+
+   .. attribute:: lambda_context
+
+     A Lambda context object that is passed to the invoked view by AWS
+     Lambda. You can find out more about this object by reading the
+     `lambda context object documentation <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
 
   .. method:: to_dict()
 
@@ -1166,6 +1260,19 @@ Event Sources
       message. This is useful if you need direct
       access to the lambda event.
 
+.. class:: LambdaFunctionEvent()
+
+   This is the input argument of middleware registered to a
+   pure Lambda function (``@app.lambda_function()``).
+
+   .. attribute:: event
+
+      The original input event dictionary.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda.
 
 Blueprints
 ==========

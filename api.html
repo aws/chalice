@@ -79,7 +79,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Sample Applications" href="samples/index.html" />
-    <link rel="prev" title="Testing" href="topics/testing.html" />
+    <link rel="prev" title="Middleware" href="topics/middleware.html" />
   <!-- Licensed under the Apache 2.0 License -->
   <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
   
@@ -131,6 +131,13 @@
 request using the <code class="docutils literal notranslate"><span class="pre">current_request</span></code> attribute which is an instance
 of the <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a> class.</li>
 </ul>
+<dl class="attribute">
+<dt id="Chalice.app_name">
+<code class="descname">app_name</code><a class="headerlink" href="#Chalice.app_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the Chalice app.  This corresponds to the value provided
+when instantiating a <code class="docutils literal notranslate"><span class="pre">Chalice</span></code> object.</p>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="Chalice.current_request">
 <code class="descname">current_request</code><a class="headerlink" href="#Chalice.current_request" title="Permalink to this definition">¶</a></dt>
@@ -589,6 +596,83 @@ connection is under the <a class="reference internal" href="#WebsocketEvent.conn
 <p>see <a class="reference internal" href="topics/websockets.html"><span class="doc">Websockets</span></a> for more information.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="Chalice.middleware">
+<code class="descname">middleware</code><span class="sig-paren">(</span><em>event_type='all'</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.middleware" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a middleware with a Chalice application.
+This decorator will register a function as Chalice middleware, which
+will be automatically invoked as part of the request/response cycle for
+a Lambda invocation.  You can provide the <code class="docutils literal notranslate"><span class="pre">event_type</span></code> argument to
+indicate what type of lambda events you want to register with.  The
+default value, <code class="docutils literal notranslate"><span class="pre">all</span></code>, indicates that the middleware will be called
+for all Lambda functions defined in your Chalice app.  Supported
+values are:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">all</span></code> - <code class="docutils literal notranslate"><span class="pre">Any</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">s3</span></code> - <a class="reference internal" href="#S3Event" title="S3Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">S3Event</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">sns</span></code> - <a class="reference internal" href="#SNSEvent" title="SNSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SNSEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">sqs</span></code> - <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">cloudwatch</span></code> - <a class="reference internal" href="#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">scheduled</span></code> - <a class="reference internal" href="#CloudWatchEvent" title="CloudWatchEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">CloudWatchEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">websocket</span></code> - <a class="reference internal" href="#WebsocketEvent" title="WebsocketEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebsocketEvent</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">http</span></code> - <a class="reference internal" href="#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">pure_lambda</span></code> - <a class="reference internal" href="#LambdaFunctionEvent" title="LambdaFunctionEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">LambdaFunctionEvent</span></code></a></li>
+</ul>
+<p>The decorated function must accept two arguments, <code class="docutils literal notranslate"><span class="pre">event</span></code> and
+<code class="docutils literal notranslate"><span class="pre">get_response</span></code>.  The <code class="docutils literal notranslate"><span class="pre">event</span></code> is the input event associated with
+the Lambda invocation, and <code class="docutils literal notranslate"><span class="pre">get_response</span></code> is a callable that takes
+an input event and will invoke the next middleware in the chain,
+and eventually the original Lambda handler.  Below is a noop middleware
+that shows the minimum needed to write middleware:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">mymiddleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="topics/middleware.html"><span class="doc">Middleware</span></a> for more information on writing middleware.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Chalice.register_middleware">
+<code class="descname">register_middleware</code><span class="sig-paren">(</span><em>func</em>, <em>event_type='all'</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.register_middleware" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a middleware with a Chalice application.  This is the same
+behavior as the <a class="reference internal" href="#Chalice.middleware" title="Chalice.middleware"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.middleware()</span></code></a> decorator and is useful
+if you want to register middleware for pre-existing functions:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">thirdparty</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span><span class="n">thirdparty</span><span class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="s1">&#39;all&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ConvertToMiddleware">
+<em class="property">class </em><code class="descname">ConvertToMiddleware</code><span class="sig-paren">(</span><em>lambda_wrapper</em><span class="sig-paren">)</span><a class="headerlink" href="#ConvertToMiddleware" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class is used to convert a function that wraps/proxies a Lambda
+function into middleware.  This allows this wrapper to automatically
+be applied to every function in your app.  For example, if you had the
+following logging decorator:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">log_invocation</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Before lambda function.&quot;</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;After lambda function.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wrapper</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@log_invocation</span>
+<span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;In myfunction().&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Rather than decorate every Lambda function with the <code class="docutils literal notranslate"><span class="pre">&#64;log_invocation</span></code>
+decorator, you can instead use <code class="docutils literal notranslate"><span class="pre">ConvertToMiddleware</span></code> to automatically
+apply this wrapper to every Lambda function in your app.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span><span class="n">ConvertToMiddleware</span><span class="p">(</span><span class="n">log_invoation</span><span class="p">))</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </div>
@@ -601,7 +685,7 @@ connection is under the <a class="reference internal" href="#WebsocketEvent.conn
 the <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> object.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/objects/{key}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myobject</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
-    <span class="n">request</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span>  <span class="c1"># type: Request</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
         <span class="c1"># handle PUT request</span>
         <span class="k">pass</span>
@@ -610,6 +694,12 @@ the <code class="docutils literal notranslate"><span class="pre">app.current_req
         <span class="k">pass</span>
 </pre></div>
 </div>
+<dl class="attribute">
+<dt id="Request.uri">
+<code class="descname">uri</code><a class="headerlink" href="#Request.uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>The URI of the HTTP request.</p>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="Request.query_params">
 <code class="descname">query_params</code><a class="headerlink" href="#Request.query_params" title="Permalink to this definition">¶</a></dt>
@@ -660,7 +750,16 @@ calculate a checksum of the HTTP body.</p>
 <dl class="attribute">
 <dt id="Request.stage_vars">
 <code class="descname">stage_vars</code><a class="headerlink" href="#Request.stage_vars" title="Permalink to this definition">¶</a></dt>
-<dd><p>A dict of configuration for the API Gateway stage.</p>
+<dd><blockquote>
+<div>A dict of configuration for the API Gateway stage.</div></blockquote>
+<dl class="attribute">
+<dt id="Request.lambda_context">
+<code class="descname">lambda_context</code><a class="headerlink" href="#Request.lambda_context" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Lambda context object that is passed to the invoked view by AWS
+Lambda. You can find out more about this object by reading the
+<a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">lambda context object documentation</a>.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="method">
@@ -1511,6 +1610,26 @@ access to the lambda event.</p>
 
 </dd></dl>
 
+<dl class="class">
+<dt id="LambdaFunctionEvent">
+<em class="property">class </em><code class="descname">LambdaFunctionEvent</code><a class="headerlink" href="#LambdaFunctionEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the input argument of middleware registered to a
+pure Lambda function (<code class="docutils literal notranslate"><span class="pre">&#64;app.lambda_function()</span></code>).</p>
+<dl class="attribute">
+<dt id="LambdaFunctionEvent.event">
+<code class="descname">event</code><a class="headerlink" href="#LambdaFunctionEvent.event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The original input event dictionary.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="LambdaFunctionEvent.context">
+<code class="descname">context</code><a class="headerlink" href="#LambdaFunctionEvent.context" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">Lambda context object</a>
+that is passed to the handler by AWS Lambda.</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="blueprints">
 <h1>Blueprints<a class="headerlink" href="#blueprints" title="Permalink to this headline">¶</a></h1>
@@ -1805,7 +1924,7 @@ instantiated directly, and instead should be accessed via the
                     
                     <section class="relations">
                         
-                        <a href="topics/testing.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Testing</a>
+                        <a href="topics/middleware.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Middleware</a>
                         
                         <a href="samples/index.html" title="next chapter" class="next-page clearfix">Sample Applications →</a>
                     </section>
@@ -1816,7 +1935,7 @@ instantiated directly, and instead should be accessed via the
                             
                             <section class="next-previous">
                                 
-                                <a href="topics/testing.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                <a href="topics/middleware.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
                                 
                                 <a href="samples/index.html" title="next chapter" class="next-page clearfix">Next →</a>
                             </section>

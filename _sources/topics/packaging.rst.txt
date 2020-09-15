@@ -148,6 +148,29 @@ your file::
            if os.path.isfile(full_path):
                return open(full_path)
 
+Environment Variables
+---------------------
+
+As part of the packaging and deployment process, Chalice will import your
+``app.py`` file.  This will result in any top level module code being
+executed.  This can sometimes have undesireable behavior.
+When running any Chalice CLI commands, a ``AWS_CHALICE_CLI_MODE`` environment
+variable is set.  You can check if this env var is set in your ``app.py``
+if you have code that you don't want to run whenever your app is packaged
+and deployed.
+
+.. code-block:: python
+
+   import os
+
+   app = Chalice(app_name='testimport')
+
+   expensive_connection = None
+   if 'AWS_CHALICE_CLI_MODE' not in os.environ:
+       # We're running in Lambda, we want to start up
+       # our connection to our DB.
+       expensive_connection = ConnectToDB()
+
 
 .. _package-examples:
 

@@ -255,6 +255,27 @@ your file:</p>
 </div>
 </div>
 </div>
+<div class="section" id="environment-variables">
+<h2>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h2>
+<p>As part of the packaging and deployment process, Chalice will import your
+<code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.  This will result in any top level module code being
+executed.  This can sometimes have undesireable behavior.
+When running any Chalice CLI commands, a <code class="docutils literal notranslate"><span class="pre">AWS_CHALICE_CLI_MODE</span></code> environment
+variable is set.  You can check if this env var is set in your <code class="docutils literal notranslate"><span class="pre">app.py</span></code>
+if you have code that you don’t want to run whenever your app is packaged
+and deployed.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;testimport&#39;</span><span class="p">)</span>
+
+<span class="n">expensive_connection</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="k">if</span> <span class="s1">&#39;AWS_CHALICE_CLI_MODE&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="c1"># We&#39;re running in Lambda, we want to start up</span>
+    <span class="c1"># our connection to our DB.</span>
+    <span class="n">expensive_connection</span> <span class="o">=</span> <span class="n">ConnectToDB</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="examples">
 <span id="package-examples"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <p>Suppose I have the following app structure:</p>
@@ -471,6 +492,7 @@ run.</p>
 <li><a class="reference internal" href="#automatic-lambda-layers">Automatic Lambda Layers</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
 <li><a class="reference internal" href="#examples">Examples</a></li>
 <li><a class="reference internal" href="#cryptography-example">Cryptography Example</a></li>
 </ul>
