@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+1.20.0
+======
+
+* enhancement:Blueprints:Add `current_app` property to Blueprints (#1094)
+* enhancement:CLI:Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)
+* feature:Middleware:Add support for middleware (#1509)
+* feature:X-Ray:Add support for AWS X-Ray (#464)
+
+
 1.19.0
 ======
 

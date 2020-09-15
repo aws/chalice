@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "CLI",
-  "description": "Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)"
-}
