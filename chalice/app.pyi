@@ -21,6 +21,8 @@ class TooManyRequestsError(ChaliceViewError): ...
 ALL_ERRORS = ... # type: List[ChaliceViewError]
 _BUILTIN_AUTH_FUNC = Callable[
     [AuthRequest], Union[AuthResponse, Dict[str, Any]]]
+_GET_RESPONSE = Callable[[Any], Any]
+_MIDDLEWARE_FUNC = Callable[[Any, _GET_RESPONSE], Any]
 
 
 class Authorizer:
@@ -132,6 +134,12 @@ class WebsocketAPI(object):
 
 
 class DecoratorAPI(object):
+    def register_middleware(self,
+                            func: _MIDDLEWARE_FUNC,
+                            event_type: str='all') -> None: ...
+
+    def middleware(self, event_type: str='all') -> Callable[..., Any]: ...
+
     def authorizer(self,
                    ttl_seconds: Optional[int]=None,
                    execution_role: Optional[str]=None,
@@ -285,3 +293,8 @@ class CloudWatchEventConfig(BaseEventSourceConfig):
 class Blueprint(DecoratorAPI):
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
+
+
+class ConvertToMiddleware:
+    def __init__(self,
+                 lambda_wrapper: Callable[..., Any]) -> None: ...
