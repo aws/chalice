@@ -1089,7 +1089,7 @@ class TypedAWSClient(object):
         client.create_deployment(
             restApiId=rest_api_id,
             stageName=api_gateway_stage,
-            tracingEnabled=xray
+            tracingEnabled=bool(xray),
         )
 
     def add_permission_for_apigateway(self, function_name,

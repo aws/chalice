@@ -41,7 +41,7 @@ STR_TO_LIST_MAP = st.dictionaries(
 )
 HTTP_METHOD = st.sampled_from(['GET', 'POST', 'PUT', 'PATCH',
                                'OPTIONS', 'HEAD', 'DELETE'])
-URIS = st.sampled_from(['/', '/foo/bar'])
+PATHS = st.sampled_from(['/', '/foo/bar'])
 HTTP_BODY = st.none() | st.text()
 HTTP_REQUEST = st.fixed_dictionaries({
     'query_params': STR_TO_LIST_MAP,
@@ -52,7 +52,7 @@ HTTP_REQUEST = st.fixed_dictionaries({
     'context': STR_MAP,
     'stage_vars': STR_MAP,
     'is_base64_encoded': st.booleans(),
-    'uri': URIS,
+    'path': PATHS,
 })
 HTTP_REQUEST = st.fixed_dictionaries({
     'multiValueQueryStringParameters': st.fixed_dictionaries({}),
@@ -60,7 +60,7 @@ HTTP_REQUEST = st.fixed_dictionaries({
     'pathParameters': STR_MAP,
     'requestContext': st.fixed_dictionaries({
         'httpMethod': HTTP_METHOD,
-        'resourcePath': URIS,
+        'resourcePath': PATHS,
     }),
     'body': HTTP_BODY,
     'stageVariables': STR_MAP,
@@ -167,7 +167,7 @@ def create_request_with_content_type(content_type):
         'stageVariables': {},
         'isBase64Encoded': False,
     }
-    return app.Request(event)
+    return app.Request(event, FakeLambdaContext())
 
 
 def assert_response_body_is(response, body):
@@ -1711,7 +1711,7 @@ def test_raw_body_is_none_if_body_is_none():
         'stageVariables': {},
         'isBase64Encoded': False,
     }
-    request = app.Request(event)
+    request = app.Request(event, FakeLambdaContext())
     assert request.raw_body == b''
 
 
@@ -1732,7 +1732,7 @@ def test_http_request_to_dict_is_json_serializable(http_request_event):
             http_request_event['body'].encode('utf-8'))
         http_request_event['body'] = body.decode('ascii')
 
-    request = Request(http_request_event)
+    request = Request(http_request_event, FakeLambdaContext())
     assert isinstance(request.raw_body, bytes)
     request_dict = request.to_dict()
     # We should always be able to dump the request dict
@@ -2877,7 +2877,7 @@ class TestMiddleware:
             response = c.http.get('/')
         assert response.json_body == {'hello': 'world'}
         actual_event = called[0]['event']
-        assert actual_event.uri == '/'
+        assert actual_event.path == '/'
         assert actual_event.lambda_context.function_name == 'api_handler'
         assert actual_event.to_original_event()[
             'requestContext']['resourcePath'] == '/'

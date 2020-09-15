@@ -483,9 +483,9 @@ Request
               pass
 
 
-  .. attribute:: uri
+  .. attribute:: path
 
-     The URI of the HTTP request.
+     The path of the HTTP request.
 
   .. attribute:: query_params
 
