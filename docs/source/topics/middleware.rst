@@ -236,18 +236,18 @@ to all Lambda functions in our application.
     )
 
     # Here we're writing Chalice specific middleware where for any HTTP
-    # APIs, we want to add the request uri to our structured log message.
+    # APIs, we want to add the request path to our structured log message.
     # This shows how we can combine both Chalice-style middleware with
     # other existing tools.
     @app.middleware('http')
     def inject_route_info(event, get_response):
-        logger.structure_logs(append=True, request_uri=event.uri)
+        logger.structure_logs(append=True, request_path=event.path)
         return get_response(event)
 
 
     @app.route('/')
     def index():
-        logger.info("In index() function, this will have a 'request_uri' key.")
+        logger.info("In index() function, this will have a 'path' key.")
         return {'hello': 'world'}
 
 

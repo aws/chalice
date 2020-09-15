@@ -41,7 +41,7 @@ STR_TO_LIST_MAP = st.dictionaries(
 )
 HTTP_METHOD = st.sampled_from(['GET', 'POST', 'PUT', 'PATCH',
                                'OPTIONS', 'HEAD', 'DELETE'])
-URIS = st.sampled_from(['/', '/foo/bar'])
+PATHS = st.sampled_from(['/', '/foo/bar'])
 HTTP_BODY = st.none() | st.text()
 HTTP_REQUEST = st.fixed_dictionaries({
     'query_params': STR_TO_LIST_MAP,
@@ -52,7 +52,7 @@ HTTP_REQUEST = st.fixed_dictionaries({
     'context': STR_MAP,
     'stage_vars': STR_MAP,
     'is_base64_encoded': st.booleans(),
-    'uri': URIS,
+    'path': PATHS,
 })
 HTTP_REQUEST = st.fixed_dictionaries({
     'multiValueQueryStringParameters': st.fixed_dictionaries({}),
@@ -60,7 +60,7 @@ HTTP_REQUEST = st.fixed_dictionaries({
     'pathParameters': STR_MAP,
     'requestContext': st.fixed_dictionaries({
         'httpMethod': HTTP_METHOD,
-        'resourcePath': URIS,
+        'resourcePath': PATHS,
     }),
     'body': HTTP_BODY,
     'stageVariables': STR_MAP,
@@ -2877,7 +2877,7 @@ class TestMiddleware:
             response = c.http.get('/')
         assert response.json_body == {'hello': 'world'}
         actual_event = called[0]['event']
-        assert actual_event.uri == '/'
+        assert actual_event.path == '/'
         assert actual_event.lambda_context.function_name == 'api_handler'
         assert actual_event.to_original_event()[
             'requestContext']['resourcePath'] == '/'

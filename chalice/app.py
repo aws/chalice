@@ -399,7 +399,7 @@ class Request(object):
         self._raw_body = b''
         self.context = event_dict['requestContext']
         self.stage_vars = event_dict['stageVariables']
-        self.uri = event_dict['requestContext']['resourcePath']
+        self.path = event_dict['requestContext']['resourcePath']
         self.lambda_context = lambda_context
         self._event_dict = event_dict
 
