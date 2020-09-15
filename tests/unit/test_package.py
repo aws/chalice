@@ -299,6 +299,7 @@ class TemplateTestBase(object):
             handler='app.app',
             tags={'foo': 'bar'},
             timeout=120,
+            xray=None,
             memory_size=128,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
@@ -447,6 +448,13 @@ class TestTerraformTemplate(TemplateTestBase):
         template = self.template_gen.generate([function])
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
+
+    def test_can_add_tracing_config(self, sample_app):
+        function = self.lambda_function()
+        function.xray = True
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['tracing_config']['mode'] == 'Active'
 
     def test_can_generate_cloudwatch_event(self):
         function = self.lambda_function()
@@ -855,6 +863,7 @@ class TestSAMTemplate(TemplateTestBase):
             tags={'foo': 'bar'},
             timeout=120,
             memory_size=128,
+            xray=None,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.ManagedIAMRole(
                 resource_name='role',
@@ -875,6 +884,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
+                'Tracing': 'PassThrough',
                 'Role': {'Fn::GetAtt': ['Role', 'Arn']},
                 'Runtime': 'python27',
                 'Tags': {'foo': 'bar'},
@@ -939,6 +949,7 @@ class TestSAMTemplate(TemplateTestBase):
             tags={'foo': 'bar'},
             timeout=120,
             memory_size=128,
+            xray=None,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
             security_group_ids=[],
@@ -955,6 +966,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'Handler': 'app.app',
                 'MemorySize': 128,
                 'Role': 'role:arn',
+                'Tracing': 'PassThrough',
                 'Runtime': 'python27',
                 'Tags': {'foo': 'bar'},
                 'Timeout': 120

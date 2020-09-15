@@ -131,6 +131,7 @@ class TestApplicationGraphBuilder(object):
             layers=[],
             reserved_concurrency=None,
             managed_layer=None,
+            xray=None,
         )
 
     def test_can_build_single_lambda_function_app_with_managed_layer(
@@ -168,6 +169,7 @@ class TestApplicationGraphBuilder(object):
                 )
             ),
             reserved_concurrency=None,
+            xray=None,
         )
 
     def test_all_lambda_functions_share_managed_layer(
@@ -215,6 +217,7 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=[],
             layers=layers,
             reserved_concurrency=None,
+            xray=None,
         )
 
     def test_can_build_app_with_domain_name(self, sample_app):
@@ -273,6 +276,7 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=['sn1', 'sn2'],
             layers=[],
             reserved_concurrency=None,
+            xray=None,
         )
 
     def test_vpc_trait_added_when_vpc_configured(self, sample_app_lambda_only):
@@ -334,6 +338,7 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=[],
             layers=[],
             reserved_concurrency=5,
+            xray=None,
         )
 
     def test_multiple_lambda_functions_share_role_and_package(

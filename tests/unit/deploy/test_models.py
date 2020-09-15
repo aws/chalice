@@ -22,6 +22,7 @@ def test_can_default_to_no_auths_in_rest_api(lambda_function):
         api_gateway_stage='api',
         endpoint_type='EDGE',
         lambda_function=lambda_function,
+        xray=False
     )
     assert rest_api.dependencies() == [lambda_function]
 
@@ -36,6 +37,7 @@ def test_can_add_authorizers_to_dependencies(lambda_function):
         api_gateway_stage='api',
         endpoint_type='EDGE',
         lambda_function=lambda_function,
+        xray=False,
         authorizers=[auth1, auth2],
     )
     assert rest_api.dependencies() == [lambda_function, auth1, auth2]

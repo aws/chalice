@@ -450,6 +450,7 @@ class PlanStage(object):
                 'runtime': resource.runtime,
                 'handler': resource.handler,
                 'environment_variables': resource.environment_variables,
+                'xray': resource.xray,
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
@@ -481,6 +482,7 @@ class PlanStage(object):
                     filename, binary=True),
                 'runtime': resource.runtime,
                 'environment_variables': resource.environment_variables,
+                'xray': resource.xray,
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
@@ -1187,6 +1189,7 @@ class PlanStage(object):
             models.APICall(
                 method_name='deploy_rest_api',
                 params={'rest_api_id': Variable('rest_api_id'),
+                        'xray': resource.xray,
                         'api_gateway_stage': resource.api_gateway_stage},
             ),
             models.StoreValue(
@@ -1272,7 +1275,6 @@ class PlanStage(object):
                 resource.domain_name, resource.endpoint_type
             )
             plan += custom_domain_plan
-
         return plan
 
     def _add_custom_domain_plan(self, resource, endpoint_type):

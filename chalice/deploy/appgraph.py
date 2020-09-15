@@ -174,7 +174,8 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
             authorizers=authorizers,
             policy=policy,
-            domain_name=custom_domain_name
+            domain_name=custom_domain_name,
+            xray=config.xray_enabled,
         )
 
     def _get_default_private_api_policy(self, config):
@@ -476,6 +477,7 @@ class ApplicationGraphBuilder(object):
             reserved_concurrency=config.reserved_concurrency,
             layers=lambda_layers,
             managed_layer=self._get_managed_lambda_layer(config),
+            xray=config.xray_enabled,
         )
         self._inject_role_traits(function, role)
         return function

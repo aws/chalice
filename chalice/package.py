@@ -244,6 +244,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Handler': resource.handler,
                 'CodeUri': resource.deployment_package.filename,
                 'Tags': resource.tags,
+                'Tracing': resource.xray and 'Active' or 'PassThrough',
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
             },
@@ -969,6 +970,10 @@ class TerraformGenerator(TemplateGenerator):
         if resource.environment_variables:
             func_definition['environment'] = {
                 'variables': resource.environment_variables
+            }
+        if resource.xray:
+            func_definition['tracing_config'] = {
+                'mode': 'Active'
             }
         if self._chalice_layer:
             func_definition['layers'] = [

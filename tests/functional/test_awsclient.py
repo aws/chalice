@@ -41,11 +41,12 @@ def test_region_name_is_exposed(stubbed_session):
 def test_deploy_rest_api(stubbed_session):
     stub_client = stubbed_session.stub('apigateway')
     stub_client.create_deployment(
-        restApiId='api_id', stageName='stage').returns({})
+        restApiId='api_id', stageName='stage',
+        tracingEnabled=False).returns({})
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    awsclient.deploy_rest_api('api_id', 'stage')
+    awsclient.deploy_rest_api('api_id', 'stage', False)
     stubbed_session.verify_stubs()
 
 

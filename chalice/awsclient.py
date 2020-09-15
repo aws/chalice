@@ -363,12 +363,14 @@ class TypedAWSClient(object):
                         handler,                     # type: str
                         environment_variables=None,  # type: StrMap
                         tags=None,                   # type: StrMap
+                        xray=None,                   # type: Optional[bool]
                         timeout=None,                # type: OptInt
                         memory_size=None,            # type: OptInt
                         security_group_ids=None,     # type: OptStrList
                         subnet_ids=None,             # type: OptStrList
                         layers=None,                 # type: OptStrList
                         ):
+        # pylint: disable=too-many-locals
         # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
@@ -381,6 +383,8 @@ class TypedAWSClient(object):
             kwargs['Environment'] = {"Variables": environment_variables}
         if tags is not None:
             kwargs['Tags'] = tags
+        if xray is True:
+            kwargs['TracingConfig'] = {'Mode': 'Active'}
         if timeout is not None:
             kwargs['Timeout'] = timeout
         if memory_size is not None:
@@ -834,6 +838,7 @@ class TypedAWSClient(object):
                         environment_variables=None,  # type: StrMap
                         runtime=None,                # type: OptStr
                         tags=None,                   # type: StrMap
+                        xray=None,                   # type: bool
                         timeout=None,                # type: OptInt
                         memory_size=None,            # type: OptInt
                         role_arn=None,               # type: OptStr
@@ -856,6 +861,7 @@ class TypedAWSClient(object):
             timeout=timeout,
             memory_size=memory_size,
             role_arn=role_arn,
+            xray=xray,
             subnet_ids=subnet_ids,
             security_group_ids=security_group_ids,
             function_name=function_name,
@@ -903,6 +909,7 @@ class TypedAWSClient(object):
                                 security_group_ids,  # type: OptStrList
                                 function_name,  # type: str
                                 layers,  # type: OptStrList
+                                xray,  # type: Optional[bool]
                                 ):
         # type: (...) -> None
         kwargs = {}  # type: Dict[str, Any]
@@ -916,6 +923,8 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
+        if xray:
+            kwargs['TracingConfig'] = {'Mode': 'Active'}
         if security_group_ids is not None and subnet_ids is not None:
             kwargs['VpcConfig'] = self._create_vpc_config(
                 subnet_ids=subnet_ids,
@@ -1074,12 +1083,13 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             raise ResourceDoesNotExistError(rest_api_id)
 
-    def deploy_rest_api(self, rest_api_id, api_gateway_stage):
-        # type: (str, str) -> None
+    def deploy_rest_api(self, rest_api_id, api_gateway_stage, xray):
+        # type: (str, str, bool) -> None
         client = self._client('apigateway')
         client.create_deployment(
             restApiId=rest_api_id,
             stageName=api_gateway_stage,
+            tracingEnabled=xray
         )
 
     def add_permission_for_apigateway(self, function_name,

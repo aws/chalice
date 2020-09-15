@@ -40,6 +40,7 @@ def create_function_resource(name, function_name=None,
         tags=tags,
         timeout=timeout,
         memory_size=memory_size,
+        xray=None,
         deployment_package=deployment_package,
         role=role,
         security_group_ids=[],
@@ -589,6 +590,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'handler': 'app.app',
                 'environment_variables': {},
                 'tags': {},
+                'xray': None,
                 'timeout': 60,
                 'memory_size': 128,
                 'security_group_ids': [],
@@ -641,6 +643,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'environment_variables': {},
                 'tags': {},
                 'timeout': 60,
+                'xray': None,
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
@@ -674,6 +677,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'zip_contents': mock.ANY,
             'runtime': 'python2.7',
             'environment_variables': {},
+            'xray': None,
             'tags': {},
             'timeout': 60,
             'security_group_ids': [],
@@ -738,6 +742,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'handler': 'app.app',
                 'environment_variables': {},
                 'tags': {},
+                'xray': None,
                 'timeout': 60,
                 'memory_size': 128,
                 'security_group_ids': [],
@@ -1360,6 +1365,7 @@ class TestPlanRestAPI(BasePlannerTests):
             endpoint_type='EDGE',
             minimum_compression='100',
             api_gateway_stage='api',
+            xray=False,
             lambda_function=function,
         )
         plan = self.determine_plan(rest_api)
@@ -1400,6 +1406,7 @@ class TestPlanRestAPI(BasePlannerTests):
             ),
             models.APICall(method_name='deploy_rest_api',
                            params={'rest_api_id': Variable('rest_api_id'),
+                                   'xray': False,
                                    'api_gateway_stage': 'api'}),
             models.StoreValue(
                 name='rest_api_url',
@@ -1460,6 +1467,7 @@ class TestPlanRestAPI(BasePlannerTests):
             minimum_compression='',
             api_gateway_stage='api',
             endpoint_type='REGIONAL',
+            xray=False,
             lambda_function=function,
         )
         self.remote_state.declare_resource_exists(rest_api)
@@ -1516,6 +1524,7 @@ class TestPlanRestAPI(BasePlannerTests):
             models.APICall(
                 method_name='deploy_rest_api',
                 params={'rest_api_id': Variable('rest_api_id'),
+                        'xray': False,
                         'api_gateway_stage': 'api'},
             ),
             models.StoreValue(
@@ -1945,6 +1954,7 @@ class TestRemoteState(object):
             minimum_compression='',
             endpoint_type='EDGE',
             api_gateway_stage='api',
+            xray=False,
             lambda_function=None,
         )
         return rest_api
