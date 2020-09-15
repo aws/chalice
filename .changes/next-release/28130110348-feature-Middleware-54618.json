@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "Middleware",
+  "description": "Add support for middleware (#1509)"
+}
