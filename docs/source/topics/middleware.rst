@@ -134,6 +134,8 @@ apply this wrapper to every Lambda function in your app.
 
 .. code-block:: python
 
+    from chalice import ConvertToMiddleware
+
     app.register_middleware(ConvertToMiddleware(log_invoation))
 
 This is also useful to integrate with existing libraries that provide
