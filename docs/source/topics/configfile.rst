@@ -286,8 +286,11 @@ resources are tagged with the key ``'aws-chalice'`` whose value is
 ``'version={chalice-version}:stage={stage-name}:app={app-name}'``.  Currently
 only the following chalice deployed resources are tagged: Lambda functions.
 
-* ``xray`` - A boolean that turns on AWS XRay's Active tracing configuration.
-  This will turn on XRay for both Lambda functions and API Gateway stages.
+``xray``
+~~~~~~~~
+
+A boolean that turns on AWS XRay's Active tracing configuration.
+This will turn on XRay for both Lambda functions and API Gateway stages.
 
 .. _lambda-config:
 
