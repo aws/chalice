@@ -971,6 +971,10 @@ class TerraformGenerator(TemplateGenerator):
             func_definition['environment'] = {
                 'variables': resource.environment_variables
             }
+        if resource.xray:
+            func_definition['tracing_config'] = {
+                'mode': 'Active'
+            }
         if self._chalice_layer:
             func_definition['layers'] = [
                 '${aws_lambda_layer_version.%s.arn}' % self._chalice_layer

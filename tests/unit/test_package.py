@@ -449,6 +449,13 @@ class TestTerraformTemplate(TemplateTestBase):
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
 
+    def test_can_add_tracing_config(self, sample_app):
+        function = self.lambda_function()
+        function.xray = True
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['tracing_config']['mode'] == 'Active'
+
     def test_can_generate_cloudwatch_event(self):
         function = self.lambda_function()
         event = models.CloudWatchEvent(
