@@ -167,7 +167,7 @@ def create_request_with_content_type(content_type):
         'stageVariables': {},
         'isBase64Encoded': False,
     }
-    return app.Request(event)
+    return app.Request(event, FakeLambdaContext())
 
 
 def assert_response_body_is(response, body):
@@ -1711,7 +1711,7 @@ def test_raw_body_is_none_if_body_is_none():
         'stageVariables': {},
         'isBase64Encoded': False,
     }
-    request = app.Request(event)
+    request = app.Request(event, FakeLambdaContext())
     assert request.raw_body == b''
 
 
@@ -1732,7 +1732,7 @@ def test_http_request_to_dict_is_json_serializable(http_request_event):
             http_request_event['body'].encode('utf-8'))
         http_request_event['body'] = body.decode('ascii')
 
-    request = Request(http_request_event)
+    request = Request(http_request_event, FakeLambdaContext())
     assert isinstance(request.raw_body, bytes)
     request_dict = request.to_dict()
     # We should always be able to dump the request dict

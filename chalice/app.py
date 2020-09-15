@@ -381,6 +381,8 @@ class CORSConfig(object):
 class Request(object):
     """The current request from API gateway."""
 
+    _NON_SERIALIZED_ATTRS = ['lambda_context']
+
     def __init__(self, event_dict, lambda_context=None):
         query_params = event_dict['multiValueQueryStringParameters']
         self.query_params = None if query_params is None \
@@ -430,8 +432,11 @@ class Request(object):
 
     def to_dict(self):
         # Don't copy internal attributes.
-        copied = {k: v for k, v in self.__dict__.items()
-                  if not k.startswith('_')}
+        copied = {
+            k: v for k, v in self.__dict__.items()
+            if not k.startswith('_') and
+            k not in self._NON_SERIALIZED_ATTRS
+        }
         # We want the output of `to_dict()` to be
         # JSON serializable, so we need to remove the CaseInsensitive dict.
         copied['headers'] = dict(copied['headers'])
