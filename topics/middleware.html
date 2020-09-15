@@ -327,18 +327,18 @@ to all Lambda functions in our application.</p>
 <span class="p">)</span>
 
 <span class="c1"># Here we&#39;re writing Chalice specific middleware where for any HTTP</span>
-<span class="c1"># APIs, we want to add the request uri to our structured log message.</span>
+<span class="c1"># APIs, we want to add the request path to our structured log message.</span>
 <span class="c1"># This shows how we can combine both Chalice-style middleware with</span>
 <span class="c1"># other existing tools.</span>
 <span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">inject_route_info</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">structure_logs</span><span class="p">(</span><span class="n">append</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">request_uri</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">structure_logs</span><span class="p">(</span><span class="n">append</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">request_path</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 
 
 <span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In index() function, this will have a &#39;request_uri&#39; key.&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In index() function, this will have a &#39;path&#39; key.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
 
