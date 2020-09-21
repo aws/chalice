@@ -382,7 +382,8 @@ class LocalGatewayAuthorizer(object):
         allow_resource_statements = []
         for statement in statements:
             if statement.get('Effect') == 'Allow' and \
-               statement.get('Action') == 'execute-api:Invoke':
+               statement.get('Action') == 'execute-api:Invoke' or \
+               'execute-api:Invoke' in statement.get('Action'):
                 for resource in statement.get('Resource'):
                     allow_resource_statements.append(resource)
 
