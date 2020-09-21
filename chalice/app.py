@@ -1776,6 +1776,7 @@ class Blueprint(DecoratorAPI):
         # Blueprint.register() and provide an app object.  Once
         # we have access to an app, we can call the actual _wrap_handler
         # which will have access to middleware.
+        @functools.wraps(user_handler)
         def _defer_wrap_handler(app):
             # pylint: disable=protected-access
             return app._wrap_handler(handler_type, handler_name,

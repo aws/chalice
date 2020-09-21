@@ -2015,6 +2015,27 @@ def test_can_combine_multiple_blueprints_in_single_app():
     assert sorted(list(myapp.routes)) == ['/bar', '/foo']
 
 
+def test_doc_saved_on_route():
+    myapp = app.Chalice('myapp')
+
+    @myapp.route('/')
+    def index():
+        """My index docstring."""
+        pass
+
+    assert index.__doc__ == 'My index docstring.'
+
+
+def test_blueprint_docstring_is_preserved():
+    foo = app.Blueprint('foo')
+
+    @foo.route('/foo')
+    def first():
+        """Blueprint docstring."""
+
+    assert first.__doc__ == 'Blueprint docstring.'
+
+
 def test_can_mount_apis_at_url_prefix():
     myapp = app.Chalice('myapp')
     foo = app.Blueprint('foo')
