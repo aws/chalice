@@ -98,6 +98,20 @@ class RemoteState(object):
             function_arn=deployed_values['lambda_arn'],
         )
 
+    def _resource_exists_kinesiseventsource(self, resource):
+        # type: (models.KinesisEventSource) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        return self._client.verify_event_source_current(
+            event_uuid=deployed_values['event_uuid'],
+            resource_name='stream/%s' % resource.stream,
+            service_name='kinesis',
+            function_arn=deployed_values['lambda_arn'],
+        )
+
     def _resource_exists_lambdalayer(self, resource):
         # type: (models.LambdaLayer) -> bool
         try:
@@ -776,8 +790,8 @@ class PlanStage(object):
             ]
         return instruction_for_queue_arn + [
             (models.APICall(
-                method_name='create_sqs_event_source',
-                params={'queue_arn': Variable(queue_arn_varname),
+                method_name='create_lambda_event_source',
+                params={'event_source_arn': Variable(queue_arn_varname),
                         'batch_size': resource.batch_size,
                         'function_name': function_arn},
                 output_var=uuid_varname,
@@ -806,6 +820,110 @@ class PlanStage(object):
             ),
             models.RecordResourceVariable(
                 resource_type='sqs_event',
+                resource_name=resource.resource_name,
+                name='lambda_arn',
+                variable_name=function_arn.name,
+            ),
+        ]
+
+    def _plan_kinesiseventsource(self, resource):
+        # type: (models.KinesisEventSource) -> Sequence[InstructionMsg]
+        stream_arn_varname = '%s_stream_arn' % resource.resource_name
+        uuid_varname = '%s_uuid' % resource.resource_name
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        instruction_for_stream_arn = [
+            models.BuiltinFunction(
+                'parse_arn',
+                [function_arn],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            models.JPSearch('partition',
+                            input_var='parsed_lambda_arn',
+                            output_var='partition'),
+            models.StoreValue(
+                name=stream_arn_varname,
+                value=StringFormat(
+                    'arn:{partition}:kinesis:{region_name}:{account_id}:'
+                    'stream/%s' % (resource.stream),
+                    ['partition', 'region_name', 'account_id'],
+                ),
+            ),
+        ]  # type: List[InstructionMsg]
+        if self._remote_state.resource_exists(resource):
+            deployed = self._remote_state.resource_deployed_values(resource)
+            uuid = deployed['event_uuid']
+            return instruction_for_stream_arn + [
+                models.APICall(
+                    method_name='update_lambda_event_source',
+                    params={'event_uuid': uuid,
+                            'batch_size': resource.batch_size}
+                ),
+                models.RecordResourceValue(
+                    resource_type='kinesis_event',
+                    resource_name=resource.resource_name,
+                    name='kinesis_arn',
+                    value=deployed['kinesis_arn'],
+                ),
+                models.RecordResourceValue(
+                    resource_type='kinesis_event',
+                    resource_name=resource.resource_name,
+                    name='event_uuid',
+                    value=uuid,
+                ),
+                models.RecordResourceValue(
+                    resource_type='kinesis_event',
+                    resource_name=resource.resource_name,
+                    name='stream',
+                    value=resource.stream,
+                ),
+                models.RecordResourceValue(
+                    resource_type='kinesis_event',
+                    resource_name=resource.resource_name,
+                    name='lambda_arn',
+                    value=deployed['lambda_arn'],
+                ),
+            ]
+        return instruction_for_stream_arn + [
+            (models.APICall(
+                method_name='create_lambda_event_source',
+                params={'event_source_arn': Variable(stream_arn_varname),
+                        'batch_size': resource.batch_size,
+                        'function_name': function_arn,
+                        'starting_position': resource.starting_position},
+                output_var=uuid_varname,
+            ), 'Subscribing %s to Kinesis stream %s\n'
+                % (resource.lambda_function.function_name, resource.stream)
+            ),
+            models.RecordResourceVariable(
+                resource_type='kinesis_event',
+                resource_name=resource.resource_name,
+                name='kinesis_arn',
+                variable_name=stream_arn_varname,
+            ),
+            # We record this because this is what's used to unsubscribe
+            # lambda to the SQS queue.
+            models.RecordResourceVariable(
+                resource_type='kinesis_event',
+                resource_name=resource.resource_name,
+                name='event_uuid',
+                variable_name=uuid_varname,
+            ),
+            models.RecordResourceValue(
+                resource_type='kinesis_event',
+                resource_name=resource.resource_name,
+                name='stream',
+                value=resource.stream,
+            ),
+            models.RecordResourceVariable(
+                resource_type='kinesis_event',
                 resource_name=resource.resource_name,
                 name='lambda_arn',
                 variable_name=function_arn.name,

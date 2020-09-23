@@ -78,6 +78,17 @@ def sample_sqs_event_app():
 
 
 @fixture
+def sample_kinesis_event_app():
+    app = Chalice('kinesis-event')
+
+    @app.on_kinesis_message(stream='mystream')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def sample_app_lambda_only():
     app = Chalice('lambda_only')
 

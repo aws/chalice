@@ -526,6 +526,21 @@ class TestApplicationGraphBuilder(object):
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 
+    def test_can_create_kinesis_event_handler(self, sample_kinesis_event_app):
+        config = self.create_config(sample_kinesis_event_app,
+                                    app_name='kinesis-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        kinesis_event = application.resources[0]
+        assert isinstance(kinesis_event, models.KinesisEventSource)
+        assert kinesis_event.resource_name == 'handler-kinesis-event-source'
+        assert kinesis_event.stream == 'mystream'
+        lambda_function = kinesis_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
     def test_can_create_websocket_event_handler(self, sample_websocket_app):
         config = self.create_config(sample_websocket_app,
                                     app_name='websocket-app',

@@ -114,6 +114,12 @@ class ApplicationGraphBuilder(object):
                         config, deployment, event_source, stage_name,
                     )
                 )
+            elif isinstance(event_source, app.KinesisEventConfig):
+                resources.append(
+                    self._create_kinesis_subscription(
+                        config, deployment, event_source, stage_name,
+                    )
+                )
         return resources
 
     def _create_rest_api_model(self,
@@ -555,6 +561,28 @@ class ApplicationGraphBuilder(object):
             lambda_function=lambda_function,
         )
         return sqs_event_source
+
+    def _create_kinesis_subscription(
+        self,
+        config,          # type: Config
+        deployment,      # type: models.DeploymentPackage
+        kinesis_config,  # type: app.KinesisEventConfig
+        stage_name,      # type: str
+    ):
+        # type: (...) -> models.KinesisEventSource
+        lambda_function = self._create_lambda_model(
+            config=config, deployment=deployment, name=kinesis_config.name,
+            handler_name=kinesis_config.handler_string, stage_name=stage_name
+        )
+        resource_name = kinesis_config.name + '-kinesis-event-source'
+        kinesis_event_source = models.KinesisEventSource(
+            resource_name=resource_name,
+            stream=kinesis_config.stream,
+            batch_size=kinesis_config.batch_size,
+            starting_position=kinesis_config.starting_position,
+            lambda_function=lambda_function,
+        )
+        return kinesis_event_source
 
 
 class DependencyBuilder(object):

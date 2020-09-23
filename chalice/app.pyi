@@ -161,6 +161,12 @@ class DecoratorAPI(object):
                        batch_size: int=1,
                        name: Optional[str]=None) -> Callable[..., Any]: ...
 
+    def on_kinesis_message(self,
+                           stream: str,
+                           batch_size: int=100,
+                           startition_position: str='LATEST',
+                           name: Optional[str]=None) -> Callable[..., Any]: ...
+
     def schedule(self,
                  expression: str,
                  name: Optional[str]=None,
@@ -288,6 +294,12 @@ class ScheduledEventConfig(BaseEventSourceConfig):
 
 class CloudWatchEventConfig(BaseEventSourceConfig):
     event_pattern = ...  # type: Dict
+
+
+class KinesisEventConfig(BaseEventSourceConfig):
+    stream = ...             # type: str
+    batch_size = ...         # type: int
+    starting_position = ...  # type: str
 
 
 class Blueprint(DecoratorAPI):

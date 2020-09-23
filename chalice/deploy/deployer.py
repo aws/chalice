@@ -105,6 +105,7 @@ from chalice.constants import DEFAULT_LAMBDA_TIMEOUT
 from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.constants import DEFAULT_TLS_VERSION
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
+from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
@@ -513,7 +514,8 @@ class SwaggerBuilder(BaseDeployStep):
 class LambdaEventSourcePolicyInjector(BaseDeployStep):
     def __init__(self):
         # type: () -> None
-        self._policy_injected = False
+        self._sqs_policy_injected = False
+        self._kinesis_policy_injected = False
 
     def handle_sqseventsource(self, config, resource):
         # type: (Config, models.SQSEventSource) -> None
@@ -521,14 +523,36 @@ class LambdaEventSourcePolicyInjector(BaseDeployStep):
         # available records so the lambda function needs
         # permission to call sqs.
         role = resource.lambda_function.role
-        if (not self._policy_injected and
+        if not self._sqs_policy_injected and \
+                self._needs_policy_injected(role):
+            # mypy can't follow the type narrowing from
+            # _needs_policy_injected so we're working around
+            # that by explicitly casting the role.
+            role = cast(models.ManagedIAMRole, role)
+            document = cast(Dict[str, Any], role.policy.document)
+            self._inject_trigger_policy(document,
+                                        SQS_EVENT_SOURCE_POLICY.copy())
+            self._sqs_policy_injected = True
+
+    def handle_kinesiseventsource(self, config, resource):
+        # type: (Config, models.KinesisEventSource) -> None
+        role = resource.lambda_function.role
+        if not self._kinesis_policy_injected and \
+                self._needs_policy_injected(role):
+            # See commen in handle_kinesiseventsource about this cast.
+            role = cast(models.ManagedIAMRole, role)
+            document = cast(Dict[str, Any], role.policy.document)
+            self._inject_trigger_policy(document,
+                                        KINESIS_EVENT_SOURCE_POLICY.copy())
+            self._kinesis_policy_injected = True
+
+    def _needs_policy_injected(self, role):
+        # type: (models.IAMRole) -> bool
+        return (
             isinstance(role, models.ManagedIAMRole) and
             isinstance(role.policy, models.AutoGenIAMPolicy) and
-            not isinstance(role.policy.document,
-                           models.Placeholder)):
-            self._inject_trigger_policy(role.policy.document,
-                                        SQS_EVENT_SOURCE_POLICY.copy())
-            self._policy_injected = True
+            not isinstance(role.policy.document, models.Placeholder)
+        )
 
     def _inject_trigger_policy(self, document, policy):
         # type: (Dict[str, Any], Dict[str, Any]) -> None

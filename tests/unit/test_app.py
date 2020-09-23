@@ -6,6 +6,7 @@ import gzip
 import inspect
 import collections
 from copy import deepcopy
+from datetime import datetime
 
 import pytest
 from pytest import fixture
@@ -2003,6 +2004,77 @@ def test_can_map_sqs_event(sample_app):
     assert first_record.to_dict() == sqs_event['Records'][0]
     assert actual_event.to_dict() == sqs_event
     assert actual_event.context == lambda_context
+
+
+def test_can_create_kinesis_handler(sample_app):
+    @sample_app.on_kinesis_message(stream='MyStream',
+                                   batch_size=1,
+                                   starting_position='TRIM_HORIZON')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    config = sample_app.event_sources[0]
+    assert config.stream == 'MyStream'
+    assert config.batch_size == 1
+    assert config.starting_position == 'TRIM_HORIZON'
+
+
+def test_can_map_kinesis_event(sample_app):
+    @sample_app.on_kinesis_message(stream='MyStream')
+    def handler(event):
+        return event
+
+    kinesis_event = {
+        "Records": [
+            {
+                "kinesis": {
+                    "kinesisSchemaVersion": "1.0",
+                    "partitionKey": "1",
+                    "sequenceNumber": "12345",
+                    "data": "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0Lg==",
+                    "approximateArrivalTimestamp": 1545084650.987
+                },
+                "eventSource": "aws:kinesis",
+                "eventVersion": "1.0",
+                "eventID": "shardId-000000000006:12345",
+                "eventName": "aws:kinesis:record",
+                "invokeIdentityArn": "arn:aws:iam::123:role/lambda-role",
+                "awsRegion": "us-east-2",
+                "eventSourceARN": (
+                    "arn:aws:kinesis:us-east-2:123:stream/lambda-stream"
+                )
+            },
+            {
+                "kinesis": {
+                    "kinesisSchemaVersion": "1.0",
+                    "partitionKey": "1",
+                    "sequenceNumber": "12346",
+                    "data": "VGhpcyBpcyBvbmx5IGEgdGVzdC4=",
+                    "approximateArrivalTimestamp": 1545084711.166
+                },
+                "eventSource": "aws:kinesis",
+                "eventVersion": "1.0",
+                "eventID": "shardId-000000000006:12346",
+                "eventName": "aws:kinesis:record",
+                "invokeIdentityArn": "arn:aws:iam::123:role/lambda-role",
+                "awsRegion": "us-east-2",
+                "eventSourceARN": (
+                    "arn:aws:kinesis:us-east-2:123:stream/lambda-stream"
+                )
+            }
+        ]
+    }
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(kinesis_event, context=lambda_context)
+    records = list(actual_event)
+    assert len(records) == 2
+    assert records[0].data == b'Hello, this is a test.'
+    assert records[0].sequence_number == "12345"
+    assert records[0].partition_key == "1"
+    assert records[0].schema_version == "1.0"
+    assert records[0].timestamp == datetime(2018, 12, 17, 22, 10, 50, 987000)
+    assert records[1].data == b'This is only a test.'
 
 
 def test_bytes_when_binary_type_is_application_json():

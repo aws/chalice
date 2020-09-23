@@ -728,6 +728,31 @@ class TestTerraformTemplate(TemplateTestBase):
                    'batch_size': 5
                }
 
+    def test_can_package_kinesis_handler(self, sample_app):
+        @sample_app.on_kinesis_message(stream='mystream', batch_size=5,
+                                       starting_position='TRIM_HORIZON')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-kinesis-event-source'] == {
+                   'event_source_arn': (
+                       'arn:${data.aws_partition.chalice.partition}:kinesis'
+                       ':${data.aws_region.chalice.name}:'
+                       '${data.aws_caller_identity.chalice.account_id}'
+                       ':stream/mystream'),
+                   'function_name': 'sample_app-dev-handler',
+                   'starting_position': 'TRIM_HORIZON',
+                   'batch_size': 5
+               }
+
     def test_package_websocket_with_error_message(self, sample_websocket_app):
         config = Config.create(chalice_app=sample_websocket_app,
                                project_dir='.',
@@ -1420,6 +1445,32 @@ class TestSAMTemplate(TemplateTestBase):
                         )
                     },
                     'BatchSize': 5,
+                },
+            }
+        }
+
+    def test_can_package_kinesis_handler(self, sample_app):
+        @sample_app.on_kinesis_message(stream='mystream', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        sns_handler = template['Resources']['Handler']
+        assert sns_handler['Properties']['Events'] == {
+            'HandlerKinesisEventSource': {
+                'Type': 'Kinesis',
+                'Properties': {
+                    'Stream': {
+                        'Fn::Sub': (
+                            'arn:${AWS::Partition}:kinesis:${AWS::Region}'
+                            ':${AWS::AccountId}:stream/mystream'
+                        )
+                    },
+                    'BatchSize': 5,
+                    'StartingPosition': 'LATEST',
                 },
             }
         }

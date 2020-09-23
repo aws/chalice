@@ -326,6 +326,52 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
+   .. method:: on_kinesis_message(stream, batch_size=1,
+                                  starting_position='LATEST', name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever data is published to the specified Kinesis stream.
+
+      The lambda function must accept a single parameter which
+      is of type :class:`KinesisEvent`.
+
+      If the decorated function raises an exception, Lambda retries the
+      batch until processing succeeds or the data expires.
+
+      See
+      `Using AWS Lambda with Amazon Kinesis <https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html>`__
+      for more information on how Lambda integrates with Kinesis.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_kinesis_message(stream='mystream')
+          def handler(event):
+              app.log.info("Event: %s", event.to_dict())
+              for record in event:
+                  app.log.info("Message body: %s", record.data)
+
+      :param stream: The name of the Kinesis stream you want to subscribe to.
+        This is the name of the queue, not the ARN.
+
+      :param batch_size: The maximum number of messages to retrieve
+        when polling for Kinesis messages.  The event parameter can have
+        multiple Kinesis records associated with it.  This is why the
+        event parameter passed to the lambda function is iterable.  The
+        batch size controls how many messages can be in a single event.
+
+      :param starting_position: Specifies where to start processing records.
+        This can have the following values:
+
+        * ``LATEST`` - Process new records that are added to the stream.
+        * ``TRIM_HORIZON`` - Process all records in the stream.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
    .. method:: lambda_function(name=None)
 
       Create a pure lambda function that's not connected to anything.

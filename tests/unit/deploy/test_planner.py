@@ -1789,9 +1789,9 @@ class TestPlanSQSSubscription(BasePlannerTests):
         ]
         assert plan[5:] == [
             models.APICall(
-                method_name='create_sqs_event_source',
+                method_name='create_lambda_event_source',
                 params={
-                    'queue_arn': Variable(
+                    'event_source_arn': Variable(
                         "function_name-sqs-event-source_queue_arn"
                     ),
                     'batch_size': 10,
@@ -1937,6 +1937,88 @@ class TestPlanSQSSubscription(BasePlannerTests):
 
         assert len(integrations) == 1
         assert integrations[0] == integration_injected
+
+
+class TestPlanKinesisSubscription(BasePlannerTests):
+    def test_can_plan_kinesis_event_source(self):
+        function = create_function_resource('function_name')
+        kinesis_event_source = models.KinesisEventSource(
+            resource_name='function_name-kinesis-event-source',
+            stream='mystream',
+            batch_size=10,
+            starting_position='LATEST',
+            lambda_function=function
+        )
+        plan = self.determine_plan(kinesis_event_source)
+        plan_parse_arn = plan[:5]
+        assert plan_parse_arn == [
+            models.BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn'
+            ),
+            models.JPSearch(
+                expression='account_id',
+                input_var='parsed_lambda_arn',
+                output_var='account_id'
+            ),
+            models.JPSearch(
+                expression='region',
+                input_var='parsed_lambda_arn',
+                output_var='region_name'
+            ),
+            models.JPSearch(
+                expression='partition',
+                input_var='parsed_lambda_arn',
+                output_var='partition'
+            ),
+            models.StoreValue(
+                name='function_name-kinesis-event-source_stream_arn',
+                value=StringFormat(
+                    ("arn:{partition}:kinesis:{region_name}:{account_id}:"
+                     "stream/mystream"),
+                    variables=['partition', 'region_name', 'account_id'],
+                ),
+            )
+        ]
+        assert plan[5:] == [
+            models.APICall(
+                method_name='create_lambda_event_source',
+                params={
+                    'event_source_arn': Variable(
+                        "function_name-kinesis-event-source_stream_arn"
+                    ),
+                    'batch_size': 10,
+                    'starting_position': 'LATEST',
+                    'function_name': Variable("function_name_lambda_arn")
+                },
+                output_var='function_name-kinesis-event-source_uuid'
+            ),
+            models.RecordResourceVariable(
+                resource_type='kinesis_event',
+                resource_name='function_name-kinesis-event-source',
+                name='kinesis_arn',
+                variable_name='function_name-kinesis-event-source_stream_arn'
+            ),
+            models.RecordResourceVariable(
+                resource_type='kinesis_event',
+                resource_name='function_name-kinesis-event-source',
+                name='event_uuid',
+                variable_name='function_name-kinesis-event-source_uuid'
+            ),
+            models.RecordResourceValue(
+                resource_type='kinesis_event',
+                resource_name='function_name-kinesis-event-source',
+                name='stream',
+                value='mystream'
+            ),
+            models.RecordResourceVariable(
+                resource_type='kinesis_event',
+                resource_name='function_name-kinesis-event-source',
+                name='lambda_arn',
+                variable_name='function_name_lambda_arn'
+            )
+        ]
 
 
 class TestRemoteState(object):
@@ -2743,7 +2825,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         self.execute(plan, config)
         assert plan == [
             models.APICall(
-                method_name='remove_sqs_event_source',
+                method_name='remove_lambda_event_source',
                 params={'event_uuid': 'event-uuid'},
             ),
         ]
@@ -2770,7 +2852,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         self.execute(plan, config)
         assert plan[-1:] == [
             models.APICall(
-                method_name='remove_sqs_event_source',
+                method_name='remove_lambda_event_source',
                 params={'event_uuid': 'event-uuid'},
             ),
         ]
