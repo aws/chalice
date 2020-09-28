@@ -494,12 +494,17 @@ class Response(object):
         body = response_dict['body']
 
         if _matches_content_type(content_type, binary_types):
-            if _matches_content_type(content_type, ['application/json']):
+            if _matches_content_type(content_type, ['application/json']) or \
+                    not content_type:
                 # There's a special case when a user configures
                 # ``application/json`` as a binary type.  The default
                 # json serialization results in a string type, but for binary
                 # content types we need a type bytes().  So we need to special
                 # case this scenario and encode the JSON body to bytes().
+                #
+                # If a user does not provide a content type header, which can
+                # happen if they return a python type instead of a ``Response``
+                # type, then we assume the content is application/json.
                 body = body if isinstance(body, bytes) \
                     else body.encode('utf-8')
             body = self._base64encode(body)

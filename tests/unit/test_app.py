@@ -415,6 +415,44 @@ def test_can_encode_binary_json(sample_app):
     assert encoded_response['body'] == 'eyJmb28iOiJiYXIifQ=='
 
 
+def test_wildcard_accepts_with_native_python_types_serializes_json(
+        sample_app, create_event):
+    sample_app.api.binary_types = ['*/*']
+
+    @sample_app.route('/py-dict')
+    def py_dict():
+        return {'foo': 'bar'}
+
+    event = create_event('/py-dict', 'GET', {})
+    event['headers']['Accept'] = '*/*'
+    response = sample_app(event, context=None)
+    # In this case, they've return a native python dict type, which should
+    # be serialized to JSON and returned back to the user as JSON.  Because
+    # we also have ``*/*`` as a binary type, we'll return the response
+    # as a binary response type.
+    assert base64.b64decode(response['body']) == b'{"foo":"bar"}'
+    assert response['isBase64Encoded']
+
+
+def test_wildcard_accepts_with_response_class(
+        sample_app, create_event):
+    sample_app.api.binary_types = ['*/*']
+
+    @sample_app.route('/py-dict')
+    def py_dict():
+        return Response(body=json.dumps({'foo': 'bar'}).encode('utf-8'),
+                        headers={'Content-Type': 'application/json'},
+                        status_code=200)
+
+    event = create_event('/py-dict', 'GET', {})
+    event['headers']['Accept'] = '*/*'
+    response = sample_app(event, context=None)
+    # Because our binary types is '*/*' we should be returning this
+    # content as binary.
+    assert base64.b64decode(response['body']) == b'{"foo": "bar"}'
+    assert response['isBase64Encoded']
+
+
 def test_can_parse_route_view_args():
     entry = app.RouteEntry(lambda: {"foo": "bar"}, 'view-name',
                            '/foo/{bar}/baz/{qux}', method='GET')
