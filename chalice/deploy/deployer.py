@@ -106,6 +106,7 @@ from chalice.constants import DEFAULT_LAMBDA_MEMORY_SIZE
 from chalice.constants import DEFAULT_TLS_VERSION
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
 from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
+from chalice.constants import DDB_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
@@ -516,6 +517,7 @@ class LambdaEventSourcePolicyInjector(BaseDeployStep):
         # type: () -> None
         self._sqs_policy_injected = False
         self._kinesis_policy_injected = False
+        self._ddb_policy_injected = False
 
     def handle_sqseventsource(self, config, resource):
         # type: (Config, models.SQSEventSource) -> None
@@ -545,6 +547,18 @@ class LambdaEventSourcePolicyInjector(BaseDeployStep):
             self._inject_trigger_policy(document,
                                         KINESIS_EVENT_SOURCE_POLICY.copy())
             self._kinesis_policy_injected = True
+
+    def handle_dynamodbeventsource(self, config, resource):
+        # type: (Config, models.KinesisEventSource) -> None
+        role = resource.lambda_function.role
+        if not self._ddb_policy_injected and \
+                self._needs_policy_injected(role):
+            # See commen in handle_kinesiseventsource about this cast.
+            role = cast(models.ManagedIAMRole, role)
+            document = cast(Dict[str, Any], role.policy.document)
+            self._inject_trigger_policy(document,
+                                        DDB_EVENT_SOURCE_POLICY.copy())
+            self._ddb_policy_injected = True
 
     def _needs_policy_injected(self, role):
         # type: (models.IAMRole) -> bool

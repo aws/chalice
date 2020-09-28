@@ -25,6 +25,7 @@ class ResourceSweeper(object):
         'sns_event',
         'sqs_event',
         'kinesis_event',
+        'dynamodb_event',
         'domain_name'
     )
 
@@ -86,11 +87,22 @@ class ResourceSweeper(object):
     def _determine_kinesis_event(self, name, resource_values):
         # type: (str, Dict[str, str]) -> Optional[str]
         existing_stream = resource_values['stream']
-        referenced_queue = [instruction for instruction in self.marked[name]
-                            if instruction.name == 'stream' and
-                            isinstance(instruction,
-                                       models.RecordResourceValue)][0]
-        if referenced_queue.value != existing_stream:
+        referenced_stream = [instruction for instruction in self.marked[name]
+                             if instruction.name == 'stream' and
+                             isinstance(instruction,
+                                        models.RecordResourceValue)][0]
+        if referenced_stream.value != existing_stream:
+            return name
+        return None
+
+    def _determine_dynamodb_event(self, name, resource_values):
+        # type: (str, Dict[str, str]) -> Optional[str]
+        existing_stream_arn = resource_values['stream_arn']
+        referenced_stream = [instruction for instruction in self.marked[name]
+                             if instruction.name == 'stream_arn' and
+                             isinstance(instruction,
+                                        models.RecordResourceValue)][0]
+        if referenced_stream.value != existing_stream_arn:
             return name
         return None
 
@@ -316,6 +328,17 @@ class ResourceSweeper(object):
         }
 
     def _delete_kinesis_event(self, resource_values):
+        # type: (Dict[str, Any]) -> ResourceValueType
+        return {
+            'instructions': (
+                models.APICall(
+                    method_name='remove_lambda_event_source',
+                    params={'event_uuid': resource_values['event_uuid']},
+                ),
+            )
+        }
+
+    def _delete_dynamodb_event(self, resource_values):
         # type: (Dict[str, Any]) -> ResourceValueType
         return {
             'instructions': (

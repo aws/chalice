@@ -1665,6 +1665,27 @@ class TypedAWSClient(object):
         except client.exceptions.ResourceNotFoundException:
             return False
 
+    def verify_event_source_arn_current(self, event_uuid, event_source_arn,
+                                        function_arn):
+        # type: (str, str, str) -> bool
+        """Check if the uuid matches the event and function ARN.
+
+        This is similar to verify_event_source_current, except that you provide
+        an explicit event_source_arn here.  This is useful for cases where you
+        know the event source ARN or where you can't construct the event source
+        arn solely based on the resource_name and the service_name.
+
+        """
+        client = self._client('lambda')
+        try:
+            attributes = client.get_event_source_mapping(UUID=event_uuid)
+        except client.exceptions.ResourceNotFoundException:
+            return False
+        return bool(
+            event_source_arn == attributes['EventSourceArn'] and
+            function_arn == attributes['FunctionArn']
+        )
+
     def create_websocket_api(self, name):
         # type: (str) -> str
         client = self._client('apigatewayv2')

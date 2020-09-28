@@ -541,6 +541,21 @@ class TestApplicationGraphBuilder(object):
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 
+    def test_can_create_ddb_event_handler(self, sample_ddb_event_app):
+        config = self.create_config(sample_ddb_event_app,
+                                    app_name='ddb-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        ddb_event = application.resources[0]
+        assert isinstance(ddb_event, models.DynamoDBEventSource)
+        assert ddb_event.resource_name == 'handler-dynamodb-event-source'
+        assert ddb_event.stream_arn == 'arn:aws:...:stream'
+        lambda_function = ddb_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
     def test_can_create_websocket_event_handler(self, sample_websocket_app):
         config = self.create_config(sample_websocket_app,
                                     app_name='websocket-app',

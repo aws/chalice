@@ -2077,6 +2077,57 @@ def test_can_map_kinesis_event(sample_app):
     assert records[1].data == b'This is only a test.'
 
 
+def test_can_create_ddb_handler(sample_app):
+    @sample_app.on_dynamodb_message(
+        stream_arn='arn:aws:dynamodb:...:stream', batch_size=10,
+        starting_position='TRIM_HORIZON')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    config = sample_app.event_sources[0]
+    assert config.stream_arn == 'arn:aws:dynamodb:...:stream'
+    assert config.batch_size == 10
+    assert config.starting_position == 'TRIM_HORIZON'
+
+
+def test_can_map_ddb_event(sample_app):
+    @sample_app.on_dynamodb_message(stream_arn='arn:aws:...:stream')
+    def handler(event):
+        return event
+
+    ddb_event = {
+        'Records': [
+            {'awsRegion': 'us-west-2',
+             'dynamodb': {'ApproximateCreationDateTime': 1601317140.0,
+                          'Keys': {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}},
+                          'NewImage': {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}},
+                          'SequenceNumber': '1700000000020701978607',
+                          'SizeBytes': 20,
+                          'StreamViewType': 'NEW_AND_OLD_IMAGES'},
+             'eventID': 'da037887f71a88a1f6f4cfd149709d5a',
+             'eventName': 'INSERT',
+             'eventSource': 'aws:dynamodb',
+             'eventSourceARN': (
+                 'arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                 '2020-09-28T16:49:14.209'
+             ),
+             'eventVersion': '1.1'}
+        ]
+    }
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(ddb_event, context=lambda_context)
+    records = list(actual_event)
+    assert len(records) == 1
+    assert records[0].timestamp == datetime(2020, 9, 28, 18, 19)
+    assert records[0].keys == {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    assert records[0].new_image == {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    assert records[0].old_image is None
+    assert records[0].sequence_number == '1700000000020701978607'
+    assert records[0].size_bytes == 20
+    assert records[0].stream_view_type == 'NEW_AND_OLD_IMAGES'
+
+
 def test_bytes_when_binary_type_is_application_json():
     demo = app.Chalice('demo-app')
     demo.api.binary_types.append('application/json')

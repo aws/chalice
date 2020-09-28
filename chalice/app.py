@@ -706,6 +706,16 @@ class DecoratorAPI(object):
                                  'starting_position': starting_position},
         )
 
+    def on_dynamodb_message(self, stream_arn, batch_size=100,
+                            starting_position='LATEST', name=None):
+        return self._create_registration_function(
+            handler_type='on_dynamodb_message',
+            name=name,
+            registration_kwargs={'stream_arn': stream_arn,
+                                 'batch_size': batch_size,
+                                 'starting_position': starting_position},
+        )
+
     def route(self, path, **kwargs):
         return self._create_registration_function(
             handler_type='route',
@@ -765,6 +775,7 @@ class DecoratorAPI(object):
             'on_sqs_message': SQSEvent,
             'on_cw_event': CloudWatchEvent,
             'on_kinesis_message': KinesisEvent,
+            'on_dynamodb_message': DynamoDBEvent,
             'schedule': CloudWatchEvent,
             'lambda_function': LambdaFunctionEvent,
         }
@@ -774,6 +785,7 @@ class DecoratorAPI(object):
             'on_sqs_message': 'sqs',
             'on_cw_event': 'cloudwatch',
             'on_kinesis_message': 'kinesis',
+            'on_dynamodb_message': 'dynamodb',
             'schedule': 'scheduled',
             'lambda_function': 'pure_lambda',
         }
@@ -956,6 +968,17 @@ class _HandlerRegistration(object):
             starting_position=kwargs['starting_position'],
         )
         self.event_sources.append(kinesis_config)
+
+    def _register_on_dynamodb_message(self, name, handler_string,
+                                      kwargs, **unused):
+        ddb_config = DynamoDBEventConfig(
+            name=name,
+            handler_string=handler_string,
+            stream_arn=kwargs['stream_arn'],
+            batch_size=kwargs['batch_size'],
+            starting_position=kwargs['starting_position'],
+        )
+        self.event_sources.append(ddb_config)
 
     def _register_on_cw_event(self, name, handler_string, kwargs, **unused):
         event_source = CloudWatchEventConfig(
@@ -1407,6 +1430,15 @@ class KinesisEventConfig(BaseEventSourceConfig):
         self.starting_position = starting_position
 
 
+class DynamoDBEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, stream_arn,
+                 batch_size, starting_position):
+        super(DynamoDBEventConfig, self).__init__(name, handler_string)
+        self.stream_arn = stream_arn
+        self.batch_size = batch_size
+        self.starting_position = starting_position
+
+
 class WebsocketConnectConfig(BaseEventSourceConfig):
     CONNECT_ROUTE = '$connect'
 
@@ -1780,6 +1812,26 @@ class KinesisRecord(BaseLambdaEvent):
         self.schema_version = kinesis['kinesisSchemaVersion']
         self.timestamp = datetime.datetime.utcfromtimestamp(
             kinesis['approximateArrivalTimestamp'])
+
+
+class DynamoDBEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield DynamoDBRecord(record, self.context)
+
+
+class DynamoDBRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        dynamodb = event_dict['dynamodb']
+        self.timestamp = datetime.datetime.utcfromtimestamp(
+        self.new_image = dynamodb.get('NewImage')
+        self.old_image = dynamodb.get('OldImage')
+        self.sequence_number = dynamodb['SequenceNumber']
+        self.size_bytes = dynamodb['SizeBytes']
+        self.stream_view_type = dynamodb['StreamViewType']
 
 
 class Blueprint(DecoratorAPI):

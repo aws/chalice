@@ -753,6 +753,28 @@ class TestTerraformTemplate(TemplateTestBase):
                    'batch_size': 5
                }
 
+    def test_can_package_dynamodb_handler(self, sample_app):
+        @sample_app.on_dynamodb_message(stream_arn='arn:aws:...:stream',
+                                        batch_size=5,
+                                        starting_position='TRIM_HORIZON')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-dynamodb-event-source'] == {
+                       'event_source_arn': 'arn:aws:...:stream',
+                       'function_name': 'sample_app-dev-handler',
+                       'starting_position': 'TRIM_HORIZON',
+                       'batch_size': 5
+                   }
+
     def test_package_websocket_with_error_message(self, sample_websocket_app):
         config = Config.create(chalice_app=sample_websocket_app,
                                project_dir='.',
@@ -1469,6 +1491,28 @@ class TestSAMTemplate(TemplateTestBase):
                             ':${AWS::AccountId}:stream/mystream'
                         )
                     },
+                    'BatchSize': 5,
+                    'StartingPosition': 'LATEST',
+                },
+            }
+        }
+
+    def test_can_package_dynamodb_handler(self, sample_app):
+        @sample_app.on_dynamodb_message(stream_arn='arn:aws:...:stream',
+                                        batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        ddb_handler = template['Resources']['Handler']
+        assert ddb_handler['Properties']['Events'] == {
+            'HandlerDynamodbEventSource': {
+                'Type': 'DynamoDB',
+                'Properties': {
+                    'Stream': 'arn:aws:...:stream',
                     'BatchSize': 5,
                     'StartingPosition': 'LATEST',
                 },

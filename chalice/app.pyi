@@ -302,6 +302,12 @@ class KinesisEventConfig(BaseEventSourceConfig):
     starting_position = ...  # type: str
 
 
+class DynamoDBEventConfig(BaseEventSourceConfig):
+    stream_arn = ...             # type: str
+    batch_size = ...             # type: int
+    starting_position = ...      # type: str
+
+
 class Blueprint(DecoratorAPI):
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext

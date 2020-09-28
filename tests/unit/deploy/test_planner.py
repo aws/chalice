@@ -2020,6 +2020,74 @@ class TestPlanKinesisSubscription(BasePlannerTests):
             )
         ]
 
+    def test_can_update_kinesis_event_source(self):
+        function = create_function_resource('function_name')
+        kinesis_event_source = models.KinesisEventSource(
+            resource_name='function_name-kinesis-event-source',
+            stream='mystream',
+            batch_size=10,
+            starting_position='LATEST',
+            lambda_function=function
+        )
+        self.remote_state.declare_resource_exists(
+            kinesis_event_source,
+            stream='mystream',
+            kinesis_arn='arn:aws:kinesis:stream',
+            resource_type='kinesis_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(kinesis_event_source)
+        assert plan[5] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+            }
+        )
+
+
+class TestPlanDynamoDBSubscription(BasePlannerTests):
+    def test_can_plan_dynamodb_event_source(self):
+        function = create_function_resource('function_name')
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            starting_position='LATEST', lambda_function=function)
+        plan = self.determine_plan(event_source)
+        assert plan[0] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': 'arn:stream',
+                'batch_size': 100,
+                'function_name': Variable('function_name_lambda_arn'),
+                'starting_position': 'LATEST',
+            },
+            output_var='handler-dynamodb-event-source_uuid',
+        )
+
+    def test_can_plan_dynamodb_event_source_update(self):
+        function = create_function_resource('function_name')
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            starting_position='LATEST', lambda_function=function)
+        self.remote_state.declare_resource_exists(
+            event_source,
+            stream_arn='arn:stream',
+            resource_type='dynamodb_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(event_source)
+        assert plan[0] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 100,
+            },
+        )
+
 
 class TestRemoteState(object):
     def setup_method(self):
@@ -2411,6 +2479,70 @@ class TestRemoteState(object):
                 service_name='sqs',
                 function_arn='arn:aws:lambda:handler',
             )
+
+    def test_kinesis_event_source_not_exists(self):
+        event_source = models.KinesisEventSource(
+            resource_name='handler-kinesis-event-source',
+            stream='mystream', batch_size=100, starting_position='LATEST',
+            lambda_function=None)
+        deployed_resources = {'resources': []}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        assert not remote_state.resource_exists(event_source)
+
+    def test_kinesis_event_source_exists(self):
+        event_source = models.KinesisEventSource(
+            resource_name='handler-kinesis-event-source',
+            stream='mystream', batch_size=100, starting_position='LATEST',
+            lambda_function=None)
+        deployed_resources = {
+            'resources': [{
+                'name': 'handler-kinesis-event-source',
+                'resource_type': 'kinesis_event',
+                'kinesis_arn': 'arn:aws:kinesis:...:stream/mystream',
+                'event_uuid': 'abcd',
+                'stream': 'mystream',
+                'lambda_arn': 'arn:aws:lambda:function:test-dev-index'
+            }]
+        }
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        self.client.verify_event_source_current.return_value = True
+        assert remote_state.resource_exists(event_source)
+
+    def test_ddb_event_source_not_exists(self):
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            starting_position='LATEST', lambda_function=None)
+        deployed_resources = {'resources': []}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        assert not remote_state.resource_exists(event_source)
+
+    def test_ddb_event_source_exists(self):
+        event_source = models.KinesisEventSource(
+            resource_name='handler-kinesis-event-source',
+            stream='mystream', batch_size=100, starting_position='LATEST',
+            lambda_function=None)
+        deployed_resources = {
+            'resources': [{
+                'name': 'handler-kinesis-event-source',
+                'resource_type': 'kinesis_event',
+                'stream_arn': 'arn:aws:kinesis:...:stream/mystream',
+                'event_uuid': 'abcd',
+                'stream': 'mystream',
+                'lambda_arn': 'arn:aws:lambda:function:test-dev-index'
+            }]
+        }
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        self.client.verify_event_source_arn_current.return_value = True
+        assert remote_state.resource_exists(event_source)
 
 
 class TestUnreferencedResourcePlanner(BasePlannerTests):

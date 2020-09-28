@@ -342,3 +342,11 @@ class KinesisEventSource(FunctionEventSubscriber):
     stream = attrib()                # type: str
     batch_size = attrib()            # type: int
     starting_position = attrib()     # type: str
+
+
+@attrs
+class DynamoDBEventSource(FunctionEventSubscriber):
+    resource_type = 'dynamodb_event'
+    stream_arn = attrib()            # type: str
+    batch_size = attrib()            # type: int
+    starting_position = attrib()     # type: str

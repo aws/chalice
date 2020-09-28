@@ -89,6 +89,17 @@ def sample_kinesis_event_app():
 
 
 @fixture
+def sample_ddb_event_app():
+    app = Chalice('ddb-event')
+
+    @app.on_dynamodb_message(stream_arn='arn:aws:...:stream')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def sample_app_lambda_only():
     app = Chalice('lambda_only')
 

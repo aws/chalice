@@ -3606,6 +3606,49 @@ def test_verify_event_source_current(stubbed_session, resource_name,
     stubbed_session.verify_stubs()
 
 
+def test_verify_event_source_arn_current(stubbed_session):
+    client = stubbed_session.stub('lambda')
+    uuid = 'uuid-12345'
+    client.get_event_source_mapping(
+        UUID=uuid,
+    ).returns({
+        'UUID': uuid,
+        'BatchSize': 10,
+        'EventSourceArn': 'arn:aws:dynamodb:...:table/MyTable/stream/2020',
+        'FunctionArn': 'arn:aws:lambda:function-arn',
+        'LastModified': '2018-07-02T18:19:03.958000-07:00',
+        'State': 'Enabled',
+        'StateTransitionReason': 'USER_INITIATED'
+    })
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.verify_event_source_arn_current(
+        uuid,
+        event_source_arn='arn:aws:dynamodb:...:table/MyTable/stream/2020',
+        function_arn='arn:aws:lambda:function-arn',
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_event_source_uuid_does_not_exist(stubbed_session):
+    client = stubbed_session.stub('lambda')
+    uuid = 'uuid-12345'
+    client.get_event_source_mapping(
+        UUID=uuid,
+    ).raises_error(error_code='ResourceNotFoundException',
+                   message='Does not exists.')
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert not awsclient.verify_event_source_arn_current(
+        uuid, event_source_arn='arn:aws:dynamodb:...',
+        function_arn='arn:aws:lambda:...',
+    )
+    stubbed_session.verify_stubs()
+
+
 def test_event_source_does_not_exist(stubbed_session):
     client = stubbed_session.stub('lambda')
     uuid = 'uuid-12345'
