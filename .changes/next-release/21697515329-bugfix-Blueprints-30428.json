@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Blueprints",
-  "description": "Preserve docstring in blueprints (#1525)"
-}

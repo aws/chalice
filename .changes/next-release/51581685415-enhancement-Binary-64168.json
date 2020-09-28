@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Binary",
-  "description": "Support returning native python types when using `*/*` for binary types (#1501)"
-}

@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.20.1
+======
+
+* bugfix:Blueprints:Preserve docstring in blueprints (#1525)
+* enhancement:Binary:Support returning native python types when using `*/*` for binary types (#1501)
+
+
 1.20.0
 ======
 
