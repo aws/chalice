@@ -705,7 +705,7 @@ class PlanStage(object):
                     ['partition', 'region_name', 'account_id'],
                 ),
             )
-        )  # type: List[InstructionMsg]
+        )
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
@@ -759,7 +759,7 @@ class PlanStage(object):
                     ['partition', 'region_name', 'account_id'],
                 ),
             )
-        )  # type: List[InstructionMsg]
+        )
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
