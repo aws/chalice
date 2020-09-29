@@ -1398,7 +1398,7 @@ Event Sources
    .. attribute:: data
 
       The payload data for the Kinesis record.  This data is automatically
-      base64 decoded for you.
+      base64 decoded for you and will be a ``bytes`` type.
 
    .. attribute:: sequence_number
 

@@ -1804,8 +1804,6 @@ class KinesisRecord(BaseLambdaEvent):
     def _extract_attributes(self, event_dict):
         kinesis = event_dict['kinesis']
         encoded_payload = kinesis['data']
-        # Double check on python3 on this.  I think we
-        # might need to encode as ascii the encoded_payload.
         self.data = base64.b64decode(encoded_payload)
         self.sequence_number = kinesis['sequenceNumber']
         self.partition_key = kinesis['partitionKey']
