@@ -176,6 +176,16 @@ class BasePlannerTests(object):
                 api_calls.append(instruction)
         return api_calls
 
+    def assert_recorded_values(self, plan, resource_type, resource_name,
+                               expected_mapping):
+        actual = {}
+        for step in plan:
+            if isinstance(step, models.RecordResourceValue):
+                actual[step.name] = step.value
+            elif isinstance(step, models.RecordResourceVariable):
+                actual[step.name] = Variable(step.variable_name)
+        assert actual == expected_mapping
+
 
 class TestPlanManagedRole(BasePlannerTests):
     def test_can_plan_for_iam_role_creation(self):
@@ -1580,7 +1590,7 @@ class TestPlanSNSSubscription(BasePlannerTests):
             ),
         ]
         topic_arn_var = Variable("function_name-sns-subscription_topic_arn")
-        assert plan[5:] == [
+        assert plan[5:7] == [
             models.APICall(
                 method_name='add_permission_for_sns_topic',
                 params={
@@ -1597,30 +1607,17 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 },
                 output_var='function_name-sns-subscription_subscription_arn'
             ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic',
-                value='mytopic'),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='subscription_arn',
-                variable_name='function_name-sns-subscription_subscription_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic_arn',
-                variable_name='function_name-sns-subscription_topic_arn',
-            ),
         ]
+        self.assert_recorded_values(
+            plan, 'sns_event', 'function_name-sns-subscription', {
+                'topic': 'mytopic',
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'subscription_arn': Variable(
+                    'function_name-sns-subscription_subscription_arn'),
+                'topic_arn': Variable(
+                    'function_name-sns-subscription_topic_arn'),
+            }
+        )
 
     def test_can_plan_sns_arn_subscription(self):
         function = create_function_resource('function_name')
@@ -1637,7 +1634,7 @@ class TestPlanSNSSubscription(BasePlannerTests):
             value=topic_arn,
         )
         topic_arn_var = Variable("function_name-sns-subscription_topic_arn")
-        assert plan[1:] == [
+        assert plan[1:3] == [
             models.APICall(
                 method_name='add_permission_for_sns_topic',
                 params={
@@ -1654,30 +1651,17 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 },
                 output_var='function_name-sns-subscription_subscription_arn'
             ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic',
-                value=topic_arn),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='subscription_arn',
-                variable_name='function_name-sns-subscription_subscription_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic_arn',
-                variable_name='function_name-sns-subscription_topic_arn',
-            ),
         ]
+        self.assert_recorded_values(
+            plan, 'sns_event', 'function_name-sns-subscription', {
+                'topic': topic_arn,
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'subscription_arn': Variable(
+                    'function_name-sns-subscription_subscription_arn'),
+                'topic_arn': Variable(
+                    'function_name-sns-subscription_topic_arn'),
+            }
+        )
 
     def test_sns_subscription_exists_is_noop_for_planner(self):
         function = create_function_resource('function_name')
@@ -1720,31 +1704,15 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 )
             ),
         ]
-        assert plan[5:] == [
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic',
-                value='mytopic'),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='subscription_arn',
-                value='arn:aws:subscribe',
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic_arn',
-                variable_name='function_name-sns-subscription_topic_arn',
-            ),
-        ]
+        self.assert_recorded_values(
+            plan, 'sns_event', 'function_name-sns-subscription', {
+                'topic': 'mytopic',
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'subscription_arn': 'arn:aws:subscribe',
+                'topic_arn': Variable(
+                    'function_name-sns-subscription_topic_arn'),
+            }
+        )
 
 
 class TestPlanSQSSubscription(BasePlannerTests):
@@ -1787,43 +1755,28 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 ),
             )
         ]
-        assert plan[5:] == [
-            models.APICall(
-                method_name='create_lambda_event_source',
-                params={
-                    'event_source_arn': Variable(
-                        "function_name-sqs-event-source_queue_arn"
-                    ),
-                    'batch_size': 10,
-                    'function_name': Variable("function_name_lambda_arn")
-                },
-                output_var='function_name-sqs-event-source_uuid'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue_arn',
-                variable_name='function_name-sqs-event-source_queue_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='event_uuid',
-                variable_name='function_name-sqs-event-source_uuid'
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue',
-                value='myqueue'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            )
-        ]
+        assert plan[5] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': Variable(
+                    "function_name-sqs-event-source_queue_arn"
+                ),
+                'batch_size': 10,
+                'function_name': Variable("function_name_lambda_arn")
+            },
+            output_var='function_name-sqs-event-source_uuid'
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': Variable(
+                    'function_name-sqs-event-source_queue_arn'),
+                'event_uuid': Variable(
+                    'function_name-sqs-event-source_uuid'),
+                'queue': 'myqueue',
+                'lambda_arn': Variable(
+                    'function_name_lambda_arn')
+            }
+        )
 
     def test_sqs_event_source_exists_updates_batch_size(self):
         function = create_function_resource('function_name')
@@ -1869,39 +1822,21 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 ),
             )
         ]
-        assert plan[5:] == [
-            models.APICall(
-                method_name='update_sqs_event_source',
-                params={
-                    'event_uuid': 'my-uuid',
-                    'batch_size': 10,
-                },
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue_arn',
-                value='arn:sqs:myqueue',
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='event_uuid',
-                value='my-uuid'
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue',
-                value='myqueue'
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='lambda_arn',
-                value='arn:lambda'
-            )
-        ]
+        assert plan[5] == models.APICall(
+            method_name='update_sqs_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': 'arn:sqs:myqueue',
+                'event_uuid': 'my-uuid',
+                'queue': 'myqueue',
+                'lambda_arn': 'arn:lambda'
+            }
+        )
 
     @pytest.mark.parametrize('functions,integration_injected', [
         (
@@ -1981,44 +1916,29 @@ class TestPlanKinesisSubscription(BasePlannerTests):
                 ),
             )
         ]
-        assert plan[5:] == [
-            models.APICall(
-                method_name='create_lambda_event_source',
-                params={
-                    'event_source_arn': Variable(
-                        "function_name-kinesis-event-source_stream_arn"
-                    ),
-                    'batch_size': 10,
-                    'starting_position': 'LATEST',
-                    'function_name': Variable("function_name_lambda_arn")
-                },
-                output_var='function_name-kinesis-event-source_uuid'
-            ),
-            models.RecordResourceVariable(
-                resource_type='kinesis_event',
-                resource_name='function_name-kinesis-event-source',
-                name='kinesis_arn',
-                variable_name='function_name-kinesis-event-source_stream_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='kinesis_event',
-                resource_name='function_name-kinesis-event-source',
-                name='event_uuid',
-                variable_name='function_name-kinesis-event-source_uuid'
-            ),
-            models.RecordResourceValue(
-                resource_type='kinesis_event',
-                resource_name='function_name-kinesis-event-source',
-                name='stream',
-                value='mystream'
-            ),
-            models.RecordResourceVariable(
-                resource_type='kinesis_event',
-                resource_name='function_name-kinesis-event-source',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            )
-        ]
+        assert plan[5] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': Variable(
+                    "function_name-kinesis-event-source_stream_arn"
+                ),
+                'batch_size': 10,
+                'starting_position': 'LATEST',
+                'function_name': Variable("function_name_lambda_arn")
+            },
+            output_var='function_name-kinesis-event-source_uuid'
+        )
+        self.assert_recorded_values(
+            plan, 'kinesis_event', 'function_name-kinesis-event-source', {
+                'kinesis_arn': Variable(
+                    'function_name-kinesis-event-source_stream_arn'),
+                'event_uuid': Variable(
+                    'function_name-kinesis-event-source_uuid'),
+                'stream': 'mystream',
+                'lambda_arn': Variable(
+                    'function_name_lambda_arn')
+            }
+        )
 
     def test_can_update_kinesis_event_source(self):
         function = create_function_resource('function_name')
