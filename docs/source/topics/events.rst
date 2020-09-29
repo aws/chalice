@@ -382,6 +382,48 @@ Here's an example:
 For more information on using Kinesis and Lambda, see
 `Using AWS Lambda with Amazon Kinesis <https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html>`__.
 
+.. _dynamodb-events:
+
+DynamoDB Events
+===============
+
+You can configure a Lambda function to be invoked whenever messages are
+published to an Amazon DynamoDB stream.  To configure this, use the
+:meth:`Chalice.on_dynamodb_message` decorator and provide the name of the
+DynamoDB stream ARN.
+
+.. note::
+   Other event handlers such as :meth:`Chalice.on_kinesis_message`,
+   :meth:`Chalice.on_sqs_message`, and :meth:`Chalice.on_sns_message`
+   only require the resource name and not the full ARN.  In the case
+   of DynamoDB streams, there are auto-generated portions of the
+   stream ARN that cannot be computed based on the resource name.  This
+   is why Chalice requires that full stream ARN when configuring
+   a DynamoDB stream handler.
+
+The :class:`DynamoDBEvent` that is passed in as the ``event`` argument
+to the event handler is also iterable.  This allows you to iterate over
+all the records in the event.
+
+Here's an example:
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = chalice.Chalice(app_name='ddb-event-demo')
+    app.debug = True
+
+    @app.on_kinesis_message(stream_arn='arn:aws:dynamodb:.../stream/2020')
+    def handle_ddb_message(event):
+        for record in event:
+            app.log.debug("New: %s", record.new_image)
+
+
+For more information on using Lambda and DynamoDB, see
+`Using AWS Lambda with Amazon DynamoDB <https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html>`__.
+
+
 .. _event notifications: https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
 .. _AWS documentation: https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
 .. _Understanding Scaling Behavior: https://docs.aws.amazon.com/lambda/latest/dg/scaling.html

@@ -1827,6 +1827,7 @@ class DynamoDBRecord(BaseLambdaEvent):
     def _extract_attributes(self, event_dict):
         dynamodb = event_dict['dynamodb']
         self.timestamp = datetime.datetime.utcfromtimestamp(
+        self.keys = dynamodb.get('Keys')
         self.new_image = dynamodb.get('NewImage')
         self.old_image = dynamodb.get('OldImage')
         self.sequence_number = dynamodb['SequenceNumber']
