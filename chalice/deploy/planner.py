@@ -656,32 +656,14 @@ class PlanStage(object):
             # from the topic.
             deployed = self._remote_state.resource_deployed_values(resource)
             subscription_arn = deployed['subscription_arn']
-            return instruction_for_topic_arn + [
-                models.RecordResourceValue(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='topic',
-                    value=resource.topic,
-                ),
-                models.RecordResourceVariable(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='lambda_arn',
-                    variable_name=function_arn.name,
-                ),
-                models.RecordResourceValue(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='subscription_arn',
-                    value=subscription_arn,
-                ),
-                models.RecordResourceVariable(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='topic_arn',
-                    variable_name=topic_arn_varname,
-                ),
-            ]
+            return instruction_for_topic_arn + self._batch_record_resource(
+                'sns_event', resource.resource_name, {
+                    'topic': resource.topic,
+                    'lambda_arn': Variable(function_arn.name),
+                    'subscription_arn': subscription_arn,
+                    'topic_arn': Variable(topic_arn_varname),
+                }
+            )
         return instruction_for_topic_arn + [
             models.APICall(
                 method_name='add_permission_for_sns_topic',
@@ -695,32 +677,15 @@ class PlanStage(object):
                 output_var=subscribe_varname,
             ), 'Subscribing %s to SNS topic %s\n'
                 % (resource.lambda_function.function_name, resource.topic)
-            ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='topic',
-                value=resource.topic,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='lambda_arn',
-                variable_name=function_arn.name,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='subscription_arn',
-                variable_name=subscribe_varname,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='topic_arn',
-                variable_name=topic_arn_varname,
-            ),
-        ]
+            )
+        ] + self._batch_record_resource(
+            'sns_event', resource.resource_name, {
+                'topic': resource.topic,
+                'lambda_arn': Variable(function_arn.name),
+                'subscription_arn': Variable(subscribe_varname),
+                'topic_arn': Variable(topic_arn_varname),
+            }
+        )
 
     def _plan_sqseventsource(self, resource):
         # type: (models.SQSEventSource) -> Sequence[InstructionMsg]
@@ -803,32 +768,15 @@ class PlanStage(object):
                     method_name='update_lambda_event_source',
                     params={'event_uuid': uuid,
                             'batch_size': resource.batch_size}
-                ),
-                models.RecordResourceValue(
-                    resource_type='kinesis_event',
-                    resource_name=resource.resource_name,
-                    name='kinesis_arn',
-                    value=deployed['kinesis_arn'],
-                ),
-                models.RecordResourceValue(
-                    resource_type='kinesis_event',
-                    resource_name=resource.resource_name,
-                    name='event_uuid',
-                    value=uuid,
-                ),
-                models.RecordResourceValue(
-                    resource_type='kinesis_event',
-                    resource_name=resource.resource_name,
-                    name='stream',
-                    value=resource.stream,
-                ),
-                models.RecordResourceValue(
-                    resource_type='kinesis_event',
-                    resource_name=resource.resource_name,
-                    name='lambda_arn',
-                    value=deployed['lambda_arn'],
-                ),
-            ]
+                )
+            ] + self._batch_record_resource(
+                'kinesis_event', resource.resource_name, {
+                    'kinesis_arn': deployed['kinesis_arn'],
+                    'event_uuid': uuid,
+                    'stream': resource.stream,
+                    'lambda_arn': deployed['lambda_arn'],
+                }
+            )
         return instruction_for_stream_arn + [
             (models.APICall(
                 method_name='create_lambda_event_source',
@@ -839,34 +787,15 @@ class PlanStage(object):
                 output_var=uuid_varname,
             ), 'Subscribing %s to Kinesis stream %s\n'
                 % (resource.lambda_function.function_name, resource.stream)
-            ),
-            models.RecordResourceVariable(
-                resource_type='kinesis_event',
-                resource_name=resource.resource_name,
-                name='kinesis_arn',
-                variable_name=stream_arn_varname,
-            ),
-            # We record this because this is what's used to unsubscribe
-            # lambda to the Kinesis stream.
-            models.RecordResourceVariable(
-                resource_type='kinesis_event',
-                resource_name=resource.resource_name,
-                name='event_uuid',
-                variable_name=uuid_varname,
-            ),
-            models.RecordResourceValue(
-                resource_type='kinesis_event',
-                resource_name=resource.resource_name,
-                name='stream',
-                value=resource.stream,
-            ),
-            models.RecordResourceVariable(
-                resource_type='kinesis_event',
-                resource_name=resource.resource_name,
-                name='lambda_arn',
-                variable_name=function_arn.name,
-            ),
-        ]
+            )
+        ] + self._batch_record_resource(
+            'kinesis_event', resource.resource_name, {
+                'kinesis_arn': Variable(stream_arn_varname),
+                'event_uuid': Variable(uuid_varname),
+                'stream': resource.stream,
+                'lambda_arn': Variable(function_arn.name),
+            }
+        )
 
     def _plan_dynamodbeventsource(self, resource):
         # type: (models.DynamoDBEventSource) -> Sequence[InstructionMsg]
