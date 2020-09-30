@@ -828,7 +828,7 @@ class PlanStage(object):
                         'function_name': function_arn,
                         'starting_position': resource.starting_position},
                 output_var=uuid_varname,
-            ), 'Subscribing %s to Kinesis stream %s\n'
+            ), 'Subscribing %s to DynamoDB stream %s\n'
                 % (resource.lambda_function.function_name,
                    resource.stream_arn))
         ] + self._batch_record_resource(
