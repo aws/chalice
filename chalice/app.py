@@ -1832,6 +1832,28 @@ class DynamoDBRecord(BaseLambdaEvent):
         self.sequence_number = dynamodb['SequenceNumber']
         self.size_bytes = dynamodb['SizeBytes']
         self.stream_view_type = dynamodb['StreamViewType']
+        # These are from the top level keys in a record.
+        self.aws_region = event_dict['awsRegion']
+        self.event_id = event_dict['eventID']
+        self.event_name = event_dict['eventName']
+        self.event_source_arn = event_dict['eventSourceARN']
+
+    @property
+    def table_name(self):
+        # Converts:
+        # "arn:aws:dynamodb:us-west-2:12345:table/MyTable/"
+        # "stream/2020-09-28T16:49:14.209"
+        #
+        # into:
+        # "MyTable"
+        parts = self.event_source_arn.split(':', 5)
+        if not len(parts) == 6:
+            return ''
+        full_name = parts[-1]
+        name_parts = full_name.split('/')
+        if len(name_parts) >= 2:
+            return name_parts[1]
+        return ''
 
 
 class Blueprint(DecoratorAPI):

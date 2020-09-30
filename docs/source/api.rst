@@ -1500,6 +1500,29 @@ Event Sources
 
       The type of data from the modified DynamoDB item.
 
+   .. attribute:: aws_region
+
+      The region associated with the event.
+
+   .. attribute:: event_id
+
+      A unique identifier for the event.
+
+   .. attribute:: event_name
+
+      The type of data modification that was performed on the DynamoDB table.
+      This can be: ``INSERT``, ``MODIFY``, or ``DELETE``.
+
+   .. attribute:: event_source_arn
+
+      The ARN of the DynamoDB stream.
+
+   .. attribute:: table_name
+
+      The name of the DynamoDB table associated with the stream.  This value is
+      computed from the ``event_source_arn`` parameter and will be an empty string
+      if Chalice is unable to parse the table name from the event source ARN.
+
    .. attribute:: context
 
       A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_

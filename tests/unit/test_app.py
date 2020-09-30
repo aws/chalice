@@ -2126,6 +2126,15 @@ def test_can_map_ddb_event(sample_app):
     assert records[0].sequence_number == '1700000000020701978607'
     assert records[0].size_bytes == 20
     assert records[0].stream_view_type == 'NEW_AND_OLD_IMAGES'
+    # Mapping from top level keys in a record.
+    assert records[0].aws_region == 'us-west-2'
+    assert records[0].event_id == 'da037887f71a88a1f6f4cfd149709d5a'
+    assert records[0].event_name == 'INSERT'
+    assert records[0].event_source_arn == (
+        'arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+        '2020-09-28T16:49:14.209')
+    # Computed value.
+    assert records[0].table_name == 'MyTable'
 
 
 def test_bytes_when_binary_type_is_application_json():
