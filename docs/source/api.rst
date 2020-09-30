@@ -353,7 +353,7 @@ Chalice
                   app.log.info("Message body: %s", record.data)
 
       :param stream: The name of the Kinesis stream you want to subscribe to.
-        This is the name of the queue, not the ARN.
+        This is the name of the data stream, not the ARN.
 
       :param batch_size: The maximum number of messages to retrieve
         when polling for Kinesis messages.  The event parameter can have
@@ -372,7 +372,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_dynamodb_message(stream, batch_size=100,
+   .. method:: on_dynamodb_message(stream_arn, batch_size=100,
                                    starting_position='LATEST', name=None)
 
       Create a lambda function and configure it to be automatically invoked
