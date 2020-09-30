@@ -81,7 +81,7 @@ def sample_sqs_event_app():
 def sample_kinesis_event_app():
     app = Chalice('kinesis-event')
 
-    @app.on_kinesis_message(stream='mystream')
+    @app.on_kinesis_record(stream='mystream')
     def handler(event):
         pass
 

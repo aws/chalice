@@ -696,10 +696,10 @@ class DecoratorAPI(object):
                                  'description': description},
         )
 
-    def on_kinesis_message(self, stream, batch_size=100,
-                           starting_position='LATEST', name=None):
+    def on_kinesis_record(self, stream, batch_size=100,
+                          starting_position='LATEST', name=None):
         return self._create_registration_function(
-            handler_type='on_kinesis_message',
+            handler_type='on_kinesis_record',
             name=name,
             registration_kwargs={'stream': stream,
                                  'batch_size': batch_size,
@@ -774,7 +774,7 @@ class DecoratorAPI(object):
             'on_sns_message': SNSEvent,
             'on_sqs_message': SQSEvent,
             'on_cw_event': CloudWatchEvent,
-            'on_kinesis_message': KinesisEvent,
+            'on_kinesis_record': KinesisEvent,
             'on_dynamodb_message': DynamoDBEvent,
             'schedule': CloudWatchEvent,
             'lambda_function': LambdaFunctionEvent,
@@ -784,7 +784,7 @@ class DecoratorAPI(object):
             'on_sns_message': 'sns',
             'on_sqs_message': 'sqs',
             'on_cw_event': 'cloudwatch',
-            'on_kinesis_message': 'kinesis',
+            'on_kinesis_record': 'kinesis',
             'on_dynamodb_message': 'dynamodb',
             'schedule': 'scheduled',
             'lambda_function': 'pure_lambda',
@@ -958,8 +958,8 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(sqs_config)
 
-    def _register_on_kinesis_message(self, name, handler_string,
-                                     kwargs, **unused):
+    def _register_on_kinesis_record(self, name, handler_string,
+                                    kwargs, **unused):
         kinesis_config = KinesisEventConfig(
             name=name,
             handler_string=handler_string,

@@ -729,8 +729,8 @@ class TestTerraformTemplate(TemplateTestBase):
                }
 
     def test_can_package_kinesis_handler(self, sample_app):
-        @sample_app.on_kinesis_message(stream='mystream', batch_size=5,
-                                       starting_position='TRIM_HORIZON')
+        @sample_app.on_kinesis_record(stream='mystream', batch_size=5,
+                                      starting_position='TRIM_HORIZON')
         def handler(event):
             pass
 
@@ -1472,7 +1472,7 @@ class TestSAMTemplate(TemplateTestBase):
         }
 
     def test_can_package_kinesis_handler(self, sample_app):
-        @sample_app.on_kinesis_message(stream='mystream', batch_size=5)
+        @sample_app.on_kinesis_record(stream='mystream', batch_size=5)
         def handler(event):
             pass
 

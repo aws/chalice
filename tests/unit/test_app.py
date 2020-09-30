@@ -2007,9 +2007,9 @@ def test_can_map_sqs_event(sample_app):
 
 
 def test_can_create_kinesis_handler(sample_app):
-    @sample_app.on_kinesis_message(stream='MyStream',
-                                   batch_size=1,
-                                   starting_position='TRIM_HORIZON')
+    @sample_app.on_kinesis_record(stream='MyStream',
+                                  batch_size=1,
+                                  starting_position='TRIM_HORIZON')
     def handler(event):
         pass
 
@@ -2021,7 +2021,7 @@ def test_can_create_kinesis_handler(sample_app):
 
 
 def test_can_map_kinesis_event(sample_app):
-    @sample_app.on_kinesis_message(stream='MyStream')
+    @sample_app.on_kinesis_record(stream='MyStream')
     def handler(event):
         return event
 

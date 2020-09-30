@@ -356,7 +356,7 @@ Kinesis Events
 
 You can configure a Lambda function to be invoked whenever messages are
 published to an Amazon Kinesis data stream.  To configure this, use the
-:meth:`Chalice.on_kinesis_message` decorator and provide the name of the
+:meth:`Chalice.on_kinesis_record` decorator and provide the name of the
 Kinesis stream.
 
 The :class:`KinesisEvent` that is passed in as the ``event`` argument
@@ -373,7 +373,7 @@ Here's an example:
     app = chalice.Chalice(app_name='kinesiseventdemo')
     app.debug = True
 
-    @app.on_kinesis_message(stream='mystream')
+    @app.on_kinesis_record(stream='mystream')
     def handle_kinesis_message(event):
         for record in event:
             # The .data attribute is automatically base64 decoded for you.
@@ -393,7 +393,7 @@ published to an Amazon DynamoDB stream.  To configure this, use the
 DynamoDB stream ARN.
 
 .. note::
-   Other event handlers such as :meth:`Chalice.on_kinesis_message`,
+   Other event handlers such as :meth:`Chalice.on_kinesis_record`,
    :meth:`Chalice.on_sqs_message`, and :meth:`Chalice.on_sns_message`
    only require the resource name and not the full ARN.  In the case
    of DynamoDB streams, there are auto-generated portions of the
@@ -414,7 +414,7 @@ Here's an example:
     app = chalice.Chalice(app_name='ddb-event-demo')
     app.debug = True
 
-    @app.on_kinesis_message(stream_arn='arn:aws:dynamodb:.../stream/2020')
+    @app.on_kinesis_record(stream_arn='arn:aws:dynamodb:.../stream/2020')
     def handle_ddb_message(event):
         for record in event:
             app.log.debug("New: %s", record.new_image)

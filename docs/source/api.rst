@@ -326,8 +326,8 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_kinesis_message(stream, batch_size=100,
-                                  starting_position='LATEST', name=None)
+   .. method:: on_kinesis_record(stream, batch_size=100,
+                                 starting_position='LATEST', name=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever data is published to the specified Kinesis stream.
@@ -346,7 +346,7 @@ Chalice
 
           app.debug = True
 
-          @app.on_kinesis_message(stream='mystream')
+          @app.on_kinesis_record(stream='mystream')
           def handler(event):
               app.log.info("Event: %s", event.to_dict())
               for record in event:
@@ -1361,7 +1361,7 @@ Event Sources
 
    .. code-block:: python
 
-      @app.on_kinesis_message(stream='mystream')
+      @app.on_kinesis_record(stream='mystream')
       def event_handler(event: KinesisEvent):
           app.log.info("Event: %s", event.to_dict())
 

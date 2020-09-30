@@ -161,11 +161,11 @@ class DecoratorAPI(object):
                        batch_size: int=1,
                        name: Optional[str]=None) -> Callable[..., Any]: ...
 
-    def on_kinesis_message(self,
-                           stream: str,
-                           batch_size: int=100,
-                           startition_position: str='LATEST',
-                           name: Optional[str]=None) -> Callable[..., Any]: ...
+    def on_kinesis_record(self,
+                          stream: str,
+                          batch_size: int=100,
+                          startition_position: str='LATEST',
+                          name: Optional[str]=None) -> Callable[..., Any]: ...
 
     def on_dynamodb_message(self,
                             stream_arn: str,
