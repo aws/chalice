@@ -167,11 +167,11 @@ class DecoratorAPI(object):
                           startition_position: str='LATEST',
                           name: Optional[str]=None) -> Callable[..., Any]: ...
 
-    def on_dynamodb_message(self,
-                            stream_arn: str,
-                            batch_size: int=100,
-                            startition_position: str='LATEST',
-                            name: Optional[str]=None) -> Callable[..., Any]: ...
+    def on_dynamodb_record(self,
+                           stream_arn: str,
+                           batch_size: int=100,
+                           startition_position: str='LATEST',
+                           name: Optional[str]=None) -> Callable[..., Any]: ...
 
     def schedule(self,
                  expression: str,

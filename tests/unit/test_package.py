@@ -754,9 +754,9 @@ class TestTerraformTemplate(TemplateTestBase):
                }
 
     def test_can_package_dynamodb_handler(self, sample_app):
-        @sample_app.on_dynamodb_message(stream_arn='arn:aws:...:stream',
-                                        batch_size=5,
-                                        starting_position='TRIM_HORIZON')
+        @sample_app.on_dynamodb_record(stream_arn='arn:aws:...:stream',
+                                       batch_size=5,
+                                       starting_position='TRIM_HORIZON')
         def handler(event):
             pass
 
@@ -1498,8 +1498,8 @@ class TestSAMTemplate(TemplateTestBase):
         }
 
     def test_can_package_dynamodb_handler(self, sample_app):
-        @sample_app.on_dynamodb_message(stream_arn='arn:aws:...:stream',
-                                        batch_size=5)
+        @sample_app.on_dynamodb_record(stream_arn='arn:aws:...:stream',
+                                       batch_size=5)
         def handler(event):
             pass
 

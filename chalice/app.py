@@ -706,10 +706,10 @@ class DecoratorAPI(object):
                                  'starting_position': starting_position},
         )
 
-    def on_dynamodb_message(self, stream_arn, batch_size=100,
-                            starting_position='LATEST', name=None):
+    def on_dynamodb_record(self, stream_arn, batch_size=100,
+                           starting_position='LATEST', name=None):
         return self._create_registration_function(
-            handler_type='on_dynamodb_message',
+            handler_type='on_dynamodb_record',
             name=name,
             registration_kwargs={'stream_arn': stream_arn,
                                  'batch_size': batch_size,
@@ -775,7 +775,7 @@ class DecoratorAPI(object):
             'on_sqs_message': SQSEvent,
             'on_cw_event': CloudWatchEvent,
             'on_kinesis_record': KinesisEvent,
-            'on_dynamodb_message': DynamoDBEvent,
+            'on_dynamodb_record': DynamoDBEvent,
             'schedule': CloudWatchEvent,
             'lambda_function': LambdaFunctionEvent,
         }
@@ -785,7 +785,7 @@ class DecoratorAPI(object):
             'on_sqs_message': 'sqs',
             'on_cw_event': 'cloudwatch',
             'on_kinesis_record': 'kinesis',
-            'on_dynamodb_message': 'dynamodb',
+            'on_dynamodb_record': 'dynamodb',
             'schedule': 'scheduled',
             'lambda_function': 'pure_lambda',
         }
@@ -969,8 +969,8 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(kinesis_config)
 
-    def _register_on_dynamodb_message(self, name, handler_string,
-                                      kwargs, **unused):
+    def _register_on_dynamodb_record(self, name, handler_string,
+                                     kwargs, **unused):
         ddb_config = DynamoDBEventConfig(
             name=name,
             handler_string=handler_string,

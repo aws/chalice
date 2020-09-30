@@ -389,7 +389,7 @@ DynamoDB Events
 
 You can configure a Lambda function to be invoked whenever messages are
 published to an Amazon DynamoDB stream.  To configure this, use the
-:meth:`Chalice.on_dynamodb_message` decorator and provide the name of the
+:meth:`Chalice.on_dynamodb_record` decorator and provide the name of the
 DynamoDB stream ARN.
 
 .. note::

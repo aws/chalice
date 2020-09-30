@@ -2078,7 +2078,7 @@ def test_can_map_kinesis_event(sample_app):
 
 
 def test_can_create_ddb_handler(sample_app):
-    @sample_app.on_dynamodb_message(
+    @sample_app.on_dynamodb_record(
         stream_arn='arn:aws:dynamodb:...:stream', batch_size=10,
         starting_position='TRIM_HORIZON')
     def handler(event):
@@ -2092,7 +2092,7 @@ def test_can_create_ddb_handler(sample_app):
 
 
 def test_can_map_ddb_event(sample_app):
-    @sample_app.on_dynamodb_message(stream_arn='arn:aws:...:stream')
+    @sample_app.on_dynamodb_record(stream_arn='arn:aws:...:stream')
     def handler(event):
         return event
 

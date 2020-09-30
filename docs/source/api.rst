@@ -372,7 +372,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_dynamodb_message(stream_arn, batch_size=100,
+   .. method:: on_dynamodb_record(stream_arn, batch_size=100,
                                    starting_position='LATEST', name=None)
 
       Create a lambda function and configure it to be automatically invoked
@@ -392,7 +392,7 @@ Chalice
 
           app.debug = True
 
-          @app.on_dynamodb_message(stream_arn='arn:aws:dynamodb:...:stream')
+          @app.on_dynamodb_record(stream_arn='arn:aws:dynamodb:...:stream')
           def handler(event):
               app.log.info("Event: %s", event.to_dict())
               for record in event:
@@ -1435,7 +1435,7 @@ Event Sources
 
    .. code-block:: python
 
-      @app.on_dynamodb_message(stream_arn='arn:aws:us-west-2:.../stream')
+      @app.on_dynamodb_record(stream_arn='arn:aws:us-west-2:.../stream')
       def event_handler(event: DynamoDBEvent):
           app.log.info("Event: %s", event.to_dict())
           for record in event:

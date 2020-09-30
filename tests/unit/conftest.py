@@ -92,7 +92,7 @@ def sample_kinesis_event_app():
 def sample_ddb_event_app():
     app = Chalice('ddb-event')
 
-    @app.on_dynamodb_message(stream_arn='arn:aws:...:stream')
+    @app.on_dynamodb_record(stream_arn='arn:aws:...:stream')
     def handler(event):
         pass
 
