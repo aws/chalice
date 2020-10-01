@@ -2185,6 +2185,23 @@ def test_can_combine_multiple_blueprints_in_single_app():
     assert sorted(list(myapp.routes)) == ['/bar', '/foo']
 
 
+def test_can_preserve_signature_on_blueprint():
+    myapp = app.Chalice('myapp')
+    foo = app.Blueprint('foo')
+
+    @foo.lambda_function()
+    def first(event, context):
+        return {'foo': 'bar'}
+
+    myapp.register_blueprint(foo)
+
+    # The handler string given to a blueprint
+    # is the "module.function_name" so we have
+    # to ensure we can continue to invoke the
+    # function with its expected signature.
+    assert first({}, None) == {'foo': 'bar'}
+
+
 def test_doc_saved_on_route():
     myapp = app.Chalice('myapp')
 
