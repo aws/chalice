@@ -3436,6 +3436,28 @@ def test_can_remove_s3_permission(stubbed_session):
     stubbed_session.verify_stubs()
 
 
+def test_can_create_kinesis_event_source(stubbed_session):
+    kinesis_arn = 'arn:aws:kinesis:us-west-2:...:stream/MyStream'
+    function_name = 'myfunction'
+    batch_size = 100
+    starting_position = 'TRIM_HORIZON'
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=kinesis_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size,
+        StartingPosition=starting_position,
+    ).returns({'UUID': 'my-uuid'})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    result = client.create_lambda_event_source(
+        kinesis_arn, function_name, batch_size, starting_position
+    )
+    assert result == 'my-uuid'
+    stubbed_session.verify_stubs()
+
+
 def test_can_create_sqs_event_source(stubbed_session):
     queue_arn = 'arn:sqs:queue-name'
     function_name = 'myfunction'
@@ -3450,7 +3472,7 @@ def test_can_create_sqs_event_source(stubbed_session):
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
-    result = client.create_sqs_event_source(
+    result = client.create_lambda_event_source(
         queue_arn, function_name, batch_size
     )
     assert result == 'my-uuid'
@@ -3480,7 +3502,7 @@ def test_can_retry_create_sqs_event_source(stubbed_session):
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
-    result = client.create_sqs_event_source(
+    result = client.create_lambda_event_source(
         queue_arn, function_name, batch_size
     )
     assert result == 'my-uuid'
@@ -3496,7 +3518,7 @@ def test_can_delete_sqs_event_source(stubbed_session):
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
-    client.remove_sqs_event_source(
+    client.remove_lambda_event_source(
         'my-uuid',
     )
     stubbed_session.verify_stubs()
@@ -3517,7 +3539,7 @@ def test_can_retry_delete_event_source(stubbed_session):
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
-    client.remove_sqs_event_source(
+    client.remove_lambda_event_source(
         'my-uuid',
     )
     stubbed_session.verify_stubs()
@@ -3534,7 +3556,7 @@ def test_only_retry_settling_errors(stubbed_session):
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
     with pytest.raises(botocore.exceptions.ClientError):
-        client.remove_sqs_event_source('my-uuid')
+        client.remove_lambda_event_source('my-uuid')
     stubbed_session.verify_stubs()
 
 
@@ -3547,7 +3569,7 @@ def test_can_retry_update_event_source(stubbed_session):
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
-    client.update_sqs_event_source(
+    client.update_lambda_event_source(
         event_uuid='my-uuid', batch_size=5
     )
     stubbed_session.verify_stubs()
@@ -3584,6 +3606,49 @@ def test_verify_event_source_current(stubbed_session, resource_name,
     stubbed_session.verify_stubs()
 
 
+def test_verify_event_source_arn_current(stubbed_session):
+    client = stubbed_session.stub('lambda')
+    uuid = 'uuid-12345'
+    client.get_event_source_mapping(
+        UUID=uuid,
+    ).returns({
+        'UUID': uuid,
+        'BatchSize': 10,
+        'EventSourceArn': 'arn:aws:dynamodb:...:table/MyTable/stream/2020',
+        'FunctionArn': 'arn:aws:lambda:function-arn',
+        'LastModified': '2018-07-02T18:19:03.958000-07:00',
+        'State': 'Enabled',
+        'StateTransitionReason': 'USER_INITIATED'
+    })
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert awsclient.verify_event_source_arn_current(
+        uuid,
+        event_source_arn='arn:aws:dynamodb:...:table/MyTable/stream/2020',
+        function_arn='arn:aws:lambda:function-arn',
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_event_source_uuid_does_not_exist(stubbed_session):
+    client = stubbed_session.stub('lambda')
+    uuid = 'uuid-12345'
+    client.get_event_source_mapping(
+        UUID=uuid,
+    ).raises_error(error_code='ResourceNotFoundException',
+                   message='Does not exists.')
+
+    stubbed_session.activate_stubs()
+
+    awsclient = TypedAWSClient(stubbed_session)
+    assert not awsclient.verify_event_source_arn_current(
+        uuid, event_source_arn='arn:aws:dynamodb:...',
+        function_arn='arn:aws:lambda:...',
+    )
+    stubbed_session.verify_stubs()
+
+
 def test_event_source_does_not_exist(stubbed_session):
     client = stubbed_session.stub('lambda')
     uuid = 'uuid-12345'
@@ -3600,7 +3665,7 @@ def test_event_source_does_not_exist(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_can_update_sqs_event_source(stubbed_session):
+def test_can_update_lambda_event_source(stubbed_session):
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.update_event_source_mapping(
         UUID='my-uuid',
@@ -3609,7 +3674,7 @@ def test_can_update_sqs_event_source(stubbed_session):
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
-    client.update_sqs_event_source(
+    client.update_lambda_event_source(
         event_uuid='my-uuid', batch_size=5
     )
     stubbed_session.verify_stubs()

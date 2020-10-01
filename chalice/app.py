@@ -10,6 +10,7 @@ import decimal
 import base64
 import copy
 import functools
+import datetime
 from collections import defaultdict
 
 
@@ -695,6 +696,26 @@ class DecoratorAPI(object):
                                  'description': description},
         )
 
+    def on_kinesis_record(self, stream, batch_size=100,
+                          starting_position='LATEST', name=None):
+        return self._create_registration_function(
+            handler_type='on_kinesis_record',
+            name=name,
+            registration_kwargs={'stream': stream,
+                                 'batch_size': batch_size,
+                                 'starting_position': starting_position},
+        )
+
+    def on_dynamodb_record(self, stream_arn, batch_size=100,
+                           starting_position='LATEST', name=None):
+        return self._create_registration_function(
+            handler_type='on_dynamodb_record',
+            name=name,
+            registration_kwargs={'stream_arn': stream_arn,
+                                 'batch_size': batch_size,
+                                 'starting_position': starting_position},
+        )
+
     def route(self, path, **kwargs):
         return self._create_registration_function(
             handler_type='route',
@@ -753,6 +774,8 @@ class DecoratorAPI(object):
             'on_sns_message': SNSEvent,
             'on_sqs_message': SQSEvent,
             'on_cw_event': CloudWatchEvent,
+            'on_kinesis_record': KinesisEvent,
+            'on_dynamodb_record': DynamoDBEvent,
             'schedule': CloudWatchEvent,
             'lambda_function': LambdaFunctionEvent,
         }
@@ -761,6 +784,8 @@ class DecoratorAPI(object):
             'on_sns_message': 'sns',
             'on_sqs_message': 'sqs',
             'on_cw_event': 'cloudwatch',
+            'on_kinesis_record': 'kinesis',
+            'on_dynamodb_record': 'dynamodb',
             'schedule': 'scheduled',
             'lambda_function': 'pure_lambda',
         }
@@ -932,6 +957,28 @@ class _HandlerRegistration(object):
             batch_size=kwargs['batch_size'],
         )
         self.event_sources.append(sqs_config)
+
+    def _register_on_kinesis_record(self, name, handler_string,
+                                    kwargs, **unused):
+        kinesis_config = KinesisEventConfig(
+            name=name,
+            handler_string=handler_string,
+            stream=kwargs['stream'],
+            batch_size=kwargs['batch_size'],
+            starting_position=kwargs['starting_position'],
+        )
+        self.event_sources.append(kinesis_config)
+
+    def _register_on_dynamodb_record(self, name, handler_string,
+                                     kwargs, **unused):
+        ddb_config = DynamoDBEventConfig(
+            name=name,
+            handler_string=handler_string,
+            stream_arn=kwargs['stream_arn'],
+            batch_size=kwargs['batch_size'],
+            starting_position=kwargs['starting_position'],
+        )
+        self.event_sources.append(ddb_config)
 
     def _register_on_cw_event(self, name, handler_string, kwargs, **unused):
         event_source = CloudWatchEventConfig(
@@ -1374,6 +1421,24 @@ class SQSEventConfig(BaseEventSourceConfig):
         self.batch_size = batch_size
 
 
+class KinesisEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, stream,
+                 batch_size, starting_position):
+        super(KinesisEventConfig, self).__init__(name, handler_string)
+        self.stream = stream
+        self.batch_size = batch_size
+        self.starting_position = starting_position
+
+
+class DynamoDBEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, stream_arn,
+                 batch_size, starting_position):
+        super(DynamoDBEventConfig, self).__init__(name, handler_string)
+        self.stream_arn = stream_arn
+        self.batch_size = batch_size
+        self.starting_position = starting_position
+
+
 class WebsocketConnectConfig(BaseEventSourceConfig):
     CONNECT_ROUTE = '$connect'
 
@@ -1724,6 +1789,71 @@ class SQSRecord(BaseLambdaEvent):
     def _extract_attributes(self, event_dict):
         self.body = event_dict['body']
         self.receipt_handle = event_dict['receiptHandle']
+
+
+class KinesisEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield KinesisRecord(record, self.context)
+
+
+class KinesisRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        kinesis = event_dict['kinesis']
+        encoded_payload = kinesis['data']
+        self.data = base64.b64decode(encoded_payload)
+        self.sequence_number = kinesis['sequenceNumber']
+        self.partition_key = kinesis['partitionKey']
+        self.schema_version = kinesis['kinesisSchemaVersion']
+        self.timestamp = datetime.datetime.utcfromtimestamp(
+            kinesis['approximateArrivalTimestamp'])
+
+
+class DynamoDBEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield DynamoDBRecord(record, self.context)
+
+
+class DynamoDBRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        dynamodb = event_dict['dynamodb']
+        self.timestamp = datetime.datetime.utcfromtimestamp(
+            dynamodb['ApproximateCreationDateTime'])
+        self.keys = dynamodb.get('Keys')
+        self.new_image = dynamodb.get('NewImage')
+        self.old_image = dynamodb.get('OldImage')
+        self.sequence_number = dynamodb['SequenceNumber']
+        self.size_bytes = dynamodb['SizeBytes']
+        self.stream_view_type = dynamodb['StreamViewType']
+        # These are from the top level keys in a record.
+        self.aws_region = event_dict['awsRegion']
+        self.event_id = event_dict['eventID']
+        self.event_name = event_dict['eventName']
+        self.event_source_arn = event_dict['eventSourceARN']
+
+    @property
+    def table_name(self):
+        # Converts:
+        # "arn:aws:dynamodb:us-west-2:12345:table/MyTable/"
+        # "stream/2020-09-28T16:49:14.209"
+        #
+        # into:
+        # "MyTable"
+        parts = self.event_source_arn.split(':', 5)
+        if not len(parts) == 6:
+            return ''
+        full_name = parts[-1]
+        name_parts = full_name.split('/')
+        if len(name_parts) >= 2:
+            return name_parts[1]
+        return ''
 
 
 class Blueprint(DecoratorAPI):

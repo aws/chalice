@@ -6,6 +6,7 @@ import gzip
 import inspect
 import collections
 from copy import deepcopy
+from datetime import datetime
 
 import pytest
 from pytest import fixture
@@ -2003,6 +2004,137 @@ def test_can_map_sqs_event(sample_app):
     assert first_record.to_dict() == sqs_event['Records'][0]
     assert actual_event.to_dict() == sqs_event
     assert actual_event.context == lambda_context
+
+
+def test_can_create_kinesis_handler(sample_app):
+    @sample_app.on_kinesis_record(stream='MyStream',
+                                  batch_size=1,
+                                  starting_position='TRIM_HORIZON')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    config = sample_app.event_sources[0]
+    assert config.stream == 'MyStream'
+    assert config.batch_size == 1
+    assert config.starting_position == 'TRIM_HORIZON'
+
+
+def test_can_map_kinesis_event(sample_app):
+    @sample_app.on_kinesis_record(stream='MyStream')
+    def handler(event):
+        return event
+
+    kinesis_event = {
+        "Records": [
+            {
+                "kinesis": {
+                    "kinesisSchemaVersion": "1.0",
+                    "partitionKey": "1",
+                    "sequenceNumber": "12345",
+                    "data": "SGVsbG8sIHRoaXMgaXMgYSB0ZXN0Lg==",
+                    "approximateArrivalTimestamp": 1545084650.987
+                },
+                "eventSource": "aws:kinesis",
+                "eventVersion": "1.0",
+                "eventID": "shardId-000000000006:12345",
+                "eventName": "aws:kinesis:record",
+                "invokeIdentityArn": "arn:aws:iam::123:role/lambda-role",
+                "awsRegion": "us-east-2",
+                "eventSourceARN": (
+                    "arn:aws:kinesis:us-east-2:123:stream/lambda-stream"
+                )
+            },
+            {
+                "kinesis": {
+                    "kinesisSchemaVersion": "1.0",
+                    "partitionKey": "1",
+                    "sequenceNumber": "12346",
+                    "data": "VGhpcyBpcyBvbmx5IGEgdGVzdC4=",
+                    "approximateArrivalTimestamp": 1545084711.166
+                },
+                "eventSource": "aws:kinesis",
+                "eventVersion": "1.0",
+                "eventID": "shardId-000000000006:12346",
+                "eventName": "aws:kinesis:record",
+                "invokeIdentityArn": "arn:aws:iam::123:role/lambda-role",
+                "awsRegion": "us-east-2",
+                "eventSourceARN": (
+                    "arn:aws:kinesis:us-east-2:123:stream/lambda-stream"
+                )
+            }
+        ]
+    }
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(kinesis_event, context=lambda_context)
+    records = list(actual_event)
+    assert len(records) == 2
+    assert records[0].data == b'Hello, this is a test.'
+    assert records[0].sequence_number == "12345"
+    assert records[0].partition_key == "1"
+    assert records[0].schema_version == "1.0"
+    assert records[0].timestamp == datetime(2018, 12, 17, 22, 10, 50, 987000)
+    assert records[1].data == b'This is only a test.'
+
+
+def test_can_create_ddb_handler(sample_app):
+    @sample_app.on_dynamodb_record(
+        stream_arn='arn:aws:dynamodb:...:stream', batch_size=10,
+        starting_position='TRIM_HORIZON')
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    config = sample_app.event_sources[0]
+    assert config.stream_arn == 'arn:aws:dynamodb:...:stream'
+    assert config.batch_size == 10
+    assert config.starting_position == 'TRIM_HORIZON'
+
+
+def test_can_map_ddb_event(sample_app):
+    @sample_app.on_dynamodb_record(stream_arn='arn:aws:...:stream')
+    def handler(event):
+        return event
+
+    ddb_event = {
+        'Records': [
+            {'awsRegion': 'us-west-2',
+             'dynamodb': {'ApproximateCreationDateTime': 1601317140.0,
+                          'Keys': {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}},
+                          'NewImage': {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}},
+                          'SequenceNumber': '1700000000020701978607',
+                          'SizeBytes': 20,
+                          'StreamViewType': 'NEW_AND_OLD_IMAGES'},
+             'eventID': 'da037887f71a88a1f6f4cfd149709d5a',
+             'eventName': 'INSERT',
+             'eventSource': 'aws:dynamodb',
+             'eventSourceARN': (
+                 'arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                 '2020-09-28T16:49:14.209'
+             ),
+             'eventVersion': '1.1'}
+        ]
+    }
+    lambda_context = FakeLambdaContext()
+    actual_event = handler(ddb_event, context=lambda_context)
+    records = list(actual_event)
+    assert len(records) == 1
+    assert records[0].timestamp == datetime(2020, 9, 28, 18, 19)
+    assert records[0].keys == {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    assert records[0].new_image == {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    assert records[0].old_image is None
+    assert records[0].sequence_number == '1700000000020701978607'
+    assert records[0].size_bytes == 20
+    assert records[0].stream_view_type == 'NEW_AND_OLD_IMAGES'
+    # Mapping from top level keys in a record.
+    assert records[0].aws_region == 'us-west-2'
+    assert records[0].event_id == 'da037887f71a88a1f6f4cfd149709d5a'
+    assert records[0].event_name == 'INSERT'
+    assert records[0].event_source_arn == (
+        'arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+        '2020-09-28T16:49:14.209')
+    # Computed value.
+    assert records[0].table_name == 'MyTable'
 
 
 def test_bytes_when_binary_type_is_application_json():

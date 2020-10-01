@@ -251,6 +251,30 @@ SQS_EVENT_SOURCE_POLICY = {
 }
 
 
+KINESIS_EVENT_SOURCE_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "kinesis:GetRecords",
+        "kinesis:GetShardIterator",
+        "kinesis:DescribeStream",
+        "kinesis:ListStreams",
+    ],
+    "Resource": "*",
+}
+
+
+DDB_EVENT_SOURCE_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:ListStreams"
+    ],
+    "Resource": "*"
+}
+
+
 POST_TO_WEBSOCKET_CONNECTION_POLICY = {
     "Effect": "Allow",
     "Action": [

@@ -1601,20 +1601,23 @@ class TypedAWSClient(object):
                     StatementId=statement['Sid'],
                 )
 
-    def create_sqs_event_source(self, queue_arn, function_name, batch_size):
-        # type: (str, str, int) -> None
+    def create_lambda_event_source(self, event_source_arn, function_name,
+                                   batch_size, starting_position=None):
+        # type: (str, str, int, Optional[str]) -> None
         lambda_client = self._client('lambda')
         kwargs = {
-            'EventSourceArn': queue_arn,
+            'EventSourceArn': event_source_arn,
             'FunctionName': function_name,
             'BatchSize': batch_size,
         }
+        if starting_position is not None:
+            kwargs['StartingPosition'] = starting_position
         return self._call_client_method_with_retries(
             lambda_client.create_event_source_mapping, kwargs,
             max_attempts=self.LAMBDA_CREATE_ATTEMPTS
         )['UUID']
 
-    def update_sqs_event_source(self, event_uuid, batch_size):
+    def update_lambda_event_source(self, event_uuid, batch_size):
         # type: (str, int) -> None
         lambda_client = self._client('lambda')
         self._call_client_method_with_retries(
@@ -1624,7 +1627,7 @@ class TypedAWSClient(object):
             should_retry=self._is_settling_error,
         )
 
-    def remove_sqs_event_source(self, event_uuid):
+    def remove_lambda_event_source(self, event_uuid):
         # type: (str) -> None
         lambda_client = self._client('lambda')
         self._call_client_method_with_retries(
@@ -1661,6 +1664,27 @@ class TypedAWSClient(object):
             )
         except client.exceptions.ResourceNotFoundException:
             return False
+
+    def verify_event_source_arn_current(self, event_uuid, event_source_arn,
+                                        function_arn):
+        # type: (str, str, str) -> bool
+        """Check if the uuid matches the event and function ARN.
+
+        This is similar to verify_event_source_current, except that you provide
+        an explicit event_source_arn here.  This is useful for cases where you
+        know the event source ARN or where you can't construct the event source
+        arn solely based on the resource_name and the service_name.
+
+        """
+        client = self._client('lambda')
+        try:
+            attributes = client.get_event_source_mapping(UUID=event_uuid)
+        except client.exceptions.ResourceNotFoundException:
+            return False
+        return bool(
+            event_source_arn == attributes['EventSourceArn'] and
+            function_arn == attributes['FunctionArn']
+        )
 
     def create_websocket_api(self, name):
         # type: (str) -> str

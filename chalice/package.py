@@ -647,6 +647,50 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
         }
 
+    def _generate_kinesiseventsource(self, resource, template):
+        # type: (models.KinesisEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        kinesis_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        properties = {
+            'Stream': {
+                'Fn::Sub': (
+                    'arn:${AWS::Partition}:kinesis:${AWS::Region}'
+                    ':${AWS::AccountId}:stream/%s' %
+                    resource.stream
+                )
+            },
+            'BatchSize': resource.batch_size,
+            'StartingPosition': resource.starting_position,
+        }
+        function_cfn['Properties']['Events'] = {
+            kinesis_cfn_name: {
+                'Type': 'Kinesis',
+                'Properties': properties
+            }
+        }
+
+    def _generate_dynamodbeventsource(self, resource, template):
+        # type: (models.DynamoDBEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        ddb_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        properties = {
+            'Stream': resource.stream_arn,
+            'BatchSize': resource.batch_size,
+            'StartingPosition': resource.starting_position,
+        }
+        function_cfn['Properties']['Events'] = {
+            ddb_cfn_name: {
+                'Type': 'DynamoDB',
+                'Properties': properties
+            }
+        }
+
     def _generate_apimapping(self, resource, template):
         # type: (models.APIMapping, Dict[str, Any]) -> None
         pass
@@ -863,6 +907,29 @@ class TerraformGenerator(TemplateGenerator):
                 ":%(account_id)s:%(queue)s",
                 queue=resource.queue),
             'batch_size': resource.batch_size,
+            'function_name': resource.lambda_function.function_name,
+        }
+
+    def _generate_kinesiseventsource(self, resource, template):
+        # type: (models.KinesisEventSource, Dict[str, Any]) -> None
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': self._arnref(
+                "arn:%(partition)s:kinesis:%(region)s"
+                ":%(account_id)s:stream/%(stream)s",
+                stream=resource.stream),
+            'batch_size': resource.batch_size,
+            'starting_position': resource.starting_position,
+            'function_name': resource.lambda_function.function_name,
+        }
+
+    def _generate_dynamodbeventsource(self, resource, template):
+        # type: (models.DynamoDBEventSource, Dict[str, Any]) -> None
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': resource.stream_arn,
+            'batch_size': resource.batch_size,
+            'starting_position': resource.starting_position,
             'function_name': resource.lambda_function.function_name,
         }
 
