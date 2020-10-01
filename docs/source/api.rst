@@ -391,7 +391,7 @@ Request
           another_param = request.query_params.get('another_param') 
           # None if key doesn't exist, usual Python behavior
           multi_param = request.query_params.get('multi_param')
-          # A List of all parameters named multi_param, Empty list if none
+          # A List of all parameters named multi_param, Throws an exception if key doesn't exist
 
   .. attribute:: headers
 
