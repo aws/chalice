@@ -380,8 +380,18 @@ Request
 
   .. attribute:: query_params
 
-     A dict of the query params for the request.  This value is ``None`` if
-     no query params were provided in the request.
+     A MultiDict of the query params for the request.  This value is ``None`` if
+     no query params were provided in the request. The MultiDict acts like a normal 
+     dictionary except that you can call the moethod getlist to get multiple keys
+     from the same query string parameter
+     .. code-block:: python
+          request = app.current_request
+          single_param = request.query_params['single'] 
+          # Raises an exception if key doesn't exist, usual Python behavior
+          another_param = request.query_params.get('another_param') 
+          # None if key doesn't exist, usual Python behavior
+          multi_param = request.query_params.get('multi_param')
+          # A List of all parameters named multi_param, Empty list if none
 
   .. attribute:: headers
 
