@@ -150,8 +150,14 @@
 <h2 id="_">_</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#SQSEvent.__iter__">__iter__() (SQSEvent method)</a>
+      <li><a href="api.html#DynamoDBEvent.__iter__">__iter__() (DynamoDBEvent method)</a>
+
+      <ul>
+        <li><a href="api.html#KinesisEvent.__iter__">(KinesisEvent method)</a>
 </li>
+        <li><a href="api.html#SQSEvent.__iter__">(SQSEvent method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -170,10 +176,10 @@
 </li>
       <li><a href="api.html#APIGateway">APIGateway (built-in class)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#Chalice.app_name">app_name (Chalice attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#AuthRequest.auth_type">auth_type (AuthRequest attribute)</a>
 </li>
       <li><a href="api.html#Chalice.authorizer">authorizer() (Chalice method)</a>
@@ -185,6 +191,8 @@
       <li><a href="api.html#AuthResponse">AuthResponse (built-in class)</a>
 </li>
       <li><a href="api.html#AuthRoute">AuthRoute (built-in class)</a>
+</li>
+      <li><a href="api.html#DynamoDBRecord.aws_region">aws_region (DynamoDBRecord attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -239,6 +247,14 @@
       <ul>
         <li><a href="api.html#CloudWatchEvent.context">(CloudWatchEvent attribute)</a>
 </li>
+        <li><a href="api.html#DynamoDBEvent.context">(DynamoDBEvent attribute)</a>
+</li>
+        <li><a href="api.html#DynamoDBRecord.context">(DynamoDBRecord attribute)</a>
+</li>
+        <li><a href="api.html#KinesisEvent.context">(KinesisEvent attribute)</a>
+</li>
+        <li><a href="api.html#KinesisRecord.context">(KinesisRecord attribute)</a>
+</li>
         <li><a href="api.html#LambdaFunctionEvent.context">(LambdaFunctionEvent attribute)</a>
 </li>
         <li><a href="api.html#Request.context">(Request attribute)</a>
@@ -272,6 +288,8 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#KinesisRecord.data">data (KinesisRecord attribute)</a>
+</li>
       <li><a href="api.html#Chalice.debug">debug (Chalice attribute)</a>
 </li>
       <li><a href="api.html#APIGateway.default_binary_types">default_binary_types (APIGateway attribute)</a>
@@ -286,6 +304,10 @@
 </li>
       <li><a href="api.html#WebsocketEvent.domain_name">domain_name (WebsocketEvent attribute)</a>
 </li>
+      <li><a href="api.html#DynamoDBEvent">DynamoDBEvent (built-in class)</a>
+</li>
+      <li><a href="api.html#DynamoDBRecord">DynamoDBRecord (built-in class)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -295,9 +317,17 @@
       <li><a href="api.html#LambdaFunctionEvent.event">event (LambdaFunctionEvent attribute)</a>
 </li>
       <li><a href="api.html#CloudWatchEvent.event_id">event_id (CloudWatchEvent attribute)</a>
+
+      <ul>
+        <li><a href="api.html#DynamoDBRecord.event_id">(DynamoDBRecord attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#DynamoDBRecord.event_name">event_name (DynamoDBRecord attribute)</a>
+</li>
+      <li><a href="api.html#DynamoDBRecord.event_source_arn">event_source_arn (DynamoDBRecord attribute)</a>
+</li>
       <li><a href="api.html#Client.events">events (Client attribute)</a>
 </li>
       <li><a href="api.html#CORSConfig.expose_headers">expose_headers (CORSConfig attribute)</a>
@@ -384,6 +414,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#S3Event.key">key (S3Event attribute)</a>
 </li>
+      <li><a href="api.html#DynamoDBRecord.keys">keys (DynamoDBRecord attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#KinesisEvent">KinesisEvent (built-in class)</a>
+</li>
+      <li><a href="api.html#KinesisRecord">KinesisRecord (built-in class)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -437,21 +475,27 @@
 </li>
       </ul></li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#DynamoDBRecord.new_image">new_image (DynamoDBRecord attribute)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#DynamoDBRecord.old_image">old_image (DynamoDBRecord attribute)</a>
+</li>
       <li><a href="api.html#Chalice.on_cw_event">on_cw_event() (Chalice method)</a>
 </li>
       <li><a href="api.html#Chalice.on_s3_event">on_s3_event() (Chalice method)</a>
 </li>
       <li><a href="api.html#Chalice.on_sns_message">on_sns_message() (Chalice method)</a>
 </li>
-      <li><a href="api.html#Chalice.on_sqs_message">on_sqs_message() (Chalice method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#Chalice.on_sqs_message">on_sqs_message() (Chalice method)</a>
+</li>
       <li><a href="api.html#Chalice.on_ws_connect">on_ws_connect() (Chalice method)</a>
 </li>
       <li><a href="api.html#Chalice.on_ws_disconnect">on_ws_disconnect() (Chalice method)</a>
@@ -466,6 +510,8 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#KinesisRecord.partition_key">partition_key (KinesisRecord attribute)</a>
+</li>
       <li><a href="api.html#TestHTTPClient.patch">patch() (TestHTTPClient method)</a>
 </li>
       <li><a href="api.html#AuthRoute.path">path (AuthRoute attribute)</a>
@@ -474,10 +520,10 @@
         <li><a href="api.html#Request.path">(Request attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api.html#InvokeResponse.payload">payload (InvokeResponse attribute)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#InvokeResponse.payload">payload (InvokeResponse attribute)</a>
+</li>
       <li><a href="api.html#TestHTTPClient.post">post() (TestHTTPClient method)</a>
 </li>
       <li><a href="api.html#AuthResponse.principal_id">principal_id (AuthResponse attribute)</a>
@@ -536,16 +582,26 @@
 </li>
       <li><a href="api.html#Chalice.schedule">schedule() (Chalice method)</a>
 </li>
+      <li><a href="api.html#KinesisRecord.schema_version">schema_version (KinesisRecord attribute)</a>
+</li>
       <li><a href="api.html#send">send()</a>
 </li>
+      <li><a href="api.html#DynamoDBRecord.sequence_number">sequence_number (DynamoDBRecord attribute)</a>
+
+      <ul>
+        <li><a href="api.html#KinesisRecord.sequence_number">(KinesisRecord attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api.html#WebsocketAPI.session">session (WebsocketAPI attribute)</a>
+</li>
+      <li><a href="api.html#DynamoDBRecord.size_bytes">size_bytes (DynamoDBRecord attribute)</a>
 </li>
       <li><a href="api.html#SNSEvent">SNSEvent (built-in class)</a>
 </li>
-      <li><a href="api.html#CloudWatchEvent.source">source (CloudWatchEvent attribute)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#CloudWatchEvent.source">source (CloudWatchEvent attribute)</a>
+</li>
       <li><a href="api.html#SQSEvent">SQSEvent (built-in class)</a>
 </li>
       <li><a href="api.html#SQSRecord">SQSRecord (built-in class)</a>
@@ -560,6 +616,8 @@
         <li><a href="api.html#Response.status_code">(Response attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api.html#DynamoDBRecord.stream_view_type">stream_view_type (DynamoDBRecord attribute)</a>
+</li>
       <li><a href="api.html#SNSEvent.subject">subject (SNSEvent attribute)</a>
 </li>
   </ul></td>
@@ -568,6 +626,8 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#DynamoDBRecord.table_name">table_name (DynamoDBRecord attribute)</a>
+</li>
       <li><a href="api.html#TestEventsClient">TestEventsClient (built-in class)</a>
 </li>
       <li><a href="api.html#TestHTTPClient">TestHTTPClient (built-in class)</a>
@@ -576,9 +636,23 @@
 </li>
       <li><a href="api.html#CloudWatchEvent.time">time (CloudWatchEvent attribute)</a>
 </li>
+      <li><a href="api.html#DynamoDBRecord.timestamp">timestamp (DynamoDBRecord attribute)</a>
+
+      <ul>
+        <li><a href="api.html#KinesisRecord.timestamp">(KinesisRecord attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api.html#CloudWatchEvent.to_dict">to_dict() (CloudWatchEvent method)</a>
 
       <ul>
+        <li><a href="api.html#DynamoDBEvent.to_dict">(DynamoDBEvent method)</a>
+</li>
+        <li><a href="api.html#DynamoDBRecord.to_dict">(DynamoDBRecord method)</a>
+</li>
+        <li><a href="api.html#KinesisEvent.to_dict">(KinesisEvent method)</a>
+</li>
+        <li><a href="api.html#KinesisRecord.to_dict">(KinesisRecord method)</a>
+</li>
         <li><a href="api.html#Request.to_dict">(Request method)</a>
 </li>
         <li><a href="api.html#S3Event.to_dict">(S3Event method)</a>

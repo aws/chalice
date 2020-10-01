@@ -503,6 +503,114 @@ not provided, the name of the python function will be used.</li>
 </dd></dl>
 
 <dl class="method">
+<dt>
+<code class="descname">on_kinesis_record(stream, batch_size=100,</code></dt>
+<dt>
+<code class="descname">starting_position='LATEST', name=None)</code></dt>
+<dd><p>Create a lambda function and configure it to be automatically invoked
+whenever data is published to the specified Kinesis stream.</p>
+<p>The lambda function must accept a single parameter which
+is of type <a class="reference internal" href="#KinesisEvent" title="KinesisEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">KinesisEvent</span></code></a>.</p>
+<p>If the decorated function raises an exception, Lambda retries the
+batch until processing succeeds or the data expires.</p>
+<p>See
+<a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html">Using AWS Lambda with Amazon Kinesis</a>
+for more information on how Lambda integrates with Kinesis.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Message body: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>stream</strong> – The name of the Kinesis stream you want to subscribe to.
+This is the name of the data stream, not the ARN.</li>
+<li><strong>batch_size</strong> – The maximum number of messages to retrieve
+when polling for Kinesis messages.  The event parameter can have
+multiple Kinesis records associated with it.  This is why the
+event parameter passed to the lambda function is iterable.  The
+batch size controls how many messages can be in a single event.</li>
+<li><strong>starting_position</strong> – <p>Specifies where to start processing records.
+This can have the following values:</p>
+<ul>
+<li><code class="docutils literal notranslate"><span class="pre">LATEST</span></code> - Process new records that are added to the stream.</li>
+<li><code class="docutils literal notranslate"><span class="pre">TRIM_HORIZON</span></code> - Process all records in the stream.</li>
+</ul>
+</li>
+<li><strong>name</strong> – The name of the function to use.  This name is combined
+with the chalice app name as well as the stage name to create the
+entire lambda function name.  This parameter is optional.  If it is
+not provided, the name of the python function will be used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">on_dynamodb_record(stream_arn, batch_size=100,</code></dt>
+<dt>
+<code class="descname">starting_position='LATEST', name=None)</code></dt>
+<dd><p>Create a lambda function and configure it to be automatically invoked
+whenever data is written to a DynamoDB stream.</p>
+<p>The lambda function must accept a single parameter which
+is of type <a class="reference internal" href="#DynamoDBEvent" title="DynamoDBEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code></a>.</p>
+<p>If the decorated function raises an exception, Lambda retries the
+batch until processing succeeds or the data expires.</p>
+<p>See
+<a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html">Using AWS Lambda with Amazon DynamoDB</a>
+for more information on how Lambda integrates with DynamoDB Streams.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:dynamodb:...:stream&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;New: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">new_image</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>stream_arn</strong> – The name of the DynamoDB stream ARN you want to
+subscribe to.  Note that, unlike other event handlers that accept
+the resource name, you must provide the stream ARN when subscribing
+to the DynamoDB stream ARN.</li>
+<li><strong>batch_size</strong> – The maximum number of messages to retrieve
+when polling for DynamoDB messages.  The event parameter can have
+multiple DynamoDB records associated with it.  This is why the
+event parameter passed to the lambda function is iterable.  The
+batch size controls how many messages can be in a single event.</li>
+<li><strong>starting_position</strong> – <p>Specifies where to start processing records.
+This can have the following values:</p>
+<ul>
+<li><code class="docutils literal notranslate"><span class="pre">LATEST</span></code> - Process new records that are added to the stream.</li>
+<li><code class="docutils literal notranslate"><span class="pre">TRIM_HORIZON</span></code> - Process all records in the stream.</li>
+</ul>
+</li>
+<li><strong>name</strong> – The name of the function to use.  This name is combined
+with the chalice app name as well as the stage name to create the
+entire lambda function name.  This parameter is optional.  If it is
+not provided, the name of the python function will be used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="Chalice.lambda_function">
 <code class="descname">lambda_function</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.lambda_function" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a pure lambda function that’s not connected to anything.</p>
@@ -1603,6 +1711,242 @@ that is passed to the handler by AWS Lambda.</p>
 <dl class="method">
 <dt id="SQSRecord.to_dict">
 <code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#SQSRecord.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the original dictionary associated with the given
+message. This is useful if you need direct
+access to the lambda event.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="KinesisEvent">
+<em class="property">class </em><code class="descname">KinesisEvent</code><a class="headerlink" href="#KinesisEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the input argument for a Kinesis data stream event handler.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">KinesisEvent</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>In the code example above, the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument is of
+type <code class="docutils literal notranslate"><span class="pre">KinesisEvent</span></code>.  A <code class="docutils literal notranslate"><span class="pre">KinesisEvent</span></code> can have multiple
+messages associated with it.  To access the multiple
+messages, you can iterate over the <code class="docutils literal notranslate"><span class="pre">KinesisEvent</span></code>.</p>
+<dl class="method">
+<dt id="KinesisEvent.__iter__">
+<code class="descname">__iter__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#KinesisEvent.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over individual Kinesis records associated with
+the event.  Each element in the iterable is of type
+<a class="reference internal" href="#KinesisRecord" title="KinesisRecord"><code class="xref py py-class docutils literal notranslate"><span class="pre">KinesisRecord</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="KinesisEvent.context">
+<code class="descname">context</code><a class="headerlink" href="#KinesisEvent.context" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">Lambda context object</a>
+that is passed to the handler by AWS Lambda. This is useful if you need
+the AWS request ID for tracing, or any other data in the context object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="KinesisEvent.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#KinesisEvent.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the original event dictionary provided
+from Lambda.  This is useful if you need direct
+access to the lambda event, for example if a
+new key is added to the lambda event that has not
+been mapped as an attribute to the <code class="docutils literal notranslate"><span class="pre">SQSEvent</span></code>
+object.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="KinesisRecord">
+<em class="property">class </em><code class="descname">KinesisRecord</code><a class="headerlink" href="#KinesisRecord" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a single Kinesis record within a <a class="reference internal" href="#KinesisEvent" title="KinesisEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">KinesisEvent</span></code></a>.</p>
+<dl class="attribute">
+<dt id="KinesisRecord.data">
+<code class="descname">data</code><a class="headerlink" href="#KinesisRecord.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>The payload data for the Kinesis record.  This data is automatically
+base64 decoded for you and will be a <code class="docutils literal notranslate"><span class="pre">bytes</span></code> type.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="KinesisRecord.sequence_number">
+<code class="descname">sequence_number</code><a class="headerlink" href="#KinesisRecord.sequence_number" title="Permalink to this definition">¶</a></dt>
+<dd><p>The unique identifier of the record within its shard.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="KinesisRecord.partition_key">
+<code class="descname">partition_key</code><a class="headerlink" href="#KinesisRecord.partition_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identifies which shard in the stream the data record is assigned to.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="KinesisRecord.schema_version">
+<code class="descname">schema_version</code><a class="headerlink" href="#KinesisRecord.schema_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schema version for the record.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="KinesisRecord.timestamp">
+<code class="descname">timestamp</code><a class="headerlink" href="#KinesisRecord.timestamp" title="Permalink to this definition">¶</a></dt>
+<dd><p>The approximate time that the record was inserted into the stream.  This
+is automatically converted to a <code class="docutils literal notranslate"><span class="pre">datetime.datetime</span></code> object.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="KinesisRecord.context">
+<code class="descname">context</code><a class="headerlink" href="#KinesisRecord.context" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">Lambda context object</a>
+that is passed to the handler by AWS Lambda.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="KinesisRecord.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#KinesisRecord.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the original dictionary associated with the given
+message. This is useful if you need direct
+access to the lambda event.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="DynamoDBEvent">
+<em class="property">class </em><code class="descname">DynamoDBEvent</code><a class="headerlink" href="#DynamoDBEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the input argument for a DynamoDB stream event handler.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:us-west-2:.../stream&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">DynamoDBEvent</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>In the code example above, the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument is of
+type <code class="docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code>.  A <code class="docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code> can have multiple
+messages associated with it.  To access the multiple
+messages, you can iterate over the <code class="docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code>.</p>
+<dl class="method">
+<dt id="DynamoDBEvent.__iter__">
+<code class="descname">__iter__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DynamoDBEvent.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over individual DynamoDB records associated with
+the event.  Each element in the iterable is of type
+<a class="reference internal" href="#DynamoDBRecord" title="DynamoDBRecord"><code class="xref py py-class docutils literal notranslate"><span class="pre">DynamoDBRecord</span></code></a>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBEvent.context">
+<code class="descname">context</code><a class="headerlink" href="#DynamoDBEvent.context" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">Lambda context object</a>
+that is passed to the handler by AWS Lambda. This is useful if you need
+the AWS request ID for tracing, or any other data in the context object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="DynamoDBEvent.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DynamoDBEvent.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the original event dictionary provided
+from Lambda.  This is useful if you need direct
+access to the lambda event, for example if a
+new key is added to the lambda event that has not
+been mapped as an attribute to the <code class="docutils literal notranslate"><span class="pre">SQSEvent</span></code>
+object.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="DynamoDBRecord">
+<em class="property">class </em><code class="descname">DynamoDBRecord</code><a class="headerlink" href="#DynamoDBRecord" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a single DynamoDB record within a <a class="reference internal" href="#DynamoDBEvent" title="DynamoDBEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code></a>.</p>
+<dl class="attribute">
+<dt id="DynamoDBRecord.timestamp">
+<code class="descname">timestamp</code><a class="headerlink" href="#DynamoDBRecord.timestamp" title="Permalink to this definition">¶</a></dt>
+<dd><p>The approximate time that the record was the stream record was created.
+This is automatically converted to a <code class="docutils literal notranslate"><span class="pre">datetime.datetime</span></code> object.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.keys">
+<code class="descname">keys</code><a class="headerlink" href="#DynamoDBRecord.keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>The primary key attribute(s) for the DynamoDB item that was modified.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.new_image">
+<code class="descname">new_image</code><a class="headerlink" href="#DynamoDBRecord.new_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>The item in the DynamoDB table as it appeared after it was modified.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.old_image">
+<code class="descname">old_image</code><a class="headerlink" href="#DynamoDBRecord.old_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>The item in the DynamoDB table as it appeared before it was modified.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.sequence_number">
+<code class="descname">sequence_number</code><a class="headerlink" href="#DynamoDBRecord.sequence_number" title="Permalink to this definition">¶</a></dt>
+<dd><p>The sequence number of the stream record.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.size_bytes">
+<code class="descname">size_bytes</code><a class="headerlink" href="#DynamoDBRecord.size_bytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>The size of the stream record, in bytes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.stream_view_type">
+<code class="descname">stream_view_type</code><a class="headerlink" href="#DynamoDBRecord.stream_view_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of data from the modified DynamoDB item.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.aws_region">
+<code class="descname">aws_region</code><a class="headerlink" href="#DynamoDBRecord.aws_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>The region associated with the event.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.event_id">
+<code class="descname">event_id</code><a class="headerlink" href="#DynamoDBRecord.event_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>A unique identifier for the event.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.event_name">
+<code class="descname">event_name</code><a class="headerlink" href="#DynamoDBRecord.event_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of data modification that was performed on the DynamoDB table.
+This can be: <code class="docutils literal notranslate"><span class="pre">INSERT</span></code>, <code class="docutils literal notranslate"><span class="pre">MODIFY</span></code>, or <code class="docutils literal notranslate"><span class="pre">DELETE</span></code>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.event_source_arn">
+<code class="descname">event_source_arn</code><a class="headerlink" href="#DynamoDBRecord.event_source_arn" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ARN of the DynamoDB stream.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.table_name">
+<code class="descname">table_name</code><a class="headerlink" href="#DynamoDBRecord.table_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the DynamoDB table associated with the stream.  This value is
+computed from the <code class="docutils literal notranslate"><span class="pre">event_source_arn</span></code> parameter and will be an empty string
+if Chalice is unable to parse the table name from the event source ARN.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DynamoDBRecord.context">
+<code class="descname">context</code><a class="headerlink" href="#DynamoDBRecord.context" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html">Lambda context object</a>
+that is passed to the handler by AWS Lambda.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="DynamoDBRecord.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DynamoDBRecord.to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the original dictionary associated with the given
 message. This is useful if you need direct
 access to the lambda event.</p>

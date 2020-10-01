@@ -412,6 +412,66 @@ successfully processed a message.</li>
 <p>For more information on Lambda and SQS,
 see the <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html">AWS documentation</a>.</p>
 </div>
+<div class="section" id="kinesis-events">
+<span id="id5"></span><h2>Kinesis Events<a class="headerlink" href="#kinesis-events" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a Lambda function to be invoked whenever messages are
+published to an Amazon Kinesis data stream.  To configure this, use the
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.on_kinesis_record()</span></code> decorator and provide the name of the
+Kinesis stream.</p>
+<p>The <a class="reference internal" href="../api.html#KinesisEvent" title="KinesisEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">KinesisEvent</span></code></a> that is passed in as the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument
+to the event handler is also iterable.  This allows you to iterate over
+all the records in the event.  Additionally, each record has a <code class="docutils literal notranslate"><span class="pre">.data</span></code>
+attribute that is automatically base64 decoded for you.</p>
+<p>Here’s an example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;kinesiseventdemo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_kinesis_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+        <span class="c1"># The .data attribute is automatically base64 decoded for you.</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received message with contents: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For more information on using Kinesis and Lambda, see
+<a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html">Using AWS Lambda with Amazon Kinesis</a>.</p>
+</div>
+<div class="section" id="dynamodb-events">
+<span id="id6"></span><h2>DynamoDB Events<a class="headerlink" href="#dynamodb-events" title="Permalink to this headline">¶</a></h2>
+<p>You can configure a Lambda function to be invoked whenever messages are
+published to an Amazon DynamoDB stream.  To configure this, use the
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.on_dynamodb_record()</span></code> decorator and provide the name of the
+DynamoDB stream ARN.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Other event handlers such as <code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.on_kinesis_record()</span></code>,
+<a class="reference internal" href="../api.html#Chalice.on_sqs_message" title="Chalice.on_sqs_message"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.on_sqs_message()</span></code></a>, and <a class="reference internal" href="../api.html#Chalice.on_sns_message" title="Chalice.on_sns_message"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.on_sns_message()</span></code></a>
+only require the resource name and not the full ARN.  In the case
+of DynamoDB streams, there are auto-generated portions of the
+stream ARN that cannot be computed based on the resource name.  This
+is why Chalice requires that full stream ARN when configuring
+a DynamoDB stream handler.</p>
+</div>
+<p>The <a class="reference internal" href="../api.html#DynamoDBEvent" title="DynamoDBEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code></a> that is passed in as the <code class="docutils literal notranslate"><span class="pre">event</span></code> argument
+to the event handler is also iterable.  This allows you to iterate over
+all the records in the event.</p>
+<p>Here’s an example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;ddb-event-demo&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:dynamodb:.../stream/2020&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_ddb_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;New: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">new_image</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For more information on using Lambda and DynamoDB, see
+<a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html">Using AWS Lambda with Amazon DynamoDB</a>.</p>
+</div>
 </div>
 
 
@@ -441,6 +501,8 @@ see the <a class="reference external" href="https://docs.aws.amazon.com/lambda/l
 <li><a class="reference internal" href="#s3-events">S3 Events</a></li>
 <li><a class="reference internal" href="#sns-events">SNS Events</a></li>
 <li><a class="reference internal" href="#sqs-events">SQS Events</a></li>
+<li><a class="reference internal" href="#kinesis-events">Kinesis Events</a></li>
+<li><a class="reference internal" href="#dynamodb-events">DynamoDB Events</a></li>
 </ul>
 </li>
 </ul>
