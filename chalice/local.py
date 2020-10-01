@@ -544,7 +544,13 @@ class LocalGateway(object):
         # type:(EventType) -> HeaderType
         route_key = lambda_event['requestContext']['resourcePath']
         route_dict = self._app_object.routes[route_key]
-        route_methods = list(route_dict.keys())
+        route_methods = [method for method in route_dict.keys()
+                         if route_dict[method].cors is not None]
+
+        # If there are no views with CORS enabled
+        # then OPTIONS is the only allowed method.
+        if not route_methods:
+            return {'Access-Control-Allow-Methods': 'OPTIONS'}
 
         # Chalice ensures that routes with multiple views have the same
         # CORS configuration, so if any view has a CORS Config we can use
