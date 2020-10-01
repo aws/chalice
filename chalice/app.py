@@ -769,27 +769,7 @@ class DecoratorAPI(object):
         return _register_handler
 
     def _wrap_handler(self, handler_type, handler_name, user_handler):
-        event_classes = {
-            'on_s3_event': S3Event,
-            'on_sns_message': SNSEvent,
-            'on_sqs_message': SQSEvent,
-            'on_cw_event': CloudWatchEvent,
-            'on_kinesis_record': KinesisEvent,
-            'on_dynamodb_record': DynamoDBEvent,
-            'schedule': CloudWatchEvent,
-            'lambda_function': LambdaFunctionEvent,
-        }
-        middleware_mapping = {
-            'on_s3_event': 's3',
-            'on_sns_message': 'sns',
-            'on_sqs_message': 'sqs',
-            'on_cw_event': 'cloudwatch',
-            'on_kinesis_record': 'kinesis',
-            'on_dynamodb_record': 'dynamodb',
-            'schedule': 'scheduled',
-            'lambda_function': 'pure_lambda',
-        }
-        if handler_type in event_classes:
+        if handler_type in _EVENT_CLASSES:
             if handler_type == 'lambda_function':
                 # We have to wrap existing @app.lambda_function()
                 # handlers for backwards compat reasons so we can
@@ -799,9 +779,9 @@ class DecoratorAPI(object):
                 # here.
                 user_handler = PureLambdaWrapper(user_handler)
             return EventSourceHandler(
-                user_handler, event_classes[handler_type],
+                user_handler, _EVENT_CLASSES[handler_type],
                 middleware_handlers=self._get_middleware_handlers(
-                    event_type=middleware_mapping[handler_type],
+                    event_type=_MIDDLEWARE_MAPPING[handler_type],
                 )
             )
 
@@ -1506,6 +1486,14 @@ class EventSourceHandler(BaseLambdaHandler):
         self._middleware_handlers = middleware_handlers
         self.handler = None
 
+    @property
+    def middleware_handlers(self):
+        return self._middleware_handlers
+
+    @middleware_handlers.setter
+    def middleware_handlers(self, value):
+        self._middleware_handlers = value
+
     def __call__(self, event, context):
         event_obj = self.event_class(event, context)
         if self.handler is None:
@@ -1906,17 +1894,6 @@ class Blueprint(DecoratorAPI):
     # these methods are not public in the sense that we don't want users to
     # call them, they're available for blueprints to use in order to avoid
     # boilerplate code.
-    def _wrap_handler(self, handler_type, handler_name, user_handler):
-        # This deferred wrap handler will be called when we call
-        # Blueprint.register() and provide an app object.  Once
-        # we have access to an app, we can call the actual _wrap_handler
-        # which will have access to middleware.
-        @functools.wraps(user_handler)
-        def _defer_wrap_handler(app):
-            # pylint: disable=protected-access
-            return app._wrap_handler(handler_type, handler_name,
-                                     user_handler)
-        return _defer_wrap_handler
 
     def register_middleware(self, func, event_type='all'):
         self._deferred_registrations.append(
@@ -1932,18 +1909,22 @@ class Blueprint(DecoratorAPI):
         # we have to duplicate either the methods or the params in this
         # class.  We're using _register_handler as a tradeoff for cutting
         # down on the duplication.
-        self._deferred_registrations.append(
+        def _register_blueprint_handler(app, options):
+            if handler_type in _EVENT_CLASSES:
+                # pylint: disable=protected-access
+                wrapped_handler.middleware_handlers = \
+                    app._get_middleware_handlers(
+                        _MIDDLEWARE_MAPPING[handler_type])
             # pylint: disable=protected-access
-            lambda app, options: app._register_handler(
-                handler_type, name, user_handler, wrapped_handler(app),
+            app._register_handler(
+                handler_type, name, user_handler, wrapped_handler,
                 kwargs, options
             )
-        )
+        self._deferred_registrations.append(_register_blueprint_handler)
 
     def _get_middleware_handlers(self, event_type):
-        raise RuntimeError("Blueprints are unable to retrieve middleware "
-                           "handlers, must be registered to an app using "
-                           "register_blueprint()")
+        # This will get filled in later during the registration process.
+        return []
 
 
 # This class is used to convert any existing/3rd party decorators
@@ -1977,3 +1958,27 @@ class ConvertToMiddleware(object):
         if isinstance(event, Request):
             return event.to_original_event(), event.lambda_context
         return event.to_dict(), event.context
+
+
+_EVENT_CLASSES = {
+    'on_s3_event': S3Event,
+    'on_sns_message': SNSEvent,
+    'on_sqs_message': SQSEvent,
+    'on_cw_event': CloudWatchEvent,
+    'on_kinesis_record': KinesisEvent,
+    'on_dynamodb_record': DynamoDBEvent,
+    'schedule': CloudWatchEvent,
+    'lambda_function': LambdaFunctionEvent,
+}
+
+
+_MIDDLEWARE_MAPPING = {
+    'on_s3_event': 's3',
+    'on_sns_message': 'sns',
+    'on_sqs_message': 'sqs',
+    'on_cw_event': 'cloudwatch',
+    'on_kinesis_record': 'kinesis',
+    'on_dynamodb_record': 'dynamodb',
+    'schedule': 'scheduled',
+    'lambda_function': 'pure_lambda',
+}
