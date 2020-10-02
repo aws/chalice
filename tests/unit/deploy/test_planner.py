@@ -1823,7 +1823,7 @@ class TestPlanSQSSubscription(BasePlannerTests):
             )
         ]
         assert plan[5] == models.APICall(
-            method_name='update_sqs_event_source',
+            method_name='update_lambda_event_source',
             params={
                 'event_uuid': 'my-uuid',
                 'batch_size': 10,
