@@ -28,6 +28,7 @@ from chalice.app import (
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
     ConvertToMiddleware,
+    WebsocketAPI
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -139,9 +140,10 @@ class FakeClient(object):
 
 
 class FakeSession(object):
-    def __init__(self, client=None):
+    def __init__(self, client=None, region_name='us-west-2'):
         self.calls = []
         self._client = client
+        self.region_name = region_name
 
     def client(self, name, endpoint_url=None):
         self.calls.append((name, endpoint_url))
@@ -2633,7 +2635,7 @@ def test_can_route_websocket_connect_message(sample_websocket_app,
     assert calls[0][0] == 'connect'
     event = calls[0][1]
     assert isinstance(event, WebsocketEvent)
-    assert event.domain_name == 'abcd1234.us-west-2.amazonaws.com'
+    assert event.domain_name == 'abcd1234.execute-api.us-west-2.amazonaws.com'
     assert event.stage == 'api'
     assert event.connection_id == 'ABCD1234='
 
@@ -2652,7 +2654,7 @@ def test_can_route_websocket_disconnect_message(sample_websocket_app,
     assert calls[0][0] == 'disconnect'
     event = calls[0][1]
     assert isinstance(event, WebsocketEvent)
-    assert event.domain_name == 'abcd1234.us-west-2.amazonaws.com'
+    assert event.domain_name == 'abcd1234.execute-api.us-west-2.amazonaws.com'
     assert event.stage == 'api'
     assert event.connection_id == 'ABCD1234='
 
@@ -2671,7 +2673,7 @@ def test_can_route_websocket_default_message(sample_websocket_app,
     assert calls[0][0] == 'default'
     event = calls[0][1]
     assert isinstance(event, WebsocketEvent)
-    assert event.domain_name == 'abcd1234.us-west-2.amazonaws.com'
+    assert event.domain_name == 'abcd1234.execute-api.us-west-2.amazonaws.com'
     assert event.stage == 'api'
     assert event.connection_id == 'ABCD1234='
     assert event.body == 'foo bar'
@@ -2688,7 +2690,44 @@ def test_can_configure_client_on_connect(sample_websocket_app,
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
-         'https://abcd1234.us-west-2.amazonaws.com/api'),
+         'https://abcd1234.execute-api.us-west-2.amazonaws.com/api'),
+    ]
+
+
+def test_uses_api_id_not_domain_name(sample_websocket_app,
+                                     create_websocket_event):
+    demo, calls = sample_websocket_app
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+    event = create_websocket_event('$connect')
+    # If you configure a custom domain name, we should still use the
+    # original domainName generated from API gateway when configuring
+    # the apigatewaymanagementapi client.
+    event['requestContext']['domainName'] = 'api.custom-domain-name.com'
+    handler = websocket_handler_for_route('$connect', demo)
+    handler(event, context=None)
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.execute-api.us-west-2.amazonaws.com/api'),
+    ]
+
+
+def test_fallsback_to_session_if_needed(sample_websocket_app,
+                                        create_websocket_event):
+    demo, calls = sample_websocket_app
+    client = FakeClient()
+    demo.websocket_api = WebsocketAPI(env={})
+    demo.websocket_api.session = FakeSession(client, region_name='us-east-2')
+    event = create_websocket_event('$connect')
+    # If you configure a custom domain name, we should still use the
+    # original domainName generated from API gateway when configuring
+    # the apigatewaymanagementapi client.
+    event['requestContext']['domainName'] = 'api.custom-domain-name.com'
+    handler = websocket_handler_for_route('$connect', demo)
+    handler(event, context=None)
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.execute-api.us-east-2.amazonaws.com/api'),
     ]
 
 
@@ -2703,7 +2742,7 @@ def test_can_configure_client_on_disconnect(sample_websocket_app,
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
-         'https://abcd1234.us-west-2.amazonaws.com/api'),
+         'https://abcd1234.execute-api.us-west-2.amazonaws.com/api'),
     ]
 
 
@@ -2719,7 +2758,7 @@ def test_can_configure_client_on_message(sample_websocket_app,
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
-         'https://abcd1234.us-west-2.amazonaws.com/api'),
+         'https://abcd1234.execute-api.us-west-2.amazonaws.com/api'),
     ]
 
 
@@ -2736,7 +2775,7 @@ def test_does_only_configure_client_once(sample_websocket_app,
 
     assert demo.websocket_api.session.calls == [
         ('apigatewaymanagementapi',
-         'https://abcd1234.us-west-2.amazonaws.com/api'),
+         'https://abcd1234.execute-api.us-west-2.amazonaws.com/api'),
     ]
 
 
@@ -3239,6 +3278,7 @@ class TestMiddleware:
                     'domainName': 'example.com',
                     'stage': 'dev',
                     'connectionId': 'abcd',
+                    'apiId': 'abcd1234',
                 },
                 'body': "body"
             }
@@ -3325,6 +3365,7 @@ class TestMiddleware:
                     'domainName': 'example.com',
                     'stage': 'dev',
                     'connectionId': 'abcd',
+                    'apiId': 'abcd1234',
                 },
                 'body': "body"
             })

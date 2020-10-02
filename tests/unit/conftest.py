@@ -187,9 +187,10 @@ def create_websocket_event():
         return {
             'requestContext': {
                 'routeKey': route_key,
-                'domainName': 'abcd1234.us-west-2.amazonaws.com',
+                'domainName': 'abcd1234.execute-api.us-west-2.amazonaws.com',
                 'stage': 'api',
                 'connectionId': 'ABCD1234=',
+                'apiId': 'abcd1234',
             },
             'body': body,
         }
