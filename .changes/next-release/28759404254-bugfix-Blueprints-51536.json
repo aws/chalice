@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Blueprints",
-  "description": "Fix regression when invoking Lambda functions from blueprints (#1535)"
-}

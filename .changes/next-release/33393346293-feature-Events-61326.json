@@ -1,5 +1,0 @@
-{
-  "type": "feature",
-  "category": "Events",
-  "description": "Add support for Kinesis and DynamoDB event handlers (#987)"
-}

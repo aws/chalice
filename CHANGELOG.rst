@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.21.0
+======
+
+* bugfix:Blueprints:Fix regression when invoking Lambda functions from blueprints (#1535)
+* feature:Events:Add support for Kinesis and DynamoDB event handlers (#987)
+
+
 1.20.1
 ======
 
