@@ -503,10 +503,8 @@ not provided, the name of the python function will be used.</li>
 </dd></dl>
 
 <dl class="method">
-<dt>
-<code class="descname">on_kinesis_record(stream, batch_size=100,</code></dt>
-<dt>
-<code class="descname">starting_position='LATEST', name=None)</code></dt>
+<dt id="Chalice.on_kinesis_record">
+<code class="descname">on_kinesis_record</code><span class="sig-paren">(</span><em>stream</em>, <em>batch_size=100</em>, <em>starting_position='LATEST'</em>, <em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.on_kinesis_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a lambda function and configure it to be automatically invoked
 whenever data is published to the specified Kinesis stream.</p>
 <p>The lambda function must accept a single parameter which
@@ -556,10 +554,8 @@ not provided, the name of the python function will be used.</li>
 </dd></dl>
 
 <dl class="method">
-<dt>
-<code class="descname">on_dynamodb_record(stream_arn, batch_size=100,</code></dt>
-<dt>
-<code class="descname">starting_position='LATEST', name=None)</code></dt>
+<dt id="Chalice.on_dynamodb_record">
+<code class="descname">on_dynamodb_record</code><span class="sig-paren">(</span><em>stream_arn</em>, <em>batch_size=100</em>, <em>starting_position='LATEST'</em>, <em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.on_dynamodb_record" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a lambda function and configure it to be automatically invoked
 whenever data is written to a DynamoDB stream.</p>
 <p>The lambda function must accept a single parameter which

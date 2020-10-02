@@ -326,8 +326,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_kinesis_record(stream, batch_size=100,
-                                 starting_position='LATEST', name=None)
+   .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever data is published to the specified Kinesis stream.
@@ -372,8 +371,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_dynamodb_record(stream_arn, batch_size=100,
-                                   starting_position='LATEST', name=None)
+   .. method:: on_dynamodb_record(stream_arn, batch_size=100, starting_position='LATEST', name=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever data is written to a DynamoDB stream.
