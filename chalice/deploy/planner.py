@@ -711,7 +711,7 @@ class PlanStage(object):
             uuid = deployed['event_uuid']
             return instruction_for_queue_arn + [
                 models.APICall(
-                    method_name='update_sqs_event_source',
+                    method_name='update_lambda_event_source',
                     params={'event_uuid': uuid,
                             'batch_size': resource.batch_size}
                 )
