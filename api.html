@@ -807,8 +807,22 @@ the <code class="docutils literal notranslate"><span class="pre">app.current_req
 <dl class="attribute">
 <dt id="Request.query_params">
 <code class="descname">query_params</code><a class="headerlink" href="#Request.query_params" title="Permalink to this definition">¶</a></dt>
-<dd><p>A dict of the query params for the request.  This value is <code class="docutils literal notranslate"><span class="pre">None</span></code> if
-no query params were provided in the request.</p>
+<dd><p>A MultiDict of the query params for the request.  This value is <code class="docutils literal notranslate"><span class="pre">None</span></code>
+if no query params were provided in the request. The MultiDict acts like a
+normal dictionary except that you can call the method <code class="docutils literal notranslate"><span class="pre">getlist()</span></code> to get
+multiple keys from the same query string parameter</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">request</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span>
+<span class="c1"># Raises an exception if key doesn&#39;t exist, usual Python behavior.</span>
+<span class="n">single_param</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="p">[</span><span class="s1">&#39;single&#39;</span><span class="p">]</span>
+
+<span class="c1"># None if key doesn&#39;t exist, usual Python behavior</span>
+<span class="n">another_param</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;another_param&#39;</span><span class="p">)</span>
+
+<span class="c1"># A List of all parameters named multi_param, Throws an exception if</span>
+<span class="c1"># key doesn&#39;t exist</span>
+<span class="n">multi_param_list</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_params</span><span class="o">.</span><span class="n">getlist</span><span class="p">(</span><span class="s1">&#39;multi_param&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="attribute">
