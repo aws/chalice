@@ -778,9 +778,6 @@ class TestCreateDomainName(object):
             }
         ) == {
             'domain_name': 'test_domain',
-            'endpoint_configuration': {
-                'types': ['REGIONAL'],
-            },
             'security_policy': 'TLS_1_0',
             'alias_domain_name': 'regional_domain_name',
             'hosted_zone_id': 'hosted_zone_id',
@@ -833,9 +830,6 @@ class TestCreateDomainName(object):
             }
         ) == {
             'domain_name': 'test_domain',
-            'endpoint_configuration': {
-                'types': ['EDGE'],
-            },
             'security_policy': 'TLS_1_0',
             'hosted_zone_id': 'hosted_zone_id',
             'alias_domain_name': 'dist_test_domain',
@@ -862,7 +856,7 @@ class TestCreateDomainName(object):
                 'DomainName': 'test_websocket_domain',
                 'DomainNameConfigurations': [
                     {
-                        'ApiGatewayDomainName': 'test_websocket_domain',
+                        'ApiGatewayDomainName': 'd-1234',
                         'CertificateArn': 'certificate_arn',
                         'CertificateName': 'certificate_name',
                         'CertificateUploadDate': datetime.datetime.now(),
@@ -891,7 +885,7 @@ class TestCreateDomainName(object):
             }
         ) == {
             'domain_name': 'test_websocket_domain',
-            'endpoint_type': 'REGIONAL',
+            'alias_domain_name': 'd-1234',
             'security_policy': 'TLS_1_2',
             'hosted_zone_id': 'hosted_zone_id',
             'certificate_arn': 'certificate_arn'
@@ -1013,7 +1007,7 @@ class TestUpdateDomainName(object):
             'DomainName': 'test_domain',
             'DomainNameConfigurations': [
                 {
-                    'ApiGatewayDomainName': 'test_domain',
+                    'ApiGatewayDomainName': 'd-1234',
                     'CertificateArn': 'certificate_arn',
                     'CertificateName': 'certificate_name',
                     'CertificateUploadDate': datetime.datetime.now(),
@@ -1039,11 +1033,11 @@ class TestUpdateDomainName(object):
             security_policy='TLS_1_2',
             certificate_arn='certificate_arn',
         ) == {
-           'domain_name': 'test_domain',
-           'endpoint_configuration': 'REGIONAL',
-           'security_policy': 'TLS_1_2',
-           'hosted_zone_id': 'hosted_zone_id',
-           'certificate_arn': 'certificate_arn'
+            'domain_name': 'test_domain',
+            'alias_domain_name': 'd-1234',
+            'security_policy': 'TLS_1_2',
+            'hosted_zone_id': 'hosted_zone_id',
+            'certificate_arn': 'certificate_arn'
         }
         stubbed_session.verify_stubs()
 
@@ -1229,11 +1223,6 @@ class TestUpdateDomainName(object):
             certificate_arn='regional_certificate_arn',
         ) == {
             'domain_name': 'test_domain',
-            'endpoint_configuration': {
-                'types': [
-                    'REGIONAL',
-                ],
-            },
             'alias_domain_name': 'regional_domain_name',
             'security_policy': 'TLS_1_2',
             'hosted_zone_id': 'hosted_zone_id',
@@ -1307,11 +1296,6 @@ class TestUpdateDomainName(object):
             certificate_arn='certificate_arn',
         ) == {
             'domain_name': 'test_domain',
-            'endpoint_configuration': {
-                 'types': [
-                     'EDGE',
-                 ],
-             },
             'security_policy': 'TLS_1_0',
             'alias_domain_name': 'dist_domain_name',
             'hosted_zone_id': 'hosted_zone_id',
