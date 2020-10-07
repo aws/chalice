@@ -104,6 +104,14 @@ def sample_app():
     def custom_cors():
         return {'cors': True}
 
+    @demo.route('/cors-enabled-for-one-method', methods=['GET'])
+    def without_cors():
+        return {'ok': True}
+
+    @demo.route('/cors-enabled-for-one-method', methods=['POST'], cors=True)
+    def with_cors():
+        return {'ok': True}
+
     @demo.route('/options', methods=['OPTIONS'])
     def options():
         return {'options': True}
@@ -421,6 +429,26 @@ def test_non_preflight_options_request(handler):
                         headers=headers)
     handler.do_OPTIONS()
     assert _get_body_from_response_stream(handler) == {'options': True}
+
+
+def test_preflight_request_should_succeed_even_if_cors_disabled(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS', path='/index',
+                        headers=headers)
+    handler.do_OPTIONS()
+    response_lines = handler.wfile.getvalue().splitlines()
+    assert b'HTTP/1.1 200 OK' in response_lines
+
+
+def test_preflight_returns_correct_methods_in_access_allow_header(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS',
+                        path='/cors-enabled-for-one-method',
+                        headers=headers)
+    handler.do_OPTIONS()
+    response_lines = handler.wfile.getvalue().splitlines()
+    assert b'HTTP/1.1 200 OK' in response_lines
+    assert b'Access-Control-Allow-Methods: POST,OPTIONS' in response_lines
 
 
 def test_errors_converted_to_json_response(handler):
