@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Local",
+  "description": "Add support for multiple actions in builtin auth in local mode (#1527)"
+}
