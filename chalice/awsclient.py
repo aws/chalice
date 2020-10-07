@@ -63,6 +63,15 @@ LogEventsResponse = TypedDict(
         'nextToken': str,
     }, total=False
 )
+DomainNameResponse = TypedDict(
+    'DomainNameResponse', {
+        'domain_name': str,
+        'security_policy': str,
+        'hosted_zone_id': str,
+        'certificate_arn': str,
+        'alias_domain_name': str,
+    }
+)
 
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
@@ -462,7 +471,7 @@ class TypedAWSClient(object):
                            security_policy=None,  # type: Optional[str]
                            tags=None,             # type: StrMap
                            ):
-        # type: (...) -> Dict[str, Any]
+        # type: (...) -> DomainNameResponse
         if protocol == 'HTTP':
             kwargs = {
                 'domainName': domain_name,
@@ -493,7 +502,7 @@ class TypedAWSClient(object):
         return created_domain_name
 
     def _create_domain_name(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+        # type: (Dict[str, Any]) -> DomainNameResponse
         client = self._client('apigateway')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -504,29 +513,31 @@ class TypedAWSClient(object):
             should_retry=lambda x: True,
             retryable_exceptions=exceptions
         )
-        domain_name = {
-            'domain_name': result['domainName'],
-            'endpoint_configuration': result['endpointConfiguration'],
-            'security_policy': result['securityPolicy'],
-        }
         if result.get('regionalHostedZoneId'):
-            domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
+            hosted_zone_id = result['regionalHostedZoneId']
         else:
-            domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
+            hosted_zone_id = result['distributionHostedZoneId']
 
         if result.get('regionalCertificateArn'):
-            domain_name['certificate_arn'] = result['regionalCertificateArn']
+            certificate_arn = result['regionalCertificateArn']
         else:
-            domain_name['certificate_arn'] = result['certificateArn']
+            certificate_arn = result['certificateArn']
 
         if result.get('regionalDomainName') is not None:
-            domain_name['alias_domain_name'] = result['regionalDomainName']
+            alias_domain_name = result['regionalDomainName']
         else:
-            domain_name['alias_domain_name'] = result['distributionDomainName']
+            alias_domain_name = result['distributionDomainName']
+        domain_name = {
+            'domain_name': result['domainName'],
+            'security_policy': result['securityPolicy'],
+            'hosted_zone_id': hosted_zone_id,
+            'certificate_arn': certificate_arn,
+            'alias_domain_name': alias_domain_name,
+        }  # type: DomainNameResponse
         return domain_name
 
     def _create_domain_name_v2(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+        # type: (Dict[str, Any]) -> DomainNameResponse
         client = self._client('apigatewayv2')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -539,12 +550,12 @@ class TypedAWSClient(object):
         )
         result_data = result['DomainNameConfigurations'][0]
         domain_name = {
-            'domain_name': result_data['ApiGatewayDomainName'],
-            'endpoint_type': result_data['EndpointType'],
+            'domain_name': result['DomainName'],
+            'alias_domain_name': result_data['ApiGatewayDomainName'],
             'security_policy': result_data['SecurityPolicy'],
             'hosted_zone_id': result_data['HostedZoneId'],
             'certificate_arn': result_data['CertificateArn']
-        }
+        }  # type: DomainNameResponse
         return domain_name
 
     def _create_lambda_function(self, api_args):
@@ -686,7 +697,7 @@ class TypedAWSClient(object):
                            security_policy=None,      # type: Optional[str]
                            tags=None,                 # type: StrMap
                            ):
-        # type: (...) -> Dict[str, Any]
+        # type: (...) -> DomainNameResponse
         if protocol == 'HTTP':
             patch_operations = self.get_custom_domain_patch_operations(
                 certificate_arn,
@@ -745,7 +756,7 @@ class TypedAWSClient(object):
                 ResourceArn=resource_arn, Tags=tags_to_add)
 
     def _update_domain_name(self, custom_domain_name, patch_operations):
-        # type: (str, List[Dict[str, str]]) -> Dict[str, Any]
+        # type: (str, List[Dict[str, str]]) -> DomainNameResponse
         client = self._client('apigateway')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -764,29 +775,31 @@ class TypedAWSClient(object):
             )
             result.update(response)
 
-        domain_name = {
-            'domain_name': result['domainName'],
-            'endpoint_configuration': result['endpointConfiguration'],
-            'security_policy': result['securityPolicy'],
-        }
         if result.get('regionalCertificateArn'):
-            domain_name['certificate_arn'] = result['regionalCertificateArn']
+            certificate_arn = result['regionalCertificateArn']
         else:
-            domain_name['certificate_arn'] = result['certificateArn']
+            certificate_arn = result['certificateArn']
 
         if result.get('regionalHostedZoneId'):
-            domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
+            hosted_zone_id = result['regionalHostedZoneId']
         else:
-            domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
+            hosted_zone_id = result['distributionHostedZoneId']
 
         if result.get('regionalDomainName') is not None:
-            domain_name['alias_domain_name'] = result['regionalDomainName']
+            alias_domain_name = result['regionalDomainName']
         else:
-            domain_name['alias_domain_name'] = result['distributionDomainName']
+            alias_domain_name = result['distributionDomainName']
+        domain_name = {
+            'domain_name': result['domainName'],
+            'security_policy': result['securityPolicy'],
+            'certificate_arn': certificate_arn,
+            'hosted_zone_id': hosted_zone_id,
+            'alias_domain_name': alias_domain_name
+        }  # type: DomainNameResponse
         return domain_name
 
     def _update_domain_name_v2(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+        # type: (Dict[str, Any]) -> DomainNameResponse
         client = self._client('apigatewayv2')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -801,11 +814,11 @@ class TypedAWSClient(object):
         result_data = result['DomainNameConfigurations'][0]
         domain_name = {
             'domain_name': result['DomainName'],
-            'endpoint_configuration': result_data['EndpointType'],
+            'alias_domain_name': result_data['ApiGatewayDomainName'],
             'security_policy': result_data['SecurityPolicy'],
             'hosted_zone_id': result_data['HostedZoneId'],
             'certificate_arn': result_data['CertificateArn']
-        }
+        }  # type: DomainNameResponse
         return domain_name
 
     def delete_domain_name(self, domain_name):
