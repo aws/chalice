@@ -162,47 +162,48 @@ def sample_app():
 def demo_app_auth():
     demo = app.Chalice('app-name')
 
+    def _policy(effect, resource, action='execute-api:Invoke'):
+        return {
+            'context': {},
+            'principalId': 'user',
+            'policyDocument': {
+                'Version': '2012-10-17',
+                'Statement': [
+                    {
+                        'Action': action,
+                        'Effect': effect,
+                        'Resource': resource,
+                    }
+                ]
+            }
+        }
+
     @demo.authorizer()
     def auth_with_explicit_policy(auth_request):
         token = auth_request.token
         if token == 'allow':
-            return {
-                'context': {},
-                'principalId': 'user',
-                'policyDocument': {
-                    'Version': '2012-10-17',
-                    'Statement': [
-                        {
-                            'Action': 'execute-api:Invoke',
-                            'Effect': 'Allow',
-                            'Resource':
-                            ["arn:aws:execute-api:mars-west-1:123456789012:"
-                             "ymy8tbxw7b/api/GET/explicit"]
-                        }
-                    ]
-                }
-            }
+            return _policy(
+                effect='Allow', resource=[
+                    "arn:aws:execute-api:mars-west-1:123456789012:"
+                    "ymy8tbxw7b/api/GET/explicit"])
         else:
-            return {
-                'context': {},
-                'principalId': '',
-                'policyDocument': {
-                    'Version': '2012-10-17',
-                    'Statement': [
-                        {
-                            'Action': 'execute-api:Invoke',
-                            'Effect': 'Deny',
-                            'Resource':
-                            ["arn:aws:execute-api:mars-west-1:123456789012:"
-                             "ymy8tbxw7b/api/GET/explicit"]
-                        }
-                    ]
-                }
-            }
+            return _policy(
+                effect='Deny', resource=[
+                    "arn:aws:execute-api:mars-west-1:123456789012:"
+                    "ymy8tbxw7b/api/GET/explicit"])
 
     @demo.authorizer()
     def demo_authorizer_returns_none(auth_request):
         return None
+
+    @demo.authorizer()
+    def auth_with_multiple_actions(auth_request):
+        return _policy(
+            effect='Allow', resource=[
+                    "arn:aws:execute-api:mars-west-1:123456789012:"
+                    "ymy8tbxw7b/api/GET/multi"],
+            action=['execute-api:Invoke', 'execute-api:Other']
+        )
 
     @demo.authorizer()
     def demo_auth(auth_request):
@@ -263,6 +264,10 @@ def demo_app_auth():
 
     @demo.route('/explicit', authorizer=auth_with_explicit_policy)
     def explicit():
+        return {}
+
+    @demo.route('/multi', authorizer=auth_with_multiple_actions)
+    def multi():
         return {}
 
     @demo.route('/iam', authorizer=iam_authorizer)
@@ -936,6 +941,17 @@ class TestLocalBuiltinAuthorizers(object):
         context = LambdaContext(*lambda_context_args)
         with pytest.raises(NotAuthorizedError):
             authorizer.authorize(path, event, context)
+
+    def test_can_understand_multi_actions(self, demo_app_auth,
+                                          lambda_context_args,
+                                          create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/multi'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        assert event['requestContext']['authorizer']['principalId'] == 'user'
 
     def test_can_understand_cognito_token(self, lambda_context_args,
                                           demo_app_auth, create_event):
