@@ -579,11 +579,15 @@ class APIGateway(object):
 
 class WebsocketAPI(object):
     _WEBSOCKET_ENDPOINT_TEMPLATE = 'https://{domain_name}/{stage}'
+    _REGION_ENV_VARS = ['AWS_REGION', 'AWS_DEFAULT_REGION']
 
-    def __init__(self):
+    def __init__(self, env=None):
         self.session = None
         self._endpoint = None
         self._client = None
+        if env is None:
+            env = os.environ
+        self._env = env
 
     def configure(self, domain_name, stage):
         if self._endpoint is not None:
@@ -591,6 +595,37 @@ class WebsocketAPI(object):
         self._endpoint = self._WEBSOCKET_ENDPOINT_TEMPLATE.format(
             domain_name=domain_name,
             stage=stage,
+        )
+
+    def configure_from_api_id(self, api_id, stage):
+        if self._endpoint is not None:
+            return
+        region_name = self._get_region()
+        domain_name = '{api_id}.execute-api.{region}.amazonaws.com'.format(
+            api_id=api_id, region=region_name)
+        self.configure(domain_name, stage)
+
+    def _get_region(self):
+        # Attempt to get the region so we can configure the
+        # apigatewaymanagementapi client.  We'll first try
+        # retrieving this value from env vars because these should
+        # always be set in the Lambda runtime environment.
+        for varname in self._REGION_ENV_VARS:
+            if varname in self._env:
+                return self._env[varname]
+        # As a last attempt we'll try to retrieve the region
+        # from the currently configured region.  If the session
+        # isn't configured or we can't get the region, we have
+        # no choice but to error out.
+        if self.session is not None:
+            region_name = self.session.region_name
+            if region_name is not None:
+                return region_name
+        raise ValueError(
+            "Unable to retrieve the region name when configuring the "
+            "websocket client.  Either set the 'AWS_REGION' environment "
+            "variable or assign 'app.websocket_api.session' to a boto3 "
+            "session."
         )
 
     def _get_client(self):
@@ -1515,8 +1550,8 @@ class WebsocketEventSourceHandler(EventSourceHandler):
         self.handler = None
 
     def __call__(self, event, context):
-        self.websocket_api.configure(
-            event['requestContext']['domainName'],
+        self.websocket_api.configure_from_api_id(
+            event['requestContext']['apiId'],
             event['requestContext']['stage'],
         )
         super(WebsocketEventSourceHandler, self).__call__(event, context)

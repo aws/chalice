@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Websocket",
+  "description": "Fix websocket client configuration when using a custom domain (#1503)"
+}
