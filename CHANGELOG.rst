@@ -2,6 +2,15 @@
 CHANGELOG
 =========
 
+1.21.1
+======
+
+* bugfix:Websockets:Fix custom domain name configuration for websockets (#1531)
+* bugfix:Local:Add support for multiple actions in builtin auth in local mode (#1527)
+* bugfix:Websocket:Fix websocket client configuration when using a custom domain (#1503)
+* bugfix:Local:Fix CORs handling in local mode (#761)
+
+
 1.21.0
 ======
 

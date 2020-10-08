@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Websockets",
-  "description": "Fix custom domain name configuration for websockets (#1531)"
-}

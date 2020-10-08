@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Local",
-  "description": "Fix CORs handling in local mode (#761)"
-}
