@@ -28,7 +28,8 @@ from chalice.app import (
     WebsocketDisconnectedError,
     WebsocketEventSourceHandler,
     ConvertToMiddleware,
-    WebsocketAPI
+    WebsocketAPI,
+    ChaliceUnhandledError,
 )
 from chalice import __version__ as chalice_version
 from chalice.deploy.validate import ExperimentalFeatureError
@@ -604,12 +605,6 @@ class TestDefaultCORS(object):
         raw_response = sample_app_with_default_cors(event, context=None)
         assert raw_response['statusCode'] == 415
         assert 'Access-Control-Allow-Origin' not in raw_response['headers']
-
-
-def test_no_view_function_found(sample_app, create_event):
-    bad_path = create_event('/noexist', 'GET', {})
-    with pytest.raises(app.ChaliceError):
-        sample_app(bad_path, context=None)
 
 
 def test_can_access_context(create_event):
@@ -3324,6 +3319,82 @@ class TestMiddleware:
             {'name': 'mymiddleware', 'method': 'GET'},
             {'url': '/hello'},
         ]
+
+    def test_error_handler_rest_api_untouched(self):
+        demo = app.Chalice('app-name')
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            return get_response(event)
+
+        @demo.route('/error')
+        def index():
+            raise NotFoundError("resource not found")
+
+        with Client(demo) as c:
+            response = c.http.get('/error')
+            assert response.status_code == 404
+            assert response.json_body == {
+                'Code': 'NotFoundError',
+                'Message': 'NotFoundError: resource not found'
+            }
+
+    def test_unhandled_error_not_caught(self):
+        demo = app.Chalice('app-name')
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            try:
+                return get_response(event)
+            except ChaliceUnhandledError:
+                return Response(body={'foo': 'bar'}, status_code=200)
+
+        @demo.route('/error')
+        def index():
+            raise ChaliceUnhandledError("unhandled")
+
+        with Client(demo) as c:
+            response = c.http.get('/error')
+            assert response.status_code == 200
+            assert response.json_body == {'foo': 'bar'}
+
+    def test_middleware_errors_return_500_still_caught(self):
+        demo = app.Chalice('app-name')
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            return get_response(event)
+
+        @demo.route('/error')
+        def index():
+            raise ChaliceUnhandledError("unhandled")
+
+        with Client(demo) as c:
+            # An uncaught ChaliceUnhandledError should still result
+            # in the standard error handler processing for REST APIs
+            # if the exception propagates out of the middleware stack.
+            response = c.http.get('/error')
+            assert response.status_code == 500
+            assert response.json_body == {
+                'Code': 'InternalServerError',
+                'Message': 'An internal server error occurred.'
+            }
+
+    def test_middleware_errors_result_in_500(self):
+        demo = app.Chalice('app-name')
+
+        @demo.middleware('all')
+        def mymiddleware(event, get_response):
+            raise Exception("Error from middleware.")
+
+        @demo.route('/')
+        def index():
+            return {}
+
+        with Client(demo) as c:
+            response = c.http.get('/')
+            assert response.status_code == 500
+            assert response.json_body['Code'] == 'InternalServerError'
 
     def test_can_filter_middleware_registration(self, sample_middleware_app):
         with Client(sample_middleware_app) as c:

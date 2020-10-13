@@ -67,6 +67,83 @@ Below is the simplest middleware in Chalice that does nothing:
        return get_response(event)
 
 
+Error Handling
+--------------
+
+With the exception of middleware for REST APIs, all middleware follow the same
+error handling strategy.  Any exceptions from a Lambda handler are propagated
+back to each middleware.  You can then catch these exceptions in your
+middleware and process them as needed.  For example:
+
+.. code-block:: python
+
+   @app.middleware('all')
+   def handle_errors(event, get_response):
+       try:
+           return get_response(event)
+       except MyCustomError as e:
+           # We don't want MyCustomError to propagate, instead
+           # we'll convert this to an error response dictionary.
+           return {"Error": e.__class__.__name__,
+                   "Message": str(e)}
+
+   @app.lambda_function()
+   def noop_middleware(event, context):
+       raise MyCustomError("Raising an error.")
+
+
+If an exception is raised in a Lambda handler and no middleware catches the
+exception, the exception will be returned back to the client that invoked
+the Lambda function.
+
+Rest APIs
+~~~~~~~~~
+
+Rest APIs have special error processing for backwards compatibility purposes.
+If a chalice view function (decorated via ``@app.route``) raises an exception
+Chalice will automatically catch this exception and convert to a ``Response``
+object with an appropriately set status code (see :ref:`view-error-handling`).
+As a result, middleware for Rest APIs won't see exceptions propagate, they will
+instead see a `Response` object as a result of calling ``get_response(event)``.
+
+In the case where you want to allow an exception to propagate out of a view
+function, you can raise a ``chalice.ChaliceUnhandledError`` exception.
+For example:
+
+.. code-block:: python
+
+   from chalice import ChaliceUnhandledError
+
+   @app.middleware('all')
+   def handle_errors(event, get_response):
+       try:
+           return get_response(event)
+       except ChaliceUnhandledError as e:
+           return Response(status_code=500, body=str(e),
+                           headers={'Content-Type': 'text/plain'})
+
+   @app.route('/')
+   def index():
+       # The handle_errors middleware will never see this exception.
+       # This will automatically be converted to a ``Response`` object
+       # with a status code of ``500``.
+       raise MyCustomError("Raising an error.")
+
+   @app.route('/error')
+   def unhandled_error():
+       # The handle_errors middleware will see this exception because it's
+       # of type ChaliceUnhandledError.
+       raise ChaliceUnhandledError("Raising an error.")
+
+
+This is useful if you want to have middleware that applies to all event types
+that has consistent error handling behavior.  If a
+``chalice.ChaliceUnhandledError`` error is raised and no middleware catches
+and processes this error, then the standard error processing behavior will
+apply (a 500 response is returned back to the user, and if debug mode
+is enabled, the traceback is sent as the response body).
+
+
 Registering Middleware
 ----------------------
 
@@ -250,7 +327,6 @@ to all Lambda functions in our application.
         logger.info("In index() function, this will have a 'path' key.")
         return {'hello': 'world'}
 
-
     @app.route('/foo/bar')
     def foobar():
         logger.info("In foobar() function")
@@ -262,3 +338,8 @@ to all Lambda functions in our application.
         logger.info("In myfunction().")
         tracer.put_annotation(key="Status", value="SUCCESS")
         return {}
+
+
+For a more detailed walkthrough of configuring Chalice with Lambda Powertools,
+see
+`Following serverless best practices with AWS Chalice and Lambda Powertools <https://aws.amazon.com/blogs/developer/following-serverless-best-practices-with-aws-chalice-and-lambda-powertools/>`__.
