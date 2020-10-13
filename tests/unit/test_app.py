@@ -922,7 +922,7 @@ def test_can_base64_encode_binary_multiple_media_types(
     def index_view():
         return app.Response(
             status_code=200,
-            body=b'\u2713',
+            body=u'\u2713'.encode('utf-8'),
             headers={'Content-Type': content_type})
 
     event = create_event('/index', 'GET', {})
@@ -930,7 +930,7 @@ def test_can_base64_encode_binary_multiple_media_types(
     response = demo(event, context=None)
     assert response['statusCode'] == 200
     assert response['isBase64Encoded'] is True
-    assert response['body'] == 'XHUyNzEz'
+    assert response['body'] == '4pyT'
     assert response['headers']['Content-Type'] == content_type
 
 
@@ -1148,7 +1148,7 @@ def test_cannot_receive_base64_string_with_binary_response(
     def bincat():
         return app.Response(
             status_code=200,
-            body=b'\u2713',
+            body=u'\u2713'.encode('utf-8'),
             headers={'Content-Type': content_type})
 
     event = create_event_with_body('', '/bincat', 'GET', content_type)
