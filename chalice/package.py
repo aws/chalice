@@ -791,7 +791,7 @@ class TerraformGenerator(TemplateGenerator):
         template = {
             'resource': {},
             'terraform': {
-                'required_version': '> 0.11.0, < 0.13.0'
+                'required_version': '> 0.11.0, < 0.14.0'
             },
             'provider': {
                 'template': {'version': '~> 2'},
@@ -895,7 +895,8 @@ class TerraformGenerator(TemplateGenerator):
             'action': 'lambda:InvokeFunction',
             'function_name': resource.lambda_function.function_name,
             'principal': self._options.service_principal('s3'),
-            'source_arn': 'arn:*:s3:::%s' % resource.bucket
+            'source_arn': ('arn:${data.aws_partition.chalice.partition}:'
+                           's3:::%s' % resource.bucket)
         }
 
     def _generate_sqseventsource(self, resource, template):

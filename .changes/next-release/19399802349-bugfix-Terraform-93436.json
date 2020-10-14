@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Terraform",
+  "description": "Fix issue with wildcard partition names in s3 event handlers (#1508)"
+}
