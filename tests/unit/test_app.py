@@ -1460,14 +1460,11 @@ def test_can_mix_auth_routes_and_strings(auth_request):
     }
 
 
-def test_special_cased_root_resource(auth_request):
-    # Not sure why, but API gateway uses `//` for the root
-    # resource.  I've confirmed it doesn't do this for non-root
-    # URLs.  We don't to let that leak out to the APIs we expose.
+def test_root_resource(auth_request):
     auth_request.method_arn = (
-        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET//")
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/")
     expected = [
-        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET//"
+        "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/"
     ]
     response = app.AuthResponse(
         [app.AuthRoute('/', ['GET'])],
