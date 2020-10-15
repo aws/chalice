@@ -642,7 +642,8 @@ class TestTerraformTemplate(TemplateTestBase):
                    'action': 'lambda:InvokeFunction',
                    'function_name': 'sample_app-dev-handler',
                    'principal': 's3.amazonaws.com',
-                   'source_arn': 'arn:*:s3:::foo',
+                   'source_arn': (
+                       'arn:${data.aws_partition.chalice.partition}:s3:::foo'),
                    'statement_id': 'handler-s3event'
                }
 
