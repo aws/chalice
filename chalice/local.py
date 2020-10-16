@@ -57,7 +57,8 @@ class Clock(object):
 
 def create_local_server(app_obj, config, host, port):
     # type: (Chalice, Config, str, int) -> LocalDevServer
-    app_obj.__class__ = LocalChalice
+    CustomLocalChalice.__bases__ = (LocalChalice, app_obj.__class__)
+    app_obj.__class__ = CustomLocalChalice
     return LocalDevServer(app_obj, config, host, port)
 
 
@@ -750,3 +751,7 @@ class LocalChalice(Chalice):
     def current_request(self, value):  # type: ignore
         # type: (Request) -> None
         self._THREAD_LOCAL.current_request = value
+
+
+class CustomLocalChalice(LocalChalice):
+    pass
