@@ -60,6 +60,10 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
         pass
 
 
+class CustomSampleChalice(app.Chalice):
+    pass
+
+
 @pytest.fixture
 def arn_builder():
     return LocalARNBuilder()
@@ -71,6 +75,14 @@ def lambda_context_args():
     # care about for the timing tests, this gives reasonable defaults for
     # those arguments.
     return ['lambda_name', 256]
+
+
+@fixture
+def custom_sample_app():
+    demo = CustomSampleChalice(app_name='custom-demo-app')
+    demo.debug = True
+
+    return demo
 
 
 @fixture
@@ -721,6 +733,13 @@ def test_can_provide_host_to_local_server(sample_app):
     dev_server = local.create_local_server(sample_app, None, host='0.0.0.0',
                                            port=23456)
     assert dev_server.host == '0.0.0.0'
+
+
+def test_wraps_custom_sample_app_with_local_chalice(custom_sample_app):
+    dev_server = local.create_local_server(custom_sample_app, None,
+                                           host='0.0.0.0', port=23456)
+    assert isinstance(dev_server.app_object, local.LocalChalice)
+    assert isinstance(dev_server.app_object, custom_sample_app.__class__)
 
 
 class TestLambdaContext(object):
