@@ -181,6 +181,73 @@ handler.</li>
     <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </pre></div>
 </div>
+<div class="section" id="error-handling">
+<h3>Error Handling<a class="headerlink" href="#error-handling" title="Permalink to this headline">¶</a></h3>
+<p>With the exception of middleware for REST APIs, all middleware follow the same
+error handling strategy.  Any exceptions from a Lambda handler are propagated
+back to each middleware.  You can then catch these exceptions in your
+middleware and process them as needed.  For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_errors</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">MyCustomError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># We don&#39;t want MyCustomError to propagate, instead</span>
+        <span class="c1"># we&#39;ll convert this to an error response dictionary.</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Error&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                <span class="s2">&quot;Message&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
+
+<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">noop_middleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">MyCustomError</span><span class="p">(</span><span class="s2">&quot;Raising an error.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If an exception is raised in a Lambda handler and no middleware catches the
+exception, the exception will be returned back to the client that invoked
+the Lambda function.</p>
+<div class="section" id="rest-apis">
+<h4>Rest APIs<a class="headerlink" href="#rest-apis" title="Permalink to this headline">¶</a></h4>
+<p>Rest APIs have special error processing for backwards compatibility purposes.
+If a chalice view function (decorated via <code class="docutils literal notranslate"><span class="pre">&#64;app.route</span></code>) raises an exception
+Chalice will automatically catch this exception and convert to a <code class="docutils literal notranslate"><span class="pre">Response</span></code>
+object with an appropriately set status code (see <a class="reference internal" href="views.html#view-error-handling"><span class="std std-ref">Error Handling</span></a>).
+As a result, middleware for Rest APIs won’t see exceptions propagate, they will
+instead see a <cite>Response</cite> object as a result of calling <code class="docutils literal notranslate"><span class="pre">get_response(event)</span></code>.</p>
+<p>In the case where you want to allow an exception to propagate out of a view
+function, you can raise a <code class="docutils literal notranslate"><span class="pre">chalice.ChaliceUnhandledError</span></code> exception.
+For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">ChaliceUnhandledError</span>
+
+<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_errors</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ChaliceUnhandledError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">})</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="c1"># The handle_errors middleware will never see this exception.</span>
+    <span class="c1"># This will automatically be converted to a ``Response`` object</span>
+    <span class="c1"># with a status code of ``500``.</span>
+    <span class="k">raise</span> <span class="n">MyCustomError</span><span class="p">(</span><span class="s2">&quot;Raising an error.&quot;</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/error&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">unhandled_error</span><span class="p">():</span>
+    <span class="c1"># The handle_errors middleware will see this exception because it&#39;s</span>
+    <span class="c1"># of type ChaliceUnhandledError.</span>
+    <span class="k">raise</span> <span class="n">ChaliceUnhandledError</span><span class="p">(</span><span class="s2">&quot;Raising an error.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This is useful if you want to have middleware that applies to all event types
+that has consistent error handling behavior.  If a
+<code class="docutils literal notranslate"><span class="pre">chalice.ChaliceUnhandledError</span></code> error is raised and no middleware catches
+and processes this error, then the standard error processing behavior will
+apply (a 500 response is returned back to the user, and if debug mode
+is enabled, the traceback is sent as the response body).</p>
+</div>
+</div>
 <div class="section" id="registering-middleware">
 <h3>Registering Middleware<a class="headerlink" href="#registering-middleware" title="Permalink to this headline">¶</a></h3>
 <p>In order to register middleware, you use the <code class="docutils literal notranslate"><span class="pre">&#64;app.middleware()</span></code> decorator.
@@ -341,7 +408,6 @@ to all Lambda functions in our application.</p>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In index() function, this will have a &#39;path&#39; key.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
-
 <span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">foobar</span><span class="p">():</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In foobar() function&quot;</span><span class="p">)</span>
@@ -355,6 +421,9 @@ to all Lambda functions in our application.</p>
     <span class="k">return</span> <span class="p">{}</span>
 </pre></div>
 </div>
+<p>For a more detailed walkthrough of configuring Chalice with Lambda Powertools,
+see
+<a class="reference external" href="https://aws.amazon.com/blogs/developer/following-serverless-best-practices-with-aws-chalice-and-lambda-powertools/">Following serverless best practices with AWS Chalice and Lambda Powertools</a>.</p>
 </div>
 </div>
 </div>
@@ -382,6 +451,10 @@ to all Lambda functions in our application.</p>
                             <ul>
 <li><a class="reference internal" href="#">Middleware</a><ul>
 <li><a class="reference internal" href="#writing-middleware">Writing Middleware</a><ul>
+<li><a class="reference internal" href="#error-handling">Error Handling</a><ul>
+<li><a class="reference internal" href="#rest-apis">Rest APIs</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#registering-middleware">Registering Middleware</a></li>
 </ul>
 </li>
