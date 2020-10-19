@@ -48,6 +48,7 @@ def validate_configuration(config):
     validate_endpoint_type(config)
     validate_resource_policy(config)
     validate_sqs_configuration(config.chalice_app)
+    validate_environment_variables_type(config)
 
 
 def validate_resource_policy(config):
@@ -255,3 +256,15 @@ def _is_valid_queue_name(queue_name):
     # want to detect the case where a user puts the queue URL/ARN instead of
     # the name.
     return True
+
+
+def validate_environment_variables_type(config):
+    # type: (Config) -> None
+    for env_key, env_value in config.environment_variables.items():
+        if not isinstance(env_key, str):
+            raise ValueError("environment variable must be of type str."
+                             "Invalid key: %s" % env_key)
+        if not isinstance(env_value, str):
+            raise ValueError("environment variable must be of type str."
+                             "Invalid value: %s" % env_value)
+
