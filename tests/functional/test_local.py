@@ -6,7 +6,6 @@ from threading import Thread
 from threading import Event
 from threading import Lock
 import json
-import signal
 import subprocess
 from contextlib import contextmanager
 
@@ -170,18 +169,6 @@ def sample_app():
     return demo
 
 
-def _wait_for_server_ready(process):
-    if process.poll() is not None:
-        raise AssertionError(
-            'Local server immediately exited with rc: %s' % process.poll()
-        )
-
-
-def _assert_env_var_loaded(port_number, http_session):
-    response = http_session.json_get('http://localhost:%s/' % port_number)
-    assert response == {'hello': 'bar'}
-
-
 def test_has_thread_safe_current_request(config, sample_app,
                                          local_server_factory):
     local_server, port = local_server_factory(sample_app, config)
@@ -299,8 +286,19 @@ def test_can_import_env_vars(unused_tcp_port, http_session):
         try:
             _assert_env_var_loaded(unused_tcp_port, http_session)
         finally:
-            p.send_signal(signal.SIGINT)
-            p.wait()
+            p.terminate()
+
+
+def _wait_for_server_ready(process):
+    if process.poll() is not None:
+        raise AssertionError(
+            'Local server immediately exited with rc: %s' % process.poll()
+        )
+
+
+def _assert_env_var_loaded(port_number, http_session):
+    response = http_session.json_get('http://localhost:%s/' % port_number)
+    assert response == {'hello': 'bar'}
 
 
 def test_can_reload_server(unused_tcp_port, basic_app, http_session):
@@ -319,5 +317,4 @@ def test_can_reload_server(unused_tcp_port, basic_app, http_session):
             time.sleep(2)
             assert http_session.json_get(url) == {'version': 'reloaded'}
         finally:
-            p.send_signal(signal.SIGINT)
-            p.wait()
+            p.terminate()
