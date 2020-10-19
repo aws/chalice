@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Middleware",
-  "description": "Add support for HTTP middleware catching exceptions (#1541)"
-}

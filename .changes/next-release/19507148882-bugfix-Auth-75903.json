@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Auth",
-  "description": "Fix special case processing for root URL auth (#1271)"
-}

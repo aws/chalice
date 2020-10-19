@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.21.2
+======
+
+* bugfix:Terraform:Fix issue with wildcard partition names in s3 event handlers (#1508)
+* bugfix:Auth:Fix special case processing for root URL auth (#1271)
+* enhancement:Middleware:Add support for HTTP middleware catching exceptions (#1541)
+
+
 1.21.1
 ======
 
