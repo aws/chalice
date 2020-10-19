@@ -331,3 +331,24 @@ def test_validate_sqs_queue_name(sample_app):
     config = Config.create(chalice_app=sample_app)
     with pytest.raises(ValueError):
         validate_configuration(config)
+
+
+def test_validate_environment_variables_value_type_not_str(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           environment_variables={"ENV_KEY": 1})
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
+def test_validate_environment_variables_key_type_not_str(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           environment_variables={1: "ENV_VALUE"})
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
+def test_validate_environment_variables_key_value_type_not_str(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           environment_variables={1: 2})
+    with pytest.raises(ValueError):
+        validate_configuration(config)

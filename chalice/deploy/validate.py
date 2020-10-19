@@ -267,4 +267,3 @@ def validate_environment_variables_type(config):
         if not isinstance(env_value, str):
             raise ValueError("environment variable must be of type str."
                              "Invalid value: %s" % env_value)
-
