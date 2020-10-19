@@ -111,6 +111,14 @@ class ChaliceViewError(ChaliceError):
             self.__class__.__name__ + ': %s' % msg)
 
 
+class ChaliceUnhandledError(ChaliceError):
+    """This error is not caught from a Chalice view function.
+
+    This exception is allowed to propagate from a view function so
+    that middleware handlers can process the exception.
+    """
+
+
 class BadRequestError(ChaliceViewError):
     STATUS_CODE = 400
 
@@ -1568,6 +1576,12 @@ class RestAPIEventHandler(BaseLambdaHandler):
             middleware_handlers = []
         self._middleware_handlers = middleware_handlers
 
+    def _global_error_handler(self, event, get_response):
+        try:
+            return get_response(event)
+        except Exception:
+            return self._unhandled_exception_to_response()
+
     def create_request_object(self, event, context):
         # For legacy reasons, there's some initial validation that takes
         # place before we convert the input event to a python object.
@@ -1584,7 +1598,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
             return self._main_rest_api_handler(event, context)
 
         final_handler = self._build_middleware_handlers(
-            self._middleware_handlers,
+            [self._global_error_handler] + list(self._middleware_handlers),
             original_handler=wrapped_event,
         )
         response = final_handler(self.current_request)
@@ -1597,8 +1611,6 @@ class RestAPIEventHandler(BaseLambdaHandler):
                                   message='Unknown request.',
                                   http_status_code=500)
         http_method = event['requestContext']['httpMethod']
-        if resource_path not in self.routes:
-            raise ChaliceError("No view function for: %s" % resource_path)
         if http_method not in self.routes[resource_path]:
             return error_response(
                 error_code='MethodNotAllowedError',
@@ -1672,6 +1684,10 @@ class RestAPIEventHandler(BaseLambdaHandler):
             if not isinstance(response, Response):
                 response = Response(body=response)
             self._validate_response(response)
+        except ChaliceUnhandledError:
+            # Reraise this exception so that middleware has a chance
+            # to handle the exception.
+            raise
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
@@ -1679,20 +1695,24 @@ class RestAPIEventHandler(BaseLambdaHandler):
                                       'Message': str(e)},
                                 status_code=e.STATUS_CODE)
         except Exception:
-            headers = {}
-            self.log.error("Caught exception for %s", view_function,
-                           exc_info=True)
-            if self.debug:
-                # If the user has turned on debug mode,
-                # we'll let the original exception propagate so
-                # they get more information about what went wrong.
-                stack_trace = ''.join(traceback.format_exc())
-                body = stack_trace
-                headers['Content-Type'] = 'text/plain'
-            else:
-                body = {'Code': 'InternalServerError',
-                        'Message': 'An internal server error occurred.'}
-            response = Response(body=body, headers=headers, status_code=500)
+            response = self._unhandled_exception_to_response()
+        return response
+
+    def _unhandled_exception_to_response(self):
+        headers = {}
+        path = getattr(self.current_request, 'path', 'unknown')
+        self.log.error("Caught exception for path %s", path, exc_info=True)
+        if self.debug:
+            # If the user has turned on debug mode,
+            # we'll let the original exception propagate so
+            # they get more information about what went wrong.
+            stack_trace = ''.join(traceback.format_exc())
+            body = stack_trace
+            headers['Content-Type'] = 'text/plain'
+        else:
+            body = {'Code': 'InternalServerError',
+                    'Message': 'An internal server error occurred.'}
+        response = Response(body=body, headers=headers, status_code=500)
         return response
 
     def _validate_response(self, response):

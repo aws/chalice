@@ -5,7 +5,7 @@ from chalice.app import (
     CustomAuthorizer, CognitoUserPoolAuthorizer, IAMAuthorizer,
     UnprocessableEntityError, WebsocketDisconnectedError,
     AuthResponse, AuthRoute, Cron, Rate, __version__ as chalice_version,
-    ConvertToMiddleware
+    ConvertToMiddleware, ChaliceUnhandledError
 )
 # We're reassigning version here to keep mypy happy.
 __version__ = chalice_version

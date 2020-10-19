@@ -74,6 +74,8 @@ of the view function.  There are several options available:
   The body of that response depends on whether debug mode is enabled.
 
 
+.. _view-error-handling:
+
 Error Handling
 --------------
 
