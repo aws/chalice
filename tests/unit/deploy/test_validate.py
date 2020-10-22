@@ -340,15 +340,22 @@ def test_validate_environment_variables_value_type_not_str(sample_app):
         validate_configuration(config)
 
 
-def test_validate_environment_variables_key_type_not_str(sample_app):
-    config = Config.create(chalice_app=sample_app,
-                           environment_variables={1: "ENV_VALUE"})
-    with pytest.raises(ValueError):
-        validate_configuration(config)
+def test_validate_env_var_is_string_for_lambda_functions(sample_app):
+    @sample_app.lambda_function()
+    def foo(event, context):
+        pass
 
-
-def test_validate_environment_variables_key_value_type_not_str(sample_app):
-    config = Config.create(chalice_app=sample_app,
-                           environment_variables={1: 2})
+    config = Config(
+        chalice_stage='dev',
+        config_from_disk={
+            'stages': {
+                'dev': {
+                    'lambda_functions': {
+                        'foo': {'environment_variables': {'BAR': 2}}}
+                }
+            }
+        },
+        user_provided_params={'chalice_app': sample_app}
+    )
     with pytest.raises(ValueError):
         validate_configuration(config)

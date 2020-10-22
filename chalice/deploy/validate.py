@@ -1,7 +1,7 @@
 import sys
 import warnings
 
-from typing import Dict, List, Set, Iterator, Optional  # noqa
+from typing import Dict, List, Set, Iterator, Optional, Any  # noqa
 
 from chalice import app  # noqa
 from chalice.config import Config  # noqa
@@ -260,10 +260,16 @@ def _is_valid_queue_name(queue_name):
 
 def validate_environment_variables_type(config):
     # type: (Config) -> None
-    for env_key, env_value in config.environment_variables.items():
-        if not isinstance(env_key, str):
-            raise ValueError("environment variable must be of type str."
-                             "Invalid key: %s" % env_key)
-        if not isinstance(env_value, str):
-            raise ValueError("environment variable must be of type str."
-                             "Invalid value: %s" % env_value)
+    _validate_environment_variables(config.environment_variables)
+    for name in _get_all_function_names(config.chalice_app):
+        _validate_environment_variables(
+            config.scope(config.chalice_stage, name).environment_variables)
+
+
+def _validate_environment_variables(environment_variables):
+    # type: (Dict[str, Any]) -> None
+    for key, value in environment_variables.items():
+        if not isinstance(value, str):
+            raise ValueError("Environment variable values must be strings, "
+                             "got 'type' %s for key '%s'" % (
+                                 type(value).__name__, key))
