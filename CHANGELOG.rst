@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.21.3
+======
+
+* enhancement:Test:Add test client methods for generating sample kinesis events
+* enhancement:Config:Validate env var values are strings (#1543)
+
+
 1.21.2
 ======
 

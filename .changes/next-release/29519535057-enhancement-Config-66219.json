@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Config",
-  "description": "Validate env var values are strings (#1543)"
-}
