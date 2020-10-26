@@ -2220,20 +2220,26 @@ instantiated directly, and instead should be accessed via the
 
 <dl class="method">
 <dt id="TestEventsClient.generate_s3_event">
-<code class="descname">generate_s3_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_s3_event" title="Permalink to this definition">¶</a></dt>
+<code class="descname">generate_s3_event</code><span class="sig-paren">(</span><em>bucket</em>, <em>key</em>, <em>event_name='ObjectCreated:Put'</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_s3_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a sample S3 event.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="TestEventsClient.generate_sqs_event">
-<code class="descname">generate_sqs_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_sqs_event" title="Permalink to this definition">¶</a></dt>
+<code class="descname">generate_sqs_event</code><span class="sig-paren">(</span><em>message_bodies</em>, <em>queue_name='queue-name'</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_sqs_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a sample SQS event.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="TestEventsClient.generate_cw_event">
-<code class="descname">generate_cw_event</code><span class="sig-paren">(</span><em>message</em>, <em>subject=''</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_cw_event" title="Permalink to this definition">¶</a></dt>
+<code class="descname">generate_cw_event</code><span class="sig-paren">(</span><em>source</em>, <em>detail_type</em>, <em>detail</em>, <em>resources</em>, <em>region='us-west-2'</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_cw_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a sample CloudWatch event.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="TestEventsClient.generate_kinesis_event">
+<code class="descname">generate_kinesis_event</code><span class="sig-paren">(</span><em>message_bodies</em>, <em>stream_name='stream-name'</em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient.generate_kinesis_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a Kinesis event.</p>
 </dd></dl>
 
 </dd></dl>

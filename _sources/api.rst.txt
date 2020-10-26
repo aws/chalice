@@ -1767,17 +1767,21 @@ Testing
 
       Generates a sample SNS event.
 
-   .. method:: generate_s3_event(message, subject='')
+   .. method:: generate_s3_event(bucket, key, event_name='ObjectCreated:Put')
 
       Generates a sample S3 event.
 
-   .. method:: generate_sqs_event(message, subject='')
+   .. method:: generate_sqs_event(message_bodies, queue_name='queue-name')
 
       Generates a sample SQS event.
 
-   .. method:: generate_cw_event(message, subject='')
+   .. method:: generate_cw_event(source, detail_type, detail, resources, region='us-west-2')
 
       Generates a sample CloudWatch event.
+
+   .. method:: generate_kinesis_event(message_bodies, stream_name='stream-name')
+
+      Generates a Kinesis event.
 
 
 .. class:: HTTPResponse()
