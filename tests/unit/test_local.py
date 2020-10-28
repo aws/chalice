@@ -61,7 +61,8 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
 
 
 class CustomSampleChalice(app.Chalice):
-    pass
+    def custom_method(self):
+        return "foo"
 
 
 @pytest.fixture
@@ -740,6 +741,7 @@ def test_wraps_custom_sample_app_with_local_chalice(custom_sample_app):
                                            host='0.0.0.0', port=23456)
     assert isinstance(dev_server.app_object, local.LocalChalice)
     assert isinstance(dev_server.app_object, custom_sample_app.__class__)
+    assert dev_server.app_object.custom_method() == 'foo'
 
 
 class TestLambdaContext(object):
