@@ -28,16 +28,15 @@ from chalice.logs import display_logs, LogRetrieveOptions
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.deploy.validate import ExperimentalFeatureError
-from chalice.utils import getting_started_prompt, UI, serialize_to_json
-from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
+from chalice.utils import UI, serialize_to_json
 from chalice.constants import DEFAULT_STAGE_NAME
-from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanEncoder
 from chalice.deploy.appgraph import ApplicationGraphBuilder, GraphPrettyPrint
+from chalice.cli import newproj
 
 
 def _configure_logging(level, format_string=None):
@@ -51,32 +50,6 @@ def _configure_logging(level, format_string=None):
     formatter = logging.Formatter(format_string)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-
-def create_new_project_skeleton(project_name, profile=None):
-    # type: (str, Optional[str]) -> None
-    chalice_dir = os.path.join(project_name, '.chalice')
-    os.makedirs(chalice_dir)
-    config = os.path.join(project_name, '.chalice', 'config.json')
-    cfg = {
-        'version': CONFIG_VERSION,
-        'app_name': project_name,
-        'stages': {
-            DEFAULT_STAGE_NAME: {
-                'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
-            }
-        }
-    }
-    if profile is not None:
-        cfg['profile'] = profile
-    with open(config, 'w') as f:
-        f.write(serialize_to_json(cfg))
-    with open(os.path.join(project_name, 'requirements.txt'), 'w'):
-        pass
-    with open(os.path.join(project_name, 'app.py'), 'w') as f:
-        f.write(TEMPLATE_APP % project_name)
-    with open(os.path.join(project_name, '.gitignore'), 'w') as f:
-        f.write(GITIGNORE)
 
 
 def get_system_info():
@@ -434,15 +407,23 @@ def gen_policy(ctx, filename):
 @cli.command('new-project')
 @click.argument('project_name', required=False)
 @click.option('--profile', required=False)
-def new_project(project_name, profile):
-    # type: (str, str) -> None
+@click.option('-t', '--project-type', required=False, default='legacy')
+@click.pass_context
+def new_project(ctx, project_name, profile, project_type):
+    # type: (click.Context, str, str, str) -> None
+    ctx.obj.get('james')
     if project_name is None:
-        project_name = getting_started_prompt(click)
+        prompter = ctx.obj.get('prompter', newproj.getting_started_prompt)
+        answers = prompter()
+        project_name = answers['project_name']
+        project_type = answers['project_type']
     if os.path.isdir(project_name):
         click.echo("Directory already exists: %s" % project_name, err=True)
         raise click.Abort()
-    create_new_project_skeleton(project_name, profile)
+    newproj.create_new_project_skeleton(
+        project_name, project_type=project_type)
     validate_python_version(Config.create())
+    click.echo("Your project has been generated in ./%s" % project_name)
 
 
 @cli.command('url')

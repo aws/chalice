@@ -12,7 +12,7 @@ import pytest
 
 from chalice import cli
 from chalice.cli import factory
-from chalice.cli import create_new_project_skeleton
+from chalice.cli.newproj import create_new_project_skeleton
 from chalice.deploy.packager import NoSuchPackageError
 
 
@@ -35,7 +35,7 @@ def runner():
 def app_skeleton(tmpdir, runner):
     project_name = 'deployment-integ-test'
     with cd(str(tmpdir)):
-        create_new_project_skeleton(project_name, None)
+        create_new_project_skeleton(project_name)
     return str(tmpdir.join(project_name))
 
 
