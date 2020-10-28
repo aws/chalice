@@ -890,6 +890,37 @@ class TestSAMTemplate(TemplateTestBase):
             {'Ref': 'ManagedLayer'}
         ]
 
+    def test_adds_single_layer_for_multiple_lambdas(self, sample_app):
+        config = Config.create(chalice_app=sample_app,
+                               app_name='testapp',
+                               project_dir='.',
+                               automatic_layer=True,
+                               layers=['arn:aws:mylayer'],
+                               api_gateway_stage='api')
+
+        @sample_app.lambda_function()
+        def first(event, context):
+            pass
+
+        @sample_app.lambda_function()
+        def second(event, context):
+            pass
+
+        template = self.generate_template(config)
+        managed_layer = template['Resources']['ManagedLayer']
+        assert managed_layer == {
+            'Type': 'AWS::Serverless::LayerVersion',
+            'Properties': {
+                'CompatibleRuntimes': [config.lambda_python_version],
+                'LayerName': 'testapp-dev-managed-layer',
+                'ContentUri': models.Placeholder.BUILD_STAGE,
+            }
+        }
+        assert template['Resources']['First']['Properties']['Layers'] == [
+            {'Ref': 'ManagedLayer'},
+            'arn:aws:mylayer',
+        ]
+
     def test_supports_precreated_role(self):
         builder = DependencyBuilder()
         resources = builder.build_dependencies(

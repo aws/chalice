@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Layers",
+  "description": "Ensure single reference to managed layer (#1563)"
+}
