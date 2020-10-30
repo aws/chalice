@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Local",
+  "description": "Allow custom Chalice class in local mode (#1502)"
+}
