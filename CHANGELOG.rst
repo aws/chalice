@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.21.4
+======
+
+* enhancement:Local:Allow custom Chalice class in local mode (#1502)
+* bugfix:Layers:Ensure single reference to managed layer (#1563)
+
+
 1.21.3
 ======
 
