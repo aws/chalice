@@ -272,7 +272,7 @@ class SAMTemplateGenerator(TemplateGenerator):
             lambdafunction_definition['Properties'].update(
                 reserved_concurrency_config)
 
-        layers = resource.layers or []  # type: List[Any]
+        layers = list(resource.layers) or []  # type: List[Any]
         if self._chalice_layer:
             layers.insert(0, {'Ref': self._chalice_layer})
 
