@@ -34,6 +34,12 @@ setup(
     install_requires=install_requires,
     extras_require={
         'event-file-poller': ['watchdog==0.9.0'],
+        'cdk': [
+            'aws_cdk.aws_iam>=1.85.0,<2.0',
+            'aws_cdk.aws-s3-assets>=1.85.0,<2.0',
+            'aws_cdk.cloudformation-include>=1.85.0,<2.0',
+            'aws_cdk.core>=1.85.0,<2.0',
+        ]
     },
     license="Apache License 2.0",
     package_data={'chalice': ['*.json', 'py.typed']},

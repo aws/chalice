@@ -1,0 +1,2 @@
+aws_cdk.core>=1.85.0,<2.0
+aws_cdk.aws_dynamodb>=1.85.0,<2.0

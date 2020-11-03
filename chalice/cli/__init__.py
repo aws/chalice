@@ -411,7 +411,6 @@ def gen_policy(ctx, filename):
 @click.pass_context
 def new_project(ctx, project_name, profile, project_type):
     # type: (click.Context, str, str, str) -> None
-    ctx.obj.get('james')
     if project_name is None:
         prompter = ctx.obj.get('prompter', newproj.getting_started_prompt)
         answers = prompter()

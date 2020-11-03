@@ -1,0 +1,2 @@
+-r infrastructure/requirements.txt
+-r runtime/requirements.txt
