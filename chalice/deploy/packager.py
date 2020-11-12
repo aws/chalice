@@ -437,7 +437,9 @@ class DependencyBuilder(object):
     packager.
     """
     _MANYLINUX_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64',
-                                      'manylinux1_x86_64'}
+                                      'manylinux1_x86_64',
+                                      'manylinux2010_x86_64',
+                                      'manylinux2014_x86_64'}
     _COMPATIBLE_PACKAGE_WHITELIST = {
         'sqlalchemy',
         'pyyaml',
@@ -1005,7 +1007,7 @@ class PipRunner(object):
         # version and is checked later.
         for package in packages:
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
-                         'manylinux1_x86_64', '--implementation', 'cp',
+                         'manylinux2014_x86_64', '--implementation', 'cp',
                          '--abi', abi, '--dest', directory, package]
             self._execute('download', arguments)
 
