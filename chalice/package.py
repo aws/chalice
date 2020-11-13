@@ -306,11 +306,17 @@ class SAMTemplateGenerator(TemplateGenerator):
         resources['RestAPI'] = {
             'Type': 'AWS::Serverless::Api',
             'Properties': {
-                'EndpointConfiguration': resource.endpoint_type,
+                'EndpointConfiguration': resource.endpoint.endpoint_type,
                 'StageName': resource.api_gateway_stage,
                 'DefinitionBody': resource.swagger_doc,
             }
         }
+        if resource.endpoint.endpoint_vpce:
+            properties = resources['RestAPI']['Properties']['EndpointConfiguration']
+            properties['VPCEndpointIds'] = [
+                {'Ref': resource.endpoint.endpoint_vpce}
+            ]
+
         if resource.minimum_compression:
             properties = resources['RestAPI']['Properties']
             properties['MinimumCompressionSize'] = \

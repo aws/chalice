@@ -3,7 +3,7 @@ from chalice.deploy.swagger import (
 from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
-from chalice.deploy.models import RestAPI, IAMPolicy
+from chalice.deploy.models import RestAPI, IAMPolicy, Endpoint
 import mock
 from pytest import fixture
 
@@ -782,7 +782,7 @@ def test_can_custom_resource_policy(sample_app, swagger_gen):
         lambda_function=None,
         minimum_compression="",
         api_gateway_stage="xyz",
-        endpoint_type="PRIVATE",
+        endpoint=Endpoint(endpoint_type='PRIVATE', endpoint_vpce='vpce-abc123'),
         policy=IAMPolicy({
             'Statement': [{
                 "Effect": "Allow",
@@ -824,7 +824,7 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
         lambda_function=None,
         minimum_compression="",
         api_gateway_stage="xyz",
-        endpoint_type="PRIVATE",
+        endpoint=Endpoint(endpoint_type='PRIVATE', endpoint_vpce='vpce-abc123'),
         policy=IAMPolicy({
             'Statement': [{
                 "Effect": "Allow",

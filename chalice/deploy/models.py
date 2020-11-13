@@ -273,7 +273,7 @@ class RestAPI(ManagedModel):
     swagger_doc = attrib()                       # type: DV[Dict[str, Any]]
     minimum_compression = attrib()               # type: str
     api_gateway_stage = attrib()                 # type: str
-    endpoint_type = attrib()                     # type: str
+    endpoint = attrib()                          # type: Endpoint
     lambda_function = attrib()                   # type: LambdaFunction
     xray = attrib(default=False)                 # type: bool
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
@@ -288,6 +288,10 @@ class RestAPI(ManagedModel):
             resources.append(self.domain_name)
         return cast(List[Model], resources)
 
+@attrs
+class Endpoint(Model):
+    endpoint_type = attrib()                     # type: str
+    endpoint_vpce = attrib()                     # type: str
 
 @attrs
 class WebsocketAPI(ManagedModel):

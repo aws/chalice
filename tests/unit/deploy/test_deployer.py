@@ -1,52 +1,47 @@
-import os
-
-import socket
 import botocore.session
-
-import pytest
 import mock
+import os
+import pytest
+import socket
+import unittest
+from attr import attrs, attrib
 from botocore.stub import Stubber
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from pytest import fixture
 
 from chalice.app import Chalice
-from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.awsclient import DeploymentPackageTooLargeError
+from chalice.awsclient import LambdaClientError, AWSClientError
 from chalice.awsclient import LambdaErrorContext
-from chalice.config import Config
-from chalice.policy import AppPolicyGenerator
-from chalice.deploy.deployer import ChaliceDeploymentError
-from chalice.utils import UI
-import unittest
-
-from attr import attrs, attrib
-
 from chalice.awsclient import TypedAWSClient
-from chalice.utils import OSUtils, serialize_to_json
+from chalice.config import Config
+from chalice.constants import DDB_EVENT_SOURCE_POLICY
+from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
+from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
+from chalice.constants import SQS_EVENT_SOURCE_POLICY
+from chalice.constants import VPC_ATTACH_POLICY
 from chalice.deploy import models
 from chalice.deploy import packager
+from chalice.deploy.appgraph import ApplicationGraphBuilder, \
+    DependencyBuilder
+from chalice.deploy.deployer import ChaliceDeploymentError
+from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
+from chalice.deploy.deployer import WebsocketPolicyInjector
 from chalice.deploy.deployer import create_default_deployer, \
     create_deletion_deployer, Deployer, BaseDeployStep, \
     InjectDefaults, DeploymentPackager, SwaggerBuilder, \
     PolicyGenerator, BuildStage, ResultsRecorder, DeploymentReporter, \
     ManagedLayerDeploymentPackager
-from chalice.deploy.appgraph import ApplicationGraphBuilder, \
-    DependencyBuilder
 from chalice.deploy.executor import Executor
-from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
+from chalice.deploy.models import APICall
 from chalice.deploy.planner import PlanStage
 from chalice.deploy.planner import StringFormat
+from chalice.deploy.swagger import SwaggerGenerator, TemplatedSwaggerGenerator
 from chalice.deploy.sweeper import ResourceSweeper
-from chalice.deploy.models import APICall
-from chalice.constants import VPC_ATTACH_POLICY
-from chalice.constants import SQS_EVENT_SOURCE_POLICY
-from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
-from chalice.constants import DDB_EVENT_SOURCE_POLICY
-from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
-from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
-from chalice.deploy.deployer import WebsocketPolicyInjector
-
+from chalice.policy import AppPolicyGenerator
+from chalice.utils import OSUtils, serialize_to_json
+from chalice.utils import UI
 
 _SESSION = None
 
@@ -103,8 +98,8 @@ class TestChaliceDeploymentError(object):
         deploy_error = ChaliceDeploymentError(general_exception)
         deploy_error_msg = str(deploy_error)
         assert (
-            'ERROR - While deploying your chalice application'
-            in deploy_error_msg
+                'ERROR - While deploying your chalice application'
+                in deploy_error_msg
         )
         assert 'My Exception' in deploy_error_msg
 
@@ -120,8 +115,8 @@ class TestChaliceDeploymentError(object):
         deploy_error = ChaliceDeploymentError(lambda_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'ERROR - While sending your chalice handler code to '
-            'Lambda to create function \n"foo"' in deploy_error_msg
+                'ERROR - While sending your chalice handler code to '
+                'Lambda to create function \n"foo"' in deploy_error_msg
         )
         assert 'My Exception' in deploy_error_msg
 
@@ -137,8 +132,8 @@ class TestChaliceDeploymentError(object):
         deploy_error = ChaliceDeploymentError(lambda_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'sending your chalice handler code to '
-            'Lambda to update function' in deploy_error_msg
+                'sending your chalice handler code to '
+                'Lambda to update function' in deploy_error_msg
         )
 
     def test_gives_where_and_suggestion_for_too_large_deployment_error(self):
@@ -153,13 +148,13 @@ class TestChaliceDeploymentError(object):
         deploy_error = ChaliceDeploymentError(too_large_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'ERROR - While sending your chalice handler code to '
-            'Lambda to create function \n"foo"' in deploy_error_msg
+                'ERROR - While sending your chalice handler code to '
+                'Lambda to create function \n"foo"' in deploy_error_msg
         )
         assert 'Too large of deployment pacakge' in deploy_error_msg
         assert (
-            'To avoid this error, decrease the size of your chalice '
-            'application ' in deploy_error_msg
+                'To avoid this error, decrease the size of your chalice '
+                'application ' in deploy_error_msg
         )
 
     def test_include_size_context_for_too_large_deployment_error(self):
@@ -215,8 +210,8 @@ class TestChaliceDeploymentError(object):
         deploy_error = ChaliceDeploymentError(lambda_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'Connection aborted. Lambda closed the connection' in
-            deploy_error_msg
+                'Connection aborted. Lambda closed the connection' in
+                deploy_error_msg
         )
 
     def test_simplifies_error_msg_for_timeout(self):
@@ -236,8 +231,8 @@ class TestChaliceDeploymentError(object):
         deploy_error = ChaliceDeploymentError(lambda_error)
         deploy_error_msg = str(deploy_error)
         assert (
-            'Connection aborted. Timed out sending your app to Lambda.' in
-            deploy_error_msg
+                'Connection aborted. Timed out sending your app to Lambda.' in
+                deploy_error_msg
         )
 
 
@@ -355,6 +350,7 @@ class RoleTestCase(object):
         for name in self.given:
             def foo(event, context):
                 return {}
+
             foo.__name__ = name
             app.lambda_function(name)(foo)
 
@@ -710,7 +706,7 @@ class TestSwaggerBuilder(object):
             resource_name='foo',
             swagger_doc=models.Placeholder.BUILD_STAGE,
             minimum_compression='',
-            endpoint_type='EDGE',
+            endpoint=models.Endpoint(endpoint_type='EDGE'),
             api_gateway_stage='api',
             lambda_function=None,
             xray=False,
@@ -910,7 +906,6 @@ class TestDeployer(unittest.TestCase):
             deployer.deploy(config, 'dev')
 
     def test_validation_errors_raise_failure(self):
-
         @self.chalice_app.route('')
         def bad_route_empty_string():
             return {}
@@ -1007,7 +1002,7 @@ class TestDeploymentReporter(object):
 
     def test_can_generate_report(self):
         certificate_arn = "arn:aws:acm:us-east-1:account_id:" \
-                         "certificate/e2600f49-f6b7-4105-aaf6-63b2f018a030"
+                          "certificate/e2600f49-f6b7-4105-aaf6-63b2f018a030"
         deployed_values = {
             "resources": [
                 {"role_name": "james2-dev",
