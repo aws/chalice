@@ -1227,7 +1227,7 @@ class PlanStage(object):
                 (models.APICall(
                     method_name='import_rest_api',
                     params={'swagger_document': resource.swagger_doc,
-                            'endpoint_type': resource.endpoint_type},
+                            'endpoint_type': resource.endpoint.endpoint_type},
                     output_var='rest_api_id',
                 ), "Creating Rest API\n"),
                 models.RecordResourceVariable(
@@ -1252,7 +1252,7 @@ class PlanStage(object):
                     '/endpointConfiguration/types/%s' % (
                         '{rest_api[endpointConfiguration][types][0]}'),
                     ['rest_api']),
-                'value': resource.endpoint_type}
+                'value': resource.endpoint.endpoint_type}
             )
             plan = shared_plan_preamble + [
                 models.StoreValue(
@@ -1277,7 +1277,7 @@ class PlanStage(object):
 
         if resource.domain_name:
             custom_domain_plan = self._add_custom_domain_plan(
-                resource.domain_name, resource.endpoint_type
+                resource.domain_name, resource.endpoint.endpoint_type
             )
             plan += custom_domain_plan
         return plan

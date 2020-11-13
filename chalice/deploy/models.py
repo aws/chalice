@@ -278,7 +278,7 @@ class RestAPI(ManagedModel):
     xray = attrib(default=False)                 # type: bool
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
-    domain_name = attrib(default=None)    # type: Opt[DomainName]
+    domain_name = attrib(default=None)           # type: Opt[DomainName]
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -291,7 +291,7 @@ class RestAPI(ManagedModel):
 @attrs
 class Endpoint(Model):
     endpoint_type = attrib()                     # type: str
-    endpoint_vpce = attrib()                     # type: str
+    endpoint_vpce = attrib(default=None)         # type: str
 
 @attrs
 class WebsocketAPI(ManagedModel):

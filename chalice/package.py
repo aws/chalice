@@ -710,7 +710,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         if resource.domain_name is None:
             return
         domain_name = resource.domain_name
-        endpoint_type = resource.endpoint_type
+        endpoint_type = resource.endpoint.endpoint_type
         cfn_name = to_cfn_resource_name(domain_name.resource_name)
         properties = {
             'DomainName': domain_name.domain_name,
@@ -1088,7 +1088,7 @@ class TerraformGenerator(TemplateGenerator):
             'name': swagger_doc['info']['title'],
             'binary_media_types': swagger_doc[
                 'x-amazon-apigateway-binary-media-types'],
-            'endpoint_configuration': {'types': [resource.endpoint_type]}
+            'endpoint_configuration': {'types': [resource.endpoint.endpoint_type]}
         }
 
         if 'x-amazon-apigateway-policy' in swagger_doc:
@@ -1155,7 +1155,7 @@ class TerraformGenerator(TemplateGenerator):
         if resource.domain_name is None:
             return
         domain_name = resource.domain_name
-        endpoint_type = resource.endpoint_type
+        endpoint_type = resource.endpoint.endpoint_type
         properties = {
             'domain_name': domain_name.domain_name,
             'endpoint_configuration': {'types': [endpoint_type]},
