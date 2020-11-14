@@ -288,10 +288,12 @@ class RestAPI(ManagedModel):
             resources.append(self.domain_name)
         return cast(List[Model], resources)
 
+
 @attrs
 class Endpoint(Model):
     endpoint_type = attrib()                     # type: str
     endpoint_vpce = attrib(default=None)         # type: str
+
 
 @attrs
 class WebsocketAPI(ManagedModel):
