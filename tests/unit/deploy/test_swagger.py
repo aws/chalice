@@ -782,7 +782,10 @@ def test_can_custom_resource_policy(sample_app, swagger_gen):
         lambda_function=None,
         minimum_compression="",
         api_gateway_stage="xyz",
-        endpoint=Endpoint(endpoint_type='PRIVATE', endpoint_vpce='vpce-abc123'),
+        endpoint=Endpoint(
+            endpoint_type='PRIVATE',
+            endpoint_vpce='vpce-abc123'
+        ),
         policy=IAMPolicy({
             'Statement': [{
                 "Effect": "Allow",
@@ -824,7 +827,10 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
         lambda_function=None,
         minimum_compression="",
         api_gateway_stage="xyz",
-        endpoint=Endpoint(endpoint_type='PRIVATE', endpoint_vpce='vpce-abc123'),
+        endpoint=Endpoint(
+            endpoint_type='PRIVATE',
+            endpoint_vpce='vpce-abc123'
+        ),
         policy=IAMPolicy({
             'Statement': [{
                 "Effect": "Allow",
