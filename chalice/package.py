@@ -4,26 +4,25 @@ import copy
 import json
 import os
 import re
-
-import six
 from typing import Any, Optional, Dict, List, Set, Union  # noqa
 from typing import cast
 
+import six
 import yaml
-from yaml.scanner import ScannerError
 from yaml.nodes import Node, ScalarNode, SequenceNode
+from yaml.scanner import ScannerError
 
-from chalice.deploy.swagger import (
-    CFNSwaggerGenerator, TerraformSwaggerGenerator)
-from chalice.utils import (
-    OSUtils, UI, serialize_to_json, to_cfn_resource_name
-)
-from chalice.awsclient import TypedAWSClient # noqa
+from chalice.awsclient import TypedAWSClient  # noqa
 from chalice.config import Config  # noqa
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
 from chalice.deploy.deployer import BuildStage  # noqa
 from chalice.deploy.deployer import create_build_stage
+from chalice.deploy.swagger import (
+    CFNSwaggerGenerator, TerraformSwaggerGenerator)
+from chalice.utils import (
+    OSUtils, UI, serialize_to_json, to_cfn_resource_name
+)
 
 
 def create_app_packager(
@@ -308,19 +307,18 @@ class SAMTemplateGenerator(TemplateGenerator):
             'Properties': {
                 'StageName': resource.api_gateway_stage,
                 'DefinitionBody': resource.swagger_doc,
+                'EndpointConfiguration': {
+                    'Type': resource.endpoint.type
+                }
             }
         }
 
-        endpoint_configuration = {
-            'Type': resource.endpoint.type
-        }
         if resource.endpoint.vpce_ids:
-            endpoint_configuration['VPCEndpointIds'] = [
-                resource.endpoint.vpce_ids
-            ]
-
-        resources['RestAPI']['Properties']['EndpointConfiguration'] = \
-            endpoint_configuration
+            properties = resources['RestAPI']['Properties']
+            properties['EndpointConfiguration']['VPCEndpointIds'] = \
+                resource.endpoint.vpce_ids \
+                    if isinstance(resource.endpoint.vpce_ids, List) \
+                    else [resource.endpoint.vpce_ids]
 
         if resource.minimum_compression:
             properties = resources['RestAPI']['Properties']
@@ -1088,7 +1086,9 @@ class TerraformGenerator(TemplateGenerator):
         }
         if resource.endpoint.vpce_ids:
             endpoint_configuration['vpc_endpoint_ids'] = \
-                [resource.endpoint.vpce_ids]
+                resource.endpoint.vpce_ids \
+                if isinstance(resource.endpoint.vpce_ids, List) \
+                else [resource.endpoint.vpce_ids]
 
         template['resource'].setdefault('aws_api_gateway_rest_api', {})[
             resource.resource_name] = {
