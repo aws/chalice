@@ -544,7 +544,8 @@ class TestTerraformTemplate(TemplateTestBase):
         assert resources['aws_api_gateway_rest_api'][
             'rest_api']['minimum_compression_size'] == 8192
         assert resources['aws_api_gateway_rest_api'][
-            'rest_api']['endpoint_configuration'] == {'types': ['PRIVATE'], 'vpc_endpoint_ids': ['vpce-abc123']}
+            'rest_api']['endpoint_configuration'] == \
+            {'types': ['PRIVATE'], 'vpc_endpoint_ids': ['vpce-abc123']}
 
         assert 'aws_api_gateway_stage' not in resources
         assert resources['aws_api_gateway_deployment']['rest_api'] == {
