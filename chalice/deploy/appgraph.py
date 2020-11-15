@@ -181,8 +181,8 @@ class ApplicationGraphBuilder(object):
             resource_name='rest_api',
             swagger_doc=models.Placeholder.BUILD_STAGE,
             endpoint=models.Endpoint(
-                endpoint_type=config.api_gateway_endpoint_type,
-                endpoint_vpce=config.api_gateway_endpoint_vpce
+                type=config.api_gateway_endpoint_type,
+                vpce_ids=config.api_gateway_endpoint_vpce
             ),
             minimum_compression=minimum_compression,
             api_gateway_stage=config.api_gateway_stage,

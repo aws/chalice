@@ -417,6 +417,10 @@ class TestApplicationGraphBuilder(object):
         application = builder.build(config, stage_name='dev')
         rest_api = application.resources[0]
         assert isinstance(rest_api, models.RestAPI)
+        assert rest_api.endpoint == models.Endpoint(
+            type='PRIVATE',
+            vpce_ids='vpce-abc123'
+        )
         assert rest_api.policy.document == {
             'Version': '2012-10-17',
             'Statement': [

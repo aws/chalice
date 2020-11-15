@@ -2904,7 +2904,7 @@ def test_import_rest_api(stubbed_session):
 
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
-    rest_api_id = awsclient.import_rest_api(swagger_doc, 'EDGE')
+    rest_api_id = awsclient.import_rest_api(swagger_doc, {'type': 'EDGE'})
     stubbed_session.verify_stubs()
     assert rest_api_id == 'rest_api_id'
 

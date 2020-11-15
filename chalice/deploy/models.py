@@ -291,8 +291,8 @@ class RestAPI(ManagedModel):
 
 @attrs
 class Endpoint(Model):
-    endpoint_type = attrib()                     # type: str
-    endpoint_vpce = attrib(default=None)         # type: str
+    type = attrib()                         # type: str
+    vpce_ids = attrib(default=None)         # type: Union[str, List[str]]
 
 
 @attrs

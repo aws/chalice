@@ -783,8 +783,8 @@ def test_can_custom_resource_policy(sample_app, swagger_gen):
         minimum_compression="",
         api_gateway_stage="xyz",
         endpoint=Endpoint(
-            endpoint_type='PRIVATE',
-            endpoint_vpce='vpce-abc123'
+            type='PRIVATE',
+            vpce_ids='vpce-abc123'
         ),
         policy=IAMPolicy({
             'Statement': [{
@@ -828,8 +828,8 @@ def test_can_auto_resource_policy_with_cfn(sample_app):
         minimum_compression="",
         api_gateway_stage="xyz",
         endpoint=Endpoint(
-            endpoint_type='PRIVATE',
-            endpoint_vpce='vpce-abc123'
+            type='PRIVATE',
+            vpce_ids='vpce-abc123'
         ),
         policy=IAMPolicy({
             'Statement': [{

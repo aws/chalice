@@ -292,7 +292,7 @@ class TestPlanCreateUpdateAPIMapping(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             lambda_function=lambda_function,
             domain_name=create_http_domain_name()
         )
@@ -367,7 +367,7 @@ class TestPlanCreateUpdateAPIMapping(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             lambda_function=lambda_function,
             domain_name=domain_name
         )
@@ -413,7 +413,7 @@ class TestPlanCreateUpdateAPIMapping(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             lambda_function=lambda_function,
             domain_name=domain_name
         )
@@ -457,7 +457,7 @@ class TestPlanCreateUpdateDomainName(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             lambda_function=lambda_function,
             domain_name=domain_name
         )
@@ -1372,7 +1372,7 @@ class TestPlanRestAPI(BasePlannerTests):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             minimum_compression='100',
             api_gateway_stage='api',
             xray=False,
@@ -1385,7 +1385,7 @@ class TestPlanRestAPI(BasePlannerTests):
             models.APICall(
                 method_name='import_rest_api',
                 params={'swagger_document': {'swagger': '2.0'},
-                        'endpoint_type': 'EDGE'},
+                        'endpoint': models.Endpoint(type='EDGE')},
                 output_var='rest_api_id',
             ),
             models.RecordResourceVariable(
@@ -1444,7 +1444,7 @@ class TestPlanRestAPI(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             policy="{'Statement': []}",
             lambda_function=function,
         )
@@ -1476,7 +1476,7 @@ class TestPlanRestAPI(BasePlannerTests):
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
             api_gateway_stage='api',
-            endpoint=models.Endpoint(endpoint_type='REGIONAL'),
+            endpoint=models.Endpoint(type='REGIONAL'),
             xray=False,
             lambda_function=function,
         )
@@ -2022,7 +2022,7 @@ class TestRemoteState(object):
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
             minimum_compression='',
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             api_gateway_stage='api',
             xray=False,
             lambda_function=None,
@@ -2941,7 +2941,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         rest_api = models.RestAPI(
             resource_name='rest_api',
             swagger_doc={'swagger': '2.0'},
-            endpoint=models.Endpoint(endpoint_type='EDGE'),
+            endpoint=models.Endpoint(type='EDGE'),
             minimum_compression='100',
             api_gateway_stage='api',
             lambda_function=function,

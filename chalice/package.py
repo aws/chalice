@@ -306,16 +306,21 @@ class SAMTemplateGenerator(TemplateGenerator):
         resources['RestAPI'] = {
             'Type': 'AWS::Serverless::Api',
             'Properties': {
-                'EndpointConfiguration': resource.endpoint.endpoint_type,
                 'StageName': resource.api_gateway_stage,
                 'DefinitionBody': resource.swagger_doc,
             }
         }
-        if resource.endpoint.endpoint_vpce:
-            properties = resources['RestAPI']['Properties']
-            properties['EndpointConfiguration']['VPCEndpointIds'] = [
-                {'Ref': resource.endpoint.endpoint_vpce}
+
+        endpoint_configuration = {
+            'Type': resource.endpoint.type
+        }
+        if resource.endpoint.vpce_ids:
+            endpoint_configuration['VPCEndpointIds'] = [
+                resource.endpoint.vpce_ids
             ]
+
+        resources['RestAPI']['Properties']['EndpointConfiguration'] = \
+            endpoint_configuration
 
         if resource.minimum_compression:
             properties = resources['RestAPI']['Properties']
@@ -710,7 +715,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         if resource.domain_name is None:
             return
         domain_name = resource.domain_name
-        endpoint_type = resource.endpoint.endpoint_type
+        endpoint_type = resource.endpoint.type
         cfn_name = to_cfn_resource_name(domain_name.resource_name)
         properties = {
             'DomainName': domain_name.domain_name,
@@ -1078,6 +1083,13 @@ class TerraformGenerator(TemplateGenerator):
             'chalice_api_swagger', {})['template'] = json.dumps(
             swagger_doc)
 
+        endpoint_configuration = {
+            'types': [resource.endpoint.type]
+        }
+        if resource.endpoint.vpce_ids:
+            endpoint_configuration['vpc_endpoint_ids'] = \
+                [resource.endpoint.vpce_ids]
+
         template['resource'].setdefault('aws_api_gateway_rest_api', {})[
             resource.resource_name] = {
             'body': '${data.template_file.chalice_api_swagger.rendered}',
@@ -1088,9 +1100,7 @@ class TerraformGenerator(TemplateGenerator):
             'name': swagger_doc['info']['title'],
             'binary_media_types': swagger_doc[
                 'x-amazon-apigateway-binary-media-types'],
-            'endpoint_configuration': {
-                'types': [resource.endpoint.endpoint_type]
-            }
+            'endpoint_configuration': endpoint_configuration
         }
 
         if 'x-amazon-apigateway-policy' in swagger_doc:
@@ -1157,7 +1167,7 @@ class TerraformGenerator(TemplateGenerator):
         if resource.domain_name is None:
             return
         domain_name = resource.domain_name
-        endpoint_type = resource.endpoint.endpoint_type
+        endpoint_type = resource.endpoint.type
         properties = {
             'domain_name': domain_name.domain_name,
             'endpoint_configuration': {'types': [endpoint_type]},

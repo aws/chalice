@@ -25,7 +25,7 @@ import re
 import uuid
 from collections import OrderedDict
 from typing import Any, Optional, Dict, Callable, List, Iterator, Iterable, \
-    Sequence, IO  # noqa
+    Sequence, IO, Union  # noqa
 
 import botocore.session  # noqa
 from botocore.loaders import create_loader
@@ -1062,12 +1062,18 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             return {}
 
-    def import_rest_api(self, swagger_document, endpoint_type):
-        # type: (Dict[str, Any], str) -> str
+    def import_rest_api(self, swagger_document, endpoint):
+        # type: (Dict[str, Any], Dict[str, Union[str, List[str]]]) -> str
         client = self._client('apigateway')
+        parameters = {
+            'endpointConfigurationTypes': endpoint['type']
+        }
+        if endpoint.get('vpce_ids'):
+            parameters['endpointConfigurationVpcEndpointIds'] = \
+                endpoint['vpce_ids']
         response = client.import_rest_api(
             body=json.dumps(swagger_document, indent=2),
-            parameters={'endpointConfigurationTypes': endpoint_type}
+            parameters=parameters
         )
         rest_api_id = response['id']
         return rest_api_id
