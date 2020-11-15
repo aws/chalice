@@ -317,8 +317,8 @@ class SAMTemplateGenerator(TemplateGenerator):
             properties = resources['RestAPI']['Properties']
             properties['EndpointConfiguration']['VPCEndpointIds'] = \
                 resource.endpoint.vpce_ids \
-                    if isinstance(resource.endpoint.vpce_ids, List) \
-                    else [resource.endpoint.vpce_ids]
+                if isinstance(resource.endpoint.vpce_ids, List) \
+                else [resource.endpoint.vpce_ids]
 
         if resource.minimum_compression:
             properties = resources['RestAPI']['Properties']
