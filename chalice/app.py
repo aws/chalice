@@ -1612,10 +1612,12 @@ class RestAPIEventHandler(BaseLambdaHandler):
                                   http_status_code=500)
         http_method = event['requestContext']['httpMethod']
         if http_method not in self.routes[resource_path]:
+            allowed_methods = ', '.join(self.routes[resource_path].keys())
             return error_response(
                 error_code='MethodNotAllowedError',
                 message='Unsupported method: %s' % http_method,
-                http_status_code=405)
+                http_status_code=405,
+                headers={'Allow': allowed_methods})
         route_entry = self.routes[resource_path][http_method]
         view_function = route_entry.view_function
         function_args = {name: event['pathParameters'][name]

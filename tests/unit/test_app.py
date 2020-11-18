@@ -569,6 +569,7 @@ def test_error_on_unsupported_method(sample_app, create_event):
     event = create_event('/name/{name}', 'POST', {'name': 'james'})
     raw_response = sample_app(event, context=None)
     assert raw_response['statusCode'] == 405
+    assert raw_response['headers']['Allow'] == 'GET'
     assert json_response_body(raw_response)['Code'] == 'MethodNotAllowedError'
 
 
