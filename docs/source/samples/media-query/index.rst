@@ -3,6 +3,10 @@ Media Query Application
 =======================
 
 
+.. youtube:: UCZXJpI1dKw
+   :width: 75%
+
+
 This sample application shows how to combine multiple event handlers in Chalice
 to create an image processing pipeline.  It takes as input any image or video
 and it will identify objects, people, text, scenes, and activities.  This

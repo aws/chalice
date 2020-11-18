@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Packaging",
+      "description": "Add support for automatic layer creation (#1485, #1001)"
+    }
+  ]
+}

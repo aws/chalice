@@ -13,7 +13,8 @@ import uuid
 from typing import Any, List, Dict, Set  # noqa
 import botocore.session
 
-from chalice.constants import CLOUDWATCH_LOGS, VPC_ATTACH_POLICY
+from chalice.constants import (
+    CLOUDWATCH_LOGS, VPC_ATTACH_POLICY, XRAY_POLICY)
 from chalice.utils import OSUtils  # noqa
 from chalice.config import Config  # noqa
 
@@ -93,6 +94,8 @@ class AppPolicyGenerator(object):
         app_policy['Statement'].append(CLOUDWATCH_LOGS)
         if config.subnet_ids and config.security_group_ids:
             app_policy['Statement'].append(VPC_ATTACH_POLICY)
+        if config.xray_enabled:
+            app_policy['Statement'].append(XRAY_POLICY)
         return app_policy
 
 

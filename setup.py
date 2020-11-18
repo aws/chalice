@@ -13,7 +13,7 @@ install_requires = [
     'mypy-extensions==0.4.3',
     'six>=1.10.0,<2.0.0',
     'pip>=9,<20.3',
-    'attrs>=19.3.0,<20.0.0',
+    'attrs>=19.3.0,<20.3.0',
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
     'pyyaml>=5.3.1,<6.0.0',
@@ -23,7 +23,7 @@ install_requires = [
 
 setup(
     name='chalice',
-    version='1.17.0',
+    version='1.21.4',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
@@ -35,7 +35,7 @@ setup(
         'event-file-poller': ['watchdog==0.9.0'],
     },
     license="Apache License 2.0",
-    package_data={'chalice': ['*.json']},
+    package_data={'chalice': ['*.json', 'py.typed']},
     include_package_data=True,
     zip_safe=False,
     keywords='chalice',

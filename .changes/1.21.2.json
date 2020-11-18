@@ -1,0 +1,20 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Terraform",
+      "description": "Fix issue with wildcard partition names in s3 event handlers (#1508)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Auth",
+      "description": "Fix special case processing for root URL auth (#1271)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Middleware",
+      "description": "Add support for HTTP middleware catching exceptions (#1541)"
+    }
+  ]
+}

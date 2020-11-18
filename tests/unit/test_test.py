@@ -286,6 +286,20 @@ def test_can_generate_cloudwatch_event():
                                                'state': 'pending'}}
 
 
+def test_can_generate_kinesis_event():
+    app = Chalice('kinesis')
+
+    @app.on_kinesis_record(stream='mystream')
+    def foo(event):
+        return [record.data for record in event]
+
+    with Client(app) as client:
+        event = client.events.generate_kinesis_event(
+            message_bodies=[b'foo', b'bar', b'baz'])
+        response = client.lambda_.invoke('foo', event)
+        assert response.payload == [b'foo', b'bar', b'baz']
+
+
 def test_can_mix_pure_lambda_and_event_handlers():
     app = Chalice('lambda-only')
 

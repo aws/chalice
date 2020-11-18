@@ -262,7 +262,7 @@ class TestEventsClient(BaseClient):
         return s3_event
 
     def generate_sqs_event(self, message_bodies, queue_name='queue-name'):
-        # type: (str, str) -> Dict[str, Any]
+        # type: (List[str], str) -> Dict[str, Any]
         records = [{
             'attributes': {
                 'ApproximateFirstReceiveTimestamp': '1530576251596',
@@ -297,6 +297,29 @@ class TestEventsClient(BaseClient):
             "detail": detail,
         }
         return event
+
+    def generate_kinesis_event(self, message_bodies,
+                               stream_name='stream-name'):
+        # type: (List[bytes], str) -> Dict[str, Any]
+        records = [{
+            "kinesis": {
+                "kinesisSchemaVersion": "1.0",
+                "partitionKey": "1",
+                "sequenceNumber": "12345",
+                "data": base64.b64encode(body).decode('ascii'),
+                "approximateArrivalTimestamp": 1545084650.987
+            },
+            "eventSource": "aws:kinesis",
+            "eventVersion": "1.0",
+            "eventID": "shardId-000000000006:12345",
+            "eventName": "aws:kinesis:record",
+            "invokeIdentityArn": "arn:aws:iam::123:role/lambda-role",
+            "awsRegion": "us-west-2",
+            "eventSourceARN": (
+                "arn:aws:kinesis:us-east-2:123:stream/%s" % stream_name
+            )
+        } for body in message_bodies]
+        return {'Records': records}
 
 
 class TestLambdaClient(BaseClient):

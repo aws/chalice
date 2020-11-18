@@ -9,10 +9,12 @@ import traceback
 import decimal
 import base64
 import copy
+import functools
+import datetime
 from collections import defaultdict
 
 
-__version__ = '1.17.0'
+__version__ = '1.21.4'
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
@@ -68,7 +70,7 @@ def error_response(message, error_code, http_status_code, headers=None):
     response = Response(body=body, status_code=http_status_code,
                         headers=headers)
 
-    return response.to_dict()
+    return response
 
 
 def _matches_content_type(content_type, valid_content_types):
@@ -107,6 +109,14 @@ class ChaliceViewError(ChaliceError):
     def __init__(self, msg=''):
         super(ChaliceViewError, self).__init__(
             self.__class__.__name__ + ': %s' % msg)
+
+
+class ChaliceUnhandledError(ChaliceError):
+    """This error is not caught from a Chalice view function.
+
+    This exception is allowed to propagate from a view function so
+    that middleware handlers can process the exception.
+    """
 
 
 class BadRequestError(ChaliceViewError):
@@ -380,22 +390,27 @@ class CORSConfig(object):
 class Request(object):
     """The current request from API gateway."""
 
-    def __init__(self, query_params, headers, uri_params, method, body,
-                 context, stage_vars, is_base64_encoded):
+    _NON_SERIALIZED_ATTRS = ['lambda_context']
+
+    def __init__(self, event_dict, lambda_context=None):
+        query_params = event_dict['multiValueQueryStringParameters']
         self.query_params = None if query_params is None \
             else MultiDict(query_params)
-        self.headers = CaseInsensitiveMapping(headers)
-        self.uri_params = uri_params
-        self.method = method
-        self._is_base64_encoded = is_base64_encoded
-        self._body = body
+        self.headers = CaseInsensitiveMapping(event_dict['headers'])
+        self.uri_params = event_dict['pathParameters']
+        self.method = event_dict['requestContext']['httpMethod']
+        self._is_base64_encoded = event_dict.get('isBase64Encoded', False)
+        self._body = event_dict['body']
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
         self._json_body = None
         self._raw_body = b''
-        self.context = context
-        self.stage_vars = stage_vars
+        self.context = event_dict['requestContext']
+        self.stage_vars = event_dict['stageVariables']
+        self.path = event_dict['requestContext']['resourcePath']
+        self.lambda_context = lambda_context
+        self._event_dict = event_dict
 
     def _base64decode(self, encoded):
         if not isinstance(encoded, bytes):
@@ -426,14 +441,26 @@ class Request(object):
 
     def to_dict(self):
         # Don't copy internal attributes.
-        copied = {k: v for k, v in self.__dict__.items()
-                  if not k.startswith('_')}
+        copied = {
+            k: v for k, v in self.__dict__.items()
+            if not k.startswith('_') and
+            k not in self._NON_SERIALIZED_ATTRS
+        }
         # We want the output of `to_dict()` to be
         # JSON serializable, so we need to remove the CaseInsensitive dict.
         copied['headers'] = dict(copied['headers'])
         if copied['query_params'] is not None:
             copied['query_params'] = dict(copied['query_params'])
         return copied
+
+    def to_original_event(self):
+        # To bring consistency with the BaseLambdaEvents, every
+        # input event should have access to the original event
+        # dictionary as an escape hatch to the underlying data
+        # in case something gets added and we haven't mapped it yet.
+        # We unfortunately already have a `to_dict()` method which is
+        # what other events use so we have to use a different method name.
+        return self._event_dict
 
 
 class Response(object):
@@ -476,12 +503,17 @@ class Response(object):
         body = response_dict['body']
 
         if _matches_content_type(content_type, binary_types):
-            if _matches_content_type(content_type, ['application/json']):
+            if _matches_content_type(content_type, ['application/json']) or \
+                    not content_type:
                 # There's a special case when a user configures
                 # ``application/json`` as a binary type.  The default
                 # json serialization results in a string type, but for binary
                 # content types we need a type bytes().  So we need to special
                 # case this scenario and encode the JSON body to bytes().
+                #
+                # If a user does not provide a content type header, which can
+                # happen if they return a python type instead of a ``Response``
+                # type, then we assume the content is application/json.
                 body = body if isinstance(body, bytes) \
                     else body.encode('utf-8')
             body = self._base64encode(body)
@@ -555,11 +587,15 @@ class APIGateway(object):
 
 class WebsocketAPI(object):
     _WEBSOCKET_ENDPOINT_TEMPLATE = 'https://{domain_name}/{stage}'
+    _REGION_ENV_VARS = ['AWS_REGION', 'AWS_DEFAULT_REGION']
 
-    def __init__(self):
+    def __init__(self, env=None):
         self.session = None
         self._endpoint = None
         self._client = None
+        if env is None:
+            env = os.environ
+        self._env = env
 
     def configure(self, domain_name, stage):
         if self._endpoint is not None:
@@ -567,6 +603,37 @@ class WebsocketAPI(object):
         self._endpoint = self._WEBSOCKET_ENDPOINT_TEMPLATE.format(
             domain_name=domain_name,
             stage=stage,
+        )
+
+    def configure_from_api_id(self, api_id, stage):
+        if self._endpoint is not None:
+            return
+        region_name = self._get_region()
+        domain_name = '{api_id}.execute-api.{region}.amazonaws.com'.format(
+            api_id=api_id, region=region_name)
+        self.configure(domain_name, stage)
+
+    def _get_region(self):
+        # Attempt to get the region so we can configure the
+        # apigatewaymanagementapi client.  We'll first try
+        # retrieving this value from env vars because these should
+        # always be set in the Lambda runtime environment.
+        for varname in self._REGION_ENV_VARS:
+            if varname in self._env:
+                return self._env[varname]
+        # As a last attempt we'll try to retrieve the region
+        # from the currently configured region.  If the session
+        # isn't configured or we can't get the region, we have
+        # no choice but to error out.
+        if self.session is not None:
+            region_name = self.session.region_name
+            if region_name is not None:
+                return region_name
+        raise ValueError(
+            "Unable to retrieve the region name when configuring the "
+            "websocket client.  Either set the 'AWS_REGION' environment "
+            "variable or assign 'app.websocket_api.session' to a boto3 "
+            "session."
         )
 
     def _get_client(self):
@@ -617,6 +684,12 @@ class WebsocketAPI(object):
 
 
 class DecoratorAPI(object):
+    def middleware(self, event_type='all'):
+        def _middleware_wrapper(func):
+            self.register_middleware(func, event_type)
+            return func
+        return _middleware_wrapper
+
     def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
         return self._create_registration_function(
             handler_type='authorizer',
@@ -664,6 +737,26 @@ class DecoratorAPI(object):
             name=name,
             registration_kwargs={'expression': expression,
                                  'description': description},
+        )
+
+    def on_kinesis_record(self, stream, batch_size=100,
+                          starting_position='LATEST', name=None):
+        return self._create_registration_function(
+            handler_type='on_kinesis_record',
+            name=name,
+            registration_kwargs={'stream': stream,
+                                 'batch_size': batch_size,
+                                 'starting_position': starting_position},
+        )
+
+    def on_dynamodb_record(self, stream_arn, batch_size=100,
+                           starting_position='LATEST', name=None):
+        return self._create_registration_function(
+            handler_type='on_dynamodb_record',
+            name=name,
+            registration_kwargs={'stream_arn': stream_arn,
+                                 'batch_size': batch_size,
+                                 'starting_position': starting_position},
         )
 
     def route(self, path, **kwargs):
@@ -719,16 +812,21 @@ class DecoratorAPI(object):
         return _register_handler
 
     def _wrap_handler(self, handler_type, handler_name, user_handler):
-        event_classes = {
-            'on_s3_event': S3Event,
-            'on_sns_message': SNSEvent,
-            'on_sqs_message': SQSEvent,
-            'on_cw_event': CloudWatchEvent,
-            'schedule': CloudWatchEvent,
-        }
-        if handler_type in event_classes:
+        if handler_type in _EVENT_CLASSES:
+            if handler_type == 'lambda_function':
+                # We have to wrap existing @app.lambda_function()
+                # handlers for backwards compat reasons so we can
+                # preserve the `def handler(event, context): ...`
+                # interface.  However we need a consistent interface
+                # for middleware so we have to wrap the event
+                # here.
+                user_handler = PureLambdaWrapper(user_handler)
             return EventSourceHandler(
-                user_handler, event_classes[handler_type])
+                user_handler, _EVENT_CLASSES[handler_type],
+                middleware_handlers=self._get_middleware_handlers(
+                    event_type=_MIDDLEWARE_MAPPING[handler_type],
+                )
+            )
 
         websocket_event_classes = [
             'on_ws_connect',
@@ -738,7 +836,9 @@ class DecoratorAPI(object):
         if handler_type in websocket_event_classes:
             return WebsocketEventSourceHandler(
                 user_handler, WebsocketEvent,
-                self.websocket_api  # pylint: disable=no-member
+                self.websocket_api,  # pylint: disable=no-member
+                middleware_handlers=self._get_middleware_handlers(
+                    event_type='websocket')
             )
         if handler_type == 'authorizer':
             # Authorizer is special cased and doesn't quite fit the
@@ -746,9 +846,15 @@ class DecoratorAPI(object):
             return ChaliceAuthorizer(handler_name, user_handler)
         return user_handler
 
+    def _get_middleware_handlers(self, event_type):
+        raise NotImplementedError("_get_middleware_handlers")
+
     def _register_handler(self, handler_type, name,
                           user_handler, wrapped_handler, kwargs, options=None):
         raise NotImplementedError("_register_handler")
+
+    def register_middleware(self, func, event_type='all'):
+        raise NotImplementedError("register_middleware")
 
 
 class _HandlerRegistration(object):
@@ -761,6 +867,10 @@ class _HandlerRegistration(object):
         self.pure_lambda_functions = []
         self.api = APIGateway()
         self.handler_map = {}
+        self.middleware_handlers = []
+
+    def register_middleware(self, func, event_type='all'):
+        self.middleware_handlers.append((func, event_type))
 
     def _do_register_handler(self, handler_type, name, user_handler,
                              wrapped_handler, kwargs, options=None):
@@ -772,7 +882,7 @@ class _HandlerRegistration(object):
             if name_prefix is not None:
                 name = name_prefix + name
             url_prefix = options.get('url_prefix')
-            if url_prefix is not None:
+            if url_prefix is not None and handler_type == 'route':
                 # Move url_prefix into kwargs so only the
                 # route() handler gets a url_prefix kwarg.
                 kwargs['url_prefix'] = url_prefix
@@ -870,6 +980,28 @@ class _HandlerRegistration(object):
             batch_size=kwargs['batch_size'],
         )
         self.event_sources.append(sqs_config)
+
+    def _register_on_kinesis_record(self, name, handler_string,
+                                    kwargs, **unused):
+        kinesis_config = KinesisEventConfig(
+            name=name,
+            handler_string=handler_string,
+            stream=kwargs['stream'],
+            batch_size=kwargs['batch_size'],
+            starting_position=kwargs['starting_position'],
+        )
+        self.event_sources.append(kinesis_config)
+
+    def _register_on_dynamodb_record(self, name, handler_string,
+                                     kwargs, **unused):
+        ddb_config = DynamoDBEventConfig(
+            name=name,
+            handler_string=handler_string,
+            stream_arn=kwargs['stream_arn'],
+            batch_size=kwargs['batch_size'],
+            starting_position=kwargs['starting_position'],
+        )
+        self.event_sources.append(ddb_config)
 
     def _register_on_cw_event(self, name, handler_string, kwargs, **unused):
         event_source = CloudWatchEventConfig(
@@ -1021,6 +1153,8 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
+    # These are defined here on the Chalice class because we want all the
+    # feature flag tracking to live in Chalice and not the DecoratorAPI.
     def _register_on_ws_connect(self, name, user_handler, handler_string,
                                 kwargs, **unused):
         self._features_used.add('WEBSOCKETS')
@@ -1039,142 +1173,29 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         super(Chalice, self)._register_on_ws_disconnect(
             name, user_handler, handler_string, kwargs, **unused)
 
+    def _get_middleware_handlers(self, event_type):
+        # We're returning a generator here because we want to defer the
+        # collection of all middleware until as last as possible (when
+        # then handler is actually invoked).  This lets us pick up any
+        # middleware that's registered after a handler has been defined,
+        # which is the behavior you'd expect.
+        return (func for func, filter_type in self.middleware_handlers if
+                filter_type in [event_type, 'all'])
+
     def __call__(self, event, context):
-        # This is what's invoked via lambda.
-        # Sometimes the event can be something that's not
-        # what we specified in our request_template mapping.
-        # When that happens, we want to give a better error message here.
-        resource_path = event.get('requestContext', {}).get('resourcePath')
-        if resource_path is None:
-            return error_response(error_code='InternalServerError',
-                                  message='Unknown request.',
-                                  http_status_code=500)
-        http_method = event['requestContext']['httpMethod']
-        if resource_path not in self.routes:
-            raise ChaliceError("No view function for: %s" % resource_path)
-        if http_method not in self.routes[resource_path]:
-            return error_response(
-                error_code='MethodNotAllowedError',
-                message='Unsupported method: %s' % http_method,
-                http_status_code=405)
-        route_entry = self.routes[resource_path][http_method]
-        view_function = route_entry.view_function
-        function_args = {name: event['pathParameters'][name]
-                         for name in route_entry.view_args}
+        # For legacy reasons, we can't move the Rest API handler entry
+        # point away from this Chalice.__call__ method . However, we can
+        # try to extract as much as logic as possible to a separate handler
+        # class we can call.  That way it's still structured somewhat similar
+        # to the other event handlers which makes it more manageable to
+        # implement shared functionality (e.g. middleware).
         self.lambda_context = context
-        self.current_request = Request(
-            event['multiValueQueryStringParameters'],
-            event['headers'],
-            event['pathParameters'],
-            event['requestContext']['httpMethod'],
-            event['body'],
-            event['requestContext'],
-            event['stageVariables'],
-            event.get('isBase64Encoded', False)
+        handler = RestAPIEventHandler(
+            self.routes, self.api, self.log, self.debug,
+            middleware_handlers=self._get_middleware_handlers('http'),
         )
-        # We're getting the CORS headers before validation to be able to
-        # output desired headers with
-        cors_headers = None
-        if self._cors_enabled_for_route(route_entry):
-            cors_headers = self._get_cors_headers(route_entry.cors)
-        # We're doing the header validation after creating the request
-        # so can leverage the case insensitive dict that the Request class
-        # uses for headers.
-        if route_entry.content_types:
-            content_type = self.current_request.headers.get(
-                'content-type', 'application/json')
-            if not _matches_content_type(content_type,
-                                         route_entry.content_types):
-                return error_response(
-                    error_code='UnsupportedMediaType',
-                    message='Unsupported media type: %s' % content_type,
-                    http_status_code=415,
-                    headers=cors_headers
-                )
-        response = self._get_view_function_response(view_function,
-                                                    function_args)
-        if cors_headers is not None:
-            self._add_cors_headers(response, cors_headers)
-
-        response_headers = CaseInsensitiveMapping(response.headers)
-        if not self._validate_binary_response(
-                self.current_request.headers, response_headers):
-            content_type = response_headers.get('content-type', '')
-            return error_response(
-                error_code='BadRequest',
-                message=('Request did not specify an Accept header with %s, '
-                         'The response has a Content-Type of %s. If a '
-                         'response has a binary Content-Type then the request '
-                         'must specify an Accept header that matches.'
-                         % (content_type, content_type)),
-                http_status_code=400,
-                headers=cors_headers
-            )
-        response = response.to_dict(self.api.binary_types)
-        return response
-
-    def _validate_binary_response(self, request_headers, response_headers):
-        # Validates that a response is valid given the request. If the response
-        # content-type specifies a binary type, there must be an accept header
-        # that is a binary type as well.
-        request_accept_header = request_headers.get('accept')
-        response_content_type = response_headers.get(
-            'content-type', 'application/json')
-        response_is_binary = _matches_content_type(response_content_type,
-                                                   self.api.binary_types)
-        expects_binary_response = False
-        if request_accept_header is not None:
-            expects_binary_response = _matches_content_type(
-                request_accept_header, self.api.binary_types)
-        if response_is_binary and not expects_binary_response:
-            return False
-        return True
-
-    def _get_view_function_response(self, view_function, function_args):
-        try:
-            response = view_function(**function_args)
-            if not isinstance(response, Response):
-                response = Response(body=response)
-            self._validate_response(response)
-        except ChaliceViewError as e:
-            # Any chalice view error should propagate.  These
-            # get mapped to various HTTP status codes in API Gateway.
-            response = Response(body={'Code': e.__class__.__name__,
-                                      'Message': str(e)},
-                                status_code=e.STATUS_CODE)
-        except Exception:
-            headers = {}
-            self.log.error("Caught exception for %s", view_function,
-                           exc_info=True)
-            if self.debug:
-                # If the user has turned on debug mode,
-                # we'll let the original exception propagate so
-                # they get more information about what went wrong.
-                stack_trace = ''.join(traceback.format_exc())
-                body = stack_trace
-                headers['Content-Type'] = 'text/plain'
-            else:
-                body = {'Code': 'InternalServerError',
-                        'Message': 'An internal server error occurred.'}
-            response = Response(body=body, headers=headers, status_code=500)
-        return response
-
-    def _validate_response(self, response):
-        for header, value in response.headers.items():
-            if '\n' in value:
-                raise ChaliceError("Bad value for header '%s': %r" %
-                                   (header, value))
-
-    def _cors_enabled_for_route(self, route_entry):
-        return route_entry.cors is not None
-
-    def _get_cors_headers(self, cors):
-        return cors.get_access_control_headers()
-
-    def _add_cors_headers(self, response, cors_headers):
-        for name, value in cors_headers.items():
-            if name not in response.headers:
-                response.headers[name] = value
+        self.current_request = handler.create_request_object(event, context)
+        return handler(event, context)
 
 
 class BuiltinAuthConfig(object):
@@ -1313,11 +1334,9 @@ class AuthResponse(object):
         # '/'.join(...)'d properly.
         base.extend([method, route[1:]])
         last_arn_segment = '/'.join(base)
-        if route in ['/', '*']:
-            # We have to special case the '/' case.  For whatever
-            # reason, API gateway adds an extra '/' to the method_arn
-            # of the auth request, so we need to do the same thing.
-            # We also have to handle the '*' case which is for wildcards
+        if route == '*':
+            # We also have to handle the '*' case which matches
+            # all routes.
             last_arn_segment += route
         final_arn = '%s:%s' % (parts[0], last_arn_segment)
         return final_arn
@@ -1423,6 +1442,24 @@ class SQSEventConfig(BaseEventSourceConfig):
         self.batch_size = batch_size
 
 
+class KinesisEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, stream,
+                 batch_size, starting_position):
+        super(KinesisEventConfig, self).__init__(name, handler_string)
+        self.stream = stream
+        self.batch_size = batch_size
+        self.starting_position = starting_position
+
+
+class DynamoDBEventConfig(BaseEventSourceConfig):
+    def __init__(self, name, handler_string, stream_arn,
+                 batch_size, starting_position):
+        super(DynamoDBEventConfig, self).__init__(name, handler_string)
+        self.stream_arn = stream_arn
+        self.batch_size = batch_size
+        self.starting_position = starting_position
+
+
 class WebsocketConnectConfig(BaseEventSourceConfig):
     CONNECT_ROUTE = '$connect'
 
@@ -1448,31 +1485,252 @@ class WebsocketDisconnectConfig(BaseEventSourceConfig):
         self.handler_function = user_handler
 
 
-class EventSourceHandler(object):
+class PureLambdaWrapper(object):
+    def __init__(self, original_func):
+        self._original_func = original_func
 
-    def __init__(self, func, event_class):
+    def __call__(self, event):
+        # The @app.lambda_function() expects an event dict
+        # and a context argument so this class will is used to adapt
+        # from the Chalice single-arg style function (which is used
+        # in all the event handlers) to the low-level lambda api.
+        return self._original_func(event.to_dict(), event.context)
+
+
+class MiddlewareHandler(object):
+    def __init__(self, handler, next_handler):
+        self.handler = handler
+        self.next_handler = next_handler
+
+    def __call__(self, request):
+        return self.handler(request, self.next_handler)
+
+
+class BaseLambdaHandler(object):
+    def __call__(self, event, context):
+        pass
+
+    def _build_middleware_handlers(self, handlers, original_handler):
+        current = original_handler
+        for handler in reversed(list(handlers)):
+            current = MiddlewareHandler(handler=handler, next_handler=current)
+        return current
+
+
+class EventSourceHandler(BaseLambdaHandler):
+
+    def __init__(self, func, event_class, middleware_handlers=None):
         self.func = func
         self.event_class = event_class
+        if middleware_handlers is None:
+            middleware_handlers = []
+        self._middleware_handlers = middleware_handlers
+        self.handler = None
+
+    @property
+    def middleware_handlers(self):
+        return self._middleware_handlers
+
+    @middleware_handlers.setter
+    def middleware_handlers(self, value):
+        self._middleware_handlers = value
 
     def __call__(self, event, context):
         event_obj = self.event_class(event, context)
-        return self.func(event_obj)
+        if self.handler is None:
+            # Defer creating handlers so we have all middleware configured.
+            self.handler = self._build_middleware_handlers(
+                self._middleware_handlers, original_handler=self.func)
+        return self.handler(event_obj)
 
 
-class WebsocketEventSourceHandler(object):
-    def __init__(self, func, event_class, websocket_api):
+class WebsocketEventSourceHandler(EventSourceHandler):
+    def __init__(self, func, event_class, websocket_api,
+                 middleware_handlers=None):
         self.func = func
         self.event_class = event_class
         self.websocket_api = websocket_api
+        if middleware_handlers is None:
+            middleware_handlers = []
+        self._middleware_handlers = middleware_handlers
+        self.handler = None
 
     def __call__(self, event, context):
-        event_obj = self.event_class(event, context)
-        self.websocket_api.configure(
-            event_obj.domain_name,
-            event_obj.stage,
+        self.websocket_api.configure_from_api_id(
+            event['requestContext']['apiId'],
+            event['requestContext']['stage'],
         )
-        self.func(event_obj)
+        super(WebsocketEventSourceHandler, self).__call__(event, context)
         return {'statusCode': 200}
+
+
+class RestAPIEventHandler(BaseLambdaHandler):
+    def __init__(self, route_table, api, log, debug, middleware_handlers=None):
+        self.routes = route_table
+        self.api = api
+        self.log = log
+        self.debug = debug
+        self.current_request = None
+        self.lambda_context = None
+        if middleware_handlers is None:
+            middleware_handlers = []
+        self._middleware_handlers = middleware_handlers
+
+    def _global_error_handler(self, event, get_response):
+        try:
+            return get_response(event)
+        except Exception:
+            return self._unhandled_exception_to_response()
+
+    def create_request_object(self, event, context):
+        # For legacy reasons, there's some initial validation that takes
+        # place before we convert the input event to a python object.
+        # We don't do this in event handlers we added later, so we *should*
+        # be able to remove this code.  To be safe, we're keeping it in for
+        # now to minimize the potential for breaking changes.
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        if resource_path is not None:
+            self.current_request = Request(event, context)
+            return self.current_request
+
+    def __call__(self, event, context):
+        def wrapped_event(request):
+            return self._main_rest_api_handler(event, context)
+
+        final_handler = self._build_middleware_handlers(
+            [self._global_error_handler] + list(self._middleware_handlers),
+            original_handler=wrapped_event,
+        )
+        response = final_handler(self.current_request)
+        return response.to_dict(self.api.binary_types)
+
+    def _main_rest_api_handler(self, event, context):
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        if resource_path is None:
+            return error_response(error_code='InternalServerError',
+                                  message='Unknown request.',
+                                  http_status_code=500)
+        http_method = event['requestContext']['httpMethod']
+        if http_method not in self.routes[resource_path]:
+            return error_response(
+                error_code='MethodNotAllowedError',
+                message='Unsupported method: %s' % http_method,
+                http_status_code=405)
+        route_entry = self.routes[resource_path][http_method]
+        view_function = route_entry.view_function
+        function_args = {name: event['pathParameters'][name]
+                         for name in route_entry.view_args}
+        self.lambda_context = context
+        # We're getting the CORS headers before validation to be able to
+        # output desired headers with
+        cors_headers = None
+        if self._cors_enabled_for_route(route_entry):
+            cors_headers = self._get_cors_headers(route_entry.cors)
+        # We're doing the header validation after creating the request
+        # so can leverage the case insensitive dict that the Request class
+        # uses for headers.
+        if route_entry.content_types:
+            content_type = self.current_request.headers.get(
+                'content-type', 'application/json')
+            if not _matches_content_type(content_type,
+                                         route_entry.content_types):
+                return error_response(
+                    error_code='UnsupportedMediaType',
+                    message='Unsupported media type: %s' % content_type,
+                    http_status_code=415,
+                    headers=cors_headers
+                )
+        response = self._get_view_function_response(view_function,
+                                                    function_args)
+        if cors_headers is not None:
+            self._add_cors_headers(response, cors_headers)
+
+        response_headers = CaseInsensitiveMapping(response.headers)
+        if not self._validate_binary_response(
+                self.current_request.headers, response_headers):
+            content_type = response_headers.get('content-type', '')
+            return error_response(
+                error_code='BadRequest',
+                message=('Request did not specify an Accept header with %s, '
+                         'The response has a Content-Type of %s. If a '
+                         'response has a binary Content-Type then the request '
+                         'must specify an Accept header that matches.'
+                         % (content_type, content_type)),
+                http_status_code=400,
+                headers=cors_headers
+            )
+        return response
+
+    def _validate_binary_response(self, request_headers, response_headers):
+        # Validates that a response is valid given the request. If the response
+        # content-type specifies a binary type, there must be an accept header
+        # that is a binary type as well.
+        request_accept_header = request_headers.get('accept')
+        response_content_type = response_headers.get(
+            'content-type', 'application/json')
+        response_is_binary = _matches_content_type(response_content_type,
+                                                   self.api.binary_types)
+        expects_binary_response = False
+        if request_accept_header is not None:
+            expects_binary_response = _matches_content_type(
+                request_accept_header, self.api.binary_types)
+        if response_is_binary and not expects_binary_response:
+            return False
+        return True
+
+    def _get_view_function_response(self, view_function, function_args):
+        try:
+            response = view_function(**function_args)
+            if not isinstance(response, Response):
+                response = Response(body=response)
+            self._validate_response(response)
+        except ChaliceUnhandledError:
+            # Reraise this exception so that middleware has a chance
+            # to handle the exception.
+            raise
+        except ChaliceViewError as e:
+            # Any chalice view error should propagate.  These
+            # get mapped to various HTTP status codes in API Gateway.
+            response = Response(body={'Code': e.__class__.__name__,
+                                      'Message': str(e)},
+                                status_code=e.STATUS_CODE)
+        except Exception:
+            response = self._unhandled_exception_to_response()
+        return response
+
+    def _unhandled_exception_to_response(self):
+        headers = {}
+        path = getattr(self.current_request, 'path', 'unknown')
+        self.log.error("Caught exception for path %s", path, exc_info=True)
+        if self.debug:
+            # If the user has turned on debug mode,
+            # we'll let the original exception propagate so
+            # they get more information about what went wrong.
+            stack_trace = ''.join(traceback.format_exc())
+            body = stack_trace
+            headers['Content-Type'] = 'text/plain'
+        else:
+            body = {'Code': 'InternalServerError',
+                    'Message': 'An internal server error occurred.'}
+        response = Response(body=body, headers=headers, status_code=500)
+        return response
+
+    def _validate_response(self, response):
+        for header, value in response.headers.items():
+            if '\n' in value:
+                raise ChaliceError("Bad value for header '%s': %r" %
+                                   (header, value))
+
+    def _cors_enabled_for_route(self, route_entry):
+        return route_entry.cors is not None
+
+    def _get_cors_headers(self, cors):
+        return cors.get_access_control_headers()
+
+    def _add_cors_headers(self, response, cors_headers):
+        for name, value in cors_headers.items():
+            if name not in response.headers:
+                response.headers[name] = value
 
 
 # These classes contain all the event types that are passed
@@ -1490,6 +1748,22 @@ class BaseLambdaEvent(object):
 
     def to_dict(self):
         return self._event_dict
+
+
+# This class is only used for middleware handlers because
+# we can't change the existing interface for @app.lambda_function().
+# This could be a Chalice 2.0 thing where we make all the decorators
+# have a consistent interface that takes a single event arg.
+class LambdaFunctionEvent(BaseLambdaEvent):
+    def __init__(self, event_dict, context):
+        self.event = event_dict
+        self.context = context
+
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def to_dict(self):
+        return self.event
 
 
 class CloudWatchEvent(BaseLambdaEvent):
@@ -1558,6 +1832,71 @@ class SQSRecord(BaseLambdaEvent):
         self.receipt_handle = event_dict['receiptHandle']
 
 
+class KinesisEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield KinesisRecord(record, self.context)
+
+
+class KinesisRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        kinesis = event_dict['kinesis']
+        encoded_payload = kinesis['data']
+        self.data = base64.b64decode(encoded_payload)
+        self.sequence_number = kinesis['sequenceNumber']
+        self.partition_key = kinesis['partitionKey']
+        self.schema_version = kinesis['kinesisSchemaVersion']
+        self.timestamp = datetime.datetime.utcfromtimestamp(
+            kinesis['approximateArrivalTimestamp'])
+
+
+class DynamoDBEvent(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        pass
+
+    def __iter__(self):
+        for record in self._event_dict['Records']:
+            yield DynamoDBRecord(record, self.context)
+
+
+class DynamoDBRecord(BaseLambdaEvent):
+    def _extract_attributes(self, event_dict):
+        dynamodb = event_dict['dynamodb']
+        self.timestamp = datetime.datetime.utcfromtimestamp(
+            dynamodb['ApproximateCreationDateTime'])
+        self.keys = dynamodb.get('Keys')
+        self.new_image = dynamodb.get('NewImage')
+        self.old_image = dynamodb.get('OldImage')
+        self.sequence_number = dynamodb['SequenceNumber']
+        self.size_bytes = dynamodb['SizeBytes']
+        self.stream_view_type = dynamodb['StreamViewType']
+        # These are from the top level keys in a record.
+        self.aws_region = event_dict['awsRegion']
+        self.event_id = event_dict['eventID']
+        self.event_name = event_dict['eventName']
+        self.event_source_arn = event_dict['eventSourceARN']
+
+    @property
+    def table_name(self):
+        # Converts:
+        # "arn:aws:dynamodb:us-west-2:12345:table/MyTable/"
+        # "stream/2020-09-28T16:49:14.209"
+        #
+        # into:
+        # "MyTable"
+        parts = self.event_source_arn.split(':', 5)
+        if not len(parts) == 6:
+            return ''
+        full_name = parts[-1]
+        name_parts = full_name.split('/')
+        if len(name_parts) >= 2:
+            return name_parts[1]
+        return ''
+
+
 class Blueprint(DecoratorAPI):
     def __init__(self, import_name):
         self._import_name = import_name
@@ -1575,6 +1914,15 @@ class Blueprint(DecoratorAPI):
         return self._current_app.current_request
 
     @property
+    def current_app(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.current_app if it's registered "
+                "to an app."
+            )
+        return self._current_app
+
+    @property
     def lambda_context(self):
         if self._current_app is None:
             raise RuntimeError(
@@ -1590,16 +1938,100 @@ class Blueprint(DecoratorAPI):
         for function in self._deferred_registrations:
             function(app, all_options)
 
+    # Note on blueprints implementation.  One option we have for implementing
+    # blueprints is to copy every decorator in our public API over to the
+    # Blueprints class.  Instead what we do is inherit from DecoratorAPI so we
+    # get new decorators for free.  The tradeoff is that need to add
+    # implementations of the internal methods used to manage handler
+    # registration that defer registration until we get an app object. While
+    # these methods are not public in the sense that we don't want users to
+    # call them, they're available for blueprints to use in order to avoid
+    # boilerplate code.
+
+    def register_middleware(self, func, event_type='all'):
+        self._deferred_registrations.append(
+            # pylint: disable=protected-access
+            lambda app, options: app.register_middleware(
+                func, event_type
+            )
+        )
+
     def _register_handler(self, handler_type, name, user_handler,
                           wrapped_handler, kwargs, options=None):
         # If we go through the public API (app.route, app.schedule, etc) then
         # we have to duplicate either the methods or the params in this
         # class.  We're using _register_handler as a tradeoff for cutting
         # down on the duplication.
-        self._deferred_registrations.append(
+        def _register_blueprint_handler(app, options):
+            if handler_type in _EVENT_CLASSES:
+                # pylint: disable=protected-access
+                wrapped_handler.middleware_handlers = \
+                    app._get_middleware_handlers(
+                        _MIDDLEWARE_MAPPING[handler_type])
             # pylint: disable=protected-access
-            lambda app, options: app._register_handler(
+            app._register_handler(
                 handler_type, name, user_handler, wrapped_handler,
                 kwargs, options
             )
-        )
+        self._deferred_registrations.append(_register_blueprint_handler)
+
+    def _get_middleware_handlers(self, event_type):
+        # This will get filled in later during the registration process.
+        return []
+
+
+# This class is used to convert any existing/3rd party decorators
+# that work directly on lambda functions with the original signature
+# of (event, context).  By using ConvertToMiddleware you can automatically
+# apply this decorator to every lambda function in a Chalice app.
+# Example:
+#
+# Before:
+#
+# @third_part.decorator
+# def some_lambda_function(event, context): pass
+#
+# Now:
+#
+# app.register_middleware(ConvertToMiddleware(third_party.decorator))
+#
+#
+class ConvertToMiddleware(object):
+    def __init__(self, lambda_wrapper):
+        self._wrapper = lambda_wrapper
+
+    def __call__(self, event, get_response):
+        original_event, context = self._extract_original_param(event)
+        @functools.wraps(self._wrapper)
+        def wrapped(original_event, context):
+            return get_response(event)
+        return self._wrapper(wrapped)(original_event, context)
+
+    def _extract_original_param(self, event):
+        if isinstance(event, Request):
+            return event.to_original_event(), event.lambda_context
+        return event.to_dict(), event.context
+
+
+_EVENT_CLASSES = {
+    'on_s3_event': S3Event,
+    'on_sns_message': SNSEvent,
+    'on_sqs_message': SQSEvent,
+    'on_cw_event': CloudWatchEvent,
+    'on_kinesis_record': KinesisEvent,
+    'on_dynamodb_record': DynamoDBEvent,
+    'schedule': CloudWatchEvent,
+    'lambda_function': LambdaFunctionEvent,
+}
+
+
+_MIDDLEWARE_MAPPING = {
+    'on_s3_event': 's3',
+    'on_sns_message': 'sns',
+    'on_sqs_message': 'sqs',
+    'on_cw_event': 'cloudwatch',
+    'on_kinesis_record': 'kinesis',
+    'on_dynamodb_record': 'dynamodb',
+    'schedule': 'scheduled',
+    'lambda_function': 'pure_lambda',
+}

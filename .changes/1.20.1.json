@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Blueprints",
+      "description": "Preserve docstring in blueprints (#1525)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Binary",
+      "description": "Support returning native python types when using `*/*` for binary types (#1501)"
+    }
+  ]
+}

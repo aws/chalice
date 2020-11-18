@@ -1,0 +1,25 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Websockets",
+      "description": "Fix custom domain name configuration for websockets (#1531)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Local",
+      "description": "Add support for multiple actions in builtin auth in local mode (#1527)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Websocket",
+      "description": "Fix websocket client configuration when using a custom domain (#1503)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Local",
+      "description": "Fix CORs handling in local mode (#761)"
+    }
+  ]
+}

@@ -94,6 +94,14 @@ VPC_ATTACH_POLICY = {
     "Resource": "*"
 }
 
+XRAY_POLICY = {
+    'Effect': 'Allow',
+    'Action': [
+        'xray:PutTraceSegments',
+        'xray:PutTelemetryRecords',
+    ],
+    'Resource': '*'
+}
 
 CODEBUILD_POLICY = {
     "Version": "2012-10-17",
@@ -240,6 +248,30 @@ SQS_EVENT_SOURCE_POLICY = {
         "sqs:GetQueueAttributes",
     ],
     "Resource": "*",
+}
+
+
+KINESIS_EVENT_SOURCE_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "kinesis:GetRecords",
+        "kinesis:GetShardIterator",
+        "kinesis:DescribeStream",
+        "kinesis:ListStreams",
+    ],
+    "Resource": "*",
+}
+
+
+DDB_EVENT_SOURCE_POLICY = {
+    "Effect": "Allow",
+    "Action": [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:ListStreams"
+    ],
+    "Resource": "*"
 }
 
 

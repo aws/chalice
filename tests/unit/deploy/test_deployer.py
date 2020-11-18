@@ -29,7 +29,8 @@ from chalice.deploy import packager
 from chalice.deploy.deployer import create_default_deployer, \
     create_deletion_deployer, Deployer, BaseDeployStep, \
     InjectDefaults, DeploymentPackager, SwaggerBuilder, \
-    PolicyGenerator, BuildStage, ResultsRecorder, DeploymentReporter
+    PolicyGenerator, BuildStage, ResultsRecorder, DeploymentReporter, \
+    ManagedLayerDeploymentPackager
 from chalice.deploy.appgraph import ApplicationGraphBuilder, \
     DependencyBuilder
 from chalice.deploy.executor import Executor
@@ -40,6 +41,8 @@ from chalice.deploy.sweeper import ResourceSweeper
 from chalice.deploy.models import APICall
 from chalice.constants import VPC_ATTACH_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
+from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
+from chalice.constants import DDB_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
 from chalice.deploy.deployer import WebsocketPolicyInjector
@@ -274,11 +277,15 @@ def create_function_resource(name):
         tags={},
         timeout=60,
         memory_size=128,
-        deployment_package=models.DeploymentPackage(filename='foo'),
+        deployment_package=models.DeploymentPackage(
+            models.Placeholder.BUILD_STAGE
+        ),
+        xray=False,
         role=models.PreCreatedIAMRole(role_arn='role:arn'),
         security_group_ids=[],
         subnet_ids=[],
-        layers=[]
+        layers=[],
+        reserved_concurrency=None,
     )
 
 
@@ -374,7 +381,9 @@ class RoleTestCase(object):
     def assert_required_roles_created(self, application):
         resources = application.resources
         assert len(resources) == len(self.given)
-        functions_by_name = {f.function_name: f for f in resources}
+        functions_by_name = {
+            f.function_name: f for f in resources
+            if isinstance(f, models.LambdaFunction)}
         # Roles that have the same name/arn should be the same
         # object.  If we encounter a role that's already in
         # roles_by_identifier, we'll verify that it's the exact same object.
@@ -565,6 +574,7 @@ class TestDefaultsInjector(object):
             runtime='python2.7',
             handler='app.app',
             tags={},
+            xray=None,
             deployment_package=None,
             role=None,
             security_group_ids=[],
@@ -594,6 +604,7 @@ class TestDefaultsInjector(object):
             runtime='python2.7',
             handler='app.app',
             tags={},
+            xray=None,
             deployment_package=None,
             role=None,
             security_group_ids=[],
@@ -702,6 +713,7 @@ class TestSwaggerBuilder(object):
             endpoint_type='EDGE',
             api_gateway_stage='api',
             lambda_function=None,
+            xray=False,
         )
         app = Chalice(app_name='foo')
         config = Config.create(chalice_app=app)
@@ -712,6 +724,84 @@ class TestSwaggerBuilder(object):
 
 
 class TestDeploymentPackager(object):
+    def test_can_generate_layer_package(self):
+        function = create_function_resource('myfunction')
+        function.managed_layer = models.LambdaLayer(
+            resource_name='managed-layer',
+            layer_name='appname-dev-managed-layer',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE
+            )
+        )
+        lambda_packager = mock.Mock(spec=packager.BaseLambdaDeploymentPackager)
+        layer_packager = mock.Mock(spec=packager.BaseLambdaDeploymentPackager)
+        lambda_packager.create_deployment_package.return_value = 'package.zip'
+        layer_packager.create_deployment_package.return_value = (
+            'package-layer.zip')
+
+        config = Config.create(project_dir='.')
+
+        p = ManagedLayerDeploymentPackager(lambda_packager, layer_packager)
+        p.handle(config, function.managed_layer)
+        p.handle(config, function)
+        assert function.deployment_package.filename == 'package.zip'
+        lambda_packager.create_deployment_package.assert_called_with(
+            '.', config.lambda_python_version
+        )
+        assert function.managed_layer.deployment_package.filename == (
+            'package-layer.zip'
+        )
+        layer_packager.create_deployment_package.assert_called_with(
+            '.', config.lambda_python_version
+        )
+
+    def test_layer_package_not_generated_if_filename_populated(self):
+        generator = mock.Mock(spec=packager.BaseLambdaDeploymentPackager)
+
+        function = create_function_resource('myfunction')
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='name',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='original.zip')
+        )
+        function.managed_layer = layer
+        config = Config.create(project_dir='.')
+
+        p = ManagedLayerDeploymentPackager(None, generator)
+        p.handle(config, layer)
+
+        assert layer.deployment_package.filename == 'original.zip'
+        assert not generator.create_deployment_package.called
+
+    def test_managed_layer_removed_if_no_deps(self):
+        function = create_function_resource('myfunction')
+        function.managed_layer = models.LambdaLayer(
+            resource_name='managed-layer',
+            layer_name='appname-dev-managed-layer',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE
+            )
+        )
+        lambda_packager = mock.Mock(spec=packager.BaseLambdaDeploymentPackager)
+        layer_packager = mock.Mock(spec=packager.BaseLambdaDeploymentPackager)
+        lambda_packager.create_deployment_package.return_value = 'package.zip'
+        layer_packager.create_deployment_package.side_effect = \
+            packager.EmptyPackageError()
+
+        config = Config.create(project_dir='.')
+
+        p = ManagedLayerDeploymentPackager(lambda_packager, layer_packager)
+        p.handle(config, function.managed_layer)
+        p.handle(config, function)
+        # If the deployment package for layers would result in an empty
+        # deployment package, we expect that resource to be removed, it can't
+        # be created on the service.
+        assert function.managed_layer is None
+
     def test_can_generate_package(self):
         generator = mock.Mock(spec=packager.LambdaDeploymentPackager)
         generator.create_deployment_package.return_value = 'package.zip'
@@ -840,6 +930,16 @@ def test_can_create_default_deployer():
     assert isinstance(deployer, Deployer)
 
 
+def test_can_create_deployer_with_layer_builds():
+    session = botocore.session.get_session()
+    deployer = create_default_deployer(session, Config.create(
+        project_dir='.',
+        chalice_stage='dev',
+        automatic_layer=True,
+    ), UI())
+    assert isinstance(deployer, Deployer)
+
+
 def test_can_create_deletion_deployer():
     session = botocore.session.get_session()
     deployer = create_deletion_deployer(TypedAWSClient(session), UI())
@@ -914,6 +1014,9 @@ class TestDeploymentReporter(object):
                  "role_arn": "my-role-arn",
                  "name": "default-role",
                  "resource_type": "iam_role"},
+                {"resource_type": "lambda_layer",
+                 "name": "layer",
+                 "layer_version_arn": "arn:layer:4"},
                 {"lambda_arn": "lambda-arn-foo",
                  "name": "foo",
                  "resource_type": "lambda_function"},
@@ -945,6 +1048,7 @@ class TestDeploymentReporter(object):
         report = self.reporter.generate_report(deployed_values)
         assert report == (
             "Resources deployed:\n"
+            "  - Lambda Layer ARN: arn:layer:4\n"
             "  - Lambda ARN: lambda-arn-foo\n"
             "  - Lambda ARN: lambda-arn-dev\n"
             "  - Rest API URL: https://host/api\n"
@@ -1003,7 +1107,7 @@ class TestLambdaEventSourcePolicyInjector(object):
         builder = ApplicationGraphBuilder()
         application = builder.build(config, stage_name='dev')
         event_sources = application.resources
-        role = event_sources[0].lambda_function.role
+        role = event_sources[1].lambda_function.role
         role.policy.document = {'Statement': []}
         injector = LambdaEventSourcePolicyInjector()
         injector.handle(config, event_sources[0])
@@ -1012,6 +1116,33 @@ class TestLambdaEventSourcePolicyInjector(object):
         # inject the policy once.
         assert role.policy.document == {
             'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
+        }
+
+    def test_can_inject_policy_for_kinesis(self, sample_kinesis_event_app):
+        config = Config.create(chalice_app=sample_kinesis_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sample_kinesis_event_app,
+                                                  config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [KINESIS_EVENT_SOURCE_POLICY],
+        }
+
+    def test_can_inject_policy_for_ddb(self, sample_ddb_event_app):
+        config = Config.create(chalice_app=sample_ddb_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sample_ddb_event_app, config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [DDB_EVENT_SOURCE_POLICY],
         }
 
 

@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Blueprints",
+      "description": "Fix regression when invoking Lambda functions from blueprints (#1535)"
+    },
+    {
+      "type": "feature",
+      "category": "Events",
+      "description": "Add support for Kinesis and DynamoDB event handlers (#987)"
+    }
+  ]
+}

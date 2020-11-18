@@ -61,6 +61,7 @@ class TestApplicationGraphBuilder(object):
                       api_gateway_stage='api',
                       autogen_policy=False, security_group_ids=None,
                       subnet_ids=None, reserved_concurrency=None, layers=None,
+                      automatic_layer=False,
                       api_gateway_endpoint_type=None,
                       api_gateway_endpoint_vpce=None,
                       api_gateway_policy_file=None,
@@ -71,6 +72,7 @@ class TestApplicationGraphBuilder(object):
             'chalice_app': app,
             'app_name': app_name,
             'project_dir': project_dir,
+            'automatic_layer': automatic_layer,
             'api_gateway_stage': api_gateway_stage,
             'api_gateway_policy_file': api_gateway_policy_file,
             'api_gateway_endpoint_type': api_gateway_endpoint_type,
@@ -106,6 +108,7 @@ class TestApplicationGraphBuilder(object):
         # This is the simplest configuration we can get.
         builder = ApplicationGraphBuilder()
         config = self.create_config(sample_app_lambda_only,
+                                    automatic_layer=False,
                                     iam_role_arn='role:arn')
         application = builder.build(config, stage_name='dev')
         # The top level resource is always an Application.
@@ -127,7 +130,64 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=[],
             layers=[],
             reserved_concurrency=None,
+            managed_layer=None,
+            xray=None,
         )
+
+    def test_can_build_single_lambda_function_app_with_managed_layer(
+            self, sample_app_lambda_only):
+        # This is the simplest configuration we can get.
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(
+            sample_app_lambda_only,
+            iam_role_arn='role:arn', automatic_layer=True)
+        application = builder.build(config, stage_name='dev')
+        # The top level resource is always an Application.
+        assert isinstance(application, models.Application)
+        assert len(application.resources) == 1
+        assert application.resources[0] == models.LambdaFunction(
+            resource_name='myfunction',
+            function_name='lambda-only-dev-myfunction',
+            environment_variables={},
+            runtime=config.lambda_python_version,
+            handler='app.myfunction',
+            tags=config.tags,
+            timeout=None,
+            memory_size=None,
+            deployment_package=models.DeploymentPackage(
+                models.Placeholder.BUILD_STAGE),
+            role=models.PreCreatedIAMRole('role:arn'),
+            security_group_ids=[],
+            subnet_ids=[],
+            layers=[],
+            managed_layer=models.LambdaLayer(
+                resource_name='managed-layer',
+                layer_name='lambda-only-dev-managed-layer',
+                runtime=config.lambda_python_version,
+                deployment_package=models.DeploymentPackage(
+                    models.Placeholder.BUILD_STAGE,
+                )
+            ),
+            reserved_concurrency=None,
+            xray=None,
+        )
+
+    def test_all_lambda_functions_share_managed_layer(
+            self, sample_app_lambda_only):
+
+        @sample_app_lambda_only.lambda_function()
+        def second(event, context):
+            pass
+
+        builder = ApplicationGraphBuilder()
+        config = self.create_config(
+            sample_app_lambda_only,
+            iam_role_arn='role:arn', automatic_layer=True)
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 2
+        first_layer = application.resources[0].managed_layer
+        second_layer = application.resources[1].managed_layer
+        assert first_layer == second_layer
 
     def test_can_build_lambda_function_with_layers(self,
                                                    sample_app_lambda_only):
@@ -157,6 +217,7 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=[],
             layers=layers,
             reserved_concurrency=None,
+            xray=None,
         )
 
     def test_can_build_app_with_domain_name(self, sample_app):
@@ -215,6 +276,7 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=['sn1', 'sn2'],
             layers=[],
             reserved_concurrency=None,
+            xray=None,
         )
 
     def test_vpc_trait_added_when_vpc_configured(self, sample_app_lambda_only):
@@ -276,6 +338,7 @@ class TestApplicationGraphBuilder(object):
             subnet_ids=[],
             layers=[],
             reserved_concurrency=5,
+            xray=None,
         )
 
     def test_multiple_lambda_functions_share_role_and_package(
@@ -460,6 +523,36 @@ class TestApplicationGraphBuilder(object):
         assert sqs_event.resource_name == 'handler-sqs-event-source'
         assert sqs_event.queue == 'myqueue'
         lambda_function = sqs_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_kinesis_event_handler(self, sample_kinesis_event_app):
+        config = self.create_config(sample_kinesis_event_app,
+                                    app_name='kinesis-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        kinesis_event = application.resources[0]
+        assert isinstance(kinesis_event, models.KinesisEventSource)
+        assert kinesis_event.resource_name == 'handler-kinesis-event-source'
+        assert kinesis_event.stream == 'mystream'
+        lambda_function = kinesis_event.lambda_function
+        assert lambda_function.resource_name == 'handler'
+        assert lambda_function.handler == 'app.handler'
+
+    def test_can_create_ddb_event_handler(self, sample_ddb_event_app):
+        config = self.create_config(sample_ddb_event_app,
+                                    app_name='ddb-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        assert len(application.resources) == 1
+        ddb_event = application.resources[0]
+        assert isinstance(ddb_event, models.DynamoDBEventSource)
+        assert ddb_event.resource_name == 'handler-dynamodb-event-source'
+        assert ddb_event.stream_arn == 'arn:aws:...:stream'
+        lambda_function = ddb_event.lambda_function
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 

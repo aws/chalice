@@ -20,7 +20,7 @@ def create_function_resource(name, function_name=None,
                              runtime='python2.7', handler='app.app',
                              tags=None, timeout=60,
                              memory_size=128, deployment_package=None,
-                             role=None, layers=None):
+                             role=None, layers=None, managed_layer=None):
     if function_name is None:
         function_name = 'appname-dev-%s' % name
     if environment_variables is None:
@@ -40,13 +40,26 @@ def create_function_resource(name, function_name=None,
         tags=tags,
         timeout=timeout,
         memory_size=memory_size,
+        xray=None,
         deployment_package=deployment_package,
         role=role,
         security_group_ids=[],
         subnet_ids=[],
         layers=layers,
         reserved_concurrency=None,
+        managed_layer=managed_layer,
     )
+
+
+def create_managed_layer():
+    layer = models.LambdaLayer(
+        resource_name='layer',
+        layer_name='bar',
+        runtime='python2.7',
+        deployment_package=models.DeploymentPackage(
+            filename='foo')
+    )
+    return layer
 
 
 def create_api_mapping():
@@ -155,6 +168,23 @@ class BasePlannerTests(object):
         planner = PlanStage(self.remote_state, self.osutils)
         self.last_plan = planner.execute([resource])
         return self.last_plan.instructions
+
+    def filter_api_calls(self, plan):
+        api_calls = []
+        for instruction in plan:
+            if isinstance(instruction, models.APICall):
+                api_calls.append(instruction)
+        return api_calls
+
+    def assert_recorded_values(self, plan, resource_type, resource_name,
+                               expected_mapping):
+        actual = {}
+        for step in plan:
+            if isinstance(step, models.RecordResourceValue):
+                actual[step.name] = step.value
+            elif isinstance(step, models.RecordResourceVariable):
+                actual[step.name] = Variable(step.variable_name)
+        assert actual == expected_mapping
 
 
 class TestPlanManagedRole(BasePlannerTests):
@@ -495,6 +525,67 @@ class TestPlanCreateUpdateDomainName(BasePlannerTests):
 
 
 class TestPlanLambdaFunction(BasePlannerTests):
+
+    def test_can_create_layer(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        plan = self.determine_plan(layer)
+        expected = [models.APICall(
+            method_name='publish_layer',
+            params={
+                'layer_name': 'bar',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7'})
+        ]
+        self.assert_apicall_equals(plan[0], expected[0])
+        assert list(self.last_plan.messages.values()) == [
+            'Creating lambda layer: bar\n',
+        ]
+
+    def test_can_update_layer(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        copy_of_layer = attr.evolve(layer)
+        self.remote_state.declare_resource_exists(
+            copy_of_layer,
+            layer_version_arn='arn:bar:4'
+        )
+
+        plan = self.determine_plan(layer)
+        expected = [
+            models.APICall(
+                method_name='delete_layer_version',
+                params={'layer_version_arn': 'arn:bar:4'}),
+            models.APICall(
+                method_name='publish_layer',
+                params={
+                    'layer_name': 'bar',
+                    'zip_contents': mock.ANY,
+                    'runtime': 'python2.7'}),
+            models.RecordResourceVariable(
+                resource_type='lambda_layer',
+                resource_name='layer',
+                name='layer_version_arn',
+                variable_name='layer_version_arn')
+        ]
+        assert len(plan) == 3
+        assert plan[0] == expected[0]
+        assert plan[2] == expected[2]
+        self.assert_apicall_equals(plan[1], expected[1])
+        assert list(self.last_plan.messages.values()) == [
+            'Updating lambda layer: bar\n',
+        ]
+
     def test_can_create_function(self):
         function = create_function_resource('function_name')
         self.remote_state.declare_no_resources_exists()
@@ -509,11 +600,12 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'handler': 'app.app',
                 'environment_variables': {},
                 'tags': {},
+                'xray': None,
                 'timeout': 60,
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': None
+                'layers': [],
             },
         ),
             models.APICall(
@@ -535,10 +627,22 @@ class TestPlanLambdaFunction(BasePlannerTests):
 
     def test_create_function_with_layers(self):
         layers = ['arn:aws:lambda:us-east-1:111:layer:test_layer:1']
-        function = create_function_resource('function_name', layers=layers)
+        function = create_function_resource(
+            'function_name', layers=layers,
+            managed_layer=create_managed_layer()
+        )
         self.remote_state.declare_no_resources_exists()
-        plan = self.determine_plan(function)
+        plan = self.filter_api_calls(
+            self.determine_plan(function.managed_layer))
+        plan.extend(self.filter_api_calls(self.determine_plan(function)))
         expected = [models.APICall(
+            method_name='publish_layer',
+            params={
+                'layer_name': 'bar',
+                'zip_contents': mock.ANY,
+                'runtime': 'python2.7'}
+        ),
+            models.APICall(
             method_name='create_function',
             params={
                 'function_name': 'appname-dev-function_name',
@@ -549,10 +653,11 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'environment_variables': {},
                 'tags': {},
                 'timeout': 60,
+                'xray': None,
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': layers
+                'layers': [Variable('layer_version_arn')] + layers
             },
         ),
             models.APICall(
@@ -566,11 +671,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
         # create_function
         self.assert_apicall_equals(plan[0], expected[0])
         # delete_function_concurrency
-        self.assert_apicall_equals(plan[2], expected[1])
-
-        assert list(self.last_plan.messages.values()) == [
-            'Creating lambda function: appname-dev-function_name\n',
-        ]
+        self.assert_apicall_equals(plan[1], expected[1])
 
     def test_can_update_lambda_function_code(self):
         function = create_function_resource('function_name')
@@ -586,11 +687,12 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'zip_contents': mock.ANY,
             'runtime': 'python2.7',
             'environment_variables': {},
+            'xray': None,
             'tags': {},
             'timeout': 60,
             'security_group_ids': [],
             'subnet_ids': [],
-            'layers': None
+            'layers': [],
         }
         expected_params = dict(memory_size=256, **existing_params)
         expected = [models.APICall(
@@ -614,6 +716,27 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'Updating lambda function: appname-dev-function_name\n',
         ]
 
+    def test_can_update_lambda_function_with_managed_layer(self):
+        function = create_function_resource(
+            'function_name',
+            managed_layer=create_managed_layer(),
+        )
+        copy_of_function = attr.evolve(function)
+        self.remote_state.declare_resource_exists(copy_of_function)
+        copy_of_layer = attr.evolve(function.managed_layer)
+        self.remote_state.declare_resource_exists(
+            copy_of_layer,
+            layer_version_arn='arn:bar:4'
+        )
+        plan = self.determine_plan(function.managed_layer)
+        plan.extend(self.determine_plan(function))
+        self.assert_apicall_equals(plan[0], models.APICall(
+            method_name='delete_layer_version',
+            params={'layer_version_arn': 'arn:bar:4'},
+        ))
+        assert plan[3].method_name == 'update_function'
+        assert plan[3].params['layers'] == [Variable('layer_version_arn')]
+
     def test_can_create_function_with_reserved_concurrency(self):
         function = create_function_resource('function_name')
         function.reserved_concurrency = 5
@@ -629,11 +752,12 @@ class TestPlanLambdaFunction(BasePlannerTests):
                 'handler': 'app.app',
                 'environment_variables': {},
                 'tags': {},
+                'xray': None,
                 'timeout': 60,
                 'memory_size': 128,
                 'security_group_ids': [],
                 'subnet_ids': [],
-                'layers': None
+                'layers': [],
             },
         ),
             models.APICall(
@@ -1251,6 +1375,7 @@ class TestPlanRestAPI(BasePlannerTests):
             endpoint_type='EDGE',
             minimum_compression='100',
             api_gateway_stage='api',
+            xray=False,
             lambda_function=function,
         )
         plan = self.determine_plan(rest_api)
@@ -1291,6 +1416,7 @@ class TestPlanRestAPI(BasePlannerTests):
             ),
             models.APICall(method_name='deploy_rest_api',
                            params={'rest_api_id': Variable('rest_api_id'),
+                                   'xray': False,
                                    'api_gateway_stage': 'api'}),
             models.StoreValue(
                 name='rest_api_url',
@@ -1351,6 +1477,7 @@ class TestPlanRestAPI(BasePlannerTests):
             minimum_compression='',
             api_gateway_stage='api',
             endpoint_type='REGIONAL',
+            xray=False,
             lambda_function=function,
         )
         self.remote_state.declare_resource_exists(rest_api)
@@ -1407,6 +1534,7 @@ class TestPlanRestAPI(BasePlannerTests):
             models.APICall(
                 method_name='deploy_rest_api',
                 params={'rest_api_id': Variable('rest_api_id'),
+                        'xray': False,
                         'api_gateway_stage': 'api'},
             ),
             models.StoreValue(
@@ -1462,7 +1590,7 @@ class TestPlanSNSSubscription(BasePlannerTests):
             ),
         ]
         topic_arn_var = Variable("function_name-sns-subscription_topic_arn")
-        assert plan[5:] == [
+        assert plan[5:7] == [
             models.APICall(
                 method_name='add_permission_for_sns_topic',
                 params={
@@ -1479,30 +1607,17 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 },
                 output_var='function_name-sns-subscription_subscription_arn'
             ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic',
-                value='mytopic'),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='subscription_arn',
-                variable_name='function_name-sns-subscription_subscription_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic_arn',
-                variable_name='function_name-sns-subscription_topic_arn',
-            ),
         ]
+        self.assert_recorded_values(
+            plan, 'sns_event', 'function_name-sns-subscription', {
+                'topic': 'mytopic',
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'subscription_arn': Variable(
+                    'function_name-sns-subscription_subscription_arn'),
+                'topic_arn': Variable(
+                    'function_name-sns-subscription_topic_arn'),
+            }
+        )
 
     def test_can_plan_sns_arn_subscription(self):
         function = create_function_resource('function_name')
@@ -1519,7 +1634,7 @@ class TestPlanSNSSubscription(BasePlannerTests):
             value=topic_arn,
         )
         topic_arn_var = Variable("function_name-sns-subscription_topic_arn")
-        assert plan[1:] == [
+        assert plan[1:3] == [
             models.APICall(
                 method_name='add_permission_for_sns_topic',
                 params={
@@ -1536,30 +1651,17 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 },
                 output_var='function_name-sns-subscription_subscription_arn'
             ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic',
-                value=topic_arn),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='subscription_arn',
-                variable_name='function_name-sns-subscription_subscription_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic_arn',
-                variable_name='function_name-sns-subscription_topic_arn',
-            ),
         ]
+        self.assert_recorded_values(
+            plan, 'sns_event', 'function_name-sns-subscription', {
+                'topic': topic_arn,
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'subscription_arn': Variable(
+                    'function_name-sns-subscription_subscription_arn'),
+                'topic_arn': Variable(
+                    'function_name-sns-subscription_topic_arn'),
+            }
+        )
 
     def test_sns_subscription_exists_is_noop_for_planner(self):
         function = create_function_resource('function_name')
@@ -1602,31 +1704,15 @@ class TestPlanSNSSubscription(BasePlannerTests):
                 )
             ),
         ]
-        assert plan[5:] == [
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic',
-                value='mytopic'),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='subscription_arn',
-                value='arn:aws:subscribe',
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name='function_name-sns-subscription',
-                name='topic_arn',
-                variable_name='function_name-sns-subscription_topic_arn',
-            ),
-        ]
+        self.assert_recorded_values(
+            plan, 'sns_event', 'function_name-sns-subscription', {
+                'topic': 'mytopic',
+                'lambda_arn': Variable('function_name_lambda_arn'),
+                'subscription_arn': 'arn:aws:subscribe',
+                'topic_arn': Variable(
+                    'function_name-sns-subscription_topic_arn'),
+            }
+        )
 
 
 class TestPlanSQSSubscription(BasePlannerTests):
@@ -1669,43 +1755,28 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 ),
             )
         ]
-        assert plan[5:] == [
-            models.APICall(
-                method_name='create_sqs_event_source',
-                params={
-                    'queue_arn': Variable(
-                        "function_name-sqs-event-source_queue_arn"
-                    ),
-                    'batch_size': 10,
-                    'function_name': Variable("function_name_lambda_arn")
-                },
-                output_var='function_name-sqs-event-source_uuid'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue_arn',
-                variable_name='function_name-sqs-event-source_queue_arn'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='event_uuid',
-                variable_name='function_name-sqs-event-source_uuid'
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue',
-                value='myqueue'
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='lambda_arn',
-                variable_name='function_name_lambda_arn'
-            )
-        ]
+        assert plan[5] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': Variable(
+                    "function_name-sqs-event-source_queue_arn"
+                ),
+                'batch_size': 10,
+                'function_name': Variable("function_name_lambda_arn")
+            },
+            output_var='function_name-sqs-event-source_uuid'
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': Variable(
+                    'function_name-sqs-event-source_queue_arn'),
+                'event_uuid': Variable(
+                    'function_name-sqs-event-source_uuid'),
+                'queue': 'myqueue',
+                'lambda_arn': Variable(
+                    'function_name_lambda_arn')
+            }
+        )
 
     def test_sqs_event_source_exists_updates_batch_size(self):
         function = create_function_resource('function_name')
@@ -1751,39 +1822,21 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 ),
             )
         ]
-        assert plan[5:] == [
-            models.APICall(
-                method_name='update_sqs_event_source',
-                params={
-                    'event_uuid': 'my-uuid',
-                    'batch_size': 10,
-                },
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue_arn',
-                value='arn:sqs:myqueue',
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='event_uuid',
-                value='my-uuid'
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='queue',
-                value='myqueue'
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name='function_name-sqs-event-source',
-                name='lambda_arn',
-                value='arn:lambda'
-            )
-        ]
+        assert plan[5] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': 'arn:sqs:myqueue',
+                'event_uuid': 'my-uuid',
+                'queue': 'myqueue',
+                'lambda_arn': 'arn:lambda'
+            }
+        )
 
     @pytest.mark.parametrize('functions,integration_injected', [
         (
@@ -1821,6 +1874,141 @@ class TestPlanSQSSubscription(BasePlannerTests):
         assert integrations[0] == integration_injected
 
 
+class TestPlanKinesisSubscription(BasePlannerTests):
+    def test_can_plan_kinesis_event_source(self):
+        function = create_function_resource('function_name')
+        kinesis_event_source = models.KinesisEventSource(
+            resource_name='function_name-kinesis-event-source',
+            stream='mystream',
+            batch_size=10,
+            starting_position='LATEST',
+            lambda_function=function
+        )
+        plan = self.determine_plan(kinesis_event_source)
+        plan_parse_arn = plan[:5]
+        assert plan_parse_arn == [
+            models.BuiltinFunction(
+                function_name='parse_arn',
+                args=[Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn'
+            ),
+            models.JPSearch(
+                expression='account_id',
+                input_var='parsed_lambda_arn',
+                output_var='account_id'
+            ),
+            models.JPSearch(
+                expression='region',
+                input_var='parsed_lambda_arn',
+                output_var='region_name'
+            ),
+            models.JPSearch(
+                expression='partition',
+                input_var='parsed_lambda_arn',
+                output_var='partition'
+            ),
+            models.StoreValue(
+                name='function_name-kinesis-event-source_stream_arn',
+                value=StringFormat(
+                    ("arn:{partition}:kinesis:{region_name}:{account_id}:"
+                     "stream/mystream"),
+                    variables=['partition', 'region_name', 'account_id'],
+                ),
+            )
+        ]
+        assert plan[5] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': Variable(
+                    "function_name-kinesis-event-source_stream_arn"
+                ),
+                'batch_size': 10,
+                'starting_position': 'LATEST',
+                'function_name': Variable("function_name_lambda_arn")
+            },
+            output_var='function_name-kinesis-event-source_uuid'
+        )
+        self.assert_recorded_values(
+            plan, 'kinesis_event', 'function_name-kinesis-event-source', {
+                'kinesis_arn': Variable(
+                    'function_name-kinesis-event-source_stream_arn'),
+                'event_uuid': Variable(
+                    'function_name-kinesis-event-source_uuid'),
+                'stream': 'mystream',
+                'lambda_arn': Variable(
+                    'function_name_lambda_arn')
+            }
+        )
+
+    def test_can_update_kinesis_event_source(self):
+        function = create_function_resource('function_name')
+        kinesis_event_source = models.KinesisEventSource(
+            resource_name='function_name-kinesis-event-source',
+            stream='mystream',
+            batch_size=10,
+            starting_position='LATEST',
+            lambda_function=function
+        )
+        self.remote_state.declare_resource_exists(
+            kinesis_event_source,
+            stream='mystream',
+            kinesis_arn='arn:aws:kinesis:stream',
+            resource_type='kinesis_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(kinesis_event_source)
+        assert plan[5] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+            }
+        )
+
+
+class TestPlanDynamoDBSubscription(BasePlannerTests):
+    def test_can_plan_dynamodb_event_source(self):
+        function = create_function_resource('function_name')
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            starting_position='LATEST', lambda_function=function)
+        plan = self.determine_plan(event_source)
+        assert plan[0] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': 'arn:stream',
+                'batch_size': 100,
+                'function_name': Variable('function_name_lambda_arn'),
+                'starting_position': 'LATEST',
+            },
+            output_var='handler-dynamodb-event-source_uuid',
+        )
+
+    def test_can_plan_dynamodb_event_source_update(self):
+        function = create_function_resource('function_name')
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            starting_position='LATEST', lambda_function=function)
+        self.remote_state.declare_resource_exists(
+            event_source,
+            stream_arn='arn:stream',
+            resource_type='dynamodb_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(event_source)
+        assert plan[0] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 100,
+            },
+        )
+
+
 class TestRemoteState(object):
     def setup_method(self):
         self.client = mock.Mock(spec=TypedAWSClient)
@@ -1836,6 +2024,7 @@ class TestRemoteState(object):
             minimum_compression='',
             endpoint_type='EDGE',
             api_gateway_stage='api',
+            xray=False,
             lambda_function=None,
         )
         return rest_api
@@ -1887,6 +2076,37 @@ class TestRemoteState(object):
                                      policy=None)
         assert not self.remote_state.resource_exists(role)
         self.client.get_role_arn_for_name.assert_called_with('app-dev')
+
+    def test_lambda_layer_not_exists(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        assert not self.remote_state.resource_exists(layer)
+
+    def test_lambda_layer_exists(self):
+        layer = models.LambdaLayer(
+            resource_name='layer',
+            layer_name='bar',
+            runtime='python2.7',
+            deployment_package=models.DeploymentPackage(
+                filename='foo')
+        )
+        deployed_resources = {
+            'resources': [{
+                'name': 'layer',
+                'resource_type': 'lambda_layer',
+                'layer_version_arn': 'arn:layer:4'
+            }]
+        }
+        self.client.get_layer_version.return_value = {
+            'LayerVersionArn': 'arn:layer:4'}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources))
+        assert remote_state.resource_exists(layer)
 
     def test_lambda_function_exists(self):
         function = create_function_resource('function-name')
@@ -2180,6 +2400,70 @@ class TestRemoteState(object):
                 function_arn='arn:aws:lambda:handler',
             )
 
+    def test_kinesis_event_source_not_exists(self):
+        event_source = models.KinesisEventSource(
+            resource_name='handler-kinesis-event-source',
+            stream='mystream', batch_size=100, starting_position='LATEST',
+            lambda_function=None)
+        deployed_resources = {'resources': []}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        assert not remote_state.resource_exists(event_source)
+
+    def test_kinesis_event_source_exists(self):
+        event_source = models.KinesisEventSource(
+            resource_name='handler-kinesis-event-source',
+            stream='mystream', batch_size=100, starting_position='LATEST',
+            lambda_function=None)
+        deployed_resources = {
+            'resources': [{
+                'name': 'handler-kinesis-event-source',
+                'resource_type': 'kinesis_event',
+                'kinesis_arn': 'arn:aws:kinesis:...:stream/mystream',
+                'event_uuid': 'abcd',
+                'stream': 'mystream',
+                'lambda_arn': 'arn:aws:lambda:function:test-dev-index'
+            }]
+        }
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        self.client.verify_event_source_current.return_value = True
+        assert remote_state.resource_exists(event_source)
+
+    def test_ddb_event_source_not_exists(self):
+        event_source = models.DynamoDBEventSource(
+            resource_name='handler-dynamodb-event-source',
+            stream_arn='arn:stream', batch_size=100,
+            starting_position='LATEST', lambda_function=None)
+        deployed_resources = {'resources': []}
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        assert not remote_state.resource_exists(event_source)
+
+    def test_ddb_event_source_exists(self):
+        event_source = models.KinesisEventSource(
+            resource_name='handler-kinesis-event-source',
+            stream='mystream', batch_size=100, starting_position='LATEST',
+            lambda_function=None)
+        deployed_resources = {
+            'resources': [{
+                'name': 'handler-kinesis-event-source',
+                'resource_type': 'kinesis_event',
+                'stream_arn': 'arn:aws:kinesis:...:stream/mystream',
+                'event_uuid': 'abcd',
+                'stream': 'mystream',
+                'lambda_arn': 'arn:aws:lambda:function:test-dev-index'
+            }]
+        }
+        remote_state = RemoteState(
+            self.client, DeployedResources(deployed_resources),
+        )
+        self.client.verify_event_source_arn_current.return_value = True
+        assert remote_state.resource_exists(event_source)
+
 
 class TestUnreferencedResourcePlanner(BasePlannerTests):
     def setup_method(self):
@@ -2316,6 +2600,20 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             {'name': 'myrole2'},
             {'name': 'myrole'},
         ]
+
+    def test_can_delete_lambda_layer(self):
+        plan = []
+        deployed = {
+            'resources': [{
+                'name': 'layer',
+                'resource_type': 'lambda_layer',
+                'layer_version_arn': 'arn'}]}
+        config = FakeConfig(deployed)
+        self.execute(plan, config)
+        assert plan == [
+            models.APICall(
+                method_name='delete_layer_version',
+                params={'layer_version_arn': 'arn'})]
 
     def test_can_delete_scheduled_event(self):
         plan = []
@@ -2579,7 +2877,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         self.execute(plan, config)
         assert plan == [
             models.APICall(
-                method_name='remove_sqs_event_source',
+                method_name='remove_lambda_event_source',
                 params={'event_uuid': 'event-uuid'},
             ),
         ]
@@ -2606,7 +2904,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         self.execute(plan, config)
         assert plan[-1:] == [
             models.APICall(
-                method_name='remove_sqs_event_source',
+                method_name='remove_lambda_event_source',
                 params={'event_uuid': 'event-uuid'},
             ),
         ]

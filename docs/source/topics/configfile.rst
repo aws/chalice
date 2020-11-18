@@ -135,6 +135,19 @@ seconds.
 A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See `AWS Lambda Layers Configuration`_.
 
+
+
+.. _automatic-layer-option:
+
+``automatic_layer``
+~~~~~~~~~~~~~~~~~~~~
+
+Indicates whether chalice will automatically construct a single
+stage layer for all Lambda functions with requirements.txt libraries and
+vendored libraries.  Boolean value defaults to ``false`` if not specified.
+See :ref:`package-3rd-party` for more information.
+
+
 .. _custom-domain-config-options:
 
 ``api_gateway_custom_domain``
@@ -273,6 +286,11 @@ resources are tagged with the key ``'aws-chalice'`` whose value is
 ``'version={chalice-version}:stage={stage-name}:app={app-name}'``.  Currently
 only the following chalice deployed resources are tagged: Lambda functions.
 
+``xray``
+~~~~~~~~
+
+A boolean that turns on AWS XRay's Active tracing configuration.
+This will turn on XRay for both Lambda functions and API Gateway stages.
 
 .. _lambda-config:
 

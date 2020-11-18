@@ -10,6 +10,11 @@ Chalice
      request using the ``current_request`` attribute which is an instance
      of the :class:`Request` class.
 
+   .. attribute:: app_name
+
+      The name of the Chalice app.  This corresponds to the value provided
+      when instantiating a ``Chalice`` object.
+
    .. attribute:: current_request
 
       An object of type :class:`Request`.  This value is only set when
@@ -82,6 +87,9 @@ Chalice
         methods in a single view function (``methods=['GET', 'POST']``), you
         can check the :attr:`app.current_request.method <Request.method>`
         attribute to see which HTTP method was used when making the request.
+        You can provide any HTTP method supported by API Gateway, which
+        includes: ``GET``, ``POST``, ``PUT``, ``PATCH``, ``HEAD``,
+        ``OPTIONS``, and ``DELETE``.
 
       :param str name: Optional parameter to specify the name of the view
         function.  You generally do not need to set this value.  The name
@@ -318,6 +326,98 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
+   .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever data is published to the specified Kinesis stream.
+
+      The lambda function must accept a single parameter which
+      is of type :class:`KinesisEvent`.
+
+      If the decorated function raises an exception, Lambda retries the
+      batch until processing succeeds or the data expires.
+
+      See
+      `Using AWS Lambda with Amazon Kinesis <https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html>`__
+      for more information on how Lambda integrates with Kinesis.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_kinesis_record(stream='mystream')
+          def handler(event):
+              app.log.info("Event: %s", event.to_dict())
+              for record in event:
+                  app.log.info("Message body: %s", record.data)
+
+      :param stream: The name of the Kinesis stream you want to subscribe to.
+        This is the name of the data stream, not the ARN.
+
+      :param batch_size: The maximum number of messages to retrieve
+        when polling for Kinesis messages.  The event parameter can have
+        multiple Kinesis records associated with it.  This is why the
+        event parameter passed to the lambda function is iterable.  The
+        batch size controls how many messages can be in a single event.
+
+      :param starting_position: Specifies where to start processing records.
+        This can have the following values:
+
+        * ``LATEST`` - Process new records that are added to the stream.
+        * ``TRIM_HORIZON`` - Process all records in the stream.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
+   .. method:: on_dynamodb_record(stream_arn, batch_size=100, starting_position='LATEST', name=None)
+
+      Create a lambda function and configure it to be automatically invoked
+      whenever data is written to a DynamoDB stream.
+
+      The lambda function must accept a single parameter which
+      is of type :class:`DynamoDBEvent`.
+
+      If the decorated function raises an exception, Lambda retries the
+      batch until processing succeeds or the data expires.
+
+      See
+      `Using AWS Lambda with Amazon DynamoDB <https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html>`__
+      for more information on how Lambda integrates with DynamoDB Streams.
+
+      .. code-block:: python
+
+          app.debug = True
+
+          @app.on_dynamodb_record(stream_arn='arn:aws:dynamodb:...:stream')
+          def handler(event):
+              app.log.info("Event: %s", event.to_dict())
+              for record in event:
+                  app.log.info("New: %s", record.new_image)
+
+      :param stream_arn: The name of the DynamoDB stream ARN you want to
+        subscribe to.  Note that, unlike other event handlers that accept
+        the resource name, you must provide the stream ARN when subscribing
+        to the DynamoDB stream ARN.
+
+      :param batch_size: The maximum number of messages to retrieve
+        when polling for DynamoDB messages.  The event parameter can have
+        multiple DynamoDB records associated with it.  This is why the
+        event parameter passed to the lambda function is iterable.  The
+        batch size controls how many messages can be in a single event.
+
+      :param starting_position: Specifies where to start processing records.
+        This can have the following values:
+
+        * ``LATEST`` - Process new records that are added to the stream.
+        * ``TRIM_HORIZON`` - Process all records in the stream.
+
+      :param name: The name of the function to use.  This name is combined
+        with the chalice app name as well as the stage name to create the
+        entire lambda function name.  This parameter is optional.  If it is
+        not provided, the name of the python function will be used.
+
    .. method:: lambda_function(name=None)
 
       Create a pure lambda function that's not connected to anything.
@@ -375,6 +475,85 @@ Chalice
 
       see :doc:`topics/websockets` for more information.
 
+   .. method:: middleware(event_type='all')
+
+      Register a middleware with a Chalice application.
+      This decorator will register a function as Chalice middleware, which
+      will be automatically invoked as part of the request/response cycle for
+      a Lambda invocation.  You can provide the ``event_type`` argument to
+      indicate what type of lambda events you want to register with.  The
+      default value, ``all``, indicates that the middleware will be called
+      for all Lambda functions defined in your Chalice app.  Supported
+      values are:
+
+      * ``all`` - ``Any``
+      * ``s3`` - :class:`S3Event`
+      * ``sns`` - :class:`SNSEvent`
+      * ``sqs`` - :class:`SQSEvent`
+      * ``cloudwatch`` - :class:`CloudWatchEvent`
+      * ``scheduled`` - :class:`CloudWatchEvent`
+      * ``websocket`` - :class:`WebsocketEvent`
+      * ``http`` - :class:`Request`
+      * ``pure_lambda`` - :class:`LambdaFunctionEvent`
+
+      The decorated function must accept two arguments, ``event`` and
+      ``get_response``.  The ``event`` is the input event associated with
+      the Lambda invocation, and ``get_response`` is a callable that takes
+      an input event and will invoke the next middleware in the chain,
+      and eventually the original Lambda handler.  Below is a noop middleware
+      that shows the minimum needed to write middleware:
+
+      .. code-block:: python
+
+          @app.middleware('all')
+          def mymiddleware(event, get_response):
+              return get_response(event)
+
+      See :doc:`topics/middleware` for more information on writing middleware.
+
+   .. method:: register_middleware(func, event_type='all')
+
+      Register a middleware with a Chalice application.  This is the same
+      behavior as the :meth:`Chalice.middleware` decorator and is useful
+      if you want to register middleware for pre-existing functions:
+
+      .. code-block:: python
+
+          import thirdparty
+
+          app.register_middleware(thirdparty.func, 'all')
+
+.. class:: ConvertToMiddleware(lambda_wrapper)
+
+   This class is used to convert a function that wraps/proxies a Lambda
+   function into middleware.  This allows this wrapper to automatically
+   be applied to every function in your app.  For example, if you had the
+   following logging decorator:
+
+   .. code-block:: python
+
+       def log_invocation(func):
+           def wrapper(event, context):
+               logger.debug("Before lambda function.")
+               response = func(event, context)
+               logger.debug("After lambda function.")
+           return wrapper
+
+       @app.lambda_function()
+       @log_invocation
+       def myfunction(event, context):
+           logger.debug("In myfunction().")
+
+
+   Rather than decorate every Lambda function with the ``@log_invocation``
+   decorator, you can instead use ``ConvertToMiddleware`` to automatically
+   apply this wrapper to every Lambda function in your app.
+
+   .. code-block:: python
+
+       app.register_middleware(ConvertToMiddleware(log_invoation))
+
+
 Request
 =======
 
@@ -387,7 +566,7 @@ Request
 
       @app.route('/objects/{key}', methods=['GET', 'PUT'])
       def myobject(key):
-          request = app.current_request
+          request = app.current_request  # type: Request
           if request.method == 'PUT':
               # handle PUT request
               pass
@@ -396,10 +575,29 @@ Request
               pass
 
 
+  .. attribute:: path
+
+     The path of the HTTP request.
+
   .. attribute:: query_params
 
-     A dict of the query params for the request.  This value is ``None`` if
-     no query params were provided in the request.
+     A MultiDict of the query params for the request.  This value is ``None``
+     if no query params were provided in the request. The MultiDict acts like a
+     normal dictionary except that you can call the method ``getlist()`` to get
+     multiple keys from the same query string parameter
+
+     .. code-block:: python
+
+          request = app.current_request
+          # Raises an exception if key doesn't exist, usual Python behavior.
+          single_param = request.query_params['single']
+
+          # None if key doesn't exist, usual Python behavior
+          another_param = request.query_params.get('another_param')
+
+          # A List of all parameters named multi_param, Throws an exception if
+          # key doesn't exist
+          multi_param_list = request.query_params.getlist('multi_param')
 
   .. attribute:: headers
 
@@ -432,6 +630,12 @@ Request
   .. attribute:: stage_vars
 
      A dict of configuration for the API Gateway stage.
+
+   .. attribute:: lambda_context
+
+     A Lambda context object that is passed to the invoked view by AWS
+     Lambda. You can find out more about this object by reading the
+     `lambda context object documentation <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_.
 
   .. method:: to_dict()
 
@@ -1164,6 +1368,200 @@ Event Sources
       access to the lambda event.
 
 
+.. class:: KinesisEvent()
+
+   This is the input argument for a Kinesis data stream event handler.
+
+   .. code-block:: python
+
+      @app.on_kinesis_record(stream='mystream')
+      def event_handler(event: KinesisEvent):
+          app.log.info("Event: %s", event.to_dict())
+
+   In the code example above, the ``event`` argument is of
+   type ``KinesisEvent``.  A ``KinesisEvent`` can have multiple
+   messages associated with it.  To access the multiple
+   messages, you can iterate over the ``KinesisEvent``.
+
+   .. method:: __iter__()
+
+      Iterate over individual Kinesis records associated with
+      the event.  Each element in the iterable is of type
+      :class:`KinesisRecord`.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``SQSEvent``
+      object.
+
+.. class:: KinesisRecord()
+
+   Represents a single Kinesis record within a :class:`KinesisEvent`.
+
+   .. attribute:: data
+
+      The payload data for the Kinesis record.  This data is automatically
+      base64 decoded for you and will be a ``bytes`` type.
+
+   .. attribute:: sequence_number
+
+      The unique identifier of the record within its shard.
+
+   .. attribute:: partition_key
+
+      Identifies which shard in the stream the data record is assigned to.
+
+   .. attribute:: schema_version
+
+      Schema version for the record.
+
+   .. attribute:: timestamp
+
+      The approximate time that the record was inserted into the stream.  This
+      is automatically converted to a ``datetime.datetime`` object.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda.
+
+   .. method:: to_dict()
+
+      Return the original dictionary associated with the given
+      message. This is useful if you need direct
+      access to the lambda event.
+
+
+.. class:: DynamoDBEvent()
+
+   This is the input argument for a DynamoDB stream event handler.
+
+   .. code-block:: python
+
+      @app.on_dynamodb_record(stream_arn='arn:aws:us-west-2:.../stream')
+      def event_handler(event: DynamoDBEvent):
+          app.log.info("Event: %s", event.to_dict())
+          for record in event:
+              app.log.info(record.to_dict())
+
+   In the code example above, the ``event`` argument is of
+   type ``DynamoDBEvent``.  A ``DynamoDBEvent`` can have multiple
+   messages associated with it.  To access the multiple
+   messages, you can iterate over the ``DynamoDBEvent``.
+
+   .. method:: __iter__()
+
+      Iterate over individual DynamoDB records associated with
+      the event.  Each element in the iterable is of type
+      :class:`DynamoDBRecord`.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda. This is useful if you need
+      the AWS request ID for tracing, or any other data in the context object.
+
+   .. method:: to_dict()
+
+      Return the original event dictionary provided
+      from Lambda.  This is useful if you need direct
+      access to the lambda event, for example if a
+      new key is added to the lambda event that has not
+      been mapped as an attribute to the ``SQSEvent``
+      object.
+
+.. class:: DynamoDBRecord()
+
+   Represents a single DynamoDB record within a :class:`DynamoDBEvent`.
+
+   .. attribute:: timestamp
+
+      The approximate time that the record was the stream record was created.
+      This is automatically converted to a ``datetime.datetime`` object.
+
+   .. attribute:: keys
+
+      The primary key attribute(s) for the DynamoDB item that was modified.
+
+   .. attribute:: new_image
+
+      The item in the DynamoDB table as it appeared after it was modified.
+
+   .. attribute:: old_image
+
+      The item in the DynamoDB table as it appeared before it was modified.
+
+   .. attribute:: sequence_number
+
+      The sequence number of the stream record.
+
+   .. attribute:: size_bytes
+
+      The size of the stream record, in bytes.
+
+   .. attribute:: stream_view_type
+
+      The type of data from the modified DynamoDB item.
+
+   .. attribute:: aws_region
+
+      The region associated with the event.
+
+   .. attribute:: event_id
+
+      A unique identifier for the event.
+
+   .. attribute:: event_name
+
+      The type of data modification that was performed on the DynamoDB table.
+      This can be: ``INSERT``, ``MODIFY``, or ``DELETE``.
+
+   .. attribute:: event_source_arn
+
+      The ARN of the DynamoDB stream.
+
+   .. attribute:: table_name
+
+      The name of the DynamoDB table associated with the stream.  This value is
+      computed from the ``event_source_arn`` parameter and will be an empty string
+      if Chalice is unable to parse the table name from the event source ARN.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda.
+
+   .. method:: to_dict()
+
+      Return the original dictionary associated with the given
+      message. This is useful if you need direct
+      access to the lambda event.
+
+
+.. class:: LambdaFunctionEvent()
+
+   This is the input argument of middleware registered to a
+   pure Lambda function (``@app.lambda_function()``).
+
+   .. attribute:: event
+
+      The original input event dictionary.
+
+   .. attribute:: context
+
+      A `Lambda context object <https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html>`_
+      that is passed to the handler by AWS Lambda.
+
 Blueprints
 ==========
 
@@ -1369,17 +1767,21 @@ Testing
 
       Generates a sample SNS event.
 
-   .. method:: generate_s3_event(message, subject='')
+   .. method:: generate_s3_event(bucket, key, event_name='ObjectCreated:Put')
 
       Generates a sample S3 event.
 
-   .. method:: generate_sqs_event(message, subject='')
+   .. method:: generate_sqs_event(message_bodies, queue_name='queue-name')
 
       Generates a sample SQS event.
 
-   .. method:: generate_cw_event(message, subject='')
+   .. method:: generate_cw_event(source, detail_type, detail, resources, region='us-west-2')
 
       Generates a sample CloudWatch event.
+
+   .. method:: generate_kinesis_event(message_bodies, stream_name='stream-name')
+
+      Generates a Kinesis event.
 
 
 .. class:: HTTPResponse()

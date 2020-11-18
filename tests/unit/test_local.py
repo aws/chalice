@@ -60,6 +60,11 @@ class ChaliceStubbedHandler(local.ChaliceRequestHandler):
         pass
 
 
+class CustomSampleChalice(app.Chalice):
+    def custom_method(self):
+        return "foo"
+
+
 @pytest.fixture
 def arn_builder():
     return LocalARNBuilder()
@@ -71,6 +76,14 @@ def lambda_context_args():
     # care about for the timing tests, this gives reasonable defaults for
     # those arguments.
     return ['lambda_name', 256]
+
+
+@fixture
+def custom_sample_app():
+    demo = CustomSampleChalice(app_name='custom-demo-app')
+    demo.debug = True
+
+    return demo
 
 
 @fixture
@@ -103,6 +116,14 @@ def sample_app():
     ))
     def custom_cors():
         return {'cors': True}
+
+    @demo.route('/cors-enabled-for-one-method', methods=['GET'])
+    def without_cors():
+        return {'ok': True}
+
+    @demo.route('/cors-enabled-for-one-method', methods=['POST'], cors=True)
+    def with_cors():
+        return {'ok': True}
 
     @demo.route('/options', methods=['OPTIONS'])
     def options():
@@ -162,47 +183,48 @@ def sample_app():
 def demo_app_auth():
     demo = app.Chalice('app-name')
 
+    def _policy(effect, resource, action='execute-api:Invoke'):
+        return {
+            'context': {},
+            'principalId': 'user',
+            'policyDocument': {
+                'Version': '2012-10-17',
+                'Statement': [
+                    {
+                        'Action': action,
+                        'Effect': effect,
+                        'Resource': resource,
+                    }
+                ]
+            }
+        }
+
     @demo.authorizer()
     def auth_with_explicit_policy(auth_request):
         token = auth_request.token
         if token == 'allow':
-            return {
-                'context': {},
-                'principalId': 'user',
-                'policyDocument': {
-                    'Version': '2012-10-17',
-                    'Statement': [
-                        {
-                            'Action': 'execute-api:Invoke',
-                            'Effect': 'Allow',
-                            'Resource':
-                            ["arn:aws:execute-api:mars-west-1:123456789012:"
-                             "ymy8tbxw7b/api/GET/explicit"]
-                        }
-                    ]
-                }
-            }
+            return _policy(
+                effect='Allow', resource=[
+                    "arn:aws:execute-api:mars-west-1:123456789012:"
+                    "ymy8tbxw7b/api/GET/explicit"])
         else:
-            return {
-                'context': {},
-                'principalId': '',
-                'policyDocument': {
-                    'Version': '2012-10-17',
-                    'Statement': [
-                        {
-                            'Action': 'execute-api:Invoke',
-                            'Effect': 'Deny',
-                            'Resource':
-                            ["arn:aws:execute-api:mars-west-1:123456789012:"
-                             "ymy8tbxw7b/api/GET/explicit"]
-                        }
-                    ]
-                }
-            }
+            return _policy(
+                effect='Deny', resource=[
+                    "arn:aws:execute-api:mars-west-1:123456789012:"
+                    "ymy8tbxw7b/api/GET/explicit"])
 
     @demo.authorizer()
     def demo_authorizer_returns_none(auth_request):
         return None
+
+    @demo.authorizer()
+    def auth_with_multiple_actions(auth_request):
+        return _policy(
+            effect='Allow', resource=[
+                    "arn:aws:execute-api:mars-west-1:123456789012:"
+                    "ymy8tbxw7b/api/GET/multi"],
+            action=['execute-api:Invoke', 'execute-api:Other']
+        )
 
     @demo.authorizer()
     def demo_auth(auth_request):
@@ -263,6 +285,10 @@ def demo_app_auth():
 
     @demo.route('/explicit', authorizer=auth_with_explicit_policy)
     def explicit():
+        return {}
+
+    @demo.route('/multi', authorizer=auth_with_multiple_actions)
+    def multi():
         return {}
 
     @demo.route('/iam', authorizer=iam_authorizer)
@@ -421,6 +447,26 @@ def test_non_preflight_options_request(handler):
                         headers=headers)
     handler.do_OPTIONS()
     assert _get_body_from_response_stream(handler) == {'options': True}
+
+
+def test_preflight_request_should_succeed_even_if_cors_disabled(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS', path='/index',
+                        headers=headers)
+    handler.do_OPTIONS()
+    response_lines = handler.wfile.getvalue().splitlines()
+    assert b'HTTP/1.1 200 OK' in response_lines
+
+
+def test_preflight_returns_correct_methods_in_access_allow_header(handler):
+    headers = {'content-type': 'application/json', 'origin': 'null'}
+    set_current_request(handler, method='OPTIONS',
+                        path='/cors-enabled-for-one-method',
+                        headers=headers)
+    handler.do_OPTIONS()
+    response_lines = handler.wfile.getvalue().splitlines()
+    assert b'HTTP/1.1 200 OK' in response_lines
+    assert b'Access-Control-Allow-Methods: POST,OPTIONS' in response_lines
 
 
 def test_errors_converted_to_json_response(handler):
@@ -690,6 +736,14 @@ def test_can_provide_host_to_local_server(sample_app):
     assert dev_server.host == '0.0.0.0'
 
 
+def test_wraps_custom_sample_app_with_local_chalice(custom_sample_app):
+    dev_server = local.create_local_server(custom_sample_app, None,
+                                           host='0.0.0.0', port=23456)
+    assert isinstance(dev_server.app_object, local.LocalChalice)
+    assert isinstance(dev_server.app_object, custom_sample_app.__class__)
+    assert dev_server.app_object.custom_method() == 'foo'
+
+
 class TestLambdaContext(object):
     def test_can_get_remaining_time_once(self, lambda_context_args):
         time_source = FakeTimeSource([0, 5])
@@ -936,6 +990,17 @@ class TestLocalBuiltinAuthorizers(object):
         context = LambdaContext(*lambda_context_args)
         with pytest.raises(NotAuthorizedError):
             authorizer.authorize(path, event, context)
+
+    def test_can_understand_multi_actions(self, demo_app_auth,
+                                          lambda_context_args,
+                                          create_event):
+        authorizer = LocalGatewayAuthorizer(demo_app_auth)
+        path = '/multi'
+        event = create_event(path, 'GET', {})
+        event['headers']['authorization'] = 'allow'
+        context = LambdaContext(*lambda_context_args)
+        event, context = authorizer.authorize(path, event, context)
+        assert event['requestContext']['authorizer']['principalId'] == 'user'
 
     def test_can_understand_cognito_token(self, lambda_context_args,
                                           demo_app_auth, create_event):

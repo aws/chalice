@@ -40,7 +40,7 @@ def create_app_packager(
     template_serializer = cast(TemplateSerializer, JSONTemplateSerializer())
     if package_format == 'cloudformation':
         build_stage = create_build_stage(
-            osutils, ui, CFNSwaggerGenerator())
+            osutils, ui, CFNSwaggerGenerator(), config)
         use_yaml_serializer = template_format == 'yaml'
         if merge_template is not None and \
                 YAMLTemplateSerializer.is_yaml_template(merge_template):
@@ -60,7 +60,7 @@ def create_app_packager(
         generator = SAMTemplateGenerator(config, options)
     else:
         build_stage = create_build_stage(
-            osutils, ui, TerraformSwaggerGenerator())
+            osutils, ui, TerraformSwaggerGenerator(), config)
         generator = TerraformGenerator(config, options)
         post_processors.append(
             TerraformCodeLocationPostProcessor(osutils=osutils))
@@ -115,6 +115,9 @@ class ResourceBuilder(object):
             config, chalice_stage_name)
         resources = self._deps_builder.build_dependencies(application)
         self._build_stage.execute(config, resources)
+        # Rebuild dependencies in case the build stage modified
+        # the application graph.
+        resources = self._deps_builder.build_dependencies(application)
         return resources
 
 
@@ -172,6 +175,7 @@ class SAMTemplateGenerator(TemplateGenerator):
         # type: (Config, PackageOptions) -> None
         super(SAMTemplateGenerator, self).__init__(config, options)
         self._seen_names = set([])  # type: Set[str]
+        self._chalice_layer = ""
 
     def generate(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
@@ -180,6 +184,20 @@ class SAMTemplateGenerator(TemplateGenerator):
         for resource in resources:
             self.dispatch(resource, template)
         return template
+
+    def _generate_lambdalayer(self, resource, template):
+        # type: (models.LambdaLayer, Dict[str, Any]) -> None
+        layer = to_cfn_resource_name(
+            resource.resource_name)
+        template['Resources'][layer] = {
+            "Type": "AWS::Serverless::LayerVersion",
+            "Properties": {
+                "CompatibleRuntimes": [resource.runtime],
+                "ContentUri": resource.deployment_package.filename,
+                "LayerName": resource.layer_name
+            }
+        }
+        self._chalice_layer = layer
 
     def _generate_scheduledevent(self, resource, template):
         # type: (models.ScheduledEvent, Dict[str, Any]) -> None
@@ -226,6 +244,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Handler': resource.handler,
                 'CodeUri': resource.deployment_package.filename,
                 'Tags': resource.tags,
+                'Tracing': resource.xray and 'Active' or 'PassThrough',
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
             },
@@ -252,10 +271,15 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
             lambdafunction_definition['Properties'].update(
                 reserved_concurrency_config)
-        if resource.layers:
+
+        layers = list(resource.layers) or []  # type: List[Any]
+        if self._chalice_layer:
+            layers.insert(0, {'Ref': self._chalice_layer})
+
+        if layers:
             layers_config = {
-                'Layers': resource.layers
-            }  # type: Dict[str, List[str]]
+                'Layers': layers
+            }  # type: Dict[str, Any]
             lambdafunction_definition['Properties'].update(layers_config)
 
         resources[cfn_name] = lambdafunction_definition
@@ -623,6 +647,50 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
         }
 
+    def _generate_kinesiseventsource(self, resource, template):
+        # type: (models.KinesisEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        kinesis_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        properties = {
+            'Stream': {
+                'Fn::Sub': (
+                    'arn:${AWS::Partition}:kinesis:${AWS::Region}'
+                    ':${AWS::AccountId}:stream/%s' %
+                    resource.stream
+                )
+            },
+            'BatchSize': resource.batch_size,
+            'StartingPosition': resource.starting_position,
+        }
+        function_cfn['Properties']['Events'] = {
+            kinesis_cfn_name: {
+                'Type': 'Kinesis',
+                'Properties': properties
+            }
+        }
+
+    def _generate_dynamodbeventsource(self, resource, template):
+        # type: (models.DynamoDBEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        ddb_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        properties = {
+            'Stream': resource.stream_arn,
+            'BatchSize': resource.batch_size,
+            'StartingPosition': resource.starting_position,
+        }
+        function_cfn['Properties']['Events'] = {
+            ddb_cfn_name: {
+                'Type': 'DynamoDB',
+                'Properties': properties
+            }
+        }
+
     def _generate_apimapping(self, resource, template):
         # type: (models.APIMapping, Dict[str, Any]) -> None
         pass
@@ -713,12 +781,17 @@ class SAMTemplateGenerator(TemplateGenerator):
 class TerraformGenerator(TemplateGenerator):
     template_file = "chalice.tf"
 
+    def __init__(self, config, options):
+        # type: (Config, PackageOptions) -> None
+        super(TerraformGenerator, self).__init__(config, options)
+        self._chalice_layer = ""
+
     def generate(self, resources):
         # type: (List[models.Model]) -> Dict[str, Any]
         template = {
             'resource': {},
             'terraform': {
-                'required_version': '> 0.11.0, < 0.13.0'
+                'required_version': '> 0.11.0, < 0.14.0'
             },
             'provider': {
                 'template': {'version': '~> 2'},
@@ -822,7 +895,8 @@ class TerraformGenerator(TemplateGenerator):
             'action': 'lambda:InvokeFunction',
             'function_name': resource.lambda_function.function_name,
             'principal': self._options.service_principal('s3'),
-            'source_arn': 'arn:*:s3:::%s' % resource.bucket
+            'source_arn': ('arn:${data.aws_partition.chalice.partition}:'
+                           's3:::%s' % resource.bucket)
         }
 
     def _generate_sqseventsource(self, resource, template):
@@ -834,6 +908,29 @@ class TerraformGenerator(TemplateGenerator):
                 ":%(account_id)s:%(queue)s",
                 queue=resource.queue),
             'batch_size': resource.batch_size,
+            'function_name': resource.lambda_function.function_name,
+        }
+
+    def _generate_kinesiseventsource(self, resource, template):
+        # type: (models.KinesisEventSource, Dict[str, Any]) -> None
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': self._arnref(
+                "arn:%(partition)s:kinesis:%(region)s"
+                ":%(account_id)s:stream/%(stream)s",
+                stream=resource.stream),
+            'batch_size': resource.batch_size,
+            'starting_position': resource.starting_position,
+            'function_name': resource.lambda_function.function_name,
+        }
+
+    def _generate_dynamodbeventsource(self, resource, template):
+        # type: (models.DynamoDBEventSource, Dict[str, Any]) -> None
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': resource.stream_arn,
+            'batch_size': resource.batch_size,
+            'starting_position': resource.starting_position,
             'function_name': resource.lambda_function.function_name,
         }
 
@@ -904,9 +1001,19 @@ class TerraformGenerator(TemplateGenerator):
                 resource.resource_name)
         }
 
+    def _generate_lambdalayer(self, resource, template):
+        # type: (models.LambdaLayer, Dict[str, Any]) -> None
+        template['resource'].setdefault(
+            "aws_lambda_layer_version", {})[
+                resource.resource_name] = {
+                'layer_name': resource.layer_name,
+                'compatible_runtimes': [resource.runtime],
+                'filename': resource.deployment_package.filename,
+        }
+        self._chalice_layer = resource.resource_name
+
     def _generate_lambdafunction(self, resource, template):
         # type: (models.LambdaFunction, Dict[str, Any]) -> None
-
         func_definition = {
             'function_name': resource.function_name,
             'runtime': resource.runtime,
@@ -916,7 +1023,8 @@ class TerraformGenerator(TemplateGenerator):
             'timeout': resource.timeout,
             'source_code_hash': '${filebase64sha256("%s")}' % (
                 resource.deployment_package.filename),
-            'filename': resource.deployment_package.filename}
+            'filename': resource.deployment_package.filename
+        }  # type: Dict[str, Any]
 
         if resource.security_group_ids and resource.subnet_ids:
             func_definition['vpc_config'] = {
@@ -931,8 +1039,17 @@ class TerraformGenerator(TemplateGenerator):
             func_definition['environment'] = {
                 'variables': resource.environment_variables
             }
+        if resource.xray:
+            func_definition['tracing_config'] = {
+                'mode': 'Active'
+            }
+        if self._chalice_layer:
+            func_definition['layers'] = [
+                '${aws_lambda_layer_version.%s.arn}' % self._chalice_layer
+            ]
         if resource.layers:
-            func_definition['layers'] = list(resource.layers)
+            func_definition.setdefault('layers', []).extend(
+                list(resource.layers))
 
         if isinstance(resource.role, models.ManagedIAMRole):
             func_definition['role'] = '${aws_iam_role.%s.arn}' % (
@@ -1006,6 +1123,11 @@ class TerraformGenerator(TemplateGenerator):
         template.setdefault('output', {})[
             'EndpointURL'] = {
             'value': '${aws_api_gateway_deployment.%s.invoke_url}' % (
+                resource.resource_name)
+        }
+        template.setdefault('output', {})[
+            'RestAPIId'] = {
+            'value': '${aws_api_gateway_rest_api.%s.id}' % (
                 resource.resource_name)
         }
 
@@ -1133,14 +1255,18 @@ class SAMCodeLocationPostProcessor(TemplatePostProcessor):
         # somehow, which isn't currently possible.
         copied = False
         for resource in template['Resources'].values():
-            if resource['Type'] != 'AWS::Serverless::Function':
-                continue
-            original_location = resource['Properties']['CodeUri']
-            new_location = os.path.join(outdir, 'deployment.zip')
-            if not copied:
+            if resource['Type'] == 'AWS::Serverless::Function':
+                original_location = resource['Properties']['CodeUri']
+                new_location = os.path.join(outdir, 'deployment.zip')
+                if not copied:
+                    self._osutils.copy(original_location, new_location)
+                    copied = True
+                resource['Properties']['CodeUri'] = './deployment.zip'
+            elif resource['Type'] == 'AWS::Serverless::LayerVersion':
+                original_location = resource['Properties']['ContentUri']
+                new_location = os.path.join(outdir, 'layer-deployment.zip')
                 self._osutils.copy(original_location, new_location)
-                copied = True
-            resource['Properties']['CodeUri'] = './deployment.zip'
+                resource['Properties']['ContentUri'] = './layer-deployment.zip'
 
 
 class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
@@ -1149,7 +1275,8 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
         # type: (Dict[str, Any], Config, str, str) -> None
 
         copied = False
-        for r in template['resource'].get('aws_lambda_function', {}).values():
+        resources = template['resource']
+        for r in resources.get('aws_lambda_function', {}).values():
             if not copied:
                 asset_path = os.path.join(outdir, 'deployment.zip')
                 self._osutils.copy(r['filename'], asset_path)
@@ -1157,6 +1284,15 @@ class TerraformCodeLocationPostProcessor(TemplatePostProcessor):
             r['filename'] = "${path.module}/deployment.zip"
             r['source_code_hash'] = \
                 '${filebase64sha256("${path.module}/deployment.zip")}'
+        copied = False
+        for r in resources.get('aws_lambda_layer_version', {}).values():
+            if not copied:
+                asset_path = os.path.join(outdir, 'layer-deployment.zip')
+                self._osutils.copy(r['filename'], asset_path)
+                copied = True
+            r['filename'] = "${path.module}/layer-deployment.zip"
+            r['source_code_hash'] = \
+                '${filebase64sha256("${path.module}/layer-deployment.zip")}'
 
 
 class TemplateMergePostProcessor(TemplatePostProcessor):

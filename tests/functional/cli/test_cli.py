@@ -273,7 +273,8 @@ def test_can_package_with_single_file(runner):
         assert result.exit_code == 0, result.output
         assert os.path.isfile('package.zip')
         with zipfile.ZipFile('package.zip', 'r') as f:
-            assert sorted(f.namelist()) == ['deployment.zip', 'sam.json']
+            assert sorted(f.namelist()) == [
+                'deployment.zip', 'sam.json']
 
 
 def test_package_terraform_err_with_single_file_or_merge(runner):
@@ -707,3 +708,10 @@ def test_can_generate_appgraph(runner, mock_cli_factory):
         # Just sanity checking some of the output
         assert 'Application' in result.output
         assert 'RestAPI(' in result.output
+
+
+def test_chalice_cli_mode_env_var_always_set(runner):
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli.new_project, ['testproject'])
+        assert result.exit_code == 0
+        assert os.environ['AWS_CHALICE_CLI_MODE'] == 'true'

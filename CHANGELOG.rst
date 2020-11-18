@@ -2,6 +2,79 @@
 CHANGELOG
 =========
 
+1.21.4
+======
+
+* enhancement:Local:Allow custom Chalice class in local mode (#1502)
+* bugfix:Layers:Ensure single reference to managed layer (#1563)
+
+
+1.21.3
+======
+
+* enhancement:Test:Add test client methods for generating sample kinesis events
+* enhancement:Config:Validate env var values are strings (#1543)
+
+
+1.21.2
+======
+
+* bugfix:Terraform:Fix issue with wildcard partition names in s3 event handlers (#1508)
+* bugfix:Auth:Fix special case processing for root URL auth (#1271)
+* enhancement:Middleware:Add support for HTTP middleware catching exceptions (#1541)
+
+
+1.21.1
+======
+
+* bugfix:Websockets:Fix custom domain name configuration for websockets (#1531)
+* bugfix:Local:Add support for multiple actions in builtin auth in local mode (#1527)
+* bugfix:Websocket:Fix websocket client configuration when using a custom domain (#1503)
+* bugfix:Local:Fix CORs handling in local mode (#761)
+
+
+1.21.0
+======
+
+* bugfix:Blueprints:Fix regression when invoking Lambda functions from blueprints (#1535)
+* feature:Events:Add support for Kinesis and DynamoDB event handlers (#987)
+
+
+1.20.1
+======
+
+* bugfix:Blueprints:Preserve docstring in blueprints (#1525)
+* enhancement:Binary:Support returning native python types when using `*/*` for binary types (#1501)
+
+
+1.20.0
+======
+
+* enhancement:Blueprints:Add `current_app` property to Blueprints (#1094)
+* enhancement:CLI:Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)
+* feature:Middleware:Add support for middleware (#1509)
+* feature:X-Ray:Add support for AWS X-Ray (#464)
+
+
+1.19.0
+======
+
+* feature:Pipeline:Add a new v2 template for the deployment pipeline CloudFormation template (#1506)
+
+
+1.18.1
+======
+
+* bugfix:Packaging:Add fallback to retrieve name/version from sdist (#1486)
+* bugfix:Analyzer:Handle symbols with multiple (shadowed) namespaces (#1494)
+
+
+1.18.0
+======
+
+* feature:Packaging:Add support for automatic layer creation (#1485, #1001)
+
+
 1.17.0
 ======
 

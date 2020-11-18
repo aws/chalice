@@ -57,7 +57,8 @@ class Clock(object):
 
 def create_local_server(app_obj, config, host, port):
     # type: (Chalice, Config, str, int) -> LocalDevServer
-    app_obj.__class__ = LocalChalice
+    CustomLocalChalice.__bases__ = (LocalChalice, app_obj.__class__)
+    app_obj.__class__ = CustomLocalChalice
     return LocalDevServer(app_obj, config, host, port)
 
 
@@ -382,7 +383,8 @@ class LocalGatewayAuthorizer(object):
         allow_resource_statements = []
         for statement in statements:
             if statement.get('Effect') == 'Allow' and \
-               statement.get('Action') == 'execute-api:Invoke':
+                    (statement.get('Action') == 'execute-api:Invoke' or
+                     'execute-api:Invoke' in statement.get('Action')):
                 for resource in statement.get('Resource'):
                     allow_resource_statements.append(resource)
 
@@ -544,7 +546,13 @@ class LocalGateway(object):
         # type:(EventType) -> HeaderType
         route_key = lambda_event['requestContext']['resourcePath']
         route_dict = self._app_object.routes[route_key]
-        route_methods = list(route_dict.keys())
+        route_methods = [method for method in route_dict.keys()
+                         if route_dict[method].cors is not None]
+
+        # If there are no views with CORS enabled
+        # then OPTIONS is the only allowed method.
+        if not route_methods:
+            return {'Access-Control-Allow-Methods': 'OPTIONS'}
 
         # Chalice ensures that routes with multiple views have the same
         # CORS configuration, so if any view has a CORS Config we can use
@@ -743,3 +751,7 @@ class LocalChalice(Chalice):
     def current_request(self, value):  # type: ignore
         # type: (Request) -> None
         self._THREAD_LOCAL.current_request = value
+
+
+class CustomLocalChalice(LocalChalice):
+    pass
