@@ -155,7 +155,7 @@ Once we've created a test user, we can now login by sending a POST
 request to the ``/login`` URL::
 
     $ echo '{"username": "myusername", "password": "mypassword"}' | \
-        http POST https://abcd.execute-api.us-west-2.amazonaws.com/api/todos/
+        http POST https://abcd.execute-api.us-west-2.amazonaws.com/api/login/
     {
         "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJteXVzZXJuYW1lIiwiaWF0IjoxNTk1NDU3Njg5LCJuYmYiOjE1OTU0NTc2ODksImp0aSI6IjMxNjc4YzFkLTdkZjEtNGEzOC04YmZiLTllZjZiMGM1YzAyNyJ9.w46RdtzZdk_P0LAh_St3wjsqgh-k-Hp1ykTpbDqad2k",
     }
