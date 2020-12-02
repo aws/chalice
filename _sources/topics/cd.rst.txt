@@ -254,5 +254,5 @@ creating your secret in Secrets Manager.
       GithubRepoName=repo-name \
       --capabilities CAPABILITY_IAM
 
-We've now created a dpeloyment pipeline that will automatically deploy our
+We've now created a deployment pipeline that will automatically deploy our
 Chalice app whenever we push to our GitHub repository.
