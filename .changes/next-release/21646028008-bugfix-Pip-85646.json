@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Pip",
+  "description": "Bump pip version contraint (#1590)"
+}
