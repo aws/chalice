@@ -257,7 +257,7 @@ Password verified.
 <p>Once we’ve created a test user, we can now login by sending a POST
 request to the <code class="docutils literal notranslate"><span class="pre">/login</span></code> URL:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ echo &#39;{&quot;username&quot;: &quot;myusername&quot;, &quot;password&quot;: &quot;mypassword&quot;}&#39; | \
-    http POST https://abcd.execute-api.us-west-2.amazonaws.com/api/todos/
+    http POST https://abcd.execute-api.us-west-2.amazonaws.com/api/login/
 {
     &quot;token&quot;: &quot;eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJteXVzZXJuYW1lIiwiaWF0IjoxNTk1NDU3Njg5LCJuYmYiOjE1OTU0NTc2ODksImp0aSI6IjMxNjc4YzFkLTdkZjEtNGEzOC04YmZiLTllZjZiMGM1YzAyNyJ9.w46RdtzZdk_P0LAh_St3wjsqgh-k-Hp1ykTpbDqad2k&quot;,
 }
