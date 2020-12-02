@@ -414,7 +414,7 @@ Here's an example:
     app = chalice.Chalice(app_name='ddb-event-demo')
     app.debug = True
 
-    @app.on_kinesis_record(stream_arn='arn:aws:dynamodb:.../stream/2020')
+    @app.on_dynamodb_record(stream_arn='arn:aws:dynamodb:.../stream/2020')
     def handle_ddb_message(event):
         for record in event:
             app.log.debug("New: %s", record.new_image)
