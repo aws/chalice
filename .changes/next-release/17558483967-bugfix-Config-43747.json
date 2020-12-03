@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Config",
+  "description": "Fix config validation for env vars on py27 (#1573)"
+}

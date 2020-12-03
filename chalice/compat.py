@@ -7,6 +7,9 @@ from typing import Dict, Any  # noqa
 from six import StringIO
 
 
+STRING_TYPES = six.string_types
+
+
 def pip_import_string():
     # type: () -> str
     import pip
