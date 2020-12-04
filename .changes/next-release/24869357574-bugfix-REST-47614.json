@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "REST",
-  "description": "Add Allow header with list of allowed methods when returning 405 error (#1583)"
-}

@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.21.5
+======
+
+* bugfix:Config:Fix config validation for env vars on py27 (#1573)
+* bugfix:Pip:Bump pip version contraint (#1590)
+* bugfix:REST:Add Allow header with list of allowed methods when returning 405 error (#1583)
+
+
 1.21.4
 ======
 
