@@ -223,7 +223,7 @@ token you created.  Next we can create the secret using this command::
 
 Now we can generate our deployment pipeline::
 
-    $ aws generate-pipeline --pipeline-version v2 \
+    $ chalice generate-pipeline --pipeline-version v2 \
       --source github --buildspec-file buildspec.yml pipeline.json
 
 This will create two files, a ``pipeline.json`` file containing our
