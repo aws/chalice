@@ -130,7 +130,7 @@
 <p>Websockets are considered an experimental API.  You’ll need to opt-in
 to this feature using the <code class="docutils literal notranslate"><span class="pre">WEBSOCKETS</span></code> feature flag:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="s1">&#39;myapp&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
     <span class="s1">&#39;WEBSOCKETS&#39;</span>
 <span class="p">])</span>
 </pre></div>
