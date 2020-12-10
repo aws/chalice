@@ -1175,6 +1175,18 @@ class TerraformGenerator(TemplateGenerator):
             }
         }
 
+        cf_domain_name_value = (
+            '${aws_api_gateway_domain_name.%s.cloudfront_domain_name}'
+        )
+
+        template.setdefault('output', {})['CloudFrontDomainName'] = {
+            'value': cf_domain_name_value % (domain_name.resource_name)
+        }
+        template.setdefault('output', {})['CloudFrontZoneID'] = {
+            'value': '${aws_api_gateway_domain_name.%s.cloudfront_zone_id}' % (
+                domain_name.resource_name)
+        }
+
     def _generate_apimapping(self, resource, template):
         # type: (models.APIMapping, Dict[str, Any]) -> None
         pass
