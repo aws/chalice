@@ -5,9 +5,6 @@ AWS Chalice
 .. image:: https://badges.gitter.im/awslabs/chalice.svg
    :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
    :alt: Gitter
-.. image:: https://travis-ci.org/aws/chalice.svg?branch=master
-   :target: https://travis-ci.org/aws/chalice
-   :alt: Travis CI
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
    :target: http://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status

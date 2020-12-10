@@ -972,8 +972,8 @@ class PipRunner(object):
             if err is None:
                 err = b'Unknown error'
             error = err.decode()
-            match = re.search(("Could not find a version that satisfies the "
-                               "requirement (.+?) "), error)
+            match = re.search(r"Could not find a version that satisfies the "
+                              r"requirement ([^\s]+)", error)
             if match:
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
