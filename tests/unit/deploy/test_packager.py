@@ -218,7 +218,7 @@ class TestPipRunner(object):
         abi = 'cp37m'
         runner.download_manylinux_wheels(abi, packages, 'directory')
         expected_prefix = ['download', '--only-binary=:all:', '--no-deps',
-                           '--platform', 'manylinux1_x86_64',
+                           '--platform', 'manylinux2014_x86_64',
                            '--implementation', 'cp', '--abi', abi,
                            '--dest', 'directory']
         for i, package in enumerate(packages):
