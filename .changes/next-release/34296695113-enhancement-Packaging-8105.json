@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Packaging",
-  "description": "Increase upper bound for AWS provider in Terraform to 3.x (#1596)"
-}

@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.21.6
+======
+
+* enhancement:Packaging:Increase upper bound for AWS provider in Terraform to 3.x (#1596)
+
+
 1.21.5
 ======
 
