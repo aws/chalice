@@ -795,7 +795,7 @@ class TerraformGenerator(TemplateGenerator):
             },
             'provider': {
                 'template': {'version': '~> 2'},
-                'aws': {'version': '~> 2'},
+                'aws': {'version': '>= 2, < 4'},
                 'null': {'version': '~> 2'},
             },
             'data': {
