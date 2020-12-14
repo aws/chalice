@@ -172,6 +172,40 @@ and deployed.
        expensive_connection = ConnectToDB()
 
 
+Chalice will also set any environment variables specified in your global or
+stage specific configuration whenever your app is packaged and deployed.
+Per-Lambda function environment variables are not set when importing your app
+(this would require importing your application for each Lambda function).  For
+example, given the config below you would be able to access the ``STAGE_VAR``
+environment variable but not the ``PER_FUNCTION`` variable during the
+building/packaging process when Chalice imports your application.  This
+can be useful if you want to move configuration or resource names out of
+your app.py file.
+
+::
+
+  {
+    "stages": {
+      "dev": {
+        "environment_variables": {
+          "STAGE_VAR": "stage-var"
+        }
+        "api_gateway_stage": "api",
+        "lambda_functions": {
+          "foo": {
+            "environment_variables": {"PER_FUNCTION": "per-function"}
+          }
+        }
+      }
+    },
+    "version": "2.0",
+    "app_name": "demo"
+  }
+
+This only applies to the packaging stage.  When the ``foo`` function is invoked
+on Lambda, the ``PER_FUNCTION`` environment variable will be set as expected.
+
+
 .. _package-examples:
 
 Examples
