@@ -90,7 +90,8 @@ A mapping of key value pairs.  These key value pairs will be set as environment
 variables in your application.  All environment variables must be strings.  If
 this key is specified in both a stage specific config option as well as a top
 level key, the stage specific environment variables will be merged into the top
-level keys.  See the examples section below for a concrete example.
+level keys.  See the :ref:`env-var-examples` section below for a concrete
+example.
 
 
 ``iam_policy_file``
@@ -502,6 +503,8 @@ name of ``prod`` because the ``api_gateway_stage`` is specified
 in ``{"stages": {"prod": ...}}`` mapping.
 
 
+
+.. _env-var-examples:
 
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~
