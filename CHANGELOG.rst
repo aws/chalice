@@ -6,6 +6,7 @@ CHANGELOG
 ======
 
 * enhancement:Packaging:Increase upper bound for AWS provider in Terraform to 3.x (#1596)
+* enhancement:Packaging:Add support for manylinux2014 wheels (#1551)
 
 
 1.21.5
