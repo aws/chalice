@@ -5,6 +5,11 @@
       "type": "enhancement",
       "category": "Packaging",
       "description": "Increase upper bound for AWS provider in Terraform to 3.x (#1596)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Packaging",
+      "description": "Add support for manylinux2014 wheels (#1551)"
     }
   ]
 }
