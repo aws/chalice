@@ -196,7 +196,8 @@ a policy from source code analysis.</p>
 variables in your application.  All environment variables must be strings.  If
 this key is specified in both a stage specific config option as well as a top
 level key, the stage specific environment variables will be merged into the top
-level keys.  See the examples section below for a concrete example.</p>
+level keys.  See the <a class="reference internal" href="#env-var-examples"><span class="std std-ref">Environment Variables</span></a> section below for a concrete
+example.</p>
 </div>
 <div class="section" id="iam-policy-file">
 <h3><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code><a class="headerlink" href="#iam-policy-file" title="Permalink to this headline">¶</a></h3>
@@ -548,8 +549,8 @@ However, the <code class="docutils literal notranslate"><span class="pre">prod</
 name of <code class="docutils literal notranslate"><span class="pre">prod</span></code> because the <code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code> is specified
 in <code class="docutils literal notranslate"><span class="pre">{&quot;stages&quot;:</span> <span class="pre">{&quot;prod&quot;:</span> <span class="pre">...}}</span></code> mapping.</p>
 </div>
-<div class="section" id="id1">
-<h3>Environment Variables<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="env-var-examples">
+<span id="id1"></span><h3>Environment Variables<a class="headerlink" href="#env-var-examples" title="Permalink to this headline">¶</a></h3>
 <p>In the following example, environment variables are specified
 both as top level keys as well as per stage.  This allows us to
 provide environment variables that all stages should have as well
@@ -712,7 +713,7 @@ value <code class="docutils literal notranslate"><span class="pre">mytable</span
 <li><a class="reference internal" href="#examples">Examples</a><ul>
 <li><a class="reference internal" href="#custom-domain-name">Custom Domain Name</a></li>
 <li><a class="reference internal" href="#iam-roles-and-policies">IAM Roles and Policies</a></li>
-<li><a class="reference internal" href="#id1">Environment Variables</a></li>
+<li><a class="reference internal" href="#env-var-examples">Environment Variables</a></li>
 <li><a class="reference internal" href="#per-lambda-examples">Per Lambda Examples</a></li>
 </ul>
 </li>

@@ -275,6 +275,36 @@ and deployed.</p>
     <span class="n">expensive_connection</span> <span class="o">=</span> <span class="n">ConnectToDB</span><span class="p">()</span>
 </pre></div>
 </div>
+<p>Chalice will also set any environment variables specified in your global or
+stage specific configuration whenever your app is packaged and deployed.
+Per-Lambda function environment variables are not set when importing your app
+(this would require importing your application for each Lambda function).  For
+example, given the config below you would be able to access the <code class="docutils literal notranslate"><span class="pre">STAGE_VAR</span></code>
+environment variable but not the <code class="docutils literal notranslate"><span class="pre">PER_FUNCTION</span></code> variable during the
+building/packaging process when Chalice imports your application.  This
+can be useful if you want to move configuration or resource names out of
+your app.py file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;STAGE_VAR&quot;</span><span class="p">:</span> <span class="s2">&quot;stage-var&quot;</span>
+      <span class="p">}</span>
+      <span class="s2">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;lambda_functions&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;foo&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;PER_FUNCTION&quot;</span><span class="p">:</span> <span class="s2">&quot;per-function&quot;</span><span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;demo&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This only applies to the packaging stage.  When the <code class="docutils literal notranslate"><span class="pre">foo</span></code> function is invoked
+on Lambda, the <code class="docutils literal notranslate"><span class="pre">PER_FUNCTION</span></code> environment variable will be set as expected.</p>
 </div>
 <div class="section" id="examples">
 <span id="package-examples"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
