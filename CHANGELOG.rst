@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.21.7
+======
+
+* enhancement:Terraform:Map custom domain outputs in Terraform packaging (#1601)
+
+
 1.21.6
 ======
 
