@@ -1174,17 +1174,26 @@ class TerraformGenerator(TemplateGenerator):
                     resource.resource_name)
             }
         }
+        self._add_domain_name_outputs(domain_name.resource_name, endpoint_type,
+                                      template)
 
-        cf_domain_name_value = (
-            '${aws_api_gateway_domain_name.%s.cloudfront_domain_name}'
+    def _add_domain_name_outputs(self, domain_resource_name,
+                                 endpoint_type, template):
+        # type: (str, str, Dict[str, Any]) -> None
+        base = (
+            'aws_api_gateway_domain_name.%s' % domain_resource_name
         )
-
-        template.setdefault('output', {})['CloudFrontDomainName'] = {
-            'value': cf_domain_name_value % (domain_name.resource_name)
+        if endpoint_type == 'EDGE':
+            alias_domain_name = '${%s.cloudfront_domain_name}' % base
+            hosted_zone_id = '${%s.cloudfront_zone_id}' % base
+        else:
+            alias_domain_name = '${%s.regional_domain_name}' % base
+            hosted_zone_id = '${%s.regional_zone_id}' % base
+        template.setdefault('output', {})['AliasDomainName'] = {
+            'value': alias_domain_name
         }
-        template.setdefault('output', {})['CloudFrontZoneID'] = {
-            'value': '${aws_api_gateway_domain_name.%s.cloudfront_zone_id}' % (
-                domain_name.resource_name)
+        template.setdefault('output', {})['HostedZoneId'] = {
+            'value': hosted_zone_id
         }
 
     def _generate_apimapping(self, resource, template):

@@ -817,6 +817,15 @@ class TestTerraformTemplate(TemplateTestBase):
                 'stage_name': 'api',
                 'domain_name': 'example.com',
         }
+        outputs = template['output']
+        assert outputs['AliasDomainName']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.cloudfront_domain_name}'
+        )
+        assert outputs['HostedZoneId']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.cloudfront_zone_id}'
+        )
 
     def test_can_generate_domain_for_regional_endpoint(self, sample_app):
         config = Config.create(
@@ -842,6 +851,15 @@ class TestTerraformTemplate(TemplateTestBase):
                 'stage_name': 'api',
                 'domain_name': 'example.com',
         }
+        outputs = template['output']
+        assert outputs['AliasDomainName']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.regional_domain_name}'
+        )
+        assert outputs['HostedZoneId']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.regional_zone_id}'
+        )
 
 
 class TestSAMTemplate(TemplateTestBase):
