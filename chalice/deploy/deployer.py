@@ -478,7 +478,7 @@ class ManagedLayerDeploymentPackager(BaseDeployStep):
         if resource.managed_layer is not None and \
                 resource.managed_layer.is_empty:
             # Lambda doesn't allow us to create an empty layer so if we've
-            # tried to create the deploment package and determined it's empty
+            # tried to create the deployment package and determined it's empty
             # we should remove the managed layer from the model entirely so
             # downstream consumers don't have to worry about it.
             resource.managed_layer = None
