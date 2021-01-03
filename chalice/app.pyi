@@ -144,7 +144,8 @@ class DecoratorAPI(object):
     def authorizer(self,
                    ttl_seconds: Optional[int]=None,
                    execution_role: Optional[str]=None,
-                   name: Optional[str]=None) -> Callable[..., Any]: ...
+                   name: Optional[str]=None,
+                   header: Optional[str]='Authorization') -> Callable[..., Any]: ...
 
     def on_s3_event(self,
                     bucket: str,

@@ -690,12 +690,15 @@ class DecoratorAPI(object):
             return func
         return _middleware_wrapper
 
-    def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
+    def authorizer(self, ttl_seconds=None, execution_role=None,
+                   name=None, header='Authorization'):
         return self._create_registration_function(
             handler_type='authorizer',
             name=name,
             registration_kwargs={
-                'ttl_seconds': ttl_seconds, 'execution_role': execution_role,
+                'ttl_seconds': ttl_seconds,
+                'execution_role': execution_role,
+                'header': header
             }
         )
 
@@ -1025,6 +1028,7 @@ class _HandlerRegistration(object):
         actual_kwargs = kwargs.copy()
         ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
         execution_role = actual_kwargs.pop('execution_role', None)
+        header = actual_kwargs.pop('header', None)
         if actual_kwargs:
             raise TypeError(
                 'TypeError: authorizer() got unexpected keyword '
@@ -1034,6 +1038,7 @@ class _HandlerRegistration(object):
             handler_string=handler_string,
             ttl_seconds=ttl_seconds,
             execution_role=execution_role,
+            header=header,
         )
         wrapped_handler.config = auth_config
         self.builtin_auth_handlers.append(auth_config)
@@ -1200,12 +1205,13 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
 
 class BuiltinAuthConfig(object):
     def __init__(self, name, handler_string, ttl_seconds=None,
-                 execution_role=None):
+                 execution_role=None, header='Authorization'):
         # We'd also support all the misc config options you can set.
         self.name = name
         self.handler_string = handler_string
         self.ttl_seconds = ttl_seconds
         self.execution_role = execution_role
+        self.header = header
 
 
 # ChaliceAuthorizer is unique in that the runtime component (the thing
