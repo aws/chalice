@@ -143,6 +143,9 @@ Chalice
       :param execution_role: An optional IAM role to specify when invoking
         the Lambda function associated with the built-in authorizer.
 
+      :param header: The header where the auth token will be specified.
+        The default is ``Authorization``
+
    .. method:: schedule(expression, name=None)
 
       Register a scheduled event that's invoked on a regular schedule.
