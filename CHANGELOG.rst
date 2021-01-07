@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.21.8
+======
+
+* enhancement:Authorizers:Add support for custom headers in built-in authorizers (#1613)
+
+
 1.21.7
 ======
 

@@ -14,7 +14,7 @@ import datetime
 from collections import defaultdict
 
 
-__version__ = '1.21.7'
+__version__ = '1.21.8'
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
