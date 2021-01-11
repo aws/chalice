@@ -8,9 +8,6 @@ AWS Chalice
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
    :target: http://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status
-.. image:: https://codecov.io/github/aws/chalice/coverage.svg?branch=master
-   :target: https://codecov.io/github/aws/chalice
-   :alt: codecov.io
 
 
 .. image:: https://aws.github.io/chalice/_images/chalice-logo-whitespace.png
