@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.21.9
+======
+
+* enhancement:Dependencies:Bump attr version constraint (#1620)
+
+
 1.21.8
 ======
 

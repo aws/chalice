@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Dependencies",
+      "description": "Bump attr version constraint (#1620)"
+    }
+  ]
+}
