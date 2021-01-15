@@ -168,15 +168,16 @@ project::
     $ chalice new-project helloworld
 
 This will create a ``helloworld`` directory.  Cd into this
-directory.  You'll see several files have been created for you::
+directory.  You'll see several files and directories have been created for you::
 
     $ cd helloworld
     $ ls -la
     drwxr-xr-x   .chalice
     -rw-r--r--   app.py
+    drwxr-xr-x   chalicelib
     -rw-r--r--   requirements.txt
 
-You can ignore the ``.chalice`` directory for now, the two main files
+You can ignore the ``.chalice`` and ``chalicelib`` directories for now, the two main files
 we'll focus on is ``app.py`` and ``requirements.txt``.
 
 Let's take a look at the ``app.py`` file:

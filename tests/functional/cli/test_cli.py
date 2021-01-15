@@ -51,6 +51,7 @@ def assert_chalice_app_structure_created(dirname):
     app_contents = os.listdir(os.path.join(os.getcwd(), dirname))
     assert 'app.py' in app_contents
     assert 'requirements.txt' in app_contents
+    assert 'chalicelib' in app_contents
     assert '.chalice' in app_contents
     assert '.gitignore' in app_contents
 
