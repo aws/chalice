@@ -31,6 +31,7 @@ from __future__ import print_function
 import os
 import re
 import json
+import fnmatch
 from typing import Optional, Dict, Any, Iterator, Tuple, Match, List  # noqa
 
 import inquirer
@@ -47,7 +48,7 @@ TEMPLATES_DIR = os.path.join(
     'templates'
 )
 VAR_REF_REGEX = r'{{(.*?)}}'
-IGNORE_FILES = ['metadata.json']
+IGNORE_FILES = ['metadata.json', '*.pyc']
 
 
 class BadTemplateError(Exception):
@@ -110,7 +111,7 @@ class ProjectCreator(object):
         # type: (str, str) -> Iterator[Tuple[str, str]]
         for rootdir, _, filenames in self._osutils.walk(source_dir):
             for filename in filenames:
-                if filename in IGNORE_FILES:
+                if self._should_ignore(filename):
                     continue
                 full_src_path = os.path.join(rootdir, filename)
                 # The starting index needs `+ 1` to account for the
@@ -118,6 +119,13 @@ class ProjectCreator(object):
                 full_dst_path = os.path.join(
                     destination_dir, full_src_path[len(source_dir) + 1:])
                 yield full_src_path, full_dst_path
+
+    def _should_ignore(self, filename):
+        # type: (str) -> bool
+        for ignore in IGNORE_FILES:
+            if fnmatch.fnmatch(filename, ignore):
+                return True
+        return False
 
 
 def get_templated_content(contents, template_kwargs):
