@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "app_name": "{{app_name}}",
+  "stages": {
+    "dev": {
+      "api_gateway_stage": "api",
+      "lambda_functions": {
+        "api_handler": {
+          "environment_variables": {
+            "APP_TABLE_NAME": ""
+	  }
+	}
+      }
+    }
+  }
+}

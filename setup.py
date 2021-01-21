@@ -17,6 +17,7 @@ install_requires = [
     'enum-compat>=0.0.2',
     'jmespath>=0.9.3,<1.0.0',
     'pyyaml>=5.3.1,<6.0.0',
+    'inquirer>=2.7.0,<3.0.0',
     'wheel',
     'setuptools'
 ]
@@ -33,6 +34,12 @@ setup(
     install_requires=install_requires,
     extras_require={
         'event-file-poller': ['watchdog==0.9.0'],
+        'cdk': [
+            'aws_cdk.aws_iam>=1.85.0,<2.0',
+            'aws_cdk.aws-s3-assets>=1.85.0,<2.0',
+            'aws_cdk.cloudformation-include>=1.85.0,<2.0',
+            'aws_cdk.core>=1.85.0,<2.0',
+        ]
     },
     license="Apache License 2.0",
     package_data={'chalice': ['*.json', 'py.typed']},
