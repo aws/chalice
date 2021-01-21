@@ -1,5 +1,0 @@
-{
-  "type": "feature",
-  "category": "CDK",
-  "description": "Add built-in support for the AWS CDK (#1622)"
-}

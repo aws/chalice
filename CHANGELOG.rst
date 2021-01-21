@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.22.0
+======
+
+* feature:CDK:Add built-in support for the AWS CDK (#1622)
+
+
 1.21.9
 ======
 
