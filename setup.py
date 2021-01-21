@@ -1,9 +1,22 @@
 #!/usr/bin/env python
+import os
 from setuptools import setup, find_packages
 
 
 with open('README.rst') as readme_file:
     README = readme_file.read()
+
+
+def recursive_include(relative_dir):
+    all_paths = []
+    root_prefix = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'chalice')
+    full_path = os.path.join(root_prefix, relative_dir)
+    for rootdir, _, filenames in os.walk(full_path):
+        for filename in filenames:
+            abs_filename = os.path.join(rootdir, filename)
+            all_paths.append(abs_filename[len(root_prefix) + 1:])
+    return all_paths
 
 
 install_requires = [
@@ -42,7 +55,8 @@ setup(
         ]
     },
     license="Apache License 2.0",
-    package_data={'chalice': ['*.json', 'py.typed']},
+    package_data={'chalice': [
+        '*.json', 'py.typed'] + recursive_include('templates')},
     include_package_data=True,
     zip_safe=False,
     keywords='chalice',
