@@ -1,0 +1,471 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Deploying with the AWS CDK &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
+    
+
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript">
+        function _scroll(subjectId) {
+            var subjectElement = $(subjectId);
+            var actualSubjectHeight = subjectElement.height();
+            var startingPosition = subjectElement[0].getBoundingClientRect().top;
+            return function() {
+                var availableHeight = $(window).height() - startingPosition;
+                // Subtract the scroll position to account for sticky movement.
+                availableHeight += Math.min($(window).scrollTop(), 40);
+                var cappedHeight = Math.min(actualSubjectHeight, availableHeight);
+                if (subjectElement.css("height") !== cappedHeight) {
+                    subjectElement.css("height", cappedHeight);
+                }
+            };
+        }
+
+        // Scroll and resize the the columns when scrolled.
+        $(function() {
+            var rightScroll = _scroll("#right-column > .column-body");
+            var scrollFn = function() {
+                rightScroll.call(this, arguments);
+            };
+            scrollFn();
+            $(window).scroll(scrollFn);
+            $(window).resize(scrollFn);
+        });
+
+        // Scroll spy to change highlighted navigation element.
+        $(function() {
+            var section = document.querySelectorAll(".section");
+            var sections = {};
+            var i = 0;
+            Array.prototype.forEach.call(section, function(e) {
+                sections[e.id] = e.offsetTop;
+            });
+            var scrollSpy = function() {
+                var scrollPosition = document.documentElement.scrollTop || document.body.scrollTop;
+                for (i in sections) {
+                    if (sections[i] <= scrollPosition) {
+                        $('#right-column .current').removeClass('current');
+                        $("#right-column a[href='#" + i + "']").addClass('current');
+                    }
+                }
+            };
+            $(window).scroll(scrollSpy);
+            scrollSpy();
+        });
+    </script>
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-168492171-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-168492171-3');
+    </script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Custom Domain Names" href="customdomain.html" />
+    <link rel="prev" title="REST API Tutorial" href="basicrestapi.html" />
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../_static/fonts/open-sans/stylesheet.css" />
+  
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+  </head><body>
+    <header>
+        <div class="header-flex width-wrapper">
+            <div class="site-logo">
+                <a href="../index.html">
+		  <span class="logo-icon"><img src="../_static/img/chalice-logo-icon-small.png" /></span>
+                </a>
+            </div>
+
+            <ul id="page-navigation">
+                <li class="site-page first"><a href="../quickstart.html">Quick Start</a></li>
+                <li class="site-page"><a href="index.html">Tutorials</a></li>
+                <li class="site-page"><a href="../samples/index.html">Samples</a></li>
+                <li class="site-page"><a href="../main.html">Documentation</a></li>
+                <li class="site-page"><a href="https://github.com/aws/chalice">Code</a></li>
+                <li class="site-search hidden-sm">
+                    <form action="../search.html" method="get">
+                        <input type="hidden" name="check_keywords" value="yes" />
+                        <input type="hidden" name="area" value="default" />
+                        <input class="search-input" autocomplete="off" type="search" name="q" placeholder="Search" />
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+    
+        
+        
+        <section id="page-container">
+            <div class="width-wrapper flex">
+                <article id="document-body">
+                    
+                    <ul class="rel-parents">
+                    <li><a href="index.html" accesskey="U">Tutorials</a></li>
+                    </ul>
+                    
+                    
+  <div class="section" id="deploying-with-the-aws-cdk">
+<h1>Deploying with the AWS CDK<a class="headerlink" href="#deploying-with-the-aws-cdk" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial, we’re going to create a REST API with an Amazon DynamoDB
+table as our data store.  We’ll be using the <a class="reference external" href="https://aws.amazon.com/cdk/">AWS Cloud Development Kit (CDK)</a>
+to deploy our application, and we’ll show how to use the integration between
+Chalice and the CDK in order to build and deploy our application.</p>
+<p>By combining Chalice and the CDK together, you can use Chalice to
+write your application code using its familiar, decorator-based APIs, and
+use the CDK and the full breadth of its construct libraries to create the
+service infrastructure and resources needed for your application.
+We’ll also see how we can use the Chalice construct to manipulate our
+Chalice application using the CDK APIs as well as take resources from
+CDK constructs and map them into our Chalice application.</p>
+<div class="section" id="installation-and-configuration">
+<h2>Installation and Configuration<a class="headerlink" href="#installation-and-configuration" title="Permalink to this headline">¶</a></h2>
+<p>This tutorial requires that both Chalice and the AWS CDK is installed.
+The CDK is written in Typescript and requires node and npm to be installed.
+See the <a class="reference external" href="https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_prerequisites">Getting started with the AWS CDK</a>
+for more details on install the CDK.</p>
+<p>First, we’ll install the CDK.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ npm install -g aws-cdk
+</pre></div>
+</div>
+<p>You should now have a <code class="docutils literal notranslate"><span class="pre">cdk</span></code> executable you can run.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cdk --version
+1.83.0 (build 827c5f4)
+</pre></div>
+</div>
+<p>Next we’ll create a Python virtual environment and install Chalice.  Be sure
+to use Python 3.6 or greater.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m venv demo
+$ . demo/bin/activate
+$ python3 -m pip install chalice
+$ chalice --version
+chalice 1.22.0, python 3.7.8, darwin 19.6.0
+</pre></div>
+</div>
+<p>CDK integration with Chalice is available as an optional package installation.
+To install the necessary dependencies run the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install chalice[cdk]
+</pre></div>
+</div>
+<p>You’re now ready to create your first Chalice and CDK application.</p>
+</div>
+<div class="section" id="project-creation">
+<h2>Project Creation<a class="headerlink" href="#project-creation" title="Permalink to this headline">¶</a></h2>
+<p>To create a new project we’ll use the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">new-project</span></code> command with no
+arguments.  Enter a name for your project and select
+<code class="docutils literal notranslate"><span class="pre">[CDK]</span> <span class="pre">REST</span> <span class="pre">API</span> <span class="pre">with</span> <span class="pre">DynamoDB</span> <span class="pre">backend</span></code> for the project type.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice new-project
+
+
+   ___  _  _    _    _     ___  ___  ___
+  / __|| || |  /_\  | |   |_ _|/ __|| __|
+ | (__ | __ | / _ \ | |__  | || (__ | _|
+  \___||_||_|/_/ \_\|____||___|\___||___|
+
+
+The python serverless microframework for AWS allows
+you to quickly create and deploy applications using
+Amazon API Gateway and AWS Lambda.
+
+Please enter the project name
+[?] Enter the project name: cdkdemo
+[?] Select your project type: [CDK] REST API with DynamoDB backend
+   REST API
+   S3 Event Handler
+   Lambda Functions only
+   Legacy REST API Template
+   [CDK] REST API with DynamoDB backend
+
+Your project has been generated in ./cdkdemo
+</pre></div>
+</div>
+<p>Next, we’ll <code class="docutils literal notranslate"><span class="pre">cd</span></code> into the <code class="docutils literal notranslate"><span class="pre">cdkdemo</span></code> directory and see what Chalice has
+generated.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd cdkdemo
+$ tree
+.
+├── README.rst
+├── infrastructure           # CDK Application
+│   ├── app.py
+│   ├── cdk.json
+│   ├── requirements.txt
+│   └── stacks
+│       ├── __init__.py
+│       └── chaliceapp.py
+├── requirements.txt
+└── runtime                  # Chalice Application
+    ├── app.py
+    └── requirements.txt
+</pre></div>
+</div>
+<p>There’s two top level directories, <code class="docutils literal notranslate"><span class="pre">infrastructure</span></code> and <code class="docutils literal notranslate"><span class="pre">runtime</span></code>, which
+correspond to the CDK application and the Chalice application.  The
+<code class="docutils literal notranslate"><span class="pre">infrastructure</span></code> directory is where we can add additional AWS resources
+needed by our application, and the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> directory is where we write
+our application code for our Lambda functions.  We’ll look at these in more
+detail, but first we’ll deploy our application.</p>
+<p>In order to build and deploy our application, we need to install the
+dependencies used by our application.  We can do this by installing the
+requirements file in the top level directory of our project.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install -r requirements.txt
+</pre></div>
+</div>
+<p>If this is your first time using the CDK, you’ll need to bootstrap your
+account, which will deploy an AWS CloudFormation stack that contains
+resources needed to store our application.  You can do this by running the
+<code class="docutils literal notranslate"><span class="pre">cdk</span> <span class="pre">bootstrap</span></code> command from the <code class="docutils literal notranslate"><span class="pre">infrastructure</span></code> directory.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd infrastructure
+$ cdk bootstrap
+Packaging Chalice app for cdkdemo
+Creating deployment package.
+The stack cdkdemo already includes a CDKMetadata resource
+ ⏳  Bootstrapping environment aws://12345/us-west-2...
+CDKToolkit: creating CloudFormation changeset...
+[██████████████████████████████████████████████████████████] (3/3)
+
+
+ ✅  Environment aws://12345/us-west-2 bootstrapped.
+</pre></div>
+</div>
+<p>We can now deploy our applicaation using the <code class="docutils literal notranslate"><span class="pre">cdk</span> <span class="pre">deploy</span></code> command.  Make sure
+you’re still in the <code class="docutils literal notranslate"><span class="pre">infrastructure</span></code> directory.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cdk deploy
+Packaging Chalice app for cdkdemo
+Creating deployment package.
+Reusing existing deployment package.
+The stack cdkdemo already includes a CDKMetadata resource
+This deployment will make potentially sensitive changes according to your current security approval level (--require-approval broadening).
+Please confirm you intend to make the following modifications:
+
+...
+
+Do you wish to deploy these changes (y/n)? y
+cdkdemo: deploying...
+[0%] start: Publishing abcd:current
+[100%] success: Published abcd:current
+cdkdemo: creating CloudFormation changeset...
+[██████████████████████████████████████████████████████████] (10/10)
+
+
+ ✅  cdkdemo
+
+Outputs:
+cdkdemo.APIHandlerArn = arn:aws:lambda:us-west-2:12345:function:cdkdemo-APIHandler-C8OLGQT9YIDO
+cdkdemo.APIHandlerName = cdkdemo-APIHandler-C8OLGQT9YIDO
+cdkdemo.AppTableName = cdkdemo-AppTable815C50BC-1OPGOPFYODZOJ
+cdkdemo.EndpointURL = https://abcd.execute-api.us-west-2.amazonaws.com/api/
+cdkdemo.RestAPIId = abcd
+
+Stack ARN:
+arn:aws:cloudformation:us-west-2:12345:stack/cdkdemo/574c4850-1d23-11eb-8cae-0aea264da24f
+</pre></div>
+</div>
+<p>We’ve now deployed a Chalice application powered by the CDK.  We can now test
+our REST API.</p>
+</div>
+<div class="section" id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>
+<p>To test our application, we make HTTP requests to our <code class="docutils literal notranslate"><span class="pre">EndpointUrl</span></code>, which is
+shown as the value for <code class="docutils literal notranslate"><span class="pre">cdkdemo.EndpointUrl</span></code> in the output section above.
+We’re using <a class="reference external" href="https://httpie.io/">httpie</a> to make our HTTP requests from the
+command line.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install httpie
+$ http POST https://abcd.execute-api.us-west-2.amazonaws.com/api/users/ username=jamesls name=James
+HTTP/1.1 200 OK
+...
+
+{}
+
+$ http https://abcd.execute-api.us-west-2.amazonaws.com/api/users/jamesls
+HTTP/1.1 200 OK
+Content-Type: application/json
+...
+
+{
+    &quot;name&quot;: &quot;James&quot;,
+    &quot;username&quot;: &quot;jamesls&quot;
+}
+</pre></div>
+</div>
+<p>Now that we have our sample application up and running, let’s walk through the
+project code so we can better understand what’s happening.</p>
+</div>
+<div class="section" id="code-walkthrough">
+<h2>Code Walkthrough<a class="headerlink" href="#code-walkthrough" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">runtime/</span></code> directory contains code where you define your Lambda event
+handlers (e.g. <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;app.on_s3_event()</span></code>, etc.).  When you
+create a Chalice application without the CDK, this is normally the root
+directory for your application.  You should also see your Chalice config file
+in <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>.  The <code class="docutils literal notranslate"><span class="pre">infrastructure/</span></code> directory contains the
+definitions for the AWS resources used by your application.  This is the
+directory structure that would be generated if you were only using the
+CDK and not Chalice.  This is why the combined Chalice/CDK application template
+has a new top level directory with separate sub directories for the CDK app
+and the Chalice app.</p>
+<p>To better understand how the two applications communicate with each other,
+we’ll examine how the DynamoDB table was added to the application.</p>
+<p>First, let’s look at the code for our REST API in <code class="docutils literal notranslate"><span class="pre">runtime/app.py</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;cdkdemo&#39;</span><span class="p">)</span>
+<span class="n">dynamodb</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s1">&#39;dynamodb&#39;</span><span class="p">)</span>
+<span class="n">dynamodb_table</span> <span class="o">=</span> <span class="n">dynamodb</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;APP_TABLE_NAME&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/users&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">create_user</span><span class="p">():</span>
+    <span class="o">...</span>
+
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/users/{username}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>The name of the DynamoDB table is passed through an environment variable,
+<code class="docutils literal notranslate"><span class="pre">APP_TABLE_NAME</span></code>.  We then create a <code class="docutils literal notranslate"><span class="pre">dynamodb.Table</span></code> resource given this
+name.  This environment variable is generated and mapped in the CDK stack that
+Chalice generated for us.  This is located in
+<code class="docutils literal notranslate"><span class="pre">../infrastructure/stacks/haliceapp.py</span></code>.</p>
+<p>Let’s look at the contents of the <code class="docutils literal notranslate"><span class="pre">../infrastructure/stacks/chaliceapp.py</span></code>
+file now.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">aws_cdk</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">aws_dynamodb</span> <span class="k">as</span> <span class="n">dynamodb</span><span class="p">,</span>
+    <span class="n">core</span> <span class="k">as</span> <span class="n">cdk</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">chalice.cdk</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+
+<span class="n">RUNTIME_SOURCE_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)),</span> <span class="n">os</span><span class="o">.</span><span class="n">pardir</span><span class="p">,</span> <span class="s1">&#39;runtime&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ChaliceApp</span><span class="p">(</span><span class="n">cdk</span><span class="o">.</span><span class="n">Stack</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scope</span><span class="p">:</span> <span class="n">cdk</span><span class="o">.</span><span class="n">Construct</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">scope</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dynamodb_table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_ddb_table</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chalice</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;ChaliceApp&#39;</span><span class="p">,</span> <span class="n">source_dir</span><span class="o">=</span><span class="n">RUNTIME_SOURCE_DIR</span><span class="p">,</span>
+            <span class="n">stage_config</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;environment_variables&#39;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">&#39;APP_TABLE_NAME&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamodb_table</span><span class="o">.</span><span class="n">table_name</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dynamodb_table</span><span class="o">.</span><span class="n">grant_read_write_data</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">chalice</span><span class="o">.</span><span class="n">get_role</span><span class="p">(</span><span class="s1">&#39;DefaultRole&#39;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_ddb_table</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">dynamodb_table</span> <span class="o">=</span> <span class="n">dynamodb</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;AppTable&#39;</span><span class="p">,</span>
+            <span class="n">partition_key</span><span class="o">=</span><span class="n">dynamodb</span><span class="o">.</span><span class="n">Attribute</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;PK&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">dynamodb</span><span class="o">.</span><span class="n">AttributeType</span><span class="o">.</span><span class="n">STRING</span><span class="p">),</span>
+            <span class="n">sort_key</span><span class="o">=</span><span class="n">dynamodb</span><span class="o">.</span><span class="n">Attribute</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;SK&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">dynamodb</span><span class="o">.</span><span class="n">AttributeType</span><span class="o">.</span><span class="n">STRING</span>
+            <span class="p">),</span>
+            <span class="n">removal_policy</span><span class="o">=</span><span class="n">cdk</span><span class="o">.</span><span class="n">RemovalPolicy</span><span class="o">.</span><span class="n">DESTROY</span><span class="p">)</span>
+        <span class="n">cdk</span><span class="o">.</span><span class="n">CfnOutput</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;AppTableName&#39;</span><span class="p">,</span>
+                      <span class="n">value</span><span class="o">=</span><span class="n">dynamodb_table</span><span class="o">.</span><span class="n">table_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dynamodb_table</span>
+</pre></div>
+</div>
+<p>Our CDK stack is using the Chalice construct from the <code class="docutils literal notranslate"><span class="pre">chalice.cdk</span></code>
+package.  This provides us two benefits.  First, we can generate CDK resources
+and pass them into our Chalice application by mapping environment variables.
+Second, we can take resources generated in our Chalice application and
+reference them with the CDK API.  For example, we’re generating a DynamoDB
+table in the <code class="docutils literal notranslate"><span class="pre">self._create_ddb_table()</span></code> method, and then mapping it into our
+Chalice application by providing a <code class="docutils literal notranslate"><span class="pre">stage_config</span></code> override.  This dictionary
+is merged with the existing Chalice configuration located in
+./runtime/.chalice/config.json.  If we want to pass additional values into our
+Chalice application we can update the environment_variables dictionary in our
+stage_config.</p>
+<p>We’re also able to retrieve references to our resources in our Chalice
+application and reference them in our CDK stack.  For example, once we’ve
+created our DynamoDB table we also need to grant the IAM role associated with
+your Lambda function access to this table.  We do this by using the
+<code class="docutils literal notranslate"><span class="pre">grant_read_write_data</span></code> method on our table resource, and we provide a
+reference to the default role that Chalice creates for us by using the
+<code class="docutils literal notranslate"><span class="pre">self.chalice.get_role()</span></code> method.</p>
+</div>
+<div class="section" id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>Feel free to experiment with this sample app.  Add new resources to your
+application by updating the <code class="docutils literal notranslate"><span class="pre">infrastructure/stacks/chaliceapp.py</span></code> file, map
+CDK resources into your Chalice app through environment variables, and
+redeploy your application by running <code class="docutils literal notranslate"><span class="pre">cdk</span> <span class="pre">deploy</span></code> from the
+<code class="docutils literal notranslate"><span class="pre">infrastructure/</span></code> directory.</p>
+</div>
+</div>
+
+
+                    
+                    <section class="relations">
+                        
+                        <a href="basicrestapi.html" title="previous chapter" class="previous-page clearfix hidden-xs">← REST API Tutorial</a>
+                        
+                        <a href="customdomain.html" title="next chapter" class="next-page clearfix">Custom Domain Names →</a>
+                    </section>
+                    
+                </article><aside id="right-column" class="side-column hidden-sm">
+                    <div class="column-body">
+                        <section class="sidebar">
+                            
+                            <section class="next-previous">
+                                
+                                <a href="basicrestapi.html" title="previous chapter" class="previous-page clearfix hidden-xs">← Prev</a>
+                                
+                                <a href="customdomain.html" title="next chapter" class="next-page clearfix">Next →</a>
+                            </section>
+                            
+                            <ul>
+<li><a class="reference internal" href="#">Deploying with the AWS CDK</a><ul>
+<li><a class="reference internal" href="#installation-and-configuration">Installation and Configuration</a></li>
+<li><a class="reference internal" href="#project-creation">Project Creation</a></li>
+<li><a class="reference internal" href="#testing">Testing</a></li>
+<li><a class="reference internal" href="#code-walkthrough">Code Walkthrough</a></li>
+<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+
+                        </section>
+                    </div>
+                </aside></div>
+        </section>
+        
+    
+<footer id="footer">
+    <div class="width-wrapper">
+        <div class="copyright">
+            <p>©2020, Amazon Web Services, Inc or its affiliates. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+  </body>
+</html>

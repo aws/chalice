@@ -2281,6 +2281,138 @@ instantiated directly, and instead should be accessed via the
 </dd></dl>
 
 </div>
+<div class="section" id="aws-cdk">
+<span id="cdk-api"></span><h1>AWS CDK<a class="headerlink" href="#aws-cdk" title="Permalink to this headline">¶</a></h1>
+<p>The Chalice CDK construct is available in the <code class="docutils literal notranslate"><span class="pre">chalice.cdk</span></code> namespace.
+For more details on using the AWS CDK with Chalice, see <a class="reference internal" href="tutorials/cdk.html"><span class="doc">Deploying with the AWS CDK</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice.cdk</span> <span class="kn">import</span> <span class="n">Chalice</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="descname">Chalice</code><span class="sig-paren">(</span><em>scope</em>, <em>id</em>, <em>source_dir</em>, <em>stage_config=None</em>, <em>preserve_logical_ids=True</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>A test client used to write tests for Chalice apps.  It allows you to</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>scope</strong> – The CDK scope that the construct is created within.</li>
+<li><strong>id</strong> (<em>str</em>) – The identifier for the construct.  Must be unique within the
+scope in which it’s created.</li>
+<li><strong>source_dir</strong> (<em>str</em>) – Path to Chalice application source code.</li>
+<li><strong>stage_config</strong> (<em>dict</em>) – Chalice stage configuration.
+The configuration object should have the same structure as Chalice
+JSON stage configuration.</li>
+<li><strong>preserve_logical_ids</strong> (<em>bool</em>) – Whether the resources should have
+the same logical IDs in the resulting CDK template as they did in
+the original CloudFormation template file. If you’re vending a
+Construct using cdk-chalice, make sure to pass this as <code class="docutils literal notranslate"><span class="pre">False</span></code>.
+Note: regardless of whether this option is true or false, the
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">sam_template</span></code>’s <code class="docutils literal notranslate"><span class="pre">get_resource</span></code> and related methods always
+uses the original logical ID of the resource/element, as specified
+in the template file.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><strong>ChaliceError</strong> – Error packaging the Chalice application.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">chalice</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;ChaliceApp&#39;</span><span class="p">,</span> <span class="n">source_dir</span><span class="o">=</span><span class="s1">&#39;../runtime&#39;</span><span class="p">,</span>
+    <span class="n">stage_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;environment_variables&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;MY_ENV_VAR&#39;</span><span class="p">:</span> <span class="s1">&#39;FOO&#39;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="Chalice.get_resource">
+<code class="descname">get_resource</code><span class="sig-paren">(</span><em>resource_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.get_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a low-level CfnResource from the resources in a Chalice app with
+the given resource name.  The resource name corresponds to the logical ID
+of the underlying resource in the SAM template.  Any modifications
+performed on that resource will be reflected in the resulting CDK
+template.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>resource_name</strong> (<em>str</em>) – The logical ID of the resource in the SAM template.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">aws_cdk.cdk.CfnResource</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Chalice.get_role">
+<code class="descname">get_role</code><span class="sig-paren">(</span><em>resource_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.get_role" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an <code class="docutils literal notranslate"><span class="pre">IRole</span></code> for an underlying SAM template resource.  This is useful
+if you want to grant additional permissions to an IAM role constructed by Chalice.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dynamodb_table</span> <span class="o">=</span> <span class="n">dynamodb</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">chalice</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">scope</span><span class="p">,</span> <span class="s1">&#39;ChaliceApp&#39;</span><span class="p">,</span> <span class="o">....</span><span class="p">)</span>
+<span class="n">dynamodb_table</span><span class="o">.</span><span class="n">grant_read_write_data</span><span class="p">(</span><span class="n">chalice</span><span class="o">.</span><span class="n">get_role</span><span class="p">(</span><span class="s1">&#39;DefaultRole&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>resource_name</strong> (<em>str</em>) – The logical ID of the resource in the SAM template.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">aws_cdk.aws_iam.IRole</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Chalice.get_function">
+<code class="descname">get_function</code><span class="sig-paren">(</span><em>resource_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.get_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an <code class="docutils literal notranslate"><span class="pre">IRole</span></code> for an underlying SAM template resource.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>resource_name</strong> (<em>str</em>) – The logical ID of the resource in the SAM template.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">aws_cdk.aws_lambda.IFunction</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Chalice.add_environment_variable">
+<code class="descname">add_environment_variable</code><span class="sig-paren">(</span><em>key</em>, <em>value</em>, <em>function_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.add_environment_variable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to add environment variables to a single Lambda
+function constructed by Chalice.  You can also add environment variables
+to Lambda functions using the <code class="docutils literal notranslate"><span class="pre">stage_config</span></code> parameter when creating the
+<code class="docutils literal notranslate"><span class="pre">Chalice()</span></code> construct.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> (<em>str</em>) – The environment variable key name.</li>
+<li><strong>value</strong> (<em>str</em>) – The value of the environment variable.</li>
+<li><strong>function_name</strong> (<em>str</em>) – The logical ID of the Lambda function resource.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 
 
                     
@@ -2317,6 +2449,7 @@ instantiated directly, and instead should be accessed via the
 <li><a class="reference internal" href="#blueprints">Blueprints</a></li>
 <li><a class="reference internal" href="#websockets">Websockets</a></li>
 <li><a class="reference internal" href="#testing">Testing</a></li>
+<li><a class="reference internal" href="#aws-cdk">AWS CDK</a></li>
 </ul>
 
                         </section>

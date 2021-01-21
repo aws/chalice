@@ -46,3 +46,11 @@ Event Source Tutorials
    :glob:
 
    *
+
+AWS CDK Tutorials
+-----------------
+
+:doc:`cdk`
+  This tutorial walks you through creating a REST API with a DynamoDB data
+  store that's deployed using the AWS CDK.  It shows you how you can combine
+  the APIs of Chalice with CDK construct APIs
