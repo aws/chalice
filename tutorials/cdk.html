@@ -162,7 +162,7 @@ chalice 1.22.0, python 3.7.8, darwin 19.6.0
 </div>
 <p>CDK integration with Chalice is available as an optional package installation.
 To install the necessary dependencies run the following command:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install chalice[cdk]
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install &quot;chalice[cdk]&quot;
 </pre></div>
 </div>
 <p>You’re now ready to create your first Chalice and CDK application.</p>
@@ -280,6 +280,14 @@ arn:aws:cloudformation:us-west-2:12345:stack/cdkdemo/574c4850-1d23-11eb-8cae-0ae
 </div>
 <p>We’ve now deployed a Chalice application powered by the CDK.  We can now test
 our REST API.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If you’ve Chalice before, you may be familiar with the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
+command.  When we use the AWS CDK to deploy our application we no longer
+use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and instead we run <code class="docutils literal notranslate"><span class="pre">cdk</span> <span class="pre">deploy</span></code> from the
+<code class="docutils literal notranslate"><span class="pre">infrastructure/</span></code> directory.  You should not use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
+to deploy your application when using Chalice’s CDK integration.</p>
+</div>
 </div>
 <div class="section" id="testing">
 <h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>

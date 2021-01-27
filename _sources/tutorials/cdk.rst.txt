@@ -53,7 +53,7 @@ To install the necessary dependencies run the following command:
 
 ::
 
-  $ python3 -m pip install chalice[cdk]
+  $ python3 -m pip install "chalice[cdk]"
 
 You're now ready to create your first Chalice and CDK application.
 
@@ -187,6 +187,13 @@ you're still in the ``infrastructure`` directory.
 We've now deployed a Chalice application powered by the CDK.  We can now test
 our REST API.
 
+
+.. note::
+   If you've Chalice before, you may be familiar with the ``chalice deploy``
+   command.  When we use the AWS CDK to deploy our application we no longer
+   use ``chalice deploy`` and instead we run ``cdk deploy`` from the
+   ``infrastructure/`` directory.  You should not use ``chalice deploy``
+   to deploy your application when using Chalice's CDK integration.
 
 Testing
 -------
