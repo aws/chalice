@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.22.1
+======
+
+* enhancement:Pip:Bump pip version range to latest version 21.x (#1630)
+* enhancement:IAM:Improve client call collection when generation policies (#692)
+
+
 1.22.0
 ======
 

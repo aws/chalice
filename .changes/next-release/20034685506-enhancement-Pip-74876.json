@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Pip",
-  "description": "Bump pip version range to latest version 21.x (#1630)"
-}
