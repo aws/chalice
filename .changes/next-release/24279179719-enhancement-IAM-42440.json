@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "IAM",
+  "description": "Improve client call collection when generation policies (#692)"
+}
