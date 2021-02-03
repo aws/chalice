@@ -474,7 +474,7 @@ def test_errors_converted_to_json_response(handler):
     handler.do_GET()
     assert _get_body_from_response_stream(handler) == {
         'Code': 'BadRequestError',
-        'Message': 'BadRequestError: bad-request'
+        'Message': 'bad-request'
     }
 
 
