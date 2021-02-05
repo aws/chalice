@@ -78,9 +78,10 @@ API (``https://endpoint/prefix/your-api``).
 
 A boolean value that indicates if chalice should try to automatically generate
 an IAM policy based on analyzing your application source code.  The default
-value is ``true``.  If this value is ``false`` then chalice will load try to a
-local file in ``.chalice/policy-<stage-name>.json`` instead of auto-generating
-a policy from source code analysis.
+value is ``true``.  If this value is ``false`` then chalice will try to load an
+IAM policy from disk at ``.chalice/policy-<stage-name>.json`` instead of
+auto-generating a policy from source code analysis. You can change the filename
+by providing the ``iam_policy_file`` config option.
 
 
 ``environment_variables``
