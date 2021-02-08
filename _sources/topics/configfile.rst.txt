@@ -423,7 +423,7 @@ dev stage for REST API::
           "domain_name": "api.example.com",
           "security_policy": "TLS 1.2|TLS 1.0",
           "certificate_arn": "arn:aws:acm:example.com",
-          "url_prefixes": ["foo", "bar],
+          "url_prefixes": ["foo", "bar"],
           "tags": {
             "key": "tag1",
             "key1": "tag2"
