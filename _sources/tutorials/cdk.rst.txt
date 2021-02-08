@@ -271,7 +271,7 @@ The name of the DynamoDB table is passed through an environment variable,
 ``APP_TABLE_NAME``.  We then create a ``dynamodb.Table`` resource given this
 name.  This environment variable is generated and mapped in the CDK stack that
 Chalice generated for us.  This is located in
-``../infrastructure/stacks/haliceapp.py``.
+``../infrastructure/stacks/chaliceapp.py``.
 
 Let's look at the contents of the ``../infrastructure/stacks/chaliceapp.py``
 file now.

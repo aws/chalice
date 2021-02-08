@@ -186,9 +186,10 @@ API (<code class="docutils literal notranslate"><span class="pre">https://endpoi
 <h3><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code><a class="headerlink" href="#autogen-policy" title="Permalink to this headline">¶</a></h3>
 <p>A boolean value that indicates if chalice should try to automatically generate
 an IAM policy based on analyzing your application source code.  The default
-value is <code class="docutils literal notranslate"><span class="pre">true</span></code>.  If this value is <code class="docutils literal notranslate"><span class="pre">false</span></code> then chalice will load try to a
-local file in <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> instead of auto-generating
-a policy from source code analysis.</p>
+value is <code class="docutils literal notranslate"><span class="pre">true</span></code>.  If this value is <code class="docutils literal notranslate"><span class="pre">false</span></code> then chalice will try to load an
+IAM policy from disk at <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> instead of
+auto-generating a policy from source code analysis. You can change the filename
+by providing the <code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code> config option.</p>
 </div>
 <div class="section" id="environment-variables">
 <h3><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code><a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
