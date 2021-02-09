@@ -189,7 +189,9 @@ an IAM policy based on analyzing your application source code.  The default
 value is <code class="docutils literal notranslate"><span class="pre">true</span></code>.  If this value is <code class="docutils literal notranslate"><span class="pre">false</span></code> then chalice will try to load an
 IAM policy from disk at <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> instead of
 auto-generating a policy from source code analysis. You can change the filename
-by providing the <code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code> config option.</p>
+by providing the <code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code> config option.
+See <a class="reference internal" href="#iam-role-pol-examples"><span class="std std-ref">IAM Roles and Policies</span></a> for examples of how to configure IAM roles
+and policies.</p>
 </div>
 <div class="section" id="environment-variables">
 <h3><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code><a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
@@ -202,18 +204,35 @@ example.</p>
 </div>
 <div class="section" id="iam-policy-file">
 <h3><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code><a class="headerlink" href="#iam-policy-file" title="Permalink to this headline">¶</a></h3>
-<p>When <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> is false, chalice will try to load an IAM policy from
-disk instead of auto-generating one based on source code analysis.  The default
-location of this file is <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code>, e.g
+<p>When <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, Chalice will try to load an IAM policy
+from disk instead of auto-generating one based on source code analysis.  The
+default location of this file is <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code>, e.g
 <code class="docutils literal notranslate"><span class="pre">.chalice/policy-dev.json</span></code>, <code class="docutils literal notranslate"><span class="pre">.chalice/policy-prod.json</span></code>, etc.  You can
 change the filename by providing this <code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code> config option.  This
-filename is relative to the <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory.</p>
+filename is relative to the <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory.  For example, this config
+will create an IAM role using the file in <code class="docutils literal notranslate"><span class="pre">.chalice/my-policy.json</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;autogen_policy&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+      <span class="s2">&quot;iam_policy_file&quot;</span><span class="p">:</span> <span class="s2">&quot;my-policy.json&quot;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="#iam-role-pol-examples"><span class="std std-ref">IAM Roles and Policies</span></a> for more examples of how to configure IAM
+roles and policies.</p>
 </div>
 <div class="section" id="iam-role-arn">
 <h3><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code><a class="headerlink" href="#iam-role-arn" title="Permalink to this headline">¶</a></h3>
 <p>If <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, you must specify this value that indicates
 which IAM role arn to use when configuration your application.  This value is
-only used if <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p>
+only used if <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>.
+See <a class="reference internal" href="#iam-role-pol-examples"><span class="std std-ref">IAM Roles and Policies</span></a> for examples of how to configure IAM roles
+and policies.</p>
 </div>
 <div class="section" id="lambda-memory-size">
 <h3><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code><a class="headerlink" href="#lambda-memory-size" title="Permalink to this headline">¶</a></h3>
@@ -235,10 +254,10 @@ per Lambda function. See <a class="reference external" href="https://docs.aws.am
 </div>
 <div class="section" id="automatic-layer">
 <span id="automatic-layer-option"></span><h3><code class="docutils literal notranslate"><span class="pre">automatic_layer</span></code><a class="headerlink" href="#automatic-layer" title="Permalink to this headline">¶</a></h3>
-<p>Indicates whether chalice will automatically construct a single
-stage layer for all Lambda functions with requirements.txt libraries and
-vendored libraries.  Boolean value defaults to <code class="docutils literal notranslate"><span class="pre">false</span></code> if not specified.
-See <a class="reference internal" href="packaging.html#package-3rd-party"><span class="std std-ref">3rd Party Packages</span></a> for more information.</p>
+<p>A boolean value that indicates whether chalice will automatically construct a
+single stage layer for all Lambda functions with requirements.txt libraries and
+vendored libraries.  Boolean value defaults to <code class="docutils literal notranslate"><span class="pre">false</span></code> if not specified.  See
+<a class="reference internal" href="packaging.html#package-3rd-party"><span class="std std-ref">3rd Party Packages</span></a> for more information.</p>
 </div>
 <div class="section" id="api-gateway-custom-domain">
 <span id="custom-domain-config-options"></span><h3><code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code><a class="headerlink" href="#api-gateway-custom-domain" title="Permalink to this headline">¶</a></h3>
@@ -494,7 +513,7 @@ with specified <code class="docutils literal notranslate"><span class="pre">url_
 instead of <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code>.</p>
 </div>
 <div class="section" id="iam-roles-and-policies">
-<h3>IAM Roles and Policies<a class="headerlink" href="#iam-roles-and-policies" title="Permalink to this headline">¶</a></h3>
+<span id="iam-role-pol-examples"></span><h3>IAM Roles and Policies<a class="headerlink" href="#iam-roles-and-policies" title="Permalink to this headline">¶</a></h3>
 <p>Here’s an example for configuring IAM policies across stages:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>

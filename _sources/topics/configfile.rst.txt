@@ -82,6 +82,8 @@ value is ``true``.  If this value is ``false`` then chalice will try to load an
 IAM policy from disk at ``.chalice/policy-<stage-name>.json`` instead of
 auto-generating a policy from source code analysis. You can change the filename
 by providing the ``iam_policy_file`` config option.
+See :ref:`iam-role-pol-examples` for examples of how to configure IAM roles
+and policies.
 
 
 ``environment_variables``
@@ -98,12 +100,28 @@ example.
 ``iam_policy_file``
 ~~~~~~~~~~~~~~~~~~~
 
-When ``autogen_policy`` is false, chalice will try to load an IAM policy from
-disk instead of auto-generating one based on source code analysis.  The default
-location of this file is ``.chalice/policy-<stage-name>.json``, e.g
+When ``autogen_policy`` is ``false``, Chalice will try to load an IAM policy
+from disk instead of auto-generating one based on source code analysis.  The
+default location of this file is ``.chalice/policy-<stage-name>.json``, e.g
 ``.chalice/policy-dev.json``, ``.chalice/policy-prod.json``, etc.  You can
 change the filename by providing this ``iam_policy_file`` config option.  This
-filename is relative to the ``.chalice`` directory.
+filename is relative to the ``.chalice`` directory.  For example, this config
+will create an IAM role using the file in ``.chalice/my-policy.json``::
+
+  {
+    "version": "2.0",
+    "app_name": "app",
+    "stages": {
+      "dev": {
+        "autogen_policy": false,
+        "iam_policy_file": "my-policy.json"
+      }
+    }
+  }
+
+
+See :ref:`iam-role-pol-examples` for more examples of how to configure IAM
+roles and policies.
 
 
 ``iam_role_arn``
@@ -112,6 +130,8 @@ filename is relative to the ``.chalice`` directory.
 If ``manage_iam_role`` is ``false``, you must specify this value that indicates
 which IAM role arn to use when configuration your application.  This value is
 only used if ``manage_iam_role`` is ``false``.
+See :ref:`iam-role-pol-examples` for examples of how to configure IAM roles
+and policies.
 
 
 ``lambda_memory_size``
@@ -144,10 +164,10 @@ per Lambda function. See `AWS Lambda Layers Configuration`_.
 ``automatic_layer``
 ~~~~~~~~~~~~~~~~~~~~
 
-Indicates whether chalice will automatically construct a single
-stage layer for all Lambda functions with requirements.txt libraries and
-vendored libraries.  Boolean value defaults to ``false`` if not specified.
-See :ref:`package-3rd-party` for more information.
+A boolean value that indicates whether chalice will automatically construct a
+single stage layer for all Lambda functions with requirements.txt libraries and
+vendored libraries.  Boolean value defaults to ``false`` if not specified.  See
+:ref:`package-3rd-party` for more information.
 
 
 .. _custom-domain-config-options:
@@ -441,6 +461,8 @@ with specified ``url_prefixes`` that should contain information about
 
 If there is Websocket API ``websocket_api_custom_domain`` should be used
 instead of ``api_gateway_custom_domain``.
+
+.. _iam-role-pol-examples:
 
 IAM Roles and Policies
 ~~~~~~~~~~~~~~~~~~~~~~
