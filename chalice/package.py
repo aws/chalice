@@ -791,7 +791,7 @@ class TerraformGenerator(TemplateGenerator):
         template = {
             'resource': {},
             'terraform': {
-                'required_version': '> 0.11.0, < 0.14.0'
+                'required_version': '> 0.11.0, < 0.15.0'
             },
             'provider': {
                 'template': {'version': '~> 2'},
