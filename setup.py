@@ -56,7 +56,7 @@ setup(
     },
     license="Apache License 2.0",
     package_data={'chalice': [
-        '*.json', 'py.typed'] + recursive_include('templates')},
+        '*.json', '*.pyi', 'py.typed'] + recursive_include('templates')},
     include_package_data=True,
     zip_safe=False,
     keywords='chalice',

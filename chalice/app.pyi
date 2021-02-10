@@ -20,8 +20,6 @@ class TooManyRequestsError(ChaliceViewError): ...
 
 
 ALL_ERRORS = ... # type: List[ChaliceViewError]
-_BUILTIN_AUTH_FUNC = Callable[
-    [AuthRequest], Union[AuthResponse, Dict[str, Any]]]
 _GET_RESPONSE = Callable[[Any], Any]
 _MIDDLEWARE_FUNC = Callable[[Any, _GET_RESPONSE], Any]
 
@@ -30,7 +28,7 @@ class Authorizer:
     name = ... # type: str
     scopes = ... # type: List[str]
     def to_swagger(self) -> Dict[str, Any]: ...
-    def with_scopes(self, scopes: List[str]) -> Authorizer: ...
+    def with_scopes(self, scopes: List[str]) -> Authorizer: ... #pylint: disable=undefined-variable
 
 
 class CognitoUserPoolAuthorizer(Authorizer): ...
@@ -46,9 +44,9 @@ class CORSConfig:
     allow_headers = ... # type: str
     get_access_control_headers = ... # type: Callable[..., Dict[str, str]]
 
-    def __init__(self, allow_origin: str='*', allow_headers: Set[str]=None,
-                 expose_headers: Set[str]=None, max_age: Optional[int]=None,
-                 allow_credentials: Optional[bool]=None) -> None: ...
+    def __init__(self, allow_origin: str=..., allow_headers: Set[str]=...,
+                 expose_headers: Set[str]=..., max_age: Optional[int]=...,
+                 allow_credentials: Optional[bool]=...) -> None: ...
 
     def __eq__(self, other: object) -> bool: ...
 
@@ -62,6 +60,7 @@ class Request:
     base64_body = ... # type: str
     context = ... # type: Dict[str, str]
     stage_vars = ... # type: Dict[str, str]
+    json_body = ... # type: Any
 
     def __init__(
         self,
@@ -83,11 +82,11 @@ class Response:
 
     def __init__(self,
                  body: Any,
-                 headers: Dict[str, str]=None,
-                 status_code: int=200) -> None: ...
+                 headers: Dict[str, str]=...,
+                 status_code: int=...) -> None: ...
 
     def to_dict(self,
-                binary_types: Optional[List[str]]=None) -> Dict[str, Any]: ...
+                binary_types: Optional[List[str]]=...) -> Dict[str, Any]: ...
 
 
 class RouteEntry(object):
@@ -107,11 +106,11 @@ class RouteEntry(object):
                  view_name: str,
                  path: str,
                  method: str,
-                 api_key_required: Optional[bool]=None,
-                 content_types: Optional[List[str]]=None,
+                 api_key_required: Optional[bool]=...,
+                 content_types: Optional[List[str]]=...,
                  authorizer: Optional[Union[Authorizer,
-                                            ChaliceAuthorizer]]=None,
-                 cors: Union[bool, CORSConfig]=False) -> None: ...
+                                            ChaliceAuthorizer]]=...,
+                 cors: Union[bool, CORSConfig]=...) -> None: ...
 
     def _parse_view_args(self) -> List[str]: ...
 
@@ -137,52 +136,52 @@ class WebsocketAPI(object):
 class DecoratorAPI(object):
     def register_middleware(self,
                             func: _MIDDLEWARE_FUNC,
-                            event_type: str='all') -> None: ...
+                            event_type: str=...) -> None: ...
 
-    def middleware(self, event_type: str='all') -> Callable[..., Any]: ...
+    def middleware(self, event_type: str=...) -> Callable[..., Any]: ...
 
     def authorizer(self,
-                   ttl_seconds: Optional[int]=None,
-                   execution_role: Optional[str]=None,
-                   name: Optional[str]=None,
-                   header: Optional[str]='Authorization') -> Callable[..., Any]: ...
+                   ttl_seconds: Optional[int]=...,
+                   execution_role: Optional[str]=...,
+                   name: Optional[str]=...,
+                   header: Optional[str]=...) -> Callable[..., Any]: ...
 
     def on_s3_event(self,
                     bucket: str,
-                    events: Optional[List[str]]=None,
-                    prefix: Optional[str]=None,
-                    suffix: Optional[str]=None,
-                    name: Optional[str]=None) -> Callable[..., Any]: ...
+                    events: Optional[List[str]]=...,
+                    prefix: Optional[str]=...,
+                    suffix: Optional[str]=...,
+                    name: Optional[str]=...) -> Callable[..., Any]: ...
 
     def on_sns_message(self,
                       topic: str,
-                      name: Optional[str]=None) -> Callable[..., Any]: ...
+                      name: Optional[str]=...) -> Callable[..., Any]: ...
 
     def on_sqs_message(self,
                        queue: str,
-                       batch_size: int=1,
-                       name: Optional[str]=None) -> Callable[..., Any]: ...
+                       batch_size: int=...,
+                       name: Optional[str]=...) -> Callable[..., Any]: ...
 
     def on_kinesis_record(self,
                           stream: str,
-                          batch_size: int=100,
-                          startition_position: str='LATEST',
-                          name: Optional[str]=None) -> Callable[..., Any]: ...
+                          batch_size: int=...,
+                          startition_position: str=...,
+                          name: Optional[str]=...) -> Callable[..., Any]: ...
 
     def on_dynamodb_record(self,
                            stream_arn: str,
-                           batch_size: int=100,
-                           startition_position: str='LATEST',
-                           name: Optional[str]=None) -> Callable[..., Any]: ...
+                           batch_size: int=...,
+                           startition_position: str=...,
+                           name: Optional[str]=...) -> Callable[..., Any]: ...
 
     def schedule(self,
                  expression: str,
-                 name: Optional[str]=None,
-                 description: Optional[str]="") -> Callable[..., Any]: ...
+                 name: Optional[str]=...,
+                 description: Optional[str]=...) -> Callable[..., Any]: ...
 
     def route(self, path: str, **kwargs: Any) -> Callable[..., Any]: ...
 
-    def lambda_function(self, name: Optional[str]=None) -> Callable[..., Any]: ...
+    def lambda_function(self, name: Optional[str]=...) -> Callable[..., Any]: ...
 
 
 class Chalice(DecoratorAPI):
@@ -200,14 +199,14 @@ class Chalice(DecoratorAPI):
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
     event_sources = ... # type: List[BaseEventSourceConfig]
     pure_lambda_functions = ... # type: List[LambdaFunction]
-    handler_map = ... # type: Dict[str, Callable]
+    handler_map = ... # type: Dict[str, Callable[..., Any]]
     # Used for feature flag validation
     _features_used = ... # type: Set[str]
     experimental_feature_flags = ... # type: Set[str]
 
-    def __init__(self, app_name: str, debug: bool=False,
-                 configure_logs: bool=True,
-                 env: Optional[Dict[str, str]]=None) -> None: ...
+    def __init__(self, app_name: str, debug: bool=...,
+                 configure_logs: bool=...,
+                 env: Optional[Dict[str, str]]=...) -> None: ...
 
     def __call__(self, event: Any, context: Any) -> Any: ...
     def _get_view_function_response(self,
@@ -217,7 +216,7 @@ class Chalice(DecoratorAPI):
 
 class ChaliceAuthorizer(object):
     name = ... # type: str
-    func = ... # type: _BUILTIN_AUTH_FUNC
+    func = ... # type: Callable[[AuthRequest], Union[AuthResponse, Dict[str, Any]]]
     scopes = ... # type: List[str]
     config = ... # type: BuiltinAuthConfig
     def with_scopes(self, scopes: List[str]) -> ChaliceAuthorizer: ...
@@ -301,7 +300,7 @@ class ScheduledEventConfig(BaseEventSourceConfig):
 
 
 class CloudWatchEventConfig(BaseEventSourceConfig):
-    event_pattern = ...  # type: Dict
+    event_pattern = ...  # type: Dict[str, Any]
 
 
 class KinesisEventConfig(BaseEventSourceConfig):
