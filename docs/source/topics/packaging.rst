@@ -99,13 +99,13 @@ We recommend setting ``"automatic_layer": true`` in your
 ``.chalice/config.json`` due to these benefits.
 
 Migrating to ``"automatic_layer": true`` is mostly backwards compatible
-with one notible exception: the location of the vendor files is different.
+with one notable exception: the location of the vendor files is different.
 
 When not using automatic layers, any files placed in ``vendor/`` will be
 available in your CWD of your application.  However, when using layers,
 these files will be unzipped to ``/opt/python/lib/pythonX.Y/site-packages``.
 If you are using the ``vendor/`` directory to include custom built python
-packges then this change is transparent as that directory is automatically
+packages then this change is transparent as that directory is automatically
 added to the python path.  However, if you are trying to read a file from
 ``vendor/`` directly, then this will no longer work.  For example, if you
 have::
