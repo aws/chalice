@@ -257,7 +257,7 @@ it created when running the ``chalice deploy`` command.
 Feedback
 ========
 
-We'also love to hear from you.  Please create any Github issues for
+We'd also love to hear from you.  Please create any Github issues for
 additional features you'd like to see over at
 https://github.com/aws/chalice/issues.  You can also chat with us
 on gitter: https://gitter.im/awslabs/chalice
