@@ -30,7 +30,7 @@ contributions as well:
   include unit tests, and optionally functional and integration tests.
 * All PRs must run cleanly through ``make prcheck``.  This is described
   in more detail in the sections below.
-* All new features must include documentation before it can be merged.
+* All new features must include documentation before they can be merged.
 
 
 Feature Development
@@ -77,7 +77,7 @@ is to  use::
     $ pip install -e ".[event-file-poller]"
 
 
-Run this command the root directory of the chalice repo.
+Run this command in the root directory of the chalice repo.
 
 Next, you have a few options.  There are various requirements files
 depending on what you'd like to do.
@@ -109,9 +109,9 @@ The tests are categorized into 3 categories:
   In the functional tests, AWS calls are stubbed, but they'll go through the
   `botocore stubber
   <http://botocore.readthedocs.io/en/latest/reference/stubber.html>`__.
-* ``integration`` - These tests require an AWS accounts and will actually
+* ``integration`` - These tests require an AWS account and will actually
   create real AWS resources.  The integration tests in chalice usually
-  involving deploying a sample app and making assertions about the deployed
+  involve deploying a sample app and making assertions about the deployed
   app by making HTTP/AWS requests to external endpoints.
 
 During development, you'll generally run the unit tests, and less
