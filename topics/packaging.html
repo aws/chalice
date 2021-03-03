@@ -209,12 +209,12 @@ stores its own copies of your 3rd party dependencies.</li>
 <p>We recommend setting <code class="docutils literal notranslate"><span class="pre">&quot;automatic_layer&quot;:</span> <span class="pre">true</span></code> in your
 <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> due to these benefits.</p>
 <p>Migrating to <code class="docutils literal notranslate"><span class="pre">&quot;automatic_layer&quot;:</span> <span class="pre">true</span></code> is mostly backwards compatible
-with one notible exception: the location of the vendor files is different.</p>
+with one notable exception: the location of the vendor files is different.</p>
 <p>When not using automatic layers, any files placed in <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> will be
 available in your CWD of your application.  However, when using layers,
 these files will be unzipped to <code class="docutils literal notranslate"><span class="pre">/opt/python/lib/pythonX.Y/site-packages</span></code>.
 If you are using the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory to include custom built python
-packges then this change is transparent as that directory is automatically
+packages then this change is transparent as that directory is automatically
 added to the python path.  However, if you are trying to read a file from
 <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directly, then this will no longer work.  For example, if you
 have:</p>

@@ -217,9 +217,9 @@ This is done with the <a class="reference internal" href="../api.html#Chalice.on
 </pre></div>
 </div>
 <p>In this example above, Chalice connects the S3 bucket to the
-<code class="docutils literal notranslate"><span class="pre">handle_s3_event</span></code> Lambda function such that whenver an object is uploaded
+<code class="docutils literal notranslate"><span class="pre">handle_s3_event</span></code> Lambda function such that whenever an object is uploaded
 to the <code class="docutils literal notranslate"><span class="pre">mybucket-name</span></code> bucket, the Lambda function will be invoked.
-This example also uses the <code class="docutils literal notranslate"><span class="pre">.bucket</span></code> and <code class="docutils literal notranslate"><span class="pre">.key</span></code> attribute from the
+This example also uses the <code class="docutils literal notranslate"><span class="pre">.bucket</span></code> and <code class="docutils literal notranslate"><span class="pre">.key</span></code> attributes from the
 <code class="docutils literal notranslate"><span class="pre">event</span></code> parameter, which is of type <a class="reference internal" href="../api.html#S3Event" title="S3Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">S3Event</span></code></a>.</p>
 <p>It will automatically create the appropriate S3 notification configuration
 as needed.  Chalice will also leave any existing notification configuration
@@ -392,7 +392,7 @@ invoked.  The function argument is an <a class="reference internal" href="../api
 <code class="docutils literal notranslate"><span class="pre">record</span></code> in the example above is of type <a class="reference internal" href="../api.html#SQSRecord" title="SQSRecord"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSRecord</span></code></a>.  Lambda takes
 care of automatically scaling your function as needed.  See <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/scaling.html">Understanding
 Scaling Behavior</a> for more information on how Lambda scaling works.</p>
-<p>If your lambda functions completes without raising an exception, then
+<p>If your lambda function completes without raising an exception, then
 Lambda will automatically delete all the messages associated with the
 <a class="reference internal" href="../api.html#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a>.  You don’t need to manually call <code class="docutils literal notranslate"><span class="pre">sqs.delete_message()</span></code>
 in your lambda function.  If your lambda function raises an exception, then

@@ -168,7 +168,7 @@ Middleware” below).</li>
 to the caller.</li>
 <li>In order to invoke the next middleware in the chain and eventually call the
 actual Lambda handler, it must invoke <code class="docutils literal notranslate"><span class="pre">get_response(event)</span></code>.</li>
-<li>Middleware can short-circuit the request be returning its own response.
+<li>Middleware can short-circuit the request by returning its own response.
 It does not have to invoke <code class="docutils literal notranslate"><span class="pre">get_response(event)</span></code> if not needed.  The
 response type should match the response type of the underlying Lambda
 handler.</li>

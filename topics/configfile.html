@@ -274,7 +274,7 @@ certificate <strong>must</strong> be in the same region as your API.  If you’r
 <p>You can also provide the following optional configuration:</p>
 <ul class="simple">
 <li><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
-policy for this domain name.  Defaults to <code class="docutils literal notranslate"><span class="pre">TLS_1_2</span></code>, you an also provide
+policy for this domain name.  Defaults to <code class="docutils literal notranslate"><span class="pre">TLS_1_2</span></code>, you can also provide
 <code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</li>
 <li><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
 specification identifies a deployed REST API in a given stage. With custom
@@ -543,7 +543,7 @@ For the <code class="docutils literal notranslate"><span class="pre">beta</span>
 associate with the IAM role for that stage.  In the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage,
 chalice won’t modify any IAM roles.  It will just set the IAM role
 for the Lambda function to be <code class="docutils literal notranslate"><span class="pre">arn:aws:iam::...:role/prod-role</span></code>.</p>
-<p>Here’s an example that show config precedence:</p>
+<p>Here’s an example that shows config precedence:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
   <span class="s2">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;app&quot;</span><span class="p">,</span>
