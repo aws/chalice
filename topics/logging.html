@@ -175,7 +175,9 @@ level:</p>
 the default log level is <code class="docutils literal notranslate"><span class="pre">ERROR</span></code>.  Also note the log message formatting.
 This is the default format that’s been automatically configured.
 We can make a change to set our log level to debug:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demolog&#39;</span><span class="p">)</span>
 <span class="c1"># Enable DEBUG logs.</span>
