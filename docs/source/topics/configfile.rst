@@ -188,7 +188,7 @@ specifying an ``api_gateway_custom_domain``:
 You can also provide the following optional configuration:
 
 - ``tls_version`` - The Transport Layer Security (TLS) version of the security
-  policy for this domain name.  Defaults to ``TLS_1_2``, you an also provide
+  policy for this domain name.  Defaults to ``TLS_1_2``, you can also provide
   ``TLS_1_0`` for REST APIs.
 - ``url_prefix`` - A custom domain name plus a url_prefix (BasePathMapping)
   specification identifies a deployed REST API in a given stage. With custom
@@ -498,7 +498,7 @@ associate with the IAM role for that stage.  In the ``prod`` stage,
 chalice won't modify any IAM roles.  It will just set the IAM role
 for the Lambda function to be ``arn:aws:iam::...:role/prod-role``.
 
-Here's an example that show config precedence::
+Here's an example that shows config precedence::
 
 
   {

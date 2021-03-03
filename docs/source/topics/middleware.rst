@@ -51,7 +51,7 @@ Middleware must adhere to these requirements:
   to the caller.
 * In order to invoke the next middleware in the chain and eventually call the
   actual Lambda handler, it must invoke ``get_response(event)``.
-* Middleware can short-circuit the request be returning its own response.
+* Middleware can short-circuit the request by returning its own response.
   It does not have to invoke ``get_response(event)`` if not needed.  The
   response type should match the response type of the underlying Lambda
   handler.

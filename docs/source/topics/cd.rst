@@ -198,7 +198,7 @@ you to configure how to connect your GitHub repository with your CodePipeline.
 
 You must store your OAuth token that enables access to a GitHub repository
 in AWS Secrets Manager.  You then specify the secret name/id and the JSON
-key name as CloudFormation parameters.  This values default to a secret
+key name as CloudFormation parameters.  These values default to a secret
 name of ``GithubRepoAccess`` and a JSON key name of ``OAuthToken``.
 
 Below is an example of how to configure a GitHub repository as the
