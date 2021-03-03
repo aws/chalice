@@ -4,6 +4,8 @@ on: [push, pull_request]
 jobs:
   prcheck:
     runs-on: ${{ matrix.os }}
+    env:
+      HYPOTHESIS_PROFILE=ci
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
