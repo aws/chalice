@@ -48,7 +48,7 @@ For example::
     GET /cities/portland  --> index('portland')
 
 
-If you want to access any other metdata of the incoming HTTP request,
+If you want to access any other metadata of the incoming HTTP request,
 you can use the ``app.current_request`` property, which is an instance of
 the the :class:`Request` class.
 
@@ -207,7 +207,7 @@ important to know:
   both be named ``view()``.
 
 * View functions that share the same route cannot overlap in supported HTTP
-  methods. For example if two view function both share the same route path,
+  methods. For example if two view functions both share the same route path,
   they both cannot contain ``'PUT'`` in their route ``methods`` list.
 
 * View functions that share the same route path and have CORS configured cannot
@@ -230,7 +230,7 @@ data back in a response, simply set your ``Content-Type`` header to something
 present in the ``binary_types`` list. Note that you can override the default
 types by modifying the ``app.api.binary_types`` list at the module level.
 
-Here is an example app which simply echos back binary content:
+Here is an example app which simply echoes back binary content:
 
 .. code-block:: python
 
@@ -252,7 +252,7 @@ You can see this app echo back binary data sent to it::
     Accept:application/octet-stream Content-Type:application/octet-stream | xxd
   0000000: feed                                     ..
 
-Note that both the ``Accept`` and ``Content-Type`` header are required. If
+Note that both the ``Accept`` and ``Content-Type`` headers are required. If
 you fail to set the ``Content-Type`` header on the request will result in a
 ``415 UnsupportedMediaType`` error. Care must be taken when configuring what
 ``content_types`` a route accepts, they must all be valid binary types, or they
