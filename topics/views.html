@@ -163,7 +163,7 @@ For example:</p>
 <span class="n">GET</span> <span class="o">/</span><span class="n">cities</span><span class="o">/</span><span class="n">portland</span>  <span class="o">--&gt;</span> <span class="n">index</span><span class="p">(</span><span class="s1">&#39;portland&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>If you want to access any other metdata of the incoming HTTP request,
+<p>If you want to access any other metadata of the incoming HTTP request,
 you can use the <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> property, which is an instance of
 the the <a class="reference internal" href="../api.html#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a> class.</p>
 </div>
@@ -302,7 +302,7 @@ important to know:</p>
 For example, two view functions that both share the same route path cannot
 both be named <code class="docutils literal notranslate"><span class="pre">view()</span></code>.</li>
 <li>View functions that share the same route cannot overlap in supported HTTP
-methods. For example if two view function both share the same route path,
+methods. For example if two view functions both share the same route path,
 they both cannot contain <code class="docutils literal notranslate"><span class="pre">'PUT'</span></code> in their route <code class="docutils literal notranslate"><span class="pre">methods</span></code> list.</li>
 <li>View functions that share the same route path and have CORS configured cannot
 have differing CORS configuration. For example, if two view functions that
@@ -322,7 +322,7 @@ property <code class="docutils literal notranslate"><span class="pre">app.curren
 data back in a response, simply set your <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header to something
 present in the <code class="docutils literal notranslate"><span class="pre">binary_types</span></code> list. Note that you can override the default
 types by modifying the <code class="docutils literal notranslate"><span class="pre">app.api.binary_types</span></code> list at the module level.</p>
-<p>Here is an example app which simply echos back binary content:</p>
+<p>Here is an example app which simply echoes back binary content:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;binary-response&quot;</span><span class="p">)</span>
@@ -342,7 +342,7 @@ types by modifying the <code class="docutils literal notranslate"><span class="p
 0000000: feed                                     ..
 </pre></div>
 </div>
-<p>Note that both the <code class="docutils literal notranslate"><span class="pre">Accept</span></code> and <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header are required. If
+<p>Note that both the <code class="docutils literal notranslate"><span class="pre">Accept</span></code> and <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> headers are required. If
 you fail to set the <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header on the request will result in a
 <code class="docutils literal notranslate"><span class="pre">415</span> <span class="pre">UnsupportedMediaType</span></code> error. Care must be taken when configuring what
 <code class="docutils literal notranslate"><span class="pre">content_types</span></code> a route accepts, they must all be valid binary types, or they

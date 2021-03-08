@@ -127,7 +127,7 @@
 <h1>Pure Lambda Functions<a class="headerlink" href="#pure-lambda-functions" title="Permalink to this headline">¶</a></h1>
 <p>Chalice provides abstractions over AWS Lambda functions, including:</p>
 <ul class="simple">
-<li>An API handler the coordinates with API Gateway for creating rest APIs.</li>
+<li>An API handler that coordinates with API Gateway for creating rest APIs.</li>
 <li>A custom authorizer that allows you to integrate custom auth logic in your
 rest API.</li>
 <li>A scheduled event that includes managing the CloudWatch Event rules, targets,
@@ -164,7 +164,7 @@ signature expected by AWS Lambda as <a class="reference external" href="https://
 <p>In this example, we’ve updated the starter hello world app with
 two extra Lambda functions.  When you run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> Chalice will create
 three Lambda functions.  The first lambda function is for the API handler
-used by API gateway.  The second and third lambda function will be pure lambda
+used by API gateway.  The second and third lambda functions will be pure lambda
 functions.  These two additional lambda functions won’t be hooked up to anything.
 You’ll need to manage connecting them to any additional AWS Resources on your
 own.</p>
