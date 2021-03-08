@@ -1913,6 +1913,14 @@ class Blueprint(DecoratorAPI):
         self._lambda_context = None
 
     @property
+    def log(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.log if it's registered to an app."
+            )
+        return self._current_app.log
+
+    @property
     def current_request(self):
         if self._current_app is None:
             raise RuntimeError(
