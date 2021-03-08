@@ -2399,6 +2399,23 @@ def test_can_call_lambda_context_on_blueprint_when_mounted(create_event):
     assert response == {'context': 'foo'}
 
 
+def test_can_access_log_when_mounted(create_event):
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/log')
+    def log_message():
+        # We shouldn't get an error because we've registered it to
+        # an app.
+        bp.log.info("test log message")
+        return {}
+
+    myapp.register_blueprint(bp)
+    event = create_event('/log', 'GET', {})
+    response = json_response_body(myapp(event, context={'context': 'foo'}))
+    assert response == {}
+
+
 def test_can_add_authorizer_with_url_prefix_and_routes():
     myapp = app.Chalice('myapp')
     foo = app.Blueprint('app.chalicelib.blueprints.foo')
