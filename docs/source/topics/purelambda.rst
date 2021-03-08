@@ -5,7 +5,7 @@ Pure Lambda Functions
 
 Chalice provides abstractions over AWS Lambda functions, including:
 
-* An API handler the coordinates with API Gateway for creating rest APIs.
+* An API handler that coordinates with API Gateway for creating rest APIs.
 * A custom authorizer that allows you to integrate custom auth logic in your
   rest API.
 * A scheduled event that includes managing the CloudWatch Event rules, targets,
@@ -46,7 +46,7 @@ Let's look at an example.
 In this example, we've updated the starter hello world app with
 two extra Lambda functions.  When you run ``chalice deploy`` Chalice will create
 three Lambda functions.  The first lambda function is for the API handler
-used by API gateway.  The second and third lambda function will be pure lambda
+used by API gateway.  The second and third lambda functions will be pure lambda
 functions.  These two additional lambda functions won't be hooked up to anything.
 You'll need to manage connecting them to any additional AWS Resources on your
 own.
