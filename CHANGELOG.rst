@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.22.2
+======
+
+* enhancement:Blueprint:Add log property to blueprint
+* bugfix:Pipeline:Fix build command in pipeline generation (#1653)
+* enhancement:Dependencies:Change enum-compat dependency to enum34 with version restrictions (#1667)
+
+
 1.22.1
 ======
 

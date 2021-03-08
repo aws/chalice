@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Pipeline",
-  "description": "Fix build command in pipeline generation (#1653)"
-}
