@@ -1134,7 +1134,7 @@ class TerraformGenerator(TemplateGenerator):
         for auth in resource.authorizers:
             template['resource']['aws_lambda_permission'][
                 auth.resource_name + '_invoke'] = {
-                'function_name': auth.function_name,
+                'function_name': self._fref(auth),
                 'action': 'lambda:InvokeFunction',
                 'principal': self._options.service_principal('apigateway'),
                 'source_arn': (

@@ -561,8 +561,7 @@ class TestTerraformTemplate(TemplateTestBase):
         # Along with permission to invoke from API Gateway.
         assert resources['aws_lambda_permission']['myauth_invoke'] == {
             'action': 'lambda:InvokeFunction',
-            # TODO: This should be updated.
-            'function_name': 'sample_app-dev-myauth',
+            'function_name': '${aws_lambda_function.myauth.arn}',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
                 '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
