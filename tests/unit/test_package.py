@@ -515,7 +515,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert resources['aws_lambda_function']
         # Along with permission to invoke from API Gateway.
         assert list(resources['aws_lambda_permission'].values())[0] == {
-            'function_name': 'sample_app-dev',
+            'function_name': '${aws_lambda_function.api_handler.arn}',
             'action': 'lambda:InvokeFunction',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
@@ -561,7 +561,7 @@ class TestTerraformTemplate(TemplateTestBase):
         # Along with permission to invoke from API Gateway.
         assert resources['aws_lambda_permission']['myauth_invoke'] == {
             'action': 'lambda:InvokeFunction',
-            'function_name': 'sample_app-dev-myauth',
+            'function_name': '${aws_lambda_function.myauth.arn}',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
                 '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
@@ -640,7 +640,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert template['resource']['aws_lambda_permission'][
                    'handler-s3event'] == {
                    'action': 'lambda:InvokeFunction',
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'principal': 's3.amazonaws.com',
                    'source_arn': (
                        'arn:${data.aws_partition.chalice.partition}:s3:::foo'),
@@ -701,7 +701,7 @@ class TestTerraformTemplate(TemplateTestBase):
 
         assert template['resource']['aws_lambda_permission'][
                    'handler-sns-subscription'] == {
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'action': 'lambda:InvokeFunction',
                    'principal': 'sns.amazonaws.com',
                    'source_arn': 'arn:aws:sns:space-leo-1:1234567890:foo'
@@ -725,7 +725,7 @@ class TestTerraformTemplate(TemplateTestBase):
                        'arn:${data.aws_partition.chalice.partition}:sqs'
                        ':${data.aws_region.chalice.name}:'
                        '${data.aws_caller_identity.chalice.account_id}:foo'),
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'batch_size': 5
                }
 
@@ -749,7 +749,7 @@ class TestTerraformTemplate(TemplateTestBase):
                        ':${data.aws_region.chalice.name}:'
                        '${data.aws_caller_identity.chalice.account_id}'
                        ':stream/mystream'),
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'starting_position': 'TRIM_HORIZON',
                    'batch_size': 5
                }
@@ -771,7 +771,7 @@ class TestTerraformTemplate(TemplateTestBase):
                    'aws_lambda_event_source_mapping'][
                    'handler-dynamodb-event-source'] == {
                        'event_source_arn': 'arn:aws:...:stream',
-                       'function_name': 'sample_app-dev-handler',
+                       'function_name': '${aws_lambda_function.handler.arn}',
                        'starting_position': 'TRIM_HORIZON',
                        'batch_size': 5
                    }
