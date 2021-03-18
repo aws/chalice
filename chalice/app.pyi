@@ -1,4 +1,16 @@
-from typing import Dict, List, Any, Callable, Union, Optional, Set
+from typing import (
+    Dict,
+    List,
+    Any,
+    Callable,
+    Union,
+    Optional,
+    Set,
+    Type,
+    Mapping,
+    MutableMapping,
+    Generator,
+)
 import logging
 from chalice.local import LambdaContext
 
@@ -17,6 +29,7 @@ class NotFoundError(ChaliceViewError): ...
 class ConflictError(ChaliceViewError): ...
 class UnprocessableEntityError(ChaliceViewError): ...
 class TooManyRequestsError(ChaliceViewError): ...
+class RequestTimeoutError(ChaliceViewError): ...
 
 
 ALL_ERRORS = ... # type: List[ChaliceViewError]
@@ -31,7 +44,14 @@ class Authorizer:
     def with_scopes(self, scopes: List[str]) -> Authorizer: ... #pylint: disable=undefined-variable
 
 
-class CognitoUserPoolAuthorizer(Authorizer): ...
+class CognitoUserPoolAuthorizer(Authorizer):
+    def __init__(
+        self,
+        name: str,
+        provider_arns: List[str],
+        header: Optional[str],
+        scopes: Optional[List]
+    ) -> None: ...
 
 class IAMAuthorizer(Authorizer): ...
 
@@ -61,17 +81,13 @@ class Request:
     context = ... # type: Dict[str, str]
     stage_vars = ... # type: Dict[str, str]
     json_body = ... # type: Any
+    path = ... # type: str
+    _json_body = ... # type: Optional[Any]
+    raw_body = ... # type: Optional[Any]
 
     def __init__(
-        self,
-        query_params: Dict[str, str],
-        headers: Dict[str, str],
-        uri_params: Dict[str, str],
-        method: str,
-        body: Any,
-        base64_body: str,
-        context: Dict[str, str],
-        stage_vars: Dict[str, str]) -> None: ...
+        self, event_dict: Dict[str, Any], lambda_context: Optional[Any]
+    ) -> None: ...
     def to_dict(self) -> Dict[Any, Any]: ...
 
 
@@ -82,7 +98,7 @@ class Response:
 
     def __init__(self,
                  body: Any,
-                 headers: Dict[str, str]=...,
+                 headers: Optional[Dict[str, Union[str, List[str]]]]=...,
                  status_code: int=...) -> None: ...
 
     def to_dict(self,
@@ -118,7 +134,9 @@ class RouteEntry(object):
 
 
 class APIGateway(object):
+    cors = ... # type: Union[bool, CORSConfig]
     binary_types = ... # type: List[str]
+    default_binary_types = ... # type: List[str]
 
 
 class WebsocketAPI(object):
@@ -175,7 +193,7 @@ class DecoratorAPI(object):
                            name: Optional[str]=...) -> Callable[..., Any]: ...
 
     def schedule(self,
-                 expression: str,
+                 expression: Union[str, Cron, Rate],
                  name: Optional[str]=...,
                  description: Optional[str]=...) -> Callable[..., Any]: ...
 
@@ -197,7 +215,7 @@ class Chalice(DecoratorAPI):
     log = ... # type: logging.Logger
     authorizers = ... # type: Dict[str, Dict[str, Any]]
     builtin_auth_handlers = ... # type: List[BuiltinAuthConfig]
-    event_sources = ... # type: List[BaseEventSourceConfig]
+    event_sources = ... # type: List[Type[BaseEventSourceConfig]]
     pure_lambda_functions = ... # type: List[LambdaFunction]
     handler_map = ... # type: Dict[str, Callable[..., Any]]
     # Used for feature flag validation
@@ -244,15 +262,26 @@ class AuthResponse(object):
     principal_id = ... # type: str
     context = ... # type: Optional[Dict[str, str]]
 
+    def __init__(
+        self,
+        routes: Union[str, AuthRoute],
+        principal_id: str,
+        context: Optional[Dict[str, str]]
+    ) -> None: ...
+
 
 class ScheduleExpression(object):
     def to_string(self) -> str: ...
 
 
 class Rate(ScheduleExpression):
+    MINUTES = ...  # type: str
+    HOURS = ...  # type: str
+    DAYS = ...  # type: str
     value = ... # type: int
     unit = ... # type: str
 
+    def __init__(self, value: int, unit: str) -> None: ...
     def to_string(self) -> str: ...
 
 
@@ -264,6 +293,12 @@ class Cron(ScheduleExpression):
     day_of_week = ... # type: Union[str, int]
     year = ... # type: Union[str, int]
 
+    def __init__(
+        self,
+        minutes: Union[str, int], hours: Union[str, int],
+        day_of_month: Union[str, int], month: Union[str, int],
+        day_of_week: Union[str, int], year: Union[str, int]
+    ) -> None: ...
     def to_string(self) -> str: ...
 
 
@@ -293,6 +328,10 @@ class SQSEventConfig(BaseEventSourceConfig):
     queue = ... # type: str
     batch_size = ... # type: int
 
+    def __init__(
+        self, name: str, handler_string: str, queue: str, batch_size: int
+    ) -> None: ...
+
 
 class ScheduledEventConfig(BaseEventSourceConfig):
     schedule_expression = ...  # type: Union[str, ScheduleExpression]
@@ -319,7 +358,142 @@ class Blueprint(DecoratorAPI):
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
 
+    def __init__(self, import_name: str) -> None: ...
+
 
 class ConvertToMiddleware:
     def __init__(self,
                  lambda_wrapper: Callable[..., Any]) -> None: ...
+
+
+class MiddlewareHandler(object):
+    handler = ... # type: Callable[..., Any]
+    next_handler = ... # type: Callable[..., Any]
+
+    def __init__(
+        self, handler: Callable[..., Any], next_handler: Callable[..., Any]
+    ) -> None: ...
+    def __call__(self, request: Any) -> Any: ...
+
+
+class BaseLambdaHandler(object):
+    def __call__(self, event: Any, context: Any) -> Any: ...
+    def _build_middleware_handlers(
+        self, handlers: List[Callable[..., Any]], original_handler: Callable[..., Any]
+    ) -> MiddlewareHandler: ...
+
+
+class RestAPIEventHandler(BaseLambdaHandler):
+    api = ... # type: APIGateway
+    routes = ... # type: Dict[str, Dict[str, RouteEntry]]
+    debug = ... # type: bool
+    log = ... # type: logging.Logger
+    current_request = ... # type: Optional[Request]
+    lambda_context = ... # type: Optional[LambdaContext]
+    _middleware_handlers = ... # type: Optional[List[MiddlewareHandler]]
+
+    def __init__(
+        self,
+        route_table: Dict[str, Dict[str, RouteEntry]],
+        api: APIGateway,
+        log: logging.Logger,
+        debug: bool,
+        middleware_handlers: Optional[List[MiddlewareHandler]]
+    ) -> None: ...
+    def _global_error_handler(
+        self, event: Any, get_response: Callable[..., Any]
+    ) -> Response: ...
+    def create_request_object(self, event: Any, context: Any) -> Optional[Request]: ...
+    def __call__(self, event: Any, context: Any) -> Any: ...
+    def _main_rest_api_handler(self, event: Any, context: Any) -> Response: ...
+    def _validate_binary_response(
+        self, request_headers: Dict[str, str], response_headers: CaseInsensitiveMapping
+    ) -> bool: ...
+    def _get_view_function_response(
+        self, view_function: Callable[..., Any], function_args: Dict[str, Any]
+    ) -> Response: ...
+    def _unhandled_exception_to_response(self) -> Response: ...
+    def _validate_response(self, response: Response) -> None: ...
+    def _cors_enabled_for_route(self, route_entry: RouteEntry) -> bool: ...
+    def _get_cors_headers(self, cors: CORSConfig) -> Dict[str, Any]: ...
+    def _add_cors_headers(self, response: Response, cors_headers: Dict[str, str]) -> None: ...
+
+
+class EventSourceHandler(BaseLambdaHandler):
+    func = ... # type: Callable[..., Any]
+    event_class = ... # type: Any
+    handler = ... # type: Optional[Callable[..., Any]]
+    middleware_handlers = ... # type: List[Callable[..., Any]]
+    _middleware_handlers = ... # type: List[Callable[..., Any]]
+
+    def __init__(
+        self,
+        func: Callable[..., Any],
+        event_class: Any,
+        middleware_handlers: Optional[List[Callable[..., Any]]]
+    ) -> None: ...
+    def __call__(self, event: Any, context: Any) -> Any: ...
+
+
+class BaseLambdaEvent(object):
+    _event_dict = ... # type: Dict[Any, Any]
+    context = ... # type: Optional[Dict[str, Any]]
+
+    def __init__(self, event_dict: Dict[str, Any], context: Any) -> None: ...
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None: ...
+    def to_dict(self) -> Dict[str, Any]: ...
+
+
+class LambdaFunctionEvent(BaseLambdaEvent):
+    event = ... # type: Dict[str, Any]
+    context = ...  # type: Optional[Dict[str, Any]]
+
+    def __init__(self, event_dict: Dict[str, Any], context: Any) -> None: ...
+
+
+class CloudWatchEvent(BaseLambdaEvent):
+    version = ... # type: str
+    account = ... # type: str
+    region = ... # type: str
+    detail = ... # type: Dict[str, Any]
+    detail_type = ... # type: str
+    source = ... # type: str
+    time = ... # type: str
+    event_id = ... # type: str
+    resources = ... # type: List[str]
+
+
+class SQSRecord(BaseLambdaEvent):
+    body = ... # type: Any
+    receipt_handle = ... # type: Any
+
+
+class SQSEvent(BaseLambdaEvent):
+    def __iter__(self) -> Generator[SQSRecord, None, None]: ...
+
+
+class MultiDict(MutableMapping):
+    _dict = ...  # type: Dict[Any, Any]
+
+    def __init__(self, mapping: Dict[Any, Any]) -> None: ...
+    def __getitem__(self, k: str) -> Optional[Any]: ...
+    def __setitem__(self, k: str, v: Any) -> None: ...
+    def __delitem__(self, k: str) -> None: ...
+    def getlist(self, k: str) -> List[Any]: ...
+    def __len__(self) -> int: ...
+    def __iter__(self) -> Any: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+
+class CaseInsensitiveMapping(Mapping):
+    _dict = ... # type: Dict[Any, Any]
+
+    def __init__(self, mapping: Dict[Any, Any]) -> None: ...
+    def __getitem__(self, key: str) -> Any: ...
+    def __iter__(self) -> Any: ...
+    def __len__(self) -> int: ...
+    def __repr__(self) -> str: ...
+
+
+unquote_str = ... # type: Callable[..., Any]
