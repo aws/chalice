@@ -10,6 +10,7 @@ from typing import (
     Mapping,
     MutableMapping,
     Generator,
+    Sequence,
 )
 import logging
 from chalice.local import LambdaContext
@@ -61,11 +62,13 @@ class CustomAuthorizer(Authorizer): ...
 class CORSConfig:
     _REQUIRED_HEADERS = ... # type: List[str]
     allow_origin = ... # type: str
-    allow_headers = ... # type: str
+    allow_headers = ... # type: Optional[Sequence[str]]
     get_access_control_headers = ... # type: Callable[..., Dict[str, str]]
 
-    def __init__(self, allow_origin: str=..., allow_headers: Set[str]=...,
-                 expose_headers: Set[str]=..., max_age: Optional[int]=...,
+    def __init__(self, allow_origin: str=...,
+                 allow_headers: Optional[Sequence[str]]=...,
+                 expose_headers: Optional[Sequence[str]]=...,
+                 max_age: Optional[int]=...,
                  allow_credentials: Optional[bool]=...) -> None: ...
 
     def __eq__(self, other: object) -> bool: ...
@@ -201,6 +204,12 @@ class DecoratorAPI(object):
 
     def lambda_function(self, name: Optional[str]=...) -> Callable[..., Any]: ...
 
+    def on_ws_connect(self, name: Optional[str] = ...) -> Callable[..., Any]: ...
+
+    def on_ws_disconnect(self, name: Optional[str] = ...) -> Callable[..., Any]: ...
+
+    def on_ws_message(self, name: Optional[str] = ...) -> Callable[..., Any]: ...
+
 
 class Chalice(DecoratorAPI):
     app_name = ... # type: str
@@ -221,15 +230,16 @@ class Chalice(DecoratorAPI):
     # Used for feature flag validation
     _features_used = ... # type: Set[str]
     experimental_feature_flags = ... # type: Set[str]
+    FORMAT_STRING = ... # type: str
 
     def __init__(self, app_name: str, debug: bool=...,
                  configure_logs: bool=...,
                  env: Optional[Dict[str, str]]=...) -> None: ...
 
     def __call__(self, event: Any, context: Any) -> Any: ...
-    def _get_view_function_response(self,
-                                    view_function: Callable[..., Any],
-                                    function_args: Dict[str, Any]) -> Response: ...
+    def register_blueprint(self, blueprint: Blueprint,
+                           name_prefix: Optional[str] = ...,
+                           url_prefix: Optional[str] = ...) -> None: ...
 
 
 class ChaliceAuthorizer(object):
@@ -243,6 +253,13 @@ class ChaliceAuthorizer(object):
 class BuiltinAuthConfig(object):
     name = ... # type: str
     handler_string = ... # type: str
+    ttl_seconds = ... # type: Optional[int]
+    execution_role = ... # type: Optional[str]
+    header = ... # type: str
+    def __init__(self, name: str, handler_string: str,
+                 ttl_seconds: Optional[int] = ...,
+                 execution_role: Optional[str] = ...,
+                 header: str = ...) -> None: ...
 
 
 class AuthRequest(object):
@@ -250,10 +267,14 @@ class AuthRequest(object):
     token = ... # type: str
     method_arn = ... # type: str
 
+    def __init__(self, auth_type: str, token: str, method_arn: str) -> None: ...
+
 
 class AuthRoute(object):
     path = ... # type: str
     methods = ... # type: List[str]
+
+    def __init__(self, path: str, methods: List[str]) -> None: ...
 
 
 class AuthResponse(object):
@@ -266,8 +287,10 @@ class AuthResponse(object):
         self,
         routes: Union[str, AuthRoute],
         principal_id: str,
-        context: Optional[Dict[str, str]]
+        context: Optional[Dict[str, str]] = ...
     ) -> None: ...
+
+    def to_dict(self, request: AuthRequest) -> Dict[str, Any]: ...
 
 
 class ScheduleExpression(object):
@@ -311,6 +334,7 @@ class LambdaFunction(object):
 class BaseEventSourceConfig(object):
     name = ... # type: str
     handler_string = ... # type: str
+    def __init__(self, name: str, handler_string: str) -> None: ...
 
 
 class S3EventConfig(BaseEventSourceConfig):
@@ -357,8 +381,15 @@ class DynamoDBEventConfig(BaseEventSourceConfig):
 class Blueprint(DecoratorAPI):
     current_request = ... # type: Request
     lambda_context = ... # type: LambdaContext
+    current_app = ... # type: Chalice
+    log = ... # type: logging.Logger
 
     def __init__(self, import_name: str) -> None: ...
+
+    def register(self, app: Chalice, options: Dict[str, Any]) -> None: ...
+
+    def register_middleware(self, func: Callable,
+                            event_type: str = ...) -> None: ...
 
 
 class ConvertToMiddleware:
