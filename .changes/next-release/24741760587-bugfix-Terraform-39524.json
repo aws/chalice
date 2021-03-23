@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Terraform",
-  "description": "Use references instead of function names in Terraform packaging (#1558)"
-}

@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Typing",
-  "description": "Fix type definitions in app.pyi (#1676)"
-}

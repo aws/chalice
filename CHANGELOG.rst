@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.22.3
+======
+
+* enhancement:Terraform:Bump Terraform version to include 0.14
+* bugfix:Typing:Fix type definitions in app.pyi (#1676)
+* bugfix:Terraform:Use references instead of function names in Terraform packaging (#1558)
+
+
 1.22.2
 ======
 
