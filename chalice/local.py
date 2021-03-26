@@ -422,14 +422,10 @@ class LocalGatewayAuthorizer(object):
         """Translate event for an authorizer input."""
         authorizer_event = lambda_event.copy()
         authorizer_event['type'] = 'TOKEN'
-        try:
-            authorizer_event['authorizationToken'] = authorizer_event.get(
-                'headers', {})['authorization']
-        except KeyError:
-            raise NotAuthorizedError(
-                {'x-amzn-RequestId': lambda_context.aws_request_id,
-                 'x-amzn-ErrorType': 'UnauthorizedException'},
-                b'{"message":"Unauthorized"}')
+        authorizer_event['authorizationToken'] = authorizer_event.get(
+            'headers', {}).get('authorization', '')
+        # NotAuthorizedError is not raised if 'authorization' is not present,
+        # in order to allow Build-in authorizer to use cookies if necessary.
         authorizer_event['methodArn'] = arn
         return authorizer_event
 
