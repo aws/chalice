@@ -114,7 +114,12 @@ built-in authorizers in chalice.
 Creating an authorizer in chalice requires you use the ``@app.authorizer``
 decorator to a function.  The function must accept a single arg, which will be
 an instance of :class:`AuthRequest`.  The function must return a
-:class:`AuthResponse`.  As an example, we'll port the example from the `API
+:class:`AuthResponse`.  An instance of :class:`AuthRequest` exposes the attributes:
+``token'' (which is taken from "Authorization" field of headers), dictionary
+``headers'' (which contains the full HTTP headers of request) and dictionary
+``cookies'' (which is parsed from the cookie string of the header).
+
+As an example, we'll port the example from the `API
 Gateway documentation`_.  First, we'll show the code and then walk through it:
 
 .. code-block:: python

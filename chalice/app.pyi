@@ -266,8 +266,10 @@ class AuthRequest(object):
     auth_type = ... # type: str
     token = ... # type: str
     method_arn = ... # type: str
+    header = ... # type: Optional[Dict[str, str]]
 
-    def __init__(self, auth_type: str, token: str, method_arn: str) -> None: ...
+    def __init__(self, auth_type: str, token: str, method_arn: str,
+                 headers: Optional[Dict[str, str]] = ...) -> None: ...
 
 
 class AuthRoute(object):
