@@ -1257,7 +1257,7 @@ class ChaliceAuthorizer(object):
         return AuthRequest(event['type'],
                            event['authorizationToken'],
                            event['methodArn'],
-                           event['headers'])
+                           event.get('headers', {}))
 
     def with_scopes(self, scopes):
         authorizer_with_scopes = copy.deepcopy(self)
