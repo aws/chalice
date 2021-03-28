@@ -2,9 +2,9 @@
 AWS Chalice
 ===========
 
-.. image:: https://badges.gitter.im/awslabs/chalice.svg
-   :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
-   :alt: Gitter
+.. image:: https://img.shields.io/badge/chat-on%20slack-green
+   :target: https://join.slack.com/t/chalicedev/shared_invite/zt-naadmddi-MRwgFq40Ge3qfcPJR_RaDQ
+   :alt: Slack
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
    :target: http://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status
