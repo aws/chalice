@@ -299,6 +299,7 @@ class TemplateTestBase(object):
             handler='app.app',
             tags={'foo': 'bar'},
             timeout=120,
+            xray=None,
             memory_size=128,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
@@ -448,6 +449,13 @@ class TestTerraformTemplate(TemplateTestBase):
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
 
+    def test_can_add_tracing_config(self, sample_app):
+        function = self.lambda_function()
+        function.xray = True
+        template = self.template_gen.generate([function])
+        tf_resource = self.get_function(template)
+        assert tf_resource['tracing_config']['mode'] == 'Active'
+
     def test_can_generate_cloudwatch_event(self):
         function = self.lambda_function()
         event = models.CloudWatchEvent(
@@ -507,7 +515,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert resources['aws_lambda_function']
         # Along with permission to invoke from API Gateway.
         assert list(resources['aws_lambda_permission'].values())[0] == {
-            'function_name': 'sample_app-dev',
+            'function_name': '${aws_lambda_function.api_handler.arn}',
             'action': 'lambda:InvokeFunction',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
@@ -553,7 +561,7 @@ class TestTerraformTemplate(TemplateTestBase):
         # Along with permission to invoke from API Gateway.
         assert resources['aws_lambda_permission']['myauth_invoke'] == {
             'action': 'lambda:InvokeFunction',
-            'function_name': 'sample_app-dev-myauth',
+            'function_name': '${aws_lambda_function.myauth.arn}',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
                 '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
@@ -632,9 +640,10 @@ class TestTerraformTemplate(TemplateTestBase):
         assert template['resource']['aws_lambda_permission'][
                    'handler-s3event'] == {
                    'action': 'lambda:InvokeFunction',
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'principal': 's3.amazonaws.com',
-                   'source_arn': 'arn:*:s3:::foo',
+                   'source_arn': (
+                       'arn:${data.aws_partition.chalice.partition}:s3:::foo'),
                    'statement_id': 'handler-s3event'
                }
 
@@ -692,7 +701,7 @@ class TestTerraformTemplate(TemplateTestBase):
 
         assert template['resource']['aws_lambda_permission'][
                    'handler-sns-subscription'] == {
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'action': 'lambda:InvokeFunction',
                    'principal': 'sns.amazonaws.com',
                    'source_arn': 'arn:aws:sns:space-leo-1:1234567890:foo'
@@ -716,9 +725,56 @@ class TestTerraformTemplate(TemplateTestBase):
                        'arn:${data.aws_partition.chalice.partition}:sqs'
                        ':${data.aws_region.chalice.name}:'
                        '${data.aws_caller_identity.chalice.account_id}:foo'),
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'batch_size': 5
                }
+
+    def test_can_package_kinesis_handler(self, sample_app):
+        @sample_app.on_kinesis_record(stream='mystream', batch_size=5,
+                                      starting_position='TRIM_HORIZON')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-kinesis-event-source'] == {
+                   'event_source_arn': (
+                       'arn:${data.aws_partition.chalice.partition}:kinesis'
+                       ':${data.aws_region.chalice.name}:'
+                       '${data.aws_caller_identity.chalice.account_id}'
+                       ':stream/mystream'),
+                   'function_name': '${aws_lambda_function.handler.arn}',
+                   'starting_position': 'TRIM_HORIZON',
+                   'batch_size': 5
+               }
+
+    def test_can_package_dynamodb_handler(self, sample_app):
+        @sample_app.on_dynamodb_record(stream_arn='arn:aws:...:stream',
+                                       batch_size=5,
+                                       starting_position='TRIM_HORIZON')
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-dynamodb-event-source'] == {
+                       'event_source_arn': 'arn:aws:...:stream',
+                       'function_name': '${aws_lambda_function.handler.arn}',
+                       'starting_position': 'TRIM_HORIZON',
+                       'batch_size': 5
+                   }
 
     def test_package_websocket_with_error_message(self, sample_websocket_app):
         config = Config.create(chalice_app=sample_websocket_app,
@@ -761,6 +817,15 @@ class TestTerraformTemplate(TemplateTestBase):
                 'stage_name': 'api',
                 'domain_name': 'example.com',
         }
+        outputs = template['output']
+        assert outputs['AliasDomainName']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.cloudfront_domain_name}'
+        )
+        assert outputs['HostedZoneId']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.cloudfront_zone_id}'
+        )
 
     def test_can_generate_domain_for_regional_endpoint(self, sample_app):
         config = Config.create(
@@ -786,6 +851,15 @@ class TestTerraformTemplate(TemplateTestBase):
                 'stage_name': 'api',
                 'domain_name': 'example.com',
         }
+        outputs = template['output']
+        assert outputs['AliasDomainName']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.regional_domain_name}'
+        )
+        assert outputs['HostedZoneId']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.regional_zone_id}'
+        )
 
 
 class TestSAMTemplate(TemplateTestBase):
@@ -834,6 +908,37 @@ class TestSAMTemplate(TemplateTestBase):
             {'Ref': 'ManagedLayer'}
         ]
 
+    def test_adds_single_layer_for_multiple_lambdas(self, sample_app):
+        config = Config.create(chalice_app=sample_app,
+                               app_name='testapp',
+                               project_dir='.',
+                               automatic_layer=True,
+                               layers=['arn:aws:mylayer'],
+                               api_gateway_stage='api')
+
+        @sample_app.lambda_function()
+        def first(event, context):
+            pass
+
+        @sample_app.lambda_function()
+        def second(event, context):
+            pass
+
+        template = self.generate_template(config)
+        managed_layer = template['Resources']['ManagedLayer']
+        assert managed_layer == {
+            'Type': 'AWS::Serverless::LayerVersion',
+            'Properties': {
+                'CompatibleRuntimes': [config.lambda_python_version],
+                'LayerName': 'testapp-dev-managed-layer',
+                'ContentUri': models.Placeholder.BUILD_STAGE,
+            }
+        }
+        assert template['Resources']['First']['Properties']['Layers'] == [
+            {'Ref': 'ManagedLayer'},
+            'arn:aws:mylayer',
+        ]
+
     def test_supports_precreated_role(self):
         builder = DependencyBuilder()
         resources = builder.build_dependencies(
@@ -855,6 +960,7 @@ class TestSAMTemplate(TemplateTestBase):
             tags={'foo': 'bar'},
             timeout=120,
             memory_size=128,
+            xray=None,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.ManagedIAMRole(
                 resource_name='role',
@@ -875,6 +981,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'CodeUri': 'foo.zip',
                 'Handler': 'app.app',
                 'MemorySize': 128,
+                'Tracing': 'PassThrough',
                 'Role': {'Fn::GetAtt': ['Role', 'Arn']},
                 'Runtime': 'python27',
                 'Tags': {'foo': 'bar'},
@@ -939,6 +1046,7 @@ class TestSAMTemplate(TemplateTestBase):
             tags={'foo': 'bar'},
             timeout=120,
             memory_size=128,
+            xray=None,
             deployment_package=models.DeploymentPackage(filename='foo.zip'),
             role=models.PreCreatedIAMRole(role_arn='role:arn'),
             security_group_ids=[],
@@ -955,6 +1063,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'Handler': 'app.app',
                 'MemorySize': 128,
                 'Role': 'role:arn',
+                'Tracing': 'PassThrough',
                 'Runtime': 'python27',
                 'Tags': {'foo': 'bar'},
                 'Timeout': 120
@@ -1408,6 +1517,54 @@ class TestSAMTemplate(TemplateTestBase):
                         )
                     },
                     'BatchSize': 5,
+                },
+            }
+        }
+
+    def test_can_package_kinesis_handler(self, sample_app):
+        @sample_app.on_kinesis_record(stream='mystream', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        sns_handler = template['Resources']['Handler']
+        assert sns_handler['Properties']['Events'] == {
+            'HandlerKinesisEventSource': {
+                'Type': 'Kinesis',
+                'Properties': {
+                    'Stream': {
+                        'Fn::Sub': (
+                            'arn:${AWS::Partition}:kinesis:${AWS::Region}'
+                            ':${AWS::AccountId}:stream/mystream'
+                        )
+                    },
+                    'BatchSize': 5,
+                    'StartingPosition': 'LATEST',
+                },
+            }
+        }
+
+    def test_can_package_dynamodb_handler(self, sample_app):
+        @sample_app.on_dynamodb_record(stream_arn='arn:aws:...:stream',
+                                       batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        ddb_handler = template['Resources']['Handler']
+        assert ddb_handler['Properties']['Events'] == {
+            'HandlerDynamodbEventSource': {
+                'Type': 'DynamoDB',
+                'Properties': {
+                    'Stream': 'arn:aws:...:stream',
+                    'BatchSize': 5,
+                    'StartingPosition': 'LATEST',
                 },
             }
         }

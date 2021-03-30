@@ -63,6 +63,15 @@ LogEventsResponse = TypedDict(
         'nextToken': str,
     }, total=False
 )
+DomainNameResponse = TypedDict(
+    'DomainNameResponse', {
+        'domain_name': str,
+        'security_policy': str,
+        'hosted_zone_id': str,
+        'certificate_arn': str,
+        'alias_domain_name': str,
+    }
+)
 
 _REMOTE_CALL_ERRORS = (
     botocore.exceptions.ClientError, RequestsConnectionError
@@ -363,12 +372,14 @@ class TypedAWSClient(object):
                         handler,                     # type: str
                         environment_variables=None,  # type: StrMap
                         tags=None,                   # type: StrMap
+                        xray=None,                   # type: Optional[bool]
                         timeout=None,                # type: OptInt
                         memory_size=None,            # type: OptInt
                         security_group_ids=None,     # type: OptStrList
                         subnet_ids=None,             # type: OptStrList
                         layers=None,                 # type: OptStrList
                         ):
+        # pylint: disable=too-many-locals
         # type: (...) -> str
         kwargs = {
             'FunctionName': function_name,
@@ -381,6 +392,8 @@ class TypedAWSClient(object):
             kwargs['Environment'] = {"Variables": environment_variables}
         if tags is not None:
             kwargs['Tags'] = tags
+        if xray is True:
+            kwargs['TracingConfig'] = {'Mode': 'Active'}
         if timeout is not None:
             kwargs['Timeout'] = timeout
         if memory_size is not None:
@@ -458,7 +471,7 @@ class TypedAWSClient(object):
                            security_policy=None,  # type: Optional[str]
                            tags=None,             # type: StrMap
                            ):
-        # type: (...) -> Dict[str, Any]
+        # type: (...) -> DomainNameResponse
         if protocol == 'HTTP':
             kwargs = {
                 'domainName': domain_name,
@@ -489,7 +502,7 @@ class TypedAWSClient(object):
         return created_domain_name
 
     def _create_domain_name(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+        # type: (Dict[str, Any]) -> DomainNameResponse
         client = self._client('apigateway')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -500,29 +513,31 @@ class TypedAWSClient(object):
             should_retry=lambda x: True,
             retryable_exceptions=exceptions
         )
-        domain_name = {
-            'domain_name': result['domainName'],
-            'endpoint_configuration': result['endpointConfiguration'],
-            'security_policy': result['securityPolicy'],
-        }
         if result.get('regionalHostedZoneId'):
-            domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
+            hosted_zone_id = result['regionalHostedZoneId']
         else:
-            domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
+            hosted_zone_id = result['distributionHostedZoneId']
 
         if result.get('regionalCertificateArn'):
-            domain_name['certificate_arn'] = result['regionalCertificateArn']
+            certificate_arn = result['regionalCertificateArn']
         else:
-            domain_name['certificate_arn'] = result['certificateArn']
+            certificate_arn = result['certificateArn']
 
         if result.get('regionalDomainName') is not None:
-            domain_name['alias_domain_name'] = result['regionalDomainName']
+            alias_domain_name = result['regionalDomainName']
         else:
-            domain_name['alias_domain_name'] = result['distributionDomainName']
+            alias_domain_name = result['distributionDomainName']
+        domain_name = {
+            'domain_name': result['domainName'],
+            'security_policy': result['securityPolicy'],
+            'hosted_zone_id': hosted_zone_id,
+            'certificate_arn': certificate_arn,
+            'alias_domain_name': alias_domain_name,
+        }  # type: DomainNameResponse
         return domain_name
 
     def _create_domain_name_v2(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+        # type: (Dict[str, Any]) -> DomainNameResponse
         client = self._client('apigatewayv2')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -535,12 +550,12 @@ class TypedAWSClient(object):
         )
         result_data = result['DomainNameConfigurations'][0]
         domain_name = {
-            'domain_name': result_data['ApiGatewayDomainName'],
-            'endpoint_type': result_data['EndpointType'],
+            'domain_name': result['DomainName'],
+            'alias_domain_name': result_data['ApiGatewayDomainName'],
             'security_policy': result_data['SecurityPolicy'],
             'hosted_zone_id': result_data['HostedZoneId'],
             'certificate_arn': result_data['CertificateArn']
-        }
+        }  # type: DomainNameResponse
         return domain_name
 
     def _create_lambda_function(self, api_args):
@@ -682,7 +697,7 @@ class TypedAWSClient(object):
                            security_policy=None,      # type: Optional[str]
                            tags=None,                 # type: StrMap
                            ):
-        # type: (...) -> Dict[str, Any]
+        # type: (...) -> DomainNameResponse
         if protocol == 'HTTP':
             patch_operations = self.get_custom_domain_patch_operations(
                 certificate_arn,
@@ -741,7 +756,7 @@ class TypedAWSClient(object):
                 ResourceArn=resource_arn, Tags=tags_to_add)
 
     def _update_domain_name(self, custom_domain_name, patch_operations):
-        # type: (str, List[Dict[str, str]]) -> Dict[str, Any]
+        # type: (str, List[Dict[str, str]]) -> DomainNameResponse
         client = self._client('apigateway')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -760,29 +775,31 @@ class TypedAWSClient(object):
             )
             result.update(response)
 
-        domain_name = {
-            'domain_name': result['domainName'],
-            'endpoint_configuration': result['endpointConfiguration'],
-            'security_policy': result['securityPolicy'],
-        }
         if result.get('regionalCertificateArn'):
-            domain_name['certificate_arn'] = result['regionalCertificateArn']
+            certificate_arn = result['regionalCertificateArn']
         else:
-            domain_name['certificate_arn'] = result['certificateArn']
+            certificate_arn = result['certificateArn']
 
         if result.get('regionalHostedZoneId'):
-            domain_name['hosted_zone_id'] = result['regionalHostedZoneId']
+            hosted_zone_id = result['regionalHostedZoneId']
         else:
-            domain_name['hosted_zone_id'] = result['distributionHostedZoneId']
+            hosted_zone_id = result['distributionHostedZoneId']
 
         if result.get('regionalDomainName') is not None:
-            domain_name['alias_domain_name'] = result['regionalDomainName']
+            alias_domain_name = result['regionalDomainName']
         else:
-            domain_name['alias_domain_name'] = result['distributionDomainName']
+            alias_domain_name = result['distributionDomainName']
+        domain_name = {
+            'domain_name': result['domainName'],
+            'security_policy': result['securityPolicy'],
+            'certificate_arn': certificate_arn,
+            'hosted_zone_id': hosted_zone_id,
+            'alias_domain_name': alias_domain_name
+        }  # type: DomainNameResponse
         return domain_name
 
     def _update_domain_name_v2(self, api_args):
-        # type: (Dict[str, Any]) -> Dict[str, Any]
+        # type: (Dict[str, Any]) -> DomainNameResponse
         client = self._client('apigatewayv2')
         exceptions = (
             client.exceptions.TooManyRequestsException,
@@ -797,11 +814,11 @@ class TypedAWSClient(object):
         result_data = result['DomainNameConfigurations'][0]
         domain_name = {
             'domain_name': result['DomainName'],
-            'endpoint_configuration': result_data['EndpointType'],
+            'alias_domain_name': result_data['ApiGatewayDomainName'],
             'security_policy': result_data['SecurityPolicy'],
             'hosted_zone_id': result_data['HostedZoneId'],
             'certificate_arn': result_data['CertificateArn']
-        }
+        }  # type: DomainNameResponse
         return domain_name
 
     def delete_domain_name(self, domain_name):
@@ -834,6 +851,7 @@ class TypedAWSClient(object):
                         environment_variables=None,  # type: StrMap
                         runtime=None,                # type: OptStr
                         tags=None,                   # type: StrMap
+                        xray=None,                   # type: bool
                         timeout=None,                # type: OptInt
                         memory_size=None,            # type: OptInt
                         role_arn=None,               # type: OptStr
@@ -856,6 +874,7 @@ class TypedAWSClient(object):
             timeout=timeout,
             memory_size=memory_size,
             role_arn=role_arn,
+            xray=xray,
             subnet_ids=subnet_ids,
             security_group_ids=security_group_ids,
             function_name=function_name,
@@ -903,6 +922,7 @@ class TypedAWSClient(object):
                                 security_group_ids,  # type: OptStrList
                                 function_name,  # type: str
                                 layers,  # type: OptStrList
+                                xray,  # type: Optional[bool]
                                 ):
         # type: (...) -> None
         kwargs = {}  # type: Dict[str, Any]
@@ -916,6 +936,8 @@ class TypedAWSClient(object):
             kwargs['MemorySize'] = memory_size
         if role_arn is not None:
             kwargs['Role'] = role_arn
+        if xray:
+            kwargs['TracingConfig'] = {'Mode': 'Active'}
         if security_group_ids is not None and subnet_ids is not None:
             kwargs['VpcConfig'] = self._create_vpc_config(
                 subnet_ids=subnet_ids,
@@ -1074,12 +1096,13 @@ class TypedAWSClient(object):
         except client.exceptions.NotFoundException:
             raise ResourceDoesNotExistError(rest_api_id)
 
-    def deploy_rest_api(self, rest_api_id, api_gateway_stage):
-        # type: (str, str) -> None
+    def deploy_rest_api(self, rest_api_id, api_gateway_stage, xray):
+        # type: (str, str, bool) -> None
         client = self._client('apigateway')
         client.create_deployment(
             restApiId=rest_api_id,
             stageName=api_gateway_stage,
+            tracingEnabled=bool(xray),
         )
 
     def add_permission_for_apigateway(self, function_name,
@@ -1591,20 +1614,23 @@ class TypedAWSClient(object):
                     StatementId=statement['Sid'],
                 )
 
-    def create_sqs_event_source(self, queue_arn, function_name, batch_size):
-        # type: (str, str, int) -> None
+    def create_lambda_event_source(self, event_source_arn, function_name,
+                                   batch_size, starting_position=None):
+        # type: (str, str, int, Optional[str]) -> None
         lambda_client = self._client('lambda')
         kwargs = {
-            'EventSourceArn': queue_arn,
+            'EventSourceArn': event_source_arn,
             'FunctionName': function_name,
             'BatchSize': batch_size,
         }
+        if starting_position is not None:
+            kwargs['StartingPosition'] = starting_position
         return self._call_client_method_with_retries(
             lambda_client.create_event_source_mapping, kwargs,
             max_attempts=self.LAMBDA_CREATE_ATTEMPTS
         )['UUID']
 
-    def update_sqs_event_source(self, event_uuid, batch_size):
+    def update_lambda_event_source(self, event_uuid, batch_size):
         # type: (str, int) -> None
         lambda_client = self._client('lambda')
         self._call_client_method_with_retries(
@@ -1614,7 +1640,7 @@ class TypedAWSClient(object):
             should_retry=self._is_settling_error,
         )
 
-    def remove_sqs_event_source(self, event_uuid):
+    def remove_lambda_event_source(self, event_uuid):
         # type: (str) -> None
         lambda_client = self._client('lambda')
         self._call_client_method_with_retries(
@@ -1651,6 +1677,27 @@ class TypedAWSClient(object):
             )
         except client.exceptions.ResourceNotFoundException:
             return False
+
+    def verify_event_source_arn_current(self, event_uuid, event_source_arn,
+                                        function_arn):
+        # type: (str, str, str) -> bool
+        """Check if the uuid matches the event and function ARN.
+
+        This is similar to verify_event_source_current, except that you provide
+        an explicit event_source_arn here.  This is useful for cases where you
+        know the event source ARN or where you can't construct the event source
+        arn solely based on the resource_name and the service_name.
+
+        """
+        client = self._client('lambda')
+        try:
+            attributes = client.get_event_source_mapping(UUID=event_uuid)
+        except client.exceptions.ResourceNotFoundException:
+            return False
+        return bool(
+            event_source_arn == attributes['EventSourceArn'] and
+            function_arn == attributes['FunctionArn']
+        )
 
     def create_websocket_api(self, name):
         # type: (str) -> str

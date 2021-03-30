@@ -62,6 +62,8 @@ We can make a change to set our log level to debug:
 
 .. code-block:: python
 
+    import logging
+
     from chalice import Chalice
 
     app = Chalice(app_name='demolog')

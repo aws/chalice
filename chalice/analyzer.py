@@ -70,10 +70,7 @@ def get_client_calls_for_app(source_code):
 
     """
     parsed = parse_code(source_code)
-    parsed.parsed_ast = ast.fix_missing_locations(
-        AppViewTransformer().visit(parsed.parsed_ast)
-    )
-    t = SymbolTableTypeInfer(parsed)
+    t = AppViewTypeInfer(parsed)
     binder = t.bind_types()
     collector = APICallCollector(binder)
     api_calls = collector.collect_api_calls(parsed.parsed_ast)
@@ -664,7 +661,7 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
         return ast.NodeVisitor.visit(self, node)
 
 
-class AppViewTransformer(ast.NodeTransformer):
+class AppViewTypeInfer(ast.NodeVisitor):
     _CHALICE_DECORATORS = [
         'route', 'authorizer', 'lambda_function',
         'schedule', 'on_s3_event', 'on_sns_message',
@@ -672,11 +669,28 @@ class AppViewTransformer(ast.NodeTransformer):
         'on_ws_disconnect',
     ]
 
+    def __init__(self, parsed_code):
+        # type: (ParsedCode) -> None
+        self._binder = TypeBinder()
+        self._visited = set()  # type: Set[ast.AST]
+        self._parsed_code = parsed_code
+        self._type_infer = SymbolTableTypeInfer(
+            self._parsed_code, self._binder, self._visited)
+
+    def bind_types(self):
+        # type: () -> TypeBinder
+        self._type_infer.bind_types()
+        self.visit(self._parsed_code.parsed_ast)
+        return self._binder
+
     def visit_FunctionDef(self, node):
-        # type: (ast.FunctionDef) -> Any
+        # type: (ast.FunctionDef) -> None
         if self._is_chalice_view(node):
-            return self._auto_invoke_view(node)
-        return node
+            sub_table = self._parsed_code.symbol_table.lookup_sub_namespace(
+                node.name, node.lineno)
+            child_infer = SymbolTableTypeInfer(
+                ParsedCode(node, sub_table), self._binder, self._visited)
+            child_infer.bind_types()
 
     def _is_chalice_view(self, node):
         # type: (ast.FunctionDef) -> bool
@@ -693,19 +707,3 @@ class AppViewTransformer(ast.NodeTransformer):
                 if decorator.func.attr in self._CHALICE_DECORATORS:
                     return True
         return False
-
-    def _auto_invoke_view(self, node):
-        # type: (ast.FunctionDef) -> List[ast.AST]
-        auto_invoke = ast.Expr(
-            value=ast.Call(
-                func=ast.Name(id=node.name, ctx=ast.Load()),
-                args=[], keywords=[], starargs=None, kwargs=None
-            )
-        )
-        # We're using the same line numbers as the original
-        # function definition so that way we can match up symbols
-        # (which have linenos with the corresponding functiondef)
-        # in the case that a symbol has multiple namespaces associated
-        # with it.
-        ast.copy_location(auto_invoke, node)
-        return [node, auto_invoke]

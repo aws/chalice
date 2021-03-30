@@ -1,0 +1,25 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Blueprints",
+      "description": "Add `current_app` property to Blueprints (#1094)"
+    },
+    {
+      "type": "enhancement",
+      "category": "CLI",
+      "description": "Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)"
+    },
+    {
+      "type": "feature",
+      "category": "Middleware",
+      "description": "Add support for middleware (#1509)"
+    },
+    {
+      "type": "feature",
+      "category": "X-Ray",
+      "description": "Add support for AWS X-Ray (#464)"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ Websockets
   .. code-block:: python
 
     app = Chalice('myapp')
-    app.experimental_feature_flags.extend([
+    app.experimental_feature_flags.update([
         'WEBSOCKETS'
     ])
 

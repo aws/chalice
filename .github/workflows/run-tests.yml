@@ -1,0 +1,54 @@
+name: Run PR Checks
+on: [push, pull_request]
+
+jobs:
+  prcheck:
+    runs-on: ${{ matrix.os }}
+    env:
+      HYPOTHESIS_PROFILE: ci
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: [2.7, 3.6, 3.7, 3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Set up Python ${{ matrix.python-version }}
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-dev.txt -r requirements-docs.txt
+          pip install -e .
+      - name: Run PRCheck
+        run: make prcheck
+        if: matrix.python-version != 2.7
+      - name: Run PRCheck-Py2
+        run: make prcheck-py2
+        if: matrix.python-version == 2.7
+#  Chalice works on windows, but there's some differences between
+#  the GitHub actions windows environment and our windows dev
+#  laptops that are causing certain tests to fail.  Once these
+#  are fixed we can also test on windows but for now we have to
+#  disable these.
+#  tests-windows:
+#    runs-on: windows-latest
+#    strategy:
+#      matrix:
+#        # In windows where you have to explicitly install
+#        # python, it's unlikely users are going to install
+#        # python 2.7 which is no longer supported so we're
+#        # only testing python3 on windows.
+#        python-version: [3.6, 3.7, 3.8]
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions/setup-python@v2
+#        name: Set up Python ${{ matrix.python-version }}
+#        with:
+#          python-version: ${{ matrix.python-version }}
+#      - name: Install dependencies
+#        run: |
+#          pip install -r requirements-dev.txt -r requirements-docs.txt
+#          pip install -e .
+#      - name: Run PRCheck
+#        run: python -m pytest tests/unit tests/functional tests/integration

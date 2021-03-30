@@ -2,6 +2,128 @@
 CHANGELOG
 =========
 
+1.22.3
+======
+
+* enhancement:Terraform:Bump Terraform version to include 0.14
+* bugfix:Typing:Fix type definitions in app.pyi (#1676)
+* bugfix:Terraform:Use references instead of function names in Terraform packaging (#1558)
+
+
+1.22.2
+======
+
+* enhancement:Blueprint:Add log property to blueprint
+* bugfix:Pipeline:Fix build command in pipeline generation (#1653)
+* enhancement:Dependencies:Change enum-compat dependency to enum34 with version restrictions (#1667)
+
+
+1.22.1
+======
+
+* enhancement:Pip:Bump pip version range to latest version 21.x (#1630)
+* enhancement:IAM:Improve client call collection when generation policies (#692)
+
+
+1.22.0
+======
+
+* feature:CDK:Add built-in support for the AWS CDK (#1622)
+
+
+1.21.9
+======
+
+* enhancement:Dependencies:Bump attr version constraint (#1620)
+
+
+1.21.8
+======
+
+* enhancement:Authorizers:Add support for custom headers in built-in authorizers (#1613)
+
+
+1.21.7
+======
+
+* enhancement:Terraform:Map custom domain outputs in Terraform packaging (#1601)
+
+
+1.21.6
+======
+
+* enhancement:Packaging:Increase upper bound for AWS provider in Terraform to 3.x (#1596)
+* enhancement:Packaging:Add support for manylinux2014 wheels (#1551)
+
+
+1.21.5
+======
+
+* bugfix:Config:Fix config validation for env vars on py27 (#1573)
+* bugfix:Pip:Bump pip version contraint (#1590)
+* bugfix:REST:Add Allow header with list of allowed methods when returning 405 error (#1583)
+
+
+1.21.4
+======
+
+* enhancement:Local:Allow custom Chalice class in local mode (#1502)
+* bugfix:Layers:Ensure single reference to managed layer (#1563)
+
+
+1.21.3
+======
+
+* enhancement:Test:Add test client methods for generating sample kinesis events
+* enhancement:Config:Validate env var values are strings (#1543)
+
+
+1.21.2
+======
+
+* bugfix:Terraform:Fix issue with wildcard partition names in s3 event handlers (#1508)
+* bugfix:Auth:Fix special case processing for root URL auth (#1271)
+* enhancement:Middleware:Add support for HTTP middleware catching exceptions (#1541)
+
+
+1.21.1
+======
+
+* bugfix:Websockets:Fix custom domain name configuration for websockets (#1531)
+* bugfix:Local:Add support for multiple actions in builtin auth in local mode (#1527)
+* bugfix:Websocket:Fix websocket client configuration when using a custom domain (#1503)
+* bugfix:Local:Fix CORs handling in local mode (#761)
+
+
+1.21.0
+======
+
+* bugfix:Blueprints:Fix regression when invoking Lambda functions from blueprints (#1535)
+* feature:Events:Add support for Kinesis and DynamoDB event handlers (#987)
+
+
+1.20.1
+======
+
+* bugfix:Blueprints:Preserve docstring in blueprints (#1525)
+* enhancement:Binary:Support returning native python types when using `*/*` for binary types (#1501)
+
+
+1.20.0
+======
+
+* enhancement:Blueprints:Add `current_app` property to Blueprints (#1094)
+* enhancement:CLI:Set `AWS_CHALICE_CLI_MODE` env var whenever a Chalice CLI command is run (#1200)
+* feature:Middleware:Add support for middleware (#1509)
+* feature:X-Ray:Add support for AWS X-Ray (#464)
+
+
+1.19.0
+======
+
+* feature:Pipeline:Add a new v2 template for the deployment pipeline CloudFormation template (#1506)
+
+
 1.18.1
 ======
 

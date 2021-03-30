@@ -98,6 +98,33 @@ class RemoteState(object):
             function_arn=deployed_values['lambda_arn'],
         )
 
+    def _resource_exists_kinesiseventsource(self, resource):
+        # type: (models.KinesisEventSource) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        return self._client.verify_event_source_current(
+            event_uuid=deployed_values['event_uuid'],
+            resource_name='stream/%s' % resource.stream,
+            service_name='kinesis',
+            function_arn=deployed_values['lambda_arn'],
+        )
+
+    def _resource_exists_dynamodbeventsource(self, resource):
+        # type: (models.DynamoDBEventSource) -> bool
+        try:
+            deployed_values = self._deployed_resources.resource_values(
+                resource.resource_name)
+        except ValueError:
+            return False
+        return self._client.verify_event_source_arn_current(
+            event_uuid=deployed_values['event_uuid'],
+            event_source_arn=deployed_values['stream_arn'],
+            function_arn=deployed_values['lambda_arn'],
+        )
+
     def _resource_exists_lambdalayer(self, resource):
         # type: (models.LambdaLayer) -> bool
         try:
@@ -450,6 +477,7 @@ class PlanStage(object):
                 'runtime': resource.runtime,
                 'handler': resource.handler,
                 'environment_variables': resource.environment_variables,
+                'xray': resource.xray,
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
@@ -481,6 +509,7 @@ class PlanStage(object):
                     filename, binary=True),
                 'runtime': resource.runtime,
                 'environment_variables': resource.environment_variables,
+                'xray': resource.xray,
                 'tags': resource.tags,
                 'timeout': resource.timeout,
                 'memory_size': resource.memory_size,
@@ -607,21 +636,8 @@ class PlanStage(object):
             # To keep the user API simple, we only require the topic
             # name and not the ARN.  However, the APIs require the topic
             # ARN so we need to reconstruct it here in the planner.
-            instruction_for_topic_arn += [
-                models.BuiltinFunction(
-                    'parse_arn',
-                    [function_arn],
-                    output_var='parsed_lambda_arn',
-                ),
-                models.JPSearch('account_id',
-                                input_var='parsed_lambda_arn',
-                                output_var='account_id'),
-                models.JPSearch('region',
-                                input_var='parsed_lambda_arn',
-                                output_var='region_name'),
-                models.JPSearch('partition',
-                                input_var='parsed_lambda_arn',
-                                output_var='partition'),
+            instruction_for_topic_arn += self._arn_parse_instructions(
+                function_arn) + [
                 models.StoreValue(
                     name=topic_arn_varname,
                     value=StringFormat(
@@ -630,7 +646,7 @@ class PlanStage(object):
                         ),
                         ['partition', 'region_name', 'account_id'],
                     ),
-                ),
+                )
             ]
         if self._remote_state.resource_exists(resource):
             # Given there's nothing about an SNS subscription you can
@@ -640,32 +656,14 @@ class PlanStage(object):
             # from the topic.
             deployed = self._remote_state.resource_deployed_values(resource)
             subscription_arn = deployed['subscription_arn']
-            return instruction_for_topic_arn + [
-                models.RecordResourceValue(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='topic',
-                    value=resource.topic,
-                ),
-                models.RecordResourceVariable(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='lambda_arn',
-                    variable_name=function_arn.name,
-                ),
-                models.RecordResourceValue(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='subscription_arn',
-                    value=subscription_arn,
-                ),
-                models.RecordResourceVariable(
-                    resource_type='sns_event',
-                    resource_name=resource.resource_name,
-                    name='topic_arn',
-                    variable_name=topic_arn_varname,
-                ),
-            ]
+            return instruction_for_topic_arn + self._batch_record_resource(
+                'sns_event', resource.resource_name, {
+                    'topic': resource.topic,
+                    'lambda_arn': Variable(function_arn.name),
+                    'subscription_arn': subscription_arn,
+                    'topic_arn': Variable(topic_arn_varname),
+                }
+            )
         return instruction_for_topic_arn + [
             models.APICall(
                 method_name='add_permission_for_sns_topic',
@@ -679,32 +677,15 @@ class PlanStage(object):
                 output_var=subscribe_varname,
             ), 'Subscribing %s to SNS topic %s\n'
                 % (resource.lambda_function.function_name, resource.topic)
-            ),
-            models.RecordResourceValue(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='topic',
-                value=resource.topic,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='lambda_arn',
-                variable_name=function_arn.name,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='subscription_arn',
-                variable_name=subscribe_varname,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sns_event',
-                resource_name=resource.resource_name,
-                name='topic_arn',
-                variable_name=topic_arn_varname,
-            ),
-        ]
+            )
+        ] + self._batch_record_resource(
+            'sns_event', resource.resource_name, {
+                'topic': resource.topic,
+                'lambda_arn': Variable(function_arn.name),
+                'subscription_arn': Variable(subscribe_varname),
+                'topic_arn': Variable(topic_arn_varname),
+            }
+        )
 
     def _plan_sqseventsource(self, resource):
         # type: (models.SQSEventSource) -> Sequence[InstructionMsg]
@@ -713,21 +694,8 @@ class PlanStage(object):
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
-        instruction_for_queue_arn = [
-            models.BuiltinFunction(
-                'parse_arn',
-                [function_arn],
-                output_var='parsed_lambda_arn',
-            ),
-            models.JPSearch('account_id',
-                            input_var='parsed_lambda_arn',
-                            output_var='account_id'),
-            models.JPSearch('region',
-                            input_var='parsed_lambda_arn',
-                            output_var='region_name'),
-            models.JPSearch('partition',
-                            input_var='parsed_lambda_arn',
-                            output_var='partition'),
+        instruction_for_queue_arn = self._arn_parse_instructions(function_arn)
+        instruction_for_queue_arn.append(
             models.StoreValue(
                 name=queue_arn_varname,
                 value=StringFormat(
@@ -736,79 +704,154 @@ class PlanStage(object):
                     ),
                     ['partition', 'region_name', 'account_id'],
                 ),
-            ),
-        ]  # type: List[InstructionMsg]
+            )
+        )
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
             return instruction_for_queue_arn + [
                 models.APICall(
-                    method_name='update_sqs_event_source',
+                    method_name='update_lambda_event_source',
                     params={'event_uuid': uuid,
                             'batch_size': resource.batch_size}
-                ),
-                models.RecordResourceValue(
-                    resource_type='sqs_event',
-                    resource_name=resource.resource_name,
-                    name='queue_arn',
-                    value=deployed['queue_arn'],
-                ),
-                models.RecordResourceValue(
-                    resource_type='sqs_event',
-                    resource_name=resource.resource_name,
-                    name='event_uuid',
-                    value=uuid,
-                ),
-                models.RecordResourceValue(
-                    resource_type='sqs_event',
-                    resource_name=resource.resource_name,
-                    name='queue',
-                    value=resource.queue,
-                ),
-                models.RecordResourceValue(
-                    resource_type='sqs_event',
-                    resource_name=resource.resource_name,
-                    name='lambda_arn',
-                    value=deployed['lambda_arn'],
-                ),
-            ]
+                )
+            ] + self._batch_record_resource(
+                'sqs_event', resource.resource_name, {
+                    'queue_arn': deployed['queue_arn'],
+                    'event_uuid': uuid,
+                    'queue': resource.queue,
+                    'lambda_arn': deployed['lambda_arn'],
+                }
+            )
         return instruction_for_queue_arn + [
             (models.APICall(
-                method_name='create_sqs_event_source',
-                params={'queue_arn': Variable(queue_arn_varname),
+                method_name='create_lambda_event_source',
+                params={'event_source_arn': Variable(queue_arn_varname),
                         'batch_size': resource.batch_size,
                         'function_name': function_arn},
                 output_var=uuid_varname,
             ), 'Subscribing %s to SQS queue %s\n'
                 % (resource.lambda_function.function_name, resource.queue)
             ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name=resource.resource_name,
-                name='queue_arn',
-                variable_name=queue_arn_varname,
-            ),
-            # We record this because this is what's used to unsubscribe
-            # lambda to the SQS queue.
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name=resource.resource_name,
-                name='event_uuid',
-                variable_name=uuid_varname,
-            ),
-            models.RecordResourceValue(
-                resource_type='sqs_event',
-                resource_name=resource.resource_name,
-                name='queue',
-                value=resource.queue,
-            ),
-            models.RecordResourceVariable(
-                resource_type='sqs_event',
-                resource_name=resource.resource_name,
-                name='lambda_arn',
-                variable_name=function_arn.name,
-            ),
-        ]
+        ] + self._batch_record_resource(
+            'sqs_event', resource.resource_name, {
+                'queue_arn': Variable(queue_arn_varname),
+                'event_uuid': Variable(uuid_varname),
+                'queue': resource.queue,
+                'lambda_arn': Variable(function_arn.name)
+            }
+        )
+
+    def _plan_kinesiseventsource(self, resource):
+        # type: (models.KinesisEventSource) -> Sequence[InstructionMsg]
+        stream_arn_varname = '%s_stream_arn' % resource.resource_name
+        uuid_varname = '%s_uuid' % resource.resource_name
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        instruction_for_stream_arn = self._arn_parse_instructions(function_arn)
+        instruction_for_stream_arn.append(
+            models.StoreValue(
+                name=stream_arn_varname,
+                value=StringFormat(
+                    'arn:{partition}:kinesis:{region_name}:{account_id}:'
+                    'stream/%s' % resource.stream,
+                    ['partition', 'region_name', 'account_id'],
+                ),
+            )
+        )
+        if self._remote_state.resource_exists(resource):
+            deployed = self._remote_state.resource_deployed_values(resource)
+            uuid = deployed['event_uuid']
+            return instruction_for_stream_arn + [
+                models.APICall(
+                    method_name='update_lambda_event_source',
+                    params={'event_uuid': uuid,
+                            'batch_size': resource.batch_size}
+                )
+            ] + self._batch_record_resource(
+                'kinesis_event', resource.resource_name, {
+                    'kinesis_arn': deployed['kinesis_arn'],
+                    'event_uuid': uuid,
+                    'stream': resource.stream,
+                    'lambda_arn': deployed['lambda_arn'],
+                }
+            )
+        return instruction_for_stream_arn + [
+            (models.APICall(
+                method_name='create_lambda_event_source',
+                params={'event_source_arn': Variable(stream_arn_varname),
+                        'batch_size': resource.batch_size,
+                        'function_name': function_arn,
+                        'starting_position': resource.starting_position},
+                output_var=uuid_varname,
+            ), 'Subscribing %s to Kinesis stream %s\n'
+                % (resource.lambda_function.function_name, resource.stream)
+            )
+        ] + self._batch_record_resource(
+            'kinesis_event', resource.resource_name, {
+                'kinesis_arn': Variable(stream_arn_varname),
+                'event_uuid': Variable(uuid_varname),
+                'stream': resource.stream,
+                'lambda_arn': Variable(function_arn.name),
+            }
+        )
+
+    def _plan_dynamodbeventsource(self, resource):
+        # type: (models.DynamoDBEventSource) -> Sequence[InstructionMsg]
+        uuid_varname = '%s_uuid' % resource.resource_name
+        function_arn = Variable(
+            '%s_lambda_arn' % resource.lambda_function.resource_name
+        )
+        instructions = []  # type: List[InstructionMsg]
+        if self._remote_state.resource_exists(resource):
+            deployed = self._remote_state.resource_deployed_values(resource)
+            uuid = deployed['event_uuid']
+            return instructions + [
+                models.APICall(
+                    method_name='update_lambda_event_source',
+                    params={'event_uuid': uuid,
+                            'batch_size': resource.batch_size}
+                )
+            ] + self._batch_record_resource(
+                'dynamodb_event', resource.resource_name, {
+                    'stream_arn': deployed['stream_arn'],
+                    'event_uuid': deployed['event_uuid'],
+                    'lambda_arn': deployed['lambda_arn'],
+                }
+            )
+        return instructions + [
+            (models.APICall(
+                method_name='create_lambda_event_source',
+                params={'event_source_arn': resource.stream_arn,
+                        'batch_size': resource.batch_size,
+                        'function_name': function_arn,
+                        'starting_position': resource.starting_position},
+                output_var=uuid_varname,
+            ), 'Subscribing %s to DynamoDB stream %s\n'
+                % (resource.lambda_function.function_name,
+                   resource.stream_arn))
+        ] + self._batch_record_resource(
+            'dynamodb_event', resource.resource_name, {
+                'stream_arn': resource.stream_arn,
+                'event_uuid': Variable(uuid_varname),
+                'lambda_arn': function_arn,
+            }
+        )
+
+    def _arn_parse_instructions(self, function_arn):
+        # type: (Variable) -> List[InstructionMsg]
+        instruction_for_stream_arn = [
+            models.BuiltinFunction('parse_arn', [function_arn],
+                                   output_var='parsed_lambda_arn'),
+            models.JPSearch('account_id', input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region', input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            models.JPSearch('partition', input_var='parsed_lambda_arn',
+                            output_var='partition'),
+        ]  # type: List[InstructionMsg]
+        return instruction_for_stream_arn
 
     def _plan_s3bucketnotification(self, resource):
         # type: (models.S3BucketNotification) -> Sequence[InstructionMsg]
@@ -974,25 +1017,7 @@ class PlanStage(object):
         # Which lambda function we use here does not matter. We are only using
         # it to find the account id and the region.
         lambda_arn_var = list(configs.values())[0]['lambda_arn_var']
-        shared_plan_preamble = [
-            # The various API gateway API calls need
-            # to know the region name and account id so
-            # we'll take care of that up front and store
-            # them in variables.
-            models.BuiltinFunction(
-                'parse_arn',
-                [lambda_arn_var],
-                output_var='parsed_lambda_arn',
-            ),
-            models.JPSearch('account_id',
-                            input_var='parsed_lambda_arn',
-                            output_var='account_id'),
-            models.JPSearch('region',
-                            input_var='parsed_lambda_arn',
-                            output_var='region_name'),
-            models.JPSearch('partition',
-                            input_var='parsed_lambda_arn',
-                            output_var='partition'),
+        shared_plan_preamble = self._arn_parse_instructions(lambda_arn_var) + [
             models.JPSearch('dns_suffix',
                             input_var='parsed_lambda_arn',
                             output_var='dns_suffix'),
@@ -1132,25 +1157,7 @@ class PlanStage(object):
         # There's a set of shared instructions that are needed
         # in both the update as well as the initial create case.
         # That's what this shared_plan_premable is for.
-        shared_plan_preamble = [
-            # The various API gateway API calls need
-            # to know the region name and account id so
-            # we'll take care of that up front and store
-            # them in variables.
-            models.BuiltinFunction(
-                'parse_arn',
-                [lambda_arn_var],
-                output_var='parsed_lambda_arn',
-            ),
-            models.JPSearch('account_id',
-                            input_var='parsed_lambda_arn',
-                            output_var='account_id'),
-            models.JPSearch('region',
-                            input_var='parsed_lambda_arn',
-                            output_var='region_name'),
-            models.JPSearch('partition',
-                            input_var='parsed_lambda_arn',
-                            output_var='partition'),
+        shared_plan_preamble = self._arn_parse_instructions(lambda_arn_var) + [
             models.JPSearch('dns_suffix',
                             input_var='parsed_lambda_arn',
                             output_var='dns_suffix'),
@@ -1187,6 +1194,7 @@ class PlanStage(object):
             models.APICall(
                 method_name='deploy_rest_api',
                 params={'rest_api_id': Variable('rest_api_id'),
+                        'xray': resource.xray,
                         'api_gateway_stage': resource.api_gateway_stage},
             ),
             models.StoreValue(
@@ -1272,7 +1280,6 @@ class PlanStage(object):
                 resource.domain_name, resource.endpoint_type
             )
             plan += custom_domain_plan
-
         return plan
 
     def _add_custom_domain_plan(self, resource, endpoint_type):
@@ -1296,6 +1303,34 @@ class PlanStage(object):
             return Variable('%s_role_arn' % resource.role_name)
         # Make mypy happy.
         raise RuntimeError("Unknown resource type: %s" % resource)
+
+    def _batch_record_resource(self, resource_type, resource_name,
+                               mapping):
+        # type: (str, str, Dict[str, Any]) -> List[InstructionMsg]
+        # This is a helper function for recording multiple values into
+        # the same resource dict.  The mapping is the set of variables
+        # you want to record.  If the value in a pair is a Variable type,
+        # then RecordResourceVariable is used, otherwise, RecordResourceValue
+        # is used.
+        instructions = []  # type: List[InstructionMsg]
+        for key, value in mapping.items():
+            instruction = cast(InstructionMsg, None)
+            if isinstance(value, Variable):
+                instruction = models.RecordResourceVariable(
+                    resource_type=resource_type,
+                    resource_name=resource_name,
+                    name=key,
+                    variable_name=value.name
+                )
+            else:
+                instruction = models.RecordResourceValue(
+                    resource_type=resource_type,
+                    resource_name=resource_name,
+                    name=key,
+                    value=value
+                )
+            instructions.append(instruction)
+        return instructions
 
 
 class NoopPlanner(PlanStage):

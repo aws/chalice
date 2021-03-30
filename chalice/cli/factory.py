@@ -146,9 +146,11 @@ class CLIFactory(object):
 
     def create_config_obj(self, chalice_stage_name=DEFAULT_STAGE_NAME,
                           autogen_policy=None,
-                          api_gateway_stage=None):
-        # type: (str, Optional[bool], str) -> Config
-        user_provided_params = {}  # type: Dict[str, Any]
+                          api_gateway_stage=None,
+                          user_provided_params=None):
+        # type: (str, Optional[bool], str, Optional[Dict[str, Any]]) -> Config
+        if user_provided_params is None:
+            user_provided_params = {}
         default_params = {'project_dir': self.project_dir,
                           'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
                           'api_gateway_endpoint_type': DEFAULT_ENDPOINT_TYPE,

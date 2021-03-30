@@ -1,0 +1,20 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Blueprint",
+      "description": "Add log property to blueprint"
+    },
+    {
+      "type": "bugfix",
+      "category": "Pipeline",
+      "description": "Fix build command in pipeline generation (#1653)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Dependencies",
+      "description": "Change enum-compat dependency to enum34 with version restrictions (#1667)"
+    }
+  ]
+}

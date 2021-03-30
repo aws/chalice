@@ -437,7 +437,9 @@ class DependencyBuilder(object):
     packager.
     """
     _MANYLINUX_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64',
-                                      'manylinux1_x86_64'}
+                                      'manylinux1_x86_64',
+                                      'manylinux2010_x86_64',
+                                      'manylinux2014_x86_64'}
     _COMPATIBLE_PACKAGE_WHITELIST = {
         'sqlalchemy',
         'pyyaml',
@@ -972,8 +974,8 @@ class PipRunner(object):
             if err is None:
                 err = b'Unknown error'
             error = err.decode()
-            match = re.search(("Could not find a version that satisfies the "
-                               "requirement (.+?) "), error)
+            match = re.search(r"Could not find a version that satisfies the "
+                              r"requirement ([^\s]+)", error)
             if match:
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
@@ -1005,7 +1007,7 @@ class PipRunner(object):
         # version and is checked later.
         for package in packages:
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
-                         'manylinux1_x86_64', '--implementation', 'cp',
+                         'manylinux2014_x86_64', '--implementation', 'cp',
                          '--abi', abi, '--dest', directory, package]
             self._execute('download', arguments)
 

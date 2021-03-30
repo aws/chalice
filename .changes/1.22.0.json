@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "CDK",
+      "description": "Add built-in support for the AWS CDK (#1622)"
+    }
+  ]
+}

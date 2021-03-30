@@ -244,6 +244,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Handler': resource.handler,
                 'CodeUri': resource.deployment_package.filename,
                 'Tags': resource.tags,
+                'Tracing': resource.xray and 'Active' or 'PassThrough',
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
             },
@@ -271,7 +272,7 @@ class SAMTemplateGenerator(TemplateGenerator):
             lambdafunction_definition['Properties'].update(
                 reserved_concurrency_config)
 
-        layers = resource.layers or []  # type: List[Any]
+        layers = list(resource.layers) or []  # type: List[Any]
         if self._chalice_layer:
             layers.insert(0, {'Ref': self._chalice_layer})
 
@@ -646,6 +647,50 @@ class SAMTemplateGenerator(TemplateGenerator):
             }
         }
 
+    def _generate_kinesiseventsource(self, resource, template):
+        # type: (models.KinesisEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        kinesis_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        properties = {
+            'Stream': {
+                'Fn::Sub': (
+                    'arn:${AWS::Partition}:kinesis:${AWS::Region}'
+                    ':${AWS::AccountId}:stream/%s' %
+                    resource.stream
+                )
+            },
+            'BatchSize': resource.batch_size,
+            'StartingPosition': resource.starting_position,
+        }
+        function_cfn['Properties']['Events'] = {
+            kinesis_cfn_name: {
+                'Type': 'Kinesis',
+                'Properties': properties
+            }
+        }
+
+    def _generate_dynamodbeventsource(self, resource, template):
+        # type: (models.DynamoDBEventSource, Dict[str, Any]) -> None
+        function_cfn_name = to_cfn_resource_name(
+            resource.lambda_function.resource_name)
+        function_cfn = template['Resources'][function_cfn_name]
+        ddb_cfn_name = self._register_cfn_resource_name(
+            resource.resource_name)
+        properties = {
+            'Stream': resource.stream_arn,
+            'BatchSize': resource.batch_size,
+            'StartingPosition': resource.starting_position,
+        }
+        function_cfn['Properties']['Events'] = {
+            ddb_cfn_name: {
+                'Type': 'DynamoDB',
+                'Properties': properties
+            }
+        }
+
     def _generate_apimapping(self, resource, template):
         # type: (models.APIMapping, Dict[str, Any]) -> None
         pass
@@ -746,11 +791,11 @@ class TerraformGenerator(TemplateGenerator):
         template = {
             'resource': {},
             'terraform': {
-                'required_version': '> 0.11.0, < 0.13.0'
+                'required_version': '> 0.11.0, < 0.15.0'
             },
             'provider': {
                 'template': {'version': '~> 2'},
-                'aws': {'version': '~> 2'},
+                'aws': {'version': '>= 2, < 4'},
                 'null': {'version': '~> 2'},
             },
             'data': {
@@ -848,9 +893,10 @@ class TerraformGenerator(TemplateGenerator):
             resource.resource_name] = {
             'statement_id': resource.resource_name,
             'action': 'lambda:InvokeFunction',
-            'function_name': resource.lambda_function.function_name,
+            'function_name': self._fref(resource.lambda_function),
             'principal': self._options.service_principal('s3'),
-            'source_arn': 'arn:*:s3:::%s' % resource.bucket
+            'source_arn': ('arn:${data.aws_partition.chalice.partition}:'
+                           's3:::%s' % resource.bucket)
         }
 
     def _generate_sqseventsource(self, resource, template):
@@ -862,7 +908,30 @@ class TerraformGenerator(TemplateGenerator):
                 ":%(account_id)s:%(queue)s",
                 queue=resource.queue),
             'batch_size': resource.batch_size,
-            'function_name': resource.lambda_function.function_name,
+            'function_name': self._fref(resource.lambda_function)
+        }
+
+    def _generate_kinesiseventsource(self, resource, template):
+        # type: (models.KinesisEventSource, Dict[str, Any]) -> None
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': self._arnref(
+                "arn:%(partition)s:kinesis:%(region)s"
+                ":%(account_id)s:stream/%(stream)s",
+                stream=resource.stream),
+            'batch_size': resource.batch_size,
+            'starting_position': resource.starting_position,
+            'function_name': self._fref(resource.lambda_function)
+        }
+
+    def _generate_dynamodbeventsource(self, resource, template):
+        # type: (models.DynamoDBEventSource, Dict[str, Any]) -> None
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': resource.stream_arn,
+            'batch_size': resource.batch_size,
+            'starting_position': resource.starting_position,
+            'function_name': self._fref(resource.lambda_function),
         }
 
     def _generate_snslambdasubscription(self, resource, template):
@@ -883,7 +952,7 @@ class TerraformGenerator(TemplateGenerator):
         }
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name] = {
-            'function_name': resource.lambda_function.function_name,
+            'function_name': self._fref(resource.lambda_function),
             'action': 'lambda:InvokeFunction',
             'principal': self._options.service_principal('sns'),
             'source_arn': topic_arn
@@ -925,7 +994,7 @@ class TerraformGenerator(TemplateGenerator):
         template['resource'].setdefault(
             'aws_lambda_permission', {})[
             resource.resource_name] = {
-            'function_name': resource.lambda_function.function_name,
+            'function_name': self._fref(resource.lambda_function),
             'action': 'lambda:InvokeFunction',
             'principal': self._options.service_principal('events'),
             'source_arn': "${aws_cloudwatch_event_rule.%s.arn}" % (
@@ -969,6 +1038,10 @@ class TerraformGenerator(TemplateGenerator):
         if resource.environment_variables:
             func_definition['environment'] = {
                 'variables': resource.environment_variables
+            }
+        if resource.xray:
+            func_definition['tracing_config'] = {
+                'mode': 'Active'
             }
         if self._chalice_layer:
             func_definition['layers'] = [
@@ -1039,7 +1112,7 @@ class TerraformGenerator(TemplateGenerator):
 
         template['resource'].setdefault('aws_lambda_permission', {})[
             resource.resource_name + '_invoke'] = {
-            'function_name': resource.lambda_function.function_name,
+            'function_name': self._fref(resource.lambda_function),
             'action': 'lambda:InvokeFunction',
             'principal': self._options.service_principal('apigateway'),
             'source_arn':
@@ -1061,7 +1134,7 @@ class TerraformGenerator(TemplateGenerator):
         for auth in resource.authorizers:
             template['resource']['aws_lambda_permission'][
                 auth.resource_name + '_invoke'] = {
-                'function_name': auth.function_name,
+                'function_name': self._fref(auth),
                 'action': 'lambda:InvokeFunction',
                 'principal': self._options.service_principal('apigateway'),
                 'source_arn': (
@@ -1100,6 +1173,27 @@ class TerraformGenerator(TemplateGenerator):
                 'api_id': '${aws_api_gateway_rest_api.%s.id}' % (
                     resource.resource_name)
             }
+        }
+        self._add_domain_name_outputs(domain_name.resource_name, endpoint_type,
+                                      template)
+
+    def _add_domain_name_outputs(self, domain_resource_name,
+                                 endpoint_type, template):
+        # type: (str, str, Dict[str, Any]) -> None
+        base = (
+            'aws_api_gateway_domain_name.%s' % domain_resource_name
+        )
+        if endpoint_type == 'EDGE':
+            alias_domain_name = '${%s.cloudfront_domain_name}' % base
+            hosted_zone_id = '${%s.cloudfront_zone_id}' % base
+        else:
+            alias_domain_name = '${%s.regional_domain_name}' % base
+            hosted_zone_id = '${%s.regional_zone_id}' % base
+        template.setdefault('output', {})['AliasDomainName'] = {
+            'value': alias_domain_name
+        }
+        template.setdefault('output', {})['HostedZoneId'] = {
+            'value': hosted_zone_id
         }
 
     def _generate_apimapping(self, resource, template):

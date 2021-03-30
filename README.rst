@@ -5,15 +5,9 @@ AWS Chalice
 .. image:: https://badges.gitter.im/awslabs/chalice.svg
    :target: https://gitter.im/awslabs/chalice?utm_source=badge&utm_medium=badge
    :alt: Gitter
-.. image:: https://travis-ci.org/aws/chalice.svg?branch=master
-   :target: https://travis-ci.org/aws/chalice
-   :alt: Travis CI
 .. image:: https://readthedocs.org/projects/chalice/badge/?version=latest
    :target: http://aws.github.io/chalice/?badge=latest
    :alt: Documentation Status
-.. image:: https://codecov.io/github/aws/chalice/coverage.svg?branch=master
-   :target: https://codecov.io/github/aws/chalice
-   :alt: codecov.io
 
 
 .. image:: https://aws.github.io/chalice/_images/chalice-logo-whitespace.png
@@ -263,7 +257,7 @@ it created when running the ``chalice deploy`` command.
 Feedback
 ========
 
-We'also love to hear from you.  Please create any Github issues for
+We'd also love to hear from you.  Please create any Github issues for
 additional features you'd like to see over at
 https://github.com/aws/chalice/issues.  You can also chat with us
 on gitter: https://gitter.im/awslabs/chalice

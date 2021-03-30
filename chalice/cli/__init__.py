@@ -15,7 +15,7 @@ import json
 
 import botocore.exceptions
 import click
-from typing import Dict, Any, Optional  # noqa
+from typing import Dict, Any, Optional, cast  # noqa
 
 from chalice import __version__ as chalice_version
 from chalice.app import Chalice  # noqa
@@ -28,16 +28,15 @@ from chalice.logs import display_logs, LogRetrieveOptions
 from chalice.utils import create_zip_file
 from chalice.deploy.validate import validate_routes, validate_python_version
 from chalice.deploy.validate import ExperimentalFeatureError
-from chalice.utils import getting_started_prompt, UI, serialize_to_json
-from chalice.constants import CONFIG_VERSION, TEMPLATE_APP, GITIGNORE
+from chalice.utils import UI, serialize_to_json
 from chalice.constants import DEFAULT_STAGE_NAME
-from chalice.constants import DEFAULT_APIGATEWAY_STAGE_NAME
 from chalice.local import LocalDevServer  # noqa
 from chalice.constants import DEFAULT_HANDLER_NAME
 from chalice.invoke import UnhandledLambdaError
 from chalice.deploy.swagger import TemplatedSwaggerGenerator
 from chalice.deploy.planner import PlanEncoder
 from chalice.deploy.appgraph import ApplicationGraphBuilder, GraphPrettyPrint
+from chalice.cli import newproj
 
 
 def _configure_logging(level, format_string=None):
@@ -51,32 +50,6 @@ def _configure_logging(level, format_string=None):
     formatter = logging.Formatter(format_string)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-
-def create_new_project_skeleton(project_name, profile=None):
-    # type: (str, Optional[str]) -> None
-    chalice_dir = os.path.join(project_name, '.chalice')
-    os.makedirs(chalice_dir)
-    config = os.path.join(project_name, '.chalice', 'config.json')
-    cfg = {
-        'version': CONFIG_VERSION,
-        'app_name': project_name,
-        'stages': {
-            DEFAULT_STAGE_NAME: {
-                'api_gateway_stage': DEFAULT_APIGATEWAY_STAGE_NAME,
-            }
-        }
-    }
-    if profile is not None:
-        cfg['profile'] = profile
-    with open(config, 'w') as f:
-        f.write(serialize_to_json(cfg))
-    with open(os.path.join(project_name, 'requirements.txt'), 'w'):
-        pass
-    with open(os.path.join(project_name, 'app.py'), 'w') as f:
-        f.write(TEMPLATE_APP % project_name)
-    with open(os.path.join(project_name, '.gitignore'), 'w') as f:
-        f.write(GITIGNORE)
 
 
 def get_system_info():
@@ -109,10 +82,20 @@ def cli(ctx, project_dir, debug=False):
         project_dir = os.path.abspath(project_dir)
     if debug is True:
         _configure_logging(logging.DEBUG)
+    _configure_cli_env_vars()
     ctx.obj['project_dir'] = project_dir
     ctx.obj['debug'] = debug
     ctx.obj['factory'] = CLIFactory(project_dir, debug, environ=os.environ)
     os.chdir(project_dir)
+
+
+def _configure_cli_env_vars():
+    # type: () -> None
+    # This will set chalice specific env vars so users can detect if
+    # we're running a Chalice CLI command.  This is useful if you want
+    # conditional behavior only when we're actually running in Lambda
+    # in your app.py file.
+    os.environ['AWS_CHALICE_CLI_MODE'] = 'true'
 
 
 @cli.command()
@@ -424,15 +407,22 @@ def gen_policy(ctx, filename):
 @cli.command('new-project')
 @click.argument('project_name', required=False)
 @click.option('--profile', required=False)
-def new_project(project_name, profile):
-    # type: (str, str) -> None
+@click.option('-t', '--project-type', required=False, default='legacy')
+@click.pass_context
+def new_project(ctx, project_name, profile, project_type):
+    # type: (click.Context, str, str, str) -> None
     if project_name is None:
-        project_name = getting_started_prompt(click)
+        prompter = ctx.obj.get('prompter', newproj.getting_started_prompt)
+        answers = prompter()
+        project_name = answers['project_name']
+        project_type = answers['project_type']
     if os.path.isdir(project_name):
         click.echo("Directory already exists: %s" % project_name, err=True)
         raise click.Abort()
-    create_new_project_skeleton(project_name, profile)
+    newproj.create_new_project_skeleton(
+        project_name, project_type=project_type)
     validate_python_version(Config.create())
+    click.echo("Your project has been generated in ./%s" % project_name)
 
 
 @cli.command('url')
@@ -566,6 +556,10 @@ def package(ctx, single_file, stage, merge_template,
 
 
 @cli.command('generate-pipeline')
+@click.option('--pipeline-version',
+              default='v1',
+              type=click.Choice(['v1', 'v2']),
+              help='Which version of the pipeline template to generate.')
 @click.option('-i', '--codebuild-image',
               help=("Specify default codebuild image to use.  "
                     "This option must be provided when using a python "
@@ -589,8 +583,9 @@ def package(ctx, single_file, stage, merge_template,
                     "directory of your app."))
 @click.argument('filename')
 @click.pass_context
-def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
-    # type: (click.Context, str, str, str, str) -> None
+def generate_pipeline(ctx, pipeline_version, codebuild_image, source,
+                      buildspec_file, filename):
+    # type: (click.Context, str, str, str, str, str) -> None
     """Generate a cloudformation template for a starter CD pipeline.
 
     This command will write a starter cloudformation template to
@@ -609,12 +604,17 @@ def generate_pipeline(ctx, codebuild_image, source, buildspec_file, filename):
     from chalice import pipeline
     factory = ctx.obj['factory']  # type: CLIFactory
     config = factory.create_config_obj()
-    p = pipeline.CreatePipelineTemplate()
+    p = cast(pipeline.BasePipelineTemplate, None)
+    if pipeline_version == 'v1':
+        p = pipeline.CreatePipelineTemplateLegacy()
+    else:
+        p = pipeline.CreatePipelineTemplateV2()
     params = pipeline.PipelineParameters(
         app_name=config.app_name,
         lambda_python_version=config.lambda_python_version,
         codebuild_image=codebuild_image,
         code_source=source,
+        pipeline_version=pipeline_version,
     )
     output = p.create_template(params)
     if buildspec_file:

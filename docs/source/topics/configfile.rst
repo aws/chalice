@@ -78,9 +78,12 @@ API (``https://endpoint/prefix/your-api``).
 
 A boolean value that indicates if chalice should try to automatically generate
 an IAM policy based on analyzing your application source code.  The default
-value is ``true``.  If this value is ``false`` then chalice will load try to a
-local file in ``.chalice/policy-<stage-name>.json`` instead of auto-generating
-a policy from source code analysis.
+value is ``true``.  If this value is ``false`` then chalice will try to load an
+IAM policy from disk at ``.chalice/policy-<stage-name>.json`` instead of
+auto-generating a policy from source code analysis. You can change the filename
+by providing the ``iam_policy_file`` config option.
+See :ref:`iam-role-pol-examples` for examples of how to configure IAM roles
+and policies.
 
 
 ``environment_variables``
@@ -90,18 +93,35 @@ A mapping of key value pairs.  These key value pairs will be set as environment
 variables in your application.  All environment variables must be strings.  If
 this key is specified in both a stage specific config option as well as a top
 level key, the stage specific environment variables will be merged into the top
-level keys.  See the examples section below for a concrete example.
+level keys.  See the :ref:`env-var-examples` section below for a concrete
+example.
 
 
 ``iam_policy_file``
 ~~~~~~~~~~~~~~~~~~~
 
-When ``autogen_policy`` is false, chalice will try to load an IAM policy from
-disk instead of auto-generating one based on source code analysis.  The default
-location of this file is ``.chalice/policy-<stage-name>.json``, e.g
+When ``autogen_policy`` is ``false``, Chalice will try to load an IAM policy
+from disk instead of auto-generating one based on source code analysis.  The
+default location of this file is ``.chalice/policy-<stage-name>.json``, e.g
 ``.chalice/policy-dev.json``, ``.chalice/policy-prod.json``, etc.  You can
 change the filename by providing this ``iam_policy_file`` config option.  This
-filename is relative to the ``.chalice`` directory.
+filename is relative to the ``.chalice`` directory.  For example, this config
+will create an IAM role using the file in ``.chalice/my-policy.json``::
+
+  {
+    "version": "2.0",
+    "app_name": "app",
+    "stages": {
+      "dev": {
+        "autogen_policy": false,
+        "iam_policy_file": "my-policy.json"
+      }
+    }
+  }
+
+
+See :ref:`iam-role-pol-examples` for more examples of how to configure IAM
+roles and policies.
 
 
 ``iam_role_arn``
@@ -110,6 +130,8 @@ filename is relative to the ``.chalice`` directory.
 If ``manage_iam_role`` is ``false``, you must specify this value that indicates
 which IAM role arn to use when configuration your application.  This value is
 only used if ``manage_iam_role`` is ``false``.
+See :ref:`iam-role-pol-examples` for examples of how to configure IAM roles
+and policies.
 
 
 ``lambda_memory_size``
@@ -142,10 +164,10 @@ per Lambda function. See `AWS Lambda Layers Configuration`_.
 ``automatic_layer``
 ~~~~~~~~~~~~~~~~~~~~
 
-Indicates whether chalice will automatically construct a single
-stage layer for all Lambda functions with requirements.txt libraries and
-vendored libraries.  Boolean value defaults to ``false`` if not specified.
-See :ref:`package-3rd-party` for more information.
+A boolean value that indicates whether chalice will automatically construct a
+single stage layer for all Lambda functions with requirements.txt libraries and
+vendored libraries.  Boolean value defaults to ``false`` if not specified.  See
+:ref:`package-3rd-party` for more information.
 
 
 .. _custom-domain-config-options:
@@ -166,7 +188,7 @@ specifying an ``api_gateway_custom_domain``:
 You can also provide the following optional configuration:
 
 - ``tls_version`` - The Transport Layer Security (TLS) version of the security
-  policy for this domain name.  Defaults to ``TLS_1_2``, you an also provide
+  policy for this domain name.  Defaults to ``TLS_1_2``, you can also provide
   ``TLS_1_0`` for REST APIs.
 - ``url_prefix`` - A custom domain name plus a url_prefix (BasePathMapping)
   specification identifies a deployed REST API in a given stage. With custom
@@ -286,6 +308,11 @@ resources are tagged with the key ``'aws-chalice'`` whose value is
 ``'version={chalice-version}:stage={stage-name}:app={app-name}'``.  Currently
 only the following chalice deployed resources are tagged: Lambda functions.
 
+``xray``
+~~~~~~~~
+
+A boolean that turns on AWS XRay's Active tracing configuration.
+This will turn on XRay for both Lambda functions and API Gateway stages.
 
 .. _lambda-config:
 
@@ -417,7 +444,7 @@ dev stage for REST API::
           "domain_name": "api.example.com",
           "security_policy": "TLS 1.2|TLS 1.0",
           "certificate_arn": "arn:aws:acm:example.com",
-          "url_prefixes": ["foo", "bar],
+          "url_prefixes": ["foo", "bar"],
           "tags": {
             "key": "tag1",
             "key1": "tag2"
@@ -434,6 +461,8 @@ with specified ``url_prefixes`` that should contain information about
 
 If there is Websocket API ``websocket_api_custom_domain`` should be used
 instead of ``api_gateway_custom_domain``.
+
+.. _iam-role-pol-examples:
 
 IAM Roles and Policies
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -469,7 +498,7 @@ associate with the IAM role for that stage.  In the ``prod`` stage,
 chalice won't modify any IAM roles.  It will just set the IAM role
 for the Lambda function to be ``arn:aws:iam::...:role/prod-role``.
 
-Here's an example that show config precedence::
+Here's an example that shows config precedence::
 
 
   {
@@ -497,6 +526,8 @@ name of ``prod`` because the ``api_gateway_stage`` is specified
 in ``{"stages": {"prod": ...}}`` mapping.
 
 
+
+.. _env-var-examples:
 
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~

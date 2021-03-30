@@ -41,6 +41,8 @@ from chalice.deploy.sweeper import ResourceSweeper
 from chalice.deploy.models import APICall
 from chalice.constants import VPC_ATTACH_POLICY
 from chalice.constants import SQS_EVENT_SOURCE_POLICY
+from chalice.constants import KINESIS_EVENT_SOURCE_POLICY
+from chalice.constants import DDB_EVENT_SOURCE_POLICY
 from chalice.constants import POST_TO_WEBSOCKET_CONNECTION_POLICY
 from chalice.deploy.deployer import LambdaEventSourcePolicyInjector
 from chalice.deploy.deployer import WebsocketPolicyInjector
@@ -278,6 +280,7 @@ def create_function_resource(name):
         deployment_package=models.DeploymentPackage(
             models.Placeholder.BUILD_STAGE
         ),
+        xray=False,
         role=models.PreCreatedIAMRole(role_arn='role:arn'),
         security_group_ids=[],
         subnet_ids=[],
@@ -571,6 +574,7 @@ class TestDefaultsInjector(object):
             runtime='python2.7',
             handler='app.app',
             tags={},
+            xray=None,
             deployment_package=None,
             role=None,
             security_group_ids=[],
@@ -600,6 +604,7 @@ class TestDefaultsInjector(object):
             runtime='python2.7',
             handler='app.app',
             tags={},
+            xray=None,
             deployment_package=None,
             role=None,
             security_group_ids=[],
@@ -708,6 +713,7 @@ class TestSwaggerBuilder(object):
             endpoint_type='EDGE',
             api_gateway_stage='api',
             lambda_function=None,
+            xray=False,
         )
         app = Chalice(app_name='foo')
         config = Config.create(chalice_app=app)
@@ -1110,6 +1116,33 @@ class TestLambdaEventSourcePolicyInjector(object):
         # inject the policy once.
         assert role.policy.document == {
             'Statement': [SQS_EVENT_SOURCE_POLICY.copy()],
+        }
+
+    def test_can_inject_policy_for_kinesis(self, sample_kinesis_event_app):
+        config = Config.create(chalice_app=sample_kinesis_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sample_kinesis_event_app,
+                                                  config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [KINESIS_EVENT_SOURCE_POLICY],
+        }
+
+    def test_can_inject_policy_for_ddb(self, sample_ddb_event_app):
+        config = Config.create(chalice_app=sample_ddb_event_app,
+                               autogen_policy=True,
+                               project_dir='.')
+        event_source = self.create_model_from_app(sample_ddb_event_app, config)
+        role = event_source.lambda_function.role
+        role.policy.document = {'Statement': []}
+        injector = LambdaEventSourcePolicyInjector()
+        injector.handle(config, event_source)
+        assert role.policy.document == {
+            'Statement': [DDB_EVENT_SOURCE_POLICY],
         }
 
 

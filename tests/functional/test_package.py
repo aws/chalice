@@ -271,7 +271,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', 'cp36m', '--dest', mock.ANY,
                 'foo==1.2'
             ],
@@ -700,7 +700,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', 'cp36m', '--dest', mock.ANY,
                 'bar==1.2'
             ],
@@ -742,7 +742,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', abi, '--dest', mock.ANY,
                 '%s==1.1.18' % package
             ],
@@ -899,7 +899,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', abi, '--dest', mock.ANY,
                 'foo==1.2'
             ],

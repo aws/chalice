@@ -330,6 +330,13 @@ class Config(object):
                                   varies_per_function=True)
 
     @property
+    def xray_enabled(self):
+        # type: () -> bool
+        return self._chain_lookup('xray',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
     def environment_variables(self):
         # type: () -> Dict[str, str]
         return self._chain_merge('environment_variables')

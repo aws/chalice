@@ -99,13 +99,13 @@ We recommend setting ``"automatic_layer": true`` in your
 ``.chalice/config.json`` due to these benefits.
 
 Migrating to ``"automatic_layer": true`` is mostly backwards compatible
-with one notible exception: the location of the vendor files is different.
+with one notable exception: the location of the vendor files is different.
 
 When not using automatic layers, any files placed in ``vendor/`` will be
 available in your CWD of your application.  However, when using layers,
 these files will be unzipped to ``/opt/python/lib/pythonX.Y/site-packages``.
 If you are using the ``vendor/`` directory to include custom built python
-packges then this change is transparent as that directory is automatically
+packages then this change is transparent as that directory is automatically
 added to the python path.  However, if you are trying to read a file from
 ``vendor/`` directly, then this will no longer work.  For example, if you
 have::
@@ -147,6 +147,63 @@ your file::
            full_path = os.path.join(dirname, filename)
            if os.path.isfile(full_path):
                return open(full_path)
+
+Environment Variables
+---------------------
+
+As part of the packaging and deployment process, Chalice will import your
+``app.py`` file.  This will result in any top level module code being
+executed.  This can sometimes have undesireable behavior.
+When running any Chalice CLI commands, a ``AWS_CHALICE_CLI_MODE`` environment
+variable is set.  You can check if this env var is set in your ``app.py``
+if you have code that you don't want to run whenever your app is packaged
+and deployed.
+
+.. code-block:: python
+
+   import os
+
+   app = Chalice(app_name='testimport')
+
+   expensive_connection = None
+   if 'AWS_CHALICE_CLI_MODE' not in os.environ:
+       # We're running in Lambda, we want to start up
+       # our connection to our DB.
+       expensive_connection = ConnectToDB()
+
+
+Chalice will also set any environment variables specified in your global or
+stage specific configuration whenever your app is packaged and deployed.
+Per-Lambda function environment variables are not set when importing your app
+(this would require importing your application for each Lambda function).  For
+example, given the config below you would be able to access the ``STAGE_VAR``
+environment variable but not the ``PER_FUNCTION`` variable during the
+building/packaging process when Chalice imports your application.  This
+can be useful if you want to move configuration or resource names out of
+your app.py file.
+
+::
+
+  {
+    "stages": {
+      "dev": {
+        "environment_variables": {
+          "STAGE_VAR": "stage-var"
+        }
+        "api_gateway_stage": "api",
+        "lambda_functions": {
+          "foo": {
+            "environment_variables": {"PER_FUNCTION": "per-function"}
+          }
+        }
+      }
+    },
+    "version": "2.0",
+    "app_name": "demo"
+  }
+
+This only applies to the packaging stage.  When the ``foo`` function is invoked
+on Lambda, the ``PER_FUNCTION`` environment variable will be set as expected.
 
 
 .. _package-examples:

@@ -102,7 +102,7 @@ class SwaggerGenerator(object):
             config = {
                 'in': 'header',
                 'type': 'apiKey',
-                'name': 'Authorization',
+                'name': auth_config.header,
                 'x-amazon-apigateway-authtype': 'custom'
             }
             api_gateway_authorizer = {

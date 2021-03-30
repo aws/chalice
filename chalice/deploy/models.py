@@ -194,6 +194,7 @@ class LambdaFunction(ManagedModel):
     function_name = attrib()          # type: str
     deployment_package = attrib()     # type: DeploymentPackage
     environment_variables = attrib()  # type: StrMap
+    xray = attrib()                   # type: bool
     runtime = attrib()                # type: str
     handler = attrib()                # type: str
     tags = attrib()                   # type: StrMap
@@ -274,6 +275,7 @@ class RestAPI(ManagedModel):
     api_gateway_stage = attrib()                 # type: str
     endpoint_type = attrib()                     # type: str
     lambda_function = attrib()                   # type: LambdaFunction
+    xray = attrib(default=False)                 # type: bool
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
     domain_name = attrib(default=None)    # type: Opt[DomainName]
@@ -332,3 +334,19 @@ class SQSEventSource(FunctionEventSubscriber):
     resource_type = 'sqs_event'
     queue = attrib()            # type: str
     batch_size = attrib()       # type: int
+
+
+@attrs
+class KinesisEventSource(FunctionEventSubscriber):
+    resource_type = 'kinesis_event'
+    stream = attrib()                # type: str
+    batch_size = attrib()            # type: int
+    starting_position = attrib()     # type: str
+
+
+@attrs
+class DynamoDBEventSource(FunctionEventSubscriber):
+    resource_type = 'dynamodb_event'
+    stream_arn = attrib()            # type: str
+    batch_size = attrib()            # type: int
+    starting_position = attrib()     # type: str

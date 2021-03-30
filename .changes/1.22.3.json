@@ -1,0 +1,20 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Bump Terraform version to include 0.14"
+    },
+    {
+      "type": "bugfix",
+      "category": "Typing",
+      "description": "Fix type definitions in app.pyi (#1676)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Terraform",
+      "description": "Use references instead of function names in Terraform packaging (#1558)"
+    }
+  ]
+}

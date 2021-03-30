@@ -1,32 +1,112 @@
 import copy
+import re
 
-from typing import List, Dict, Any, Optional  # noqa
+from typing import List, Dict, Any, Optional, Callable  # noqa
+import yaml
 
 from chalice.config import Config  # noqa
 from chalice import constants
 from chalice import __version__ as chalice_version
 
 
+def create_buildspec_v2(pipeline_params):
+    # type: (PipelineParameters) -> Dict[str, Any]
+    install_commands = [
+        "pip install 'chalice%s'" % pipeline_params.chalice_version_range,
+        "pip install -r requirements.txt",
+    ]
+    build_commands = [
+        "chalice package /tmp/packaged",
+        ("aws cloudformation package --template-file /tmp/packaged/sam.json "
+         "--s3-bucket ${APP_S3_BUCKET} "
+         "--output-template-file transformed.yaml")
+    ]
+    buildspec = {
+        "version": "0.2",
+        "phases": {
+            "install": {
+                "commands": install_commands,
+                "runtime-versions": {
+                    "python": pipeline_params.py_major_minor,
+                }
+            },
+            "build": {
+                "commands": build_commands,
+            }
+        },
+        "artifacts": {
+            "type": "zip",
+            "files": [
+                "transformed.yaml"
+            ]
+        }
+
+    }
+    return buildspec
+
+
+def create_buildspec_legacy(pipeline_params):
+    # type: (PipelineParameters) -> Dict[str, Any]
+    install_commands = [
+        'sudo pip install --upgrade awscli',
+        'aws --version',
+        "sudo pip install 'chalice%s'" % pipeline_params.chalice_version_range,
+        'sudo pip install -r requirements.txt',
+        'chalice package /tmp/packaged',
+        ('aws cloudformation package '
+            '--template-file /tmp/packaged/sam.json'
+            ' --s3-bucket ${APP_S3_BUCKET} '
+            '--output-template-file transformed.yaml'),
+    ]
+    buildspec = {
+        'version': '0.1',
+        'phases': {
+            'install': {
+                'commands': install_commands,
+            }
+        },
+        'artifacts': {
+            'type': 'zip',
+            'files': ['transformed.yaml']
+        }
+    }
+    return buildspec
+
+
 class InvalidCodeBuildPythonVersion(Exception):
-    def __init__(self, version):
-        # type: (str) -> None
-        super(InvalidCodeBuildPythonVersion, self).__init__(
-            'CodeBuild does not yet support python version %s.' % version
-        )
+    def __init__(self, version, msg=None):
+        # type: (str, Optional[str]) -> None
+        if msg is None:
+            msg = 'CodeBuild does not yet support python version %s.' % version
+        super(InvalidCodeBuildPythonVersion, self).__init__(msg)
 
 
 class PipelineParameters(object):
+
+    _PYTHON_VERSION = re.compile('python(.+)')
+
     def __init__(self, app_name, lambda_python_version,
                  codebuild_image=None, code_source='codecommit',
-                 chalice_version_range=None):
-        # type: (str, str, Optional[str], str, Optional[str]) -> None
+                 chalice_version_range=None, pipeline_version='v1'):
+        # type: (str, str, Optional[str], str, Optional[str], str) -> None
         self.app_name = app_name
+        # lambda_python_version is what matches lambda, e.g. 'python3.7'.
         self.lambda_python_version = lambda_python_version
+        # py_major_minor is just the version string, e.g. '3.7'
+        self.py_major_minor = self._extract_version(lambda_python_version)
         self.codebuild_image = codebuild_image
         self.code_source = code_source
         if chalice_version_range is None:
             chalice_version_range = self._lock_to_minor_version()
         self.chalice_version_range = chalice_version_range
+        self.pipeline_version = pipeline_version
+
+    def _extract_version(self, lambda_python_version):
+        # type: (str) -> str
+        matched = self._PYTHON_VERSION.match(lambda_python_version)
+        if matched is None:
+            raise InvalidCodeBuildPythonVersion(lambda_python_version)
+        return matched.group(1)
 
     def _lock_to_minor_version(self):
         # type: () -> str
@@ -36,7 +116,62 @@ class PipelineParameters(object):
         return '>=%s,<%s' % (min_version, max_version)
 
 
-class CreatePipelineTemplate(object):
+class BasePipelineTemplate(object):
+    def create_template(self, pipeline_params):
+        # type: (PipelineParameters) -> Dict[str, Any]
+        raise NotImplementedError("create_template")
+
+
+class CreatePipelineTemplateV2(BasePipelineTemplate):
+    _BASE_TEMPLATE = {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Parameters": {
+            "ApplicationName": {
+                "Default": "ChaliceApp",
+                "Type": "String",
+                "Description": "Enter the name of your application"
+            },
+            "CodeBuildImage": {
+                "Default": "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+                "Type": "String",
+                "Description": "Name of codebuild image to use."
+            }
+        },
+        "Resources": {},
+        "Outputs": {},
+    }
+
+    def create_template(self, pipeline_params):
+        # type: (PipelineParameters) -> Dict[str, Any]
+        self._validate_python_version(pipeline_params.py_major_minor)
+        t = copy.deepcopy(self._BASE_TEMPLATE)  # type: Dict[str, Any]
+        params = t['Parameters']
+        params['ApplicationName']['Default'] = pipeline_params.app_name
+        resources = []  # type: List[BaseResource]
+        if pipeline_params.code_source == 'github':
+            resources.append(GithubSource())
+        else:
+            resources.append(CodeCommitSourceRepository())
+        resources.extend([CodeBuild(create_buildspec_v2), CodePipeline()])
+        for resource in resources:
+            resource.add_to_template(t, pipeline_params)
+        return t
+
+    def _validate_python_version(self, python_version):
+        # type: (str) -> None
+        major, minor = [
+            int(v) for v in python_version.split('.')
+        ]
+        if (major, minor) < (3, 7):
+            raise InvalidCodeBuildPythonVersion(
+                python_version,
+                'This CodeBuild image does not support python version: %s' % (
+                    python_version
+                )
+            )
+
+
+class CreatePipelineTemplateLegacy(BasePipelineTemplate):
 
     _CODEBUILD_IMAGE = {
         'python2.7': 'python:2.7.12',
@@ -75,7 +210,7 @@ class CreatePipelineTemplate(object):
             resources.append(GithubSource())
         else:
             resources.append(CodeCommitSourceRepository())
-        resources.extend([CodeBuild(), CodePipeline()])
+        resources.extend([CodeBuild(create_buildspec_legacy), CodePipeline()])
         for resource in resources:
             resource.add_to_template(t, pipeline_params)
         return t
@@ -135,14 +270,37 @@ class GithubSource(BaseResource):
             'Type': 'String',
             'Description': 'The name of the github repository.',
         }
-        p['GithubPersonalToken'] = {
-            'Type': 'String',
-            'Description': 'Personal access token for the github repo.',
-            'NoEcho': True,
-        }
+        if pipeline_params.pipeline_version == 'v1':
+            p['GithubPersonalToken'] = {
+                'Type': 'String',
+                'Description': 'Personal access token for the github repo.',
+                'NoEcho': True,
+            }
+        else:
+            p['GithubRepoSecretId'] = {
+                'Type': 'String',
+                'Default': 'GithubRepoAccess',
+                'Description': (
+                    'The name/ID of the SecretsManager secret that '
+                    'contains the personal access token for the github repo.'
+                )
+            }
+            p['GithubRepoSecretJSONKey'] = {
+                'Type': 'String',
+                'Default': 'OAuthToken',
+                'Description': (
+                    'The name of the JSON key in the SecretsManager secret '
+                    'that contains the personal access token for the '
+                    'github repo.'
+                )
+            }
 
 
 class CodeBuild(BaseResource):
+    def __init__(self, buildspec_generator=create_buildspec_legacy):
+        # type: (Callable[[PipelineParameters], Dict[str, Any]]) -> None
+        self._buildspec_generator = buildspec_generator
+
     def add_to_template(self, template, pipeline_params):
         # type: (Dict[str, Any], PipelineParameters) -> None
         resources = template.setdefault('Resources', {})
@@ -185,32 +343,12 @@ class CodeBuild(BaseResource):
                 },
                 "Source": {
                     "Type": "CODEPIPELINE",
-                    "BuildSpec": self._get_default_buildspec(pipeline_params),
+                    "BuildSpec": yaml.dump(
+                        self._buildspec_generator(pipeline_params),
+                    ),
                 }
             }
         }
-
-    def _get_default_buildspec(self, pipeline_params):
-        # type: (PipelineParameters) -> str
-        return (
-            "version: 0.1\n"
-            "phases:\n"
-            "  install:\n"
-            "    commands:\n"
-            "      - sudo pip install --upgrade awscli\n"
-            "      - aws --version\n"
-            "      - sudo pip install 'chalice%s'\n"
-            "      - sudo pip install -r requirements.txt\n"
-            "      - chalice package /tmp/packaged\n"
-            "      - aws cloudformation package"
-            " --template-file /tmp/packaged/sam.json"
-            " --s3-bucket ${APP_S3_BUCKET}"
-            " --output-template-file transformed.yaml\n"
-            "artifacts:\n"
-            "  type: zip\n"
-            "  files:\n"
-            "    - transformed.yaml\n"
-        ) % pipeline_params.chalice_version_range
 
     def _add_s3_bucket(self, resources, outputs):
         # type: (Dict[str, Any], Dict[str, Any]) -> None
@@ -382,27 +520,39 @@ class CodePipeline(BaseResource):
         # type: (PipelineParameters) -> Dict[str, Any]
         if pipeline_params.code_source == 'codecommit':
             return self._code_commit_source()
-        return self._github_source()
+        return self._github_source(pipeline_params.pipeline_version)
 
-    def _github_source(self):
-        # type: () -> Dict[str, Any]
+    def _github_source(self, pipeline_version):
+        # type: (str) -> Dict[str, Any]
+        oauth_token = {'Ref': 'GithubPersonalToken'}  # type: Dict[str, Any]
+        if pipeline_version == 'v2':
+            oauth_token = {
+                "Fn::Join": [
+                    "", ["{{resolve:secretsmanager:",
+                         {"Ref": "GithubRepoSecretId"},
+                         ":SecretString:",
+                         {"Ref": "GithubRepoSecretJSONKey"},
+                         "}}"]
+                ]
+            }
         return {
             'Name': 'Source',
             'Actions': [{
+                "Name": "Source",
                 "ActionTypeId": {
                     "Category": "Source",
                     "Owner": "ThirdParty",
-                    "Version": 1,
+                    "Version": "1",
                     "Provider": "GitHub"
                 },
                 'RunOrder': 1,
-                'OutputArtifacts': {
+                'OutputArtifacts': [{
                     'Name': 'SourceRepo',
-                },
+                }],
                 'Configuration': {
                     'Owner': {'Ref': 'GithubOwner'},
                     'Repo': {'Ref': 'GithubRepoName'},
-                    'OAuthToken': {'Ref': 'GithubPersonalToken'},
+                    'OAuthToken': oauth_token,
                     'Branch': 'master',
                     'PollForSourceChanges': True,
                 }
@@ -424,7 +574,7 @@ class CodePipeline(BaseResource):
                     "ActionTypeId": {
                         "Category": "Build",
                         "Owner": "AWS",
-                        "Version": 1,
+                        "Version": "1",
                         "Provider": "CodeBuild"
                     },
                     "OutputArtifacts": [
@@ -451,7 +601,7 @@ class CodePipeline(BaseResource):
                     "ActionTypeId": {
                         "Category": "Deploy",
                         "Owner": "AWS",
-                        "Version": 1,
+                        "Version": "1",
                         "Provider": "CloudFormation"
                     },
                     "InputArtifacts": [
@@ -481,7 +631,7 @@ class CodePipeline(BaseResource):
                     "ActionTypeId": {
                         "Category": "Deploy",
                         "Owner": "AWS",
-                        "Version": 1,
+                        "Version": "1",
                         "Provider": "CloudFormation"
                     },
                     "Configuration": {

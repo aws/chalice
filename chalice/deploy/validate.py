@@ -1,13 +1,14 @@
 import sys
 import warnings
 
-from typing import Dict, List, Set, Iterator, Optional  # noqa
+from typing import Dict, List, Set, Iterator, Optional, Any  # noqa
 
 from chalice import app  # noqa
 from chalice.config import Config  # noqa
 from chalice.constants import EXPERIMENTAL_ERROR_MSG
 from chalice.constants import MIN_COMPRESSION_SIZE
 from chalice.constants import MAX_COMPRESSION_SIZE
+from chalice.compat import STRING_TYPES
 
 
 class ExperimentalFeatureError(Exception):
@@ -48,6 +49,7 @@ def validate_configuration(config):
     validate_endpoint_type(config)
     validate_resource_policy(config)
     validate_sqs_configuration(config.chalice_app)
+    validate_environment_variables_type(config)
 
 
 def validate_resource_policy(config):
@@ -255,3 +257,20 @@ def _is_valid_queue_name(queue_name):
     # want to detect the case where a user puts the queue URL/ARN instead of
     # the name.
     return True
+
+
+def validate_environment_variables_type(config):
+    # type: (Config) -> None
+    _validate_environment_variables(config.environment_variables)
+    for name in _get_all_function_names(config.chalice_app):
+        _validate_environment_variables(
+            config.scope(config.chalice_stage, name).environment_variables)
+
+
+def _validate_environment_variables(environment_variables):
+    # type: (Dict[str, Any]) -> None
+    for key, value in environment_variables.items():
+        if not isinstance(value, STRING_TYPES):
+            raise ValueError("Environment variable values must be strings, "
+                             "got 'type' %s for key '%s'" % (
+                                 type(value).__name__, key))

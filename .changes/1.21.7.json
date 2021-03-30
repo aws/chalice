@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Map custom domain outputs in Terraform packaging (#1601)"
+    }
+  ]
+}

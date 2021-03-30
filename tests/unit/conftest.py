@@ -78,6 +78,28 @@ def sample_sqs_event_app():
 
 
 @fixture
+def sample_kinesis_event_app():
+    app = Chalice('kinesis-event')
+
+    @app.on_kinesis_record(stream='mystream')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
+def sample_ddb_event_app():
+    app = Chalice('ddb-event')
+
+    @app.on_dynamodb_record(stream_arn='arn:aws:...:stream')
+    def handler(event):
+        pass
+
+    return app
+
+
+@fixture
 def sample_app_lambda_only():
     app = Chalice('lambda_only')
 
@@ -165,9 +187,10 @@ def create_websocket_event():
         return {
             'requestContext': {
                 'routeKey': route_key,
-                'domainName': 'abcd1234.us-west-2.amazonaws.com',
+                'domainName': 'abcd1234.execute-api.us-west-2.amazonaws.com',
                 'stage': 'api',
                 'connectionId': 'ABCD1234=',
+                'apiId': 'abcd1234',
             },
             'body': body,
         }
@@ -221,4 +244,5 @@ def lambda_function():
         subnet_ids=[],
         layers=[],
         reserved_concurrency=None,
+        xray=None,
     )

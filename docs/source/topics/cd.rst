@@ -1,3 +1,4 @@
+===========================
 Continuous Deployment (CD)
 ===========================
 
@@ -14,13 +15,41 @@ greatly simplifies managing what resources belong to your Chalice app as they
 are all stored in the Continuous Deployment pipeline.
 
 Chalice can generate a CloudFormation template that will create a starter CD
-pipeline. It contains a CodeCommit repo, a CodeBuild stage for
-packaging your chalice app, and a CodePipeline stage to deploy your
+pipeline. By default it contains an AWS CodeCommit repo, an AWS CodeBuild stage
+for packaging your chalice app, and an AWS CodePipeline stage to deploy your
 application using CloudFormation.
+
+You can also configure a source repository hosted on GitHub instead of
+a CodeCommit repository.
+
+Pipeline Template Versions
+==========================
+
+This starter pipeline template can be generated using the ``generate-pipeline``
+command.  There are two versions of this pipeline.  The older ``v1`` template
+is the default (for backwards compatibility reasons), but the newer template
+version, ``v2``, is recommended.  The version can be specified using the
+``--pipeline-version`` option.  These are the differences between ``v1`` and
+``v2`` templates:
+
+* The ``v1`` templates use version ``0.1`` of the CodeBuild buildspec, whereas
+  ``v2`` uses ``0.2`` of the CodeBuild buildspec.  Buildspec ``0.2`` is the
+  recommended version to use with CodeBuild.  See their
+  `documentation <https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html>`__
+  for more information.
+* The ``v2`` template uses `AWS Secrets Manager <https://aws.amazon.com/secrets-manager/>`__
+  to configure access to a GitHub repository.
+* The ``v2`` buildspec uses `runtime-versions <https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html#build-spec.phases.install.runtime-versions>`__
+  to configure which version of Python to use instead of a Python
+  version specific CodeBuild image.  For ``v2`` templates the
+  ``aws/codebuild/amazonlinux2-x86_64-standard`` image.
+
+**The v2 pipeline template requires Python 3.7 or higher.** If you're using
+Python versions less than 3.7 you must use the ``v1`` pipeline template.
 
 
 Usage example
--------------
+=============
 
 Setting up the deployment pipeline is a two step process. First use the
 ``chalice generate-pipeline`` command to generate a base CloudFormation
@@ -29,12 +58,17 @@ the ``aws cloudformation deploy`` command. Below is an example.
 
 ::
 
-   $ chalice generate-pipeline pipeline.json
+   $ chalice generate-pipeline --pipeline-version v2 pipeline.json
    $ aws cloudformation deploy --stack-name mystack
          --template-file pipeline.json --capabilities CAPABILITY_IAM
    Waiting for changeset to be created..
    Waiting for stack create/update to complete
    Successfully created/updated stack - mystack
+
+.. note::
+   To configure your Chalice app to use a GitHub repository instead of
+   CodeCommit see the :ref:`cicd-github-repo` section below.
+
 
 Once the CloudFormation template has finished creating the stack, you will have
 several new AWS resources that make up a bare bones CD pipeline.
@@ -76,6 +110,12 @@ populate it with the Chalice application code. Permissions will also need to be
 set up, you can find the documentation on how to do that
 `here <https://docs.aws.amazon.com/codebuild/latest/userguide/setting-up.html>`_
 .
+
+You can retrieve the CodeCommit clone URL by searching for the
+``SourceRepoURL`` in the CloudFormation stack output::
+
+    $ aws cloudformation describe-stacks --stack-name mysack \
+       --query "Stacks[0].Outputs[?OutputKey=='SourceRepoURL'] | [0].OutputValue"
 
 
 CodePipeline
@@ -144,3 +184,75 @@ Ideally the CodeBuild stage would be used to run unit and functional tests
 before deploying to beta. After the beta stage is up, integration tests can be
 run against that endpoint, and if they all pass the beta stage could be
 promoted to a production stage using the CodePipleine manual approval feature.
+
+.. _cicd-github-repo:
+
+Configuring a GitHub Repository
+===============================
+
+You can configure a GitHub repository instead of a CodeCommit repo when
+setting up your deployment pipeline by specifying the ``--source github``
+option.  When generating a CloudFormation template for a GitHub repository,
+there are several parameters that are added to your template that allow
+you to configure how to connect your GitHub repository with your CodePipeline.
+
+You must store your OAuth token that enables access to a GitHub repository
+in AWS Secrets Manager.  You then specify the secret name/id and the JSON
+key name as CloudFormation parameters.  These values default to a secret
+name of ``GithubRepoAccess`` and a JSON key name of ``OAuthToken``.
+
+Below is an example of how to configure a GitHub repository as the
+source for your deployment pipeline.
+
+First create a `GitHub token <https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token>`__
+that can be used in this template.  Next create a secret in AWS Secrets
+Manager.  You can either follow the documentation
+`here <https://docs.aws.amazon.com/secretsmanager/latest/userguide/manage_create-basic-secret.html>`__
+or use the AWS CLI or any AWS SDK.  For this example, we'll use the AWS CLI
+to create our secret.  Create a file named ``/tmp/secrets.json`` with these
+contents::
+
+    {"OAuthToken": "abcdefghhijklmnop"}
+
+Be sure to replace the value of ``OAuthToken`` with the value of your GitHub
+token you created.  Next we can create the secret using this command::
+
+    $ aws secretsmanager create-secret --name GithubRepoAccess \
+      --description "Token for Github Repo Access" \
+      --secret-string file:///tmp/secrets.json
+
+Now we can generate our deployment pipeline::
+
+    $ chalice generate-pipeline --pipeline-version v2 \
+      --source github --buildspec-file buildspec.yml pipeline.json
+
+This will create two files, a ``pipeline.json`` file containing our
+deployment pipeline and a ``buildspec.yml`` file.  This buildspec file
+lets us update what commands should be run as part of our build process
+without having to redeploy our CloudFormation template.
+
+We now add and commit our changes to our repository.
+
+::
+
+    $ git add buildspec.yml pipeline.json
+    $ git commit -m "Add deployment pipeline template"
+    $ git push
+
+Now we're ready to deploy our CloudFormation template using the AWS CLI.  Be
+sure to replace the ``GithubOwner`` and ``GithubRepoName`` with your own
+values for your GitHub repository.  You'll also need to specify the
+``GithubRepoSecretId`` and ``GithubRepoSecretJSONKey`` if you used values
+other than the default vaues of ``GithubRepoAccess`` and ``OAuthToken`` when
+creating your secret in Secrets Manager.
+
+::
+
+    $ aws cloudformation deploy --template-file pipeline.json \
+      --stack-name MyChaliceApp --parameter-overrides \
+      GithubOwner=repo-owner-name \
+      GithubRepoName=repo-name \
+      --capabilities CAPABILITY_IAM
+
+We've now created a deployment pipeline that will automatically deploy our
+Chalice app whenever we push to our GitHub repository.

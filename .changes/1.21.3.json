@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Test",
+      "description": "Add test client methods for generating sample kinesis events"
+    },
+    {
+      "type": "enhancement",
+      "category": "Config",
+      "description": "Validate env var values are strings (#1543)"
+    }
+  ]
+}
