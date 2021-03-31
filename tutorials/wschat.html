@@ -352,17 +352,17 @@ example code is contained in the <code class="docutils literal notranslate"><spa
 <span class="n">HANDLER</span> <span class="o">=</span> <span class="n">Handler</span><span class="p">(</span><span class="n">STORAGE</span><span class="p">,</span> <span class="n">SENDER</span><span class="p">)</span>
 
 
-<span class="nd">@app.on_ws_connect</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_connect</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">STORAGE</span><span class="o">.</span><span class="n">create_connection</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
 
 
-<span class="nd">@app.on_ws_disconnect</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_disconnect</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">STORAGE</span><span class="o">.</span><span class="n">delete_connection</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
 
 
-<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">HANDLER</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
 </pre></div>
@@ -393,7 +393,7 @@ following file.</p>
 
 <span class="k">class</span> <span class="nc">Storage</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;An abstraction to interact with the DynamoDB Table.&quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize Storage object</span>
 
 <span class="sd">        :param table: A boto3 dynamodb Table resource object.</span>
@@ -401,7 +401,7 @@ following file.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">table</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_env</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">from_env</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create table from the environment.</span>
 
 <span class="sd">        The environment variable TABLE is present for a deployed application</span>
@@ -413,7 +413,7 @@ following file.</p>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">table_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TABLE&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s1">&#39;dynamodb&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">create_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create a new connection object in the dtabase.</span>
@@ -555,7 +555,7 @@ following file.</p>
                     <span class="p">},</span>
                 <span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">get_record_by_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get all the properties associated with a connection.</span>
@@ -582,7 +582,7 @@ following file.</p>
 
 <span class="k">class</span> <span class="nc">Sender</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Class to send messages over websockets.&quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">storage</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">storage</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize a sender object.</span>
 
 <span class="sd">        :param app: A Chalice application object.</span>
@@ -625,7 +625,7 @@ following file.</p>
 
 <span class="sd">    This class implements the bulk of our app behavior.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize a Handler object.</span>
 
 <span class="sd">        :param storage: Storage object to interact with database.</span>
@@ -757,10 +757,10 @@ following file.</p>
                 <span class="s1">&#39;Commands available:&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;    /help&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;          Display this message.&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;    /join {chat_room_name}&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;          Join a chatroom named {chat_room_name}.&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;    /nick {nickname}&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;          Change your name to {nickname}. If no {nickname}&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /join </span><span class="si">{chat_room_name}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Join a chatroom named </span><span class="si">{chat_room_name}</span><span class="s1">.&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;    /nick </span><span class="si">{nickname}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;          Change your name to </span><span class="si">{nickname}</span><span class="s1">. If no </span><span class="si">{nickname}</span><span class="s1">&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;          is provided then your current name will be printed&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;    /room&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;          Print out the name of the room you are currently &#39;</span><span class="p">,</span>
@@ -851,7 +851,7 @@ following file.</p>
             <span class="c1"># join a room.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
                 <span class="n">connection_id</span><span class="p">,</span>
-                <span class="s1">&#39;Not currently in a room. Type /join {room_name} to do so.&#39;</span>
+                <span class="s1">&#39;Not currently in a room. Type /join </span><span class="si">{room_name}</span><span class="s1"> to do so.&#39;</span>
             <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
@@ -968,15 +968,15 @@ Type /help <span class="k">for</span> list of commands.
           is provided <span class="k">then</span> your current name will be printed
     /room
           Print out the name of the room you are currently
-          in.
+          <span class="k">in</span>.
     /ls
-          If you are in a room, list all users also in the
+          If you are <span class="k">in</span> a room, list all users also <span class="k">in</span> the
           room. Otherwise, list all rooms.
     /quit
           Leave current room.
 
-If you are in a room, raw text messages that <span class="k">do</span> not start
-with a / will be sent to everyone <span class="k">else</span> in the room.
+If you are <span class="k">in</span> a room, raw text messages that <span class="k">do</span> not start
+with a / will be sent to everyone <span class="k">else</span> <span class="k">in</span> the room.
 &gt; /join chalice
 &lt; Joined chat room <span class="s2">&quot;chalice&quot;</span>
 &lt; Jenny joined room.
@@ -1009,15 +1009,15 @@ Type /help <span class="k">for</span> list of commands.
           is provided <span class="k">then</span> your current name will be printed
     /room
           Print out the name of the room you are currently
-          in.
+          <span class="k">in</span>.
     /ls
-          If you are in a room, list all users also in the
+          If you are <span class="k">in</span> a room, list all users also <span class="k">in</span> the
           room. Otherwise, list all rooms.
     /quit
           Leave current room.
 
-If you are in a room, raw text messages that <span class="k">do</span> not start
-with a / will be sent to everyone <span class="k">else</span> in the room.
+If you are <span class="k">in</span> a room, raw text messages that <span class="k">do</span> not start
+with a / will be sent to everyone <span class="k">else</span> <span class="k">in</span> the room.
 &gt; /join chalice
 &lt; Joined chat room <span class="s2">&quot;chalice&quot;</span>
 &gt; /ls

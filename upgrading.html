@@ -253,20 +253,20 @@ resource as part of the default configuration.</p>
 Previously, the routing code would use positional args <code class="docutils literal notranslate"><span class="pre">handler(*args)</span></code>
 to invoke a view function.  In this version, kwargs are now used instead:
 <code class="docutils literal notranslate"><span class="pre">handler(**view_args)</span></code>.  For example, this code will no longer work:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/{a}/{b}&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/</span><span class="si">{a}</span><span class="s1">/</span><span class="si">{b}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{}</span>
 </pre></div>
 </div>
 <p>The example above must be updated to:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/{a}/{b}&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/</span><span class="si">{a}</span><span class="s1">/</span><span class="si">{b}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{}</span>
 </pre></div>
 </div>
 <p>Now that functions are invoked with kwargs, the order doesn’t matter.  You may
 also write the above view function as:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/{a}/{b}&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/</span><span class="si">{a}</span><span class="s1">/</span><span class="si">{b}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{}</span>
 </pre></div>
@@ -307,9 +307,9 @@ functions.  You now specify either an instance of
 <code class="docutils literal notranslate"><span class="pre">chalice.CognitoUserPoolAuthorizer</span></code> or <code class="docutils literal notranslate"><span class="pre">chalice.CustomAuthorizer</span></code>
 to an <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> function using the <code class="docutils literal notranslate"><span class="pre">authorizer</span></code> argument.</p>
 <p>Deprecated:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer_name</span><span class="o">=</span><span class="s1">&#39;MyPool&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer_name</span><span class="o">=</span><span class="s1">&#39;MyPool&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 
 <span class="n">app</span><span class="o">.</span><span class="n">define_authorizer</span><span class="p">(</span>
     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;MyPool&#39;</span><span class="p">,</span>
@@ -326,9 +326,9 @@ to an <code class="docutils literal notranslate"><span class="pre">&#64;app.rout
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
     <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">define_authorizer</span></code> is still available, but is now deprecated and will
@@ -342,9 +342,9 @@ be removed in future versions of chalice.  You can also use the new
                     <span class="s1">&#39;/functions/arn:aws:lambda:region:account-id:&#39;</span>
                     <span class="s1">&#39;function:FunctionName/invocations&#39;</span><span class="p">))</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/custom-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/custom-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -461,7 +461,7 @@ authorizer, and then provide that <code class="docutils literal notranslate"><sp
 calls.  Now they must be defined all at once in the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/auth-required&#39;</span><span class="p">,</span> <span class="n">authorizer_name</span><span class="o">=</span><span class="s1">&#39;MyUserPool&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/auth-required&#39;</span><span class="p">,</span> <span class="n">authorizer_name</span><span class="o">=</span><span class="s1">&#39;MyUserPool&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{}</span>
 

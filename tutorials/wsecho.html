@@ -180,7 +180,7 @@ next script will need it as well:</p>
 <span class="p">])</span>
 
 
-<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
@@ -219,7 +219,7 @@ parameters attached. The most useful are <code class="docutils literal notransla
 <code class="docutils literal notranslate"><span class="pre">event.body</span></code>. The <code class="docutils literal notranslate"><span class="pre">connection_id</span></code> is an API Gateway specific identifier
 that allows you to refer to the connection that sent the message. The <code class="docutils literal notranslate"><span class="pre">body</span></code>
 is the content of the message.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
 </pre></div>
 </div>

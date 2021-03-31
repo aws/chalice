@@ -153,19 +153,19 @@ which contains details on how to use the javascript SDK.</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;sdktest&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/hello/{name}&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/hello/</span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">cors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">hello_name</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/users/{user_id}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/users/</span><span class="si">{user_id}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">update_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;msg&quot;</span><span class="p">:</span> <span class="s2">&quot;fake updated user&quot;</span><span class="p">,</span> <span class="s2">&quot;userId&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">}</span>
 </pre></div>
@@ -189,22 +189,22 @@ javascript SDK methods correspond to the <code class="docutils literal notransla
   <span class="kd">var</span> <span class="nx">apigClient</span> <span class="o">=</span> <span class="nx">apigClientFactory</span><span class="p">.</span><span class="nx">newClient</span><span class="p">();</span>
 
   <span class="c1">// @app.route(&#39;/&#39;)</span>
-  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">rootGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">rootGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
       <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;root-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
   <span class="p">});</span>
 
   <span class="c1">// @app.route(&#39;/foo&#39;)</span>
-  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">fooGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">fooGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
       <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;foo-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
   <span class="p">});</span>
 
   <span class="c1">// @app.route(&#39;/hello/{name}&#39;)</span>
-  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">helloNameGet</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;jimmy&#39;</span><span class="p">}).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">helloNameGet</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;jimmy&#39;</span><span class="p">}).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
       <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;helloname-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
   <span class="p">});</span>
 
   <span class="c1">// @app.route(&#39;/users/{user_id}&#39;, methods=[&#39;PUT&#39;])</span>
-  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">usersUserIdPut</span><span class="p">({</span><span class="nx">user_id</span><span class="o">:</span> <span class="s1">&#39;123&#39;</span><span class="p">},</span> <span class="s1">&#39;body content&#39;</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">apigClient</span><span class="p">.</span><span class="nx">usersUserIdPut</span><span class="p">({</span><span class="nx">user_id</span><span class="o">:</span> <span class="s1">&#39;123&#39;</span><span class="p">},</span> <span class="s1">&#39;body content&#39;</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
       <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;users-userid-put&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
   <span class="p">});</span>
 <span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
@@ -240,22 +240,22 @@ page to test:</p>
           <span class="kd">var</span> <span class="nx">apigClient</span> <span class="o">=</span> <span class="nx">apigClientFactory</span><span class="p">.</span><span class="nx">newClient</span><span class="p">();</span>
 
           <span class="c1">// @app.route(&#39;/&#39;)</span>
-          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">rootGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">rootGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
               <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;root-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
           <span class="p">});</span>
 
           <span class="c1">// @app.route(&#39;/foo&#39;)</span>
-          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">fooGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">fooGet</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
               <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;foo-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
           <span class="p">});</span>
 
           <span class="c1">// @app.route(&#39;/hello/{name}&#39;)</span>
-          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">helloNameGet</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;jimmy&#39;</span><span class="p">}).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">helloNameGet</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;jimmy&#39;</span><span class="p">}).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
               <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;helloname-get&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
           <span class="p">});</span>
 
           <span class="c1">// @app.route(&#39;/users/{user_id}&#39;, methods=[&#39;PUT&#39;])</span>
-          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">usersUserIdPut</span><span class="p">({</span><span class="nx">user_id</span><span class="o">:</span> <span class="s1">&#39;123&#39;</span><span class="p">},</span> <span class="s1">&#39;body content&#39;</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="nx">apigClient</span><span class="p">.</span><span class="nx">usersUserIdPut</span><span class="p">({</span><span class="nx">user_id</span><span class="o">:</span> <span class="s1">&#39;123&#39;</span><span class="p">},</span> <span class="s1">&#39;body content&#39;</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">result</span> <span class="p">=&gt;</span> <span class="p">{</span>
               <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;users-userid-put&#39;</span><span class="p">).</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
           <span class="p">});</span>
         <span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>

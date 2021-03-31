@@ -225,7 +225,7 @@ have:</p>
 </pre></div>
 </div>
 <p>And your <code class="docutils literal notranslate"><span class="pre">app.py</span></code> attempts to read this file:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;myimage.png&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">do_something</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
@@ -237,7 +237,7 @@ your file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s1">&#39;/opt/python/lib/python</span><span class="si">%s</span><span class="s1">.</span><span class="si">%s</span><span class="s1">/site-packages&#39;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">with</span> <span class="n">open_vendor_file</span><span class="p">(</span><span class="s1">&#39;myimage.png&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">do_something</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
@@ -268,7 +268,7 @@ and deployed.</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;testimport&#39;</span><span class="p">)</span>
 
-<span class="n">expensive_connection</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">expensive_connection</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="k">if</span> <span class="s1">&#39;AWS_CHALICE_CLI_MODE&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
     <span class="c1"># We&#39;re running in Lambda, we want to start up</span>
     <span class="c1"># our connection to our DB.</span>

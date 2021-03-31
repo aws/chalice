@@ -134,9 +134,9 @@ specify a fixed rate or a cron expression.</p>
 decorator.  Let’s look at an example.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
 </div>
 <p>In this example, we have a single lambda function that we want automatically
@@ -147,9 +147,9 @@ lambda function as well as the necessary CloudWatch events/rules such that the
 instance of <a class="reference internal" href="../api.html#Rate" title="Rate"><code class="xref py py-class docutils literal notranslate"><span class="pre">Rate</span></code></a> or <a class="reference internal" href="../api.html#Cron" title="Cron"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cron</span></code></a>.  For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
 </div>
 <p>The function you decorate must accept a single argument,
@@ -160,14 +160,14 @@ result in a new lambda function and associated CloudWatch
 event rule.  For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">HOURS</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">every_two_hours</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
 </div>
 <p>In the app above, chalice will create two lambda functions,
@@ -182,9 +182,9 @@ any <a class="reference external" href="https://amzn.to/2SCgWA6">CloudWatch Even
 <code class="docutils literal notranslate"><span class="pre">&#64;app.on_cw_event()</span></code> decorator.  Let’s look at an example.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.on_cw_event</span><span class="p">({</span><span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;aws.codecommit&quot;</span><span class="p">]})</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_cw_event</span><span class="p">({</span><span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;aws.codecommit&quot;</span><span class="p">]})</span>
 <span class="k">def</span> <span class="nf">on_code_commit_changes</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
 </div>
 <p>In this example, we have a single lambda function that we subscribe to all
@@ -207,9 +207,9 @@ This is done with the <a class="reference internal" href="../api.html#Chalice.on
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;s3eventdemo&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket-name&#39;</span><span class="p">,</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket-name&#39;</span><span class="p">,</span>
                  <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:*&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">handle_s3_event</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received event for bucket: </span><span class="si">%s</span><span class="s2">, key: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
@@ -270,9 +270,9 @@ $ cd chalice-demo-sns/
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;chalice-sns-demo&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;my-demo-topic&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;my-demo-topic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_sns_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received message with subject: </span><span class="si">%s</span><span class="s2">, message: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
                   <span class="n">event</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
@@ -379,9 +379,9 @@ suffix, e.g. <code class="docutils literal notranslate"><span class="pre">my-que
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;chalice-sqs-demo&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;my-queue&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;my-queue&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_sqs_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
         <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Received message with contents: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
@@ -426,9 +426,9 @@ attribute that is automatically base64 decoded for you.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;kinesiseventdemo&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_kinesis_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
         <span class="c1"># The .data attribute is automatically base64 decoded for you.</span>
@@ -461,9 +461,9 @@ all the records in the event.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">chalice</span><span class="o">.</span><span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;ddb-event-demo&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:dynamodb:.../stream/2020&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:dynamodb:.../stream/2020&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_ddb_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
         <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;New: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">new_image</span><span class="p">)</span>

@@ -148,9 +148,9 @@ covered in the Built-in Authorizers section.</p>
 
 <span class="n">authorizer</span> <span class="o">=</span> <span class="n">IAMAuthorizer</span><span class="p">()</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/iam-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/iam-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>See the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html">API Gateway documentation</a>
@@ -169,9 +169,9 @@ cognito user pool configured.</p>
 <span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>For more information about using Cognito user pools with API Gateway,
@@ -193,9 +193,9 @@ you use the <code class="docutils literal notranslate"><span class="pre">CustomA
                     <span class="s1">&#39;/functions/arn:aws:lambda:region:account-id:&#39;</span>
                     <span class="s1">&#39;function:FunctionName/invocations&#39;</span><span class="p">))</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/custom-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/custom-auth&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -218,7 +218,7 @@ Gateway documentation</a>.  First, we’ll show the code and then walk through i
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demoauth1&#39;</span><span class="p">)</span>
 
 
-<span class="nd">@app.authorizer</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">authorizer</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">demo_auth</span><span class="p">(</span><span class="n">auth_request</span><span class="p">):</span>
     <span class="n">token</span> <span class="o">=</span> <span class="n">auth_request</span><span class="o">.</span><span class="n">token</span>
     <span class="c1"># This is just for demo purposes as shown in the API Gateway docs.</span>
@@ -236,7 +236,7 @@ Gateway documentation</a>.  First, we’ll show the code and then walk through i
         <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">demo_auth</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">demo_auth</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;context&#39;</span><span class="p">:</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">context</span><span class="p">}</span>
 </pre></div>
@@ -330,9 +330,9 @@ which is <code class="docutils literal notranslate"><span class="pre">resourceSe
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">],</span>
     <span class="n">scopes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;https://mychaliceapp.example.com/todos.read&quot;</span><span class="p">])</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Scopes can be configured per-route for an Authorizer using <code class="docutils literal notranslate"><span class="pre">with_scopes</span></code>.</p>
@@ -341,12 +341,12 @@ which is <code class="docutils literal notranslate"><span class="pre">resourceSe
 <span class="n">authorizer</span> <span class="o">=</span> <span class="n">CognitoUserPoolAuthorizer</span><span class="p">(</span>
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
 
-<span class="nd">@app.route</span><span class="p">(</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span>
     <span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span>
     <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span>
     <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="o">.</span><span class="n">with_scopes</span><span class="p">([</span><span class="s2">&quot;https://mychaliceapp.example.com/todos.read&quot;</span><span class="p">]))</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Scopes can also be used with custom authorizers and built-in authorizers.

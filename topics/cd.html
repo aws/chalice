@@ -241,10 +241,10 @@ a starting point, not a fully featured CD system.</p>
 <h3>CodeBuild build script<a class="headerlink" href="#codebuild-build-script" title="Permalink to this headline">¶</a></h3>
 <p>By default Chalice will create the CodeBuild project with a default buildspec
 that does the following.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">version</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span>
-<span class="l l-Scalar l-Scalar-Plain">phases</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">install</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">commands</span><span class="p p-Indicator">:</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">version</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span>
+<span class="nt">phases</span><span class="p">:</span>
+  <span class="nt">install</span><span class="p">:</span>
+    <span class="nt">commands</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sudo pip install --upgrade awscli</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">aws --version</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sudo pip install chalice</span>
@@ -253,9 +253,9 @@ that does the following.</p>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">aws cloudformation package --template-file</span>
         <span class="l l-Scalar l-Scalar-Plain">tmp/packaged/sam.json --s3-bucket ${APP_S3_BUCKET}</span>
         <span class="l l-Scalar l-Scalar-Plain">--output-template-file transformed.yaml</span>
-<span class="l l-Scalar l-Scalar-Plain">artifacts</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">zip</span>
-  <span class="l l-Scalar l-Scalar-Plain">files</span><span class="p p-Indicator">:</span>
+<span class="nt">artifacts</span><span class="p">:</span>
+  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">zip</span>
+  <span class="nt">files</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">transformed.yaml</span>
 </pre></div>
 </div>

@@ -151,7 +151,7 @@ REST API for you:</p>
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
@@ -171,11 +171,11 @@ parts of the URI:</p>
 <span class="p">}</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/cities/{city}&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/cities/</span><span class="si">{city}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">state_of_city</span><span class="p">(</span><span class="n">city</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="n">CITIES_TO_STATE</span><span class="p">[</span><span class="n">city</span><span class="p">]}</span>
 </pre></div>
@@ -243,7 +243,7 @@ enable debugging to get more information:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">True</span></code> enables debugging for your app.
@@ -271,7 +271,7 @@ catch this exception and instead return a more helpful error message
 to the user.  Here’s the updated code:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">BadRequestError</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/cities/{city}&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/cities/</span><span class="si">{city}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">state_of_city</span><span class="p">(</span><span class="n">city</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="n">CITIES_TO_STATE</span><span class="p">[</span><span class="n">city</span><span class="p">]}</span>
@@ -316,7 +316,7 @@ There are a few additional exceptions you can raise from your python code:</p>
 <p>So far, our examples have only allowed GET requests.
 It’s actually possible to support additional HTTP methods.
 Here’s an example of a view function that supports PUT:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/resource/{value}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/resource/</span><span class="si">{value}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">put_test</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
 </pre></div>
@@ -333,7 +333,7 @@ HTTP/1.1 200 OK
 <p>Note that the <code class="docutils literal notranslate"><span class="pre">methods</span></code> kwarg accepts a list of methods.  Your view function
 will be called when any of the HTTP methods you specify are used for the
 specified resource.  For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myview</span><span class="p">():</span>
     <span class="k">pass</span>
 </pre></div>
@@ -344,11 +344,11 @@ PUT is sent to <code class="docutils literal notranslate"><span class="pre">/myv
 multiple HTTP methods for the same route url, you may define separate view
 functions to the same route url but have the view functions differ by
 HTTP method. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myview_post</span><span class="p">():</span>
     <span class="k">pass</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/myview&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myview_put</span><span class="p">():</span>
     <span class="k">pass</span>
 </pre></div>
@@ -385,7 +385,7 @@ following view function:</p>
 <span class="n">OBJECTS</span> <span class="o">=</span> <span class="p">{</span>
 <span class="p">}</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/objects/{key}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/objects/</span><span class="si">{key}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myobject</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
     <span class="n">request</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
@@ -446,7 +446,7 @@ class, which also has the following properties.</p>
 the information about the current request as a dictionary.  Let’s use this
 method to write a view function that returns everything it knows about the
 request:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/introspect&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/introspect&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">introspect</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
 </pre></div>
@@ -516,7 +516,7 @@ types.  Here’s an example of this feature:</p>
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;helloworld&#39;</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">],</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">],</span>
            <span class="n">content_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;application/x-www-form-urlencoded&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_qs</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">raw_body</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
@@ -593,7 +593,7 @@ a chalice specific <code class="docutils literal notranslate"><span class="pre">
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;custom-response&#39;</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s1">&#39;hello world!&#39;</span><span class="p">,</span>
                     <span class="n">status_code</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
@@ -631,7 +631,7 @@ a chalice specific <code class="docutils literal notranslate"><span class="pre">
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;compress-response&#39;</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">binary_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;application/json&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="n">blob</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
     <span class="n">payload</span> <span class="o">=</span> <span class="n">gzip</span><span class="o">.</span><span class="n">compress</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span>
@@ -651,7 +651,7 @@ a chalice specific <code class="docutils literal notranslate"><span class="pre">
 <code class="docutils literal notranslate"><span class="pre">cors=True</span></code> parameter to your <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> call.  By
 default this value is <code class="docutils literal notranslate"><span class="pre">False</span></code>. Global CORS can be set by
 setting <code class="docutils literal notranslate"><span class="pre">app.api.cors</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/supports-cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/supports-cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">supports_cors</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{}</span>
 </pre></div>
@@ -719,11 +719,11 @@ constructor takes the following keyword arguments that map to CORS headers:</p>
     <span class="n">allow_headers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;X-Special-Header&#39;</span><span class="p">],</span>
     <span class="n">max_age</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
     <span class="n">expose_headers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;X-Special-Header&#39;</span><span class="p">],</span>
-    <span class="n">allow_credentials</span><span class="o">=</span><span class="bp">True</span>
+    <span class="n">allow_credentials</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">)</span>
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/custom-cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="n">cors_config</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/custom-cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="n">cors_config</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">supports_custom_cors</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;cors&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;cors&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>There’s a couple of things to keep in mind when enabling cors for a view:</p>
@@ -752,7 +752,7 @@ in the <code class="docutils literal notranslate"><span class="pre">Access-Contr
     <span class="s1">&#39;http://allowed2.example.com&#39;</span><span class="p">,</span>
 <span class="p">])</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/cors_multiple_origins&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;OPTIONS&#39;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/cors_multiple_origins&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;OPTIONS&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">supports_cors_multiple_origins</span><span class="p">():</span>
     <span class="n">method</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">method</span>
     <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;OPTIONS&#39;</span><span class="p">:</span>
@@ -765,7 +765,7 @@ in the <code class="docutils literal notranslate"><span class="pre">Access-Contr
         <span class="k">if</span> <span class="n">origin</span> <span class="ow">in</span> <span class="n">_ALLOWED_ORIGINS</span><span class="p">:</span>
             <span class="n">headers</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;Access-Control-Allow-Origin&#39;</span><span class="p">:</span> <span class="n">origin</span><span class="p">})</span>
         <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
-            <span class="n">body</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">body</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;GET&#39;</span><span class="p">:</span>

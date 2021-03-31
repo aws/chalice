@@ -138,11 +138,11 @@ given this sample app:</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;event&#39;</span><span class="p">:</span> <span class="n">event</span><span class="p">}</span>
 </pre></div>
@@ -196,7 +196,7 @@ you can use the <a class="reference internal" href="../api.html#Client.events" t
 sample events.  For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
-<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">}</span>
 
@@ -247,11 +247,11 @@ we create our test client:</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;MY_ENV_VAR&#39;</span><span class="p">)}</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;MY_ENV_VAR&#39;</span><span class="p">)}</span>
 
@@ -279,7 +279,7 @@ we create our test client:</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">()</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
@@ -302,7 +302,7 @@ we create our test client:</p>
  <span class="k">def</span> <span class="nf">test_index</span><span class="p">():</span>
      <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
          <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
-         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">==</span> <span class="n">b</span><span class="s1">&#39;{&quot;hello&quot;:&quot;world&quot;}&#39;</span>
+         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;{&quot;hello&quot;:&quot;world&quot;}&#39;</span>
 </pre></div>
 </div>
 <p>You can also test builtin authorizers with the test client:</p>
@@ -310,15 +310,15 @@ we create our test client:</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;testclient&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.authorizer</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">authorizer</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">myauth</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">token</span> <span class="o">==</span> <span class="s1">&#39;allow&#39;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">([</span><span class="s1">&#39;*&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">([],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;noone&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">myauth</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">myauth</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">needs_auth</span><span class="p">()</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 
 <span class="c1">#  Test code:</span>
 <span class="kn">from</span> <span class="nn">chalice.test</span> <span class="kn">import</span> <span class="n">Client</span>
@@ -327,7 +327,7 @@ we create our test client:</p>
      <span class="k">with</span> <span class="n">Client</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
          <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
              <span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s1">&#39;allow&#39;</span><span class="p">})</span>
-         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">json_body</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">json_body</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
          <span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
              <span class="s1">&#39;/needs-auth&#39;</span><span class="p">,</span>
              <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s1">&#39;deny&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span>
@@ -345,17 +345,17 @@ API call to Amazon Rekognition whenever an object is uploaded to S3:</p>
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;testclient&#39;</span><span class="p">)</span>
-<span class="n">_REKOGNITION_CLIENT</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">_REKOGNITION_CLIENT</span> <span class="o">=</span> <span class="kc">None</span>
 
 
 <span class="k">def</span> <span class="nf">get_rekognition_client</span><span class="p">():</span>
     <span class="k">global</span> <span class="n">_REKOGNITION_CLIENT</span>
-    <span class="k">if</span> <span class="n">_REKOGNITION_CLIENT</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">_REKOGNITION_CLIENT</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">_REKOGNITION_CLIENT</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;rekognition&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_REKOGNITION_CLIENT</span>
 
 
-<span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span>
                  <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:*&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">handle_object_created</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">client</span> <span class="o">=</span> <span class="n">get_rekognition_client</span><span class="p">()</span>

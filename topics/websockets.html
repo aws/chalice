@@ -162,19 +162,19 @@ for each of the events.</p>
 <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
 
 
-<span class="nd">@app.on_ws_connect</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_connect</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;New connection: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;New connection: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
 
 
-<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">))</span>
 
 
-<span class="nd">@app.on_ws_disconnect</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_disconnect</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> disconnected&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> disconnected&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -197,7 +197,7 @@ the same socket.</p>
 <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
 
 
-<span class="nd">@app.on_ws_message</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;I got your message!&#39;</span><span class="p">)</span>
 </pre></div>

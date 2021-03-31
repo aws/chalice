@@ -178,7 +178,7 @@ framework will show up in the cloudwatch logs.  Example usage:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;appname&quot;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -199,7 +199,7 @@ is intended to be used as a decorator for a view function.  For example:</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;appname&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/resource/{value}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/resource/</span><span class="si">{value}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">viewfunction</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -260,12 +260,12 @@ an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfi
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;appname&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.authorizer</span><span class="p">(</span><span class="n">ttl_seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">authorizer</span><span class="p">(</span><span class="n">ttl_seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">my_auth</span><span class="p">(</span><span class="n">auth_request</span><span class="p">):</span>
     <span class="c1"># Validate auth_request.token, and then:</span>
     <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">my_auth</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">my_auth</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">viewfunction</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -297,19 +297,19 @@ This will create a lambda function associated with the decorated
 function.  It will also schedule the lambda function to be invoked
 with a scheduled CloudWatch Event.</p>
 <p>See <a class="reference internal" href="topics/events.html#scheduled-events"><span class="std std-ref">Scheduled Events</span></a> for more information.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;cron(15 10 ? * 6L 2002-2005)&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">&#39;cron(15 10 ? * 6L 2002-2005)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">cron_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;rate(5 minutes)&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">&#39;rate(5 minutes)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">rate_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">rate_obj_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 
-<span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">cron_obj_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -376,7 +376,7 @@ configuring an existing S3 bucket.</p>
 <p>This example shows how you could implement an image resizer that’s
 triggered whenever an object is uploaded to the <code class="docutils literal notranslate"><span class="pre">images/</span></code> prefix
 of an S3 bucket (e.g <code class="docutils literal notranslate"><span class="pre">s3://mybucket/images/house.jpg</span></code>).</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span> <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:Put&#39;</span><span class="p">],</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="s1">&#39;mybucket&#39;</span><span class="p">,</span> <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:Put&#39;</span><span class="p">],</span>
                  <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;images/&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.jpg&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">resize_image</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -427,9 +427,9 @@ whenever an SNS message is published to the specified topic.</p>
 <p>This example prints the subject and the contents of the message whenever
 something publishes to the sns topic of <code class="docutils literal notranslate"><span class="pre">mytopic</span></code>.  In this example,
 the input parameter is of type <a class="reference internal" href="#SNSEvent" title="SNSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SNSEvent</span></code></a>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;SNS subject: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">subject</span><span class="p">)</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;SNS message: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
@@ -472,9 +472,9 @@ is 1.  See the
 for more information on how Lambda integrates with SQS.</p>
 <p>See the <a class="reference internal" href="topics/events.html#sqs-events"><span class="std std-ref">SQS Events</span></a> topic guide for more information on using SQS
 in Chalice.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
@@ -516,9 +516,9 @@ batch until processing succeeds or the data expires.</p>
 <p>See
 <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html">Using AWS Lambda with Amazon Kinesis</a>
 for more information on how Lambda integrates with Kinesis.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
@@ -567,9 +567,9 @@ batch until processing succeeds or the data expires.</p>
 <p>See
 <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html">Using AWS Lambda with Amazon DynamoDB</a>
 for more information on how Lambda integrates with DynamoDB Streams.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="bp">True</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">True</span>
 
-<span class="nd">@app.on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:dynamodb:...:stream&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:dynamodb:...:stream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
@@ -730,7 +730,7 @@ the Lambda invocation, and <code class="docutils literal notranslate"><span clas
 an input event and will invoke the next middleware in the chain,
 and eventually the original Lambda handler.  Below is a noop middleware
 that shows the minimum needed to write middleware:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">mymiddleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 </pre></div>
@@ -767,7 +767,7 @@ following logging decorator:</p>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;After lambda function.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">wrapper</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="nd">@log_invocation</span>
 <span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;In myfunction().&quot;</span><span class="p">)</span>
@@ -789,7 +789,7 @@ apply this wrapper to every Lambda function in your app.</p>
 <em class="property">class </em><code class="descname">Request</code><a class="headerlink" href="#Request" title="Permalink to this definition">¶</a></dt>
 <dd><p>A class that represents the current request.  This is mapped to
 the <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> object.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/objects/{key}&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/objects/</span><span class="si">{key}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
 <span class="k">def</span> <span class="nf">myobject</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
     <span class="n">request</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span>  <span class="c1"># type: Request</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;PUT&#39;</span><span class="p">:</span>
@@ -906,7 +906,7 @@ want complete control over the returned HTTP response.</p>
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;custom-response&#39;</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s1">&#39;hello world!&#39;</span><span class="p">,</span>
                     <span class="n">status_code</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
@@ -946,9 +946,9 @@ for an <code class="docutils literal notranslate"><span class="pre">&#64;app.rou
     <span class="s1">&#39;MyPool&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="s1">&#39;Authorization&#39;</span><span class="p">,</span>
     <span class="n">provider_arns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;arn:aws:cognito:...:userpool/name&#39;</span><span class="p">])</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/user-pools&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">authorizer</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">authenticated</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <dl class="class">
@@ -1295,12 +1295,12 @@ error.</p>
     <span class="n">allow_headers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;X-Special-Header&#39;</span><span class="p">],</span>
     <span class="n">max_age</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
     <span class="n">expose_headers</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;X-Special-Header&#39;</span><span class="p">],</span>
-    <span class="n">allow_credentials</span><span class="o">=</span><span class="bp">True</span>
+    <span class="n">allow_credentials</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/custom_cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="n">cors_config</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/custom_cors&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">cors</span><span class="o">=</span><span class="n">cors_config</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">supports_custom_cors</span><span class="p">():</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;cors&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;cors&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
 <div class="versionadded">
@@ -1360,7 +1360,7 @@ built in allowed headers: <code class="docutils literal notranslate"><span class
 <em class="property">class </em><code class="descname">Rate</code><span class="sig-paren">(</span><em>value</em>, <em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#Rate" title="Permalink to this definition">¶</a></dt>
 <dd><p>An instance of this class can be used as the <code class="docutils literal notranslate"><span class="pre">expression</span></code> value
 in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.schedule()</span></code></a> method:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -1400,7 +1400,7 @@ either <code class="docutils literal notranslate"><span class="pre">Rate.MINUTES
 <em class="property">class </em><code class="descname">Cron</code><span class="sig-paren">(</span><em>minutes</em>, <em>hours</em>, <em>day_of_month</em>, <em>month</em>, <em>day_of_week</em>, <em>year</em><span class="sig-paren">)</span><a class="headerlink" href="#Cron" title="Permalink to this definition">¶</a></dt>
 <dd><p>An instance of this class can be used as the <code class="docutils literal notranslate"><span class="pre">expression</span></code> value
 in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.schedule()</span></code></a> method.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
 <span class="k">def</span> <span class="nf">handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -1446,7 +1446,7 @@ supported.</li>
 <dt id="CloudWatchEvent">
 <em class="property">class </em><code class="descname">CloudWatchEvent</code><a class="headerlink" href="#CloudWatchEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a scheduled or CloudWatch events.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">CloudWatchEvent</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -1557,7 +1557,7 @@ object.  Example:</p>
 <dt id="S3Event">
 <em class="property">class </em><code class="descname">S3Event</code><a class="headerlink" href="#S3Event" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an S3 event.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">S3Event</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event received for bucket: </span><span class="si">%s</span><span class="s2">, key </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
                  <span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
@@ -1611,7 +1611,7 @@ to Lambda.</p>
 <dt id="SNSEvent">
 <em class="property">class </em><code class="descname">SNSEvent</code><a class="headerlink" href="#SNSEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an SNS event handler.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">SNSEvent</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Message received with subject: </span><span class="si">%s</span><span class="s2">, message: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
                  <span class="n">event</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
@@ -1657,7 +1657,7 @@ object.</p>
 <dt id="SQSEvent">
 <em class="property">class </em><code class="descname">SQSEvent</code><a class="headerlink" href="#SQSEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an SQS event handler.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">SQSEvent</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
@@ -1734,7 +1734,7 @@ access to the lambda event.</p>
 <dt id="KinesisEvent">
 <em class="property">class </em><code class="descname">KinesisEvent</code><a class="headerlink" href="#KinesisEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a Kinesis data stream event handler.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">KinesisEvent</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 </pre></div>
@@ -1829,7 +1829,7 @@ access to the lambda event.</p>
 <dt id="DynamoDBEvent">
 <em class="property">class </em><code class="descname">DynamoDBEvent</code><a class="headerlink" href="#DynamoDBEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a DynamoDB stream event handler.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:us-west-2:.../stream&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:us-west-2:.../stream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">DynamoDBEvent</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Event: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
@@ -2015,9 +2015,9 @@ the <cite>__name__</cite> attribute:<code class="docutils literal notranslate"><
 
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
 
-<span class="n">myblueprint</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">myblueprint</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
-<span class="nd">@myblueprint.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@myblueprint</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
@@ -2116,7 +2116,7 @@ your Chalice app.</p>
 <dd><p>Test client for invoking Lambda functions.  This class should not be
 instantiated directly, and instead should be accessed via the
 <code class="docutils literal notranslate"><span class="pre">Client.lambda_</span></code> attribute:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="s2">&quot;world&quot;</span><span class="p">}</span>
 

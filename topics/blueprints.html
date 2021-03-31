@@ -153,10 +153,10 @@ $ touch chalicelib/blueprints.py
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
 
 
-<span class="n">extra_routes</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">extra_routes</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<span class="nd">@extra_routes.route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">)</span>
+<span class="nd">@extra_routes</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">}</span>
 </pre></div>
@@ -173,7 +173,7 @@ imported when running in Lambda.  We’ll now import this module in our
 <span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">extra_routes</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 </pre></div>
@@ -260,15 +260,15 @@ events.py
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
 
 
-<span class="n">myapi</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">myapi</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<span class="nd">@myapi.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@myapi</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
 
-<span class="nd">@myapi.route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">)</span>
+<span class="nd">@myapi</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/foo&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">}</span>
 </pre></div>
@@ -277,15 +277,15 @@ events.py
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Blueprint</span>
 
 
-<span class="n">myevents</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">myevents</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<span class="nd">@myevents.schedule</span><span class="p">(</span><span class="s1">&#39;rate(5 minutes)&#39;</span><span class="p">)</span>
+<span class="nd">@myevents</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">&#39;rate(5 minutes)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">cron</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 
 
-<span class="nd">@myevents.on_sns_message</span><span class="p">(</span><span class="s1">&#39;MyTopic&#39;</span><span class="p">)</span>
+<span class="nd">@myevents</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="s1">&#39;MyTopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_sns_message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>

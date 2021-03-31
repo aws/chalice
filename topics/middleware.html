@@ -136,18 +136,18 @@ automatically be invoked by Chalice whenever your Lambda functions are called.</
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demo-middleware&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">my_middleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Before calling my main Lambda function.&quot;</span><span class="p">)</span>
     <span class="n">response</span> <span class="o">=</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
     <span class="n">app</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;After calling my main Lambda function.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">response</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
-<span class="nd">@app.on_sns_message</span><span class="p">(</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">sns_handler</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -174,7 +174,7 @@ response type should match the response type of the underlying Lambda
 handler.</li>
 </ul>
 <p>Below is the simplest middleware in Chalice that does nothing:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">noop_middleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="c1"># The `event` type will depend on what type of</span>
     <span class="c1"># Lambda handler is being invoked.</span>
@@ -187,17 +187,17 @@ handler.</li>
 error handling strategy.  Any exceptions from a Lambda handler are propagated
 back to each middleware.  You can then catch these exceptions in your
 middleware and process them as needed.  For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_errors</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">MyCustomError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="c1"># We don&#39;t want MyCustomError to propagate, instead</span>
         <span class="c1"># we&#39;ll convert this to an error response dictionary.</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Error&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Error&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
                 <span class="s2">&quot;Message&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">noop_middleware</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">raise</span> <span class="n">MyCustomError</span><span class="p">(</span><span class="s2">&quot;Raising an error.&quot;</span><span class="p">)</span>
 </pre></div>
@@ -218,7 +218,7 @@ function, you can raise a <code class="docutils literal notranslate"><span class
 For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">ChaliceUnhandledError</span>
 
-<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">handle_errors</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
@@ -226,14 +226,14 @@ For example:</p>
         <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
                         <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">})</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="c1"># The handle_errors middleware will never see this exception.</span>
     <span class="c1"># This will automatically be converted to a ``Response`` object</span>
     <span class="c1"># with a status code of ``500``.</span>
     <span class="k">raise</span> <span class="n">MyCustomError</span><span class="p">(</span><span class="s2">&quot;Raising an error.&quot;</span><span class="p">)</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/error&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/error&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">unhandled_error</span><span class="p">():</span>
     <span class="c1"># The handle_errors middleware will see this exception because it&#39;s</span>
     <span class="c1"># of type ChaliceUnhandledError.</span>
@@ -298,7 +298,7 @@ following logging decorator:</p>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;After lambda function.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">wrapper</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="nd">@log_invocation</span>
 <span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;In myfunction().&quot;</span><span class="p">)</span>
@@ -325,9 +325,9 @@ example.</p>
 <p>In this example, we want to return a 400 bad response if a specific
 header is missing from a request.  Because this is HTTP specific, we only
 want to register this handler for our <code class="docutils literal notranslate"><span class="pre">http</span></code> event type.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="nn">Response</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="n">Response</span>
 
-<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">require_header</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="c1"># From the list above, because this is an ``http`` event</span>
     <span class="c1"># type, we know that event will be of type ``chalice.Request``.</span>
@@ -346,7 +346,7 @@ want to register this handler for our <code class="docutils literal notranslate"
 a key in our Lambda response.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">time</span>
 
-<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;pure_lambda&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;pure_lambda&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">inject_time</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="n">response</span> <span class="o">=</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
@@ -390,31 +390,31 @@ to all Lambda functions in our application.</p>
 <span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span><span class="n">ConvertToMiddleware</span><span class="p">(</span><span class="n">logger</span><span class="o">.</span><span class="n">inject_lambda_context</span><span class="p">))</span>
 <span class="n">app</span><span class="o">.</span><span class="n">register_middleware</span><span class="p">(</span>
     <span class="n">ConvertToMiddleware</span><span class="p">(</span>
-        <span class="n">tracer</span><span class="o">.</span><span class="n">capture_lambda_handler</span><span class="p">(</span><span class="n">capture_response</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+        <span class="n">tracer</span><span class="o">.</span><span class="n">capture_lambda_handler</span><span class="p">(</span><span class="n">capture_response</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 <span class="p">)</span>
 
 <span class="c1"># Here we&#39;re writing Chalice specific middleware where for any HTTP</span>
 <span class="c1"># APIs, we want to add the request path to our structured log message.</span>
 <span class="c1"># This shows how we can combine both Chalice-style middleware with</span>
 <span class="c1"># other existing tools.</span>
-<span class="nd">@app.middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">inject_route_info</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">structure_logs</span><span class="p">(</span><span class="n">append</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">request_path</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">structure_logs</span><span class="p">(</span><span class="n">append</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">request_path</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">get_response</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In index() function, this will have a &#39;path&#39; key.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;hello&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">foobar</span><span class="p">():</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In foobar() function&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">}</span>
 
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">myfunction</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;In myfunction().&quot;</span><span class="p">)</span>
     <span class="n">tracer</span><span class="o">.</span><span class="n">put_annotation</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;Status&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;SUCCESS&quot;</span><span class="p">)</span>

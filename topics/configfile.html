@@ -442,7 +442,7 @@ that can be applied per function:</p>
 of these config options.</p>
 <p>In general, the name of your lambda function will correspond to
 the name of the function in your app.  For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.lambda_function</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
@@ -454,10 +454,10 @@ decorated with the <code class="docutils literal notranslate"><span class="pre">
 a single Lambda function for all requests from API gateway,
 and this name is <code class="docutils literal notranslate"><span class="pre">api_handler</span></code>.  So if you have an app
 like this:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span> <span class="k">pass</span>
 
-<span class="nd">@app.route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/foo/bar&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">other_handler</span><span class="p">():</span> <span class="k">pass</span>
 </pre></div>
 </div>
@@ -624,11 +624,11 @@ following environment variables set:</p>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;demo&#39;</span><span class="p">)</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">pass</span>
 
-<span class="nd">@app.lambda_function</span><span class="p">()</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">lambda_function</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
     <span class="k">pass</span>
 </pre></div>
