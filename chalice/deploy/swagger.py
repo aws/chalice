@@ -42,7 +42,6 @@ class SwaggerGenerator(object):
         # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
-        print('generating swagger')
         self._add_shared_definitions_and_parameters(app, api)
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
@@ -50,11 +49,8 @@ class SwaggerGenerator(object):
         return api
 
     def _add_shared_definitions_and_parameters(self, app, api):
-        print('checking for extra swag', app.__dict__)
         if hasattr(app, 'to_swagger'):
-            print('has swagger')
             swagger_additions = app.to_swagger()
-            print(swagger_additions)
             swagger_additions = yaml.load(textwrap.dedent(swagger_additions))
             if 'definitions' in swagger_additions:
                 api['definitions'].update(swagger_additions['definitions'])
