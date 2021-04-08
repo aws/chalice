@@ -70,7 +70,6 @@ def _get_random_package_name():
         ('scipy==1.5.4', [
             'scipy/__init__.py',
             'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so']),
-            'scipy/cluster/_hierarchy.cpython-*m-x86_64-linux-gnu.so']),
         ('cffi==1.14.5', [
             '_cffi_backend.cpython-*-x86_64-linux-gnu.so']),
         ('pygit2==1.5.0', [
