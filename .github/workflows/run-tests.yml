@@ -6,6 +6,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       HYPOTHESIS_PROFILE: ci
+      CHALICE_TEST_EXTENDED_PACKAGING: true
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
