@@ -54,13 +54,13 @@ def _get_random_package_name():
     'package,contents', [
         ('pandas==1.0.3', [
             'pandas/_libs/__init__.py',
-            'pandas/io/sas/_sas.cpython-*m-x86_64-linux-gnu.so']),
+            'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so']),
         ('SQLAlchemy==1.3.20', [
             'sqlalchemy/__init__.py',
-            'sqlalchemy/cresultproxy.cpython-*m-x86_64-linux-gnu.so']),
+            'sqlalchemy/cresultproxy.cpython-*-x86_64-linux-gnu.so']),
         ('numpy==1.19.4', [
             'numpy/__init__.py',
-            'numpy/core/_struct_ufunc_tests.cpython-*m-x86_64-linux-gnu.so']),
+            'numpy/core/_struct_ufunc_tests.cpython-*-x86_64-linux-gnu.so']),
         ('cryptography==3.3.1', [
             'cryptography/__init__.py',
             'cryptography/hazmat/bindings/_openssl.abi3.so']),
@@ -69,7 +69,7 @@ def _get_random_package_name():
         ('MarkupSafe==1.1.1', ['markupsafe/__init__.py']),
         ('scipy==1.5.4', [
             'scipy/__init__.py',
-            'scipy/cluster/_hierarchy.cpython-*m-x86_64-linux-gnu.so']),
+            'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so']),
     ]
 )
 def test_package_install_smoke_tests(package, contents, runner, app_skeleton):
