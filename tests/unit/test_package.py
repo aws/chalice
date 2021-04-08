@@ -729,6 +729,25 @@ class TestTerraformTemplate(TemplateTestBase):
                    'batch_size': 5
                }
 
+    def test_sqs_arn_does_not_use_fn_sub(self, sample_app):
+        @sample_app.on_sqs_message(queue_arn='arn:foo:bar', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-sqs-event-source'] == {
+                   'event_source_arn': 'arn:foo:bar',
+                   'function_name': '${aws_lambda_function.handler.arn}',
+                   'batch_size': 5
+               }
+
     def test_can_package_kinesis_handler(self, sample_app):
         @sample_app.on_kinesis_record(stream='mystream', batch_size=5,
                                       starting_position='TRIM_HORIZON')
@@ -1516,6 +1535,26 @@ class TestSAMTemplate(TemplateTestBase):
                             ':${AWS::AccountId}:foo'
                         )
                     },
+                    'BatchSize': 5,
+                },
+            }
+        }
+
+    def test_sqs_arn_does_not_use_fn_sub(self, sample_app):
+        @sample_app.on_sqs_message(queue_arn='arn:foo:bar', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        sqs_handler = template['Resources']['Handler']
+        assert sqs_handler['Properties']['Events'] == {
+            'HandlerSqsEventSource': {
+                'Type': 'SQS',
+                'Properties': {
+                    'Queue': 'arn:foo:bar',
                     'BatchSize': 5,
                 },
             }

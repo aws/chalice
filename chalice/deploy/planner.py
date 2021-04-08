@@ -91,9 +91,13 @@ class RemoteState(object):
                 resource.resource_name)
         except ValueError:
             return False
+        if isinstance(resource.queue, models.QueueARN):
+            resource_name = resource.queue.queue_name
+        else:
+            resource_name = resource.queue
         return self._client.verify_event_source_current(
             event_uuid=deployed_values['event_uuid'],
-            resource_name=resource.queue,
+            resource_name=resource_name,
             service_name='sqs',
             function_arn=deployed_values['lambda_arn'],
         )
@@ -694,18 +698,29 @@ class PlanStage(object):
         function_arn = Variable(
             '%s_lambda_arn' % resource.lambda_function.resource_name
         )
-        instruction_for_queue_arn = self._arn_parse_instructions(function_arn)
-        instruction_for_queue_arn.append(
-            models.StoreValue(
-                name=queue_arn_varname,
-                value=StringFormat(
-                    'arn:{partition}:sqs:{region_name}:{account_id}:%s' % (
-                        resource.queue
+        if not isinstance(resource.queue, models.QueueARN):
+            instruction_for_queue_arn = self._arn_parse_instructions(
+                function_arn)
+            instruction_for_queue_arn.append(
+                models.StoreValue(
+                    name=queue_arn_varname,
+                    value=StringFormat(
+                        'arn:{partition}:sqs:{region_name}:{account_id}:%s' % (
+                            resource.queue
+                        ),
+                        ['partition', 'region_name', 'account_id'],
                     ),
-                    ['partition', 'region_name', 'account_id'],
-                ),
+                )
             )
-        )
+            queue_name = resource.queue
+        else:
+            instruction_for_queue_arn = [
+                models.StoreValue(
+                    name=queue_arn_varname,
+                    value=resource.queue.arn,
+                )
+            ]
+            queue_name = resource.queue.queue_name
         if self._remote_state.resource_exists(resource):
             deployed = self._remote_state.resource_deployed_values(resource)
             uuid = deployed['event_uuid']
@@ -719,7 +734,7 @@ class PlanStage(object):
                 'sqs_event', resource.resource_name, {
                     'queue_arn': deployed['queue_arn'],
                     'event_uuid': uuid,
-                    'queue': resource.queue,
+                    'queue': queue_name,
                     'lambda_arn': deployed['lambda_arn'],
                 }
             )
@@ -737,7 +752,7 @@ class PlanStage(object):
             'sqs_event', resource.resource_name, {
                 'queue_arn': Variable(queue_arn_varname),
                 'event_uuid': Variable(uuid_varname),
-                'queue': resource.queue,
+                'queue': queue_name,
                 'lambda_arn': Variable(function_arn.name)
             }
         )

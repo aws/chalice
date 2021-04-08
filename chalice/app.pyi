@@ -354,11 +354,13 @@ class SNSEventConfig(BaseEventSourceConfig):
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    queue = ... # type: str
+    queue = ... # type: Optional[str]
+    queue_arn = ... # type: Optional[str]
     batch_size = ... # type: int
 
     def __init__(
-        self, name: str, handler_string: str, queue: str, batch_size: int
+        self, name: str, handler_string: str, queue: Optional[str],
+        queue_arn: Optional[str], batch_size: int
     ) -> None: ...
 
 

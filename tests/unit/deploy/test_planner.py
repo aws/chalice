@@ -1778,6 +1778,79 @@ class TestPlanSQSSubscription(BasePlannerTests):
             }
         )
 
+    def test_sqs_event_supports_queue_arn(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue=models.QueueARN(arn='arn:us-west-2:myqueue'),
+            batch_size=10,
+            lambda_function=function
+        )
+        plan = self.determine_plan(sqs_event_source)
+        assert plan[0] == models.StoreValue(
+            name='function_name-sqs-event-source_queue_arn',
+            value='arn:us-west-2:myqueue',
+        )
+        assert plan[1] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': Variable(
+                    "function_name-sqs-event-source_queue_arn"
+                ),
+                'batch_size': 10,
+                'function_name': Variable("function_name_lambda_arn")
+            },
+            output_var='function_name-sqs-event-source_uuid'
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': Variable(
+                    'function_name-sqs-event-source_queue_arn'),
+                'event_uuid': Variable(
+                    'function_name-sqs-event-source_uuid'),
+                'queue': 'myqueue',
+                'lambda_arn': Variable(
+                    'function_name_lambda_arn')
+            }
+        )
+
+    def test_can_update_sqs_event_with_queue_arn(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue=models.QueueARN(arn='arn:sqs:myqueue'),
+            batch_size=10,
+            lambda_function=function
+        )
+        self.remote_state.declare_resource_exists(
+            sqs_event_source,
+            queue='myqueue',
+            queue_arn='arn:sqs:myqueue',
+            resource_type='sqs_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(sqs_event_source)
+        assert plan[0] == models.StoreValue(
+            name='function_name-sqs-event-source_queue_arn',
+            value='arn:sqs:myqueue',
+        )
+        assert plan[1] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': 'arn:sqs:myqueue',
+                'event_uuid': 'my-uuid',
+                'queue': 'myqueue',
+                'lambda_arn': 'arn:lambda'
+            }
+        )
+
     def test_sqs_event_source_exists_updates_batch_size(self):
         function = create_function_resource('function_name')
         sqs_event_source = models.SQSEventSource(

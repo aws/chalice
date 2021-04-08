@@ -629,19 +629,21 @@ class SAMTemplateGenerator(TemplateGenerator):
         function_cfn_name = to_cfn_resource_name(
             resource.lambda_function.resource_name)
         function_cfn = template['Resources'][function_cfn_name]
-        sns_cfn_name = self._register_cfn_resource_name(
+        sqs_cfn_name = self._register_cfn_resource_name(
             resource.resource_name)
+        queue = ''  # type: Union[str, Dict[str, Any]]
+        if isinstance(resource.queue, models.QueueARN):
+            queue = resource.queue.arn
+        else:
+            queue = {
+                'Fn::Sub': ('arn:${AWS::Partition}:sqs:${AWS::Region}'
+                            ':${AWS::AccountId}:%s' % resource.queue)
+            }
         function_cfn['Properties']['Events'] = {
-            sns_cfn_name: {
+            sqs_cfn_name: {
                 'Type': 'SQS',
                 'Properties': {
-                    'Queue': {
-                        'Fn::Sub': (
-                            'arn:${AWS::Partition}:sqs:${AWS::Region}'
-                            ':${AWS::AccountId}:%s' %
-                            resource.queue
-                        )
-                    },
+                    'Queue': queue,
                     'BatchSize': resource.batch_size,
                 }
             }
@@ -901,12 +903,17 @@ class TerraformGenerator(TemplateGenerator):
 
     def _generate_sqseventsource(self, resource, template):
         # type: (models.SQSEventSource, Dict[str, Any]) -> None
-        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
-            resource.resource_name] = {
-            'event_source_arn': self._arnref(
+        if isinstance(resource.queue, models.QueueARN):
+            event_source_arn = resource.queue.arn
+        else:
+            event_source_arn = self._arnref(
                 "arn:%(partition)s:sqs:%(region)s"
                 ":%(account_id)s:%(queue)s",
-                queue=resource.queue),
+                queue=resource.queue
+            )
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = {
+            'event_source_arn': event_source_arn,
             'batch_size': resource.batch_size,
             'function_name': self._fref(resource.lambda_function)
         }

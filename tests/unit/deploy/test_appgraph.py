@@ -526,6 +526,22 @@ class TestApplicationGraphBuilder(object):
         assert lambda_function.resource_name == 'handler'
         assert lambda_function.handler == 'app.handler'
 
+    def test_can_create_sqs_handler_with_queue_arn(self, sample_sqs_event_app):
+        @sample_sqs_event_app.on_sqs_message(queue_arn='arn:my:queue')
+        def new_handler(event):
+            pass
+
+        config = self.create_config(sample_sqs_event_app,
+                                    app_name='sqs-event-app',
+                                    autogen_policy=True)
+        builder = ApplicationGraphBuilder()
+        application = builder.build(config, stage_name='dev')
+        sqs_event = application.resources[1]
+        assert sqs_event.queue == models.QueueARN(arn='arn:my:queue')
+        lambda_function = sqs_event.lambda_function
+        assert lambda_function.resource_name == 'new_handler'
+        assert lambda_function.handler == 'app.new_handler'
+
     def test_can_create_kinesis_event_handler(self, sample_kinesis_event_app):
         config = self.create_config(sample_kinesis_event_app,
                                     app_name='kinesis-event-app',

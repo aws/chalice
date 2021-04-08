@@ -330,9 +330,21 @@ class SNSLambdaSubscription(FunctionEventSubscriber):
 
 
 @attrs
+class QueueARN(object):
+    arn = attrib()  # type: str
+
+    @property
+    def queue_name(self):
+        # type: () -> str
+        # Pylint 2.x validates this correctly, but for py27, we have to
+        # use Pylint 1.x which doesn't support attrs.
+        return self.arn.rpartition(':')[2]  # pylint: disable=no-member
+
+
+@attrs
 class SQSEventSource(FunctionEventSubscriber):
     resource_type = 'sqs_event'
-    queue = attrib()            # type: str
+    queue = attrib()            # type: Union[str, QueueARN]
     batch_size = attrib()       # type: int
 
 
