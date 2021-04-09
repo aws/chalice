@@ -443,6 +443,7 @@ class DependencyBuilder(object):
     _COMPATIBLE_PACKAGE_WHITELIST = {
         'sqlalchemy',
         'pyyaml',
+        'pyrsistent',
     }
 
     def __init__(self, osutils, pip_runner=None):

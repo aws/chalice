@@ -70,6 +70,12 @@ def _get_random_package_name():
         ('scipy==1.5.4', [
             'scipy/__init__.py',
             'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so']),
+        ('cffi==1.14.5', [
+            '_cffi_backend.cpython-*-x86_64-linux-gnu.so']),
+        ('pygit2==1.5.0', [
+            'pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so']),
+        ('pyrsistent==0.17.3', [
+            'pyrsistent/__init__.py']),
     ]
 )
 def test_package_install_smoke_tests(package, contents, runner, app_skeleton):
