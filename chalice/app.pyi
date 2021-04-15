@@ -9,10 +9,11 @@ from typing import (
     Type,
     Mapping,
     MutableMapping,
-    Generator,
     Sequence,
+    Iterator,
 )
 import logging
+import datetime
 from chalice.local import LambdaContext
 
 __version__ = ... # type: str
@@ -182,6 +183,10 @@ class DecoratorAPI(object):
                        queue: str,
                        batch_size: int=...,
                        name: Optional[str]=...) -> Callable[..., Any]: ...
+
+    def on_cw_event(self,
+                    event_pattern: Dict[str, Any],
+                    name: Optional[str]=None) -> Callable[..., Any]: ...
 
     def on_kinesis_record(self,
                           stream: str,
@@ -495,12 +500,55 @@ class CloudWatchEvent(BaseLambdaEvent):
 
 
 class SQSRecord(BaseLambdaEvent):
-    body = ... # type: Any
-    receipt_handle = ... # type: Any
+    body = ... # type: str
+    receipt_handle = ... # type: str
 
 
 class SQSEvent(BaseLambdaEvent):
-    def __iter__(self) -> Generator[SQSRecord, None, None]: ...
+    def __iter__(self) -> Iterator[SQSRecord]: ...
+
+
+class SNSEvent(BaseLambdaEvent):
+    message = ... # type: str
+    subject = ... # type: str
+
+
+class S3Event(BaseLambdaEvent):
+    bucket = ... # type: str
+    key = ... # type: str
+
+
+class KinesisRecord(BaseLambdaEvent):
+    data = ... # type: bytes
+    sequence_number = ... # type: str
+    partition_key = ... # type: str
+    schema_version = ... # type: str
+    timestamp = ... # type: datetime.datetime
+
+
+class KinesisEvent(BaseLambdaEvent):
+    def __iter__(self) -> Iterator[KinesisRecord]: ...
+
+
+class DynamoDBRecord(BaseLambdaEvent):
+    @property
+    def table_name(self) -> str: ...
+
+    timestamp = ... # type: datetime.datetime
+    keys = ... # type: Any
+    new_image = ... # type: Any
+    old_image = ... # type: Any
+    sequence_number = ... # type: str
+    size_bytes = ... # type: int
+    stream_view_type = ... # type: str
+    aws_region = ... # type: str
+    event_id = ... # type: str
+    event_name = ... # type: str
+    event_source_arn = ... # type: str
+
+
+class DynamoDBEvent(BaseLambdaEvent):
+    def __iter__(self) -> Iterator[DynamoDBRecord]: ...
 
 
 class MultiDict(MutableMapping):
