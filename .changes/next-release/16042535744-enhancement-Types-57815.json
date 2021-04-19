@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Types",
+  "description": "Add missing types to app.pyi stub file (#1701)"
+}
