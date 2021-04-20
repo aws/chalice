@@ -16,7 +16,7 @@ pydocstyle==2.0.0
 # Test requirements
 pytest==5.3.1 ; python_version >= '3.6'
 pytest==4.6.7 ; python_version <= '2.7'
-py==1.5.3
+py==1.10.0
 pygments==2.7.4; python_version >= '3.6'
 mock==2.0.0
 requests==2.20.0
