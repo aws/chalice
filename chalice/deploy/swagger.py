@@ -185,8 +185,10 @@ class SwaggerGenerator(object):
             self._add_view_args(current, view.view_args)
         if swagger_additions is not None:
             if 'parameters' in swagger_additions and 'parameters' in current:
-                current['parameters'] = current['parameters'] + \
-                                        swagger_additions['parameters']
+                current_params = current['parameters']
+                swagger_params = swagger_additions['parameters']
+                combo = current_params + swagger_params
+                current['parameters'] = combo
                 del swagger_additions['parameters']
             current.update(swagger_additions)
         return current
