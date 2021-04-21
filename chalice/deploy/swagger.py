@@ -160,14 +160,9 @@ class SwaggerGenerator(object):
             current['summary'] = doc_lines[0]
             if len(doc_lines) > 1:
                 if '---' in doc_lines:
-                    divider_line_num = doc_lines.index('---')
-                    description = '\n'.join(doc_lines[1:divider_line_num])
-                    description = description.strip('\n')
-                    swagger_lines = doc_lines[divider_line_num + 1:]
-                    swagger = '\n'.join(swagger_lines)
-                    current['description'] = description
-                    swagger_additions = yaml.load(swagger,
-                                                  Loader=yaml.FullLoader)
+                    desc, swagger = self._get_desc_and_swagger(doc_lines)
+                    current['description'] = desc
+                    swagger_additions = swagger
                 else:
                     description = '\n'.join(doc_lines[1:]).strip('\n')
                     current['description'] = description
@@ -191,6 +186,17 @@ class SwaggerGenerator(object):
                 del swagger_additions['parameters']
             current.update(swagger_additions)
         return current
+
+    def _get_desc_and_swagger(self, doc_lines):
+        # type: (List[str]) -> (str, Dict[str, Any])
+        divider_line_num = doc_lines.index('---')
+        description = '\n'.join(doc_lines[1:divider_line_num])
+        description = description.strip('\n')
+        swagger_lines = doc_lines[divider_line_num + 1:]
+        swagger = '\n'.join(swagger_lines)
+        swagger_additions = yaml.load(swagger,
+                                      Loader=yaml.FullLoader)
+        return description, swagger_additions
 
     def _get_annotated_responses(self, api, view):
         # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
