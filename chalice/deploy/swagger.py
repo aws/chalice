@@ -3,7 +3,7 @@ import inspect
 import textwrap
 import yaml
 
-from typing import Any, List, Dict, Optional, Union  # noqa
+from typing import Any, List, Dict, Optional, Tuple, Union  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
@@ -46,6 +46,7 @@ class SwaggerGenerator(object):
         return api
 
     def _add_shared_definitions_and_parameters(self, app, api):
+        # type: (Chalice, Dict[str, Any]) -> None
         if hasattr(app, 'to_swagger'):
             swagger_additions = app.to_swagger()
             swagger_additions = yaml.load(textwrap.dedent(swagger_additions),
@@ -187,7 +188,7 @@ class SwaggerGenerator(object):
         return current
 
     def _get_desc_and_swagger(self, doc_lines):
-        # type: (List[str]) -> (str, Dict[str, Any])
+        # type: (List[str]) -> Tuple[str, Dict[str, Any]]
         divider_line_num = doc_lines.index('---')
         description = '\n'.join(doc_lines[1:divider_line_num])
         description = description.strip('\n')
@@ -274,7 +275,7 @@ class SwaggerGenerator(object):
                                methods,
                                swagger_for_path,
                                single_view):
-        # type: (CORSConfig,List[str],Dict[str, Any],Dict[str, Any]) -> None
+        # type: (CORSConfig, List[str], Dict[str, Any], RouteEntry) -> None
         methods = methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
 
@@ -284,8 +285,8 @@ class SwaggerGenerator(object):
         response_params.update(cors.get_access_control_headers())
 
         headers = {k: {'type': 'string'} for k, _ in response_params.items()}
-        response_params = {'method.response.header.%s' % k: "'%s'" % v for k, v
-                           in response_params.items()}
+        response_params = {'method.response.header.%s' % k: "'%s'" % v
+                           for k, v in response_params.items()}
 
         options_request = {
             "consumes": ["application/json"],
@@ -323,7 +324,7 @@ class SwaggerGenerator(object):
             for name in single_view.view_args
         ]
         if params:
-            options_request['parameters'] = params
+            options_request.update({'parameters': params})
 
         swagger_for_path['options'] = options_request
 
