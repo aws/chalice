@@ -203,11 +203,12 @@ class SwaggerGenerator(object):
                 definition = return_type.to_swagger()
                 if model_name not in api['definitions']:
                     api['definitions'][model_name] = definition
+                ref_string = '#/definitions/' + model_name
                 return {
                     '200': {
                         'description': '200 response',
                         'schema': {
-                            '$ref': f'#/definitions/{model_name}'
+                            '$ref': ref_string
                         }
                     }
                 }
