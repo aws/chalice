@@ -48,7 +48,7 @@ class SwaggerGenerator(object):
     def _add_shared_definitions_and_parameters(self, app, api):
         # type: (Chalice, Dict[str, Any]) -> None
         if hasattr(app, 'to_swagger'):
-            swagger_additions = app.to_swagger()
+            swagger_additions = getattr(app, 'to_swagger')()
             swagger_additions = yaml.load(textwrap.dedent(swagger_additions),
                                           Loader=yaml.FullLoader)
             if 'definitions' in swagger_additions:
@@ -288,9 +288,19 @@ class SwaggerGenerator(object):
         response_params = {'method.response.header.%s' % k: "'%s'" % v
                            for k, v in response_params.items()}
 
+        params = [
+            {
+                'name': name,
+                'in': 'path',
+                'required': True,
+                'type': 'string'
+            }
+            for name in single_view.view_args
+        ]
         options_request = {
             "consumes": ["application/json"],
             "produces": ["application/json"],
+            "parameters": params,
             "responses": {
                 "200": {
                     "description": "200 response",
@@ -314,17 +324,8 @@ class SwaggerGenerator(object):
             }
         }
 
-        params = [
-            {
-                'name': name,
-                'in': 'path',
-                'required': True,
-                'type': 'string'
-            }
-            for name in single_view.view_args
-        ]
-        if params:
-            options_request.update({'parameters': params})
+        if not params:
+            del options_request['parameters']
 
         swagger_for_path['options'] = options_request
 
