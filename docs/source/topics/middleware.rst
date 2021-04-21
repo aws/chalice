@@ -279,7 +279,7 @@ You can use Chalice middleware to easily integrate Lambda Powertools with
 your Chalice apps.  In this example, we'll use the
 `Logger
 <https://awslabs.github.io/aws-lambda-powertools-python/latest/core/logger/>`__
-and `Tracer <https://awslabs.github.io/aws-lambda-powertools-python/core/tracer/>`__
+and `Tracer <https://awslabs.github.io/aws-lambda-powertools-python/latest/core/tracer/>`__
 and convert them to Chalice middleware so they will be automatically applied
 to all Lambda functions in our application.
 
