@@ -1,5 +1,7 @@
 import copy
 import inspect
+import textwrap
+import yaml
 
 from typing import Any, List, Dict, Optional, Union  # noqa
 
@@ -9,8 +11,6 @@ from chalice.deploy.planner import StringFormat
 from chalice.deploy.models import RestAPI  # noqa
 from chalice.utils import to_cfn_resource_name
 
-import textwrap
-import yaml
 
 
 class SwaggerGenerator(object):
