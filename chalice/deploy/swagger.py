@@ -22,7 +22,6 @@ class SwaggerGenerator(object):
         },
         'schemes': ['https'],
         'paths': {},
-        'parameters': {},
         'definitions': {
             'Empty': {
                 'type': 'object',
