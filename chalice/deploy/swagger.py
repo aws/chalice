@@ -12,7 +12,6 @@ from chalice.deploy.models import RestAPI  # noqa
 from chalice.utils import to_cfn_resource_name
 
 
-
 class SwaggerGenerator(object):
 
     _BASE_TEMPLATE = {
