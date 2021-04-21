@@ -51,7 +51,7 @@ class SwaggerGenerator(object):
     def _add_shared_definitions_and_parameters(self, app, api):
         if hasattr(app, 'to_swagger'):
             swagger_additions = app.to_swagger()
-            swagger_additions = yaml.load(textwrap.dedent(swagger_additions))
+            swagger_additions = yaml.load(textwrap.dedent(swagger_additions), Loader=yaml.FullLoader)
             if 'definitions' in swagger_additions:
                 api['definitions'].update(swagger_additions['definitions'])
             if 'parameters' in swagger_additions:
@@ -160,7 +160,7 @@ class SwaggerGenerator(object):
             if len(doc_lines) > 1:
                 if '---' in doc_lines:
                     current['description'] = '\n'.join(doc_lines[1:doc_lines.index('---')]).strip('\n')
-                    swagger_additions = yaml.load('\n'.join(doc_lines[doc_lines.index('---') + 1:]))
+                    swagger_additions = yaml.load('\n'.join(doc_lines[doc_lines.index('---') + 1:]), Loader=yaml.FullLoader)
                 else:
                     current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
         if view.api_key_required:
