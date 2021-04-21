@@ -199,7 +199,7 @@ class SwaggerGenerator(object):
 
     def _get_annotated_responses(self, api, view):
         # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
-        annotations = view.view_function.__annotations__
+        annotations = getattr(view.view_function, '__annotations__', {})
         if 'return' in annotations:
             return_type = annotations['return']
             if hasattr(return_type, 'to_swagger'):
