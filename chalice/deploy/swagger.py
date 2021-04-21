@@ -261,7 +261,12 @@ class SwaggerGenerator(object):
         # type: (Dict[str, Any], List[str]) -> None
         if view_args:
             single_method['parameters'] = [
-                {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
+                {
+                    'name': name,
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string'
+                }
                 for name in view_args
             ]
 
