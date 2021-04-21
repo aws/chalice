@@ -284,13 +284,13 @@ class AuthRoute(object):
 
 class AuthResponse(object):
     ALL_HTTP_METHODS = ... # type: List[str]
-    routes = ... # type: Union[str, AuthRoute]
+    routes = ... # type: List[Union[str, AuthRoute]]
     principal_id = ... # type: str
     context = ... # type: Optional[Dict[str, str]]
 
     def __init__(
         self,
-        routes: Union[str, AuthRoute],
+        routes: List[Union[str, AuthRoute]],
         principal_id: str,
         context: Optional[Dict[str, str]] = ...
     ) -> None: ...
