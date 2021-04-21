@@ -288,15 +288,9 @@ class SwaggerGenerator(object):
         response_params = {'method.response.header.%s' % k: "'%s'" % v for k, v
                            in response_params.items()}
 
-        params = [
-            {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
-            for name in single_view.view_args
-        ]
-
         options_request = {
             "consumes": ["application/json"],
-            "produces": ["application/json"],
-            "parameters": params,
+            "produces": ["application/json"]
             "responses": {
                 "200": {
                     "description": "200 response",
@@ -319,6 +313,19 @@ class SwaggerGenerator(object):
                 "contentHandling": "CONVERT_TO_TEXT"
             }
         }
+
+        params = [
+            {
+                'name': name,
+                'in': 'path',
+                'required': True,
+                'type': 'string'
+            }
+            for name in single_view.view_args
+        ]
+        if params:
+            options_request['parameters'] = params
+
         swagger_for_path['options'] = options_request
 
 
