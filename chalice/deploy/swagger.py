@@ -37,7 +37,6 @@ class SwaggerGenerator(object):
         self._region = region
         self._deployed_resources = deployed_resources
 
-
     def generate_swagger(self, app, rest_api=None):
         # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
@@ -51,7 +50,8 @@ class SwaggerGenerator(object):
     def _add_shared_definitions_and_parameters(self, app, api):
         if hasattr(app, 'to_swagger'):
             swagger_additions = app.to_swagger()
-            swagger_additions = yaml.load(textwrap.dedent(swagger_additions), Loader=yaml.FullLoader)
+            swagger_additions = yaml.load(textwrap.dedent(swagger_additions),
+                                          Loader=yaml.FullLoader)
             if 'definitions' in swagger_additions:
                 api['definitions'].update(swagger_additions['definitions'])
             if 'parameters' in swagger_additions:
@@ -88,8 +88,10 @@ class SwaggerGenerator(object):
             # CORS configuration. So if any entry has CORS enabled, use that
             # entry's CORS configuration for the preflight setup.
             if cors_config is not None:
-                self._add_preflight_request(
-                    cors_config, methods_with_cors, swagger_for_path, list(methods.values())[0])
+                self._add_preflight_request(cors_config,
+                                            methods_with_cors,
+                                            swagger_for_path,
+                                            list(methods.values())[0])
 
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
@@ -159,10 +161,17 @@ class SwaggerGenerator(object):
             current['summary'] = doc_lines[0]
             if len(doc_lines) > 1:
                 if '---' in doc_lines:
-                    current['description'] = '\n'.join(doc_lines[1:doc_lines.index('---')]).strip('\n')
-                    swagger_additions = yaml.load('\n'.join(doc_lines[doc_lines.index('---') + 1:]), Loader=yaml.FullLoader)
+                    divider_line_num = doc_lines.index('---')
+                    description = '\n'.join(doc_lines[1:divider_line_num])
+                    description = description.strip('\n')
+                    swagger_lines = doc_lines[divider_line_num + 1:]
+                    swagger = '\n'.join(swagger_lines)
+                    current['description'] = description
+                    swagger_additions = yaml.load(swagger,
+                                                  Loader=yaml.FullLoader)
                 else:
-                    current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
+                    description = '\n'.join(doc_lines[1:]).strip('\n')
+                    current['description'] = description
         if view.api_key_required:
             # When this happens we also have to add the relevant portions
             # to the security definitions.  We have to someone indicate
@@ -176,13 +185,12 @@ class SwaggerGenerator(object):
             self._add_view_args(current, view.view_args)
         if swagger_additions is not None:
             if 'parameters' in swagger_additions and 'parameters' in current:
-                current['parameters'] = current['parameters'] + swagger_additions['parameters']
+                current['parameters'] = current['parameters'] + \
+                                        swagger_additions['parameters']
                 del swagger_additions['parameters']
             current.update(swagger_additions)
         return current
 
-    
-    
     def _get_annotated_responses(self, api, view):
         # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
         annotations = view.view_function.__annotations__
@@ -197,7 +205,7 @@ class SwaggerGenerator(object):
                     '200': {
                         'description': '200 response',
                         'schema': {
-                            '$ref': f'#/definitions/{model_name}',
+                            '$ref': f'#/definitions/{model_name}'
                         }
                     }
                 }
@@ -248,7 +256,11 @@ class SwaggerGenerator(object):
             for name in view_args
         ]
 
-    def _add_preflight_request(self, cors, methods, swagger_for_path, single_view):
+    def _add_preflight_request(self,
+                               cors,
+                               methods,
+                               swagger_for_path,
+                               single_view):
         # type: (CORSConfig, List[str], Dict[str, Any]) -> None
         methods = methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
