@@ -259,17 +259,18 @@ class SwaggerGenerator(object):
 
     def _add_view_args(self, single_method, view_args):
         # type: (Dict[str, Any], List[str]) -> None
-        single_method['parameters'] = [
-            {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
-            for name in view_args
-        ]
+        if view_args:
+            single_method['parameters'] = [
+                {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
+                for name in view_args
+            ]
 
     def _add_preflight_request(self,
                                cors,
                                methods,
                                swagger_for_path,
                                single_view):
-        # type: (CORSConfig, List[str], Dict[str, Any]) -> None
+        # type: (CORSConfig,List[str],Dict[str, Any],Dict[str, Any]) -> None
         methods = methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
 
