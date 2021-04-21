@@ -290,7 +290,7 @@ class SwaggerGenerator(object):
 
         options_request = {
             "consumes": ["application/json"],
-            "produces": ["application/json"]
+            "produces": ["application/json"],
             "responses": {
                 "200": {
                     "description": "200 response",
