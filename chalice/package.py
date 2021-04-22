@@ -733,8 +733,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
                 'RestApiId': {'Ref': 'RestAPI'},
                 'BasePath': domain_name.api_mapping.mount_path,
-                # Workaround for domainname in cdk deployment issue #1640
-                # 'Stage': {'Ref': 'RestAPI.Stage'},
+                'Stage': resource.api_gateway_stage,
             }
         }
 
