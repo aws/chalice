@@ -733,7 +733,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
                 'RestApiId': {'Ref': 'RestAPI'},
                 'BasePath': domain_name.api_mapping.mount_path,
-                'Stage': {'Ref': 'RestAPI.Stage'},
+                'Stage': resource.api_gateway_stage,
             }
         }
 
