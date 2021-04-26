@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Custom Domain",
-  "description": "Fix custom domain generation when using the CDK (#1640)"
-}

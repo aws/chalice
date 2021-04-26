@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.22.4
+======
+
+* enhancement:Types:Add missing types to app.pyi stub file (#1701)
+* bugfix:Custom Domain:Fix custom domain generation when using the CDK (#1640)
+* bugfix:Packaging:Special cases pyrsistent packaging (#1696)
+
+
 1.22.3
 ======
 

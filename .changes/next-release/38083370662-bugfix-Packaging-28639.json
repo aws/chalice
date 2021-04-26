@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Packaging",
-  "description": "Special cases pyrsistent packaging (#1696)"
-}
