@@ -76,14 +76,14 @@ class CORSConfig:
 
 
 class Request:
-    query_params = ... # type: Dict[str, str]
-    headers = ... # type: Dict[str, str]
-    uri_params = ... # type: Dict[str, str]
+    query_params = ... # type: Optional[Dict[str, str]]
+    headers = ... # type: CaseInsensitiveMapping
+    uri_params = ... # type: Optional[Dict[str, str]]
     method = ... # type: str
     body = ... # type: Any
     base64_body = ... # type: str
-    context = ... # type: Dict[str, str]
-    stage_vars = ... # type: Dict[str, str]
+    context = ... # type: Dict[str, Any]
+    stage_vars = ... # type: Optional[Dict[str, str]]
     json_body = ... # type: Any
     path = ... # type: str
     _json_body = ... # type: Optional[Any]
