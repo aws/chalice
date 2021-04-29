@@ -209,6 +209,31 @@ If you want to access the response body's raw bytes, you can use the
             assert response.body == b'{"hello":"world"}'
 
 
+You can also test other HTTP methods by using the corresponding
+``post()``, ``put()``, ``delete()``, etc. method calls.
+
+.. code-block:: python
+
+   import json
+   from chalice import Chalice
+
+   app = Chalice(app_name="testclient")
+
+   @app.route('/', methods=['POST'])
+   def index()
+       return app.current_request.json_body
+
+
+   def test_index():
+      with Client(app) as client:
+          response = client.http.post(
+              '/myview',
+              headers={'Content-Type':'application/json'},
+              body=json.dumps({'example':'json'})
+          )
+          assert response.json_body == {'example': 'json'}
+
+
 You can also test builtin authorizers with the test client:
 
 .. code-block:: python
