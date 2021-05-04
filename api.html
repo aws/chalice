@@ -454,7 +454,7 @@ not provided, the name of the python function will be used.</li>
 
 <dl class="method">
 <dt id="Chalice.on_sqs_message">
-<code class="descname">on_sqs_message</code><span class="sig-paren">(</span><em>queue</em>, <em>batch_size=1</em>, <em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.on_sqs_message" title="Permalink to this definition">¶</a></dt>
+<code class="descname">on_sqs_message</code><span class="sig-paren">(</span><em>queue</em>, <em>batch_size=1</em>, <em>name=None</em>, <em>queue_arn=None</em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.on_sqs_message" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a lambda function and configure it to be automatically invoked
 whenever a message is published to the specified SQS queue.</p>
 <p>The lambda function must accept a single parameter which
@@ -497,6 +497,10 @@ batch size controls how many messages can be in a single event.</li>
 with the chalice app name as well as the stage name to create the
 entire lambda function name.  This parameter is optional.  If it is
 not provided, the name of the python function will be used.</li>
+<li><strong>queue_arn</strong> – The ARN of the SQS queue you want to subscribe to.
+This argument is mutually exclusive with the <code class="docutils literal notranslate"><span class="pre">queue</span></code> parameter.
+This is useful if you already know the exact ARN or when integrating
+with the AWS CDK to create your SQS queue.</li>
 </ul>
 </td>
 </tr>
