@@ -282,7 +282,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_sqs_message(queue, batch_size=1, name=None)
+   .. method:: on_sqs_message(queue, batch_size=1, name=None, queue_arn=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever a message is published to the specified SQS queue.
@@ -328,6 +328,12 @@ Chalice
         with the chalice app name as well as the stage name to create the
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
+
+      :param queue_arn: The ARN of the SQS queue you want to subscribe to.
+        This argument is mutually exclusive with the ``queue`` parameter.
+        This is useful if you already know the exact ARN or when integrating
+        with the AWS CDK to create your SQS queue.
+
 
    .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None)
 

@@ -720,11 +720,16 @@ class DecoratorAPI(object):
             registration_kwargs={'topic': topic}
         )
 
-    def on_sqs_message(self, queue, batch_size=1, name=None):
+    def on_sqs_message(self, queue=None, batch_size=1,
+                       name=None, queue_arn=None):
         return self._create_registration_function(
             handler_type='on_sqs_message',
             name=name,
-            registration_kwargs={'queue': queue, 'batch_size': batch_size}
+            registration_kwargs={
+                'queue': queue,
+                'queue_arn': queue_arn,
+                'batch_size': batch_size,
+            }
         )
 
     def on_cw_event(self, event_pattern, name=None):
@@ -976,10 +981,18 @@ class _HandlerRegistration(object):
         self.event_sources.append(sns_config)
 
     def _register_on_sqs_message(self, name, handler_string, kwargs, **unused):
+        queue = kwargs.get('queue')
+        queue_arn = kwargs.get('queue_arn')
+        if not queue and not queue_arn:
+            raise ValueError(
+                "Must provide either `queue` or `queue_arn` to the "
+                "`on_sqs_message` decorator."
+            )
         sqs_config = SQSEventConfig(
             name=name,
             handler_string=handler_string,
-            queue=kwargs['queue'],
+            queue=queue,
+            queue_arn=queue_arn,
             batch_size=kwargs['batch_size'],
         )
         self.event_sources.append(sqs_config)
@@ -1442,9 +1455,10 @@ class SNSEventConfig(BaseEventSourceConfig):
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, queue, batch_size):
+    def __init__(self, name, handler_string, queue, queue_arn, batch_size):
         super(SQSEventConfig, self).__init__(name, handler_string)
         self.queue = queue
+        self.queue_arn = queue_arn
         self.batch_size = batch_size
 
 

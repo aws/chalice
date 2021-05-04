@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "SQS",
+  "description": "Add queue_arn parameter to enable CDK integration with SQS event handler (#1681)"
+}
