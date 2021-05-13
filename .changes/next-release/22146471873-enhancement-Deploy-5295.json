@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Deploy",
+  "description": "Wait for function state to be active when deploying"
+}
