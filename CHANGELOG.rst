@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.23.0
+======
+
+* enhancement:Deploy:Wait for function state to be active when deploying
+* feature:SQS:Add queue_arn parameter to enable CDK integration with SQS event handler (#1681)
+
+
 1.22.4
 ======
 
