@@ -32,6 +32,7 @@ def pytest_collection_modifyitems(config, items):
 @fixture(autouse=True)
 def teardown_function():
     sys.modules.pop('app', None)
+    sys.path_importer_cache.clear()
 
 
 class StubbedSession(botocore.session.Session):

@@ -33,6 +33,7 @@ def load_chalice_construct(dirname, stack_name='testcdk'):
         sys.modules.pop('app', None)
         sys.modules.pop('stacks', None)
         sys.path.pop()
+        sys.path_importer_cache.clear()
 
 
 def filter_resources(template, resource_type):

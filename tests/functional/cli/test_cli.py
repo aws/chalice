@@ -46,6 +46,7 @@ def mock_cli_factory():
 
 def teardown_function(function):
     sys.modules.pop('app', None)
+    sys.path_importer_cache.clear()
 
 
 def assert_chalice_app_structure_created(dirname):
