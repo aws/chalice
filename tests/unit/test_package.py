@@ -1646,7 +1646,7 @@ class TestSAMTemplate(TemplateTestBase):
             'Properties': {
                 'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
                 'RestApiId': {'Ref': 'RestAPI'},
-                'Stage': config.api_gateway_stage,
+                'Stage':  {'Ref': 'RestAPI.Stage'},
                 'BasePath': '(none)',
             }
         }
@@ -1680,7 +1680,7 @@ class TestSAMTemplate(TemplateTestBase):
             'Properties': {
                 'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
                 'RestApiId': {'Ref': 'RestAPI'},
-                'Stage': config.api_gateway_stage,
+                'Stage':  {'Ref': 'RestAPI.Stage'},
                 'BasePath': '(none)',
             }
         }
