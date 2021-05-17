@@ -436,11 +436,29 @@ class DependencyBuilder(object):
     into a site-packages directory, to be included in the bundle by the
     packager.
     """
-    _MANYLINUX_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64',
-                                      'manylinux1_x86_64'}
+    _ADDITIONAL_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64'}
+    _MANYLINUX_LEGACY_MAP = {
+        'manylinux1_x86_64': 'manylinux_2_5_x86_64',
+        'manylinux2010_x86_64': 'manylinux_2_12_x86_64',
+        'manylinux2014_x86_64': 'manylinux_2_17_x86_64',
+    }
+
+    # Mapping of abi to glibc version in Lambda runtime.
+    _RUNTIME_GLIBC = {
+        'cp27mu': (2, 17),
+        'cp36m': (2, 17),
+        'cp37m': (2, 17),
+        'cp38': (2, 26),
+    }
+    # Fallback version if we're on an unknown python version
+    # not in _RUNTIME_GLIBC.
+    # Unlikely to hit this case.
+    _DEFAULT_GLIBC = (2, 17)
+
     _COMPATIBLE_PACKAGE_WHITELIST = {
         'sqlalchemy',
         'pyyaml',
+        'pyrsistent',
     }
 
     def __init__(self, osutils, pip_runner=None):
@@ -453,23 +471,74 @@ class DependencyBuilder(object):
     def _is_compatible_wheel_filename(self, expected_abi, filename):
         # type: (str, str) -> bool
         wheel = filename[:-4]
-        implementation, abi, platform = wheel.split('-')[-3:]
-        # Verify platform is compatible
-        if platform not in self._MANYLINUX_COMPATIBLE_PLATFORM:
-            return False
-        # Verify that the ABI is compatible with lambda. Either none or the
-        # correct type for the python version cp27mu for py27 and cp36m for
-        # py36.
-        if abi == 'none':
+        all_compatibility_tags = self._iter_all_compatibility_tags(wheel)
+        for implementation, abi, platform in all_compatibility_tags:
+            # Verify platform is compatible
+            if not self._is_compatible_platform_tag(expected_abi, platform):
+                continue
+            # Verify that the ABI is compatible with lambda. Either none or the
+            # correct type for the python version cp27mu for py27 and cp36m for
+            # py36.
+            if abi == 'none':
+                return True
+            prefix_version = implementation[:3]
+            expected_abis = [expected_abi]
+            if prefix_version == 'cp3':
+                # Deploying python 3 function which means we can accept the
+                # version specific abi, or we can accept the CPython 3 stable
+                # ABI of 'abi3'.
+                expected_abis.append('abi3')
+            if abi in expected_abis:
+                return True
+        return False
+
+    def _is_compatible_platform_tag(self, expected_abi, platform):
+        # type: (str, str) -> bool
+        # From PEP 600, the new manylinux tag is
+        # manylinux_${GLIBCMAJOR}_${GLIBCMINOR}_${ARCH}
+        # e.g. manylinux_2_17_x86_64.
+        # To check if the wheel is compatible, we first need to map any of the
+        # legacy manylinux formats to the new perennial format.
+        # Then we verify that the glibc version is compatible with the version
+        # on the Lambda runtime (from _RUNTIME_GLIBC).
+        if platform in self._ADDITIONAL_COMPATIBLE_PLATFORM:
+            logger.debug("Found compatible platform tag: %s", platform)
             return True
-        prefix_version = implementation[:3]
-        expected_abis = [expected_abi]
-        if prefix_version == 'cp3':
-            # Deploying python 3 function which means we can accept the version
-            # specific abi, or we can accept the CPython 3 stable ABI of
-            # 'abi3'.
-            expected_abis.append('abi3')
-        return abi in expected_abis
+        elif platform.startswith('manylinux'):
+            # This is roughly based on the "Package Installers" section from
+            # PEP 600.
+            perennial_tag = self._MANYLINUX_LEGACY_MAP.get(platform, platform)
+            m = re.match("manylinux_([0-9]+)_([0-9]+)_(.*)", perennial_tag)
+            if m is None:
+                return False
+            tag_major, tag_minor = [int(x) for x in m.groups()[:2]]
+            runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
+                expected_abi, self._DEFAULT_GLIBC)
+            if (tag_major, tag_minor) <= (runtime_major, runtime_minor):
+                logger.debug(
+                    "Tag glibc (%s, %s) is compatible with "
+                    "runtime glibc (%s, %s)",
+                    tag_major, tag_minor, runtime_major, runtime_minor)
+                return True
+        return False
+
+    def _iter_all_compatibility_tags(self, wheel):
+        # type: (str) -> Iterator[Tuple[str, str, str]]
+        # From PEP 425, section "Compressed Tag Sets"
+        #
+        # "To allow for compact filenames of bdists that work with more than
+        # one compatibility tag triple, each tag in a filename can instead be a
+        # '.'-separated, sorted, set of tags."
+        #
+        # So this means that we have to iterate over all the possible
+        # compatibility tag tuples and check if the wheel is compatible.
+        # We just need any of the combinations to match for us to consider the
+        # wheel compatible.
+        implementation_tag, abi_tag, platform_tag = wheel.split('-')[-3:]
+        for implementation in implementation_tag.split('.'):
+            for abi in abi_tag.split('.'):
+                for platform in platform_tag.split('.'):
+                    yield (implementation, abi, platform)
 
     def _has_at_least_one_package(self, filename):
         # type: (str) -> bool
@@ -972,8 +1041,8 @@ class PipRunner(object):
             if err is None:
                 err = b'Unknown error'
             error = err.decode()
-            match = re.search(("Could not find a version that satisfies the "
-                               "requirement (.+?) "), error)
+            match = re.search(r"Could not find a version that satisfies the "
+                              r"requirement ([^\s]+)", error)
             if match:
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
@@ -1005,7 +1074,7 @@ class PipRunner(object):
         # version and is checked later.
         for package in packages:
             arguments = ['--only-binary=:all:', '--no-deps', '--platform',
-                         'manylinux1_x86_64', '--implementation', 'cp',
+                         'manylinux2014_x86_64', '--implementation', 'cp',
                          '--abi', abi, '--dest', directory, package]
             self._execute('download', arguments)
 

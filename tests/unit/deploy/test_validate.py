@@ -333,11 +333,38 @@ def test_validate_sqs_queue_name(sample_app):
         validate_configuration(config)
 
 
+def test_can_use_queue_arn(sample_app):
+
+    @sample_app.on_sqs_message(queue_arn='arn:sqs:...:myqueue')
+    def handler(event):
+        pass
+
+    config = Config.create(chalice_app=sample_app)
+    assert validate_configuration(config) is None
+
+
+def test_queue_arn_must_be_arn(sample_app):
+    @sample_app.on_sqs_message(
+        queue_arn='https://sqs.us-west-2.amazonaws.com/12345/myqueue')
+    def handler(event):
+        pass
+
+    config = Config.create(chalice_app=sample_app)
+    with pytest.raises(ValueError):
+        validate_configuration(config)
+
+
 def test_validate_environment_variables_value_type_not_str(sample_app):
     config = Config.create(chalice_app=sample_app,
                            environment_variables={"ENV_KEY": 1})
     with pytest.raises(ValueError):
         validate_configuration(config)
+
+
+def test_validate_unicode_is_valid_env_var(sample_app):
+    config = Config.create(chalice_app=sample_app,
+                           environment_variables={"ENV_KEY": u'unicode-val'})
+    assert validate_configuration(config) is None
 
 
 def test_validate_env_var_is_string_for_lambda_functions(sample_app):

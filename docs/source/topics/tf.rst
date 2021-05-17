@@ -2,7 +2,7 @@ Terraform Support
 =================
 
 When you run ``chalice deploy``, chalice will deploy your application using the
-`AWS SDK for Python <http://boto3.readthedocs.io/en/docs/>`__).  Chalice also
+`AWS SDK for Python <http://boto3.readthedocs.io/en/docs/>`__.  Chalice also
 provides functionality that allows you to manage deployments yourself using
 terraform.  This is provided via the ``chalice package --pkg-format terraform``
 command.

@@ -271,7 +271,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', 'cp36m', '--dest', mock.ANY,
                 'foo==1.2'
             ],
@@ -320,6 +320,49 @@ class TestDependencyBuilder(object):
 
         site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
         builder.build_site_packages('cp36m', requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
+    def test_can_support_new_wheel_tags(self, tmpdir, pip_runner):
+        reqs = ['numpy']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        # This is the actual filename from numpy v1.20.3.
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'numpy-1.20.3-cp37-cp37m-manylinux_2_12_x86_64.whl',
+            ]
+        )
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages('cp37m', requirements_file, site_packages)
+        installed_packages = os.listdir(site_packages)
+
+        pip.validate()
+        for req in reqs:
+            assert req in installed_packages
+
+    def test_can_support_compressed_tags(self, tmpdir, pip_runner):
+        reqs = ['numpy']
+        pip, runner = pip_runner
+        appdir, builder = self._make_appdir_and_dependency_builder(
+            reqs, tmpdir, runner)
+        requirements_file = os.path.join(appdir, 'requirements.txt')
+        # This is the actual filename from numpy v1.20.3.
+        pip.packages_to_download(
+            expected_args=['-r', requirements_file, '--dest', mock.ANY],
+            packages=[
+                'numpy-1.20.3-cp37-cp37m-manylinux_2_12_x86_64'
+                '.manylinux2010_x86_64.whl',
+            ]
+        )
+        site_packages = os.path.join(appdir, '.chalice.', 'site-packages')
+        builder.build_site_packages('cp37m', requirements_file, site_packages)
         installed_packages = os.listdir(site_packages)
 
         pip.validate()
@@ -700,7 +743,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', 'cp36m', '--dest', mock.ANY,
                 'bar==1.2'
             ],
@@ -742,7 +785,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', abi, '--dest', mock.ANY,
                 '%s==1.1.18' % package
             ],
@@ -899,7 +942,7 @@ class TestDependencyBuilder(object):
         pip.packages_to_download(
             expected_args=[
                 '--only-binary=:all:', '--no-deps', '--platform',
-                'manylinux1_x86_64', '--implementation', 'cp',
+                'manylinux2014_x86_64', '--implementation', 'cp',
                 '--abi', abi, '--dest', mock.ANY,
                 'foo==1.2'
             ],

@@ -749,6 +749,60 @@ def test_can_handle_multiple_shadowing():
     """) == {'s3': set(['list_buckets', 'head_bucket'])}
 
 
+def test_can_handle_forward_declaration():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='forward-declaration')
+
+        def get_regions():
+            return boto3.client('s3').list_buckets()
+
+        @app.route('/')
+        def index():
+            return get_regions()
+
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_handle_post_declaration():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='post-declaration')
+
+        @app.route('/')
+        def index():
+            return get_regions()
+
+        def get_regions():
+            return boto3.client('s3').list_buckets()
+
+    """) == {'s3': set(['list_buckets'])}
+
+
+def test_can_handle_shadowed_declaration():
+    assert chalice_aws_calls("""\
+        from chalice import Chalice
+        import boto3
+
+        app = Chalice(app_name='shadowed-declaration')
+
+        def get_regions():
+            return boto3.client('s3').list_buckets()
+
+        @app.route('/')
+        def index():
+            return get_regions()
+
+        def get_regions():
+            return boto3.client('s3').head_bucket(Bucket='foo')
+
+    """) == {'s3': set(['head_bucket'])}
+
+
 # def test_tuple_assignment():
 #     assert aws_calls("""\
 #         import boto3

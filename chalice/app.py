@@ -14,7 +14,7 @@ import datetime
 from collections import defaultdict
 
 
-__version__ = '1.21.4'
+__version__ = '1.23.0'
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
@@ -690,12 +690,15 @@ class DecoratorAPI(object):
             return func
         return _middleware_wrapper
 
-    def authorizer(self, ttl_seconds=None, execution_role=None, name=None):
+    def authorizer(self, ttl_seconds=None, execution_role=None,
+                   name=None, header='Authorization'):
         return self._create_registration_function(
             handler_type='authorizer',
             name=name,
             registration_kwargs={
-                'ttl_seconds': ttl_seconds, 'execution_role': execution_role,
+                'ttl_seconds': ttl_seconds,
+                'execution_role': execution_role,
+                'header': header
             }
         )
 
@@ -717,11 +720,16 @@ class DecoratorAPI(object):
             registration_kwargs={'topic': topic}
         )
 
-    def on_sqs_message(self, queue, batch_size=1, name=None):
+    def on_sqs_message(self, queue=None, batch_size=1,
+                       name=None, queue_arn=None):
         return self._create_registration_function(
             handler_type='on_sqs_message',
             name=name,
-            registration_kwargs={'queue': queue, 'batch_size': batch_size}
+            registration_kwargs={
+                'queue': queue,
+                'queue_arn': queue_arn,
+                'batch_size': batch_size,
+            }
         )
 
     def on_cw_event(self, event_pattern, name=None):
@@ -973,10 +981,18 @@ class _HandlerRegistration(object):
         self.event_sources.append(sns_config)
 
     def _register_on_sqs_message(self, name, handler_string, kwargs, **unused):
+        queue = kwargs.get('queue')
+        queue_arn = kwargs.get('queue_arn')
+        if not queue and not queue_arn:
+            raise ValueError(
+                "Must provide either `queue` or `queue_arn` to the "
+                "`on_sqs_message` decorator."
+            )
         sqs_config = SQSEventConfig(
             name=name,
             handler_string=handler_string,
-            queue=kwargs['queue'],
+            queue=queue,
+            queue_arn=queue_arn,
             batch_size=kwargs['batch_size'],
         )
         self.event_sources.append(sqs_config)
@@ -1025,6 +1041,7 @@ class _HandlerRegistration(object):
         actual_kwargs = kwargs.copy()
         ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
         execution_role = actual_kwargs.pop('execution_role', None)
+        header = actual_kwargs.pop('header', None)
         if actual_kwargs:
             raise TypeError(
                 'TypeError: authorizer() got unexpected keyword '
@@ -1034,6 +1051,7 @@ class _HandlerRegistration(object):
             handler_string=handler_string,
             ttl_seconds=ttl_seconds,
             execution_role=execution_role,
+            header=header,
         )
         wrapped_handler.config = auth_config
         self.builtin_auth_handlers.append(auth_config)
@@ -1200,12 +1218,13 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
 
 class BuiltinAuthConfig(object):
     def __init__(self, name, handler_string, ttl_seconds=None,
-                 execution_role=None):
+                 execution_role=None, header='Authorization'):
         # We'd also support all the misc config options you can set.
         self.name = name
         self.handler_string = handler_string
         self.ttl_seconds = ttl_seconds
         self.execution_role = execution_role
+        self.header = header
 
 
 # ChaliceAuthorizer is unique in that the runtime component (the thing
@@ -1436,9 +1455,10 @@ class SNSEventConfig(BaseEventSourceConfig):
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, queue, batch_size):
+    def __init__(self, name, handler_string, queue, queue_arn, batch_size):
         super(SQSEventConfig, self).__init__(name, handler_string)
         self.queue = queue
+        self.queue_arn = queue_arn
         self.batch_size = batch_size
 
 
@@ -1612,10 +1632,12 @@ class RestAPIEventHandler(BaseLambdaHandler):
                                   http_status_code=500)
         http_method = event['requestContext']['httpMethod']
         if http_method not in self.routes[resource_path]:
+            allowed_methods = ', '.join(self.routes[resource_path].keys())
             return error_response(
                 error_code='MethodNotAllowedError',
                 message='Unsupported method: %s' % http_method,
-                http_status_code=405)
+                http_status_code=405,
+                headers={'Allow': allowed_methods})
         route_entry = self.routes[resource_path][http_method]
         view_function = route_entry.view_function
         function_args = {name: event['pathParameters'][name]
@@ -1903,6 +1925,14 @@ class Blueprint(DecoratorAPI):
         self._deferred_registrations = []
         self._current_app = None
         self._lambda_context = None
+
+    @property
+    def log(self):
+        if self._current_app is None:
+            raise RuntimeError(
+                "Can only access Blueprint.log if it's registered to an app."
+            )
+        return self._current_app.log
 
     @property
     def current_request(self):

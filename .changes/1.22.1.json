@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Bump pip version range to latest version 21.x (#1630)"
+    },
+    {
+      "type": "enhancement",
+      "category": "IAM",
+      "description": "Improve client call collection when generation policies (#692)"
+    }
+  ]
+}

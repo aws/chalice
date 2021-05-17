@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Authorizers",
+      "description": "Add support for custom headers in built-in authorizers (#1613)"
+    }
+  ]
+}

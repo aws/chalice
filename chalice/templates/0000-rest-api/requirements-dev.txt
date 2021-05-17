@@ -1,0 +1,2 @@
+chalice=={{chalice_version}}
+py.test

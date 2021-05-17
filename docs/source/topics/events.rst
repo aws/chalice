@@ -129,9 +129,9 @@ Here's an example:
                       event.bucket, event.key)
 
 In this example above, Chalice connects the S3 bucket to the
-``handle_s3_event`` Lambda function such that whenver an object is uploaded
+``handle_s3_event`` Lambda function such that whenever an object is uploaded
 to the ``mybucket-name`` bucket, the Lambda function will be invoked.
-This example also uses the ``.bucket`` and ``.key`` attribute from the
+This example also uses the ``.bucket`` and ``.key`` attributes from the
 ``event`` parameter, which is of type :class:`S3Event`.
 
 It will automatically create the appropriate S3 notification configuration
@@ -329,7 +329,7 @@ invoked.  The function argument is an :class:`SQSEvent` object, and each
 care of automatically scaling your function as needed.  See `Understanding
 Scaling Behavior`_ for more information on how Lambda scaling works.
 
-If your lambda functions completes without raising an exception, then
+If your lambda function completes without raising an exception, then
 Lambda will automatically delete all the messages associated with the
 :class:`SQSEvent`.  You don't need to manually call ``sqs.delete_message()``
 in your lambda function.  If your lambda function raises an exception, then
@@ -414,7 +414,7 @@ Here's an example:
     app = chalice.Chalice(app_name='ddb-event-demo')
     app.debug = True
 
-    @app.on_kinesis_record(stream_arn='arn:aws:dynamodb:.../stream/2020')
+    @app.on_dynamodb_record(stream_arn='arn:aws:dynamodb:.../stream/2020')
     def handle_ddb_message(event):
         for record in event:
             app.log.debug("New: %s", record.new_image)

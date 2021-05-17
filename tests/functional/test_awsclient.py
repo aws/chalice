@@ -1626,6 +1626,12 @@ class TestInvokeLambdaFunction(object):
 
 
 class TestCreateLambdaFunction(object):
+
+    SUCCESS_RESPONSE = {
+        'FunctionArn': 'arn:12345:name',
+        'State': 'Active',
+    }
+
     def test_create_function_succeeds_first_try(self, stubbed_session):
         stubbed_session.stub('lambda').create_function(
             FunctionName='name',
@@ -1633,7 +1639,7 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn'
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1648,12 +1654,36 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
             'name', 'myarn', b'foo', runtime='python3.6',
             handler='app.app') == 'arn:12345:name'
+        stubbed_session.verify_stubs()
+
+    def test_create_function_wait_for_active_state(self, stubbed_session,
+                                                   monkeypatch):
+        client = stubbed_session.stub('lambda')
+        client.create_function(
+            FunctionName='name',
+            Runtime='python2.7',
+            Code={'ZipFile': b'foo'},
+            Handler='app.app',
+            Role='myarn'
+        ).returns({'FunctionArn': 'arn:12345:name', 'State': 'Pending'})
+        client.get_function_configuration(
+            FunctionName='name',
+        ).returns({'State': 'Pending'})
+        client.get_function_configuration(
+            FunctionName='name',
+        ).returns({'State': 'Active'})
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        monkeypatch.setattr(time, 'sleep', mock.Mock(spec=time.sleep))
+        assert awsclient.create_function(
+            'name', 'myarn', b'foo',
+            'python2.7', 'app.app') == 'arn:12345:name'
         stubbed_session.verify_stubs()
 
     def test_create_function_with_environment_variables(self, stubbed_session):
@@ -1664,7 +1694,7 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Environment={'Variables': {'FOO': 'BAR'}}
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1681,7 +1711,7 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Timeout=240
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1697,7 +1727,7 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Tags={'mykey': 'myvalue'}
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1713,7 +1743,7 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             MemorySize=256
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1732,7 +1762,7 @@ class TestCreateLambdaFunction(object):
                 'SecurityGroupIds': ['sg1', 'sg2'],
                 'SubnetIds': ['sn1', 'sn2']
             }
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1751,7 +1781,7 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Layers=layers
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1779,7 +1809,7 @@ class TestCreateLambdaFunction(object):
             message=('The role defined for the function cannot '
                      'be assumed by Lambda.'))
         stubbed_session.stub('lambda').create_function(
-            **kwargs).returns({'FunctionArn': 'arn:12345:name'})
+            **kwargs).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
@@ -1811,9 +1841,7 @@ class TestCreateLambdaFunction(object):
             error_code=error_code,
             message=error_message
         )
-        client.create_function(**kwargs).returns(
-            {'FunctionArn': 'arn:12345:name'}
-        )
+        client.create_function(**kwargs).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
@@ -1841,7 +1869,7 @@ class TestCreateLambdaFunction(object):
                      'to call CreateNetworkInterface on EC2 be assumed by '
                      'Lambda.'))
         stubbed_session.stub('lambda').create_function(
-            **kwargs).returns({'FunctionArn': 'arn:12345:name'})
+            **kwargs).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         assert awsclient.create_function(
@@ -1882,7 +1910,7 @@ class TestCreateLambdaFunction(object):
             Code={'ZipFile': b'foo'},
             Handler='app.app',
             Role='myarn',
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -1918,7 +1946,7 @@ class TestCreateLambdaFunction(object):
             Handler='app.app',
             Role='myarn',
             Tags={'key': 'value'},
-        ).returns({'FunctionArn': 'arn:12345:name'})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         assert awsclient.create_function(
@@ -2017,10 +2045,15 @@ class TestCreateLambdaFunction(object):
 
 
 class TestUpdateLambdaFunction(object):
+
+    SUCCESS_RESPONSE = {
+        'LastUpdateStatus': 'Successful',
+    }
+
     def test_always_update_function_code(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo')
@@ -2029,10 +2062,10 @@ class TestUpdateLambdaFunction(object):
     def test_update_function_code_with_runtime(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Runtime='python3.6').returns({})
+            Runtime='python3.6').returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', runtime='python3.6')
@@ -2041,10 +2074,11 @@ class TestUpdateLambdaFunction(object):
     def test_update_function_code_with_environment_vars(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Environment={'Variables': {"FOO": "BAR"}}).returns({})
+            Environment={'Variables': {"FOO": "BAR"}}).returns(
+                self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function(
@@ -2054,10 +2088,10 @@ class TestUpdateLambdaFunction(object):
     def test_update_function_code_with_timeout(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Timeout=240).returns({})
+            Timeout=240).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', timeout=240)
@@ -2066,10 +2100,10 @@ class TestUpdateLambdaFunction(object):
     def test_update_function_code_with_memory(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         lambda_client.update_function_configuration(
             FunctionName='name',
-            MemorySize=256).returns({})
+            MemorySize=256).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function('name', b'foo', memory_size=256)
@@ -2078,13 +2112,13 @@ class TestUpdateLambdaFunction(object):
     def test_update_function_with_vpc_config(self, stubbed_session):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         lambda_client.update_function_configuration(
             FunctionName='name', VpcConfig={
                 'SecurityGroupIds': ['sg1', 'sg2'],
                 'SubnetIds': ['sn1', 'sn2']
             }
-        ).returns({})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function(
@@ -2098,10 +2132,10 @@ class TestUpdateLambdaFunction(object):
         layers = ['arn:aws:lambda:us-east-1:111:layer:test_layer:1']
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns({})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
         lambda_client.update_function_configuration(
             FunctionName='name', Layers=layers
-        ).returns({})
+        ).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session)
         awsclient.update_function(
@@ -2116,7 +2150,8 @@ class TestUpdateLambdaFunction(object):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': function_arn})
+                {'FunctionArn': function_arn,
+                 'LastUpdateStatus': 'Successful'})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {}})
         lambda_client.tag_resource(
@@ -2133,7 +2168,8 @@ class TestUpdateLambdaFunction(object):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': function_arn})
+                {'FunctionArn': function_arn,
+                 'LastUpdateStatus': 'Successful'})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {'MyKey': 'MyOrigValue'}})
         lambda_client.tag_resource(
@@ -2150,7 +2186,8 @@ class TestUpdateLambdaFunction(object):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': function_arn})
+                {'FunctionArn': function_arn,
+                 'LastUpdateStatus': 'Successful'})
         lambda_client.list_tags(
             Resource=function_arn).returns(
                 {'Tags': {'KeyToRemove': 'Value'}})
@@ -2168,7 +2205,8 @@ class TestUpdateLambdaFunction(object):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': function_arn})
+                {'FunctionArn': function_arn,
+                 'LastUpdateStatus': 'Successful'})
         lambda_client.list_tags(
             Resource=function_arn).returns({'Tags': {'MyKey': 'SameValue'}})
         stubbed_session.activate_stubs()
@@ -2183,10 +2221,11 @@ class TestUpdateLambdaFunction(object):
         lambda_client = stubbed_session.stub('lambda')
         lambda_client.update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': function_arn})
+                {'FunctionArn': function_arn,
+                 'LastUpdateStatus': 'Successful'})
         lambda_client.update_function_configuration(
             FunctionName='name',
-            Role='role-arn').returns({})
+            Role='role-arn').returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
 
         awsclient = TypedAWSClient(stubbed_session)
@@ -2196,7 +2235,7 @@ class TestUpdateLambdaFunction(object):
     def test_update_function_is_retried_and_succeeds(self, stubbed_session):
         stubbed_session.stub('lambda').update_function_code(
             FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': 'arn'})
+                {'FunctionArn': 'arn', 'LastUpdateStatus': 'Successful'})
 
         update_config_kwargs = {
             'FunctionName': 'name',
@@ -2215,7 +2254,7 @@ class TestUpdateLambdaFunction(object):
             message=('The role defined for the function cannot '
                      'be assumed by Lambda.'))
         stubbed_session.stub('lambda').update_function_configuration(
-            **update_config_kwargs).returns({})
+            **update_config_kwargs).returns(self.SUCCESS_RESPONSE)
         stubbed_session.activate_stubs()
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         awsclient.update_function('name', b'foo', role_arn='role-arn')
@@ -2223,8 +2262,7 @@ class TestUpdateLambdaFunction(object):
 
     def test_update_function_fails_after_max_retries(self, stubbed_session):
         stubbed_session.stub('lambda').update_function_code(
-            FunctionName='name', ZipFile=b'foo').returns(
-                {'FunctionArn': 'arn'})
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
 
         update_config_kwargs = {
             'FunctionName': 'name',
@@ -2297,6 +2335,47 @@ class TestUpdateLambdaFunction(object):
         awsclient = TypedAWSClient(stubbed_session, mock.Mock(spec=time.sleep))
         with pytest.raises(DeploymentPackageTooLargeError):
             awsclient.update_function('name', b'foo')
+        stubbed_session.verify_stubs()
+
+    def test_update_function_waits_for_active(self, stubbed_session,
+                                              monkeypatch):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns({
+                'LastUpdateStatus': 'InProgress',
+            })
+        lambda_client.get_function_configuration(
+            FunctionName='name',
+        ).returns({'LastUpdateStatus': 'InProgress'})
+        lambda_client.get_function_configuration(
+            FunctionName='name',
+        ).returns({'LastUpdateStatus': 'Successful'})
+        stubbed_session.activate_stubs()
+        monkeypatch.setattr(time, 'sleep', mock.Mock(spec=time.sleep))
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function('name', b'foo')
+        stubbed_session.verify_stubs()
+
+    def test_update_function_config_waits_for_active(self, stubbed_session,
+                                                     monkeypatch):
+        lambda_client = stubbed_session.stub('lambda')
+        lambda_client.update_function_code(
+            FunctionName='name', ZipFile=b'foo').returns(self.SUCCESS_RESPONSE)
+        lambda_client.update_function_configuration(
+            FunctionName='name',
+            Role='role-arn').returns({'LastUpdateStatus': 'InProgress'})
+
+        lambda_client.get_function_configuration(
+            FunctionName='name',
+        ).returns({'LastUpdateStatus': 'InProgress'})
+        lambda_client.get_function_configuration(
+            FunctionName='name',
+        ).returns({'LastUpdateStatus': 'Successful'})
+        stubbed_session.activate_stubs()
+        monkeypatch.setattr(time, 'sleep', mock.Mock(spec=time.sleep))
+
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_function('name', b'foo', role_arn='role-arn')
         stubbed_session.verify_stubs()
 
 

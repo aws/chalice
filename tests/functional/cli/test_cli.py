@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 
 from chalice import cli
 from chalice.cli import factory
+from chalice.cli import newproj
 from chalice.config import Config, DeployedResources
 from chalice.utils import record_deployed_values
 from chalice.utils import PipeReader
@@ -45,6 +46,7 @@ def mock_cli_factory():
 
 def teardown_function(function):
     sys.modules.pop('app', None)
+    sys.path_importer_cache.clear()
 
 
 def assert_chalice_app_structure_created(dirname):
@@ -70,7 +72,7 @@ def _run_cli_command(runner, function, args, cli_factory=None):
 
 def test_create_new_project_creates_app(runner):
     with runner.isolated_filesystem():
-        result = runner.invoke(cli.new_project, ['testproject'])
+        result = runner.invoke(cli.new_project, ['testproject'], obj={})
         assert result.exit_code == 0
 
         # The 'new-project' command creates a directory based on
@@ -81,7 +83,13 @@ def test_create_new_project_creates_app(runner):
 
 def test_create_project_with_prompted_app_name(runner):
     with runner.isolated_filesystem():
-        result = runner.invoke(cli.new_project, input='testproject')
+        result = runner.invoke(
+            cli.new_project, input=b'', obj={
+                'prompter': lambda: {'project_name': 'testproject',
+                                     'project_type': 'legacy'}
+            }
+        )
+        print(result.stdout)
         assert result.exit_code == 0
         assert os.listdir(os.getcwd()) == ['testproject']
         assert_chalice_app_structure_created(dirname='testproject')
@@ -90,14 +98,14 @@ def test_create_project_with_prompted_app_name(runner):
 def test_error_raised_if_dir_already_exists(runner):
     with runner.isolated_filesystem():
         os.mkdir('testproject')
-        result = runner.invoke(cli.new_project, ['testproject'])
+        result = runner.invoke(cli.new_project, ['testproject'], obj={})
         assert result.exit_code == 1
         assert 'Directory already exists: testproject' in result.output
 
 
 def test_can_load_project_config_after_project_creation(runner):
     with runner.isolated_filesystem():
-        result = runner.invoke(cli.new_project, ['testproject'])
+        result = runner.invoke(cli.new_project, ['testproject'], obj={})
         assert result.exit_code == 0
         config = factory.CLIFactory('testproject').load_project_config()
         assert config == {
@@ -111,7 +119,7 @@ def test_can_load_project_config_after_project_creation(runner):
 
 def test_default_new_project_adds_index_route(runner):
     with runner.isolated_filesystem():
-        result = runner.invoke(cli.new_project, ['testproject'])
+        result = runner.invoke(cli.new_project, ['testproject'], obj={})
         assert result.exit_code == 0
         app = factory.CLIFactory('testproject').load_chalice_app()
         assert '/' in app.routes
@@ -119,7 +127,7 @@ def test_default_new_project_adds_index_route(runner):
 
 def test_gen_policy_command_creates_policy(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = runner.invoke(cli.cli, ['gen-policy'], obj={})
         assert result.exit_code == 0
@@ -134,7 +142,7 @@ def test_gen_policy_command_creates_policy(runner):
 
 def test_does_fail_to_generate_swagger_if_no_rest_api(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         with open('app.py', 'w') as f:
             f.write(
@@ -151,7 +159,7 @@ def test_does_fail_to_generate_swagger_if_no_rest_api(runner):
 
 def test_can_write_swagger_model(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.generate_models, [])
         assert result.exit_code == 0
@@ -230,7 +238,7 @@ def test_can_write_swagger_model(runner):
 
 def test_can_package_command(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.package, ['outdir'])
         assert result.exit_code == 0, result.output
@@ -242,7 +250,7 @@ def test_can_package_command(runner, mock_cli_factory):
 
 def test_can_package_with_yaml_command(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.package,
                                   ['--template-format', 'yaml', 'outdir'])
@@ -255,7 +263,7 @@ def test_can_package_with_yaml_command(runner):
 
 def test_case_insensitive_template_format(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.package,
                                   ['--template-format', 'YAML', 'outdir'])
@@ -266,7 +274,7 @@ def test_case_insensitive_template_format(runner):
 
 def test_can_package_with_single_file(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.package, ['--single-file', 'package.zip'])
@@ -279,7 +287,7 @@ def test_can_package_with_single_file(runner):
 
 def test_package_terraform_err_with_single_file_or_merge(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.package, ['--pkg-format', 'terraform',
@@ -296,7 +304,7 @@ def test_package_terraform_err_with_single_file_or_merge(runner):
 
 def test_debug_flag_enables_logging(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = runner.invoke(
             cli.cli, ['--debug', 'package', 'outdir'], obj={})
@@ -308,7 +316,7 @@ def test_debug_flag_enables_logging(runner):
 def test_does_deploy_with_default_api_gateway_stage_name(runner,
                                                          mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         # This isn't perfect as we're assuming we know how to
         # create the config_obj like the deploy() command does,
@@ -325,7 +333,7 @@ def test_does_deploy_with_default_api_gateway_stage_name(runner,
 
 def test_can_specify_api_gateway_stage(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.deploy,
                                   ['--api-gateway-stage', 'notdev'],
@@ -339,7 +347,7 @@ def test_can_specify_api_gateway_stage(runner, mock_cli_factory):
 
 def test_can_deploy_specify_connection_timeout(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.deploy,
                                   ['--connection-timeout', 100],
@@ -368,7 +376,7 @@ def test_can_retrieve_url(runner, mock_cli_factory):
         ]
     }
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         deployed_dir = os.path.join('.chalice', 'deployed')
         os.makedirs(deployed_dir)
@@ -393,7 +401,7 @@ def test_can_retrieve_url(runner, mock_cli_factory):
 
 def test_error_when_no_deployed_record(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.url, [],
                                   cli_factory=mock_cli_factory)
@@ -407,7 +415,7 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
                     reason="Cannot generate pipeline for python3.8.")
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.generate_pipeline, ['pipeline.json'])
@@ -423,7 +431,7 @@ def test_can_generate_pipeline_for_all(runner):
 
 def test_no_errors_if_override_codebuild_image(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.generate_pipeline,
@@ -440,7 +448,7 @@ def test_no_errors_if_override_codebuild_image(runner):
 
 def test_can_configure_github(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         # The -i option is provided so we don't have to skip this
         # test on python3.6
@@ -461,7 +469,7 @@ def test_can_configure_github(runner):
 
 def test_can_extract_buildspec_yaml(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.generate_pipeline,
@@ -479,7 +487,7 @@ def test_can_extract_buildspec_yaml(runner):
 
 def test_can_specify_profile_for_logs(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.logs, ['--profile', 'my-profile'],
@@ -502,7 +510,7 @@ def test_can_provide_lambda_name_for_logs(runner, mock_cli_factory):
     log_retriever.retrieve_logs.return_value = []
     mock_cli_factory.create_log_retriever.return_value = log_retriever
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.logs, ['--name', 'foo'],
@@ -531,7 +539,7 @@ def test_can_follow_logs_with_option(runner, mock_cli_factory):
     log_retriever.retrieve_logs.return_value = []
     mock_cli_factory.create_log_retriever.return_value = log_retriever
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(
             runner, cli.logs, ['--name', 'foo', '--follow'],
@@ -554,7 +562,7 @@ def test_can_call_invoke(runner, mock_cli_factory, monkeypatch):
     mock_reader.read.return_value = 'barbaz'
     mock_cli_factory.create_stdin_reader.return_value = mock_reader
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
                                   cli_factory=mock_cli_factory)
@@ -581,7 +589,7 @@ def test_invoke_does_raise_if_service_error(runner, mock_cli_factory):
     mock_reader.read.return_value = 'barbaz'
     mock_cli_factory.create_stdin_reader.return_value = mock_reader
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
                                   cli_factory=mock_cli_factory)
@@ -604,7 +612,7 @@ def test_invoke_does_raise_if_unhandled_error(runner, mock_cli_factory):
     mock_reader.read.return_value = 'barbaz'
     mock_cli_factory.create_stdin_reader.return_value = mock_reader
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
                                   cli_factory=mock_cli_factory)
@@ -618,7 +626,7 @@ def test_invoke_does_raise_if_read_timeout(runner, mock_cli_factory):
     mock_cli_factory.create_lambda_invoke_handler.side_effect = \
         ReadTimeout('It took too long')
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
                                   cli_factory=mock_cli_factory)
@@ -630,7 +638,7 @@ def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
     mock_cli_factory.create_lambda_invoke_handler.side_effect = \
         factory.NoSuchFunctionError('foo')
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.invoke, ['-n', 'foo'],
                                   cli_factory=mock_cli_factory)
@@ -640,7 +648,7 @@ def test_invoke_does_raise_if_no_function_found(runner, mock_cli_factory):
 
 def test_error_message_displayed_when_missing_feature_opt_in(runner):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         with open(os.path.join('testproject', 'app.py'), 'w') as f:
             # Rather than pick an existing experimental feature, we're
             # manually injecting a feature flag into our app.  This ensures
@@ -681,7 +689,7 @@ def test_cli_with_absolute_path(runner, path):
 
 def test_can_generate_dev_plan(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.plan, [],
                                   cli_factory=mock_cli_factory)
@@ -701,7 +709,7 @@ def test_can_generate_dev_plan(runner, mock_cli_factory):
                     reason="Click bug when writing unicode to stdout.")
 def test_can_generate_appgraph(runner, mock_cli_factory):
     with runner.isolated_filesystem():
-        cli.create_new_project_skeleton('testproject')
+        newproj.create_new_project_skeleton('testproject')
         os.chdir('testproject')
         result = _run_cli_command(runner, cli.appgraph, [])
         assert result.exit_code == 0
@@ -712,6 +720,6 @@ def test_can_generate_appgraph(runner, mock_cli_factory):
 
 def test_chalice_cli_mode_env_var_always_set(runner):
     with runner.isolated_filesystem():
-        result = runner.invoke(cli.new_project, ['testproject'])
+        result = runner.invoke(cli.new_project, ['testproject'], obj={})
         assert result.exit_code == 0
         assert os.environ['AWS_CHALICE_CLI_MODE'] == 'true'

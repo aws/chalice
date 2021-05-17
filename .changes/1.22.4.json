@@ -1,0 +1,20 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Types",
+      "description": "Add missing types to app.pyi stub file (#1701)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Custom Domain",
+      "description": "Fix custom domain generation when using the CDK (#1640)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Packaging",
+      "description": "Special cases pyrsistent packaging (#1696)"
+    }
+  ]
+}

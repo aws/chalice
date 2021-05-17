@@ -51,7 +51,7 @@ Middleware must adhere to these requirements:
   to the caller.
 * In order to invoke the next middleware in the chain and eventually call the
   actual Lambda handler, it must invoke ``get_response(event)``.
-* Middleware can short-circuit the request be returning its own response.
+* Middleware can short-circuit the request by returning its own response.
   It does not have to invoke ``get_response(event)`` if not needed.  The
   response type should match the response type of the underlying Lambda
   handler.
@@ -271,15 +271,15 @@ Integrating with AWS Lambda Powertools
 --------------------------------------
 
 `AWS Lambda Powertools
-<https://awslabs.github.io/aws-lambda-powertools-python/>`__ is a suite of
+<https://awslabs.github.io/aws-lambda-powertools-python/latest/>`__ is a suite of
 utilities for AWS Lambda functions that makes tracing with AWS X-Ray,
 structured logging and creating custom metrics asynchronously easier.
 
 You can use Chalice middleware to easily integrate Lambda Powertools with
 your Chalice apps.  In this example, we'll use the
 `Logger
-<https://awslabs.github.io/aws-lambda-powertools-python/core/logger/>`__
-and `Tracer <https://awslabs.github.io/aws-lambda-powertools-python/core/tracer/>`__
+<https://awslabs.github.io/aws-lambda-powertools-python/latest/core/logger/>`__
+and `Tracer <https://awslabs.github.io/aws-lambda-powertools-python/latest/core/tracer/>`__
 and convert them to Chalice middleware so they will be automatically applied
 to all Lambda functions in our application.
 

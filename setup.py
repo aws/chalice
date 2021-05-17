@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 from setuptools import setup, find_packages
 
 
@@ -6,24 +7,37 @@ with open('README.rst') as readme_file:
     README = readme_file.read()
 
 
+def recursive_include(relative_dir):
+    all_paths = []
+    root_prefix = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'chalice')
+    full_path = os.path.join(root_prefix, relative_dir)
+    for rootdir, _, filenames in os.walk(full_path):
+        for filename in filenames:
+            abs_filename = os.path.join(rootdir, filename)
+            all_paths.append(abs_filename[len(root_prefix) + 1:])
+    return all_paths
+
+
 install_requires = [
     'click>=7,<8.0',
-    'botocore>=1.12.86,<2.0.0',
+    'botocore>=1.14.0,<2.0.0',
     'typing==3.6.4;python_version<"3.7"',
     'mypy-extensions==0.4.3',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<20.3',
-    'attrs>=19.3.0,<20.3.0',
-    'enum-compat>=0.0.2',
+    'pip>=9,<21.2',
+    'attrs>=19.3.0,<20.4.0',
+    'enum34;python_version<"3.4"',
     'jmespath>=0.9.3,<1.0.0',
     'pyyaml>=5.3.1,<6.0.0',
+    'inquirer>=2.7.0,<3.0.0',
     'wheel',
     'setuptools'
 ]
 
 setup(
     name='chalice',
-    version='1.21.4',
+    version='1.23.0',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
@@ -33,9 +47,16 @@ setup(
     install_requires=install_requires,
     extras_require={
         'event-file-poller': ['watchdog==0.9.0'],
+        'cdk': [
+            'aws_cdk.aws_iam>=1.85.0,<2.0',
+            'aws_cdk.aws-s3-assets>=1.85.0,<2.0',
+            'aws_cdk.cloudformation-include>=1.85.0,<2.0',
+            'aws_cdk.core>=1.85.0,<2.0',
+        ]
     },
     license="Apache License 2.0",
-    package_data={'chalice': ['*.json', 'py.typed']},
+    package_data={'chalice': [
+        '*.json', '*.pyi', 'py.typed'] + recursive_include('templates')},
     include_package_data=True,
     zip_safe=False,
     keywords='chalice',

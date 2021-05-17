@@ -8,6 +8,7 @@ from chalice.config import Config  # noqa
 from chalice.constants import EXPERIMENTAL_ERROR_MSG
 from chalice.constants import MIN_COMPRESSION_SIZE
 from chalice.constants import MAX_COMPRESSION_SIZE
+from chalice.compat import STRING_TYPES
 
 
 class ExperimentalFeatureError(Exception):
@@ -240,21 +241,24 @@ def validate_sqs_configuration(chalice_app):
     for event in chalice_app.event_sources:
         if not isinstance(event, app.SQSEventConfig):
             continue
-        if not _is_valid_queue_name(event.queue):
+        if not _is_valid_queue_name(event.queue, event.queue_arn):
             raise ValueError("The 'queue' parameter for the "
                              "'@app.on_sqs_message()' handler must be the "
                              "name of the queue, not the queue URL or the "
                              "queue ARN.  Invalid value: %s" % event.queue)
 
 
-def _is_valid_queue_name(queue_name):
-    # type: (str) -> bool
-    if queue_name.startswith(('https:', 'arn:')):
+def _is_valid_queue_name(queue_name, queue_arn):
+    # type: (Optional[str], Optional[str]) -> bool
+    # The mutually exclusiveness is verified in the on_sqs_message decorator.
+    if queue_name is not None and queue_name.startswith(('https:', 'arn:')):
+        return False
+    if queue_arn is not None and not queue_arn.startswith('arn:'):
         return False
     # We're not validating that the queue has only valid chars because SQS
     # won't let you create a queue with that name in the first place.  We just
     # want to detect the case where a user puts the queue URL/ARN instead of
-    # the name.
+    # the name for the queue_name.
     return True
 
 
@@ -269,7 +273,7 @@ def validate_environment_variables_type(config):
 def _validate_environment_variables(environment_variables):
     # type: (Dict[str, Any]) -> None
     for key, value in environment_variables.items():
-        if not isinstance(value, str):
+        if not isinstance(value, STRING_TYPES):
             raise ValueError("Environment variable values must be strings, "
                              "got 'type' %s for key '%s'" % (
                                  type(value).__name__, key))

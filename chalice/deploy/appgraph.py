@@ -560,9 +560,14 @@ class ApplicationGraphBuilder(object):
             handler_name=sqs_config.handler_string, stage_name=stage_name
         )
         resource_name = sqs_config.name + '-sqs-event-source'
+        queue = ''  # type: Union[str, models.QueueARN]
+        if sqs_config.queue_arn is not None:
+            queue = models.QueueARN(arn=sqs_config.queue_arn)
+        elif sqs_config.queue is not None:
+            queue = sqs_config.queue
         sqs_event_source = models.SQSEventSource(
             resource_name=resource_name,
-            queue=sqs_config.queue,
+            queue=queue,
             batch_size=sqs_config.batch_size,
             lambda_function=lambda_function,
         )

@@ -2,6 +2,83 @@
 CHANGELOG
 =========
 
+1.23.0
+======
+
+* enhancement:Deploy:Wait for function state to be active when deploying
+* feature:SQS:Add queue_arn parameter to enable CDK integration with SQS event handler (#1681)
+
+
+1.22.4
+======
+
+* enhancement:Types:Add missing types to app.pyi stub file (#1701)
+* bugfix:Custom Domain:Fix custom domain generation when using the CDK (#1640)
+* bugfix:Packaging:Special cases pyrsistent packaging (#1696)
+
+
+1.22.3
+======
+
+* enhancement:Terraform:Bump Terraform version to include 0.14
+* bugfix:Typing:Fix type definitions in app.pyi (#1676)
+* bugfix:Terraform:Use references instead of function names in Terraform packaging (#1558)
+
+
+1.22.2
+======
+
+* enhancement:Blueprint:Add log property to blueprint
+* bugfix:Pipeline:Fix build command in pipeline generation (#1653)
+* enhancement:Dependencies:Change enum-compat dependency to enum34 with version restrictions (#1667)
+
+
+1.22.1
+======
+
+* enhancement:Pip:Bump pip version range to latest version 21.x (#1630)
+* enhancement:IAM:Improve client call collection when generation policies (#692)
+
+
+1.22.0
+======
+
+* feature:CDK:Add built-in support for the AWS CDK (#1622)
+
+
+1.21.9
+======
+
+* enhancement:Dependencies:Bump attr version constraint (#1620)
+
+
+1.21.8
+======
+
+* enhancement:Authorizers:Add support for custom headers in built-in authorizers (#1613)
+
+
+1.21.7
+======
+
+* enhancement:Terraform:Map custom domain outputs in Terraform packaging (#1601)
+
+
+1.21.6
+======
+
+* enhancement:Packaging:Increase upper bound for AWS provider in Terraform to 3.x (#1596)
+* enhancement:Packaging:Add support for manylinux2014 wheels (#1551)
+
+
+1.21.5
+======
+
+* bugfix:Config:Fix config validation for env vars on py27 (#1573)
+* bugfix:Pip:Bump pip version contraint (#1590)
+* bugfix:REST:Add Allow header with list of allowed methods when returning 405 error (#1583)
+
+
 1.21.4
 ======
 

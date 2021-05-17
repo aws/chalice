@@ -515,7 +515,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert resources['aws_lambda_function']
         # Along with permission to invoke from API Gateway.
         assert list(resources['aws_lambda_permission'].values())[0] == {
-            'function_name': 'sample_app-dev',
+            'function_name': '${aws_lambda_function.api_handler.arn}',
             'action': 'lambda:InvokeFunction',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
@@ -561,7 +561,7 @@ class TestTerraformTemplate(TemplateTestBase):
         # Along with permission to invoke from API Gateway.
         assert resources['aws_lambda_permission']['myauth_invoke'] == {
             'action': 'lambda:InvokeFunction',
-            'function_name': 'sample_app-dev-myauth',
+            'function_name': '${aws_lambda_function.myauth.arn}',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
                 '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
@@ -640,7 +640,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert template['resource']['aws_lambda_permission'][
                    'handler-s3event'] == {
                    'action': 'lambda:InvokeFunction',
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'principal': 's3.amazonaws.com',
                    'source_arn': (
                        'arn:${data.aws_partition.chalice.partition}:s3:::foo'),
@@ -701,7 +701,7 @@ class TestTerraformTemplate(TemplateTestBase):
 
         assert template['resource']['aws_lambda_permission'][
                    'handler-sns-subscription'] == {
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'action': 'lambda:InvokeFunction',
                    'principal': 'sns.amazonaws.com',
                    'source_arn': 'arn:aws:sns:space-leo-1:1234567890:foo'
@@ -725,7 +725,26 @@ class TestTerraformTemplate(TemplateTestBase):
                        'arn:${data.aws_partition.chalice.partition}:sqs'
                        ':${data.aws_region.chalice.name}:'
                        '${data.aws_caller_identity.chalice.account_id}:foo'),
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
+                   'batch_size': 5
+               }
+
+    def test_sqs_arn_does_not_use_fn_sub(self, sample_app):
+        @sample_app.on_sqs_message(queue_arn='arn:foo:bar', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               app_name='sample_app',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+
+        assert template['resource'][
+                   'aws_lambda_event_source_mapping'][
+                   'handler-sqs-event-source'] == {
+                   'event_source_arn': 'arn:foo:bar',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'batch_size': 5
                }
 
@@ -749,7 +768,7 @@ class TestTerraformTemplate(TemplateTestBase):
                        ':${data.aws_region.chalice.name}:'
                        '${data.aws_caller_identity.chalice.account_id}'
                        ':stream/mystream'),
-                   'function_name': 'sample_app-dev-handler',
+                   'function_name': '${aws_lambda_function.handler.arn}',
                    'starting_position': 'TRIM_HORIZON',
                    'batch_size': 5
                }
@@ -771,7 +790,7 @@ class TestTerraformTemplate(TemplateTestBase):
                    'aws_lambda_event_source_mapping'][
                    'handler-dynamodb-event-source'] == {
                        'event_source_arn': 'arn:aws:...:stream',
-                       'function_name': 'sample_app-dev-handler',
+                       'function_name': '${aws_lambda_function.handler.arn}',
                        'starting_position': 'TRIM_HORIZON',
                        'batch_size': 5
                    }
@@ -817,6 +836,15 @@ class TestTerraformTemplate(TemplateTestBase):
                 'stage_name': 'api',
                 'domain_name': 'example.com',
         }
+        outputs = template['output']
+        assert outputs['AliasDomainName']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.cloudfront_domain_name}'
+        )
+        assert outputs['HostedZoneId']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.cloudfront_zone_id}'
+        )
 
     def test_can_generate_domain_for_regional_endpoint(self, sample_app):
         config = Config.create(
@@ -842,6 +870,15 @@ class TestTerraformTemplate(TemplateTestBase):
                 'stage_name': 'api',
                 'domain_name': 'example.com',
         }
+        outputs = template['output']
+        assert outputs['AliasDomainName']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.regional_domain_name}'
+        )
+        assert outputs['HostedZoneId']['value'] == (
+            '${aws_api_gateway_domain_name.api_gateway_custom_domain'
+            '.regional_zone_id}'
+        )
 
 
 class TestSAMTemplate(TemplateTestBase):
@@ -1503,6 +1540,26 @@ class TestSAMTemplate(TemplateTestBase):
             }
         }
 
+    def test_sqs_arn_does_not_use_fn_sub(self, sample_app):
+        @sample_app.on_sqs_message(queue_arn='arn:foo:bar', batch_size=5)
+        def handler(event):
+            pass
+
+        config = Config.create(chalice_app=sample_app,
+                               project_dir='.',
+                               api_gateway_stage='api')
+        template = self.generate_template(config)
+        sqs_handler = template['Resources']['Handler']
+        assert sqs_handler['Properties']['Events'] == {
+            'HandlerSqsEventSource': {
+                'Type': 'SQS',
+                'Properties': {
+                    'Queue': 'arn:foo:bar',
+                    'BatchSize': 5,
+                },
+            }
+        }
+
     def test_can_package_kinesis_handler(self, sample_app):
         @sample_app.on_kinesis_record(stream='mystream', batch_size=5)
         def handler(event):
@@ -1589,7 +1646,7 @@ class TestSAMTemplate(TemplateTestBase):
             'Properties': {
                 'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
                 'RestApiId': {'Ref': 'RestAPI'},
-                'Stage': {'Ref': 'RestAPI.Stage'},
+                'Stage': config.api_gateway_stage,
                 'BasePath': '(none)',
             }
         }
@@ -1623,7 +1680,7 @@ class TestSAMTemplate(TemplateTestBase):
             'Properties': {
                 'DomainName': {'Ref': 'ApiGatewayCustomDomain'},
                 'RestApiId': {'Ref': 'RestAPI'},
-                'Stage': {'Ref': 'RestAPI.Stage'},
+                'Stage': config.api_gateway_stage,
                 'BasePath': '(none)',
             }
         }

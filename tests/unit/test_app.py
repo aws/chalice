@@ -569,6 +569,7 @@ def test_error_on_unsupported_method(sample_app, create_event):
     event = create_event('/name/{name}', 'POST', {'name': 'james'})
     raw_response = sample_app(event, context=None)
     assert raw_response['statusCode'] == 405
+    assert raw_response['headers']['Allow'] == 'GET'
     assert json_response_body(raw_response)['Code'] == 'MethodNotAllowedError'
 
 
@@ -2396,6 +2397,23 @@ def test_can_call_lambda_context_on_blueprint_when_mounted(create_event):
     event = create_event('/context', 'GET', {})
     response = json_response_body(myapp(event, context={'context': 'foo'}))
     assert response == {'context': 'foo'}
+
+
+def test_can_access_log_when_mounted(create_event):
+    myapp = app.Chalice('myapp')
+    bp = app.Blueprint('app.chalicelib.blueprints.foo')
+
+    @bp.route('/log')
+    def log_message():
+        # We shouldn't get an error because we've registered it to
+        # an app.
+        bp.log.info("test log message")
+        return {}
+
+    myapp.register_blueprint(bp)
+    event = create_event('/log', 'GET', {})
+    response = json_response_body(myapp(event, context={'context': 'foo'}))
+    assert response == {}
 
 
 def test_can_add_authorizer_with_url_prefix_and_routes():

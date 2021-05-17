@@ -1,0 +1,9 @@
+{
+  "version": "2.0",
+  "app_name": "{{app_name}}",
+  "stages": {
+    "dev": {
+      "api_gateway_stage": "api"
+    }
+  }
+}

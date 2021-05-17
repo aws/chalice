@@ -2,6 +2,7 @@ import os
 import sys
 import stat
 import uuid
+import fnmatch
 from zipfile import ZipFile
 import hashlib
 from contextlib import contextmanager
@@ -11,7 +12,7 @@ import pytest
 
 from chalice import cli
 from chalice.cli import factory
-from chalice.cli import create_new_project_skeleton
+from chalice.cli.newproj import create_new_project_skeleton
 from chalice.deploy.packager import NoSuchPackageError
 
 
@@ -34,7 +35,7 @@ def runner():
 def app_skeleton(tmpdir, runner):
     project_name = 'deployment-integ-test'
     with cd(str(tmpdir)):
-        create_new_project_skeleton(project_name, None)
+        create_new_project_skeleton(project_name)
     return str(tmpdir.join(project_name))
 
 
@@ -42,30 +43,72 @@ def _get_random_package_name():
     return 'foobar-%s' % str(uuid.uuid4())[:8]
 
 
-class TestPackage(object):
-    def assert_can_package_dependency(
-            self, runner, app_skeleton, package, contents):
-        req = os.path.join(app_skeleton, 'requirements.txt')
-        with open(req, 'w') as f:
-            f.write('%s\n' % package)
-        cli_factory = factory.CLIFactory(app_skeleton)
-        package_output_location = os.path.join(app_skeleton, 'pkg')
-        result = runner.invoke(
-            cli.package, [package_output_location],
-            obj={'project_dir': app_skeleton,
-                 'debug': False,
-                 'factory': cli_factory})
-        assert result.exit_code == 0
-        assert result.output.strip() == 'Creating deployment package.'
-        package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
-        package_file = ZipFile(package_path)
-        package_content = package_file.namelist()
-        for content in contents:
-            assert content in package_content
+# This test can take a while, but you can set this env var to make sure that
+# the commonly used python packages can be packaged successfully.
+@pytest.mark.skipif(not os.environ.get('CHALICE_TEST_EXTENDED_PACKAGING'),
+                    reason='Set CHALICE_TEST_EXTENDED_PACKAGING for extended '
+                           'packaging tests.')
+@pytest.mark.skipif(sys.version_info[0] == 2,
+                    reason='Extended packaging tests only run on py3.')
+@pytest.mark.parametrize(
+    'package,contents', [
+        ('pandas==1.0.3', [
+            'pandas/_libs/__init__.py',
+            'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so']),
+        ('SQLAlchemy==1.3.20', [
+            'sqlalchemy/__init__.py',
+            'sqlalchemy/cresultproxy.cpython-*-x86_64-linux-gnu.so']),
+        ('numpy==1.19.4', [
+            'numpy/__init__.py',
+            'numpy/core/_struct_ufunc_tests.cpython-*-x86_64-linux-gnu.so']),
+        ('cryptography==3.3.1', [
+            'cryptography/__init__.py',
+            'cryptography/hazmat/bindings/_openssl.abi3.so']),
+        ('Jinja2==2.11.2', ['jinja2/__init__.py']),
+        ('Mako==1.1.3', ['mako/__init__.py']),
+        ('MarkupSafe==1.1.1', ['markupsafe/__init__.py']),
+        ('scipy==1.5.4', [
+            'scipy/__init__.py',
+            'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so']),
+        ('cffi==1.14.5', [
+            '_cffi_backend.cpython-*-x86_64-linux-gnu.so']),
+        ('pygit2==1.5.0', [
+            'pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so']),
+        ('pyrsistent==0.17.3', [
+            'pyrsistent/__init__.py']),
+    ]
+)
+def test_package_install_smoke_tests(package, contents, runner, app_skeleton):
+    assert_can_package_dependency(runner, app_skeleton, package, contents)
 
+
+def assert_can_package_dependency(
+        runner, app_skeleton, package, contents):
+    req = os.path.join(app_skeleton, 'requirements.txt')
+    with open(req, 'w') as f:
+        f.write('%s\n' % package)
+    cli_factory = factory.CLIFactory(app_skeleton)
+    package_output_location = os.path.join(app_skeleton, 'pkg')
+    result = runner.invoke(
+        cli.package, [package_output_location],
+        obj={'project_dir': app_skeleton,
+             'debug': False,
+             'factory': cli_factory})
+    assert result.exit_code == 0
+    assert result.output.strip() == 'Creating deployment package.'
+    package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
+    package_file = ZipFile(package_path)
+    package_content = package_file.namelist()
+    for content in contents:
+        assert any(fnmatch.fnmatch(filename, content)
+                   for filename in package_content), (
+                       "No match found for %s" % content)
+
+
+class TestPackage(object):
     def test_can_package_with_dashes_in_name(self, runner, app_skeleton,
                                              no_local_config):
-        self.assert_can_package_dependency(
+        assert_can_package_dependency(
             runner,
             app_skeleton,
             'googleapis-common-protos==1.5.2',
@@ -76,7 +119,7 @@ class TestPackage(object):
 
     def test_can_package_simplejson(self, runner, app_skeleton,
                                     no_local_config):
-        self.assert_can_package_dependency(
+        assert_can_package_dependency(
             runner,
             app_skeleton,
             'simplejson==3.17.0',
@@ -89,7 +132,7 @@ class TestPackage(object):
                                     no_local_config):
         # SQLAlchemy is used quite often with Chalice so we want to ensure
         # we can package it correctly.
-        self.assert_can_package_dependency(
+        assert_can_package_dependency(
             runner,
             app_skeleton,
             'SQLAlchemy==1.3.13',
@@ -101,7 +144,7 @@ class TestPackage(object):
     @pytest.mark.skipif(sys.version_info[0] == 2,
                         reason='pandas==1.0.3 is only suported on py3.')
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        self.assert_can_package_dependency(
+        assert_can_package_dependency(
             runner,
             app_skeleton,
             'pandas==1.0.3',

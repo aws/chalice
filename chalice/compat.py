@@ -7,6 +7,9 @@ from typing import Dict, Any  # noqa
 from six import StringIO
 
 
+STRING_TYPES = six.string_types
+
+
 def pip_import_string():
     # type: () -> str
     import pip
@@ -24,7 +27,7 @@ def pip_import_string():
         return 'from pip._internal import main'
     elif (19, 3) <= pip_major_minor < (20, 0):
         return 'from pip._internal.main import main'
-    elif (20, 0) <= pip_major_minor < (21, 0):
+    elif (20, 0) <= pip_major_minor < (22, 0):
         # More changes! https://github.com/pypa/pip/issues/7498
         return 'from pip._internal.cli.main import main'
     raise RuntimeError("Unknown import string for pip version: %s"

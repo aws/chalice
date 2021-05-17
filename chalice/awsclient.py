@@ -25,7 +25,7 @@ import re
 import uuid
 from collections import OrderedDict
 from typing import Any, Optional, Dict, Callable, List, Iterator, Iterable, \
-    Sequence, IO  # noqa
+    Sequence, IO, Tuple  # noqa
 
 import botocore.session  # noqa
 from botocore.loaders import create_loader
@@ -405,7 +405,18 @@ class TypedAWSClient(object):
             )
         if layers is not None:
             kwargs['Layers'] = layers
-        return self._create_lambda_function(kwargs)
+        arn, state = self._create_lambda_function(kwargs)
+        # Avoid the GetFunctionConfiguration call unless
+        # we're not immediately active.
+        if state != 'Active':
+            self._wait_for_active(function_name)
+        return arn
+
+    def _wait_for_active(self, function_name):
+        # type: (str) -> None
+        client = self._client('lambda')
+        waiter = client.get_waiter('function_active')
+        waiter.wait(FunctionName=function_name)
 
     def create_api_mapping(self,
                            domain_name,  # type: str
@@ -559,12 +570,13 @@ class TypedAWSClient(object):
         return domain_name
 
     def _create_lambda_function(self, api_args):
-        # type: (Dict[str, Any]) -> str
+        # type: (Dict[str, Any]) -> Tuple[str, str]
         try:
-            return self._call_client_method_with_retries(
+            result = self._call_client_method_with_retries(
                 self._client('lambda').create_function,
                 api_args, max_attempts=self.LAMBDA_CREATE_ATTEMPTS,
-            )['FunctionArn']
+            )
+            return result['FunctionArn'], result['State']
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(
                 api_args['FunctionName'],
@@ -888,7 +900,7 @@ class TypedAWSClient(object):
         # type: (str, str) -> Dict[str, Any]
         lambda_client = self._client('lambda')
         try:
-            return lambda_client.update_function_code(
+            result = lambda_client.update_function_code(
                 FunctionName=function_name, ZipFile=zip_contents)
         except _REMOTE_CALL_ERRORS as e:
             context = LambdaErrorContext(
@@ -897,6 +909,15 @@ class TypedAWSClient(object):
                 len(zip_contents)
             )
             raise self._get_lambda_code_deployment_error(e, context)
+        if result['LastUpdateStatus'] != 'Successful':
+            self._wait_for_function_update(function_name)
+        return result
+
+    def _wait_for_function_update(self, function_name):
+        # type: (str) -> None
+        client = self._client('lambda')
+        waiter = client.get_waiter('function_updated')
+        waiter.wait(FunctionName=function_name)
 
     def put_function_concurrency(self, function_name,
                                  reserved_concurrent_executions):
@@ -946,12 +967,18 @@ class TypedAWSClient(object):
         if layers is not None:
             kwargs['Layers'] = layers
         if kwargs:
-            kwargs['FunctionName'] = function_name
-            lambda_client = self._client('lambda')
-            self._call_client_method_with_retries(
-                lambda_client.update_function_configuration, kwargs,
-                max_attempts=self.LAMBDA_CREATE_ATTEMPTS
-            )
+            self._do_update_function_config(function_name, kwargs)
+
+    def _do_update_function_config(self, function_name, kwargs):
+        # type: (str, Dict[str, Any]) -> None
+        kwargs['FunctionName'] = function_name
+        lambda_client = self._client('lambda')
+        result = self._call_client_method_with_retries(
+            lambda_client.update_function_configuration, kwargs,
+            max_attempts=self.LAMBDA_CREATE_ATTEMPTS
+        )
+        if result['LastUpdateStatus'] != 'Successful':
+            self._wait_for_function_update(function_name)
 
     def _update_function_tags(self, function_arn, requested_tags):
         # type: (str, Dict[str, str]) -> None

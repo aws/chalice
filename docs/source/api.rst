@@ -143,6 +143,9 @@ Chalice
       :param execution_role: An optional IAM role to specify when invoking
         the Lambda function associated with the built-in authorizer.
 
+      :param header: The header where the auth token will be specified.
+        The default is ``Authorization``
+
    .. method:: schedule(expression, name=None)
 
       Register a scheduled event that's invoked on a regular schedule.
@@ -279,7 +282,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_sqs_message(queue, batch_size=1, name=None)
+   .. method:: on_sqs_message(queue, batch_size=1, name=None, queue_arn=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever a message is published to the specified SQS queue.
@@ -325,6 +328,12 @@ Chalice
         with the chalice app name as well as the stage name to create the
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
+
+      :param queue_arn: The ARN of the SQS queue you want to subscribe to.
+        This argument is mutually exclusive with the ``queue`` parameter.
+        This is useful if you already know the exact ARN or when integrating
+        with the AWS CDK to create your SQS queue.
+
 
    .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None)
 
@@ -1803,3 +1812,92 @@ Testing
   .. attribute:: payload
 
      The response payload of Lambda invocation.
+
+
+.. _cdk-api:
+
+AWS CDK
+=======
+
+The Chalice CDK construct is available in the ``chalice.cdk`` namespace.
+For more details on using the AWS CDK with Chalice, see :doc:`tutorials/cdk`.
+
+.. code-block:: python
+
+   from chalice.cdk import Chalice
+
+.. class:: Chalice(scope, id, source_dir, stage_config=None, preserve_logical_ids=True, \*\*kwargs)
+
+   A test client used to write tests for Chalice apps.  It allows you to
+
+   :param scope: The CDK scope that the construct is created within.
+   :param str id: The identifier for the construct.  Must be unique within the
+       scope in which it's created.
+   :param str source_dir: Path to Chalice application source code.
+   :param dict stage_config: Chalice stage configuration.
+       The configuration object should have the same structure as Chalice
+       JSON stage configuration.
+   :param bool preserve_logical_ids: Whether the resources should have
+       the same logical IDs in the resulting CDK template as they did in
+       the original CloudFormation template file. If you're vending a
+       Construct using cdk-chalice, make sure to pass this as ``False``.
+       Note: regardless of whether this option is true or false, the
+       :attr:`sam_template`'s ``get_resource`` and related methods always
+       uses the original logical ID of the resource/element, as specified
+       in the template file.
+   :raises `ChaliceError`: Error packaging the Chalice application.
+
+   .. code-block:: python
+
+      chalice = Chalice(
+          self, 'ChaliceApp', source_dir='../runtime',
+          stage_config={
+              'environment_variables': {
+                  'MY_ENV_VAR': 'FOO'
+              }
+          }
+      )
+
+
+   .. method:: get_resource(resource_name)
+
+      Returns a low-level CfnResource from the resources in a Chalice app with
+      the given resource name.  The resource name corresponds to the logical ID
+      of the underlying resource in the SAM template.  Any modifications
+      performed on that resource will be reflected in the resulting CDK
+      template.
+
+      :param str resource_name: The logical ID of the resource in the SAM template.
+      :rtype: aws_cdk.cdk.CfnResource
+
+   .. method:: get_role(resource_name)
+
+      Returns an ``IRole`` for an underlying SAM template resource.  This is useful
+      if you want to grant additional permissions to an IAM role constructed by Chalice.
+
+      .. code-block:: python
+
+        dynamodb_table = dynamodb.Table(...)
+        chalice = Chalice(scope, 'ChaliceApp', ....)
+        dynamodb_table.grant_read_write_data(chalice.get_role('DefaultRole'))
+
+      :param str resource_name: The logical ID of the resource in the SAM template.
+      :rtype: aws_cdk.aws_iam.IRole
+
+   .. method:: get_function(resource_name)
+
+      Returns an ``IRole`` for an underlying SAM template resource.
+
+      :param str resource_name: The logical ID of the resource in the SAM template.
+      :rtype: aws_cdk.aws_lambda.IFunction
+
+   .. method:: add_environment_variable(key, value, function_name)
+
+      Convenience function to add environment variables to a single Lambda
+      function constructed by Chalice.  You can also add environment variables
+      to Lambda functions using the ``stage_config`` parameter when creating the
+      ``Chalice()`` construct.
+
+      :param str key: The environment variable key name.
+      :param str value: The value of the environment variable.
+      :param str function_name: The logical ID of the Lambda function resource.

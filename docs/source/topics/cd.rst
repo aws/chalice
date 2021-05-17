@@ -198,7 +198,7 @@ you to configure how to connect your GitHub repository with your CodePipeline.
 
 You must store your OAuth token that enables access to a GitHub repository
 in AWS Secrets Manager.  You then specify the secret name/id and the JSON
-key name as CloudFormation parameters.  This values default to a secret
+key name as CloudFormation parameters.  These values default to a secret
 name of ``GithubRepoAccess`` and a JSON key name of ``OAuthToken``.
 
 Below is an example of how to configure a GitHub repository as the
@@ -223,7 +223,7 @@ token you created.  Next we can create the secret using this command::
 
 Now we can generate our deployment pipeline::
 
-    $ aws generate-pipeline --pipeline-version v2 \
+    $ chalice generate-pipeline --pipeline-version v2 \
       --source github --buildspec-file buildspec.yml pipeline.json
 
 This will create two files, a ``pipeline.json`` file containing our
@@ -254,5 +254,5 @@ creating your secret in Secrets Manager.
       GithubRepoName=repo-name \
       --capabilities CAPABILITY_IAM
 
-We've now created a dpeloyment pipeline that will automatically deploy our
+We've now created a deployment pipeline that will automatically deploy our
 Chalice app whenever we push to our GitHub repository.
