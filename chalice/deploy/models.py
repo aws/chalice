@@ -278,7 +278,8 @@ class RestAPI(ManagedModel):
     xray = attrib(default=False)                 # type: bool
     policy = attrib(default=None)                # type: Opt[IAMPolicy]
     authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
-    domain_name = attrib(default=None)    # type: Opt[DomainName]
+    domain_name = attrib(default=None)           # type: Opt[DomainName]
+    vpce_ids = attrib(default=None)              # type: Opt[List[str]]
 
     def dependencies(self):
         # type: () -> List[Model]
