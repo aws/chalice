@@ -168,6 +168,11 @@ class ApplicationGraphBuilder(object):
                 filename=os.path.join(
                     config.project_dir, '.chalice', policy_path))
 
+        vpce_ids = None
+        if config.api_gateway_endpoint_vpce:
+            vpce = config.api_gateway_endpoint_vpce
+            vpce_ids = [vpce] if isinstance(vpce, str) else vpce
+
         custom_domain_name = None
         if config.api_gateway_custom_domain:
             custom_domain_name = self._create_custom_domain_name(
@@ -188,6 +193,7 @@ class ApplicationGraphBuilder(object):
             policy=policy,
             domain_name=custom_domain_name,
             xray=config.xray_enabled,
+            vpce_ids=vpce_ids,
         )
 
     def _get_default_private_api_policy(self, config):

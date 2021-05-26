@@ -40,12 +40,20 @@ class SwaggerGenerator(object):
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
         self._add_resource_policy(api, rest_api)
+        self._add_vpc_endpoint(api, rest_api)
         return api
 
     def _add_resource_policy(self, api, rest_api):
         # type: (Dict[str, Any], Optional[RestAPI]) -> None
         if rest_api and rest_api.policy:
             api['x-amazon-apigateway-policy'] = rest_api.policy.document
+
+    def _add_vpc_endpoint(self, api, rest_api):
+        # type: (Dict[str, Any], Optional[RestAPI]) -> None
+        if rest_api and rest_api.vpce_ids:
+            api['x-amazon-apigateway-endpoint-configuration'] = {
+                "vpcEndpointIds": rest_api.vpce_ids
+            }
 
     def _add_binary_types(self, api, app):
         # type: (Dict[str, Any], Chalice) -> None

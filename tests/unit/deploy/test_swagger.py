@@ -865,6 +865,23 @@ def test_can_custom_resource_policy(sample_app, swagger_gen):
     }
 
 
+def test_can_vpce(sample_app, swagger_gen):
+    rest_api = RestAPI(
+        resource_name='dev',
+        swagger_doc={},
+        lambda_function=None,
+        minimum_compression="",
+        api_gateway_stage="xyz",
+        endpoint_type="PRIVATE",
+        vpce_ids=["vpce-12346", "vpce-abc123"],
+    )
+
+    doc = swagger_gen.generate_swagger(sample_app, rest_api)
+    assert doc['x-amazon-apigateway-endpoint-configuration'] == {
+        "vpcEndpointIds": ["vpce-12346", "vpce-abc123"]
+    }
+
+
 def test_can_auto_resource_policy_with_cfn(sample_app):
     swagger_gen = CFNSwaggerGenerator()
     rest_api = RestAPI(
