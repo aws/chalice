@@ -577,4 +577,9 @@ class CaseInsensitiveMapping(Mapping):
     def __repr__(self) -> str: ...
 
 
+class WebsocketEvent(BaseLambdaEvent):
+    connection_id = ... # type: str
+    body = ... # type: str
+
+
 unquote_str = ... # type: Callable[..., Any]
