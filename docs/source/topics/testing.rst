@@ -179,7 +179,7 @@ You can test your REST API with the Chalice test client using the
    app = Chalice(app_name="testclient")
 
    @app.route('/')
-   def index()
+   def index():
        return {'hello': 'world'}
 
 
