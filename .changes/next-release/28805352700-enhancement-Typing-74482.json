@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Typing",
+  "description": "Add missing WebsocketEvent type information (#1746)"
+}
