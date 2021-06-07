@@ -793,12 +793,12 @@ class TerraformGenerator(TemplateGenerator):
         template = {
             'resource': {},
             'terraform': {
-                'required_version': '> 0.11.0, < 0.15.0'
+                'required_version': '> 0.11.0, < 0.16.0'
             },
             'provider': {
                 'template': {'version': '~> 2'},
                 'aws': {'version': '>= 2, < 4'},
-                'null': {'version': '~> 2'},
+                'null': {'version': '>= 2, < 4'},
             },
             'data': {
                 'aws_caller_identity': {'chalice': {}},
