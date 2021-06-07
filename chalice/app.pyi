@@ -578,6 +578,8 @@ class CaseInsensitiveMapping(Mapping):
 
 
 class WebsocketEvent(BaseLambdaEvent):
+    domain_name = ... # type: str
+    stage = ... # type: str
     connection_id = ... # type: str
     body = ... # type: str
 
