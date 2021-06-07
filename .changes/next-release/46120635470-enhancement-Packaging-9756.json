@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Packaging",
+  "description": "Add support for Terraform v0.15 (#1725)"
+}
