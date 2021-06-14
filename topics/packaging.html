@@ -167,7 +167,9 @@ Specifically all pure python packages as well as all packages that upload
 wheel files for the <code class="docutils literal notranslate"><span class="pre">manylinux1_x86_64</span></code> platform will be automatically
 installable.</li>
 <li><strong>vendor/</strong> - The <em>contents</em> of this directory are automatically added to
-the your deployment package and its location will depend</li>
+your deployment package and its location in your Lambda functions will
+depend on whether you are using automatic Lambda Layers, described in the
+<a class="reference internal" href="#package-auto-layers"><span class="std std-ref">Automatic Lambda Layers</span></a> section.</li>
 </ul>
 <p>Chalice will also check for an optional <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory in the project
 root directory.  The contents of this directory are automatically included in
@@ -185,7 +187,7 @@ if you want better performance you can vendor a version that is compiled.</li>
 <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code>, and dependencies are either specified in <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>
 or placed in the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory.</p>
 <div class="section" id="automatic-lambda-layers">
-<h3>Automatic Lambda Layers<a class="headerlink" href="#automatic-lambda-layers" title="Permalink to this headline">¶</a></h3>
+<span id="package-auto-layers"></span><h3>Automatic Lambda Layers<a class="headerlink" href="#automatic-lambda-layers" title="Permalink to this headline">¶</a></h3>
 <p>By default, Chalice will create a single zip file that contains all the
 code needed to run your application.</p>
 <p>You can set the <a class="reference internal" href="configfile.html#automatic-layer-option"><span class="std std-ref">automatic_layer</span></a> in your <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>
