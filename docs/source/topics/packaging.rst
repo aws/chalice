@@ -52,7 +52,9 @@ There are two options for handling python package dependencies:
   wheel files for the ``manylinux1_x86_64`` platform will be automatically
   installable.
 * **vendor/** - The *contents* of this directory are automatically added to
-  the your deployment package and its location will depend
+  your deployment package and its location in your Lambda functions will
+  depend on whether you are using automatic Lambda Layers, described in the
+  :ref:`package-auto-layers` section.
 
 Chalice will also check for an optional ``vendor/`` directory in the project
 root directory.  The contents of this directory are automatically included in
@@ -69,6 +71,8 @@ specific examples).  The ``vendor/`` directory is helpful in these scenarios:
 As a general rule of thumb, code that you write goes in either ``app.py`` or
 ``chalicelib/``, and dependencies are either specified in ``requirements.txt``
 or placed in the ``vendor/`` directory.
+
+.. _package-auto-layers:
 
 Automatic Lambda Layers
 ~~~~~~~~~~~~~~~~~~~~~~~
