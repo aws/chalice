@@ -897,6 +897,7 @@ class TerraformGenerator(TemplateGenerator):
             'action': 'lambda:InvokeFunction',
             'function_name': self._fref(resource.lambda_function),
             'principal': self._options.service_principal('s3'),
+            'source_account': '${data.aws_caller_identity.chalice.account_id}',
             'source_arn': ('arn:${data.aws_partition.chalice.partition}:'
                            's3:::%s' % resource.bucket)
         }

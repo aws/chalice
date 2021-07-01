@@ -642,6 +642,8 @@ class TestTerraformTemplate(TemplateTestBase):
                    'action': 'lambda:InvokeFunction',
                    'function_name': '${aws_lambda_function.handler.arn}',
                    'principal': 's3.amazonaws.com',
+                   'source_account': (
+                       '${data.aws_caller_identity.chalice.account_id}'),
                    'source_arn': (
                        'arn:${data.aws_partition.chalice.partition}:s3:::foo'),
                    'statement_id': 'handler-s3event'
