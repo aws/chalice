@@ -877,7 +877,8 @@ class PlanStage(object):
             models.APICall(
                 method_name='add_permission_for_s3_event',
                 params={'bucket': resource.bucket,
-                        'function_arn': function_arn},
+                        'function_arn': function_arn,
+                        'account_id': Variable('account_id')},
             ),
             (models.APICall(
                 method_name='connect_s3_bucket_to_lambda',

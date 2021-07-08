@@ -819,6 +819,7 @@ class TestPlanS3Events(BasePlannerTests):
                 params={
                     'bucket': 'mybucket',
                     'function_arn': Variable('function_name_lambda_arn'),
+                    'account_id': Variable('account_id'),
                 },
             )
         )
