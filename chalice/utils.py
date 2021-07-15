@@ -65,9 +65,9 @@ def remove_stage_from_deployed_values(key, filename):
 
     try:
         del final_values[key]
-        with open(filename, 'wb') as f2:
+        with open(filename, 'wb') as outfile:
             data = serialize_to_json(final_values)
-            f2.write(data.encode('utf-8'))
+            outfile.write(data.encode('utf-8'))
     except KeyError:
         # If they key didn't exist then there is nothing to remove.
         pass
@@ -85,9 +85,9 @@ def record_deployed_values(deployed_values, filename):
         with open(filename, 'r') as f:
             final_values = json.load(f)
     final_values.update(deployed_values)
-    with open(filename, 'wb') as f2:
+    with open(filename, 'wb') as outfile:
         data = serialize_to_json(final_values)
-        f2.write(data.encode('utf-8'))
+        outfile.write(data.encode('utf-8'))
 
 
 def serialize_to_json(data):
