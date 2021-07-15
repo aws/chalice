@@ -118,8 +118,9 @@ class ChaliceZipFile(zipfile.ZipFile):
         super(ChaliceZipFile, self).__init__(*args, **kwargs)
 
     # pylint: disable=W0221
-    def write(self, filename, arcname=None, compress_type=None):
-        # type: (StrPath, Optional[StrPath], Optional[int]) -> None
+    def write(self, filename, arcname=None, compress_type=None,
+              compresslevel=None):
+        # type: (StrPath, Optional[StrPath], OptInt, OptInt) -> None
         # Only supports files, py2.7 and 3 have different signatures.
         # We know that in our packager code we never call write() on
         # directories.
