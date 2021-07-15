@@ -10,7 +10,7 @@ import sys
 import tarfile
 from datetime import datetime, timedelta
 import subprocess
-
+from os import PathLike  # noqa
 
 from collections import OrderedDict # noqa
 import click
@@ -24,8 +24,9 @@ from dateutil.tz import tzutc
 from chalice.constants import WELCOME_PROMPT
 
 OptInt = Optional[int]
-OptStr = Optional[str]
+OptBytes = Optional[bytes]
 EnvVars = MutableMapping
+StrPath = Union[str, 'PathLike[str]']
 
 
 class AbortedError(Exception):
@@ -64,9 +65,9 @@ def remove_stage_from_deployed_values(key, filename):
 
     try:
         del final_values[key]
-        with open(filename, 'wb') as f:
+        with open(filename, 'wb') as f2:
             data = serialize_to_json(final_values)
-            f.write(data.encode('utf-8'))
+            f2.write(data.encode('utf-8'))
     except KeyError:
         # If they key didn't exist then there is nothing to remove.
         pass
@@ -84,9 +85,9 @@ def record_deployed_values(deployed_values, filename):
         with open(filename, 'r') as f:
             final_values = json.load(f)
     final_values.update(deployed_values)
-    with open(filename, 'wb') as f:
+    with open(filename, 'wb') as f2:
         data = serialize_to_json(final_values)
-        f.write(data.encode('utf-8'))
+        f2.write(data.encode('utf-8'))
 
 
 def serialize_to_json(data):
@@ -118,7 +119,7 @@ class ChaliceZipFile(zipfile.ZipFile):
 
     # pylint: disable=W0221
     def write(self, filename, arcname=None, compress_type=None):
-        # type: (Text, Optional[Text], Optional[int]) -> None
+        # type: (StrPath, Optional[StrPath], Optional[int]) -> None
         # Only supports files, py2.7 and 3 have different signatures.
         # We know that in our packager code we never call write() on
         # directories.
@@ -127,7 +128,7 @@ class ChaliceZipFile(zipfile.ZipFile):
             self.writestr(zinfo, f.read())
 
     def _create_zipinfo(self, filename, arcname, compress_type):
-        # type: (Text, Optional[Text], Optional[int]) -> zipfile.ZipInfo
+        # type: (StrPath, Optional[StrPath], Optional[int]) -> zipfile.ZipInfo
         # The main thing that prevents deterministic zip file generation
         # is that the mtime of the file is included in the zip metadata.
         # We don't actually care what the mtime is when we run on lambda,
@@ -301,7 +302,7 @@ class OSUtils(object):
         return p
 
     def mtime(self, path):
-        # type: (str) -> int
+        # type: (str) -> float
         return os.stat(path).st_mtime
 
     def stat(self, path):
@@ -368,11 +369,11 @@ class UI(object):
 
 class PipeReader(object):
     def __init__(self, stream):
-        # type: (IO[str]) -> None
+        # type: (IO[bytes]) -> None
         self._stream = stream
 
     def read(self):
-        # type: () -> OptStr
+        # type: () -> OptBytes
         if not self._stream.isatty():
             return self._stream.read()
         return None

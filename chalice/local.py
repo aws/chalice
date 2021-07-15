@@ -176,7 +176,7 @@ class LambdaEventConverter(object):
         return headers.get('content-type', '') in self._binary_types
 
     def create_lambda_event(self, method, path, headers, body=None):
-        # type: (str, str, Dict[str, str], str) -> EventType
+        # type: (str, str, Dict[str, str], bytes) -> EventType
         view_route = self._route_matcher.match_route(path)
         event = {
             'requestContext': {
@@ -472,7 +472,7 @@ class LocalGateway(object):
         )
 
     def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[str]) -> EventType
+        # type: (str, str, HeaderType, Optional[bytes]) -> EventType
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
             body=body,
@@ -485,7 +485,7 @@ class LocalGateway(object):
         return 'OPTIONS' in self._app_object.routes[route_key]
 
     def handle_request(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[str]) -> ResponseType
+        # type: (str, str, HeaderType, Optional[bytes]) -> ResponseType
         lambda_context = self._generate_lambda_context()
         try:
             lambda_event = self._generate_lambda_event(
@@ -586,7 +586,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
             self, request, client_address, server)  # type: ignore
 
     def _parse_payload(self):
-        # type: () -> Tuple[HeaderType, Optional[str]]
+        # type: () -> Tuple[HeaderType, Optional[bytes]]
         body = None
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:

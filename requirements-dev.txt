@@ -4,20 +4,14 @@ flake8==3.7.9
 tox==3.0.0
 wheel==0.26.0
 doc8==0.8.1
-# The latest version of pylint only works on python3.
-pylint==2.4.4 ; python_version >= '3.6'
-# For python2, there are a few bugs in the latest versions of 1.x,
-# so we're locking to a specific version that we know works.
-pylint==1.9.3 ; python_version <= '2.7'
-astroid==1.6.5 ; python_version <= '2.7'
+pylint==2.4.4
 pytest-cov==2.8.1
 pydocstyle==2.0.0
 
 # Test requirements
-pytest==5.3.1 ; python_version >= '3.6'
-pytest==4.6.7 ; python_version <= '2.7'
+pytest==5.3.1
 py==1.10.0
-pygments==2.7.4; python_version >= '3.6'
+pygments==2.7.4
 mock==2.0.0
 requests==2.20.0
 boto3==1.15.16
@@ -27,5 +21,5 @@ hypothesis==4.43.1
 # the top level requirements.
 pluggy==0.12
 
-mypy==0.812; python_version >= '3.6'
+mypy==0.812
 mypy-extensions==0.4.3

@@ -542,10 +542,11 @@ class SymbolTableTypeInfer(ast.NodeVisitor):
             self._symbol_table.register_ast_node_for_symbol(node.name, node)
 
     def visit_AsyncFunctionDef(self, node):
-        # type: (ast.FunctionDef) -> None
+        # type: (ast.AsyncFunctionDef) -> None
         # this type is actually wrong but we can't use the actual type as it's
         # not available in python 2
-        self.visit_FunctionDef(node)
+        converted = cast(ast.FunctionDef, node)
+        self.visit_FunctionDef(converted)
 
     def visit_ClassDef(self, node):
         # type: (ast.ClassDef) -> None

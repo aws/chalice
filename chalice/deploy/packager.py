@@ -12,7 +12,7 @@ from zipfile import ZipFile  # noqa
 
 from typing import Any, Set, List, Optional, Tuple, Iterable, Callable  # noqa
 from typing import Iterator  # noqa
-from typing import Dict, MutableMapping, AnyStr  # noqa
+from typing import Dict, MutableMapping, cast  # noqa
 from chalice.compat import pip_import_string
 from chalice.compat import pip_no_compile_c_env_vars
 from chalice.compat import pip_no_compile_c_shim
@@ -175,8 +175,8 @@ class BaseLambdaDeploymentPackager(object):
         if not self._osutils.file_exists(requirements_filename):
             contents = b''
         else:
-            contents = self._osutils.get_file_contents(
-                requirements_filename, binary=True)
+            contents = cast(bytes, self._osutils.get_file_contents(
+                requirements_filename, binary=True))
         h = hashlib.md5(contents)
         for filename, _ in self._iter_app_filenames(project_dir):
             with self._osutils.open(filename, 'rb') as f:
@@ -245,7 +245,7 @@ class BaseLambdaDeploymentPackager(object):
         self._osutils.move(tmpzip, deployment_package_filename)
 
     def _needs_latest_version(self, filename):
-        # type: (AnyStr) -> bool
+        # type: (str) -> bool
         return filename == 'app.py' or filename.startswith(
             ('chalicelib/', 'chalice/'))
 
@@ -411,8 +411,8 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
         if not self._osutils.file_exists(requirements_filename):
             contents = b''
         else:
-            contents = self._osutils.get_file_contents(
-                requirements_filename, binary=True)
+            contents = cast(bytes, self._osutils.get_file_contents(
+                requirements_filename, binary=True))
         h = hashlib.md5(contents)
         vendor_dir = self._osutils.joinpath(project_dir, self._VENDOR_DIR)
         if self._osutils.directory_exists(vendor_dir):
