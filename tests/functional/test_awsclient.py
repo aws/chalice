@@ -19,8 +19,9 @@ from chalice.awsclient import LambdaClientError
 from chalice.awsclient import ReadTimeout
 
 
-def create_policy_statement(source_arn, service_name, statement_id):
-    return {
+def create_policy_statement(source_arn, service_name, statement_id,
+                            account_id=None):
+    policy_statement = {
         'Action': 'lambda:InvokeFunction',
         'Condition': {
             'ArnLike': {
@@ -32,6 +33,11 @@ def create_policy_statement(source_arn, service_name, statement_id):
         'Resource': 'function-arn',
         'Sid': statement_id,
     }
+    if account_id is not None:
+        policy_statement['Condition']['StringEquals'] = {
+            'AWS:SourceAccount': account_id,
+        }
+    return policy_statement
 
 
 def test_region_name_is_exposed(stubbed_session):
@@ -3256,12 +3262,13 @@ def test_add_permission_for_s3_event(stubbed_session):
         StatementId=stub.ANY,
         Principal='s3.amazonaws.com',
         SourceArn='arn:aws:s3:::mybucket',
+        SourceAccount='12345',
     ).returns({})
     stubbed_session.activate_stubs()
 
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.add_permission_for_s3_event(
-        'mybucket', 'function-arn')
+        'mybucket', 'function-arn', '12345')
     stubbed_session.verify_stubs()
 
 
@@ -3272,6 +3279,9 @@ def test_skip_if_permission_already_granted_to_s3(stubbed_session):
         'Statement': [{
             'Action': 'lambda:InvokeFunction',
             'Condition': {
+                'StringEquals': {
+                    'AWS:SourceAccount': '12345',
+                },
                 'ArnLike': {
                     'AWS:SourceArn': 'arn:aws:s3:::mybucket',
                 }
@@ -3288,7 +3298,7 @@ def test_skip_if_permission_already_granted_to_s3(stubbed_session):
     stubbed_session.activate_stubs()
     awsclient = TypedAWSClient(stubbed_session)
     awsclient.add_permission_for_s3_event(
-        'mybucket', 'function-arn')
+        'mybucket', 'function-arn', '12345')
     stubbed_session.verify_stubs()
 
 
@@ -3480,7 +3490,8 @@ def test_can_remove_s3_permission(stubbed_session):
         'Id': 'default',
         'Statement': [create_policy_statement('arn:aws:s3:::mybucket',
                                               service_name='s3',
-                                              statement_id='12345')],
+                                              statement_id='12345',
+                                              account_id='67890')],
         'Version': '2012-10-17'
     }
     lambda_stub = stubbed_session.stub('lambda')
@@ -3495,7 +3506,7 @@ def test_can_remove_s3_permission(stubbed_session):
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
     client.remove_permission_for_s3_event(
-        'mybucket', 'name')
+        'mybucket', 'name', '67890')
     stubbed_session.verify_stubs()
 
 

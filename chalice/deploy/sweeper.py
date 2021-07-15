@@ -11,6 +11,7 @@ from typing import ( # noqa
 
 from chalice.config import Config, DeployedResources  # noqa
 from chalice.deploy import models
+from chalice.deploy.planner import Variable
 from chalice.deploy.models import Instruction, StoreMultipleValue  # noqa
 
 MarkedResource = Dict[str, List[models.RecordResource]]
@@ -286,13 +287,18 @@ class ResourceSweeper(object):
         function_arn = resource_values['lambda_arn']
         return {
             'instructions': (
+                models.BuiltinFunction('parse_arn', [function_arn],
+                                       output_var='parsed_lambda_arn'),
+                models.JPSearch('account_id', input_var='parsed_lambda_arn',
+                                output_var='account_id'),
                 models.APICall(
                     method_name='disconnect_s3_bucket_from_lambda',
                     params={'bucket': bucket, 'function_arn': function_arn}
                 ),
                 models.APICall(
                     method_name='remove_permission_for_s3_event',
-                    params={'bucket': bucket, 'function_arn': function_arn}
+                    params={'bucket': bucket, 'function_arn': function_arn,
+                            'account_id': Variable('account_id')}
                 ),
             )
         }
