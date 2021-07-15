@@ -811,7 +811,23 @@ class TestPlanS3Events(BasePlannerTests):
             suffix=None,
             lambda_function=function,
         )
-        plan = self.determine_plan(bucket_event)
+        full_plan = self.determine_plan(bucket_event)
+        setup_plan, plan = full_plan[:4], full_plan[4:]
+        assert setup_plan[0:4] == [
+            models.BuiltinFunction(
+                'parse_arn', [Variable("function_name_lambda_arn")],
+                output_var='parsed_lambda_arn',
+            ),
+            models.JPSearch('account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
+            models.JPSearch('region',
+                            input_var='parsed_lambda_arn',
+                            output_var='region_name'),
+            models.JPSearch('partition',
+                            input_var='parsed_lambda_arn',
+                            output_var='partition')
+        ]
         self.assert_apicall_equals(
             plan[0],
             models.APICall(
@@ -2720,13 +2736,20 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         config = FakeConfig(deployed)
         self.execute(plan, config)
         assert plan == [
+            models.BuiltinFunction(
+                function_name='parse_arn', args=['lambda_arn'],
+                output_var='parsed_lambda_arn'),
+            models.JPSearch(expression='account_id',
+                            input_var='parsed_lambda_arn',
+                            output_var='account_id'),
             models.APICall(
                 method_name='disconnect_s3_bucket_from_lambda',
                 params={'bucket': 'mybucket', 'function_arn': 'lambda_arn'},
             ),
             models.APICall(
                 method_name='remove_permission_for_s3_event',
-                params={'bucket': 'mybucket', 'function_arn': 'lambda_arn'},
+                params={'bucket': 'mybucket', 'function_arn': 'lambda_arn',
+                        'account_id': Variable("account_id")}
             )
         ]
 
@@ -2794,7 +2817,8 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
             ),
             models.APICall(
                 method_name='remove_permission_for_s3_event',
-                params={'bucket': 'OLDBUCKET', 'function_arn': 'lambda_arn'},
+                params={'bucket': 'OLDBUCKET', 'function_arn': 'lambda_arn',
+                        'account_id': Variable('account_id')},
             ),
         ]
 
