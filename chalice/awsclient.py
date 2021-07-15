@@ -25,7 +25,7 @@ import re
 import uuid
 from collections import OrderedDict
 from typing import Any, Optional, Dict, Callable, List, Iterator, Iterable, \
-    Sequence, IO, Tuple  # noqa
+    Sequence, IO, Tuple, Union  # noqa
 
 import botocore.session  # noqa
 from botocore.loaders import create_loader
@@ -597,7 +597,7 @@ class TypedAWSClient(object):
         kwargs = {
             'FunctionName': name,
             'InvocationType': 'RequestResponse',
-        }
+        }  # type: Dict[str, Union[str, bytes]]
         if payload is not None:
             kwargs['Payload'] = payload
 
@@ -1218,7 +1218,7 @@ class TypedAWSClient(object):
     def get_sdk_download_stream(self, rest_api_id,
                                 api_gateway_stage=DEFAULT_STAGE_NAME,
                                 sdk_type='javascript'):
-        # type: (str, str, str) -> IO[str]
+        # type: (str, str, str) -> IO[bytes]
         """Generate an SDK for a given SDK.
 
         Returns a file like object that streams a zip contents for the

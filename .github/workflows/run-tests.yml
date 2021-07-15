@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [2.7, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -23,10 +23,6 @@ jobs:
           pip install -e .
       - name: Run PRCheck
         run: make prcheck
-        if: matrix.python-version != 2.7
-      - name: Run PRCheck-Py2
-        run: make prcheck-py2
-        if: matrix.python-version == 2.7
 #  Chalice works on windows, but there's some differences between
 #  the GitHub actions windows environment and our windows dev
 #  laptops that are causing certain tests to fail.  Once these
