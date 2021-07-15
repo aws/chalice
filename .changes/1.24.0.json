@@ -1,0 +1,30 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Python2.7",
+      "description": "Remove support for Python 2.7 (#1766)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Update Terraform packaging to support version 1.0 (#1757)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Typing",
+      "description": "Add missing WebsocketEvent type information (#1746)"
+    },
+    {
+      "type": "enhancement",
+      "category": "S3 events",
+      "description": "Add source account to Lambda permissions when configuring S3 events (#1635)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Packaging",
+      "description": "Add support for Terraform v0.15 (#1725)"
+    }
+  ]
+}

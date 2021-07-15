@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "S3 events",
-  "description": "Add source account to Lambda permissions when configuring S3 events (#1635)"
-}

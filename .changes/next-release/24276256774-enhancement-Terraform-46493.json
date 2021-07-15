@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Terraform",
-  "description": "Update Terraform packaging to support version 1.0 (#1757)"
-}

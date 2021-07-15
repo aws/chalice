@@ -1,5 +1,0 @@
-{
-  "type": "feature",
-  "category": "Python2.7",
-  "description": "Remove support for Python 2.7 (#1766)"
-}

@@ -2,6 +2,16 @@
 CHANGELOG
 =========
 
+1.24.0
+======
+
+* feature:Python2.7:Remove support for Python 2.7 (#1766)
+* enhancement:Terraform:Update Terraform packaging to support version 1.0 (#1757)
+* enhancement:Typing:Add missing WebsocketEvent type information (#1746)
+* enhancement:S3 events:Add source account to Lambda permissions when configuring S3 events (#1635)
+* enhancement:Packaging:Add support for Terraform v0.15 (#1725)
+
+
 1.23.0
 ======
 
