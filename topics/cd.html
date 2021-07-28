@@ -252,7 +252,7 @@ that does the following.</p>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sudo pip install -r requirements.txt</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">chalice package /tmp/packaged</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">aws cloudformation package --template-file</span>
-        <span class="l l-Scalar l-Scalar-Plain">tmp/packaged/sam.json --s3-bucket ${APP_S3_BUCKET}</span>
+        <span class="l l-Scalar l-Scalar-Plain">/tmp/packaged/sam.json --s3-bucket ${APP_S3_BUCKET}</span>
         <span class="l l-Scalar l-Scalar-Plain">--output-template-file transformed.yaml</span>
 <span class="nt">artifacts</span><span class="p">:</span>
   <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">zip</span>
