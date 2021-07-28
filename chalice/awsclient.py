@@ -729,9 +729,10 @@ class TypedAWSClient(object):
             updated_domain_name = self._update_domain_name_v2(kwargs)
         else:
             raise ValueError('Unsupported protocol value.')
-        resource_arn = 'arn:aws:apigateway:{region_name}:' \
+        resource_arn = 'arn:{partition}:apigateway:{region_name}:' \
                        ':/domainnames/{domain_name}'\
             .format(
+                partition=self.partition_name,
                 region_name=self.region_name,
                 domain_name=domain_name
             )

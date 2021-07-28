@@ -1309,6 +1309,77 @@ class TestUpdateDomainName(object):
         }
         stubbed_session.verify_stubs()
 
+    def test_update_domain_name_govcloud(self, stubbed_session):
+        stubbed_session.create_client(
+            'apigateway', region_name='us-gov-west-1')
+        apig = stubbed_session.stub('apigateway')
+        self._setup_expected_update_calls(apig)
+        # Verify we use the aws-us-gov partition in our ARN.
+        arn = (
+            'arn:aws-us-gov:apigateway:us-gov-west-1::/domainnames/test_domain'
+        )
+        stubbed_session.stub('apigatewayv2') \
+            .get_tags(ResourceArn=arn) \
+            .returns({
+                'Tags': {}
+            })
+        stubbed_session.activate_stubs()
+        awsclient = TypedAWSClient(stubbed_session)
+        awsclient.update_domain_name(
+            protocol='HTTP',
+            domain_name='test_domain',
+            endpoint_type='EDGE',
+            security_policy='TLS_1_0',
+            certificate_arn='certificate_arn',
+        )
+        stubbed_session.verify_stubs()
+
+    def _setup_expected_update_calls(self, apig):
+        apig.update_domain_name(
+            domainName='test_domain',
+            patchOperations=[
+                {
+                    'op': 'replace',
+                    'path': '/securityPolicy',
+                    'value': 'TLS_1_0',
+                },
+            ]
+        ).returns({
+            'domainName': 'test_domain',
+            'distributionHostedZoneId': 'hosted_zone_id',
+            'certificateArn': 'old_certificate_arn',
+            'distributionDomainName': 'dist_domain_name',
+            'endpointConfiguration': {
+                'types': [
+                    'EDGE',
+                ],
+            },
+            'domainNameStatus': 'AVAILABLE',
+            'securityPolicy': 'TLS_1_0'
+        })
+        apig.update_domain_name(
+            domainName='test_domain',
+            patchOperations=[
+                {
+                    'op': 'replace',
+                    'path': '/certificateArn',
+                    'value': 'certificate_arn',
+                }
+            ]
+        ).returns({
+            'domainName': 'test_domain',
+            'distributionHostedZoneId': 'hosted_zone_id',
+            'distributionDomainName': 'dist_domain_name',
+            'certificateArn': 'certificate_arn',
+            'endpointConfiguration': {
+                'types': [
+                    'EDGE',
+                ],
+            },
+            'domainNameStatus': 'AVAILABLE',
+            'securityPolicy': 'TLS_1_0'
+        })
+
     def test_update_domain_name_max_retries(self, stubbed_session):
         for _ in range(6):
             stubbed_session.stub('apigateway') \
