@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Websockets &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,10 +123,10 @@
                     </ul>
                     
                     
-  <div class="section" id="websockets">
+  <section id="websockets">
 <h1>Websockets<a class="headerlink" href="#websockets" title="Permalink to this headline">¶</a></h1>
 <div class="admonition warning">
-<p class="first admonition-title">Warning</p>
+<p class="admonition-title">Warning</p>
 <p>Websockets are considered an experimental API.  You’ll need to opt-in
 to this feature using the <code class="docutils literal notranslate"><span class="pre">WEBSOCKETS</span></code> feature flag:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="s1">&#39;myapp&#39;</span><span class="p">)</span>
@@ -135,12 +135,12 @@ to this feature using the <code class="docutils literal notranslate"><span class
 <span class="p">])</span>
 </pre></div>
 </div>
-<p class="last">See <a class="reference internal" href="experimental.html"><span class="doc">Experimental APIs</span></a> for more information.</p>
+<p>See <a class="reference internal" href="experimental.html"><span class="doc">Experimental APIs</span></a> for more information.</p>
 </div>
 <p>Chalice supports websockets through integration with an API Gateway Websocket
 API. If any of the decorators are present in a Chalice app, then an API
 Gateway Websocket API will be deployed and wired to Lambda Functions.</p>
-<div class="section" id="responding-to-websocket-events">
+<section id="responding-to-websocket-events">
 <h2>Responding to websocket events<a class="headerlink" href="#responding-to-websocket-events" title="Permalink to this headline">¶</a></h2>
 <p>In a Chalice app the websocket API is accessed through the three decorators
 <code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_message</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_disconnect</span></code>. These handle a new
@@ -177,8 +177,8 @@ for each of the events.</p>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> disconnected&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="sending-a-message-over-a-websocket">
+</section>
+<section id="sending-a-message-over-a-websocket">
 <h2>Sending a message over a websocket<a class="headerlink" href="#sending-a-message-over-a-websocket" title="Permalink to this headline">¶</a></h2>
 <p>To send a message to a websocket client Chalice, use the
 <a class="reference internal" href="../api.html#websocket-send"><span class="std std-ref">app.websocket_api.send()</span></a> method. This method will work in any
@@ -203,8 +203,8 @@ the same socket.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="../tutorials/index.html#websocket-tutorial"><span class="std std-ref">Websocket Tutorials</span></a> for completely worked example applications.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

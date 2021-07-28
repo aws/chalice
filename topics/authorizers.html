@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Authorization &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="authorization">
+  <section id="authorization">
 <h1>Authorization<a class="headerlink" href="#authorization" title="Permalink to this headline">¶</a></h1>
 <p>Chalice supports multiple mechanisms for authorization.  This topic
 covers how you can integrate authorization into your Chalice applications.</p>
@@ -138,7 +138,7 @@ Chalice app to use.</p>
 <p>Chalice also supports built-in authorizers, which allows Chalice to
 manage your custom authorizers as part of <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.  This is
 covered in the Built-in Authorizers section.</p>
-<div class="section" id="aws-iam-authorizer">
+<section id="aws-iam-authorizer">
 <h2>AWS IAM Authorizer<a class="headerlink" href="#aws-iam-authorizer" title="Permalink to this headline">¶</a></h2>
 <p>The IAM Authorizer allows you to control access to API Gateway with
 <a class="reference external" href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access_controlling.html">IAM permissions</a></p>
@@ -155,8 +155,8 @@ covered in the Built-in Authorizers section.</p>
 </div>
 <p>See the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/permissions.html">API Gateway documentation</a>
 for more information on controlling access to API Gateway with IAM permissions.</p>
-</div>
-<div class="section" id="amazon-cognito-user-pools">
+</section>
+<section id="amazon-cognito-user-pools">
 <h2>Amazon Cognito User Pools<a class="headerlink" href="#amazon-cognito-user-pools" title="Permalink to this headline">¶</a></h2>
 <p>In addition to using IAM roles and policies with the <a class="reference internal" href="../api.html#IAMAuthorizer" title="IAMAuthorizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">IAMAuthorizer</span></code></a> you
 can also use a <a class="reference external" href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html">Cognito user pools</a> to control who can access your Chalice
@@ -176,8 +176,8 @@ cognito user pool configured.</p>
 </div>
 <p>For more information about using Cognito user pools with API Gateway,
 see the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html">Use Amazon Cognito User Pools documentation</a>.</p>
-</div>
-<div class="section" id="custom-authorizers">
+</section>
+<section id="custom-authorizers">
 <h2>Custom Authorizers<a class="headerlink" href="#custom-authorizers" title="Permalink to this headline">¶</a></h2>
 <p>API Gateway also lets you write custom authorizers using a Lambda function.
 You can configure a Chalice route to use a pre-existing Lambda function as
@@ -198,8 +198,8 @@ you use the <code class="docutils literal notranslate"><span class="pre">CustomA
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="built-in-authorizers">
+</section>
+<section id="built-in-authorizers">
 <span id="builtin-authorizers"></span><h2>Built-in Authorizers<a class="headerlink" href="#built-in-authorizers" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">IAMAuthorizer</span></code>, <code class="docutils literal notranslate"><span class="pre">CognitoUserPoolAuthorizer</span></code>, and the
 <code class="docutils literal notranslate"><span class="pre">CustomAuthorizer</span></code> classes are all for cases where you have existing
@@ -313,8 +313,8 @@ without modification back to API Gateway.</p>
 <p>For more information on custom authorizers, see the
 <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html">Use API Gateway Custom Authorizers</a>
 page in the API Gateway user guide.</p>
-</div>
-<div class="section" id="scopes">
+</section>
+<section id="scopes">
 <h2>Scopes<a class="headerlink" href="#scopes" title="Permalink to this headline">¶</a></h2>
 <p>OAuth 2.0 and OpenID Connect (OIDC) scopes can be used to implement access
 controls in your Chalice app. Scopes are supported when using the Cognito
@@ -352,8 +352,8 @@ which is <code class="docutils literal notranslate"><span class="pre">resourceSe
 <p>Scopes can also be used with custom authorizers and built-in authorizers.
 These authorizers will need to inspect the access token to determine if access
 should be granted based on the scopes configured for the authorizer and route.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>AWS CloudFormation Support &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="aws-cloudformation-support">
+  <section id="aws-cloudformation-support">
 <h1>AWS CloudFormation Support<a class="headerlink" href="#aws-cloudformation-support" title="Permalink to this headline">¶</a></h1>
 <p>When you run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, chalice will deploy your application using the
 <a class="reference external" href="http://boto3.readthedocs.io/en/docs/">AWS SDK for Python</a>).  Chalice also
@@ -134,19 +134,19 @@ package that contains your application as well as a <a class="reference external
 Model (SAM)</a>
 template.  You can then use a tool like the AWS CLI, or any cloudformation
 deployment tools you use, to deploy your chalice application.</p>
-<div class="section" id="considerations">
+<section id="considerations">
 <h2>Considerations<a class="headerlink" href="#considerations" title="Permalink to this headline">¶</a></h2>
 <p>Using the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> command is useful when you don’t want to
 use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> to manage your deployments.  There’s several reasons
 why you might want to do this:</p>
 <ul class="simple">
-<li>You have pre-existing infrastructure and tooling set up to manage
-cloudformation stacks.</li>
-<li>You want to integrate with other cloudformation stacks to manage
+<li><p>You have pre-existing infrastructure and tooling set up to manage
+cloudformation stacks.</p></li>
+<li><p>You want to integrate with other cloudformation stacks to manage
 all your AWS resources, including resources outside of your chalice
-app.</li>
-<li>You’d like to integrate with <a class="reference external" href="https://aws.amazon.com/codepipeline/">AWS CodePipeline</a> to automatically deploy
-changes when you push to a git repo.</li>
+app.</p></li>
+<li><p>You’d like to integrate with <a class="reference external" href="https://aws.amazon.com/codepipeline/">AWS CodePipeline</a> to automatically deploy
+changes when you push to a git repo.</p></li>
 </ul>
 <p>Keep in mind that you can’t switch between <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
 <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code> + CloudFormation for deploying your app.</p>
@@ -154,8 +154,8 @@ changes when you push to a git repo.</li>
 your app, you won’t be able to switch back to <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.
 Running <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> would create an entirely new set of AWS
 resources (API Gateway Rest API, AWS Lambda function, etc).</p>
-</div>
-<div class="section" id="template-merge">
+</section>
+<section id="template-merge">
 <h2>Template Merge<a class="headerlink" href="#template-merge" title="Permalink to this headline">¶</a></h2>
 <p>It’s a common use case to need to modify a Chalice generated template
 before deployment. Often to inject extra resources, values, or
@@ -251,8 +251,8 @@ applications, and reference them from our Chalice-deployed functions. We can
 now rely on Chalice’s policy auto-generation to generate a policy that allows
 DynamoDB access, inject our own policy modifications through the same
 extras.json file, or specify a custom policy using the config file.</p>
-</div>
-<div class="section" id="example">
+</section>
+<section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <p>In this example, we’ll create a chalice app and deploy it using
 the AWS CLI.</p>
@@ -334,8 +334,8 @@ Content-Type: application/json
 }
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
                     

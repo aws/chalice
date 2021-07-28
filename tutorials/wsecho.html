@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Echo Server Example &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="echo-server-example">
+  <section id="echo-server-example">
 <h1>Echo Server Example<a class="headerlink" href="#echo-server-example" title="Permalink to this headline">¶</a></h1>
 <p>An echo server is a simple server that echos any message it receives back to
 the client that sent it.</p>
@@ -148,49 +148,29 @@ next script will need it as well:</p>
 <p>Next replace the contents of the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file with the code below.</p>
 <div class="literal-block-wrapper docutils container" id="id1">
 <div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
-<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
-
-<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
-<span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">WebsocketDisconnectedError</span>
-
-<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;echo-server&quot;</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
-<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
-    <span class="s1">&#39;WEBSOCKETS&#39;</span>
-<span class="p">])</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
-<span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
-            <span class="n">connection_id</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="k">except</span> <span class="n">WebsocketDisconnectedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">pass</span>  <span class="c1"># Disconnected so we can&#39;t send the message back.</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+<span class="linenos"> 4</span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">WebsocketDisconnectedError</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;echo-server&quot;</span><span class="p">)</span>
+<span class="linenos"> 7</span><span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+<span class="linenos"> 8</span><span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+<span class="linenos"> 9</span>    <span class="s1">&#39;WEBSOCKETS&#39;</span>
+<span class="linenos">10</span><span class="p">])</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span><span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_message</span><span class="p">()</span>
+<span class="linenos">14</span><span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<span class="linenos">15</span>    <span class="k">try</span><span class="p">:</span>
+<span class="linenos">16</span>        <span class="n">app</span><span class="o">.</span><span class="n">websocket_api</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+<span class="linenos">17</span>            <span class="n">connection_id</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">,</span>
+<span class="linenos">18</span>            <span class="n">message</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
+<span class="linenos">19</span>        <span class="p">)</span>
+<span class="linenos">20</span>    <span class="k">except</span> <span class="n">WebsocketDisconnectedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<span class="linenos">21</span>        <span class="k">pass</span>  <span class="c1"># Disconnected so we can&#39;t send the message back.</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>Stepping through this app line by line, the first thing to note is that we
 need to import and instantiate a boto3 session. This session is manually
@@ -282,8 +262,8 @@ following command:</p>
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">If you encounter an Internal Server Error here it is likely that you forgot
+<p class="admonition-title">Note</p>
+<p>If you encounter an Internal Server Error here it is likely that you forgot
 to include <code class="docutils literal notranslate"><span class="pre">boto3&gt;=1.9.91</span></code> in the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file.</p>
 </div>
 <p>To tear down the example. Just run:</p>
@@ -293,13 +273,13 @@ to include <code class="docutils literal notranslate"><span class="pre">boto3&gt
   Deleting IAM role: echo-server-dev
 </pre></div>
 </div>
-<div class="section" id="next-steps">
+<section id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
 <p>In this tutorial, we created an echo server with websockets.
 If you’d like to try something more ambitious, you can follow our
 tutorial for creating a sample <a class="reference internal" href="wschat.html"><span class="doc">Chat application with websocket</span></a>.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

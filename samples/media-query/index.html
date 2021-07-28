@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Media Query Application &#8212; AWS Chalice</title><link rel="stylesheet" href="../../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/default.css" />
     <link rel="stylesheet" href="../../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../../_static/jquery.js"></script>
-    <script type="text/javascript" src="../../_static/underscore.js"></script>
-    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="media-query-application">
+  <section id="media-query-application">
 <h1>Media Query Application<a class="headerlink" href="#media-query-application" title="Permalink to this headline">¶</a></h1>
 <div class="youtube-wrapper" style="margin: 0 auto 30px auto; padding-bottom: 42.187500%; padding-top: 30px; position: relative; width: 75%">
 <iframe allowfullscreen="true" src="https://www.youtube.com/embed/UCZXJpI1dKw" style="border: 0; height: 100%; left: 0; position: absolute; top: 0; width: 100%">
@@ -155,8 +155,8 @@ $ cd chalice/docs/source/samples/media-query/code
 <p>We’ll now walk through the architecture of the application, how to
 deploy and use the application, and go over the application code.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This sample application is also available as a <a class="reference external" href="https://chalice-workshop.readthedocs.io/en/latest/media-query/index.html">workshop</a>.
+<p class="admonition-title">Note</p>
+<p>This sample application is also available as a <a class="reference external" href="https://chalice-workshop.readthedocs.io/en/latest/media-query/index.html">workshop</a>.
 The main difference between the sample apps here and the Chalice workshops
 is that the workshop is a detailed step by step process for how to create
 this application from scratch.  You build the app by gradually adding each
@@ -164,32 +164,32 @@ feature piece by piece.  It takes several hours to work through all the
 workshop material.  In this document we review the architecture,
 the deployment process, then walk through the main sections of the code.</p>
 </div>
-<div class="section" id="architecture">
+<section id="architecture">
 <h2>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h2>
 <p>Below is the architecture for the application.</p>
 <a class="reference internal image-reference" href="../../_images/architecture.png"><img alt="Architecture diagram" src="../../_images/architecture.png" style="width: 100%;" /></a>
 <p>The main components of the application are as follows:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">handle_object_created</span></code>: A Lambda function that is triggered when an
+<li><p><code class="docutils literal notranslate"><span class="pre">handle_object_created</span></code>: A Lambda function that is triggered when an
 object is uploaded to a S3 bucket. If the object is an image, it will
 call Amazon Rekognition’s <code class="docutils literal notranslate"><span class="pre">DetectLabels</span></code> API to detect objects in the
 image. With the detected objects, the Lambda function will then add the
 object to an Amazon DynamoDB table. If the object is a video, it will call
 Rekognition’s <code class="docutils literal notranslate"><span class="pre">StartLabelDetection</span></code> API to initiate an asynchronous
 job to detect labels in the video. When the job is completed, a completion
-notification is pushed to an SNS topic.</li>
-<li><code class="docutils literal notranslate"><span class="pre">handle_object_deleted</span></code>: A Lambda function that removes the object from
-the DynamoDB table if the object is deleted from the S3 bucket.</li>
-<li><code class="docutils literal notranslate"><span class="pre">add_video_labels</span></code>: A Lambda function that is triggered on video label
+notification is pushed to an SNS topic.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">handle_object_deleted</span></code>: A Lambda function that removes the object from
+the DynamoDB table if the object is deleted from the S3 bucket.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_video_labels</span></code>: A Lambda function that is triggered on video label
 detection SNS messages. On invocation, it will call Rekognition’s
 <code class="docutils literal notranslate"><span class="pre">GetLabelDetection</span></code> API to retrieve all detected objects from the video.
-It then adds the video with its labels to the DynamoDB Table</li>
-<li><code class="docutils literal notranslate"><span class="pre">api_handler</span></code>: A Lambda function that is invoked by HTTP requests to
+It then adds the video with its labels to the DynamoDB Table</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">api_handler</span></code>: A Lambda function that is invoked by HTTP requests to
 Amazon API Gateway. On invocation, it will query the database based on the
-received HTTP request and return the results to the user through API Gateway.</li>
+received HTTP request and return the results to the user through API Gateway.</p></li>
 </ul>
-</div>
-<div class="section" id="deployment">
+</section>
+<section id="deployment">
 <h2>Deployment<a class="headerlink" href="#deployment" title="Permalink to this headline">¶</a></h2>
 <p>First, we’ll setup our development environment by cloning the Chalice
 GitHub repository and copying the sample code in a new directory:</p>
@@ -201,10 +201,10 @@ $ cd /tmp/demo/media-query/
 </div>
 <p>Next configure a virtual environment that uses Python 3.  In this example
 we’re using Python 3.7.</p>
-<dl class="docutils">
-<dt>::</dt>
-<dd>$ python3 -m venv /tmp/venv37
-$ . /tmp/venv37/bin/activate</dd>
+<dl class="simple">
+<dt>::</dt><dd><p>$ python3 -m venv /tmp/venv37
+$ . /tmp/venv37/bin/activate</p>
+</dd>
 </dl>
 <p>To deploy the application, first install the necessary requirements and
 install Chalice:</p>
@@ -231,8 +231,8 @@ Once those resources are created and recorded, deploy the Chalice application:</
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice deploy
 </pre></div>
 </div>
-</div>
-<div class="section" id="using-the-application">
+</section>
+<section id="using-the-application">
 <h2>Using the Application<a class="headerlink" href="#using-the-application" title="Permalink to this headline">¶</a></h2>
 <p>Once the application is deployed, use the AWS CLI to fetch the name of the
 bucket that is storing the media files:</p>
@@ -434,98 +434,59 @@ x-amzn-RequestId: 5d29d59a-8476-11e8-a347-ebb5d5f47789
 ]
 </pre></div>
 </div>
-</div>
-<div class="section" id="code-walkthrough">
+</section>
+<section id="code-walkthrough">
 <h2>Code Walkthrough<a class="headerlink" href="#code-walkthrough" title="Permalink to this headline">¶</a></h2>
 <p>We’ll take a top-down approach with this application and start with the main
 entry point, the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.  The source code for this application is
 split between the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> as well as supporting code in <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code>.</p>
-<div class="section" id="event-handlers">
+<section id="event-handlers">
 <h3>Event Handlers<a class="headerlink" href="#event-handlers" title="Permalink to this headline">¶</a></h3>
 <p>In the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> we see four different decorator types, each corresponding
 to Lambda functions that are triggered by different events.  Note that
 the line numbers correspond to the line numbers in the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.</p>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MEDIA_BUCKET_NAME&#39;</span><span class="p">],</span>
-                 <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:*&#39;</span><span class="p">])</span>
-<span class="k">def</span> <span class="nf">handle_object_created</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">_is_image</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
-        <span class="n">_handle_created_image</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">_is_video</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
-        <span class="n">_handle_created_video</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MEDIA_BUCKET_NAME&#39;</span><span class="p">],</span>
-                 <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectRemoved:*&#39;</span><span class="p">])</span>
-<span class="k">def</span> <span class="nf">handle_object_removed</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">_is_image</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_is_video</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
-        <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">delete_media_file</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;VIDEO_TOPIC_NAME&#39;</span><span class="p">])</span>
-<span class="k">def</span> <span class="nf">add_video_file</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
-    <span class="n">labels</span> <span class="o">=</span> <span class="n">get_rekognition_client</span><span class="p">()</span><span class="o">.</span><span class="n">get_video_job_labels</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;JobId&#39;</span><span class="p">])</span>
-    <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">add_media_file</span><span class="p">(</span>
-        <span class="n">name</span><span class="o">=</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;Video&#39;</span><span class="p">][</span><span class="s1">&#39;S3ObjectName&#39;</span><span class="p">],</span>
-        <span class="n">media_type</span><span class="o">=</span><span class="n">db</span><span class="o">.</span><span class="n">VIDEO_TYPE</span><span class="p">,</span>
-        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">list_media_files</span><span class="p">():</span>
-    <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">query_params</span><span class="p">:</span>
-        <span class="n">params</span> <span class="o">=</span> <span class="n">_extract_db_list_params</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">query_params</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">list_media_files</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/</span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">get_media_file</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
-    <span class="n">item</span> <span class="o">=</span> <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">get_media_file</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">NotFoundError</span><span class="p">(</span><span class="s1">&#39;Media file (</span><span class="si">%s</span><span class="s1">) not found&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">item</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">43</span><span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MEDIA_BUCKET_NAME&#39;</span><span class="p">],</span>
+<span class="linenos">44</span>                 <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectCreated:*&#39;</span><span class="p">])</span>
+<span class="linenos">45</span><span class="k">def</span> <span class="nf">handle_object_created</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<span class="linenos">46</span>    <span class="k">if</span> <span class="n">_is_image</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
+<span class="linenos">47</span>        <span class="n">_handle_created_image</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+<span class="linenos">48</span>    <span class="k">elif</span> <span class="n">_is_video</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
+<span class="linenos">49</span>        <span class="n">_handle_created_video</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+<span class="linenos">50</span>
+<span class="linenos">51</span>
+<span class="linenos">52</span><span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MEDIA_BUCKET_NAME&#39;</span><span class="p">],</span>
+<span class="linenos">53</span>                 <span class="n">events</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s3:ObjectRemoved:*&#39;</span><span class="p">])</span>
+<span class="linenos">54</span><span class="k">def</span> <span class="nf">handle_object_removed</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<span class="linenos">55</span>    <span class="k">if</span> <span class="n">_is_image</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_is_video</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
+<span class="linenos">56</span>        <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">delete_media_file</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+<span class="linenos">57</span>
+<span class="linenos">58</span>
+<span class="linenos">59</span><span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;VIDEO_TOPIC_NAME&#39;</span><span class="p">])</span>
+<span class="linenos">60</span><span class="k">def</span> <span class="nf">add_video_file</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<span class="linenos">61</span>    <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+<span class="linenos">62</span>    <span class="n">labels</span> <span class="o">=</span> <span class="n">get_rekognition_client</span><span class="p">()</span><span class="o">.</span><span class="n">get_video_job_labels</span><span class="p">(</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;JobId&#39;</span><span class="p">])</span>
+<span class="linenos">63</span>    <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">add_media_file</span><span class="p">(</span>
+<span class="linenos">64</span>        <span class="n">name</span><span class="o">=</span><span class="n">message</span><span class="p">[</span><span class="s1">&#39;Video&#39;</span><span class="p">][</span><span class="s1">&#39;S3ObjectName&#39;</span><span class="p">],</span>
+<span class="linenos">65</span>        <span class="n">media_type</span><span class="o">=</span><span class="n">db</span><span class="o">.</span><span class="n">VIDEO_TYPE</span><span class="p">,</span>
+<span class="linenos">66</span>        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+<span class="linenos">67</span>
+<span class="linenos">68</span>
+<span class="linenos">69</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="linenos">70</span><span class="k">def</span> <span class="nf">list_media_files</span><span class="p">():</span>
+<span class="linenos">71</span>    <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="linenos">72</span>    <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">query_params</span><span class="p">:</span>
+<span class="linenos">73</span>        <span class="n">params</span> <span class="o">=</span> <span class="n">_extract_db_list_params</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">query_params</span><span class="p">)</span>
+<span class="linenos">74</span>    <span class="k">return</span> <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">list_media_files</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+<span class="linenos">75</span>
+<span class="linenos">76</span>
+<span class="linenos">77</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/</span><span class="si">{name}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="linenos">78</span><span class="k">def</span> <span class="nf">get_media_file</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+<span class="linenos">79</span>    <span class="n">item</span> <span class="o">=</span> <span class="n">get_media_db</span><span class="p">()</span><span class="o">.</span><span class="n">get_media_file</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+<span class="linenos">80</span>    <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">81</span>        <span class="k">raise</span> <span class="n">NotFoundError</span><span class="p">(</span><span class="s1">&#39;Media file (</span><span class="si">%s</span><span class="s1">) not found&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+<span class="linenos">82</span>    <span class="k">return</span> <span class="n">item</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 <p>The first two decorators use <code class="docutils literal notranslate"><span class="pre">&#64;app.on_s3_event</span></code> and are specifying
 that these two Lambda functions should be invoked when an object is
 created or deleted from S3, respectively.  The name of the S3 bucket
@@ -562,17 +523,13 @@ video analysis is performed by first starting a “video label job”.  When
 you start this asynchronous job, we can specify an SNS topic that
 Rekognition will publish to when the job is complete, as shown in the
 <code class="docutils literal notranslate"><span class="pre">_handle_created_video</span></code> function below.</p>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>111
-112
-113
-114
-115</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_handle_created_video</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
-    <span class="n">get_rekognition_client</span><span class="p">()</span><span class="o">.</span><span class="n">start_video_label_job</span><span class="p">(</span>
-        <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">topic_arn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;VIDEO_TOPIC_ARN&#39;</span><span class="p">],</span>
-        <span class="n">role_arn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;VIDEO_ROLE_ARN&#39;</span><span class="p">]</span>
-    <span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">111</span><span class="k">def</span> <span class="nf">_handle_created_video</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+<span class="linenos">112</span>    <span class="n">get_rekognition_client</span><span class="p">()</span><span class="o">.</span><span class="n">start_video_label_job</span><span class="p">(</span>
+<span class="linenos">113</span>        <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">topic_arn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;VIDEO_TOPIC_ARN&#39;</span><span class="p">],</span>
+<span class="linenos">114</span>        <span class="n">role_arn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;VIDEO_ROLE_ARN&#39;</span><span class="p">]</span>
+<span class="linenos">115</span>    <span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 <p>The <code class="docutils literal notranslate"><span class="pre">add_video_file()</span></code> function will then query for the results
 of the job (the <code class="docutils literal notranslate"><span class="pre">JobId</span></code> is provided as part of the SNS message
 that’s published) and store the results in the DynamoDB table.</p>
@@ -584,13 +541,13 @@ return all the media files that have been analyzed so far.  Request
 to S3 will return the detected labels for that single resource.  This is
 equivalent to a “Get” API call.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This sample application returns all analyzed media files in its
+<p class="admonition-title">Note</p>
+<p>This sample application returns all analyzed media files in its
 List API call.  In practice, you should paginate your List API calls
 to ensure you don’t return unbounded results.</p>
 </div>
-</div>
-<div class="section" id="supporting-files">
+</section>
+<section id="supporting-files">
 <h3>Supporting Files<a class="headerlink" href="#supporting-files" title="Permalink to this headline">¶</a></h3>
 <p>The event handlers described in the previous section interact with
 Rekognition and DynamoDB through clients that are accessed through
@@ -601,75 +558,51 @@ high level clients are in <code class="docutils literal notranslate"><span class
 <code class="docutils literal notranslate"><span class="pre">chalicelib/db.py</span></code>.  If we look at the <code class="docutils literal notranslate"><span class="pre">DynamoMediaDB.add_media_file()</span></code>
 method in the <code class="docutils literal notranslate"><span class="pre">chalicelib/db.py</span></code> file, we see that it’s a small wrapper
 around the <code class="docutils literal notranslate"><span class="pre">put_item()</span></code> operation of the underlying DynamoDB API:</p>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>46
-47
-48
-49
-50
-51
-52
-53
-54
-55</pre></div></td><td class="code"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">add_media_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">media_type</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
-            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
-                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">media_type</span><span class="p">,</span>
-                <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="n">labels</span><span class="p">,</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">46</span>    <span class="k">def</span> <span class="nf">add_media_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">media_type</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="linenos">47</span>        <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">48</span>            <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="linenos">49</span>        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
+<span class="linenos">50</span>            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
+<span class="linenos">51</span>                <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+<span class="linenos">52</span>                <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">media_type</span><span class="p">,</span>
+<span class="linenos">53</span>                <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="n">labels</span><span class="p">,</span>
+<span class="linenos">54</span>            <span class="p">}</span>
+<span class="linenos">55</span>        <span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 <p>We see a similar pattern in <code class="docutils literal notranslate"><span class="pre">chalicelib/rekognition.py</span></code>.  Here’s the
 <code class="docutils literal notranslate"><span class="pre">start_video_label_job</span></code> job that starts the asynchronous processing
 discussed in the previous section.</p>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35</pre></div></td><td class="code"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">start_video_label_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">topic_arn</span><span class="p">,</span> <span class="n">role_arn</span><span class="p">):</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boto3_client</span><span class="o">.</span><span class="n">start_label_detection</span><span class="p">(</span>
-            <span class="n">Video</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;S3Object&#39;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="s1">&#39;Bucket&#39;</span><span class="p">:</span> <span class="n">bucket</span><span class="p">,</span>
-                    <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="n">key</span>
-                <span class="p">}</span>
-            <span class="p">},</span>
-            <span class="n">ClientRequestToken</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()),</span>
-            <span class="n">NotificationChannel</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;SNSTopicArn&#39;</span><span class="p">:</span> <span class="n">topic_arn</span><span class="p">,</span>
-                <span class="s1">&#39;RoleArn&#39;</span><span class="p">:</span> <span class="n">role_arn</span>
-            <span class="p">},</span>
-            <span class="n">MinConfidence</span><span class="o">=</span><span class="mf">50.0</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;JobId&#39;</span><span class="p">]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">20</span>    <span class="k">def</span> <span class="nf">start_video_label_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">topic_arn</span><span class="p">,</span> <span class="n">role_arn</span><span class="p">):</span>
+<span class="linenos">21</span>        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boto3_client</span><span class="o">.</span><span class="n">start_label_detection</span><span class="p">(</span>
+<span class="linenos">22</span>            <span class="n">Video</span><span class="o">=</span><span class="p">{</span>
+<span class="linenos">23</span>                <span class="s1">&#39;S3Object&#39;</span><span class="p">:</span> <span class="p">{</span>
+<span class="linenos">24</span>                    <span class="s1">&#39;Bucket&#39;</span><span class="p">:</span> <span class="n">bucket</span><span class="p">,</span>
+<span class="linenos">25</span>                    <span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="n">key</span>
+<span class="linenos">26</span>                <span class="p">}</span>
+<span class="linenos">27</span>            <span class="p">},</span>
+<span class="linenos">28</span>            <span class="n">ClientRequestToken</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()),</span>
+<span class="linenos">29</span>            <span class="n">NotificationChannel</span><span class="o">=</span><span class="p">{</span>
+<span class="linenos">30</span>                <span class="s1">&#39;SNSTopicArn&#39;</span><span class="p">:</span> <span class="n">topic_arn</span><span class="p">,</span>
+<span class="linenos">31</span>                <span class="s1">&#39;RoleArn&#39;</span><span class="p">:</span> <span class="n">role_arn</span>
+<span class="linenos">32</span>            <span class="p">},</span>
+<span class="linenos">33</span>            <span class="n">MinConfidence</span><span class="o">=</span><span class="mf">50.0</span>
+<span class="linenos">34</span>        <span class="p">)</span>
+<span class="linenos">35</span>        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;JobId&#39;</span><span class="p">]</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 <p>As you can see, it’s a small wrapper around the <code class="docutils literal notranslate"><span class="pre">start_label_detection</span></code>
 operation of the underlying Rekognition API.</p>
 <p>We encourage you to look through the rest of the <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code> directory
 to see how these high level clients are implemented.</p>
-</div>
-</div>
-<div class="section" id="cleaning-up">
+</section>
+</section>
+<section id="cleaning-up">
 <h2>Cleaning Up<a class="headerlink" href="#cleaning-up" title="Permalink to this headline">¶</a></h2>
 <p>If you’re done experimenting with this sample app, you can run these commands
 to delete this app.</p>
 <ol class="arabic">
-<li><p class="first">Delete the chalice application:</p>
+<li><p>Delete the chalice application:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ chalice delete
 Deleting Rest API: kyfn3gqcf0
 Deleting function: arn:aws:lambda:us-west-2:123456789123:function:media-query-dev
@@ -683,21 +616,21 @@ Deleting IAM role: media-query-dev-handle_object_created
 </pre></div>
 </div>
 </li>
-<li><p class="first">Delete all objects in your S3 bucket:</p>
+<li><p>Delete all objects in your S3 bucket:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws s3 rm s3://$MEDIA_BUCKET_NAME --recursive
 delete: s3://media-query-mediabucket-4b1h8anboxpa/sample.jpg
 delete: s3://media-query-mediabucket-4b1h8anboxpa/sample.mp4
 </pre></div>
 </div>
 </li>
-<li><p class="first">Delete the CloudFormation stack containing the additional AWS resources:</p>
+<li><p>Delete the CloudFormation stack containing the additional AWS resources:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation delete-stack --stack-name media-query
 </pre></div>
 </div>
 </li>
 </ol>
-</div>
-</div>
+</section>
+</section>
 
 
                     

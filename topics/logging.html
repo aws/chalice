@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Logging &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="logging">
+  <section id="logging">
 <h1>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h1>
 <p>You have several options for logging in your
 application.  You can use any of the options
@@ -142,14 +142,14 @@ attribute, which is a logger specifically for your application.
 This attribute is an instance of <code class="docutils literal notranslate"><span class="pre">logging.getLogger(your_app_name_)</span></code>
 that’s been preconfigured with reasonable defaults:</p>
 <ul class="simple">
-<li>StreamHandler associated with <code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code>.</li>
-<li>Log level set to <code class="docutils literal notranslate"><span class="pre">logging.ERROR</span></code> by default.
+<li><p>StreamHandler associated with <code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code>.</p></li>
+<li><p>Log level set to <code class="docutils literal notranslate"><span class="pre">logging.ERROR</span></code> by default.
 You can also manually set the logging level by setting
-<code class="docutils literal notranslate"><span class="pre">app.log.setLevel(logging.DEBUG)</span></code>.</li>
-<li>A logging formatter that displays the app name, level name,
-and message.</li>
+<code class="docutils literal notranslate"><span class="pre">app.log.setLevel(logging.DEBUG)</span></code>.</p></li>
+<li><p>A logging formatter that displays the app name, level name,
+and message.</p></li>
 </ul>
-<div class="section" id="examples">
+<section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <p>In the following application, we’re using the application logger
 to emit two log messages, one at <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> and one at the <code class="docutils literal notranslate"><span class="pre">ERROR</span></code>
@@ -228,8 +228,8 @@ given this app:</p>
 $ chalice logs --name MyFunction
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
                     

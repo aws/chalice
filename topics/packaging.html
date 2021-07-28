@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>App Packaging &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="app-packaging">
+  <section id="app-packaging">
 <h1>App Packaging<a class="headerlink" href="#app-packaging" title="Permalink to this headline">¶</a></h1>
 <p>In order to deploy your Chalice app, a zip file is created that
 contains your application and all third party packages your application
@@ -138,22 +138,22 @@ necessary to deploy your application to Lambda.  Chalice also has
 the ability to split your code into multiple files to leverage
 <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html">AWS Lambda layers</a>.
 This is discussed in the <a class="reference internal" href="#package-3rd-party"><span class="std std-ref">3rd Party Packages</span></a> section below.</p>
-<div class="section" id="app-directories">
+<section id="app-directories">
 <h2>App Directories<a class="headerlink" href="#app-directories" title="Permalink to this headline">¶</a></h2>
 <p>You have two options to structure application specific code/config:</p>
 <ul class="simple">
-<li><strong>app.py</strong> - This file includes all your route information and is always
-included in the deployment package.</li>
-<li><strong>chalicelib/</strong> - This directory (if it exists) is included in the
+<li><p><strong>app.py</strong> - This file includes all your route information and is always
+included in the deployment package.</p></li>
+<li><p><strong>chalicelib/</strong> - This directory (if it exists) is included in the
 deployment package.  This is where you can add config files and additional
 application modules if you prefer not to have all your app code in the
-<code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.</li>
+<code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.</p></li>
 </ul>
 <p>See <a class="reference internal" href="multifile.html"><span class="doc">Multifile Support</span></a> for more info on the <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code> directory.  Both the
 <code class="docutils literal notranslate"><span class="pre">app.py</span></code> and the <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code> directory are intended for code that you
 write yourself.</p>
-</div>
-<div class="section" id="rd-party-packages">
+</section>
+<section id="rd-party-packages">
 <span id="package-3rd-party"></span><h2>3rd Party Packages<a class="headerlink" href="#rd-party-packages" title="Permalink to this headline">¶</a></h2>
 <p>When handling third party packages, you can have Chalice manage
 these files as part of the deployment package of your Lambda function,
@@ -161,32 +161,32 @@ or as a separate Lambda layer that’s shared by all your Lambda functions.
 See the <a class="reference internal" href="#package-examples"><span class="std std-ref">Examples</span></a> section for examples of how this works.</p>
 <p>There are two options for handling python package dependencies:</p>
 <ul class="simple">
-<li><strong>requirements.txt</strong> - During the packaging process, Chalice will
+<li><p><strong>requirements.txt</strong> - During the packaging process, Chalice will
 install any packages it finds or can build compatible wheels for.
 Specifically all pure python packages as well as all packages that upload
 wheel files for the <code class="docutils literal notranslate"><span class="pre">manylinux1_x86_64</span></code> platform will be automatically
-installable.</li>
-<li><strong>vendor/</strong> - The <em>contents</em> of this directory are automatically added to
+installable.</p></li>
+<li><p><strong>vendor/</strong> - The <em>contents</em> of this directory are automatically added to
 your deployment package and its location in your Lambda functions will
 depend on whether you are using automatic Lambda Layers, described in the
-<a class="reference internal" href="#package-auto-layers"><span class="std std-ref">Automatic Lambda Layers</span></a> section.</li>
+<a class="reference internal" href="#package-auto-layers"><span class="std std-ref">Automatic Lambda Layers</span></a> section.</p></li>
 </ul>
 <p>Chalice will also check for an optional <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory in the project
 root directory.  The contents of this directory are automatically included in
 the top level of the deployment package (see <a class="reference internal" href="#package-examples"><span class="std std-ref">Examples</span></a> for
 specific examples).  The <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory is helpful in these scenarios:</p>
 <ul class="simple">
-<li>You need to include custom packages or binary content that is not accessible
-via <code class="docutils literal notranslate"><span class="pre">pip</span></code>.  These may be internal packages that aren’t public.</li>
-<li>Wheel files are not available for a package you need from pip.</li>
-<li>A package is installable with <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> but has optional c
+<li><p>You need to include custom packages or binary content that is not accessible
+via <code class="docutils literal notranslate"><span class="pre">pip</span></code>.  These may be internal packages that aren’t public.</p></li>
+<li><p>Wheel files are not available for a package you need from pip.</p></li>
+<li><p>A package is installable with <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> but has optional c
 extensions. Chalice can build the dependency without the c extensions, but
-if you want better performance you can vendor a version that is compiled.</li>
+if you want better performance you can vendor a version that is compiled.</p></li>
 </ul>
 <p>As a general rule of thumb, code that you write goes in either <code class="docutils literal notranslate"><span class="pre">app.py</span></code> or
 <code class="docutils literal notranslate"><span class="pre">chalicelib/</span></code>, and dependencies are either specified in <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>
 or placed in the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory.</p>
-<div class="section" id="automatic-lambda-layers">
+<section id="automatic-lambda-layers">
 <span id="package-auto-layers"></span><h3>Automatic Lambda Layers<a class="headerlink" href="#automatic-lambda-layers" title="Permalink to this headline">¶</a></h3>
 <p>By default, Chalice will create a single zip file that contains all the
 code needed to run your application.</p>
@@ -195,18 +195,18 @@ file which will instruct Chalice to create your 3rd party packages as a
 separate Lambda layer.</p>
 <p>There are several benefits to this approach:</p>
 <ul class="simple">
-<li>The layer is created once and then shared across all Lambda functions in
-your application.</li>
-<li>When creating or updating a Lambda function, you send the entire contents
+<li><p>The layer is created once and then shared across all Lambda functions in
+your application.</p></li>
+<li><p>When creating or updating a Lambda function, you send the entire contents
 of the zip file that contains your app.  This is repeated for each Lambda
 function.  As a result, there is unnecessary time and network bandwidth
 used to send the same 3rd party dependencies for each Lambda function.
 When using layers, Chalice will specify the layer ARN when creating or
 updating your Lambda function, which cuts down on the time it takes
-to package and deploy your application.</li>
-<li>Saves storage space in Lambda.  There is a 75GB maximum size for all
+to package and deploy your application.</p></li>
+<li><p>Saves storage space in Lambda.  There is a 75GB maximum size for all
 your Lambda functions.  If you’re not using layers, each Lambda function
-stores its own copies of your 3rd party dependencies.</li>
+stores its own copies of your 3rd party dependencies.</p></li>
 </ul>
 <p>We recommend setting <code class="docutils literal notranslate"><span class="pre">&quot;automatic_layer&quot;:</span> <span class="pre">true</span></code> in your
 <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> due to these benefits.</p>
@@ -255,9 +255,9 @@ your file:</p>
             <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="environment-variables">
+</section>
+</section>
+<section id="environment-variables">
 <h2>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h2>
 <p>As part of the packaging and deployment process, Chalice will import your
 <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file.  This will result in any top level module code being
@@ -307,8 +307,8 @@ your app.py file.</p>
 </div>
 <p>This only applies to the packaging stage.  When the <code class="docutils literal notranslate"><span class="pre">foo</span></code> function is invoked
 on Lambda, the <code class="docutils literal notranslate"><span class="pre">PER_FUNCTION</span></code> environment variable will be set as expected.</p>
-</div>
-<div class="section" id="examples">
+</section>
+<section id="examples">
 <span id="package-examples"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <p>Suppose I have the following app structure:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
@@ -376,17 +376,17 @@ created. The deployment package used for the Lambda function will be:</p>
 layers.  Both functions now share the same Lambda layer that contains the third
 party packages used by the application.</p>
 <a class="reference internal image-reference" href="../_images/auto-layer.png"><img alt="Shared layer for 3rd party code." class="align-center" src="../_images/auto-layer.png" style="width: 80%;" /></a>
-</div>
-<div class="section" id="cryptography-example">
+</section>
+<section id="cryptography-example">
 <h2>Cryptography Example<a class="headerlink" href="#cryptography-example" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
+<p class="admonition-title">Note</p>
 <p>Since the original version of this example was written, cryptography has
 released version 2.0 which does have manylinux1 wheels available. This
 means if you want to use cryptography in a Chalice app all you need to
 do is add <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> or <code class="docutils literal notranslate"><span class="pre">cryptography&gt;=2.0</span></code> in your
 requirements.txt file.</p>
-<p class="last">This example will use version 1.9 of Cryptography
+<p>This example will use version 1.9 of Cryptography
 because it is a good example of a library with C extensions and no wheel
 files.</p>
 </div>
@@ -423,19 +423,19 @@ directory, and build the <code class="docutils literal notranslate"><span class=
 instance running in EC2. All of the following commands were run inside a
 <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">3.6</span></code> virtual environment.</p>
 <ul>
-<li><p class="first">Download the source first:</p>
+<li><p>Download the source first:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip download cryptography==1.9
 </pre></div>
 </div>
 <p>This will download all the requirements into the current working directory.
 The directory should have the following contents:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">asn1crypto-0.22.0-py2.py3-none-any.whl</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">cffi-1.10.0-cp36-cp36m-manylinux1_x86_64.whl</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">cryptography-1.9.tar.gz</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">idna-2.5-py2.py3-none-any.whl</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">pycparser-2.17.tar.gz</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">six-1.10.0-py2.py3-none-any.whl</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">asn1crypto-0.22.0-py2.py3-none-any.whl</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cffi-1.10.0-cp36-cp36m-manylinux1_x86_64.whl</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cryptography-1.9.tar.gz</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">idna-2.5-py2.py3-none-any.whl</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pycparser-2.17.tar.gz</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">six-1.10.0-py2.py3-none-any.whl</span></code></p></li>
 </ul>
 <p>This is a complete set of dependencies required for the cryptography package.
 Most of these packages have wheels that were downloaded, which means they can
@@ -443,22 +443,22 @@ simply be put in the <code class="docutils literal notranslate"><span class="pre
 downloading them. That leaves <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> itself and <code class="docutils literal notranslate"><span class="pre">pycparser</span></code> as
 the only two that did not have a wheel file available for download.</p>
 </li>
-<li><p class="first">Next build the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> source package into a wheel file:</p>
+<li><p>Next build the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> source package into a wheel file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip wheel cryptography-1.9.tar.gz
 </pre></div>
 </div>
 <p>This will take a few seconds and build a wheel file for both <code class="docutils literal notranslate"><span class="pre">cryptography</span></code>
 and <code class="docutils literal notranslate"><span class="pre">pycparser</span></code>. The directory should now have two additional wheel files:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">cryptography-1.9-cp36-cp36m-linux_x86_64.whl</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">pycparser-2.17-py2.py3-none-any.whl</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cryptography-1.9-cp36-cp36m-linux_x86_64.whl</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pycparser-2.17-py2.py3-none-any.whl</span></code></p></li>
 </ul>
 <p>The <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> wheel file has been built with a compatible
 architecture for Lambda (<code class="docutils literal notranslate"><span class="pre">linux_x86_64</span></code>) and the <code class="docutils literal notranslate"><span class="pre">pycparser</span></code> has been
 built for <code class="docutils literal notranslate"><span class="pre">any</span></code> architecture which means it can also be automatically
 packaged by Chalice if it is listed in the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file.</p>
 </li>
-<li><p class="first">Download the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> wheel file from the Amazon Linux instance and
+<li><p>Download the <code class="docutils literal notranslate"><span class="pre">cryptography</span></code> wheel file from the Amazon Linux instance and
 unzip it into the <code class="docutils literal notranslate"><span class="pre">vendor/</span></code> directory in the root directory of your Chalice
 app.</p>
 <p>You should now have a project directory that looks like this:</p>
@@ -494,8 +494,8 @@ dependencies will all get included when the <code class="docutils literal notran
 run.</p>
 </li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
                     

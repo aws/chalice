@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Event Sources Tutorial &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,14 +123,14 @@
                     </ul>
                     
                     
-  <div class="section" id="event-sources-tutorial">
+  <section id="event-sources-tutorial">
 <h1>Event Sources Tutorial<a class="headerlink" href="#event-sources-tutorial" title="Permalink to this headline">¶</a></h1>
 <p>In the <a class="reference internal" href="../quickstart.html"><span class="doc">Quickstart</span></a> guide, we looked at how to create a
 REST API using the <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> decorator.  Chalice also has
 additional decorators that connects your code to specific event sources.
 This results in your code being invoked when a specific event occurs.</p>
 <p>In this tutorial we’ll look at a few examples.</p>
-<div class="section" id="installation-and-configuration">
+<section id="installation-and-configuration">
 <h2>Installation and Configuration<a class="headerlink" href="#installation-and-configuration" title="Permalink to this headline">¶</a></h2>
 <p>If you haven’t already setup and configured Chalice, see the
 <a class="reference internal" href="../quickstart.html"><span class="doc">Quickstart</span></a> for a step by step guide.  In a nutshell, you can get a
@@ -147,8 +147,8 @@ $ cd chalice-sns-demo
 <p>We’ll also be using the AWS CLI in this tutorial.  You can follow
 <a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html">these instructions</a>
 for installing the AWS CLI v2.</p>
-</div>
-<div class="section" id="amazon-sns-topics">
+</section>
+<section id="amazon-sns-topics">
 <h2>Amazon SNS Topics<a class="headerlink" href="#amazon-sns-topics" title="Permalink to this headline">¶</a></h2>
 <p>In this first example, we’ll create a Chalice application that will
 call our Lambda function whenever a message is published to an
@@ -209,14 +209,14 @@ We can wait for the messages using the <code class="docutils literal notranslate
 ... 217378 chalice-sns-demo - DEBUG - Received message with subject: TestSubject2, message: TestMessage2
 </pre></div>
 </div>
-</div>
-<div class="section" id="next-steps">
+</section>
+<section id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
 <p>In addition to SNS, chalice supports other event sources including Amazon S3,
 Amazon SQS, as well as scheduled events.  You can check out the topic guide
 on <a class="reference internal" href="../topics/events.html"><span class="doc">Lambda Event Sources</span></a> for more details.</p>
-</div>
-<div class="section" id="cleaning-up">
+</section>
+<section id="cleaning-up">
 <h2>Cleaning Up<a class="headerlink" href="#cleaning-up" title="Permalink to this headline">¶</a></h2>
 <p>Once you’re done experimenting you can clean up by deleting the Chalice
 app and deleting the SNS topic:</p>
@@ -226,8 +226,8 @@ Deleting IAM role: chalice-sns-demo-dev
 $ aws sns delete-topic --topic-arn arn:aws:sns:us-west-2:12345:MyDemoTopic
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
                     

@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>REST API Tutorial &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,11 +123,11 @@
                     </ul>
                     
                     
-  <div class="section" id="rest-api-tutorial">
+  <section id="rest-api-tutorial">
 <h1>REST API Tutorial<a class="headerlink" href="#rest-api-tutorial" title="Permalink to this headline">¶</a></h1>
 <p>In this tutorial, we’re going to create a REST API and explore what features
 Chalice provides that helps us write this REST APIs.</p>
-<div class="section" id="installation-and-configuration">
+<section id="installation-and-configuration">
 <h2>Installation and Configuration<a class="headerlink" href="#installation-and-configuration" title="Permalink to this headline">¶</a></h2>
 <p>If you haven’t already setup and configured Chalice, see the
 <a class="reference internal" href="../quickstart.html"><span class="doc">Quickstart</span></a> for a step by step guide.  In a nutshell, you can get a
@@ -141,8 +141,8 @@ $ chalice new-project helloworld
 $ cd helloworld
 </pre></div>
 </div>
-</div>
-<div class="section" id="url-parameters">
+</section>
+<section id="url-parameters">
 <h2>URL Parameters<a class="headerlink" href="#url-parameters" title="Permalink to this headline">¶</a></h2>
 <p>The default template when you run the <code class="docutils literal notranslate"><span class="pre">new-project</span></code> generates a sample
 REST API for you:</p>
@@ -230,8 +230,8 @@ X-Cache: Error from cloudfront
 </div>
 <p>In the next section, we’ll see how to fix this and provide better
 error messages.</p>
-</div>
-<div class="section" id="error-messages">
+</section>
+<section id="error-messages">
 <h2>Error Messages<a class="headerlink" href="#error-messages" title="Permalink to this headline">¶</a></h2>
 <p>In the example above, you’ll notice that when our app raised
 an uncaught exception, a 500 internal server error was returned.</p>
@@ -310,8 +310,8 @@ There are a few additional exceptions you can raise from your python code:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">UnauthorizedError</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="additional-routing">
+</section>
+<section id="additional-routing">
 <h2>Additional Routing<a class="headerlink" href="#additional-routing" title="Permalink to this headline">¶</a></h2>
 <p>So far, our examples have only allowed GET requests.
 It’s actually possible to support additional HTTP methods.
@@ -360,19 +360,19 @@ view function. It is also important to note that the view functions
 named <code class="docutils literal notranslate"><span class="pre">myview()</span></code>.</p>
 <p>In the next section we’ll go over how you can introspect the given request
 in order to differentiate between various HTTP methods.</p>
-</div>
-<div class="section" id="request-metadata">
+</section>
+<section id="request-metadata">
 <h2>Request Metadata<a class="headerlink" href="#request-metadata" title="Permalink to this headline">¶</a></h2>
 <p>In the examples above, you saw how to create a view function that supports
 an HTTP PUT request as well as a view function that supports both POST and
 PUT via the same view function.  However, there’s more information we
 might need about a given request:</p>
 <ul class="simple">
-<li>In a PUT/POST, you frequently send a request body.  We need some
-way of accessing the contents of the request body.</li>
-<li>For view functions that support multiple HTTP methods, we’d like
+<li><p>In a PUT/POST, you frequently send a request body.  We need some
+way of accessing the contents of the request body.</p></li>
+<li><p>For view functions that support multiple HTTP methods, we’d like
 to detect which HTTP method was used so we can have different
-code paths for PUTs vs. POSTs.</li>
+code paths for PUTs vs. POSTs.</p></li>
 </ul>
 <p>All of this and more is handled by the current request object that the
 <code class="docutils literal notranslate"><span class="pre">chalice</span></code> library makes available to each view function when it’s called.</p>
@@ -433,14 +433,14 @@ HTTP/1.1 200 OK
 <p>The <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> object is an instance of the <a class="reference internal" href="../api.html#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a>
 class, which also has the following properties.</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">current_request.query_params</span></code> - A dict of the query params.</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.headers</span></code> - A dict of the request headers.</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.uri_params</span></code> - A dict of the captured URI params.</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.method</span></code> -  The HTTP method (as a string).</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.json_body</span></code> - The parsed JSON body.</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.raw_body</span></code> - The raw HTTP body as bytes.</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.context</span></code> - A dict of additional context information</li>
-<li><code class="docutils literal notranslate"><span class="pre">current_request.stage_vars</span></code> - Configuration for the API Gateway stage</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.query_params</span></code> - A dict of the query params.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.headers</span></code> - A dict of the request headers.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.uri_params</span></code> - A dict of the captured URI params.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.method</span></code> -  The HTTP method (as a string).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.json_body</span></code> - The parsed JSON body.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.raw_body</span></code> - The raw HTTP body as bytes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.context</span></code> - A dict of additional context information</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">current_request.stage_vars</span></code> - Configuration for the API Gateway stage</p></li>
 </ul>
 <p>The <code class="docutils literal notranslate"><span class="pre">current_request</span></code> object also has a <code class="docutils literal notranslate"><span class="pre">to_dict</span></code> method, which returns all
 the information about the current request as a dictionary.  Let’s use this
@@ -495,8 +495,8 @@ HTTP/1.1 200 OK
 }
 </pre></div>
 </div>
-</div>
-<div class="section" id="request-content-types">
+</section>
+<section id="request-content-types">
 <h2>Request Content Types<a class="headerlink" href="#request-content-types" title="Permalink to this headline">¶</a></h2>
 <p>The default behavior of a view function supports
 a request body of <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.  When a request is
@@ -574,8 +574,8 @@ the raw body bytes:</p>
 <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> is not <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.  This means that
 you will need to use <code class="docutils literal notranslate"><span class="pre">app.current_request.raw_body</span></code> and parse
 the request body as needed.</p>
-</div>
-<div class="section" id="customizing-the-http-response">
+</section>
+<section id="customizing-the-http-response">
 <h2>Customizing the HTTP Response<a class="headerlink" href="#customizing-the-http-response" title="Permalink to this headline">¶</a></h2>
 <p>The return value from a chalice view function is serialized as JSON as the
 response body returned back to the caller.  This makes it easy to create
@@ -583,9 +583,9 @@ rest APIs that return JSON response bodies.</p>
 <p>Chalice allows you to control this behavior by returning an instance of
 a chalice specific <code class="docutils literal notranslate"><span class="pre">Response</span></code> class.  This behavior allows you to:</p>
 <ul class="simple">
-<li>Specify the status code to return</li>
-<li>Specify custom headers to add to the response</li>
-<li>Specify response bodies that are not <code class="docutils literal notranslate"><span class="pre">application/json</span></code></li>
+<li><p>Specify the status code to return</p></li>
+<li><p>Specify custom headers to add to the response</p></li>
+<li><p>Specify response bodies that are not <code class="docutils literal notranslate"><span class="pre">application/json</span></code></p></li>
 </ul>
 <p>Here’s an example of this:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">Response</span>
@@ -609,8 +609,8 @@ Content-Type: text/plain
 hello world!
 </pre></div>
 </div>
-</div>
-<div class="section" id="gzip-compression-for-json">
+</section>
+<section id="gzip-compression-for-json">
 <h2>GZIP compression for JSON<a class="headerlink" href="#gzip-compression-for-json" title="Permalink to this headline">¶</a></h2>
 <p>The return value from a chalice view function is serialized as JSON as the
 response body returned back to the caller.  This makes it easy to create
@@ -618,10 +618,10 @@ rest APIs that return JSON response bodies.</p>
 <p>Chalice allows you to control this behavior by returning an instance of
 a chalice specific <code class="docutils literal notranslate"><span class="pre">Response</span></code> class.  This behavior allows you to:</p>
 <ul class="simple">
-<li>Add <code class="docutils literal notranslate"><span class="pre">application/json</span></code> to binary_types</li>
-<li>Specify the status code to return</li>
-<li>Specify custom header <code class="docutils literal notranslate"><span class="pre">Content-Type:</span> <span class="pre">application/json</span></code></li>
-<li>Specify custom header <code class="docutils literal notranslate"><span class="pre">Content-Encoding:</span> <span class="pre">gzip</span></code></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">application/json</span></code> to binary_types</p></li>
+<li><p>Specify the status code to return</p></li>
+<li><p>Specify custom header <code class="docutils literal notranslate"><span class="pre">Content-Type:</span> <span class="pre">application/json</span></code></p></li>
+<li><p>Specify custom header <code class="docutils literal notranslate"><span class="pre">Content-Encoding:</span> <span class="pre">gzip</span></code></p></li>
 </ul>
 <p>Here’s an example of this:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
@@ -644,8 +644,8 @@ a chalice specific <code class="docutils literal notranslate"><span class="pre">
                     <span class="n">headers</span><span class="o">=</span><span class="n">custom_headers</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="cors-support">
+</section>
+<section id="cors-support">
 <h2>CORS Support<a class="headerlink" href="#cors-support" title="Permalink to this headline">¶</a></h2>
 <p>You can specify whether a view supports CORS by adding the
 <code class="docutils literal notranslate"><span class="pre">cors=True</span></code> parameter to your <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> call.  By
@@ -659,56 +659,56 @@ setting <code class="docutils literal notranslate"><span class="pre">app.api.cor
 <p>Setting <code class="docutils literal notranslate"><span class="pre">cors=True</span></code> has similar behavior to enabling CORS
 using the AWS Console.  This includes:</p>
 <ul class="simple">
-<li>Injecting the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code> header to your
-responses, including all error responses you can return.</li>
-<li>Automatically adding an <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method to support preflighting
-requests.</li>
+<li><p>Injecting the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code> header to your
+responses, including all error responses you can return.</p></li>
+<li><p>Automatically adding an <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method to support preflighting
+requests.</p></li>
 </ul>
 <p>The preflight request will return a response that includes:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code></li>
-<li>The <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Methods</span></code> header will return a list of all HTTP
+<li><p><code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin:</span> <span class="pre">*</span></code></p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Methods</span></code> header will return a list of all HTTP
 methods you’ve called out in your view function.  In the example above,
-this will be <code class="docutils literal notranslate"><span class="pre">PUT,OPTIONS</span></code>.</li>
-<li><code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Headers:</span> <span class="pre">Content-Type,X-Amz-Date,Authorization,</span>
-<span class="pre">X-Api-Key,X-Amz-Security-Token</span></code>.</li>
+this will be <code class="docutils literal notranslate"><span class="pre">PUT,OPTIONS</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Headers:</span> <span class="pre">Content-Type,X-Amz-Date,Authorization,</span>
+<span class="pre">X-Api-Key,X-Amz-Security-Token</span></code>.</p></li>
 </ul>
 <p>If more fine grained control of the CORS headers is desired, set the <code class="docutils literal notranslate"><span class="pre">cors</span></code>
 parameter to an instance of <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> instead of <code class="docutils literal notranslate"><span class="pre">True</span></code>. The
 <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> object can be imported from from the <code class="docutils literal notranslate"><span class="pre">chalice</span></code> package it’s
 constructor takes the following keyword arguments that map to CORS headers:</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="32%" />
-<col width="8%" />
-<col width="60%" />
+<col style="width: 32%" />
+<col style="width: 8%" />
+<col style="width: 60%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Argument</th>
-<th class="head">Type</th>
-<th class="head">Header</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Header</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>allow_origin</td>
-<td>str</td>
-<td>Access-Control-Allow-Origin</td>
+<tbody>
+<tr class="row-even"><td><p>allow_origin</p></td>
+<td><p>str</p></td>
+<td><p>Access-Control-Allow-Origin</p></td>
 </tr>
-<tr class="row-odd"><td>allow_headers</td>
-<td>list</td>
-<td>Access-Control-Allow-Headers</td>
+<tr class="row-odd"><td><p>allow_headers</p></td>
+<td><p>list</p></td>
+<td><p>Access-Control-Allow-Headers</p></td>
 </tr>
-<tr class="row-even"><td>expose_headers</td>
-<td>list</td>
-<td>Access-Control-Expose-Headers</td>
+<tr class="row-even"><td><p>expose_headers</p></td>
+<td><p>list</p></td>
+<td><p>Access-Control-Expose-Headers</p></td>
 </tr>
-<tr class="row-odd"><td>max_age</td>
-<td>int</td>
-<td>Access-Control-Max-Age</td>
+<tr class="row-odd"><td><p>max_age</p></td>
+<td><p>int</p></td>
+<td><p>Access-Control-Max-Age</p></td>
 </tr>
-<tr class="row-even"><td>allow_credentials</td>
-<td>bool</td>
-<td>Access-Control-Allow-Credentials</td>
+<tr class="row-even"><td><p>allow_credentials</p></td>
+<td><p>bool</p></td>
+<td><p>Access-Control-Allow-Credentials</p></td>
 </tr>
 </tbody>
 </table>
@@ -728,11 +728,10 @@ constructor takes the following keyword arguments that map to CORS headers:</p>
 </div>
 <p>There’s a couple of things to keep in mind when enabling cors for a view:</p>
 <ul>
-<li><p class="first">An <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method for preflighting is always injected.  Ensure that
+<li><p>An <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> method for preflighting is always injected.  Ensure that
 you don’t have <code class="docutils literal notranslate"><span class="pre">OPTIONS</span></code> in the <code class="docutils literal notranslate"><span class="pre">methods=[...]</span></code> list of your
-view function.</p>
-</li>
-<li><p class="first">Even though the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header can be set to a
+view function.</p></li>
+<li><p>Even though the <code class="docutils literal notranslate"><span class="pre">Access-Control-Allow-Origin</span></code> header can be set to a
 string that is a space separated list of origins, this behavior does not
 work on all clients that implement CORS. You should only supply a single
 origin to the <code class="docutils literal notranslate"><span class="pre">CORSConfig</span></code> object. If you need to supply multiple origins
@@ -772,8 +771,8 @@ in the <code class="docutils literal notranslate"><span class="pre">Access-Contr
         <span class="k">return</span> <span class="s1">&#39;Foo&#39;</span>
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
                     

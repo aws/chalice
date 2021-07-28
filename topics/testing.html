@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Testing &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,12 +123,12 @@
                     </ul>
                     
                     
-  <div class="section" id="testing">
+  <section id="testing">
 <h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
 <p>Chalice provides a <a class="reference internal" href="../api.html#testing-api"><span class="std std-ref">test client</span></a> in <code class="docutils literal notranslate"><span class="pre">chalice.test</span></code> that
 you can use to test your Chalice applications.  This client lets you invoke
 Lambda function and event handlers directly, as well as test your REST APIs.</p>
-<div class="section" id="lambda-functions">
+<section id="lambda-functions">
 <span id="testing-lambda-functions"></span><h2>Lambda Functions<a class="headerlink" href="#lambda-functions" title="Permalink to this headline">¶</a></h2>
 <p>To test lambda functions, use the
 <a class="reference internal" href="../api.html#TestLambdaClient.invoke" title="TestLambdaClient.invoke"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Client.lambda_.invoke</span></code></a> method.  The
@@ -187,8 +187,8 @@ test_app.py ..                                                            [100%]
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">See the <a class="reference internal" href="#testing-pytest-fixtures"><span class="std std-ref">Pytest Fixtures</span></a> section for how to use pytest
+<p class="admonition-title">Note</p>
+<p>See the <a class="reference internal" href="#testing-pytest-fixtures"><span class="std std-ref">Pytest Fixtures</span></a> section for how to use pytest
 fixtures with the Chalice test client.</p>
 </div>
 <p>For testing Lambda functions that are connected to specific events,
@@ -213,7 +213,7 @@ sample events.  For example:</p>
         <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;hello world&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="environment-variables">
+<section id="environment-variables">
 <h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
 <p>The Chalice test client will also configure any environment variables you
 have configured with your Lambda functions in your <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>
@@ -269,9 +269,9 @@ we create our test client:</p>
         <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">payload</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;OVERRIDE&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="rest-apis">
+</section>
+</section>
+<section id="rest-apis">
 <h2>REST APIs<a class="headerlink" href="#rest-apis" title="Permalink to this headline">¶</a></h2>
 <p>You can test your REST API with the Chalice test client using the
 <a class="reference internal" href="../api.html#Client.http" title="Client.http"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Client.http</span></code></a> attribute.  For example, given this REST API:</p>
@@ -355,8 +355,8 @@ we create our test client:</p>
              <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s1">&#39;deny&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="testing-boto3-client-calls">
+</section>
+<section id="testing-boto3-client-calls">
 <span id="id1"></span><h2>Testing Boto3 Client Calls<a class="headerlink" href="#testing-boto3-client-calls" title="Permalink to this headline">¶</a></h2>
 <p>If your event handlers are making AWS API calls using boto3 or botocore,
 you can use the <a class="reference external" href="https://botocore.amazonaws.com/v1/documentation/api/latest/reference/stubber.html">botocore stubber</a>
@@ -440,8 +440,8 @@ This also ensures that when our test exits that we’ll deactive the stubs for
 this client.  Now we the <code class="docutils literal notranslate"><span class="pre">client.lambda_.invoke</span></code> method is called, our
 stubbed client will return the preconfigured response data instead of making
 an actual API call to the Rekognition service.</p>
-</div>
-<div class="section" id="pytest-fixtures">
+</section>
+<section id="pytest-fixtures">
 <span id="testing-pytest-fixtures"></span><h2>Pytest Fixtures<a class="headerlink" href="#pytest-fixtures" title="Permalink to this headline">¶</a></h2>
 <p>Both the Botocore stubber and the Chalice test client are used within
 a context manager.  In our previous example, this resulted in multiple
@@ -525,14 +525,14 @@ test client fixtures:</p>
     <span class="n">stub</span><span class="o">.</span><span class="n">assert_no_pending_responses</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="next-steps">
+</section>
+<section id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
 <p>For reference documentation on the methods and attributes of the Chalice test
 client, see the <a class="reference internal" href="../api.html#testing-api"><span class="std std-ref">test client</span></a> section in the API
 documentation.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

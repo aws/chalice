@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Views &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="views">
+  <section id="views">
 <h1>Views<a class="headerlink" href="#views" title="Permalink to this headline">¶</a></h1>
 <p>A view function in chalice is the function attached to an
 <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> decorator.  In the example below, <code class="docutils literal notranslate"><span class="pre">index</span></code>
@@ -138,7 +138,7 @@ is the view function:</p>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;view&#39;</span><span class="p">:</span> <span class="s1">&#39;index&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="view-function-parameters">
+<section id="view-function-parameters">
 <h2>View Function Parameters<a class="headerlink" href="#view-function-parameters" title="Permalink to this headline">¶</a></h2>
 <p>A view function’s parameters correspond to the number of captured
 URL parameters specified in the <code class="docutils literal notranslate"><span class="pre">&#64;app.route</span></code> call.  In the example above,
@@ -166,39 +166,39 @@ For example:</p>
 <p>If you want to access any other metadata of the incoming HTTP request,
 you can use the <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> property, which is an instance of
 the the <a class="reference internal" href="../api.html#Request" title="Request"><code class="xref py py-class docutils literal notranslate"><span class="pre">Request</span></code></a> class.</p>
-</div>
-<div class="section" id="view-function-return-values">
+</section>
+<section id="view-function-return-values">
 <h2>View Function Return Values<a class="headerlink" href="#view-function-return-values" title="Permalink to this headline">¶</a></h2>
 <p>The response returned back to the client depends on the behavior
 of the view function.  There are several options available:</p>
 <ul class="simple">
-<li>Returning an instance of <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>.  This gives you
-complete control over what gets returned back to the customer.</li>
-<li>A <code class="docutils literal notranslate"><span class="pre">bytes</span></code> type response body must have a <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header value
+<li><p>Returning an instance of <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>.  This gives you
+complete control over what gets returned back to the customer.</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">bytes</span></code> type response body must have a <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> header value
 that is present in the <code class="docutils literal notranslate"><span class="pre">app.api.binary_types</span></code> list in order to be handled
-properly.</li>
-<li>Any other return value will be serialized as JSON and sent back
-as the response body with content type <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.</li>
-<li>Any subclass of <code class="docutils literal notranslate"><span class="pre">ChaliceViewError</span></code> will result in an HTTP
+properly.</p></li>
+<li><p>Any other return value will be serialized as JSON and sent back
+as the response body with content type <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.</p></li>
+<li><p>Any subclass of <code class="docutils literal notranslate"><span class="pre">ChaliceViewError</span></code> will result in an HTTP
 response being returned with the status code associated with that
 response, and a JSON response body containing a <code class="docutils literal notranslate"><span class="pre">Code</span></code> and a <code class="docutils literal notranslate"><span class="pre">Message</span></code>.
-This is discussed in more detail below.</li>
-<li>Any other exception raised will result in a 500 HTTP response.
-The body of that response depends on whether debug mode is enabled.</li>
+This is discussed in more detail below.</p></li>
+<li><p>Any other exception raised will result in a 500 HTTP response.
+The body of that response depends on whether debug mode is enabled.</p></li>
 </ul>
-</div>
-<div class="section" id="error-handling">
+</section>
+<section id="error-handling">
 <span id="view-error-handling"></span><h2>Error Handling<a class="headerlink" href="#error-handling" title="Permalink to this headline">¶</a></h2>
 <p>Chalice provides a built in set of exception classes that map to common
 HTTP errors including:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">BadRequestError</span></code>- returns a status code of 400</li>
-<li><code class="docutils literal notranslate"><span class="pre">UnauthorizedError</span></code>- returns a status code of 401</li>
-<li><code class="docutils literal notranslate"><span class="pre">ForbiddenError</span></code>- returns a status code of 403</li>
-<li><code class="docutils literal notranslate"><span class="pre">NotFoundError</span></code>- returns a status code of 404</li>
-<li><code class="docutils literal notranslate"><span class="pre">ConflictError</span></code>- returns a status code of 409</li>
-<li><code class="docutils literal notranslate"><span class="pre">TooManyRequestsError</span></code>- returns a status code of 429</li>
-<li><code class="docutils literal notranslate"><span class="pre">ChaliceViewError</span></code>- returns a status code of 500</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BadRequestError</span></code>- returns a status code of 400</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UnauthorizedError</span></code>- returns a status code of 401</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ForbiddenError</span></code>- returns a status code of 403</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NotFoundError</span></code>- returns a status code of 404</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ConflictError</span></code>- returns a status code of 409</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TooManyRequestsError</span></code>- returns a status code of 429</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ChaliceViewError</span></code>- returns a status code of 500</p></li>
 </ul>
 <p>You can raise these anywhere in your view functions and chalice will convert
 these to the appropriate HTTP response.  The default chalice error responses
@@ -241,8 +241,8 @@ for errors.  For example:</p>
                     <span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="specifying-http-methods">
+</section>
+<section id="specifying-http-methods">
 <h2>Specifying HTTP Methods<a class="headerlink" href="#specifying-http-methods" title="Permalink to this headline">¶</a></h2>
 <p>So far, our examples have only allowed GET requests. It’s actually possible
 to support additional HTTP methods. Here’s an example of a view function that
@@ -298,21 +298,21 @@ view function as shown below:</p>
 <p>If you do chose to use separate view functions for the same route path, it is
 important to know:</p>
 <ul class="simple">
-<li>View functions that share the same route cannot have the same names.
+<li><p>View functions that share the same route cannot have the same names.
 For example, two view functions that both share the same route path cannot
-both be named <code class="docutils literal notranslate"><span class="pre">view()</span></code>.</li>
-<li>View functions that share the same route cannot overlap in supported HTTP
+both be named <code class="docutils literal notranslate"><span class="pre">view()</span></code>.</p></li>
+<li><p>View functions that share the same route cannot overlap in supported HTTP
 methods. For example if two view functions both share the same route path,
-they both cannot contain <code class="docutils literal notranslate"><span class="pre">'PUT'</span></code> in their route <code class="docutils literal notranslate"><span class="pre">methods</span></code> list.</li>
-<li>View functions that share the same route path and have CORS configured cannot
+they both cannot contain <code class="docutils literal notranslate"><span class="pre">'PUT'</span></code> in their route <code class="docutils literal notranslate"><span class="pre">methods</span></code> list.</p></li>
+<li><p>View functions that share the same route path and have CORS configured cannot
 have differing CORS configuration. For example, if two view functions that
 both share the same route path, the route configuration for one of the
 view functions cannot set <code class="docutils literal notranslate"><span class="pre">cors=True</span></code> while having the route
 configuration of the other view function be set to
-<code class="docutils literal notranslate"><span class="pre">cors=app.CORSConfig(allow_origin='https://foo.example.com')</span></code>.</li>
+<code class="docutils literal notranslate"><span class="pre">cors=app.CORSConfig(allow_origin='https://foo.example.com')</span></code>.</p></li>
 </ul>
-</div>
-<div class="section" id="binary-content">
+</section>
+<section id="binary-content">
 <h2>Binary Content<a class="headerlink" href="#binary-content" title="Permalink to this headline">¶</a></h2>
 <p>Chalice supports binary payloads through its <code class="docutils literal notranslate"><span class="pre">app.api.binary_types</span></code> list. Any
 type in this list is considered a binary <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code>. Whenever a request
@@ -367,8 +367,8 @@ Date: Sat, 27 May 2017 07:09:51 GMT
 }
 </pre></div>
 </div>
-</div>
-<div class="section" id="usage-recommendations">
+</section>
+<section id="usage-recommendations">
 <h2>Usage Recommendations<a class="headerlink" href="#usage-recommendations" title="Permalink to this headline">¶</a></h2>
 <p>If you want to return a JSON response body, just return the corresponding
 python types directly.  You don’t need to use the <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a> class.
@@ -383,8 +383,8 @@ a <code class="docutils literal notranslate"><span class="pre">Code</span></code
 <p>Use the <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a> class when you want to customize the error responses
 to either return a different JSON error response body, or to return an HTTP
 response that’s not <code class="docutils literal notranslate"><span class="pre">application/json</span></code>.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

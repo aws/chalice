@@ -1824,9 +1824,9 @@ For more details on using the AWS CDK with Chalice, see :doc:`tutorials/cdk`.
 
 .. code-block:: python
 
-   from chalice.cdk import Chalice
+   from chalice import cdk
 
-.. class:: Chalice(scope, id, source_dir, stage_config=None, preserve_logical_ids=True, \*\*kwargs)
+.. class:: cdk.Chalice(scope, id, source_dir, stage_config=None, preserve_logical_ids=True, \*\*kwargs)
 
    A test client used to write tests for Chalice apps.  It allows you to
 

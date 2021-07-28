@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Todo Application &#8212; AWS Chalice</title><link rel="stylesheet" href="../../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/default.css" />
     <link rel="stylesheet" href="../../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../../_static/jquery.js"></script>
-    <script type="text/javascript" src="../../_static/underscore.js"></script>
-    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="todo-application">
+  <section id="todo-application">
 <h1>Todo Application<a class="headerlink" href="#todo-application" title="Permalink to this headline">¶</a></h1>
 <p>This is a sample application that allows you to manage Todo items.  This
 tutorial will walk through creating a serverless web API to create, update,
@@ -140,8 +140,8 @@ $ cd chalice/docs/source/samples/todo-app/code
 how to deploy and use the application, and finally we’ll go over
 the main components of the application code.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This sample application is also available as a <a class="reference external" href="https://chalice-workshop.readthedocs.io/en/latest/todo-app/index.html">workshop</a>.
+<p class="admonition-title">Note</p>
+<p>This sample application is also available as a <a class="reference external" href="https://chalice-workshop.readthedocs.io/en/latest/todo-app/index.html">workshop</a>.
 The main difference between the sample apps here and the Chalice workshops
 is that the workshop is a detailed step by step process for how to create
 this application from scratch.  You build the app by gradually adding each
@@ -154,7 +154,7 @@ material.  In this document we review the architecture, the deployment process,
 then walk through the main sections of the final version of this
 application.</p>
 </div>
-<div class="section" id="architecture">
+<section id="architecture">
 <h2>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h2>
 <p>The main component of this application is a REST API backed by Amazon API
 Gateway and AWS Lambda.  The rest API lets you manage a Todo list.  It lets you
@@ -169,15 +169,15 @@ an architecture diagram of our sample app.  It shows the API Gateway
 REST API, along with a Lambda function for our authorizer, a Lambda function
 for our REST API, and two DynamoDB tables.</p>
 <a class="reference internal image-reference" href="../../_images/architecture.jpg"><img alt="Architecture diagram" src="../../_images/architecture.jpg" style="width: 100%;" /></a>
-<div class="section" id="rest-api">
+<section id="rest-api">
 <span id="todo-sample-rest-api"></span><h3>REST API<a class="headerlink" href="#rest-api" title="Permalink to this headline">¶</a></h3>
 <p>The REST API supports the following resources:</p>
 <ul class="simple">
-<li>GET    - <code class="docutils literal notranslate"><span class="pre">/todos/</span></code> - Gets a list of all todo items</li>
-<li>POST   - <code class="docutils literal notranslate"><span class="pre">/todos/</span></code> - Creates a new Todo item</li>
-<li>GET    - <code class="docutils literal notranslate"><span class="pre">/todos/{id}</span></code> - Gets a specific todo item</li>
-<li>DELETE - <code class="docutils literal notranslate"><span class="pre">/todos/{id}</span></code> - Deletes a specific todo item</li>
-<li>PUT    - <code class="docutils literal notranslate"><span class="pre">/todos/{id}</span></code> - Updates the state of a todo item</li>
+<li><p>GET    - <code class="docutils literal notranslate"><span class="pre">/todos/</span></code> - Gets a list of all todo items</p></li>
+<li><p>POST   - <code class="docutils literal notranslate"><span class="pre">/todos/</span></code> - Creates a new Todo item</p></li>
+<li><p>GET    - <code class="docutils literal notranslate"><span class="pre">/todos/{id}</span></code> - Gets a specific todo item</p></li>
+<li><p>DELETE - <code class="docutils literal notranslate"><span class="pre">/todos/{id}</span></code> - Deletes a specific todo item</p></li>
+<li><p>PUT    - <code class="docutils literal notranslate"><span class="pre">/todos/{id}</span></code> - Updates the state of a todo item</p></li>
 </ul>
 <p>A todo item has this schema:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -190,9 +190,9 @@ for our REST API, and two DynamoDB tables.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="deployment">
+</section>
+</section>
+<section id="deployment">
 <h2>Deployment<a class="headerlink" href="#deployment" title="Permalink to this headline">¶</a></h2>
 <p>To run and deploy this application, first create a virtual environment
 and install the dependencies.  Python 3.7 is used for this sample app.</p>
@@ -229,8 +229,8 @@ Resources deployed:
   - Rest API URL: https://abcd.execute-api.us-west-2.amazonaws.com/api/
 </pre></div>
 </div>
-</div>
-<div class="section" id="using-the-application">
+</section>
+<section id="using-the-application">
 <h2>Using the Application<a class="headerlink" href="#using-the-application" title="Permalink to this headline">¶</a></h2>
 <p>If you’ve deployed your application using <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, you can test
 the REST API by making requests to the <code class="docutils literal notranslate"><span class="pre">Rest</span> <span class="pre">API</span> <span class="pre">URL</span></code>, shown in the output
@@ -264,8 +264,8 @@ request to the <code class="docutils literal notranslate"><span class="pre">/log
 </pre></div>
 </div>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">We’re using the HTTPie command line tool instead of cURL.  You can
+<p class="admonition-title">Note</p>
+<p>We’re using the HTTPie command line tool instead of cURL.  You can
 install this tool by running <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">httpie</span></code>.</p>
 </div>
 <p>Now whenever we make any requests to our REST API, we need to include
@@ -347,94 +347,56 @@ Content-Type: application/json
 }
 </pre></div>
 </div>
-</div>
-<div class="section" id="code-walkthrough">
+</section>
+<section id="code-walkthrough">
 <h2>Code Walkthrough<a class="headerlink" href="#code-walkthrough" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="todo-app-rest-api">
+<section id="todo-app-rest-api">
 <span id="id1"></span><h3>Rest API<a class="headerlink" href="#todo-app-rest-api" title="Permalink to this headline">¶</a></h3>
 <p>Below is the code for the five routes defined in the
 <a class="reference internal" href="#todo-sample-rest-api"><span class="std std-ref">REST API</span></a> section defined in the <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file:</p>
 <div class="literal-block-wrapper docutils container" id="id2">
 <div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 67
- 68
- 69
- 70
- 71
- 72
- 73
- 74
- 75
- 76
- 77
- 78
- 79
- 80
- 81
- 82
- 83
- 84
- 85
- 86
- 87
- 88
- 89
- 90
- 91
- 92
- 93
- 94
- 95
- 96
- 97
- 98
- 99
-100
-101
-102
-103
-104
-105</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">list_todos</span><span class="p">():</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">list_items</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">create_todo</span><span class="p">():</span>
-    <span class="n">body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">json_body</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">add_item</span><span class="p">(</span>
-        <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="n">body</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">],</span>
-        <span class="n">metadata</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">),</span>
-    <span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos/</span><span class="si">{uid}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">get_todo</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos/</span><span class="si">{uid}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">update_todo</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
-    <span class="n">body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">json_body</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
-    <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">update_item</span><span class="p">(</span>
-        <span class="n">uid</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">),</span>
-        <span class="n">state</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;state&#39;</span><span class="p">),</span>
-        <span class="n">metadata</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">),</span>
-        <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
-
-
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos/</span><span class="si">{uid}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;DELETE&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">delete_todo</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 67</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
+<span class="linenos"> 68</span><span class="k">def</span> <span class="nf">list_todos</span><span class="p">():</span>
+<span class="linenos"> 69</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
+<span class="linenos"> 70</span>    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">list_items</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+<span class="linenos"> 71</span>
+<span class="linenos"> 72</span>
+<span class="linenos"> 73</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
+<span class="linenos"> 74</span><span class="k">def</span> <span class="nf">create_todo</span><span class="p">():</span>
+<span class="linenos"> 75</span>    <span class="n">body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">json_body</span>
+<span class="linenos"> 76</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
+<span class="linenos"> 77</span>    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">add_item</span><span class="p">(</span>
+<span class="linenos"> 78</span>        <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span>
+<span class="linenos"> 79</span>        <span class="n">description</span><span class="o">=</span><span class="n">body</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">],</span>
+<span class="linenos"> 80</span>        <span class="n">metadata</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">),</span>
+<span class="linenos"> 81</span>    <span class="p">)</span>
+<span class="linenos"> 82</span>
+<span class="linenos"> 83</span>
+<span class="linenos"> 84</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos/</span><span class="si">{uid}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
+<span class="linenos"> 85</span><span class="k">def</span> <span class="nf">get_todo</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
+<span class="linenos"> 86</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
+<span class="linenos"> 87</span>    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+<span class="linenos"> 88</span>
+<span class="linenos"> 89</span>
+<span class="linenos"> 90</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos/</span><span class="si">{uid}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
+<span class="linenos"> 91</span><span class="k">def</span> <span class="nf">update_todo</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
+<span class="linenos"> 92</span>    <span class="n">body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">json_body</span>
+<span class="linenos"> 93</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
+<span class="linenos"> 94</span>    <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">update_item</span><span class="p">(</span>
+<span class="linenos"> 95</span>        <span class="n">uid</span><span class="p">,</span>
+<span class="linenos"> 96</span>        <span class="n">description</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">),</span>
+<span class="linenos"> 97</span>        <span class="n">state</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;state&#39;</span><span class="p">),</span>
+<span class="linenos"> 98</span>        <span class="n">metadata</span><span class="o">=</span><span class="n">body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;metadata&#39;</span><span class="p">),</span>
+<span class="linenos"> 99</span>        <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+<span class="linenos">100</span>
+<span class="linenos">101</span>
+<span class="linenos">102</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos/</span><span class="si">{uid}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;DELETE&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
+<span class="linenos">103</span><span class="k">def</span> <span class="nf">delete_todo</span><span class="p">(</span><span class="n">uid</span><span class="p">):</span>
+<span class="linenos">104</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
+<span class="linenos">105</span>    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>The first thing all of these routes do is extract the current username from the
 request.  This is done by examining the context associated with the current
@@ -455,8 +417,8 @@ request body.  A key takeaway from these routes is that there’s
 minimal logic in the route definitions themselves.  They’re primarily
 about extracting user input and then delegating the heavy lifting to
 other objects that are independent of any routing information.</p>
-</div>
-<div class="section" id="data-storage">
+</section>
+<section id="data-storage">
 <h3>Data Storage<a class="headerlink" href="#data-storage" title="Permalink to this headline">¶</a></h3>
 <p>Each route in this sample application app makes a call to the
 data storage layer, which is backed by a DynamoDB table.  This interface
@@ -464,39 +426,24 @@ is defined by the <code class="docutils literal notranslate"><span class="pre">T
 <code class="docutils literal notranslate"><span class="pre">chalicelib/db.py</span></code> file:</p>
 <div class="literal-block-wrapper docutils container" id="id3">
 <div class="code-block-caption"><span class="caption-text">chalicelib/db.py</span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">TodoDB</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">list_items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span> <span class="nf">add_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span> <span class="nf">get_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span> <span class="nf">delete_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span> <span class="nf">update_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                    <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">pass</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 9</span><span class="k">class</span> <span class="nc">TodoDB</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="linenos">10</span>    <span class="k">def</span> <span class="nf">list_items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos">11</span>        <span class="k">pass</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span>    <span class="k">def</span> <span class="nf">add_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="linenos">14</span>        <span class="k">pass</span>
+<span class="linenos">15</span>
+<span class="linenos">16</span>    <span class="k">def</span> <span class="nf">get_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">):</span>
+<span class="linenos">17</span>        <span class="k">pass</span>
+<span class="linenos">18</span>
+<span class="linenos">19</span>    <span class="k">def</span> <span class="nf">delete_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">):</span>
+<span class="linenos">20</span>        <span class="k">pass</span>
+<span class="linenos">21</span>
+<span class="linenos">22</span>    <span class="k">def</span> <span class="nf">update_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="linenos">23</span>                    <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="linenos">24</span>        <span class="k">pass</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>There are two different implementations of this interface.  The first one,
 <code class="docutils literal notranslate"><span class="pre">InMemoryTodoDB</span></code>, is an in-memory implementation of this interface where
@@ -511,124 +458,70 @@ us to use the <a class="reference external" href="https://boto3.amazonaws.com/v1
 The implementation is shown below.</p>
 <div class="literal-block-wrapper docutils container" id="id4">
 <div class="code-block-caption"><span class="caption-text">chalicelib/db.py</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 72
- 73
- 74
- 75
- 76
- 77
- 78
- 79
- 80
- 81
- 82
- 83
- 84
- 85
- 86
- 87
- 88
- 89
- 90
- 91
- 92
- 93
- 94
- 95
- 96
- 97
- 98
- 99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DynamoDBTodo</span><span class="p">(</span><span class="n">TodoDB</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_resource</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">table_resource</span>
-
-    <span class="k">def</span> <span class="nf">list_all_items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">scan</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]</span>
-
-    <span class="k">def</span> <span class="nf">list_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
-            <span class="n">KeyConditionExpression</span><span class="o">=</span><span class="n">Key</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]</span>
-
-    <span class="k">def</span> <span class="nf">add_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
-        <span class="n">uid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
-            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
-                <span class="s1">&#39;uid&#39;</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
-                <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
-                <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;unstarted&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;metadata&#39;</span><span class="p">:</span> <span class="n">metadata</span> <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{},</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">uid</span>
-
-    <span class="k">def</span> <span class="nf">get_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span>
-            <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
-                <span class="s1">&#39;uid&#39;</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
-            <span class="p">},</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Item&#39;</span><span class="p">]</span>
-
-    <span class="k">def</span> <span class="nf">delete_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span>
-            <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
-                <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
-                <span class="s1">&#39;uid&#39;</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">update_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                    <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
-        <span class="c1"># We could also use update_item() with an UpdateExpression.</span>
-        <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">description</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
-        <span class="k">if</span> <span class="n">state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;state&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">state</span>
-        <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span><span class="n">Item</span><span class="o">=</span><span class="n">item</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 72</span><span class="k">class</span> <span class="nc">DynamoDBTodo</span><span class="p">(</span><span class="n">TodoDB</span><span class="p">):</span>
+<span class="linenos"> 73</span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_resource</span><span class="p">):</span>
+<span class="linenos"> 74</span>        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">table_resource</span>
+<span class="linenos"> 75</span>
+<span class="linenos"> 76</span>    <span class="k">def</span> <span class="nf">list_all_items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos"> 77</span>        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">scan</span><span class="p">()</span>
+<span class="linenos"> 78</span>        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]</span>
+<span class="linenos"> 79</span>
+<span class="linenos"> 80</span>    <span class="k">def</span> <span class="nf">list_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
+<span class="linenos"> 81</span>        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+<span class="linenos"> 82</span>            <span class="n">KeyConditionExpression</span><span class="o">=</span><span class="n">Key</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+<span class="linenos"> 83</span>        <span class="p">)</span>
+<span class="linenos"> 84</span>        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]</span>
+<span class="linenos"> 85</span>
+<span class="linenos"> 86</span>    <span class="k">def</span> <span class="nf">add_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
+<span class="linenos"> 87</span>        <span class="n">uid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
+<span class="linenos"> 88</span>        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span>
+<span class="linenos"> 89</span>            <span class="n">Item</span><span class="o">=</span><span class="p">{</span>
+<span class="linenos"> 90</span>                <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
+<span class="linenos"> 91</span>                <span class="s1">&#39;uid&#39;</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
+<span class="linenos"> 92</span>                <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+<span class="linenos"> 93</span>                <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;unstarted&#39;</span><span class="p">,</span>
+<span class="linenos"> 94</span>                <span class="s1">&#39;metadata&#39;</span><span class="p">:</span> <span class="n">metadata</span> <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{},</span>
+<span class="linenos"> 95</span>            <span class="p">}</span>
+<span class="linenos"> 96</span>        <span class="p">)</span>
+<span class="linenos"> 97</span>        <span class="k">return</span> <span class="n">uid</span>
+<span class="linenos"> 98</span>
+<span class="linenos"> 99</span>    <span class="k">def</span> <span class="nf">get_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
+<span class="linenos">100</span>        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span>
+<span class="linenos">101</span>            <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
+<span class="linenos">102</span>                <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
+<span class="linenos">103</span>                <span class="s1">&#39;uid&#39;</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
+<span class="linenos">104</span>            <span class="p">},</span>
+<span class="linenos">105</span>        <span class="p">)</span>
+<span class="linenos">106</span>        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;Item&#39;</span><span class="p">]</span>
+<span class="linenos">107</span>
+<span class="linenos">108</span>    <span class="k">def</span> <span class="nf">delete_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
+<span class="linenos">109</span>        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">delete_item</span><span class="p">(</span>
+<span class="linenos">110</span>            <span class="n">Key</span><span class="o">=</span><span class="p">{</span>
+<span class="linenos">111</span>                <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
+<span class="linenos">112</span>                <span class="s1">&#39;uid&#39;</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
+<span class="linenos">113</span>            <span class="p">}</span>
+<span class="linenos">114</span>        <span class="p">)</span>
+<span class="linenos">115</span>
+<span class="linenos">116</span>    <span class="k">def</span> <span class="nf">update_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="linenos">117</span>                    <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">DEFAULT_USERNAME</span><span class="p">):</span>
+<span class="linenos">118</span>        <span class="c1"># We could also use update_item() with an UpdateExpression.</span>
+<span class="linenos">119</span>        <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">username</span><span class="p">)</span>
+<span class="linenos">120</span>        <span class="k">if</span> <span class="n">description</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">121</span>            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+<span class="linenos">122</span>        <span class="k">if</span> <span class="n">state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">123</span>            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;state&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">state</span>
+<span class="linenos">124</span>        <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">125</span>            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span>
+<span class="linenos">126</span>        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">put_item</span><span class="p">(</span><span class="n">Item</span><span class="o">=</span><span class="n">item</span><span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
 </div>
 </div>
-<div class="section" id="jwt-authentication">
+</section>
+<section id="jwt-authentication">
 <span id="todo-app-jwt-auth"></span><h3>JWT Authentication<a class="headerlink" href="#jwt-authentication" title="Permalink to this headline">¶</a></h3>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This example is for illustration purposes and does not necessarily
+<p class="admonition-title">Note</p>
+<p>This example is for illustration purposes and does not necessarily
 represent best practices.  Its intent is to show how custom
 authentication can be implemented in a Chalice app.</p>
 </div>
@@ -638,7 +531,7 @@ a auth token by making a request to the <code class="docutils literal notranslat
 user name and password.  The underlying mechanism used to handle
 our auth functionality is through issuing a <a class="reference external" href="https://jwt.io/">JWT</a>
 when you login.</p>
-<div class="section" id="users-table">
+<section id="users-table">
 <h4>Users Table<a class="headerlink" href="#users-table" title="Permalink to this headline">¶</a></h4>
 <p>In order to login, we need a way to store and retrieve user information.  This
 is done through our <code class="docutils literal notranslate"><span class="pre">Users</span></code> DynamoDB table.  This was created when you ran
@@ -662,29 +555,22 @@ Entry for user: myusername
   rounds    : 100000
 </pre></div>
 </div>
-</div>
-<div class="section" id="login-flow">
+</section>
+<section id="login-flow">
 <h4>Login Flow<a class="headerlink" href="#login-flow" title="Permalink to this headline">¶</a></h4>
 <p>Below is the code for the <code class="docutils literal notranslate"><span class="pre">/login</span></code> route:</p>
 <div class="literal-block-wrapper docutils container" id="id5">
 <div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>17
-18
-19
-20
-21
-22
-23
-24</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/login&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
-<span class="k">def</span> <span class="nf">login</span><span class="p">():</span>
-    <span class="n">body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">json_body</span>
-    <span class="n">record</span> <span class="o">=</span> <span class="n">get_users_db</span><span class="p">()</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span>
-        <span class="n">Key</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">body</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]})[</span><span class="s1">&#39;Item&#39;</span><span class="p">]</span>
-    <span class="n">jwt_token</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">get_jwt_token</span><span class="p">(</span>
-        <span class="n">body</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span> <span class="n">body</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">],</span> <span class="n">record</span><span class="p">,</span> <span class="n">get_auth_key</span><span class="p">())</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;token&#39;</span><span class="p">:</span> <span class="n">jwt_token</span><span class="p">}</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">17</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/login&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="linenos">18</span><span class="k">def</span> <span class="nf">login</span><span class="p">():</span>
+<span class="linenos">19</span>    <span class="n">body</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="o">.</span><span class="n">json_body</span>
+<span class="linenos">20</span>    <span class="n">record</span> <span class="o">=</span> <span class="n">get_users_db</span><span class="p">()</span><span class="o">.</span><span class="n">get_item</span><span class="p">(</span>
+<span class="linenos">21</span>        <span class="n">Key</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">body</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]})[</span><span class="s1">&#39;Item&#39;</span><span class="p">]</span>
+<span class="linenos">22</span>    <span class="n">jwt_token</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">get_jwt_token</span><span class="p">(</span>
+<span class="linenos">23</span>        <span class="n">body</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span> <span class="n">body</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">],</span> <span class="n">record</span><span class="p">,</span> <span class="n">get_auth_key</span><span class="p">())</span>
+<span class="linenos">24</span>    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;token&#39;</span><span class="p">:</span> <span class="n">jwt_token</span><span class="p">}</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>In this login view, we first lookup the user record fom our users DB,
 and then try to generate a JWT token for this entry.  The
@@ -693,47 +579,28 @@ matches what’s stored in our users DB, and then generate a JWT token
 for this user as shown in the code below:</p>
 <div class="literal-block-wrapper docutils container" id="id6">
 <div class="code-block-caption"><span class="caption-text">chalicelib/auth.py</span><a class="headerlink" href="#id6" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_jwt_token</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">secret</span><span class="p">):</span>
-    <span class="n">actual</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">pbkdf2_hmac</span><span class="p">(</span>
-        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;hash&#39;</span><span class="p">],</span>
-        <span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
-        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;salt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
-        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;rounds&#39;</span><span class="p">]</span>
-    <span class="p">)</span>
-    <span class="n">expected</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;hashed&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
-    <span class="k">if</span> <span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">):</span>
-        <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
-        <span class="n">unique_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s1">&#39;sub&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
-            <span class="s1">&#39;iat&#39;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
-            <span class="s1">&#39;nbf&#39;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
-            <span class="s1">&#39;jti&#39;</span><span class="p">:</span> <span class="n">unique_id</span><span class="p">,</span>
-            <span class="c1"># NOTE: We can also add &#39;exp&#39; if we want tokens to expire.</span>
-        <span class="p">}</span>
-        <span class="k">return</span> <span class="n">jwt</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;HS256&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
-    <span class="k">raise</span> <span class="n">UnauthorizedError</span><span class="p">(</span><span class="s1">&#39;Invalid password&#39;</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">10</span><span class="k">def</span> <span class="nf">get_jwt_token</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">secret</span><span class="p">):</span>
+<span class="linenos">11</span>    <span class="n">actual</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">pbkdf2_hmac</span><span class="p">(</span>
+<span class="linenos">12</span>        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;hash&#39;</span><span class="p">],</span>
+<span class="linenos">13</span>        <span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
+<span class="linenos">14</span>        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;salt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+<span class="linenos">15</span>        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;rounds&#39;</span><span class="p">]</span>
+<span class="linenos">16</span>    <span class="p">)</span>
+<span class="linenos">17</span>    <span class="n">expected</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;hashed&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
+<span class="linenos">18</span>    <span class="k">if</span> <span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">):</span>
+<span class="linenos">19</span>        <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+<span class="linenos">20</span>        <span class="n">unique_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span>
+<span class="linenos">21</span>        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+<span class="linenos">22</span>            <span class="s1">&#39;sub&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
+<span class="linenos">23</span>            <span class="s1">&#39;iat&#39;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
+<span class="linenos">24</span>            <span class="s1">&#39;nbf&#39;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
+<span class="linenos">25</span>            <span class="s1">&#39;jti&#39;</span><span class="p">:</span> <span class="n">unique_id</span><span class="p">,</span>
+<span class="linenos">26</span>            <span class="c1"># NOTE: We can also add &#39;exp&#39; if we want tokens to expire.</span>
+<span class="linenos">27</span>        <span class="p">}</span>
+<span class="linenos">28</span>        <span class="k">return</span> <span class="n">jwt</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;HS256&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="linenos">29</span>    <span class="k">raise</span> <span class="n">UnauthorizedError</span><span class="p">(</span><span class="s1">&#39;Invalid password&#39;</span><span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>The call to <code class="docutils literal notranslate"><span class="pre">jwt.encode()</span></code> requires a payload and a secret.
 This secret is a value that is only known to our application and is
@@ -745,31 +612,23 @@ retrieve this value from SSM as shown in the <code class="docutils literal notra
 defined in our <code class="docutils literal notranslate"><span class="pre">app.py</span></code> file:</p>
 <div class="literal-block-wrapper docutils container" id="id7">
 <div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>34
-35
-36
-37
-38
-39
-40
-41
-42</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_auth_key</span><span class="p">():</span>
-    <span class="k">global</span> <span class="n">_AUTH_KEY</span>
-    <span class="k">if</span> <span class="n">_AUTH_KEY</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">base64_key</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;ssm&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get_parameter</span><span class="p">(</span>
-            <span class="n">Name</span><span class="o">=</span><span class="n">_SSM_AUTH_KEY_NAME</span><span class="p">,</span>
-            <span class="n">WithDecryption</span><span class="o">=</span><span class="kc">True</span>
-        <span class="p">)[</span><span class="s1">&#39;Parameter&#39;</span><span class="p">][</span><span class="s1">&#39;Value&#39;</span><span class="p">]</span>
-        <span class="n">_AUTH_KEY</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">base64_key</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_AUTH_KEY</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">34</span><span class="k">def</span> <span class="nf">get_auth_key</span><span class="p">():</span>
+<span class="linenos">35</span>    <span class="k">global</span> <span class="n">_AUTH_KEY</span>
+<span class="linenos">36</span>    <span class="k">if</span> <span class="n">_AUTH_KEY</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="linenos">37</span>        <span class="n">base64_key</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;ssm&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get_parameter</span><span class="p">(</span>
+<span class="linenos">38</span>            <span class="n">Name</span><span class="o">=</span><span class="n">_SSM_AUTH_KEY_NAME</span><span class="p">,</span>
+<span class="linenos">39</span>            <span class="n">WithDecryption</span><span class="o">=</span><span class="kc">True</span>
+<span class="linenos">40</span>        <span class="p">)[</span><span class="s1">&#39;Parameter&#39;</span><span class="p">][</span><span class="s1">&#39;Value&#39;</span><span class="p">]</span>
+<span class="linenos">41</span>        <span class="n">_AUTH_KEY</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">base64_key</span><span class="p">)</span>
+<span class="linenos">42</span>    <span class="k">return</span> <span class="n">_AUTH_KEY</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>Once we’ve generated a JWT token, we return the token back to the caller.
 They must then provide that same token in the <code class="docutils literal notranslate"><span class="pre">Authorization</span></code> header
 whenever they make API calls to the REST API.</p>
-</div>
-<div class="section" id="custom-authorizer">
+</section>
+<section id="custom-authorizer">
 <h4>Custom Authorizer<a class="headerlink" href="#custom-authorizer" title="Permalink to this headline">¶</a></h4>
 <p>In order to require that a specific route requires proper authorization,
 we must first create an authorizer, and then associate it with any routes
@@ -784,17 +643,13 @@ using our secret key retrieved via <code class="docutils literal notranslate"><s
 authorizer is shown below:</p>
 <div class="literal-block-wrapper docutils container" id="id8">
 <div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id8" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>27
-28
-29
-30
-31</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">authorizer</span><span class="p">()</span>
-<span class="k">def</span> <span class="nf">jwt_auth</span><span class="p">(</span><span class="n">auth_request</span><span class="p">):</span>
-    <span class="n">token</span> <span class="o">=</span> <span class="n">auth_request</span><span class="o">.</span><span class="n">token</span>
-    <span class="n">decoded</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">decode_jwt_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">get_auth_key</span><span class="p">())</span>
-    <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="n">decoded</span><span class="p">[</span><span class="s1">&#39;sub&#39;</span><span class="p">])</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">27</span><span class="nd">@app</span><span class="o">.</span><span class="n">authorizer</span><span class="p">()</span>
+<span class="linenos">28</span><span class="k">def</span> <span class="nf">jwt_auth</span><span class="p">(</span><span class="n">auth_request</span><span class="p">):</span>
+<span class="linenos">29</span>    <span class="n">token</span> <span class="o">=</span> <span class="n">auth_request</span><span class="o">.</span><span class="n">token</span>
+<span class="linenos">30</span>    <span class="n">decoded</span> <span class="o">=</span> <span class="n">auth</span><span class="o">.</span><span class="n">decode_jwt_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">get_auth_key</span><span class="p">())</span>
+<span class="linenos">31</span>    <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="n">decoded</span><span class="p">[</span><span class="s1">&#39;sub&#39;</span><span class="p">])</span>
 </pre></div>
-</td></tr></table></div>
+</div>
 </div>
 <p>Once we verify that JWT token is valid, we return an <code class="docutils literal notranslate"><span class="pre">AuthResponse</span></code> that
 specifies what routes the user is allowed to access.  In our example, we’re
@@ -805,20 +660,17 @@ the function as the value of the <code class="docutils literal notranslate"><spa
 <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code> decorator is being provided an <code class="docutils literal notranslate"><span class="pre">authorizer</span></code> function:</p>
 <div class="literal-block-wrapper docutils container" id="id9">
 <div class="code-block-caption"><span class="caption-text">app.py</span><a class="headerlink" href="#id9" title="Permalink to this code">¶</a></div>
-<div class="highlight-default notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>67
-68
-69
-70</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">list_todos</span><span class="p">():</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">list_items</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="linenos">67</span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/todos&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">],</span> <span class="n">authorizer</span><span class="o">=</span><span class="n">jwt_auth</span><span class="p">)</span>
+<span class="linenos">68</span><span class="k">def</span> <span class="nf">list_todos</span><span class="p">():</span>
+<span class="linenos">69</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">get_authorized_username</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">current_request</span><span class="p">)</span>
+<span class="linenos">70</span>    <span class="k">return</span> <span class="n">get_app_db</span><span class="p">()</span><span class="o">.</span><span class="n">list_items</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
 </div>
 </div>
-</div>
-</div>
-<div class="section" id="cleaning-up">
+</section>
+</section>
+</section>
+<section id="cleaning-up">
 <h2>Cleaning Up<a class="headerlink" href="#cleaning-up" title="Permalink to this headline">¶</a></h2>
 <p>Once you’re finished experimenting with this sample app, you can cleanup your
 resources by deleting the Chalice app and deleting any additional resources
@@ -842,8 +694,8 @@ Deleting SSM param: /todo-sample-app/auth-key
 Resources deleted.  If you haven&#39;t already, be sure to run &#39;chalice delete&#39; to delete your Chalice application.
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
                     

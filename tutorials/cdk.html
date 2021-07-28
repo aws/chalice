@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Deploying with the AWS CDK &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="deploying-with-the-aws-cdk">
+  <section id="deploying-with-the-aws-cdk">
 <h1>Deploying with the AWS CDK<a class="headerlink" href="#deploying-with-the-aws-cdk" title="Permalink to this headline">¶</a></h1>
 <p>In this tutorial, we’re going to create a REST API with an Amazon DynamoDB
 table as our data store.  We’ll be using the <a class="reference external" href="https://aws.amazon.com/cdk/">AWS Cloud Development Kit (CDK)</a>
@@ -136,7 +136,7 @@ service infrastructure and resources needed for your application.
 We’ll also see how we can use the Chalice construct to manipulate our
 Chalice application using the CDK APIs as well as take resources from
 CDK constructs and map them into our Chalice application.</p>
-<div class="section" id="installation-and-configuration">
+<section id="installation-and-configuration">
 <h2>Installation and Configuration<a class="headerlink" href="#installation-and-configuration" title="Permalink to this headline">¶</a></h2>
 <p>This tutorial requires that both Chalice and the AWS CDK is installed.
 The CDK is written in Typescript and requires node and npm to be installed.
@@ -166,8 +166,8 @@ To install the necessary dependencies run the following command:</p>
 </pre></div>
 </div>
 <p>You’re now ready to create your first Chalice and CDK application.</p>
-</div>
-<div class="section" id="project-creation">
+</section>
+<section id="project-creation">
 <h2>Project Creation<a class="headerlink" href="#project-creation" title="Permalink to this headline">¶</a></h2>
 <p>To create a new project we’ll use the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">new-project</span></code> command with no
 arguments.  Enter a name for your project and select
@@ -281,15 +281,15 @@ arn:aws:cloudformation:us-west-2:12345:stack/cdkdemo/574c4850-1d23-11eb-8cae-0ae
 <p>We’ve now deployed a Chalice application powered by the CDK.  We can now test
 our REST API.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">If you’ve Chalice before, you may be familiar with the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
+<p class="admonition-title">Note</p>
+<p>If you’ve Chalice before, you may be familiar with the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
 command.  When we use the AWS CDK to deploy our application we no longer
 use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and instead we run <code class="docutils literal notranslate"><span class="pre">cdk</span> <span class="pre">deploy</span></code> from the
 <code class="docutils literal notranslate"><span class="pre">infrastructure/</span></code> directory.  You should not use <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
 to deploy your application when using Chalice’s CDK integration.</p>
 </div>
-</div>
-<div class="section" id="testing">
+</section>
+<section id="testing">
 <h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>
 <p>To test our application, we make HTTP requests to our <code class="docutils literal notranslate"><span class="pre">EndpointUrl</span></code>, which is
 shown as the value for <code class="docutils literal notranslate"><span class="pre">cdkdemo.EndpointUrl</span></code> in the output section above.
@@ -315,8 +315,8 @@ Content-Type: application/json
 </div>
 <p>Now that we have our sample application up and running, let’s walk through the
 project code so we can better understand what’s happening.</p>
-</div>
-<div class="section" id="code-walkthrough">
+</section>
+<section id="code-walkthrough">
 <h2>Code Walkthrough<a class="headerlink" href="#code-walkthrough" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">runtime/</span></code> directory contains code where you define your Lambda event
 handlers (e.g. <code class="docutils literal notranslate"><span class="pre">&#64;app.route()</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;app.on_s3_event()</span></code>, etc.).  When you
@@ -420,16 +420,16 @@ your Lambda function access to this table.  We do this by using the
 <code class="docutils literal notranslate"><span class="pre">grant_read_write_data</span></code> method on our table resource, and we provide a
 reference to the default role that Chalice creates for us by using the
 <code class="docutils literal notranslate"><span class="pre">self.chalice.get_role()</span></code> method.</p>
-</div>
-<div class="section" id="next-steps">
+</section>
+<section id="next-steps">
 <h2>Next Steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
 <p>Feel free to experiment with this sample app.  Add new resources to your
 application by updating the <code class="docutils literal notranslate"><span class="pre">infrastructure/stacks/chaliceapp.py</span></code> file, map
 CDK resources into your Chalice app through environment variables, and
 redeploy your application by running <code class="docutils literal notranslate"><span class="pre">cdk</span> <span class="pre">deploy</span></code> from the
 <code class="docutils literal notranslate"><span class="pre">infrastructure/</span></code> directory.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

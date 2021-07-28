@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Configuration File &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="configuration-file">
+  <section id="configuration-file">
 <h1>Configuration File<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h1>
 <p>Whenever you create a new project using
 <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">new-project</span></code>, a <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory is created
@@ -139,50 +139,50 @@ you can use to control what happens when you <code class="docutils literal notra
 1 directory, 3 files
 </pre></div>
 </div>
-<div class="section" id="stage-specific-configuration">
+<section id="stage-specific-configuration">
 <span id="stage-config"></span><h2>Stage Specific Configuration<a class="headerlink" href="#stage-specific-configuration" title="Permalink to this headline">¶</a></h2>
 <p>As of version 0.7.0 of chalice, you can specify configuration
 that is specific to a chalice stage as well as configuration that should
 be shared across all stages.  See the <a class="reference internal" href="stages.html"><span class="doc">Chalice Stages</span></a> doc for more
 information about chalice stages.</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">stages</span></code> - This value of this key is a mapping of chalice stage
+<li><p><code class="docutils literal notranslate"><span class="pre">stages</span></code> - This value of this key is a mapping of chalice stage
 name to stage configuration.  Chalice assumes a default stage name
 of <code class="docutils literal notranslate"><span class="pre">dev</span></code>.  If you run the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">new-project</span></code> command on
 chalice 0.7.0 or higher, this key along with the default <code class="docutils literal notranslate"><span class="pre">dev</span></code>
 key will automatically be created for you.  See the examples
-section below for some stage specific configurations.</li>
+section below for some stage specific configurations.</p></li>
 </ul>
 <p>The following config values can either be specified per stage config
 or as a top level key which is not tied to a specific stage.  Whenever
 a stage specific configuration value is needed, the <code class="docutils literal notranslate"><span class="pre">stages</span></code> mapping
 is checked first.  If no value is found then the top level keys will
 be checked.</p>
-<div class="section" id="api-gateway-endpoint-type">
+<section id="api-gateway-endpoint-type">
 <h3><code class="docutils literal notranslate"><span class="pre">api_gateway_endpoint_type</span></code><a class="headerlink" href="#api-gateway-endpoint-type" title="Permalink to this headline">¶</a></h3>
 <p>The endpoint configuration of the deployed API Gateway which determines how the
 API will be accessed, can be EDGE, REGIONAL, PRIVATE. Note this value can only
 be set as a top level key and defaults to EDGE. For more information see
 <a class="reference external" href="https://amzn.to/2LofApt">https://amzn.to/2LofApt</a></p>
-</div>
-<div class="section" id="api-gateway-endpoint-vpce">
+</section>
+<section id="api-gateway-endpoint-vpce">
 <h3><code class="docutils literal notranslate"><span class="pre">api_gateway_endpoint_vpce</span></code><a class="headerlink" href="#api-gateway-endpoint-vpce" title="Permalink to this headline">¶</a></h3>
 <p>When configuring a Private API a VPC Endpoint id must be specified to configure
 a default resource policy on the API if an explicit policy is not specified.
 This value can be a list or a string of endpoint ids.</p>
-</div>
-<div class="section" id="api-gateway-policy-file">
+</section>
+<section id="api-gateway-policy-file">
 <h3><code class="docutils literal notranslate"><span class="pre">api_gateway_policy_file</span></code><a class="headerlink" href="#api-gateway-policy-file" title="Permalink to this headline">¶</a></h3>
 <p>A file pointing to an IAM resource policy for the REST API. If not specified
 chalice will autogenerate this policy when endpoint_type is PRIVATE. This
 filename is relative to the <code class="docutils literal notranslate"><span class="pre">.chalice</span></code> directory.</p>
-</div>
-<div class="section" id="api-gateway-stage">
+</section>
+<section id="api-gateway-stage">
 <h3><code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code><a class="headerlink" href="#api-gateway-stage" title="Permalink to this headline">¶</a></h3>
 <p>The name of the API gateway stage.  This will also be the URL prefix for your
 API (<code class="docutils literal notranslate"><span class="pre">https://endpoint/prefix/your-api</span></code>).</p>
-</div>
-<div class="section" id="autogen-policy">
+</section>
+<section id="autogen-policy">
 <h3><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code><a class="headerlink" href="#autogen-policy" title="Permalink to this headline">¶</a></h3>
 <p>A boolean value that indicates if chalice should try to automatically generate
 an IAM policy based on analyzing your application source code.  The default
@@ -192,8 +192,8 @@ auto-generating a policy from source code analysis. You can change the filename
 by providing the <code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code> config option.
 See <a class="reference internal" href="#iam-role-pol-examples"><span class="std std-ref">IAM Roles and Policies</span></a> for examples of how to configure IAM roles
 and policies.</p>
-</div>
-<div class="section" id="environment-variables">
+</section>
+<section id="environment-variables">
 <h3><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code><a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
 <p>A mapping of key value pairs.  These key value pairs will be set as environment
 variables in your application.  All environment variables must be strings.  If
@@ -201,8 +201,8 @@ this key is specified in both a stage specific config option as well as a top
 level key, the stage specific environment variables will be merged into the top
 level keys.  See the <a class="reference internal" href="#env-var-examples"><span class="std std-ref">Environment Variables</span></a> section below for a concrete
 example.</p>
-</div>
-<div class="section" id="iam-policy-file">
+</section>
+<section id="iam-policy-file">
 <h3><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code><a class="headerlink" href="#iam-policy-file" title="Permalink to this headline">¶</a></h3>
 <p>When <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, Chalice will try to load an IAM policy
 from disk instead of auto-generating one based on source code analysis.  The
@@ -225,105 +225,105 @@ will create an IAM role using the file in <code class="docutils literal notransl
 </div>
 <p>See <a class="reference internal" href="#iam-role-pol-examples"><span class="std std-ref">IAM Roles and Policies</span></a> for more examples of how to configure IAM
 roles and policies.</p>
-</div>
-<div class="section" id="iam-role-arn">
+</section>
+<section id="iam-role-arn">
 <h3><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code><a class="headerlink" href="#iam-role-arn" title="Permalink to this headline">¶</a></h3>
 <p>If <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, you must specify this value that indicates
 which IAM role arn to use when configuration your application.  This value is
 only used if <code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>.
 See <a class="reference internal" href="#iam-role-pol-examples"><span class="std std-ref">IAM Roles and Policies</span></a> for examples of how to configure IAM roles
 and policies.</p>
-</div>
-<div class="section" id="lambda-memory-size">
+</section>
+<section id="lambda-memory-size">
 <h3><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code><a class="headerlink" href="#lambda-memory-size" title="Permalink to this headline">¶</a></h3>
 <p>An integer representing the amount of memory, in MB, your Lambda function is
 given. AWS Lambda uses this memory size to infer the amount of CPU allocated to
 your function. The default <code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code> value is <code class="docutils literal notranslate"><span class="pre">128</span></code>. The value
 must be a multiple of 64 MB.</p>
-</div>
-<div class="section" id="lambda-timeout">
+</section>
+<section id="lambda-timeout">
 <h3><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code><a class="headerlink" href="#lambda-timeout" title="Permalink to this headline">¶</a></h3>
 <p>An integer representing the function execution time, in seconds, at which AWS
 Lambda should terminate the function. The default <code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code> is <code class="docutils literal notranslate"><span class="pre">60</span></code>
 seconds.</p>
-</div>
-<div class="section" id="layers">
+</section>
+<section id="layers">
 <h3><code class="docutils literal notranslate"><span class="pre">layers</span></code><a class="headerlink" href="#layers" title="Permalink to this headline">¶</a></h3>
 <p>A list of Lambda Layers arns. This value can be provided per stage as well as
 per Lambda function. See <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html">AWS Lambda Layers Configuration</a>.</p>
-</div>
-<div class="section" id="automatic-layer">
+</section>
+<section id="automatic-layer">
 <span id="automatic-layer-option"></span><h3><code class="docutils literal notranslate"><span class="pre">automatic_layer</span></code><a class="headerlink" href="#automatic-layer" title="Permalink to this headline">¶</a></h3>
 <p>A boolean value that indicates whether chalice will automatically construct a
 single stage layer for all Lambda functions with requirements.txt libraries and
 vendored libraries.  Boolean value defaults to <code class="docutils literal notranslate"><span class="pre">false</span></code> if not specified.  See
 <a class="reference internal" href="packaging.html#package-3rd-party"><span class="std std-ref">3rd Party Packages</span></a> for more information.</p>
-</div>
-<div class="section" id="api-gateway-custom-domain">
+</section>
+<section id="api-gateway-custom-domain">
 <span id="custom-domain-config-options"></span><h3><code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code><a class="headerlink" href="#api-gateway-custom-domain" title="Permalink to this headline">¶</a></h3>
 <p>A mapping of key value pairs. The following are required keys when
 specifying an <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code>:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">domain_name</span></code>: The custom domain name to associated with the REST API
-(api.example.com)</li>
-<li><code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>: the ARN of ACM certificate for the current domain name.
+<li><p><code class="docutils literal notranslate"><span class="pre">domain_name</span></code>: The custom domain name to associated with the REST API
+(api.example.com)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>: the ARN of ACM certificate for the current domain name.
 If you’re using a <code class="docutils literal notranslate"><span class="pre">REGIONAL</span></code> endpoint type for your API, the ACM
 certificate <strong>must</strong> be in the same region as your API.  If you’re using an
-<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the certificate must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.</li>
+<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the certificate must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.</p></li>
 </ul>
 <p>You can also provide the following optional configuration:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
+<li><p><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
 policy for this domain name.  Defaults to <code class="docutils literal notranslate"><span class="pre">TLS_1_2</span></code>, you can also provide
-<code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</li>
-<li><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
+<code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
 specification identifies a deployed REST API in a given stage. With custom
 domain names, you can set up your API’s hostname, and choose a base path (for
 example, <cite>myservice</cite>) to map the alternative URL to your API (for example
 <code class="docutils literal notranslate"><span class="pre">https://api.example.com/myservice</span></code>).  If you don’t set any <code class="docutils literal notranslate"><span class="pre">url_prefix</span></code>,
 the resulting API’s base URL is the same as the custom domain (for example
-<code class="docutils literal notranslate"><span class="pre">https://api.example.com/</span></code>).</li>
-<li>tags - A dictionary of tags with the keys being the tag key, and the values
-being the value for the tag.</li>
+<code class="docutils literal notranslate"><span class="pre">https://api.example.com/</span></code>).</p></li>
+<li><p>tags - A dictionary of tags with the keys being the tag key, and the values
+being the value for the tag.</p></li>
 </ul>
 <p>See the <a class="reference internal" href="domainname.html"><span class="doc">Custom Domain Names</span></a> documentation for more information on configuring
 your Chalice application with a custom domain name.</p>
 <p>See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">AWS Custom Domain names setup</a> for the API Gateway documentation on
 configuring a custom domain name.</p>
-</div>
-<div class="section" id="websocket-api-custom-domain">
+</section>
+<section id="websocket-api-custom-domain">
 <span id="custom-domain-ws-config-options"></span><h3><code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code><a class="headerlink" href="#websocket-api-custom-domain" title="Permalink to this headline">¶</a></h3>
 <p>A mapping of key value pairs. The following are required keys when
 specifying a <code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code>:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">domain_name</span></code>: The custom domain name to associated with the REST API
-(api.example.com)</li>
-<li><code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>: the ARN of ACM certificate for the current domain name.
+<li><p><code class="docutils literal notranslate"><span class="pre">domain_name</span></code>: The custom domain name to associated with the REST API
+(api.example.com)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">certificate_arn</span></code>: the ARN of ACM certificate for the current domain name.
 If you’re using a <code class="docutils literal notranslate"><span class="pre">REGIONAL</span></code> endpoint type for your API, the ACM
 certificate <strong>must</strong> be in the same region as your API.  If you’re using an
-<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the certificate must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.</li>
+<code class="docutils literal notranslate"><span class="pre">EDGE</span></code> endpoint type, the certificate must be in <code class="docutils literal notranslate"><span class="pre">us-east-1</span></code>.</p></li>
 </ul>
 <p>You can also provide the following optional configuration:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
+<li><p><code class="docutils literal notranslate"><span class="pre">tls_version</span></code> - The Transport Layer Security (TLS) version of the security
 policy for this domain name.  Defaults to <code class="docutils literal notranslate"><span class="pre">TLS_1_2</span></code>, you an also provide
-<code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</li>
-<li><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
+<code class="docutils literal notranslate"><span class="pre">TLS_1_0</span></code> for REST APIs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">url_prefix</span></code> - A custom domain name plus a url_prefix (BasePathMapping)
 specification identifies a deployed REST API in a given stage. With custom
 domain names, you can set up your API’s hostname, and choose a base path (for
 example, <cite>myservice</cite>) to map the alternative URL to your API (for example
 <code class="docutils literal notranslate"><span class="pre">https://api.example.com/myservice</span></code>).  If you don’t set any <code class="docutils literal notranslate"><span class="pre">url_prefix</span></code>,
 the resulting API’s base URL is the same as the custom domain (for example
-<code class="docutils literal notranslate"><span class="pre">https://api.example.com/</span></code>).</li>
-<li>tags - A dictionary of tags with the keys being the tag key, and the values
-being the value for the tag.</li>
+<code class="docutils literal notranslate"><span class="pre">https://api.example.com/</span></code>).</p></li>
+<li><p>tags - A dictionary of tags with the keys being the tag key, and the values
+being the value for the tag.</p></li>
 </ul>
 <p>See the <a class="reference internal" href="domainname.html"><span class="doc">Custom Domain Names</span></a> documentation for more information on configuring
 your Chalice application with a custom domain name.</p>
 <p>See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">AWS Custom Domain names setup</a> for the API Gateway documentation on
 configuring a custom domain name.</p>
-</div>
-<div class="section" id="manage-iam-role">
+</section>
+<section id="manage-iam-role">
 <h3><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code><a class="headerlink" href="#manage-iam-role" title="Permalink to this headline">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">false</span></code>.  Indicates if you want chalice to create and update the IAM
 role used for your application.  By default, this value is <code class="docutils literal notranslate"><span class="pre">true</span></code>.  However,
@@ -333,15 +333,15 @@ if you have a pre-existing role you’ve created, you can set this value to
 policies associated with that role.  If this value is <code class="docutils literal notranslate"><span class="pre">false</span></code> you must
 specify an <code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code>, otherwise an error is raised when you try to run
 <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>.</p>
-</div>
-<div class="section" id="minimum-compression-size">
+</section>
+<section id="minimum-compression-size">
 <h3><code class="docutils literal notranslate"><span class="pre">minimum_compression_size</span></code><a class="headerlink" href="#minimum-compression-size" title="Permalink to this headline">¶</a></h3>
 <p>An integer value that indicates the minimum compression size to apply to the
 API gateway. If this key is specified in both a stage specific config option as
 well as a top level key, the stage specific key will override the top level key
 for the given stage. For more information check out the <a class="reference external" href="https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-gzip-compression-decompression.html">Service Docs</a></p>
-</div>
-<div class="section" id="reserved-concurrency">
+</section>
+<section id="reserved-concurrency">
 <h3><code class="docutils literal notranslate"><span class="pre">reserved_concurrency</span></code><a class="headerlink" href="#reserved-concurrency" title="Permalink to this headline">¶</a></h3>
 <p>An integer representing each function’s reserved concurrency.  This value can
 be provided per stage as well as per Lambda function. AWS Lambda reserves this
@@ -349,8 +349,8 @@ value of concurrency to each lambda deployed in this stage. If the value is set
 to 0, invocations to this function are blocked. If the value is unset, there
 will be no reserved concurrency allocations. For more information, see <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html">AWS
 Documentation on managing concurrency</a>.</p>
-</div>
-<div class="section" id="subnet-ids">
+</section>
+<section id="subnet-ids">
 <h3><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code><a class="headerlink" href="#subnet-ids" title="Permalink to this headline">¶</a></h3>
 <p>A list of subnet ids for VPC configuration.  This value can be provided per
 stage as well as per Lambda function.  In order for this value to take effect,
@@ -359,14 +359,14 @@ provided and <code class="docutils literal notranslate"><span class="pre">autoge
 IAM role with the necessary permissions to create, describe, and delete ENIs.
 If you are managing the IAM role policy yourself, make sure to update your
 permissions accordingly, as described in the <a class="reference external" href="https://docs.aws.amazon.com/lambda/latest/dg/vpc.html#vpc-configuring">AWS Lambda VPC documentation</a>.</p>
-</div>
-<div class="section" id="security-group-ids">
+</section>
+<section id="security-group-ids">
 <h3><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code><a class="headerlink" href="#security-group-ids" title="Permalink to this headline">¶</a></h3>
 <p>A list of security groups for VPC configuration.  This value can be provided
 per stage as well as per Lambda function.  In order for this value to take
 effect, you must also provide the <code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code> value.</p>
-</div>
-<div class="section" id="tags">
+</section>
+<section id="tags">
 <h3><code class="docutils literal notranslate"><span class="pre">tags</span></code><a class="headerlink" href="#tags" title="Permalink to this headline">¶</a></h3>
 <p>A mapping of key value pairs. These key value pairs will be set as the tags on
 the resources running your deployed application. All tag keys and values must
@@ -376,14 +376,14 @@ tags will be merged into the top level keys. By default, all chalice deployed
 resources are tagged with the key <code class="docutils literal notranslate"><span class="pre">'aws-chalice'</span></code> whose value is
 <code class="docutils literal notranslate"><span class="pre">'version={chalice-version}:stage={stage-name}:app={app-name}'</span></code>.  Currently
 only the following chalice deployed resources are tagged: Lambda functions.</p>
-</div>
-<div class="section" id="xray">
+</section>
+<section id="xray">
 <h3><code class="docutils literal notranslate"><span class="pre">xray</span></code><a class="headerlink" href="#xray" title="Permalink to this headline">¶</a></h3>
 <p>A boolean that turns on AWS XRay’s Active tracing configuration.
 This will turn on XRay for both Lambda functions and API Gateway stages.</p>
-</div>
-</div>
-<div class="section" id="lambda-specific-configuration">
+</section>
+</section>
+<section id="lambda-specific-configuration">
 <span id="lambda-config"></span><h2>Lambda Specific Configuration<a class="headerlink" href="#lambda-specific-configuration" title="Permalink to this headline">¶</a></h2>
 <p>In addition to a chalice stage, there are also some configuration values
 that can be specified per Lambda function.  A chalice app can have many
@@ -425,18 +425,18 @@ function in your app.  The value is a dictionary of configuration that
 will be applied to that function.  These are the configuration options
 that can be applied per function:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">layers</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">reserved_concurrency</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">tags</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">environment_variables</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iam_policy_file</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iam_role_arn</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lambda_memory_size</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lambda_timeout</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">layers</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">manage_iam_role</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reserved_concurrency</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tags</span></code></p></li>
 </ul>
 <p>See the <a class="reference internal" href="#stage-config"><span class="std std-ref">Stage Specific Configuration</span></a> section above for a description
 of these config options.</p>
@@ -475,11 +475,11 @@ you would specify:</p>
  <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="examples">
+</section>
+<section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <p>Below are examples that show how you can configure your chalice app.</p>
-<div class="section" id="custom-domain-name">
+<section id="custom-domain-name">
 <h3>Custom Domain Name<a class="headerlink" href="#custom-domain-name" title="Permalink to this headline">¶</a></h3>
 <p>Here’s an example for configuring Custom domain name for
 dev stage for REST API:</p>
@@ -511,8 +511,8 @@ with specified <code class="docutils literal notranslate"><span class="pre">url_
 <a class="reference external" href="https://docs.aws.amazon.com/apigatewayv2/latest/api-reference/domainnames-domainname-apimappings.html">AWS Api Mapping key</a>.</p>
 <p>If there is Websocket API <code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code> should be used
 instead of <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code>.</p>
-</div>
-<div class="section" id="iam-roles-and-policies">
+</section>
+<section id="iam-roles-and-policies">
 <span id="iam-role-pol-examples"></span><h3>IAM Roles and Policies<a class="headerlink" href="#iam-roles-and-policies" title="Permalink to this headline">¶</a></h3>
 <p>Here’s an example for configuring IAM policies across stages:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -568,8 +568,8 @@ default to the top level <code class="docutils literal notranslate"><span class=
 However, the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage will have an API gateway stage
 name of <code class="docutils literal notranslate"><span class="pre">prod</span></code> because the <code class="docutils literal notranslate"><span class="pre">api_gateway_stage</span></code> is specified
 in <code class="docutils literal notranslate"><span class="pre">{&quot;stages&quot;:</span> <span class="pre">{&quot;prod&quot;:</span> <span class="pre">...}}</span></code> mapping.</p>
-</div>
-<div class="section" id="env-var-examples">
+</section>
+<section id="env-var-examples">
 <span id="id1"></span><h3>Environment Variables<a class="headerlink" href="#env-var-examples" title="Permalink to this headline">¶</a></h3>
 <p>In the following example, environment variables are specified
 both as top level keys as well as per stage.  This allows us to
@@ -616,8 +616,8 @@ following environment variables set:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="per-lambda-examples">
+</section>
+<section id="per-lambda-examples">
 <h3>Per Lambda Examples<a class="headerlink" href="#per-lambda-examples" title="Permalink to this headline">¶</a></h3>
 <p>Suppose we had the following chalice app:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
@@ -636,21 +636,21 @@ following environment variables set:</p>
 <p>Given these two functions, we’d like to configure the functions
 as follows:</p>
 <ul class="simple">
-<li>Both functions should have an environment variable <code class="docutils literal notranslate"><span class="pre">OWNER</span></code> with value
-<code class="docutils literal notranslate"><span class="pre">dev-team</span></code>.</li>
-<li>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should have an autogenerated IAM policy managed by
-chalice.</li>
-<li>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should be run in a VPC with subnet ids <code class="docutils literal notranslate"><span class="pre">sn-1</span></code> and
+<li><p>Both functions should have an environment variable <code class="docutils literal notranslate"><span class="pre">OWNER</span></code> with value
+<code class="docutils literal notranslate"><span class="pre">dev-team</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should have an autogenerated IAM policy managed by
+chalice.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should be run in a VPC with subnet ids <code class="docutils literal notranslate"><span class="pre">sn-1</span></code> and
 <code class="docutils literal notranslate"><span class="pre">sn-2</span></code>, with security groups <code class="docutils literal notranslate"><span class="pre">sg-10</span></code> and <code class="docutils literal notranslate"><span class="pre">sg-11</span></code>.  Chalice should
 also automatically configure the IAM policy with permissions to modify
-EC2 network interfaces.</li>
-<li>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should have two connected layers as <code class="docutils literal notranslate"><span class="pre">layer-arn-1</span></code> and
-<code class="docutils literal notranslate"><span class="pre">layer-arn-2</span></code>. Chalice should automatically configure the IAM policy.</li>
-<li>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function should use a pre-existing IAM role that was created
+EC2 network interfaces.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> function should have two connected layers as <code class="docutils literal notranslate"><span class="pre">layer-arn-1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">layer-arn-2</span></code>. Chalice should automatically configure the IAM policy.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function should use a pre-existing IAM role that was created
 outside of chalice.  Chalice should not perform an IAM role management for
-the <code class="docutils literal notranslate"><span class="pre">bar</span></code> function.</li>
-<li>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function should have an environment variable <code class="docutils literal notranslate"><span class="pre">TABLE_NAME</span></code> with
-value <code class="docutils literal notranslate"><span class="pre">mytable</span></code>.</li>
+the <code class="docutils literal notranslate"><span class="pre">bar</span></code> function.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> function should have an environment variable <code class="docutils literal notranslate"><span class="pre">TABLE_NAME</span></code> with
+value <code class="docutils literal notranslate"><span class="pre">mytable</span></code>.</p></li>
 </ul>
 <p>We can accomplish all this with this config file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -679,9 +679,9 @@ value <code class="docutils literal notranslate"><span class="pre">mytable</span
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
                     

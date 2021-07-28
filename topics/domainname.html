@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Custom Domain Names &#8212; AWS Chalice</title><link rel="stylesheet" href="../_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/default.css" />
     <link rel="stylesheet" href="../_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -123,7 +123,7 @@
                     </ul>
                     
                     
-  <div class="section" id="custom-domain-names">
+  <section id="custom-domain-names">
 <h1>Custom Domain Names<a class="headerlink" href="#custom-domain-names" title="Permalink to this headline">¶</a></h1>
 <p>Custom domain names are simpler and more intuitive URLs
 that you can provide to your API users.
@@ -136,8 +136,8 @@ See <a class="reference external" href="https://docs.aws.amazon.com/apigateway/l
 for more information.</p>
 <p>Custom domain name can be configured per Chalice stage.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This document describes the configuration option and process
+<p class="admonition-title">Note</p>
+<p>This document describes the configuration option and process
 needed to configure a custom domain with your Chalice application.
 If you’d like a step-by-step example that walks you through configuring
 a custom domain for a Chalice app using Amazon Route53 and ACM, see
@@ -150,7 +150,7 @@ is explained in the next two sections below.
 Then you must configure your DNS configuration to point your custom domain
 name to the domain name created by API Gateway.  This is explained in the
 <a class="reference internal" href="#dns-last-config"><span class="std std-ref">DNS Configuration</span></a> section below.</p>
-<div class="section" id="configure-custom-domain-name-for-rest-api">
+<section id="configure-custom-domain-name-for-rest-api">
 <h2>Configure custom domain name for REST API<a class="headerlink" href="#configure-custom-domain-name-for-rest-api" title="Permalink to this headline">¶</a></h2>
 <p>To create custom domain name for REST API, add the
 <code class="docutils literal notranslate"><span class="pre">api_gateway_custom_domain</span></code> configuration option to your
@@ -182,8 +182,8 @@ documentation.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="configure-custom-domain-name-for-websocket">
+</section>
+<section id="configure-custom-domain-name-for-websocket">
 <h2>Configure custom domain name for WebSocket<a class="headerlink" href="#configure-custom-domain-name-for-websocket" title="Permalink to this headline">¶</a></h2>
 <p>To create custom domain name for WebSocket API, add the
 <code class="docutils literal notranslate"><span class="pre">websocket_api_custom_domain</span></code> configuration option to your
@@ -211,8 +211,8 @@ documentation.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="dns-configuration">
+</section>
+<section id="dns-configuration">
 <span id="dns-last-config"></span><h2>DNS Configuration<a class="headerlink" href="#dns-configuration" title="Permalink to this headline">¶</a></h2>
 <p>Chalice only configures your API Gateway API with the necessary resources
 and configuration so a custom domain can be used.  It does not alter any
@@ -243,8 +243,8 @@ in the output of <code class="docutils literal notranslate"><span class="pre">ch
 registrar, you’ll need to create a CNAME record to the <code class="docutils literal notranslate"><span class="pre">AliasDomainName</span></code>.
 If you’d like a step-by-step example of how to do this with Route53, see
 the <a class="reference internal" href="../tutorials/customdomain.html"><span class="doc">Custom Domain Names</span></a> tutorial.</p>
-</div>
-</div>
+</section>
+</section>
 
 
                     

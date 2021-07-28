@@ -1,23 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Upgrade Notes &#8212; AWS Chalice</title><link rel="stylesheet" href="_static/bootstrap-reboot.css" type="text/css" />
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/default.css" />
     <link rel="stylesheet" href="_static/custom-tabs.css" type="text/css" />
     
 
     
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <script type="text/javascript">
         function _scroll(subjectId) {
             var subjectElement = $(subjectId);
@@ -119,14 +119,14 @@
                 <article id="document-body">
                     
                     
-  <div class="section" id="upgrade-notes">
+  <section id="upgrade-notes">
 <h1>Upgrade Notes<a class="headerlink" href="#upgrade-notes" title="Permalink to this headline">¶</a></h1>
 <p>This document provides additional documentation
 on upgrading your version of chalice.  If you’re just
 interested in the high level changes, see the
 <a class="reference external" href="https://github.com/aws/chalice/blob/master/CHANGELOG.rst">CHANGELOG.rst</a>)
 file.</p>
-<div class="section" id="v1-2-0">
+<section id="v1-2-0">
 <span id="id1"></span><h2>1.2.0<a class="headerlink" href="#v1-2-0" title="Permalink to this headline">¶</a></h2>
 <p>This release features a rewrite of the Chalice deployer
 (<a class="reference external" href="https://github.com/aws/chalice/issues/604">#604</a>).
@@ -221,8 +221,8 @@ like this:</p>
 1.2.0, chalice will automatically converted <code class="docutils literal notranslate"><span class="pre">.chalice/deployed.json</span></code> over to
 the format as you deploy a given stage.</p>
 <div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">Once you upgrade to 1.2.0, chalice will only update the new
+<p class="admonition-title">Warning</p>
+<p>Once you upgrade to 1.2.0, chalice will only update the new
 <code class="docutils literal notranslate"><span class="pre">.chalice/deployed/&lt;stage&gt;.json</span></code>.  This means you cannot downgrade
 to earlier versions of chalice unless you manually update
 <code class="docutils literal notranslate"><span class="pre">.chalice/deployed.json</span></code> as well.</p>
@@ -231,9 +231,9 @@ to earlier versions of chalice unless you manually update
 deployer.  This results in several changes compared to the previous
 version:</p>
 <ul class="simple">
-<li>Pure lambdas are supported</li>
-<li>Scheduled events are supported</li>
-<li>Parity between the behavior of <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code></li>
+<li><p>Pure lambdas are supported</p></li>
+<li><p>Scheduled events are supported</p></li>
+<li><p>Parity between the behavior of <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code></p></li>
 </ul>
 <p>As part of this change, the CFN resource names have been updated
 to use <code class="docutils literal notranslate"><span class="pre">CamelCase</span></code> names.  Previously, chalice converted your
@@ -246,8 +246,8 @@ renames unchanged in order to preserve backwards compatibility.
 In order to fix parity issues with <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> and
 <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">package</span></code>, we now explicitly create an IAM role
 resource as part of the default configuration.</p>
-</div>
-<div class="section" id="b2">
+</section>
+<section id="b2">
 <span id="v1-0-0b2"></span><h2>1.0.0b2<a class="headerlink" href="#b2" title="Permalink to this headline">¶</a></h2>
 <p>The url parameter names and the function argument names must match.
 Previously, the routing code would use positional args <code class="docutils literal notranslate"><span class="pre">handler(*args)</span></code>
@@ -273,8 +273,8 @@ also write the above view function as:</p>
 </div>
 <p>This was done to have consistent behavior with other web frameworks such as
 Flask.</p>
-</div>
-<div class="section" id="b1">
+</section>
+<section id="b1">
 <span id="v1-0-0b1"></span><h2>1.0.0b1<a class="headerlink" href="#b1" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">Chalice.define_authorizer</span></code> method has been removed.  This has been
 deprecated since v0.8.1.  See <a class="reference internal" href="topics/authorizers.html"><span class="doc">Authorization</span></a> for updated
@@ -291,16 +291,16 @@ $ chalice deploy prod
 $ chalice deploy --api-gateway-stage prod
 </pre></div>
 </div>
-</div>
-<div class="section" id="v0-9-0">
+</section>
+<section id="v0-9-0">
 <span id="id2"></span><h2>0.9.0<a class="headerlink" href="#v0-9-0" title="Permalink to this headline">¶</a></h2>
 <p>The 0.9.0 release changed the type of <code class="docutils literal notranslate"><span class="pre">app.current_request.raw_body</span></code> to
 always be of type <code class="docutils literal notranslate"><span class="pre">bytes()</span></code>.  This only affects users that were using
 python3.  Previously you would get a type <code class="docutils literal notranslate"><span class="pre">str()</span></code>, but with the introduction
 of <a class="reference external" href="https://github.com/aws/chalice/issues/348">binary content type support</a>, the <code class="docutils literal notranslate"><span class="pre">raw_body</span></code> attribute
 was made to consistently be of type <code class="docutils literal notranslate"><span class="pre">bytes()</span></code>.</p>
-</div>
-<div class="section" id="v0-8-1">
+</section>
+<section id="v0-8-1">
 <span id="id3"></span><h2>0.8.1<a class="headerlink" href="#v0-8-1" title="Permalink to this headline">¶</a></h2>
 <p>The 0.8.1 changed the preferred way of specifying authorizers for view
 functions.  You now specify either an instance of
@@ -347,14 +347,14 @@ be removed in future versions of chalice.  You can also use the new
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;secure&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="v0-7-0">
+</section>
+<section id="v0-7-0">
 <span id="id4"></span><h2>0.7.0<a class="headerlink" href="#v0-7-0" title="Permalink to this headline">¶</a></h2>
 <p>The 0.7.0 release adds several major features to chalice.  While the majority
 of these features are introduced in a backwards compatible way, there are a few
 backwards incompatible changes that were made in order to support these new
 major features.</p>
-<div class="section" id="separate-stages">
+<section id="separate-stages">
 <h3>Separate Stages<a class="headerlink" href="#separate-stages" title="Permalink to this headline">¶</a></h3>
 <p>Prior to this version, chalice had a notion of a “stage” that corresponded to
 an API gateway stage.  You can create and deploy a new API gateway stage by
@@ -364,35 +364,35 @@ resources.  This means that if you have two chalice stages, say <code class="doc
 <code class="docutils literal notranslate"><span class="pre">prod</span></code>, then you will have two separate sets of AWS resources, one set per
 stage:</p>
 <ul class="simple">
-<li>Two API Gateway Rest APIs</li>
-<li>Two separate Lambda functions</li>
-<li>Two separate IAM roles</li>
+<li><p>Two API Gateway Rest APIs</p></li>
+<li><p>Two separate Lambda functions</p></li>
+<li><p>Two separate IAM roles</p></li>
 </ul>
 <p>The <a class="reference internal" href="topics/stages.html"><span class="doc">Chalice Stages</span></a> doc has more details on the new chalice stages
 feature.  This section highlights the key differences between the old stage
 behavior and the new chalice stage functionality in 0.7.0.  In order to ease
 transition to this new model, the following changes were made:</p>
 <ul class="simple">
-<li>A new <code class="docutils literal notranslate"><span class="pre">--stage</span></code> argument was added to the <code class="docutils literal notranslate"><span class="pre">deploy</span></code>, <code class="docutils literal notranslate"><span class="pre">logs</span></code>, <code class="docutils literal notranslate"><span class="pre">url</span></code>,
+<li><p>A new <code class="docutils literal notranslate"><span class="pre">--stage</span></code> argument was added to the <code class="docutils literal notranslate"><span class="pre">deploy</span></code>, <code class="docutils literal notranslate"><span class="pre">logs</span></code>, <code class="docutils literal notranslate"><span class="pre">url</span></code>,
 <code class="docutils literal notranslate"><span class="pre">generate-sdk</span></code>, and <code class="docutils literal notranslate"><span class="pre">package</span></code> commands.  If this value is specified
 and the stage does not exist, a new chalice stage with that name will
-be created for you.</li>
-<li>The existing form <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code> has been deprecated.
+be created for you.</p></li>
+<li><p>The existing form <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code> has been deprecated.
 The command will still work in version 0.7.0, but a deprecation warning
-will be printed to stderr.</li>
-<li>If you want the pre-existing behavior of creating a new API gateway stage
+will be printed to stderr.</p></li>
+<li><p>If you want the pre-existing behavior of creating a new API gateway stage
 (while using the same Lambda function), you can use the
 <code class="docutils literal notranslate"><span class="pre">--api-gateway-stage</span></code> argument.  This is the replacement for the
-deprecated form <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code>.</li>
-<li>The default stage if no <code class="docutils literal notranslate"><span class="pre">--stage</span></code> option is provided is <code class="docutils literal notranslate"><span class="pre">dev</span></code>.  By
+deprecated form <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span> <span class="pre">&lt;stage-name&gt;</span></code>.</p></li>
+<li><p>The default stage if no <code class="docutils literal notranslate"><span class="pre">--stage</span></code> option is provided is <code class="docutils literal notranslate"><span class="pre">dev</span></code>.  By
 defaulting to a <code class="docutils literal notranslate"><span class="pre">dev</span></code> stage, the pre-existing behavior of not
 specifying a stage name, e.g <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>, <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">url</span></code>, etc.
-will still work exactly the same.</li>
-<li>A new <code class="docutils literal notranslate"><span class="pre">stages</span></code> key is supported in the <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>.  This
+will still work exactly the same.</p></li>
+<li><p>A new <code class="docutils literal notranslate"><span class="pre">stages</span></code> key is supported in the <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>.  This
 allows you to specify configuration specific to a chalice stage.
 See the <a class="reference internal" href="topics/configfile.html"><span class="doc">Configuration File</span></a> doc for more information about stage
-specific configuration.</li>
-<li>Setting <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> to false will result in chalice looking
+specific configuration.</p></li>
+<li><p>Setting <code class="docutils literal notranslate"><span class="pre">autogen_policy</span></code> to false will result in chalice looking
 for a IAM policy file named <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code>.
 Previously it would look for a file named <code class="docutils literal notranslate"><span class="pre">.chalice/policy.json</span></code>.
 You can also explicitly set this value to
@@ -400,7 +400,7 @@ In order to ease transition, chalice will check for a
 <code class="docutils literal notranslate"><span class="pre">.chalice/policy.json</span></code> file when depoying to the <code class="docutils literal notranslate"><span class="pre">dev</span></code> stage.
 Support for <code class="docutils literal notranslate"><span class="pre">.chalice/policy.json</span></code> will be removed in future
 versions of chalice and users are encouraged to switch to the
-stage specific <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> files.</li>
+stage specific <code class="docutils literal notranslate"><span class="pre">.chalice/policy-&lt;stage-name&gt;.json</span></code> files.</p></li>
 </ul>
 <p>See the <a class="reference internal" href="topics/stages.html"><span class="doc">Chalice Stages</span></a> doc for more details on the new chalice stages
 feature.</p>
@@ -423,8 +423,8 @@ create a <code class="docutils literal notranslate"><span class="pre">.chalice/d
 </pre></div>
 </div>
 <p>This file is discussed in the next section.</p>
-</div>
-<div class="section" id="deployed-values">
+</section>
+<section id="deployed-values">
 <h3>Deployed Values<a class="headerlink" href="#deployed-values" title="Permalink to this headline">¶</a></h3>
 <p>In version 0.7.0, the way deployed values are stored and retrieved
 has changed.  In prior versions, only the <code class="docutils literal notranslate"><span class="pre">lambda_arn</span></code> was saved,
@@ -439,8 +439,8 @@ issues if you run commands such as <code class="docutils literal notranslate"><s
 without first deploying.  To fix this issue, run <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code>
 and version 0.7.0 of chalice so a <code class="docutils literal notranslate"><span class="pre">.chalice/deployed.json</span></code> will
 be created for you.</p>
-</div>
-<div class="section" id="authorizer-changes">
+</section>
+<section id="authorizer-changes">
 <h3>Authorizer Changes<a class="headerlink" href="#authorizer-changes" title="Permalink to this headline">¶</a></h3>
 <p><strong>The ``authorizer_id`` and ``authorization_type`` args are
 no longer supported in ``&#64;app.route(…)`` calls.</strong></p>
@@ -473,9 +473,9 @@ calls.  Now they must be defined all at once in the <code class="docutils litera
 <span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="v0-6-0">
+</section>
+</section>
+<section id="v0-6-0">
 <span id="id5"></span><h2>0.6.0<a class="headerlink" href="#v0-6-0" title="Permalink to this headline">¶</a></h2>
 <p>This version changed how the internals of how API gateway resources are created
 by chalice.  The integration type changed from <code class="docutils literal notranslate"><span class="pre">AWS</span></code> to <code class="docutils literal notranslate"><span class="pre">AWS_PROXY</span></code>.  This
@@ -484,11 +484,10 @@ non-JSON HTTP responses and inject arbitrary headers to the HTTP responses.
 While this change to the internals is primarily internal, there are several
 user-visible changes.</p>
 <ul>
-<li><p class="first">Uncaught exceptions with <code class="docutils literal notranslate"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">False</span></code> (the default value)
+<li><p>Uncaught exceptions with <code class="docutils literal notranslate"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">False</span></code> (the default value)
 will result in a more generic <code class="docutils literal notranslate"><span class="pre">InternalServerError</span></code> error.  The
-previous behavior was to return a <code class="docutils literal notranslate"><span class="pre">ChaliceViewError</span></code>.</p>
-</li>
-<li><p class="first">When you enabled debug mode via <code class="docutils literal notranslate"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">True</span></code>, the HTTP
+previous behavior was to return a <code class="docutils literal notranslate"><span class="pre">ChaliceViewError</span></code>.</p></li>
+<li><p>When you enabled debug mode via <code class="docutils literal notranslate"><span class="pre">app.debug</span> <span class="pre">=</span> <span class="pre">True</span></code>, the HTTP
 response will contain the python stack trace as the entire request
 body.  This is to improve the readability of stack traces.
 For example:</p>
@@ -510,7 +509,7 @@ ValueError: Hello, error!
 </pre></div>
 </div>
 </li>
-<li><p class="first">Content type validation now has error responses that match the same error
+<li><p>Content type validation now has error responses that match the same error
 response format used for other chalice built in responses.  Chalice was
 previously relying on API gateway to perform the content type validation.
 As a result of the <code class="docutils literal notranslate"><span class="pre">AWS_PROXY</span></code> work, this logic has moved into the chalice
@@ -526,13 +525,12 @@ Content-Type: application/json
 </pre></div>
 </div>
 </li>
-<li><p class="first">The keys in the <code class="docutils literal notranslate"><span class="pre">app.current_request.to_dict()</span></code> now match the casing used
+<li><p>The keys in the <code class="docutils literal notranslate"><span class="pre">app.current_request.to_dict()</span></code> now match the casing used
 by the <code class="docutils literal notranslate"><span class="pre">AWS_PPROXY</span></code> lambda integration, which are <code class="docutils literal notranslate"><span class="pre">lowerCamelCased</span></code>.
-This method is primarily intended for introspection purposes.</p>
-</li>
+This method is primarily intended for introspection purposes.</p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
                     
