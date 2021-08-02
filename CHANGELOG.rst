@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.24.1
+======
+
+* bugfix:GovCloud:Fix partition error when updating API Gateway in GovCloud region (#1770)
+
+
 1.24.0
 ======
 

@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "GovCloud",
+      "description": "Fix partition error when updating API Gateway in GovCloud region (#1770)"
+    }
+  ]
+}
