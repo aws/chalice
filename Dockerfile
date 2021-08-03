@@ -11,6 +11,6 @@ WORKDIR /chalice
 
 COPY . .
 
-RUN pip install -e ".[event-file-poller]"
-RUN pip install -r requirements-dev.txt
-RUN pip install -r requirements-docs.txt
+RUN pip install -e ".[event-file-poller]" && \
+    pip install -r requirements-dev.txt && \
+    pip install -r requirements-docs.txt
