@@ -14,6 +14,3 @@ COPY . .
 RUN pip install -e ".[event-file-poller]"
 RUN pip install -r requirements-dev.txt
 RUN pip install -r requirements-docs.txt
-
-COPY chalice chalice
-COPY tests tests
