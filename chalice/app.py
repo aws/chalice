@@ -1340,24 +1340,29 @@ class AuthResponse(object):
 
     def _generate_arn(self, route, request, method='*'):
         incoming_arn = request.method_arn
-        parts = incoming_arn.rsplit(':', 1)
-        # "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth"
+        # An incoming_arn would look like this:
+        # "arn:aws:execute-api:us-west-2:123:rest-api-id/stage/GET/needs/auth"
         # Then we pull out the rest-api-id and stage, such that:
         #   base = ['rest-api-id', 'stage']
-        base = parts[-1].split('/')[:2]
+        #
+        # We rely on the fact that the first part of the ARN format is fixed
+        # as:    arn:<partition>:<service>:<region>:<account-id>:<resource>
+        arn_parts = incoming_arn.split(':', 5)
+        allowed_resource = arn_parts[-1].split('/')[:2]
         # Now we add in the path components and rejoin everything
         # back together to make a full arn.
         # We're also assuming all HTTP methods (via '*') for now.
         # To support per HTTP method routes the API will need to be updated.
         # We also need to strip off the leading ``/`` so it can be
         # '/'.join(...)'d properly.
-        base.extend([method, route[1:]])
-        last_arn_segment = '/'.join(base)
+        allowed_resource.extend([method, route[1:]])
+        last_arn_segment = '/'.join(allowed_resource)
         if route == '*':
             # We also have to handle the '*' case which matches
             # all routes.
             last_arn_segment += route
-        final_arn = '%s:%s' % (parts[0], last_arn_segment)
+        arn_parts[-1] = last_arn_segment
+        final_arn = ':'.join(arn_parts)
         return final_arn
 
 
