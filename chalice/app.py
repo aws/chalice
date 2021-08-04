@@ -1623,14 +1623,9 @@ class WebsocketEventSourceHandler(EventSourceHandler):
             data = responce.to_dict()
         elif isinstance(responce, dict):
             data = responce
-
-        if isinstance(data, dict):
             if "statusCode" not in data:
                 data = {**self.WEBSOCKET_API_RESPONCE, **data}
-            return data
-        elif data:
-            return data
-        return self.WEBSOCKET_API_RESPONCE
+        return data or self.WEBSOCKET_API_RESPONCE
 
 
 class RestAPIEventHandler(BaseLambdaHandler):
