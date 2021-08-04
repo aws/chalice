@@ -1615,7 +1615,8 @@ class WebsocketEventSourceHandler(EventSourceHandler):
         )
 
         # Responce from user handler.
-        responce = super(EventSourceHandler, self).__call__(event, context)
+        responce = super(
+            WebsocketEventSourceHandler, self).__call__(event, context)
 
         data = None
         if isinstance(responce, Response):
@@ -1623,7 +1624,11 @@ class WebsocketEventSourceHandler(EventSourceHandler):
         elif isinstance(responce, dict):
             data = responce
 
-        if data:
+        if isinstance(data, dict):
+            if "statusCode" not in data:
+                data = {**self.WEBSOCKET_API_RESPONCE, **data}
+            return data
+        elif data:
             return data
         return self.WEBSOCKET_API_RESPONCE
 
