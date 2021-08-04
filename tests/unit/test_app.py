@@ -1358,6 +1358,37 @@ def test_can_return_auth_response():
     assert actual == response
 
 
+def test_auth_response_with_colon_chars():
+    event = {
+        'type': 'TOKEN',
+        'authorizationToken': 'authtoken',
+        'methodArn': 'arn:aws:execute-api:us-west-2:1:id/api/GET/foo/a:b:c:d',
+    }
+    auth_app = app.Chalice('builtin-auth')
+
+    response = {
+        'context': {},
+        'principalId': 'principal',
+        'policyDocument': {
+            'Version': '2012-10-17',
+            'Statement': [
+                {'Action': 'execute-api:Invoke',
+                 'Effect': 'Allow',
+                 'Resource': [
+                     'arn:aws:execute-api:us-west-2:1:id/api/*/foo/*'
+                 ]}
+            ]
+        }
+    }
+
+    @auth_app.authorizer()
+    def builtin_auth(auth_request):
+        return app.AuthResponse(['/foo/*'], 'principal')
+
+    actual = builtin_auth(event, None)
+    assert actual == response
+
+
 def test_auth_response_serialization():
     method_arn = (
         "arn:aws:execute-api:us-west-2:123:rest-api-id/dev/GET/needs/auth")
