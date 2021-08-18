@@ -9,3 +9,4 @@ updates:
   allow:
   - dependency-name: pip
   - dependency-name: click
+  - dependency-name: attrs
