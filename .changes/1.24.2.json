@@ -1,0 +1,20 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Dependencies",
+      "description": "Bump attrs dependency to latest version (#1786)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Auth",
+      "description": "Fix ARN parsing when generating a builtin AuthResponse (#1775)"
+    },
+    {
+      "type": "enhancement",
+      "category": "CLI",
+      "description": "Upgrade Click dependency to support v8.0.0 (#1729)"
+    }
+  ]
+}

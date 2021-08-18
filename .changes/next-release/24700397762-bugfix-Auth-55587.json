@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Auth",
-  "description": "Fix ARN parsing when generating a builtin AuthResponse (#1775)"
-}

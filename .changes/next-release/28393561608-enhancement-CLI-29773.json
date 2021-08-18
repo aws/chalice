@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "CLI",
-  "description": "Upgrade Click dependency to support v8.0.0 (#1729)"
-}

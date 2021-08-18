@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.24.2
+======
+
+* enhancement:Dependencies:Bump attrs dependency to latest version (#1786)
+* bugfix:Auth:Fix ARN parsing when generating a builtin AuthResponse (#1775)
+* enhancement:CLI:Upgrade Click dependency to support v8.0.0 (#1729)
+
+
 1.24.1
 ======
 
