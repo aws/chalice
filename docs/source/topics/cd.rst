@@ -183,7 +183,7 @@ There is also no mechanism provided by Chalice for a production stage.
 Ideally the CodeBuild stage would be used to run unit and functional tests
 before deploying to beta. After the beta stage is up, integration tests can be
 run against that endpoint, and if they all pass the beta stage could be
-promoted to a production stage using the CodePipleine manual approval feature.
+promoted to a production stage using the CodePipeline manual approval feature.
 
 .. _cicd-github-repo:
 
