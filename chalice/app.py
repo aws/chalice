@@ -2037,6 +2037,7 @@ class ConvertToMiddleware(object):
 
     def __call__(self, event, get_response):
         original_event, context = self._extract_original_param(event)
+
         @functools.wraps(self._wrapper)
         def wrapped(original_event, context):
             return get_response(event)
