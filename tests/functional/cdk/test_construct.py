@@ -87,8 +87,6 @@ def test_can_package_as_cdk_app(runner):
         assert bucket_ref.startswith('AssetParameters')
 
 
-@pytest.mark.xfail(reason=("Expected fail due to invalid schema in "
-                           "CDK sam.json file."))
 def test_can_package_managed_layer(runner):
     with runner.isolated_filesystem():
         newproj.create_new_project_skeleton(
