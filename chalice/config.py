@@ -163,7 +163,9 @@ class Config(object):
             return 'python3.6'
         elif (major, minor) <= (3, 7):
             return 'python3.7'
-        return 'python3.8'
+        elif (major, minor) <= (3, 8):
+            return 'python3.8'
+        return 'python3.9'
 
     @property
     def layers(self):
