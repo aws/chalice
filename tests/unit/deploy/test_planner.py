@@ -1739,7 +1739,8 @@ class TestPlanSQSSubscription(BasePlannerTests):
             resource_name='function_name-sqs-event-source',
             queue='myqueue',
             batch_size=10,
-            lambda_function=function
+            lambda_function=function,
+            maximum_batching_window_in_seconds=60
         )
         plan = self.determine_plan(sqs_event_source)
         plan_parse_arn = plan[:5]
@@ -1779,6 +1780,7 @@ class TestPlanSQSSubscription(BasePlannerTests):
                     "function_name-sqs-event-source_queue_arn"
                 ),
                 'batch_size': 10,
+                'maximum_batching_window_in_seconds': 60,
                 'function_name': Variable("function_name_lambda_arn")
             },
             output_var='function_name-sqs-event-source_uuid'
@@ -1801,7 +1803,8 @@ class TestPlanSQSSubscription(BasePlannerTests):
             resource_name='function_name-sqs-event-source',
             queue=models.QueueARN(arn='arn:us-west-2:myqueue'),
             batch_size=10,
-            lambda_function=function
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0
         )
         plan = self.determine_plan(sqs_event_source)
         assert plan[0] == models.StoreValue(
@@ -1815,6 +1818,7 @@ class TestPlanSQSSubscription(BasePlannerTests):
                     "function_name-sqs-event-source_queue_arn"
                 ),
                 'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
                 'function_name': Variable("function_name_lambda_arn")
             },
             output_var='function_name-sqs-event-source_uuid'
@@ -1837,7 +1841,8 @@ class TestPlanSQSSubscription(BasePlannerTests):
             resource_name='function_name-sqs-event-source',
             queue=models.QueueARN(arn='arn:sqs:myqueue'),
             batch_size=10,
-            lambda_function=function
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0
         )
         self.remote_state.declare_resource_exists(
             sqs_event_source,
@@ -1857,6 +1862,7 @@ class TestPlanSQSSubscription(BasePlannerTests):
             params={
                 'event_uuid': 'my-uuid',
                 'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
             },
         )
         self.assert_recorded_values(
@@ -1874,7 +1880,8 @@ class TestPlanSQSSubscription(BasePlannerTests):
             resource_name='function_name-sqs-event-source',
             queue='myqueue',
             batch_size=10,
-            lambda_function=function
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0
         )
         self.remote_state.declare_resource_exists(
             sqs_event_source,
@@ -1917,6 +1924,7 @@ class TestPlanSQSSubscription(BasePlannerTests):
             params={
                 'event_uuid': 'my-uuid',
                 'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
             },
         )
         self.assert_recorded_values(
@@ -1972,6 +1980,7 @@ class TestPlanKinesisSubscription(BasePlannerTests):
             stream='mystream',
             batch_size=10,
             starting_position='LATEST',
+            maximum_batching_window_in_seconds=0,
             lambda_function=function
         )
         plan = self.determine_plan(kinesis_event_source)
@@ -2014,6 +2023,7 @@ class TestPlanKinesisSubscription(BasePlannerTests):
                 ),
                 'batch_size': 10,
                 'starting_position': 'LATEST',
+                'maximum_batching_window_in_seconds': 0,
                 'function_name': Variable("function_name_lambda_arn")
             },
             output_var='function_name-kinesis-event-source_uuid'
@@ -2037,6 +2047,7 @@ class TestPlanKinesisSubscription(BasePlannerTests):
             stream='mystream',
             batch_size=10,
             starting_position='LATEST',
+            maximum_batching_window_in_seconds=60,
             lambda_function=function
         )
         self.remote_state.declare_resource_exists(
@@ -2053,6 +2064,7 @@ class TestPlanKinesisSubscription(BasePlannerTests):
             params={
                 'event_uuid': 'my-uuid',
                 'batch_size': 10,
+                'maximum_batching_window_in_seconds': 60,
             }
         )
 
@@ -2063,6 +2075,7 @@ class TestPlanDynamoDBSubscription(BasePlannerTests):
         event_source = models.DynamoDBEventSource(
             resource_name='handler-dynamodb-event-source',
             stream_arn='arn:stream', batch_size=100,
+            maximum_batching_window_in_seconds=0,
             starting_position='LATEST', lambda_function=function)
         plan = self.determine_plan(event_source)
         assert plan[0] == models.APICall(
@@ -2072,6 +2085,7 @@ class TestPlanDynamoDBSubscription(BasePlannerTests):
                 'batch_size': 100,
                 'function_name': Variable('function_name_lambda_arn'),
                 'starting_position': 'LATEST',
+                'maximum_batching_window_in_seconds': 0,
             },
             output_var='handler-dynamodb-event-source_uuid',
         )
@@ -2081,6 +2095,7 @@ class TestPlanDynamoDBSubscription(BasePlannerTests):
         event_source = models.DynamoDBEventSource(
             resource_name='handler-dynamodb-event-source',
             stream_arn='arn:stream', batch_size=100,
+            maximum_batching_window_in_seconds=60,
             starting_position='LATEST', lambda_function=function)
         self.remote_state.declare_resource_exists(
             event_source,
@@ -2095,6 +2110,7 @@ class TestPlanDynamoDBSubscription(BasePlannerTests):
             params={
                 'event_uuid': 'my-uuid',
                 'batch_size': 100,
+                'maximum_batching_window_in_seconds': 60
             },
         )
 
@@ -2461,6 +2477,7 @@ class TestRemoteState(object):
                                      expected_result):
         event_source = models.SQSEventSource(
             resource_name='handler-sqs-event-source',
+            maximum_batching_window_in_seconds=0,
             queue=new_queue, batch_size=100, lambda_function=None
         )
         if deployed_queue is not None:
@@ -2494,6 +2511,7 @@ class TestRemoteState(object):
         event_source = models.KinesisEventSource(
             resource_name='handler-kinesis-event-source',
             stream='mystream', batch_size=100, starting_position='LATEST',
+            maximum_batching_window_in_seconds=0,
             lambda_function=None)
         deployed_resources = {'resources': []}
         remote_state = RemoteState(
@@ -2505,6 +2523,7 @@ class TestRemoteState(object):
         event_source = models.KinesisEventSource(
             resource_name='handler-kinesis-event-source',
             stream='mystream', batch_size=100, starting_position='LATEST',
+            maximum_batching_window_in_seconds=0,
             lambda_function=None)
         deployed_resources = {
             'resources': [{
@@ -2526,6 +2545,7 @@ class TestRemoteState(object):
         event_source = models.DynamoDBEventSource(
             resource_name='handler-dynamodb-event-source',
             stream_arn='arn:stream', batch_size=100,
+            maximum_batching_window_in_seconds=0,
             starting_position='LATEST', lambda_function=None)
         deployed_resources = {'resources': []}
         remote_state = RemoteState(
@@ -2537,6 +2557,7 @@ class TestRemoteState(object):
         event_source = models.KinesisEventSource(
             resource_name='handler-kinesis-event-source',
             stream='mystream', batch_size=100, starting_position='LATEST',
+            maximum_batching_window_in_seconds=0,
             lambda_function=None)
         deployed_resources = {
             'resources': [{
@@ -2943,7 +2964,8 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
                 resource_name='handler-sqs-event-source',
                 queue='my-queue',
                 batch_size=10,
-                lambda_function=create_function_resource('function_name')
+                lambda_function=create_function_resource('function_name'),
+                maximum_batching_window_in_seconds=0
             )
         )
         deployed = {
@@ -2995,7 +3017,8 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
                 resource_name='handler-sqs-event-source',
                 queue='my-new-queue',
                 batch_size=10,
-                lambda_function=create_function_resource('function_name')
+                lambda_function=create_function_resource('function_name'),
+                maximum_batching_window_in_seconds=0
             )
         )
         config = FakeConfig(deployed)

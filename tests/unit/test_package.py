@@ -728,8 +728,9 @@ class TestTerraformTemplate(TemplateTestBase):
                        ':${data.aws_region.chalice.name}:'
                        '${data.aws_caller_identity.chalice.account_id}:foo'),
                    'function_name': '${aws_lambda_function.handler.arn}',
-                   'batch_size': 5
-               }
+                   'batch_size': 5,
+                   'maximum_batching_window_in_seconds': 0
+        }
 
     def test_sqs_arn_does_not_use_fn_sub(self, sample_app):
         @sample_app.on_sqs_message(queue_arn='arn:foo:bar', batch_size=5)
@@ -747,7 +748,8 @@ class TestTerraformTemplate(TemplateTestBase):
                    'handler-sqs-event-source'] == {
                    'event_source_arn': 'arn:foo:bar',
                    'function_name': '${aws_lambda_function.handler.arn}',
-                   'batch_size': 5
+                   'batch_size': 5,
+                   'maximum_batching_window_in_seconds': 0
                }
 
     def test_can_package_kinesis_handler(self, sample_app):
@@ -772,7 +774,8 @@ class TestTerraformTemplate(TemplateTestBase):
                        ':stream/mystream'),
                    'function_name': '${aws_lambda_function.handler.arn}',
                    'starting_position': 'TRIM_HORIZON',
-                   'batch_size': 5
+                   'batch_size': 5,
+                   'maximum_batching_window_in_seconds': 0
                }
 
     def test_can_package_dynamodb_handler(self, sample_app):
@@ -794,7 +797,8 @@ class TestTerraformTemplate(TemplateTestBase):
                        'event_source_arn': 'arn:aws:...:stream',
                        'function_name': '${aws_lambda_function.handler.arn}',
                        'starting_position': 'TRIM_HORIZON',
-                       'batch_size': 5
+                       'batch_size': 5,
+                       'maximum_batching_window_in_seconds': 0
                    }
 
     def test_package_websocket_with_error_message(self, sample_websocket_app):
@@ -1538,6 +1542,7 @@ class TestSAMTemplate(TemplateTestBase):
                         )
                     },
                     'BatchSize': 5,
+                    'MaximumBatchingWindowInSeconds': 0,
                 },
             }
         }
@@ -1558,6 +1563,7 @@ class TestSAMTemplate(TemplateTestBase):
                 'Properties': {
                     'Queue': 'arn:foo:bar',
                     'BatchSize': 5,
+                    'MaximumBatchingWindowInSeconds': 0,
                 },
             }
         }
@@ -1584,6 +1590,7 @@ class TestSAMTemplate(TemplateTestBase):
                     },
                     'BatchSize': 5,
                     'StartingPosition': 'LATEST',
+                    'MaximumBatchingWindowInSeconds': 0,
                 },
             }
         }
@@ -1606,6 +1613,7 @@ class TestSAMTemplate(TemplateTestBase):
                     'Stream': 'arn:aws:...:stream',
                     'BatchSize': 5,
                     'StartingPosition': 'LATEST',
+                    'MaximumBatchingWindowInSeconds': 0,
                 },
             }
         }

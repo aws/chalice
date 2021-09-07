@@ -570,6 +570,7 @@ class ApplicationGraphBuilder(object):
             queue=queue,
             batch_size=sqs_config.batch_size,
             lambda_function=lambda_function,
+            maximum_batching_window_in_seconds=sqs_config.maximum_batching_window_in_seconds,
         )
         return sqs_event_source
 
@@ -590,6 +591,7 @@ class ApplicationGraphBuilder(object):
             resource_name=resource_name,
             stream=kinesis_config.stream,
             batch_size=kinesis_config.batch_size,
+            maximum_batching_window_in_seconds=kinesis_config.maximum_batching_window_in_seconds,
             starting_position=kinesis_config.starting_position,
             lambda_function=lambda_function,
         )
@@ -612,6 +614,7 @@ class ApplicationGraphBuilder(object):
             resource_name=resource_name,
             stream_arn=ddb_config.stream_arn,
             batch_size=ddb_config.batch_size,
+            maximum_batching_window_in_seconds=ddb_config.maximum_batching_window_in_seconds,
             starting_position=ddb_config.starting_position,
             lambda_function=lambda_function,
         )
