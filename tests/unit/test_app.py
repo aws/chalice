@@ -1986,6 +1986,7 @@ def test_can_create_sqs_handler(sample_app):
     event = sample_app.event_sources[0]
     assert event.queue == 'MyQueue'
     assert event.batch_size == 200
+    assert event.maximum_batching_window_in_seconds == 0
     assert event.handler_string == 'app.handler'
 
 
@@ -1997,6 +1998,16 @@ def test_can_set_sqs_handler_name(sample_app):
     assert len(sample_app.event_sources) == 1
     event = sample_app.event_sources[0]
     assert event.name == 'sqs_handler'
+
+
+def test_can_set_sqs_handler_maximum_batching_window_in_seconds(sample_app):
+    @sample_app.on_sqs_message(queue='MyQueue', maximum_batching_window_in_seconds=60)
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    event = sample_app.event_sources[0]
+    assert event.maximum_batching_window_in_seconds == 60
 
 
 def test_can_map_sqs_event(sample_app):
@@ -2044,6 +2055,20 @@ def test_can_create_kinesis_handler(sample_app):
     assert config.stream == 'MyStream'
     assert config.batch_size == 1
     assert config.starting_position == 'TRIM_HORIZON'
+    assert config.maximum_batching_window_in_seconds == 0
+
+
+def test_can_set_kinesis_handler_maximum_batching_window_in_seconds(sample_app):
+    @sample_app.on_kinesis_record(stream='MyStream',
+                                  batch_size=1,
+                                  starting_position='TRIM_HORIZON',
+                                  maximum_batching_window_in_seconds=60)
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    config = sample_app.event_sources[0]
+    assert config.maximum_batching_window_in_seconds == 60
 
 
 def test_can_map_kinesis_event(sample_app):
@@ -2115,6 +2140,20 @@ def test_can_create_ddb_handler(sample_app):
     assert config.stream_arn == 'arn:aws:dynamodb:...:stream'
     assert config.batch_size == 10
     assert config.starting_position == 'TRIM_HORIZON'
+    assert config.maximum_batching_window_in_seconds == 0
+
+
+def test_can_set_ddb_handler_maximum_batching_window_in_seconds(sample_app):
+    @sample_app.on_dynamodb_record(
+        stream_arn='arn:aws:dynamodb:...:stream', batch_size=10,
+        starting_position='TRIM_HORIZON',
+        maximum_batching_window_in_seconds=60)
+    def handler(event):
+        pass
+
+    assert len(sample_app.event_sources) == 1
+    config = sample_app.event_sources[0]
+    assert config.maximum_batching_window_in_seconds == 60
 
 
 def test_can_map_ddb_event(sample_app):

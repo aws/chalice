@@ -354,13 +354,14 @@ class SNSEventConfig(BaseEventSourceConfig):
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    queue = ... # type: Optional[str]
-    queue_arn = ... # type: Optional[str]
-    batch_size = ... # type: int
+    queue = ...                              # type: Optional[str]
+    queue_arn = ...                          # type: Optional[str]
+    batch_size = ...                         # type: int
+    maximum_batching_window_in_seconds = ... # type: int
 
     def __init__(
         self, name: str, handler_string: str, queue: Optional[str],
-        queue_arn: Optional[str], batch_size: int
+        queue_arn: Optional[str], batch_size: int, maximum_batching_window_in_seconds: int,
     ) -> None: ...
 
 
@@ -374,15 +375,17 @@ class CloudWatchEventConfig(BaseEventSourceConfig):
 
 
 class KinesisEventConfig(BaseEventSourceConfig):
-    stream = ...             # type: str
-    batch_size = ...         # type: int
-    starting_position = ...  # type: str
+    stream = ...                             # type: str
+    batch_size = ...                         # type: int
+    starting_position = ...                  # type: str
+    maximum_batching_window_in_seconds = ... # type: int
 
 
 class DynamoDBEventConfig(BaseEventSourceConfig):
-    stream_arn = ...             # type: str
-    batch_size = ...             # type: int
-    starting_position = ...      # type: str
+    stream_arn = ...                         # type: str
+    batch_size = ...                         # type: int
+    starting_position = ...                  # type: str
+    maximum_batching_window_in_seconds = ... # type: int
 
 
 class Blueprint(DecoratorAPI):

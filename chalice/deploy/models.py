@@ -344,21 +344,24 @@ class QueueARN(object):
 @attrs
 class SQSEventSource(FunctionEventSubscriber):
     resource_type = 'sqs_event'
-    queue = attrib()            # type: Union[str, QueueARN]
-    batch_size = attrib()       # type: int
+    queue = attrib()                                # type: Union[str, QueueARN]
+    batch_size = attrib()                           # type: int
+    maximum_batching_window_in_seconds = attrib()   # type: int
 
 
 @attrs
 class KinesisEventSource(FunctionEventSubscriber):
     resource_type = 'kinesis_event'
-    stream = attrib()                # type: str
-    batch_size = attrib()            # type: int
-    starting_position = attrib()     # type: str
+    stream = attrib()                               # type: str
+    batch_size = attrib()                           # type: int
+    starting_position = attrib()                    # type: str
+    maximum_batching_window_in_seconds = attrib()   # type: int
 
 
 @attrs
 class DynamoDBEventSource(FunctionEventSubscriber):
     resource_type = 'dynamodb_event'
-    stream_arn = attrib()            # type: str
-    batch_size = attrib()            # type: int
-    starting_position = attrib()     # type: str
+    stream_arn = attrib()                           # type: str
+    batch_size = attrib()                           # type: int
+    starting_position = attrib()                    # type: str
+    maximum_batching_window_in_seconds = attrib()   # type: int
