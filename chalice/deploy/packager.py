@@ -77,6 +77,7 @@ class BaseLambdaDeploymentPackager(object):
         'python3.6': 'cp36m',
         'python3.7': 'cp37m',
         'python3.8': 'cp38',
+        'python3.9': 'cp39'
     }
 
     def __init__(self, osutils, dependency_builder, ui):
