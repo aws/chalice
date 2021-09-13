@@ -62,8 +62,8 @@ Python 3.6 ::
     ...
     https://endpoint/api
 
-To upgrade the application to use Python 3.9, create a python3 virtual environment
-and redeploy.
+To upgrade the application to use Python 3.9, create a python3 virtual
+environment and redeploy.
 
 ::
 
