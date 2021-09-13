@@ -344,9 +344,9 @@ class QueueARN(object):
 @attrs
 class SQSEventSource(FunctionEventSubscriber):
     resource_type = 'sqs_event'
-    queue = attrib()                                # type: Union[str, QueueARN]
-    batch_size = attrib()                           # type: int
-    maximum_batching_window_in_seconds = attrib()   # type: int
+    queue = attrib()                               # type: Union[str, QueueARN]
+    batch_size = attrib()                          # type: int
+    maximum_batching_window_in_seconds = attrib()  # type: int
 
 
 @attrs

@@ -2001,7 +2001,8 @@ def test_can_set_sqs_handler_name(sample_app):
 
 
 def test_can_set_sqs_handler_maximum_batching_window_in_seconds(sample_app):
-    @sample_app.on_sqs_message(queue='MyQueue', maximum_batching_window_in_seconds=60)
+    @sample_app.on_sqs_message(
+        queue='MyQueue', maximum_batching_window_in_seconds=60)
     def handler(event):
         pass
 
@@ -2058,7 +2059,7 @@ def test_can_create_kinesis_handler(sample_app):
     assert config.maximum_batching_window_in_seconds == 0
 
 
-def test_can_set_kinesis_handler_maximum_batching_window_in_seconds(sample_app):
+def test_can_set_kinesis_handler_maximum_batching_window(sample_app):
     @sample_app.on_kinesis_record(stream='MyStream',
                                   batch_size=1,
                                   starting_position='TRIM_HORIZON',
