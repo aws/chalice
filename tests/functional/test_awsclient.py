@@ -3592,6 +3592,7 @@ def test_can_create_kinesis_event_source(stubbed_session):
         FunctionName=function_name,
         BatchSize=batch_size,
         StartingPosition=starting_position,
+        MaximumBatchingWindowInSeconds=0
     ).returns({'UUID': 'my-uuid'})
 
     stubbed_session.activate_stubs()
@@ -3603,22 +3604,52 @@ def test_can_create_kinesis_event_source(stubbed_session):
     stubbed_session.verify_stubs()
 
 
-def test_can_create_sqs_event_source(stubbed_session):
-    queue_arn = 'arn:sqs:queue-name'
+def test_can_create_kinesis_event_source_batching_window(stubbed_session):
+    kinesis_arn = 'arn:aws:kinesis:us-west-2:...:stream/MyStream'
     function_name = 'myfunction'
     batch_size = 100
+    starting_position = 'TRIM_HORIZON'
+    maximum_batching_window_in_seconds = 60
 
     lambda_stub = stubbed_session.stub('lambda')
     lambda_stub.create_event_source_mapping(
-        EventSourceArn=queue_arn,
+        EventSourceArn=kinesis_arn,
         FunctionName=function_name,
-        BatchSize=batch_size
+        BatchSize=batch_size,
+        StartingPosition=starting_position,
+        MaximumBatchingWindowInSeconds=maximum_batching_window_in_seconds
+
     ).returns({'UUID': 'my-uuid'})
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
     result = client.create_lambda_event_source(
-        queue_arn, function_name, batch_size
+        kinesis_arn, function_name, batch_size, starting_position,
+        maximum_batching_window_in_seconds
+    )
+    assert result == 'my-uuid'
+    stubbed_session.verify_stubs()
+
+
+def test_can_create_sqs_event_source(stubbed_session):
+    queue_arn = 'arn:sqs:queue-name'
+    function_name = 'myfunction'
+    batch_size = 100
+    maximum_batching_window_in_seconds = 60
+
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.create_event_source_mapping(
+        EventSourceArn=queue_arn,
+        FunctionName=function_name,
+        BatchSize=batch_size,
+        MaximumBatchingWindowInSeconds=maximum_batching_window_in_seconds
+    ).returns({'UUID': 'my-uuid'})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    result = client.create_lambda_event_source(
+        queue_arn, function_name, batch_size,
+        maximum_batching_window_in_seconds=maximum_batching_window_in_seconds
     )
     assert result == 'my-uuid'
     stubbed_session.verify_stubs()
@@ -3633,7 +3664,8 @@ def test_can_retry_create_sqs_event_source(stubbed_session):
     lambda_stub.create_event_source_mapping(
         EventSourceArn=queue_arn,
         FunctionName=function_name,
-        BatchSize=batch_size
+        BatchSize=batch_size,
+        MaximumBatchingWindowInSeconds=0
     ).raises_error(
         error_code='InvalidParameterValueException',
         message=('The provided execution role does not '
@@ -3642,7 +3674,8 @@ def test_can_retry_create_sqs_event_source(stubbed_session):
     lambda_stub.create_event_source_mapping(
         EventSourceArn=queue_arn,
         FunctionName=function_name,
-        BatchSize=batch_size
+        BatchSize=batch_size,
+        MaximumBatchingWindowInSeconds=0
     ).returns({'UUID': 'my-uuid'})
 
     stubbed_session.activate_stubs()
@@ -3710,12 +3743,30 @@ def test_can_retry_update_event_source(stubbed_session):
     lambda_stub.update_event_source_mapping(
         UUID='my-uuid',
         BatchSize=5,
+        MaximumBatchingWindowInSeconds=0,
     ).returns({})
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
     client.update_lambda_event_source(
         event_uuid='my-uuid', batch_size=5
+    )
+    stubbed_session.verify_stubs()
+
+
+def test_can_retry_update_event_source_batching_window(stubbed_session):
+    lambda_stub = stubbed_session.stub('lambda')
+    lambda_stub.update_event_source_mapping(
+        UUID='my-uuid',
+        BatchSize=5,
+        MaximumBatchingWindowInSeconds=60,
+    ).returns({})
+
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.update_lambda_event_source(
+        event_uuid='my-uuid', batch_size=5,
+        maximum_batching_window_in_seconds=60
     )
     stubbed_session.verify_stubs()
 
@@ -3815,11 +3866,13 @@ def test_can_update_lambda_event_source(stubbed_session):
     lambda_stub.update_event_source_mapping(
         UUID='my-uuid',
         BatchSize=5,
+        MaximumBatchingWindowInSeconds=60,
     ).returns({})
 
     stubbed_session.activate_stubs()
     client = TypedAWSClient(stubbed_session)
     client.update_lambda_event_source(
-        event_uuid='my-uuid', batch_size=5
+        event_uuid='my-uuid', batch_size=5,
+        maximum_batching_window_in_seconds=60
     )
     stubbed_session.verify_stubs()

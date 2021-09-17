@@ -1660,13 +1660,16 @@ class TypedAWSClient(object):
                 )
 
     def create_lambda_event_source(self, event_source_arn, function_name,
-                                   batch_size, starting_position=None):
-        # type: (str, str, int, Optional[str]) -> None
+                                   batch_size, starting_position=None,
+                                   maximum_batching_window_in_seconds=0):
+        # type: (str, str, int, Optional[str], Optional[int]) -> None
         lambda_client = self._client('lambda')
+        batch_window = maximum_batching_window_in_seconds
         kwargs = {
             'EventSourceArn': event_source_arn,
             'FunctionName': function_name,
             'BatchSize': batch_size,
+            'MaximumBatchingWindowInSeconds': batch_window
         }
         if starting_position is not None:
             kwargs['StartingPosition'] = starting_position
@@ -1675,12 +1678,18 @@ class TypedAWSClient(object):
             max_attempts=self.LAMBDA_CREATE_ATTEMPTS
         )['UUID']
 
-    def update_lambda_event_source(self, event_uuid, batch_size):
-        # type: (str, int) -> None
+    def update_lambda_event_source(self, event_uuid, batch_size,
+                                   maximum_batching_window_in_seconds=0):
+        # type: (str, int, Optional[int]) -> None
         lambda_client = self._client('lambda')
+        batch_window = maximum_batching_window_in_seconds
+        kwargs = {
+            'UUID': event_uuid,
+            'BatchSize': batch_size,
+            'MaximumBatchingWindowInSeconds': batch_window,
+        }
         self._call_client_method_with_retries(
-            lambda_client.update_event_source_mapping,
-            {'UUID': event_uuid, 'BatchSize': batch_size},
+            lambda_client.update_event_source_mapping, kwargs,
             max_attempts=10,
             should_retry=self._is_settling_error,
         )
