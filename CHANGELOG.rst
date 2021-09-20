@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.25.0
+======
+
+* feature:Python:Add support for Python 3.9 (#1787)
+
+
 1.24.2
 ======
 

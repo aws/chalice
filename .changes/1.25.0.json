@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Python",
+      "description": "Add support for Python 3.9 (#1787)"
+    }
+  ]
+}
