@@ -233,7 +233,7 @@ want to register this handler for our ``http`` event type.
 
 .. code-block:: python
 
-   from chalice Response
+   from chalice import Response
 
    @app.middleware('http')
    def require_header(event, get_response):
