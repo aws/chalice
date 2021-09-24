@@ -64,6 +64,42 @@ for each of the events.
         print('%s disconnected' % event.connection_id)
 
 
+Setting the websocket protocol on new connections
+-------------------------------------------------
+
+You can return a dictionary or an instance of :class:`Response` in the
+``on_ws_connect`` handler, similar to what you'd do in a Rest API.  Note that
+API Gateway does not forward arbitrary headers or a response body back to the
+client, so this is primarily used to set a ``Sec-WebSocket-Protocol`` header
+value.
+
+
+.. code-block:: python
+
+    from chalice import Chalice
+
+    app = Chalice(app_name='test-websockets')
+    app.experimental_feature_flags.update([
+        'WEBSOCKETS',
+    ])
+
+
+    @app.on_ws_connect()
+    def connect(event):
+        print('New connection: %s' % event.connection_id)
+        # We don't need to explicitly set a statusCode.
+        return {
+          'headers': {'Sec-WebSocket-Protocol': 'My-Protocol'},
+        }
+
+
+You don't need to explicitly set a ``statusCode`` if you return a
+dictionary from the ``on_ws_connect`` header, but if want to return one you
+should **not** set the status code to ``101``.  API Gateway will automatically
+do this for you.  For successful connection handling you should return a
+``200`` status code if you want to explicitly set a ``statusCode``.
+
+
 Sending a message over a websocket
 ----------------------------------
 
@@ -72,9 +108,9 @@ To send a message to a websocket client Chalice, use the
 of the decorated functions outlined in the above section.
 
 Two pieces of information are needed to send a message. The identifier of the
-websocket, and the contents for the message. Below is a simple example that when
-it receives a message, it sends back the message ``"I got your message!"`` over
-the same socket.
+websocket, and the contents for the message. Below is a simple example that
+when it receives a message, it sends back the message ``"I got your message!"``
+over the same socket.
 
 .. code-block:: python
 
