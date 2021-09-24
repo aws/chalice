@@ -721,7 +721,8 @@ class DecoratorAPI(object):
         )
 
     def on_sqs_message(self, queue=None, batch_size=1,
-                       name=None, queue_arn=None):
+                       name=None, queue_arn=None,
+                       maximum_batching_window_in_seconds=0):
         return self._create_registration_function(
             handler_type='on_sqs_message',
             name=name,
@@ -729,6 +730,8 @@ class DecoratorAPI(object):
                 'queue': queue,
                 'queue_arn': queue_arn,
                 'batch_size': batch_size,
+                'maximum_batching_window_in_seconds':
+                    maximum_batching_window_in_seconds
             }
         )
 
@@ -748,23 +751,31 @@ class DecoratorAPI(object):
         )
 
     def on_kinesis_record(self, stream, batch_size=100,
-                          starting_position='LATEST', name=None):
+                          starting_position='LATEST', name=None,
+                          maximum_batching_window_in_seconds=0):
         return self._create_registration_function(
             handler_type='on_kinesis_record',
             name=name,
-            registration_kwargs={'stream': stream,
-                                 'batch_size': batch_size,
-                                 'starting_position': starting_position},
+            registration_kwargs={
+                'stream': stream,
+                'batch_size': batch_size,
+                'starting_position': starting_position,
+                'maximum_batching_window_in_seconds':
+                    maximum_batching_window_in_seconds},
         )
 
     def on_dynamodb_record(self, stream_arn, batch_size=100,
-                           starting_position='LATEST', name=None):
+                           starting_position='LATEST', name=None,
+                           maximum_batching_window_in_seconds=0):
         return self._create_registration_function(
             handler_type='on_dynamodb_record',
             name=name,
-            registration_kwargs={'stream_arn': stream_arn,
-                                 'batch_size': batch_size,
-                                 'starting_position': starting_position},
+            registration_kwargs={
+                'stream_arn': stream_arn,
+                'batch_size': batch_size,
+                'starting_position': starting_position,
+                'maximum_batching_window_in_seconds':
+                    maximum_batching_window_in_seconds},
         )
 
     def route(self, path, **kwargs):
@@ -994,6 +1005,8 @@ class _HandlerRegistration(object):
             queue=queue,
             queue_arn=queue_arn,
             batch_size=kwargs['batch_size'],
+            maximum_batching_window_in_seconds=kwargs[
+                'maximum_batching_window_in_seconds'],
         )
         self.event_sources.append(sqs_config)
 
@@ -1005,6 +1018,8 @@ class _HandlerRegistration(object):
             stream=kwargs['stream'],
             batch_size=kwargs['batch_size'],
             starting_position=kwargs['starting_position'],
+            maximum_batching_window_in_seconds=kwargs[
+                'maximum_batching_window_in_seconds'],
         )
         self.event_sources.append(kinesis_config)
 
@@ -1016,6 +1031,8 @@ class _HandlerRegistration(object):
             stream_arn=kwargs['stream_arn'],
             batch_size=kwargs['batch_size'],
             starting_position=kwargs['starting_position'],
+            maximum_batching_window_in_seconds=kwargs[
+                'maximum_batching_window_in_seconds'],
         )
         self.event_sources.append(ddb_config)
 
@@ -1460,29 +1477,38 @@ class SNSEventConfig(BaseEventSourceConfig):
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, queue, queue_arn, batch_size):
+    def __init__(self, name, handler_string, queue, queue_arn, batch_size,
+                 maximum_batching_window_in_seconds):
         super(SQSEventConfig, self).__init__(name, handler_string)
         self.queue = queue
         self.queue_arn = queue_arn
         self.batch_size = batch_size
+        self.maximum_batching_window_in_seconds = \
+            maximum_batching_window_in_seconds
 
 
 class KinesisEventConfig(BaseEventSourceConfig):
     def __init__(self, name, handler_string, stream,
-                 batch_size, starting_position):
+                 batch_size, starting_position,
+                 maximum_batching_window_in_seconds):
         super(KinesisEventConfig, self).__init__(name, handler_string)
         self.stream = stream
         self.batch_size = batch_size
         self.starting_position = starting_position
+        self.maximum_batching_window_in_seconds = \
+            maximum_batching_window_in_seconds
 
 
 class DynamoDBEventConfig(BaseEventSourceConfig):
     def __init__(self, name, handler_string, stream_arn,
-                 batch_size, starting_position):
+                 batch_size, starting_position,
+                 maximum_batching_window_in_seconds):
         super(DynamoDBEventConfig, self).__init__(name, handler_string)
         self.stream_arn = stream_arn
         self.batch_size = batch_size
         self.starting_position = starting_position
+        self.maximum_batching_window_in_seconds = \
+            maximum_batching_window_in_seconds
 
 
 class WebsocketConnectConfig(BaseEventSourceConfig):

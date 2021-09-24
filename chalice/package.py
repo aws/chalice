@@ -645,6 +645,8 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Properties': {
                     'Queue': queue,
                     'BatchSize': resource.batch_size,
+                    'MaximumBatchingWindowInSeconds':
+                        resource.maximum_batching_window_in_seconds,
                 }
             }
         }
@@ -666,6 +668,8 @@ class SAMTemplateGenerator(TemplateGenerator):
             },
             'BatchSize': resource.batch_size,
             'StartingPosition': resource.starting_position,
+            'MaximumBatchingWindowInSeconds':
+                resource.maximum_batching_window_in_seconds,
         }
         function_cfn['Properties']['Events'] = {
             kinesis_cfn_name: {
@@ -685,6 +689,8 @@ class SAMTemplateGenerator(TemplateGenerator):
             'Stream': resource.stream_arn,
             'BatchSize': resource.batch_size,
             'StartingPosition': resource.starting_position,
+            'MaximumBatchingWindowInSeconds':
+                resource.maximum_batching_window_in_seconds,
         }
         function_cfn['Properties']['Events'] = {
             ddb_cfn_name: {
@@ -916,6 +922,8 @@ class TerraformGenerator(TemplateGenerator):
             resource.resource_name] = {
             'event_source_arn': event_source_arn,
             'batch_size': resource.batch_size,
+            'maximum_batching_window_in_seconds':
+                resource.maximum_batching_window_in_seconds,
             'function_name': self._fref(resource.lambda_function)
         }
 
@@ -929,6 +937,8 @@ class TerraformGenerator(TemplateGenerator):
                 stream=resource.stream),
             'batch_size': resource.batch_size,
             'starting_position': resource.starting_position,
+            'maximum_batching_window_in_seconds':
+                resource.maximum_batching_window_in_seconds,
             'function_name': self._fref(resource.lambda_function)
         }
 
@@ -939,6 +949,8 @@ class TerraformGenerator(TemplateGenerator):
             'event_source_arn': resource.stream_arn,
             'batch_size': resource.batch_size,
             'starting_position': resource.starting_position,
+            'maximum_batching_window_in_seconds':
+                resource.maximum_batching_window_in_seconds,
             'function_name': self._fref(resource.lambda_function),
         }
 

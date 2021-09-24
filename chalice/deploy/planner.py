@@ -728,7 +728,9 @@ class PlanStage(object):
                 models.APICall(
                     method_name='update_lambda_event_source',
                     params={'event_uuid': uuid,
-                            'batch_size': resource.batch_size}
+                            'batch_size': resource.batch_size,
+                            'maximum_batching_window_in_seconds':
+                                resource.maximum_batching_window_in_seconds}
                 )
             ] + self._batch_record_resource(
                 'sqs_event', resource.resource_name, {
@@ -743,6 +745,8 @@ class PlanStage(object):
                 method_name='create_lambda_event_source',
                 params={'event_source_arn': Variable(queue_arn_varname),
                         'batch_size': resource.batch_size,
+                        'maximum_batching_window_in_seconds':
+                            resource.maximum_batching_window_in_seconds,
                         'function_name': function_arn},
                 output_var=uuid_varname,
             ), 'Subscribing %s to SQS queue %s\n'
@@ -782,7 +786,9 @@ class PlanStage(object):
                 models.APICall(
                     method_name='update_lambda_event_source',
                     params={'event_uuid': uuid,
-                            'batch_size': resource.batch_size}
+                            'batch_size': resource.batch_size,
+                            'maximum_batching_window_in_seconds':
+                                resource.maximum_batching_window_in_seconds}
                 )
             ] + self._batch_record_resource(
                 'kinesis_event', resource.resource_name, {
@@ -798,7 +804,9 @@ class PlanStage(object):
                 params={'event_source_arn': Variable(stream_arn_varname),
                         'batch_size': resource.batch_size,
                         'function_name': function_arn,
-                        'starting_position': resource.starting_position},
+                        'starting_position': resource.starting_position,
+                        'maximum_batching_window_in_seconds':
+                            resource.maximum_batching_window_in_seconds},
                 output_var=uuid_varname,
             ), 'Subscribing %s to Kinesis stream %s\n'
                 % (resource.lambda_function.function_name, resource.stream)
@@ -826,7 +834,9 @@ class PlanStage(object):
                 models.APICall(
                     method_name='update_lambda_event_source',
                     params={'event_uuid': uuid,
-                            'batch_size': resource.batch_size}
+                            'batch_size': resource.batch_size,
+                            'maximum_batching_window_in_seconds':
+                                resource.maximum_batching_window_in_seconds}
                 )
             ] + self._batch_record_resource(
                 'dynamodb_event', resource.resource_name, {
@@ -841,7 +851,9 @@ class PlanStage(object):
                 params={'event_source_arn': resource.stream_arn,
                         'batch_size': resource.batch_size,
                         'function_name': function_arn,
-                        'starting_position': resource.starting_position},
+                        'starting_position': resource.starting_position,
+                        'maximum_batching_window_in_seconds':
+                            resource.maximum_batching_window_in_seconds},
                 output_var=uuid_varname,
             ), 'Subscribing %s to DynamoDB stream %s\n'
                 % (resource.lambda_function.function_name,

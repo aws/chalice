@@ -282,7 +282,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_sqs_message(queue, batch_size=1, name=None, queue_arn=None)
+   .. method:: on_sqs_message(queue, batch_size=1, name=None, queue_arn=None, maximum_batching_window_in_seconds=0)
 
       Create a lambda function and configure it to be automatically invoked
       whenever a message is published to the specified SQS queue.
@@ -334,8 +334,10 @@ Chalice
         This is useful if you already know the exact ARN or when integrating
         with the AWS CDK to create your SQS queue.
 
+      :param maximum_batching_window_in_seconds: The maximum amount of time,
+        in seconds, to gather records before invoking the function.
 
-   .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None)
+   .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None, maximum_batching_window_in_seconds=0)
 
       Create a lambda function and configure it to be automatically invoked
       whenever data is published to the specified Kinesis stream.
@@ -380,7 +382,10 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_dynamodb_record(stream_arn, batch_size=100, starting_position='LATEST', name=None)
+      :param maximum_batching_window_in_seconds: The maximum amount of time,
+        in seconds, to gather records before invoking the function.
+
+   .. method:: on_dynamodb_record(stream_arn, batch_size=100, starting_position='LATEST', name=None, maximum_batching_window_in_seconds=0)
 
       Create a lambda function and configure it to be automatically invoked
       whenever data is written to a DynamoDB stream.
@@ -426,6 +431,9 @@ Chalice
         with the chalice app name as well as the stage name to create the
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
+
+      :param maximum_batching_window_in_seconds: The maximum amount of time,
+        in seconds, to gather records before invoking the function.
 
    .. method:: lambda_function(name=None)
 

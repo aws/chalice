@@ -565,11 +565,13 @@ class ApplicationGraphBuilder(object):
             queue = models.QueueARN(arn=sqs_config.queue_arn)
         elif sqs_config.queue is not None:
             queue = sqs_config.queue
+        batch_window = sqs_config.maximum_batching_window_in_seconds
         sqs_event_source = models.SQSEventSource(
             resource_name=resource_name,
             queue=queue,
             batch_size=sqs_config.batch_size,
             lambda_function=lambda_function,
+            maximum_batching_window_in_seconds=batch_window,
         )
         return sqs_event_source
 
@@ -586,10 +588,12 @@ class ApplicationGraphBuilder(object):
             handler_name=kinesis_config.handler_string, stage_name=stage_name
         )
         resource_name = kinesis_config.name + '-kinesis-event-source'
+        batch_window = kinesis_config.maximum_batching_window_in_seconds
         kinesis_event_source = models.KinesisEventSource(
             resource_name=resource_name,
             stream=kinesis_config.stream,
             batch_size=kinesis_config.batch_size,
+            maximum_batching_window_in_seconds=batch_window,
             starting_position=kinesis_config.starting_position,
             lambda_function=lambda_function,
         )
@@ -608,10 +612,12 @@ class ApplicationGraphBuilder(object):
             handler_name=ddb_config.handler_string, stage_name=stage_name
         )
         resource_name = ddb_config.name + '-dynamodb-event-source'
+        batch_window = ddb_config.maximum_batching_window_in_seconds
         ddb_event_source = models.DynamoDBEventSource(
             resource_name=resource_name,
             stream_arn=ddb_config.stream_arn,
             batch_size=ddb_config.batch_size,
+            maximum_batching_window_in_seconds=batch_window,
             starting_position=ddb_config.starting_position,
             lambda_function=lambda_function,
         )
