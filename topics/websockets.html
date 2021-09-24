@@ -178,15 +178,45 @@ for each of the events.</p>
 </pre></div>
 </div>
 </section>
+<section id="setting-the-websocket-protocol-on-new-connections">
+<h2>Setting the websocket protocol on new connections<a class="headerlink" href="#setting-the-websocket-protocol-on-new-connections" title="Permalink to this headline">¶</a></h2>
+<p>You can return a dictionary or an instance of <a class="reference internal" href="../api.html#Response" title="Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a> in the
+<code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code> handler, similar to what you’d do in a Rest API.  Note that
+API Gateway does not forward arbitrary headers or a response body back to the
+client, so this is primarily used to set a <code class="docutils literal notranslate"><span class="pre">Sec-WebSocket-Protocol</span></code> header
+value.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Chalice</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s1">&#39;test-websockets&#39;</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">experimental_feature_flags</span><span class="o">.</span><span class="n">update</span><span class="p">([</span>
+    <span class="s1">&#39;WEBSOCKETS&#39;</span><span class="p">,</span>
+<span class="p">])</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_ws_connect</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;New connection: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
+    <span class="c1"># We don&#39;t need to explicitly set a statusCode.</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="s1">&#39;headers&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;Sec-WebSocket-Protocol&#39;</span><span class="p">:</span> <span class="s1">&#39;My-Protocol&#39;</span><span class="p">},</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+<p>You don’t need to explicitly set a <code class="docutils literal notranslate"><span class="pre">statusCode</span></code> if you return a
+dictionary from the <code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code> header, but if want to return one you
+should <strong>not</strong> set the status code to <code class="docutils literal notranslate"><span class="pre">101</span></code>.  API Gateway will automatically
+do this for you.  For successful connection handling you should return a
+<code class="docutils literal notranslate"><span class="pre">200</span></code> status code if you want to explicitly set a <code class="docutils literal notranslate"><span class="pre">statusCode</span></code>.</p>
+</section>
 <section id="sending-a-message-over-a-websocket">
 <h2>Sending a message over a websocket<a class="headerlink" href="#sending-a-message-over-a-websocket" title="Permalink to this headline">¶</a></h2>
 <p>To send a message to a websocket client Chalice, use the
 <a class="reference internal" href="../api.html#websocket-send"><span class="std std-ref">app.websocket_api.send()</span></a> method. This method will work in any
 of the decorated functions outlined in the above section.</p>
 <p>Two pieces of information are needed to send a message. The identifier of the
-websocket, and the contents for the message. Below is a simple example that when
-it receives a message, it sends back the message <code class="docutils literal notranslate"><span class="pre">&quot;I</span> <span class="pre">got</span> <span class="pre">your</span> <span class="pre">message!&quot;</span></code> over
-the same socket.</p>
+websocket, and the contents for the message. Below is a simple example that
+when it receives a message, it sends back the message <code class="docutils literal notranslate"><span class="pre">&quot;I</span> <span class="pre">got</span> <span class="pre">your</span> <span class="pre">message!&quot;</span></code>
+over the same socket.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">boto3.session</span> <span class="kn">import</span> <span class="n">Session</span>
 <span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
 
@@ -229,6 +259,7 @@ the same socket.</p>
                             <ul>
 <li><a class="reference internal" href="#">Websockets</a><ul>
 <li><a class="reference internal" href="#responding-to-websocket-events">Responding to websocket events</a></li>
+<li><a class="reference internal" href="#setting-the-websocket-protocol-on-new-connections">Setting the websocket protocol on new connections</a></li>
 <li><a class="reference internal" href="#sending-a-message-over-a-websocket">Sending a message over a websocket</a></li>
 </ul>
 </li>
