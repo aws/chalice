@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "Websockets",
+  "description": "Add support for setting the Websocket protocol from the connect handler (#1768)"
+}

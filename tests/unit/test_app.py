@@ -2721,6 +2721,55 @@ def test_can_route_websocket_connect_message(sample_websocket_app,
     assert event.connection_id == 'ABCD1234='
 
 
+def test_can_route_websocket_connect_response_dict(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_connect()
+    def connect(event):
+        return dict(
+            headers={"Sec-WebSocket-Protocol": "Test-Protocol"},
+            statusCode=200,
+            body="Connected.",
+        )
+
+    event = create_websocket_event('$connect')
+    handler = websocket_handler_for_route('$connect', demo)
+    response = handler(event, context=None)
+    assert response == {
+        'headers': {'Sec-WebSocket-Protocol': 'Test-Protocol'},
+        'statusCode': 200,
+        'body': 'Connected.'
+    }
+
+
+def test_can_route_websocket_connect_response_obj(create_websocket_event):
+    demo = app.Chalice('app-name')
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+
+    @demo.on_ws_connect()
+    def connect(event):
+        return Response(
+            "Connected.",
+            status_code=200,
+            headers={
+                "Sec-WebSocket-Protocol": "Test-Protocol",
+            },
+        )
+
+    event = create_websocket_event('$connect')
+    handler = websocket_handler_for_route('$connect', demo)
+    response = handler(event, context=None)
+    assert response == {
+        'headers': {'Sec-WebSocket-Protocol': 'Test-Protocol'},
+        'multiValueHeaders': {},
+        'statusCode': 200,
+        'body': 'Connected.',
+    }
+
+
 def test_can_route_websocket_disconnect_message(sample_websocket_app,
                                                 create_websocket_event):
     demo, calls = sample_websocket_app
@@ -3365,7 +3414,7 @@ class TestMiddleware:
             }
             response = c.lambda_.invoke('myfunction', event)
 
-        assert response.payload == {'statusCode': 200}
+        assert response.payload == {'foo': 'bar', 'statusCode': 200}
         assert called == [
             {'name': 'mymiddleware', 'event': event},
             {'name': 'myfunction', 'event': event},
