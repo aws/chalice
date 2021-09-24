@@ -1596,7 +1596,7 @@ class EventSourceHandler(BaseLambdaHandler):
 
 
 class WebsocketEventSourceHandler(EventSourceHandler):
-    WEBSOCKET_API_RESPONCE = {'statusCode': 200}
+    WEBSOCKET_API_RESPONSE = {'statusCode': 200}
 
     def __init__(self, func, event_class, websocket_api,
                  middleware_handlers=None):
@@ -1613,19 +1613,16 @@ class WebsocketEventSourceHandler(EventSourceHandler):
             event['requestContext']['apiId'],
             event['requestContext']['stage'],
         )
-
-        # Responce from user handler.
-        responce = super(
+        response = super(
             WebsocketEventSourceHandler, self).__call__(event, context)
-
         data = None
-        if isinstance(responce, Response):
-            data = responce.to_dict()
-        elif isinstance(responce, dict):
-            data = responce
+        if isinstance(response, Response):
+            data = response.to_dict()
+        elif isinstance(response, dict):
+            data = response
             if "statusCode" not in data:
-                data = {**self.WEBSOCKET_API_RESPONCE, **data}
-        return data or self.WEBSOCKET_API_RESPONCE
+                data = {**self.WEBSOCKET_API_RESPONSE, **data}
+        return data or self.WEBSOCKET_API_RESPONSE
 
 
 class RestAPIEventHandler(BaseLambdaHandler):
