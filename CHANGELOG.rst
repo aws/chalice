@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.26.0
+======
+
+* feature:Websockets:Add support for setting the Websocket protocol from the connect handler (#1768)
+* feature:SQS:Added MaximumBatchingWindowInSeconds to SQS event handler (#1778)
+
+
 1.25.0
 ======
 

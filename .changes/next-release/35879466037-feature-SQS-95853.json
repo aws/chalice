@@ -1,5 +1,0 @@
-{
-  "type": "feature",
-  "category": "SQS",
-  "description": "Added MaximumBatchingWindowInSeconds to SQS event handler (#1778)"
-}
