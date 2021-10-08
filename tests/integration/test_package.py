@@ -52,7 +52,7 @@ def _get_random_package_name():
                     reason='Extended packaging tests only run on py3.')
 @pytest.mark.parametrize(
     'package,contents', [
-        ('pandas==1.0.3', [
+        ('pandas==1.1.5', [
             'pandas/_libs/__init__.py',
             'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so']),
         ('SQLAlchemy==1.3.20', [
@@ -142,12 +142,12 @@ class TestPackage(object):
         )
 
     @pytest.mark.skipif(sys.version_info[0] == 2,
-                        reason='pandas==1.0.3 is only suported on py3.')
+                        reason='pandas==1.1.5 is only suported on py3.')
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'pandas==1.0.3',
+            'pandas==1.1.5',
             contents=[
                 'pandas/_libs/__init__.py',
             ],
