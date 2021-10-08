@@ -42,7 +42,7 @@ setup(
     author="James Saryerwinnie",
     author_email='js@jamesls.com',
     url='https://github.com/aws/chalice',
-    packages=find_packages(exclude=['tests']),
+    packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=install_requires,
     extras_require={
         'event-file-poller': ['watchdog==0.9.0'],
