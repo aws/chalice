@@ -609,7 +609,13 @@ class WebsocketAPI(object):
         if self._endpoint is not None:
             return
         region_name = self._get_region()
-        domain_name = '{api_id}.execute-api.{region}.amazonaws.com'.format(
+
+        if region_name.startswith("cn-"):
+            domain_name_template = '{api_id}.execute-api.{region}.amazonaws.com.cn'
+        else:
+            domain_name_template = '{api_id}.execute-api.{region}.amazonaws.com'
+
+        domain_name = domain_name_template.format(
             api_id=api_id, region=region_name)
         self.configure(domain_name, stage)
 
