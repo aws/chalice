@@ -25,7 +25,7 @@ install_requires = [
     'typing==3.6.4;python_version<"3.7"',
     'mypy-extensions==0.4.3',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<21.3',
+    'pip>=9,<21.4',
     'attrs>=19.3.0,<21.3.0',
     'jmespath>=0.9.3,<1.0.0',
     'pyyaml>=5.3.1,<6.0.0',
