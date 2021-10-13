@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -59,7 +59,7 @@ jobs:
 #        # python, it's unlikely users are going to install
 #        # python 2.7 which is no longer supported so we're
 #        # only testing python3 on windows.
-#        python-version: [3.6, 3.7, 3.8]
+#        python-version: [3.6, 3.7, 3.8, 3.9]
 #    steps:
 #      - uses: actions/checkout@v2
 #      - uses: actions/setup-python@v2
