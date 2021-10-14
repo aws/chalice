@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Dependencies",
-  "description": "Bump pip dependency to latest released version (#1817)"
-}

@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Dependencies",
+      "description": "Bump pip dependency to latest released version (#1817)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Tests",
+      "description": "Don't include tests package in .whl file (#1814)"
+    }
+  ]
+}

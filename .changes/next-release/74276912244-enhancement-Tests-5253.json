@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Tests",
-  "description": "Don't include tests package in .whl file (#1814)"
-}

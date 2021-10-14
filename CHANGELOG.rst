@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.26.1
+======
+
+* enhancement:Dependencies:Bump pip dependency to latest released version (#1817)
+* enhancement:Tests:Don't include tests package in .whl file (#1814)
+
+
 1.26.0
 ======
 
