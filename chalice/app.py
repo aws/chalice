@@ -14,7 +14,7 @@ import datetime
 from collections import defaultdict
 
 
-__version__ = '1.26.0'
+__version__ = '1.26.1'
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
@@ -411,6 +411,7 @@ class Request(object):
         self.path = event_dict['requestContext']['resourcePath']
         self.lambda_context = lambda_context
         self._event_dict = event_dict
+        self.metadata = None
 
     def _base64decode(self, encoded):
         if not isinstance(encoded, bytes):
@@ -533,7 +534,7 @@ class RouteEntry(object):
 
     def __init__(self, view_function, view_name, path, method,
                  api_key_required=None, content_types=None,
-                 cors=False, authorizer=None):
+                 cors=False, authorizer=None, metadata=None):
         self.view_function = view_function
         self.view_name = view_name
         self.uri_pattern = path
@@ -543,6 +544,7 @@ class RouteEntry(object):
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
         self.view_args = self._parse_view_args()
         self.content_types = content_types
+        self.metadata = metadata
         # cors is passed as either a boolean or a CORSConfig object. If it is a
         # boolean it needs to be replaced with a real CORSConfig object to
         # pass the typechecker. None in this context will not inject any cors
@@ -1087,6 +1089,7 @@ class _HandlerRegistration(object):
             'content_types': actual_kwargs.pop('content_types',
                                                ['application/json']),
             'cors': actual_kwargs.pop('cors', self.api.cors),
+            'metadata': actual_kwargs.pop('metadata', None)
         }
         if route_kwargs['cors'] is None:
             route_kwargs['cors'] = self.api.cors
@@ -1662,6 +1665,15 @@ class RestAPIEventHandler(BaseLambdaHandler):
             [self._global_error_handler] + list(self._middleware_handlers),
             original_handler=wrapped_event,
         )
+
+        # If route, inject metadata to current request
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        if resource_path:
+            http_method = event['requestContext']['httpMethod']
+            if http_method in self.routes[resource_path]:
+                metadata = self.routes[resource_path][http_method].metadata
+                self.current_request.metadata = metadata
+
         response = final_handler(self.current_request)
         return response.to_dict(self.api.binary_types)
 
@@ -1703,6 +1715,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
                     http_status_code=415,
                     headers=cors_headers
                 )
+
         response = self._get_view_function_response(view_function,
                                                     function_args)
         if cors_headers is not None:

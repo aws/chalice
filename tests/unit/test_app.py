@@ -3259,6 +3259,50 @@ class TestMiddleware:
         assert actual_event.to_original_event()[
             'requestContext']['resourcePath'] == '/'
 
+    def test_can_access_metadata_in_http(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('http')
+        def myhandler(event, get_response):
+            called.append({'event': event})
+            return get_response(event)
+
+        @demo.route('/', metadata="TEST")
+        def index():
+            event = demo.current_request.to_dict()
+            return {
+                "meta": event["metadata"]
+            }
+
+        with Client(demo) as c:
+            response = c.http.get('/')
+        assert response.json_body == {'meta': 'TEST'}
+        metadata = called[0]['event'].metadata
+        assert metadata == "TEST"
+
+    def test_can_access_without_metadata_in_http(self):
+        demo = app.Chalice('app-name')
+        called = []
+
+        @demo.middleware('http')
+        def myhandler(event, get_response):
+            called.append({'event': event})
+            return get_response(event)
+
+        @demo.route('/')
+        def index():
+            event = demo.current_request.to_dict()
+            return {
+                "meta": event["metadata"]
+            }
+
+        with Client(demo) as c:
+            response = c.http.get('/')
+        assert response.json_body == {'meta': None}
+        metadata = called[0]['event'].metadata
+        assert True if metadata is None else False
+
     def test_can_short_circuit_response(self):
         demo = app.Chalice('app-name')
         called = []
