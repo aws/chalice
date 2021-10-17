@@ -654,10 +654,10 @@ Request
 
   .. attribute:: metadata
 
-     Metadata set on an HTTP Route. This is useful for passing route-specific
-     data to be used throughout the request lifecycle. Default value is None.
+     Corresponds to the `metadata` parameter set on an HTTP Route. When present,
+     this data is added to the request, otherwise the default value is None.
 
-   .. attribute:: lambda_context
+  .. attribute:: lambda_context
 
      A Lambda context object that is passed to the invoked view by AWS
      Lambda. You can find out more about this object by reading the
