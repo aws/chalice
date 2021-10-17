@@ -117,6 +117,10 @@ Chalice
         you would like more control over how CORS is configured, you can provide
         an instance of :class:`CORSConfig`.
 
+      :param metadata: Allows you to register arbitrary data of any type to a
+        route. The data is accessible throughout the HTTP request lifecycle via
+        the Request object.
+
    .. method:: authorizer(name, \*\*options)
 
       Register a built-in authorizer.
@@ -647,6 +651,11 @@ Request
   .. attribute:: stage_vars
 
      A dict of configuration for the API Gateway stage.
+
+  .. attribute:: metadata
+
+     Metadata set on an HTTP Route. This is useful for passing route-specific
+     data to be used throughout the request lifecycle. Default value is None.
 
    .. attribute:: lambda_context
 
