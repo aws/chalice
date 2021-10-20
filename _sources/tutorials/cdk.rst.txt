@@ -148,7 +148,7 @@ resources needed to store our application.  You can do this by running the
 
    ✅  Environment aws://12345/us-west-2 bootstrapped.
 
-We can now deploy our applicaation using the ``cdk deploy`` command.  Make sure
+We can now deploy our application using the ``cdk deploy`` command.  Make sure
 you're still in the ``infrastructure`` directory.
 
 
