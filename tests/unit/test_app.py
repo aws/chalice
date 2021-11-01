@@ -2824,6 +2824,28 @@ def test_can_configure_client_on_connect(sample_websocket_app,
     ]
 
 
+def test_can_configure_non_aws_partition_clients(sample_websocket_app,
+                                                 create_websocket_event,
+                                                 monkeypatch):
+    # tests/conftest.py already monkeypatches out environment variables,
+    # so if we want a test with a specific region we have to use the
+    # same approach and monkeypatch the os.environ.
+    monkeypatch.setenv('AWS_REGION', 'cn-north-1')
+    demo, _ = sample_websocket_app
+    client = FakeClient()
+    demo.websocket_api.session = FakeSession(client)
+    event = create_websocket_event(
+        '$connect',
+        endpoint='abcd1234.execute-api.cn-north-1.amazonaws.com.cn')
+    handler = websocket_handler_for_route('$connect', demo)
+    handler(event, context=None)
+
+    assert demo.websocket_api.session.calls == [
+        ('apigatewaymanagementapi',
+         'https://abcd1234.execute-api.cn-north-1.amazonaws.com.cn/api'),
+    ]
+
+
 def test_uses_api_id_not_domain_name(sample_websocket_app,
                                      create_websocket_event):
     demo, calls = sample_websocket_app

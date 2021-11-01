@@ -183,11 +183,13 @@ def create_event():
 
 @fixture
 def create_websocket_event():
-    def create_event_inner(route_key, body=''):
+    def create_event_inner(
+            route_key, body='',
+            endpoint='abcd1234.execute-api.us-west-2.amazonaws.com'):
         return {
             'requestContext': {
                 'routeKey': route_key,
-                'domainName': 'abcd1234.execute-api.us-west-2.amazonaws.com',
+                'domainName': endpoint,
                 'stage': 'api',
                 'connectionId': 'ABCD1234=',
                 'apiId': 'abcd1234',
