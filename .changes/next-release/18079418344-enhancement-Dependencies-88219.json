@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Dependencies",
+  "description": "Update pyyaml to 6.x (#1830)"
+}
