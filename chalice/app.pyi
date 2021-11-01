@@ -57,7 +57,14 @@ class CognitoUserPoolAuthorizer(Authorizer):
 
 class IAMAuthorizer(Authorizer): ...
 
-class CustomAuthorizer(Authorizer): ...
+class CustomAuthorizer(Authorizer):
+
+    def __init__(self, name: str=...,
+                 authorizer_uri: str=...,
+                 ttl_seconds: int=...,
+                 header: str=...,
+                 invoke_role_arn: Optional[str]=...,
+                 scopes: Optional[List[str]]=...) -> None: ...
 
 
 class CORSConfig:
