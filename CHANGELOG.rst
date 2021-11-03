@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.26.2
+======
+
+* enhancement:Dependencies:Update pyyaml to 6.x (#1830)
+* bugfix:Websocket:Correctly configure websocket endpoint in the aws-cn partition (#1820)
+
+
 1.26.1
 ======
 

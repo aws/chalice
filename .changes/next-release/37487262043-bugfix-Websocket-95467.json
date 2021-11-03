@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "Websocket",
-  "description": "Correctly configure websocket endpoint in the aws-cn partition (#1820)"
-}

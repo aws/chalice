@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Dependencies",
+      "description": "Update pyyaml to 6.x (#1830)"
+    },
+    {
+      "type": "bugfix",
+      "category": "Websocket",
+      "description": "Correctly configure websocket endpoint in the aws-cn partition (#1820)"
+    }
+  ]
+}
