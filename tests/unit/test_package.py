@@ -519,7 +519,8 @@ class TestTerraformTemplate(TemplateTestBase):
             'action': 'lambda:InvokeFunction',
             'principal': 'apigateway.amazonaws.com',
             'source_arn': (
-                '${aws_api_gateway_rest_api.rest_api.execution_arn}/*')
+                '${aws_api_gateway_rest_api.rest_api.execution_arn}/*'),
+            'depends_on': ['aws_api_gateway_deployment.rest_api']
         }
         assert 'aws_api_gateway_rest_api' in resources
         assert 'rest_api' in resources['aws_api_gateway_rest_api']
@@ -546,12 +547,18 @@ class TestTerraformTemplate(TemplateTestBase):
         assert resources['aws_api_gateway_rest_api'][
             'rest_api']['endpoint_configuration'] == {'types': ['PRIVATE']}
 
-        assert 'aws_api_gateway_stage' not in resources
+        assert resources['aws_api_gateway_stage']['rest_api'] == {
+            'deployment_id': 'aws_api_gateway_deployment.rest_api.id',
+            'rest_api_id': '${aws_api_gateway_rest_api.rest_api.id}',
+            'stage_name': 'api'
+        }
+
         assert resources['aws_api_gateway_deployment']['rest_api'] == {
             'rest_api_id': '${aws_api_gateway_rest_api.rest_api.id}',
-            'stage_description': (
-                '${md5(data.template_file.chalice_api_swagger.rendered)}'),
-            'stage_name': 'api',
+            'triggers': {
+                'redeployment': (
+                    'sha1(jsonencode(aws_api_gateway_rest_api.rest_api.body))')
+            },
             'lifecycle': {'create_before_destroy': True}
         }
 
@@ -573,7 +580,10 @@ class TestTerraformTemplate(TemplateTestBase):
             'EndpointURL': {
                 'value': '${aws_api_gateway_deployment.rest_api.invoke_url}'},
             'RestAPIId': {
-                'value': '${aws_api_gateway_rest_api.rest_api.id}'}
+                'value': '${aws_api_gateway_rest_api.rest_api.id}'},
+            'RestAPIStageArn': {
+                'value': 'aws_api_gateway_stage.rest_api.arn'
+            }
         }
 
     def test_can_package_s3_event_handler_with_tf_ref(self, sample_app):

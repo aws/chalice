@@ -803,7 +803,7 @@ class TerraformGenerator(TemplateGenerator):
             },
             'provider': {
                 'template': {'version': '~> 2'},
-                'aws': {'version': '>= 2, < 4'},
+                'aws': {'version': '>= 3.25, < 4'},
                 'null': {'version': '>= 2, < 4'},
             },
             'data': {
@@ -1119,15 +1119,24 @@ class TerraformGenerator(TemplateGenerator):
 
         template['resource'].setdefault('aws_api_gateway_deployment', {})[
             resource.resource_name] = {
-            'stage_name': resource.api_gateway_stage,
-            # Ensure that the deployment gets redeployed if we update
-            # the swagger description for the api by using its checksum
-            # in the stage description.
-            'stage_description': (
-                "${md5(data.template_file.chalice_api_swagger.rendered)}"),
             'rest_api_id': '${aws_api_gateway_rest_api.%s.id}' % (
                 resource.resource_name),
+            # Ensure that deployment gets redeployed if OpenAPI spec changes
+            'triggers': {
+                'redeployment': (
+                    'sha1(jsonencode(aws_api_gateway_rest_api.%s.body))' % (
+                        resource.resource_name))
+            },
             'lifecycle': {'create_before_destroy': True}
+        }
+
+        template['resource'].setdefault('aws_api_gateway_stage', {})[
+            resource.resource_name] = {
+            'deployment_id': 'aws_api_gateway_deployment.%s.id' % (
+                resource.resource_name),
+            'rest_api_id': '${aws_api_gateway_rest_api.%s.id}' % (
+                resource.resource_name),
+            'stage_name': resource.api_gateway_stage
         }
 
         template['resource'].setdefault('aws_lambda_permission', {})[
@@ -1137,7 +1146,9 @@ class TerraformGenerator(TemplateGenerator):
             'principal': self._options.service_principal('apigateway'),
             'source_arn':
                 "${aws_api_gateway_rest_api.%s.execution_arn}/*" % (
-                    resource.resource_name)
+                    resource.resource_name),
+            'depends_on': ['aws_api_gateway_deployment.%s' % (
+                resource.resource_name)]
         }
 
         template.setdefault('output', {})[
@@ -1148,6 +1159,11 @@ class TerraformGenerator(TemplateGenerator):
         template.setdefault('output', {})[
             'RestAPIId'] = {
             'value': '${aws_api_gateway_rest_api.%s.id}' % (
+                resource.resource_name)
+        }
+        template.setdefault('output', {})[
+            'RestAPIStageArn'] = {
+            'value': 'aws_api_gateway_stage.%s.arn' % (
                 resource.resource_name)
         }
 
