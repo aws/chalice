@@ -3493,7 +3493,7 @@ class TestMiddleware:
             assert response.status_code == 404
             assert response.json_body == {
                 'Code': 'NotFoundError',
-                'Message': 'NotFoundError: resource not found'
+                'Message': 'resource not found'
             }
 
     def test_unhandled_error_not_caught(self):
