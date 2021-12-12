@@ -106,9 +106,6 @@ class WebsocketDisconnectedError(ChaliceError):
 class ChaliceViewError(ChaliceError):
     STATUS_CODE = 500
 
-    def __init__(self, msg=''):
-        super(ChaliceViewError, self).__init__(msg)
-
 
 class ChaliceUnhandledError(ChaliceError):
     """This error is not caught from a Chalice view function.
