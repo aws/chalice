@@ -111,7 +111,7 @@ Notice what happens if we try to request a city that's not in our
 
     {
         "Code": "ChaliceViewError",
-        "Message": "ChaliceViewError: An internal server error occurred."
+        "Message": "An internal server error occurred."
     }
 
 
