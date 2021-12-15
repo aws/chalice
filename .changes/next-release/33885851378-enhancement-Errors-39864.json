@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Errors",
+  "description": "Remove redundant error code in error message string (#1339)"
+}
