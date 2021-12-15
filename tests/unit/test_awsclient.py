@@ -25,7 +25,11 @@ from chalice.awsclient import TypedAWSClient
 ])
 def test_resolve_endpoint(stubbed_session, service, region, endpoint):
     awsclient = TypedAWSClient(stubbed_session)
-    assert endpoint == awsclient.resolve_endpoint(service, region)
+    if endpoint is None:
+        assert awsclient.resolve_endpoint(service, region) is None
+    else:
+        assert endpoint.items() <= awsclient.resolve_endpoint(
+            service, region).items()
 
 
 @pytest.mark.parametrize('arn,endpoint', [
@@ -48,7 +52,11 @@ def test_resolve_endpoint(stubbed_session, service, region, endpoint):
 ])
 def test_endpoint_from_arn(stubbed_session, arn, endpoint):
     awsclient = TypedAWSClient(stubbed_session)
-    assert endpoint == awsclient.endpoint_from_arn(arn)
+    if endpoint is None:
+        assert awsclient.endpoint_from_arn(arn) is None
+    else:
+        assert endpoint.items() <= awsclient.endpoint_from_arn(
+            arn).items()
 
 
 @pytest.mark.parametrize('service,region,dns_suffix', [
