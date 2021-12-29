@@ -6,7 +6,7 @@
 #
 astroid==2.6.6
     # via pylint
-attrs==21.2.0
+attrs==21.3.0
     # via
     #   hypothesis
     #   pytest
