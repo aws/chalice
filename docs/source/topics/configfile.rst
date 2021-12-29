@@ -58,6 +58,17 @@ a default resource policy on the API if an explicit policy is not specified.
 This value can be a list or a string of endpoint ids.
 
 
+``api_gateway_responses``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A mapping of key/value pairs. They define how the built-in API Gateway
+responses should be configured. The top level keys should map to a gateway
+response type, e.g. DEFAULT_4XX, and its value should be a mapping defining
+status code, parameters, and/or templates. For more information see examples
+below or check out the `AWS API Gateway docs
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions-gateway-responses.html>`_
+
+
 ``api_gateway_policy_file``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -578,6 +589,43 @@ The ``prod`` stage will have these environment variables set::
     "TABLE_NAME": "prod-table",
     "OTHER_CONFIG": "prod-value",
   }
+
+
+
+API Gateway Responses
+~~~~~~~~~~~~~~~~~~~~~
+
+An example of configuring API Gateway responses would look like this::
+
+    {
+      "version": "2.0",
+      "app_name": "app",
+      "stages": {
+        "dev": {
+          "api_gateway_stage": "dev"
+        }
+      },
+      "api_gateway_responses": {
+        "DEFAULT_4XX": {
+          "responseParameters": {
+            "gatewayresponse.header.Access-Control-Allow-Origin": "'*'"
+          }
+        },
+        "DEFAULT_5XX": {
+          "responseParameters": {
+            "gatewayresponse.header.Access-Control-Allow-Origin": "'*'"
+          }
+        }
+      }
+    }
+
+In this config file, we set up the Default 4XX and Default 5XX API Gateway
+responses to set the Access-Control-Allow-Origin header on responses. This can
+help out with CORS setup so that any error responses are still allowed across
+different origins. For more examples of what you can set, check out the
+`AWS API Gateway docs
+<https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions-gateway-responses.html>`_
+
 
 
 Per Lambda Examples

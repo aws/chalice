@@ -508,7 +508,8 @@ class SwaggerBuilder(BaseDeployStep):
     def handle_restapi(self, config, resource):
         # type: (Config, models.RestAPI) -> None
         swagger_doc = self._swagger_generator.generate_swagger(
-            config.chalice_app, resource)
+            config.chalice_app, resource,
+            api_gateway_responses=config.api_gateway_responses)
         resource.swagger_doc = swagger_doc
 
 

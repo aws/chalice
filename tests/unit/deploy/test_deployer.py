@@ -716,11 +716,30 @@ class TestSwaggerBuilder(object):
             xray=False,
         )
         app = Chalice(app_name='foo')
-        config = Config.create(chalice_app=app)
+        api_gateway_responses = {
+            "DEFAULT_4XX": {
+                "responseParameters": {
+                    "gatewayresponse.header.Access-Control-Allow-Origin":
+                        "'domain.com'"
+                },
+                "responseTemplates": {
+                    "application/json": "{\"message\": test 4xx b }"
+                }
+            },
+            "INVALID_API_KEY": {
+                "statusCode": "429",
+                "responseTemplates": {
+                    "application/json": "{\"message\": test forbidden }"
+                }
+            }
+        }
+        config = Config.create(chalice_app=app,
+                               api_gateway_responses=api_gateway_responses)
         p = SwaggerBuilder(generator)
         p.handle(config, rest_api)
         assert rest_api.swagger_doc == {'swagger': '2.0'}
-        generator.generate_swagger.assert_called_with(app, rest_api)
+        generator.generate_swagger.assert_called_with(
+            app, rest_api, api_gateway_responses=api_gateway_responses)
 
 
 class TestDeploymentPackager(object):

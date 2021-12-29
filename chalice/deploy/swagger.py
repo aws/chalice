@@ -33,13 +33,18 @@ class SwaggerGenerator(object):
         self._region = region
         self._deployed_resources = deployed_resources
 
-    def generate_swagger(self, app, rest_api=None):
-        # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
+    def generate_swagger(self,
+                         app,                        # type: Chalice
+                         rest_api=None,              # type: Optional[RestAPI]
+                         api_gateway_responses=None  # type: Dict[str, Any]
+                         ):
+        # type: (...) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
         self._add_resource_policy(api, rest_api)
+        self._add_api_gateway_responses(api, api_gateway_responses)
         return api
 
     def _add_resource_policy(self, api, rest_api):
@@ -241,6 +246,12 @@ class SwaggerGenerator(object):
             }
         }
         swagger_for_path['options'] = options_request
+
+    def _add_api_gateway_responses(self, api, api_gateway_responses):
+        # type: (Dict[str, Any], Optional[Dict[str, Any]]) -> None
+        if api_gateway_responses:
+            api.setdefault('x-amazon-apigateway-gateway-responses',
+                           api_gateway_responses)
 
 
 class CFNSwaggerGenerator(SwaggerGenerator):
