@@ -223,7 +223,7 @@ class VariableResolver(object):
 class DisplayOnlyExecutor(BaseExecutor):
     # Max length of bytes object before we truncate with '<bytes>'
     _MAX_BYTE_LENGTH = 30
-    _LINE_VERTICAL = u'\u2502'
+    _LINE_VERTICAL = '\u2502'
 
     def execute(self, plan):
         # type: (models.Plan) -> None
