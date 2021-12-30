@@ -54,9 +54,9 @@ Below is the JSON file that contains all of our custom Cloudformation.
    {
      "Resources": {
        "ChaliceChatTable": {
-         "Type" : "AWS::DynamoDB::Table",
-         "Properties" : {
-           "AttributeDefinitions" : [
+         "Type": "AWS::DynamoDB::Table",
+         "Properties": {
+           "AttributeDefinitions": [
              {
                "AttributeName": "PK",
                "AttributeType": "S"
@@ -66,29 +66,30 @@ Below is the JSON file that contains all of our custom Cloudformation.
                "AttributeType": "S"
              }
            ],
-           "KeySchema" : [
+           "KeySchema": [
              {
-               "AttributeName" : "PK",
-               "KeyType" : "HASH"
-             },{
-               "AttributeName" : "SK",
-               "KeyType" : "RANGE"
+               "AttributeName": "PK",
+               "KeyType": "HASH"
+             },
+             {
+               "AttributeName": "SK",
+               "KeyType": "RANGE"
              }
            ],
            "GlobalSecondaryIndexes": [
              {
-               "IndexName" : "ReverseLookup",
-               "KeySchema" : [
+               "IndexName": "ReverseLookup",
+               "KeySchema": [
                  {
-                   "AttributeName" : "SK",
-                   "KeyType" : "HASH"
+                   "AttributeName": "SK",
+                   "KeyType": "HASH"
                  },
                  {
-                   "AttributeName" : "PK",
-                   "KeyType" : "RANGE"
+                   "AttributeName": "PK",
+                   "KeyType": "RANGE"
                  }
                ],
-               "Projection" : {
+               "Projection": {
                  "ProjectionType": "ALL"
                },
                "ProvisionedThroughput": {
@@ -97,7 +98,7 @@ Below is the JSON file that contains all of our custom Cloudformation.
                }
              }
            ],
-           "ProvisionedThroughput" : {
+           "ProvisionedThroughput": {
              "ReadCapacityUnits": 1,
              "WriteCapacityUnits": 1
            },
@@ -108,7 +109,9 @@ Below is the JSON file that contains all of our custom Cloudformation.
          "Properties": {
            "Environment": {
              "Variables": {
-               "TABLE": {"Ref": "ChaliceChatTable"}
+               "TABLE": {
+                 "Ref": "ChaliceChatTable"
+               }
              }
            }
          }
@@ -117,7 +120,9 @@ Below is the JSON file that contains all of our custom Cloudformation.
          "Properties": {
            "Environment": {
              "Variables": {
-               "TABLE": {"Ref": "ChaliceChatTable"}
+               "TABLE": {
+                 "Ref": "ChaliceChatTable"
+               }
              }
            }
          }
@@ -126,7 +131,9 @@ Below is the JSON file that contains all of our custom Cloudformation.
          "Properties": {
            "Environment": {
              "Variables": {
-               "TABLE": {"Ref": "ChaliceChatTable"}
+               "TABLE": {
+                 "Ref": "ChaliceChatTable"
+               }
              }
            }
          }
@@ -196,7 +203,6 @@ Below is the JSON file that contains all of our custom Cloudformation.
        }
      }
    }
-
 
 The current directory layout should now look like this::
 
