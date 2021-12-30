@@ -658,8 +658,8 @@ class DependencyBuilder(object):
 
 class GraphPrettyPrint(object):
 
-    _NEW_SECTION = u'\u251c\u2500\u2500'
-    _LINE_VERTICAL = u'\u2502'
+    _NEW_SECTION = '\u251c\u2500\u2500'
+    _LINE_VERTICAL = '\u2502'
 
     def __init__(self, ui):
         # type: (UI) -> None

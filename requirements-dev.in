@@ -9,6 +9,8 @@ pydocstyle
 flake8
 pytest-cov
 requests
+# Sphinx doesn't support 0.18.x yet.
+docutils<0.18.0
 # There are some py3 specific changes we'll need
 # to make before we can upgrade mypy, so we're holding
 # off on upgrading this for now.
