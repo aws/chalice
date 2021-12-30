@@ -26,8 +26,9 @@ coverage[toml]==6.2
     #   pytest-cov
 doc8==0.10.1
     # via -r requirements-dev.in
-docutils==0.18.1
+docutils==0.17.1
     # via
+    #   -r requirements-dev.in
     #   doc8
     #   restructuredtext-lint
 flake8==4.0.1
