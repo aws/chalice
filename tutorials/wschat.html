@@ -168,151 +168,158 @@ allow all the DynamoDB operations our application will need.</p>
 <p>Below is the JSON file that contains all of our custom Cloudformation.</p>
 <div class="literal-block-wrapper docutils container" id="id1">
 <div class="code-block-caption"><span class="caption-text">resources.json</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="nt">&quot;Resources&quot;</span><span class="p">:</span> <span class="p">{</span>
-    <span class="nt">&quot;ChaliceChatTable&quot;</span><span class="p">:</span> <span class="p">{</span>
-      <span class="nt">&quot;Type&quot;</span> <span class="p">:</span> <span class="s2">&quot;AWS::DynamoDB::Table&quot;</span><span class="p">,</span>
-      <span class="nt">&quot;Properties&quot;</span> <span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;AttributeDefinitions&quot;</span> <span class="p">:</span> <span class="p">[</span>
-          <span class="p">{</span>
-            <span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span> <span class="s2">&quot;PK&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span> <span class="s2">&quot;S&quot;</span>
-          <span class="p">},</span>
-          <span class="p">{</span>
-            <span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span> <span class="s2">&quot;SK&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span> <span class="s2">&quot;S&quot;</span>
-          <span class="p">}</span>
-        <span class="p">],</span>
-        <span class="nt">&quot;KeySchema&quot;</span> <span class="p">:</span> <span class="p">[</span>
-          <span class="p">{</span>
-            <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;PK&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;HASH&quot;</span>
-          <span class="p">},{</span>
-            <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;SK&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;RANGE&quot;</span>
-          <span class="p">}</span>
-        <span class="p">],</span>
-        <span class="nt">&quot;GlobalSecondaryIndexes&quot;</span><span class="p">:</span> <span class="p">[</span>
-          <span class="p">{</span>
-            <span class="nt">&quot;IndexName&quot;</span> <span class="p">:</span> <span class="s2">&quot;ReverseLookup&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;KeySchema&quot;</span> <span class="p">:</span> <span class="p">[</span>
-              <span class="p">{</span>
-                <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;SK&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;HASH&quot;</span>
-              <span class="p">},</span>
-              <span class="p">{</span>
-                <span class="nt">&quot;AttributeName&quot;</span> <span class="p">:</span> <span class="s2">&quot;PK&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;KeyType&quot;</span> <span class="p">:</span> <span class="s2">&quot;RANGE&quot;</span>
-              <span class="p">}</span>
-            <span class="p">],</span>
-            <span class="nt">&quot;Projection&quot;</span> <span class="p">:</span> <span class="p">{</span>
-              <span class="nt">&quot;ProjectionType&quot;</span><span class="p">:</span> <span class="s2">&quot;ALL&quot;</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span> <span class="p">{</span>
-              <span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-              <span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span>
-            <span class="p">}</span>
-          <span class="p">}</span>
-        <span class="p">],</span>
-        <span class="nt">&quot;ProvisionedThroughput&quot;</span> <span class="p">:</span> <span class="p">{</span>
-          <span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-          <span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span> <span class="mi">1</span>
-        <span class="p">},</span>
-        <span class="nt">&quot;TableName&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChat&quot;</span>
-      <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="nt">&quot;WebsocketConnect&quot;</span><span class="p">:</span> <span class="p">{</span>
-      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
-          <span class="nt">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChatTable&quot;</span><span class="p">}</span>
-          <span class="p">}</span>
-        <span class="p">}</span>
-      <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="nt">&quot;WebsocketMessage&quot;</span><span class="p">:</span> <span class="p">{</span>
-      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
-          <span class="nt">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChatTable&quot;</span><span class="p">}</span>
-          <span class="p">}</span>
-        <span class="p">}</span>
-      <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="nt">&quot;WebsocketDisconnect&quot;</span><span class="p">:</span> <span class="p">{</span>
-      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;Environment&quot;</span><span class="p">:</span> <span class="p">{</span>
-          <span class="nt">&quot;Variables&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;TABLE&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span> <span class="s2">&quot;ChaliceChatTable&quot;</span><span class="p">}</span>
-          <span class="p">}</span>
-        <span class="p">}</span>
-      <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="nt">&quot;DefaultRole&quot;</span><span class="p">:</span> <span class="p">{</span>
-      <span class="nt">&quot;Type&quot;</span><span class="p">:</span> <span class="s2">&quot;AWS::IAM::Role&quot;</span><span class="p">,</span>
-      <span class="nt">&quot;Properties&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;AssumeRolePolicyDocument&quot;</span><span class="p">:</span> <span class="p">{</span>
-          <span class="nt">&quot;Version&quot;</span><span class="p">:</span> <span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span>
-          <span class="nt">&quot;Statement&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="p">{</span>
-              <span class="nt">&quot;Sid&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-              <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
-              <span class="nt">&quot;Principal&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;Service&quot;</span><span class="p">:</span> <span class="s2">&quot;lambda.amazonaws.com&quot;</span>
-              <span class="p">},</span>
-              <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="s2">&quot;sts:AssumeRole&quot;</span>
-            <span class="p">}</span>
-          <span class="p">]</span>
-        <span class="p">},</span>
-        <span class="nt">&quot;Policies&quot;</span><span class="p">:</span> <span class="p">[</span>
-          <span class="p">{</span>
-            <span class="nt">&quot;PolicyName&quot;</span><span class="p">:</span> <span class="s2">&quot;DefaultRolePolicy&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;PolicyDocument&quot;</span><span class="p">:</span> <span class="p">{</span>
-              <span class="nt">&quot;Version&quot;</span><span class="p">:</span> <span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span>
-              <span class="nt">&quot;Statement&quot;</span><span class="p">:</span> <span class="p">[</span>
-                <span class="p">{</span>
-                  <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
-                  <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="s2">&quot;logs:CreateLogGroup&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;logs:CreateLogStream&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;logs:PutLogEvents&quot;</span>
-                  <span class="p">],</span>
-                  <span class="nt">&quot;Resource&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:logs:*:*:*&quot;</span>
-                <span class="p">},</span>
-                <span class="p">{</span>
-                  <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
-                  <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="s2">&quot;execute-api:ManageConnections&quot;</span>
-                  <span class="p">],</span>
-                  <span class="nt">&quot;Resource&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:execute-api:*:*:*/@connections/*&quot;</span>
-                <span class="p">},</span>
-                <span class="p">{</span>
-                  <span class="nt">&quot;Effect&quot;</span><span class="p">:</span> <span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
-                  <span class="nt">&quot;Action&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="s2">&quot;dynamodb:DeleteItem&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;dynamodb:PutItem&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;dynamodb:GetItem&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;dynamodb:UpdateItem&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;dynamodb:Query&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;dynamodb:Scan&quot;</span>
-                  <span class="p">],</span>
-                  <span class="nt">&quot;Resource&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="p">{</span>
-                      <span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}&quot;</span>
-                    <span class="p">},</span>
-                    <span class="p">{</span>
-                      <span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup&quot;</span>
-                    <span class="p">}</span>
-                  <span class="p">]</span>
-                <span class="p">}</span>
-              <span class="p">]</span>
-            <span class="p">}</span>
-          <span class="p">}</span>
-        <span class="p">]</span>
-      <span class="p">}</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nt">&quot;Resources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;ChaliceChatTable&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AWS::DynamoDB::Table&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;AttributeDefinitions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">          </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S&quot;</span><span class="w"></span>
+<span class="w">          </span><span class="p">},</span><span class="w"></span>
+<span class="w">          </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S&quot;</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;KeySchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">          </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HASH&quot;</span><span class="w"></span>
+<span class="w">          </span><span class="p">},</span><span class="w"></span>
+<span class="w">          </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RANGE&quot;</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;GlobalSecondaryIndexes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">          </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;IndexName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ReverseLookup&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;KeySchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">              </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HASH&quot;</span><span class="w"></span>
+<span class="w">              </span><span class="p">},</span><span class="w"></span>
+<span class="w">              </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RANGE&quot;</span><span class="w"></span>
+<span class="w">              </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;Projection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;ProjectionType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ALL&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;TableName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChat&quot;</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;WebsocketConnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;WebsocketMessage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;WebsocketDisconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;DefaultRole&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AWS::IAM::Role&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;AssumeRolePolicyDocument&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;Version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;Statement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Sid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Principal&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;Service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lambda.amazonaws.com&quot;</span><span class="w"></span>
+<span class="w">              </span><span class="p">},</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sts:AssumeRole&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">          </span><span class="p">]</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;Policies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">          </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;PolicyName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DefaultRolePolicy&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;PolicyDocument&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">              </span><span class="nt">&quot;Statement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;logs:CreateLogGroup&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;logs:CreateLogStream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;logs:PutLogEvents&quot;</span><span class="w"></span>
+<span class="w">                  </span><span class="p">],</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:logs:*:*:*&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="p">},</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;execute-api:ManageConnections&quot;</span><span class="w"></span>
+<span class="w">                  </span><span class="p">],</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:execute-api:*:*:*/@connections/*&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="p">},</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:DeleteItem&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:PutItem&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:GetItem&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:UpdateItem&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:Query&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:Scan&quot;</span><span class="w"></span>
+<span class="w">                  </span><span class="p">],</span><span class="w"></span>
+<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="p">{</span><span class="w"></span>
+<span class="w">                      </span><span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}&quot;</span><span class="w"></span>
+<span class="w">                    </span><span class="p">},</span><span class="w"></span>
+<span class="w">                    </span><span class="p">{</span><span class="w"></span>
+<span class="w">                      </span><span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup&quot;</span><span class="w"></span>
+<span class="w">                    </span><span class="p">}</span><span class="w"></span>
+<span class="w">                  </span><span class="p">]</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">              </span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </div>

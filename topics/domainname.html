@@ -163,23 +163,23 @@ otherwise specified.</p>
 when configuring a custom domain.  They are explained in the
 <a class="reference internal" href="configfile.html#custom-domain-config-options"><span class="std std-ref">api_gateway_custom_domain</span></a> section of the <a class="reference internal" href="configfile.html"><span class="doc">Configuration File</span></a>
 documentation.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-    <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;api_gateway_custom_domain&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;domain_name&quot;</span><span class="p">:</span> <span class="s2">&quot;api.example.com&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;tls_version&quot;</span><span class="p">:</span> <span class="s2">&quot;TLS_1_2|TLS_1_0&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:acm:example&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;url_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;tag1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;key1&quot;</span><span class="p">:</span> <span class="s2">&quot;tag2&quot;</span>
-                <span class="p">}</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;api_gateway_custom_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;domain_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api.example.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tls_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TLS_1_2|TLS_1_0&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:acm:example&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;url_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tag1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;key1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tag2&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
@@ -192,23 +192,23 @@ documentation.</p>
 configuring a custom domain for a WebSocket API.  They are explained in the
 <a class="reference internal" href="configfile.html#custom-domain-ws-config-options"><span class="std std-ref">websocket_api_custom_domain</span></a> section of the <a class="reference internal" href="configfile.html"><span class="doc">Configuration File</span></a>
 documentation.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-    <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;dev&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;websocket_api_custom_domain&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;domain_name&quot;</span><span class="p">:</span> <span class="s2">&quot;api.example.com&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;tls_version&quot;</span><span class="p">:</span> <span class="s2">&quot;TLS_1_2|TLS_1_0&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:acm:example&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;url_prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
-                <span class="nt">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;tag1&quot;</span><span class="p">,</span>
-                    <span class="nt">&quot;key1&quot;</span><span class="p">:</span> <span class="s2">&quot;tag2&quot;</span>
-                <span class="p">}</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;websocket_api_custom_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;domain_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api.example.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tls_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TLS_1_2|TLS_1_0&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:acm:example&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;url_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tag1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;key1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tag2&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </section>

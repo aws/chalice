@@ -123,7 +123,7 @@
 <h1>Chalice<a class="headerlink" href="#chalice" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="Chalice">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Chalice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Chalice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class represents a chalice application.  It provides:</p>
 <ul class="simple">
 <li><p>The ability to register routes using the <a class="reference internal" href="#Chalice.route" title="Chalice.route"><code class="xref py py-meth docutils literal notranslate"><span class="pre">route()</span></code></a> method.</p></li>
@@ -192,7 +192,7 @@ send messages to websocket clients connected through API Gateway.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="Chalice.route">
-<span class="sig-name descname"><span class="pre">route</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*options</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.route" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">route</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.route" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register a view function for a particular URI path.  This method
 is intended to be used as a decorator for a view function.  For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
@@ -250,7 +250,7 @@ an instance of <a class="reference internal" href="#CORSConfig" title="CORSConfi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="Chalice.authorizer">
-<span class="sig-name descname"><span class="pre">authorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">name</span></em>, <em class="sig-param"><span class="pre">\*\*options</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.authorizer" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">authorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.authorizer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register a built-in authorizer.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span><span class="p">,</span> <span class="n">AuthResponse</span>
 
@@ -713,7 +713,7 @@ if you want to register middleware for pre-existing functions:</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ConvertToMiddleware">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">ConvertToMiddleware</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lambda_wrapper</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ConvertToMiddleware" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ConvertToMiddleware</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lambda_wrapper</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ConvertToMiddleware" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class is used to convert a function that wraps/proxies a Lambda
 function into middleware.  This allows this wrapper to automatically
 be applied to every function in your app.  For example, if you had the
@@ -744,7 +744,7 @@ apply this wrapper to every Lambda function in your app.</p>
 <h1>Request<a class="headerlink" href="#request" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="Request">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Request</span></span><a class="headerlink" href="#Request" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Request</span></span><a class="headerlink" href="#Request" title="Permalink to this definition">¶</a></dt>
 <dd><p>A class that represents the current request.  This is mapped to
 the <code class="docutils literal notranslate"><span class="pre">app.current_request</span></code> object.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/objects/</span><span class="si">{key}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
@@ -856,7 +856,7 @@ serializable so you can return this value from a chalice view.</p>
 <h1>Response<a class="headerlink" href="#response" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="Response">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">body</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Response" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">body</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Response" title="Permalink to this definition">¶</a></dt>
 <dd><p>A class that represents the response for the view function.  You
 can optionally return an instance of this class from a view function if you
 want complete control over the returned HTTP response.</p>
@@ -912,7 +912,7 @@ for an <code class="docutils literal notranslate"><span class="pre">&#64;app.rou
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="CognitoUserPoolAuthorizer">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">CognitoUserPoolAuthorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider_arns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Authorization'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CognitoUserPoolAuthorizer" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CognitoUserPoolAuthorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider_arns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Authorization'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CognitoUserPoolAuthorizer" title="Permalink to this definition">¶</a></dt>
 <dd><div class="versionadded">
 <p><span class="versionmodified added">New in version 0.8.1.</span></p>
 </div>
@@ -938,7 +938,7 @@ for an <code class="docutils literal notranslate"><span class="pre">&#64;app.rou
 
 <dl class="py class">
 <dt class="sig sig-object py" id="IAMAuthorizer">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">IAMAuthorizer</span></span><a class="headerlink" href="#IAMAuthorizer" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">IAMAuthorizer</span></span><a class="headerlink" href="#IAMAuthorizer" title="Permalink to this definition">¶</a></dt>
 <dd><div class="versionadded">
 <p><span class="versionmodified added">New in version 0.8.3.</span></p>
 </div>
@@ -946,7 +946,7 @@ for an <code class="docutils literal notranslate"><span class="pre">&#64;app.rou
 
 <dl class="py class">
 <dt class="sig sig-object py" id="CustomAuthorizer">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">CustomAuthorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authorizer_uri</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ttl_seconds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Authorization'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CustomAuthorizer" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CustomAuthorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authorizer_uri</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ttl_seconds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Authorization'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CustomAuthorizer" title="Permalink to this definition">¶</a></dt>
 <dd><div class="versionadded">
 <p><span class="versionmodified added">New in version 0.8.1.</span></p>
 </div>
@@ -984,7 +984,7 @@ authorizer.</p>
 <p>These classes are used when defining built-in authorizers in Chalice.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="AuthRequest">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">AuthRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">auth_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_arn</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AuthRequest" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">AuthRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">auth_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_arn</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AuthRequest" title="Permalink to this definition">¶</a></dt>
 <dd><p>An instance of this class is passed as the first argument
 to an authorizer defined via <code class="docutils literal notranslate"><span class="pre">&#64;app.authorizer()</span></code>.  You
 generally do not instantiate this class directly.</p>
@@ -1011,7 +1011,7 @@ generally do not instantiate this class directly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="AuthResponse">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">AuthResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">routes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">principal_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AuthResponse" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">AuthResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">routes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">principal_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AuthResponse" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="py attribute">
 <dt class="sig sig-object py" id="AuthResponse.routes">
 <span class="sig-name descname"><span class="pre">routes</span></span><a class="headerlink" href="#AuthResponse.routes" title="Permalink to this definition">¶</a></dt>
@@ -1043,7 +1043,7 @@ in all subsequent authorized requests for this user.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="AuthRoute">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">AuthRoute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">methods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AuthRoute" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">AuthRoute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">methods</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AuthRoute" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class be used in the <code class="docutils literal notranslate"><span class="pre">routes</span></code> attribute of a
 <a class="reference internal" href="#AuthResponse" title="AuthResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">AuthResponse</span></code></a> instance to get fine grained control
 over which HTTP methods are allowed for a given route.</p>
@@ -1067,7 +1067,7 @@ over which HTTP methods are allowed for a given route.</p>
 <h1>APIGateway<a class="headerlink" href="#apigateway" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="APIGateway">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">APIGateway</span></span><a class="headerlink" href="#APIGateway" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">APIGateway</span></span><a class="headerlink" href="#APIGateway" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class is used to control
 how API Gateway interprets <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> headers in both requests and
 responses.</p>
@@ -1147,7 +1147,7 @@ will manifest as a <code class="docutils literal notranslate"><span class="pre">
 <h1>WebsocketAPI<a class="headerlink" href="#websocketapi" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="WebsocketAPI">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">WebsocketAPI</span></span><a class="headerlink" href="#WebsocketAPI" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebsocketAPI</span></span><a class="headerlink" href="#WebsocketAPI" title="Permalink to this definition">¶</a></dt>
 <dd><p>This class is used to send messages to websocket clients connected to an API
 Gateway Websocket API.</p>
 <dl class="py attribute">
@@ -1231,7 +1231,7 @@ error.</p>
 </div></blockquote>
 <dl class="py class">
 <dt class="sig sig-object py" id="WebsocketDisconnectedError">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">WebsocketDisconnectedError</span></span><a class="headerlink" href="#WebsocketDisconnectedError" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebsocketDisconnectedError</span></span><a class="headerlink" href="#WebsocketDisconnectedError" title="Permalink to this definition">¶</a></dt>
 <dd><p>An exception raised when a message is sent to a websocket that has disconnected.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="WebsocketDisconnectedError.connection_id">
@@ -1246,7 +1246,7 @@ error.</p>
 <h1>CORS<a class="headerlink" href="#cors" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="CORSConfig">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">CORSConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">allow_origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'*'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expose_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_credentials</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CORSConfig" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CORSConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">allow_origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'*'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expose_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_age</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_credentials</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#CORSConfig" title="Permalink to this definition">¶</a></dt>
 <dd><p>CORS configuration to attach to a route, or globally on <code class="docutils literal notranslate"><span class="pre">app.api.cors</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">CORSConfig</span>
 <span class="n">cors_config</span> <span class="o">=</span> <span class="n">CORSConfig</span><span class="p">(</span>
@@ -1316,7 +1316,7 @@ built in allowed headers: <code class="docutils literal notranslate"><span class
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="Rate">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Rate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Rate" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Rate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Rate" title="Permalink to this definition">¶</a></dt>
 <dd><p>An instance of this class can be used as the <code class="docutils literal notranslate"><span class="pre">expression</span></code> value
 in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.schedule()</span></code></a> method:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Rate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">Rate</span><span class="o">.</span><span class="n">MINUTES</span><span class="p">))</span>
@@ -1356,7 +1356,7 @@ either <code class="docutils literal notranslate"><span class="pre">Rate.MINUTES
 
 <dl class="py class">
 <dt class="sig sig-object py" id="Cron">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Cron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">minutes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">day_of_month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">day_of_week</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Cron" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Cron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">minutes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">day_of_month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">day_of_week</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Cron" title="Permalink to this definition">¶</a></dt>
 <dd><p>An instance of this class can be used as the <code class="docutils literal notranslate"><span class="pre">expression</span></code> value
 in the <a class="reference internal" href="#Chalice.schedule" title="Chalice.schedule"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Chalice.schedule()</span></code></a> method.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">Cron</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;6L&#39;</span><span class="p">,</span> <span class="s1">&#39;2002-2005&#39;</span><span class="p">))</span>
@@ -1403,7 +1403,7 @@ supported.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="CloudWatchEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">CloudWatchEvent</span></span><a class="headerlink" href="#CloudWatchEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CloudWatchEvent</span></span><a class="headerlink" href="#CloudWatchEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a scheduled or CloudWatch events.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">&#39;rate(1 hour)&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">every_hour</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">CloudWatchEvent</span><span class="p">):</span>
@@ -1514,7 +1514,7 @@ object.  Example:</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="S3Event">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">S3Event</span></span><a class="headerlink" href="#S3Event" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">S3Event</span></span><a class="headerlink" href="#S3Event" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an S3 event.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_s3_event</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="s1">&#39;mybucket&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">S3Event</span><span class="p">):</span>
@@ -1568,7 +1568,7 @@ to Lambda.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="SNSEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">SNSEvent</span></span><a class="headerlink" href="#SNSEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SNSEvent</span></span><a class="headerlink" href="#SNSEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an SNS event handler.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_sns_message</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;mytopic&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">SNSEvent</span><span class="p">):</span>
@@ -1614,7 +1614,7 @@ object.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="SQSEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">SQSEvent</span></span><a class="headerlink" href="#SQSEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SQSEvent</span></span><a class="headerlink" href="#SQSEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for an SQS event handler.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_sqs_message</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="s1">&#39;myqueue&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">SQSEvent</span><span class="p">):</span>
@@ -1656,7 +1656,7 @@ object.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="SQSRecord">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">SQSRecord</span></span><a class="headerlink" href="#SQSRecord" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">SQSRecord</span></span><a class="headerlink" href="#SQSRecord" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents a single SQS record within an <a class="reference internal" href="#SQSEvent" title="SQSEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">SQSEvent</span></code></a>.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="SQSRecord.body">
@@ -1691,7 +1691,7 @@ access to the lambda event.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="KinesisEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">KinesisEvent</span></span><a class="headerlink" href="#KinesisEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">KinesisEvent</span></span><a class="headerlink" href="#KinesisEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a Kinesis data stream event handler.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_kinesis_record</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="s1">&#39;mystream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">KinesisEvent</span><span class="p">):</span>
@@ -1733,7 +1733,7 @@ object.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="KinesisRecord">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">KinesisRecord</span></span><a class="headerlink" href="#KinesisRecord" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">KinesisRecord</span></span><a class="headerlink" href="#KinesisRecord" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents a single Kinesis record within a <a class="reference internal" href="#KinesisEvent" title="KinesisEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">KinesisEvent</span></code></a>.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="KinesisRecord.data">
@@ -1786,7 +1786,7 @@ access to the lambda event.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="DynamoDBEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">DynamoDBEvent</span></span><a class="headerlink" href="#DynamoDBEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DynamoDBEvent</span></span><a class="headerlink" href="#DynamoDBEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument for a DynamoDB stream event handler.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">on_dynamodb_record</span><span class="p">(</span><span class="n">stream_arn</span><span class="o">=</span><span class="s1">&#39;arn:aws:us-west-2:.../stream&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">event_handler</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">DynamoDBEvent</span><span class="p">):</span>
@@ -1830,7 +1830,7 @@ object.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="DynamoDBRecord">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">DynamoDBRecord</span></span><a class="headerlink" href="#DynamoDBRecord" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DynamoDBRecord</span></span><a class="headerlink" href="#DynamoDBRecord" title="Permalink to this definition">¶</a></dt>
 <dd><p>Represents a single DynamoDB record within a <a class="reference internal" href="#DynamoDBEvent" title="DynamoDBEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">DynamoDBEvent</span></code></a>.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="DynamoDBRecord.timestamp">
@@ -1927,7 +1927,7 @@ access to the lambda event.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="LambdaFunctionEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">LambdaFunctionEvent</span></span><a class="headerlink" href="#LambdaFunctionEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">LambdaFunctionEvent</span></span><a class="headerlink" href="#LambdaFunctionEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is the input argument of middleware registered to a
 pure Lambda function (<code class="docutils literal notranslate"><span class="pre">&#64;app.lambda_function()</span></code>).</p>
 <dl class="py attribute">
@@ -1950,7 +1950,7 @@ that is passed to the handler by AWS Lambda.</p>
 <h1>Blueprints<a class="headerlink" href="#blueprints" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="Blueprint">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Blueprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Blueprint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Blueprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Blueprint" title="Permalink to this definition">¶</a></dt>
 <dd><p>An object used for grouping related handlers together.
 This is primarily used as a mechanism for organizing your lambda
 handlers.  Any decorator methods defined in the <a class="reference internal" href="#Chalice" title="Chalice"><code class="xref py py-class docutils literal notranslate"><span class="pre">Chalice</span></code></a>
@@ -1988,7 +1988,7 @@ the <cite>__name__</cite> attribute:<code class="docutils literal notranslate"><
 <h1>Websockets<a class="headerlink" href="#websockets" title="Permalink to this headline">¶</a></h1>
 <span class="target" id="websocket-api"></span><dl class="py class">
 <dt class="sig sig-object py" id="WebsocketEvent">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">WebsocketEvent</span></span><a class="headerlink" href="#WebsocketEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">WebsocketEvent</span></span><a class="headerlink" href="#WebsocketEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Event object event that is passed as the sole arugment to any handler
 function decorated with one of the three websocket related handlers:
 <code class="docutils literal notranslate"><span class="pre">on_ws_connect</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_disconnect</span></code>, <code class="docutils literal notranslate"><span class="pre">on_ws_message</span></code>.</p>
@@ -2032,7 +2032,7 @@ not JSON parsable then using this attribute will raise a <code class="docutils l
 <span id="testing-api"></span><h1>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="Client">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">Client</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dev'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Client" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Client</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dev'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Client" title="Permalink to this definition">¶</a></dt>
 <dd><p>A test client used to write tests for Chalice apps.  It allows you to
 test Lambda function invocation as well as REST APIs.  Depending
 on what you want to test, you’ll access the various attributes
@@ -2071,7 +2071,7 @@ your Chalice app.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="TestLambdaClient">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">TestLambdaClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestLambdaClient" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TestLambdaClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestLambdaClient" title="Permalink to this definition">¶</a></dt>
 <dd><p>Test client for invoking Lambda functions.  This class should not be
 instantiated directly, and instead should be accessed via the
 <code class="docutils literal notranslate"><span class="pre">Client.lambda_</span></code> attribute:</p>
@@ -2098,7 +2098,7 @@ kwarg is provided when registering the function.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="TestHTTPClient">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">TestHTTPClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TestHTTPClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient" title="Permalink to this definition">¶</a></dt>
 <dd><p>Test client for REST APIs.  This class should not be
 instantiated directly, and instead should be accessed via the
 <code class="docutils literal notranslate"><span class="pre">Client.http</span></code> attribute:</p>
@@ -2118,43 +2118,43 @@ of <code class="docutils literal notranslate"><span class="pre">client.http.requ
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.get">
-<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.get" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP GET request.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.post">
-<span class="sig-name descname"><span class="pre">post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.post" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.post" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP POST request.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.put">
-<span class="sig-name descname"><span class="pre">put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.put" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.put" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP PUT request.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.patch">
-<span class="sig-name descname"><span class="pre">patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.patch" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.patch" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP PATCH request.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.options">
-<span class="sig-name descname"><span class="pre">options</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.options" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">options</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.options" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP OPTIONS request.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.delete">
-<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.delete" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.delete" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP DELETE request.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="TestHTTPClient.head">
-<span class="sig-name descname"><span class="pre">head</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">path</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.head" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">head</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestHTTPClient.head" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an HTTP HEAD request.</p>
 </dd></dl>
 
@@ -2162,7 +2162,7 @@ of <code class="docutils literal notranslate"><span class="pre">client.http.requ
 
 <dl class="py class">
 <dt class="sig sig-object py" id="TestEventsClient">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">TestEventsClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TestEventsClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">import_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TestEventsClient" title="Permalink to this definition">¶</a></dt>
 <dd><p>Test client for generating Lambda events.  This class should not be
 instantiated directly, and instead should be accessed via the
 <code class="docutils literal notranslate"><span class="pre">Client.events</span></code> attribute:</p>
@@ -2207,7 +2207,7 @@ instantiated directly, and instead should be accessed via the
 
 <dl class="py class">
 <dt class="sig sig-object py" id="HTTPResponse">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">HTTPResponse</span></span><a class="headerlink" href="#HTTPResponse" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">HTTPResponse</span></span><a class="headerlink" href="#HTTPResponse" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="py attribute">
 <dt class="sig sig-object py" id="HTTPResponse.body">
 <span class="sig-name descname"><span class="pre">body</span></span><a class="headerlink" href="#HTTPResponse.body" title="Permalink to this definition">¶</a></dt>
@@ -2230,7 +2230,7 @@ instantiated directly, and instead should be accessed via the
 
 <dl class="py class">
 <dt class="sig sig-object py" id="InvokeResponse">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">InvokeResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">payload</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#InvokeResponse" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">InvokeResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">payload</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#InvokeResponse" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="py attribute">
 <dt class="sig sig-object py" id="InvokeResponse.payload">
 <span class="sig-name descname"><span class="pre">payload</span></span><a class="headerlink" href="#InvokeResponse.payload" title="Permalink to this definition">¶</a></dt>
@@ -2249,7 +2249,7 @@ For more details on using the AWS CDK with Chalice, see <a class="reference inte
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="cdk.Chalice">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">cdk.</span></span><span class="sig-name descname"><span class="pre">Chalice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">scope</span></em>, <em class="sig-param"><span class="pre">id</span></em>, <em class="sig-param"><span class="pre">source_dir</span></em>, <em class="sig-param"><span class="pre">stage_config=None</span></em>, <em class="sig-param"><span class="pre">preserve_logical_ids=True</span></em>, <em class="sig-param"><span class="pre">\*\*kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdk.Chalice" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cdk.</span></span><span class="sig-name descname"><span class="pre">Chalice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scope</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage_config=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preserve_logical_ids=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">\*\*kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdk.Chalice" title="Permalink to this definition">¶</a></dt>
 <dd><p>A test client used to write tests for Chalice apps.  It allows you to</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>

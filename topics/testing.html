@@ -218,25 +218,25 @@ sample events.  For example:</p>
 <p>The Chalice test client will also configure any environment variables you
 have configured with your Lambda functions in your <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>
 file.  For example, suppose you had these config file:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
-    <span class="nt">&quot;app_name&quot;</span><span class="p">:</span> <span class="s2">&quot;testenv&quot;</span><span class="p">,</span>
-    <span class="nt">&quot;stages&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;prod&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span>
-            <span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;MY_ENV_VAR&quot;</span><span class="p">:</span> <span class="s2">&quot;TOP LEVEL&quot;</span>
-            <span class="p">},</span>
-            <span class="nt">&quot;lambda_functions&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="nt">&quot;bar&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span> <span class="p">{</span>
-                        <span class="nt">&quot;MY_ENV_VAR&quot;</span><span class="p">:</span> <span class="s2">&quot;OVERRIDE&quot;</span>
-                    <span class="p">}</span>
-                <span class="p">}</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;app_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;testenv&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;prod&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;MY_ENV_VAR&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TOP LEVEL&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lambda_functions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;bar&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;MY_ENV_VAR&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OVERRIDE&quot;</span><span class="w"></span>
+<span class="w">                    </span><span class="p">}</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>These sets a <code class="docutils literal notranslate"><span class="pre">MY_ENV_VAR</span></code> environment variable for the <code class="docutils literal notranslate"><span class="pre">prod</span></code> stage.
