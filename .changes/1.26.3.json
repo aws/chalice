@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Errors",
+      "description": "Remove redundant error code in error message string (#1339)"
+    },
+    {
+      "type": "enhancement",
+      "category": "VPC",
+      "description": "Associate VPC endpoint with Rest API (#1449)"
+    }
+  ]
+}

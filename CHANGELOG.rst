@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.26.3
+======
+
+* enhancement:Errors:Remove redundant error code in error message string (#1339)
+* enhancement:VPC:Associate VPC endpoint with Rest API (#1449)
+
+
 1.26.2
 ======
 

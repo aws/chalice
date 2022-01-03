@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "VPC",
-  "description": "Associate VPC endpoint with Rest API (#1449)"
-}
