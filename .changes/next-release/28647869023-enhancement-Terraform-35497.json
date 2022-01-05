@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Terraform",
+  "description": "Bump Terraform version to suppose 1.1.x (#1868)"
+}
