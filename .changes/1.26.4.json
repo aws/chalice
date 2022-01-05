@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Terraform",
+      "description": "Use updated keywords for providing provider version contraints (#1717)"
+    }
+  ]
+}

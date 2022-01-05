@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.26.4
+======
+
+* bugfix:Terraform:Use updated keywords for providing provider version contraints (#1717)
+
+
 1.26.3
 ======
 
