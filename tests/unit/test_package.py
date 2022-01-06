@@ -550,7 +550,7 @@ class TestTerraformTemplate(TemplateTestBase):
         assert resources['aws_api_gateway_deployment']['rest_api'] == {
             'rest_api_id': '${aws_api_gateway_rest_api.rest_api.id}',
             'stage_description': (
-                '${md5(data.template_file.chalice_api_swagger.rendered)}'),
+                '${md5(local.chalice_api_swagger)}'),
             'stage_name': 'api',
             'lifecycle': {'create_before_destroy': True}
         }
