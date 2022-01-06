@@ -798,11 +798,11 @@ class TerraformGenerator(TemplateGenerator):
         # type: (List[models.Model]) -> Dict[str, Any]
         template = {
             'resource': {},
+            'locals': {},
             'terraform': {
                 'required_version': '>= 0.12.26, < 1.2.0',
                 'required_providers': {
                     'aws': {'version': '>= 2, < 4'},
-                    'template': {'version': '~> 2'},
                     'null': {'version': '>= 2, < 4'}
                 }
             },
@@ -1087,14 +1087,12 @@ class TerraformGenerator(TemplateGenerator):
 
         # typechecker happiness
         swagger_doc = cast(Dict, resource.swagger_doc)
-        template['data'].setdefault(
-            'template_file', {}).setdefault(
-            'chalice_api_swagger', {})['template'] = json.dumps(
+        template['locals']['chalice_api_swagger'] = json.dumps(
             swagger_doc)
 
         template['resource'].setdefault('aws_api_gateway_rest_api', {})[
             resource.resource_name] = {
-            'body': '${data.template_file.chalice_api_swagger.rendered}',
+            'body': '${local.chalice_api_swagger}',
             # Terraform will diff explicitly configured attributes
             # to the current state of the resource. Attributes configured
             # via swagger on the REST api need to be duplicated here, else
@@ -1124,7 +1122,7 @@ class TerraformGenerator(TemplateGenerator):
             # the swagger description for the api by using its checksum
             # in the stage description.
             'stage_description': (
-                "${md5(data.template_file.chalice_api_swagger.rendered)}"),
+                "${md5(local.chalice_api_swagger)}"),
             'rest_api_id': '${aws_api_gateway_rest_api.%s.id}' % (
                 resource.resource_name),
             'lifecycle': {'create_before_destroy': True}
