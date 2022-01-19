@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Remove template provider in favor of locals (#1869)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Bump Terraform version to suppose 1.1.x (#1868)"
+    }
+  ]
+}

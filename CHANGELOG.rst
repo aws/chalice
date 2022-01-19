@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.26.5
+======
+
+* enhancement:Terraform:Remove template provider in favor of locals (#1869)
+* enhancement:Terraform:Bump Terraform version to suppose 1.1.x (#1868)
+
+
 1.26.4
 ======
 
