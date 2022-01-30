@@ -1816,6 +1816,17 @@ def test_http_response_to_dict(body, headers, status_code):
     assert isinstance(serialized['body'], six.string_types)
 
 
+@given(headers=STR_MAP,
+       status_code=st.integers(min_value=200, max_value=599))
+def test_http_response_with_set_to_dict(headers, status_code):
+    r = Response(body={'example': set([1, 2, 3])}, headers=headers, status_code=status_code)
+    serialized = r.to_dict()
+    assert 'headers' in serialized
+    assert 'statusCode' in serialized
+    assert 'body' in serialized
+    assert isinstance(serialized['body'], six.string_types)
+
+
 @given(body=st.binary(), content_type=st.sampled_from(BINARY_TYPES))
 def test_handles_binary_responses(body, content_type):
     r = Response(body=body, headers={'Content-Type': content_type})

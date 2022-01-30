@@ -57,6 +57,9 @@ def handle_extra_types(obj):
     # to support that as well.
     if isinstance(obj, decimal.Decimal):
         return float(obj)
+    # DynamoDB responses might contain sets
+    if isinstance(obj, set):
+        return list(obj)
     # This is added for backwards compatibility.
     # It will keep only the last value for every key as it used to.
     if isinstance(obj, MultiDict):
