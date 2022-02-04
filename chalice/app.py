@@ -106,6 +106,14 @@ class WebsocketDisconnectedError(ChaliceError):
 class ChaliceViewError(ChaliceError):
     STATUS_CODE = 500
 
+    def to_response(self):
+        return Response(
+            body={
+                'Code': self.__class__.__name__,
+                'Message': str(self)},
+            status_code=self.STATUS_CODE
+        )
+
 
 class ChaliceUnhandledError(ChaliceError):
     """This error is not caught from a Chalice view function.
@@ -1760,9 +1768,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
-            response = Response(body={'Code': e.__class__.__name__,
-                                      'Message': str(e)},
-                                status_code=e.STATUS_CODE)
+            response = e.to_request()
         except Exception:
             response = self._unhandled_exception_to_response()
         return response
