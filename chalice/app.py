@@ -1768,7 +1768,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
-            response = e.to_request()
+            response = e.to_response()
         except Exception:
             response = self._unhandled_exception_to_response()
         return response
