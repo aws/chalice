@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt -r requirements-docs.txt
-          pip install -e .
+          pip install --upgrade --upgrade-strategy eager -e .
       - name: Run PRCheck
         run: make prcheck
   cdktests:
