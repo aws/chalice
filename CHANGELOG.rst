@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.26.6
+======
+
+* bugfix:pip:Fix RuntimeError with pip v22.x (#1887)
+
+
 1.26.5
 ======
 
