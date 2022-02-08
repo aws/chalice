@@ -28,8 +28,13 @@ def pip_import_string():
         return 'from pip._internal import main'
     elif (19, 3) <= pip_major_minor < (20, 0):
         return 'from pip._internal.main import main'
-    elif (20, 0) <= pip_major_minor < (22, 0):
+    elif pip_major_minor >= (20, 0):
         # More changes! https://github.com/pypa/pip/issues/7498
+        # We'll assume that anything >= v20.0 will use this import
+        # string.  We're already specifying our supported versions of
+        # pip as a dependency so assuming this stays the same, pip
+        # upgrades will just require bumping our dependency range in
+        # setup.py.
         return 'from pip._internal.cli.main import main'
     raise RuntimeError("Unknown import string for pip version: %s"
                        % str(pip_major_minor))
