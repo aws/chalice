@@ -1,2 +1,2 @@
 chalice=={{chalice_version}}
-py.test
+pytest
