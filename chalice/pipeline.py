@@ -258,6 +258,7 @@ class CodeCommitSourceRepository(BaseResource):
 
 class CodeStarSource(BaseResource):
     def add_to_template(self, template, pipeline_params):
+        # type: (Dict[str, Any], PipelineParameters) -> None
         p = template.setdefault('Parameters', {})
         p['CodeStarConnectionArn'] = {
             'Type': 'String',
@@ -543,6 +544,7 @@ class CodePipeline(BaseResource):
         return self._github_source(pipeline_params.pipeline_version)
 
     def _code_star_source(self):
+        # type: (str) -> Dict[str, Any]
         return {
             'Name': 'Source',
             'Actions': [{
