@@ -150,6 +150,8 @@ class CreatePipelineTemplateV2(BasePipelineTemplate):
         resources = []  # type: List[BaseResource]
         if pipeline_params.code_source == 'github':
             resources.append(GithubSource())
+        elif pipeline_params.code_source == 'codestar':
+            resources.append(CodeStarSource())
         else:
             resources.append(CodeCommitSourceRepository())
         resources.extend([CodeBuild(create_buildspec_v2), CodePipeline()])
@@ -251,6 +253,22 @@ class CodeCommitSourceRepository(BaseResource):
             "Value": {
                 "Fn::GetAtt": "SourceRepository.CloneUrlHttp"
             }
+        }
+
+
+class CodeStarSource(BaseResource):
+    def add_to_template(self, template, pipeline_params):
+        p = template.setdefault('Parameters', {})
+        p['CodeStarConnectionArn'] = {
+            'Type': 'String',
+            'Description': 'The codestar connection arn.',
+        }
+        p['CodeStarFullRepositoryId'] = {
+            'Type': 'String',
+            'Description': (
+                    'The repository id. '
+                    'Example, bitbucketusername/repo'
+            )
         }
 
 
@@ -520,7 +538,33 @@ class CodePipeline(BaseResource):
         # type: (PipelineParameters) -> Dict[str, Any]
         if pipeline_params.code_source == 'codecommit':
             return self._code_commit_source()
+        if pipeline_params.code_source == 'codestar':
+            return self._code_star_source()
         return self._github_source(pipeline_params.pipeline_version)
+
+    def _code_star_source(self):
+        return {
+            'Name': 'Source',
+            'Actions': [{
+                "Name": "Source",
+                "ActionTypeId": {
+                    "Category": "Source",
+                    "Owner": "AWS",
+                    "Version": "1",
+                    "Provider": "CodeStarSourceConnection"
+                },
+                'RunOrder': 1,
+                'OutputArtifacts': [{
+                    'Name': 'SourceRepo',
+                }],
+                'Configuration': {
+                    'ConnectionArn': {'Ref': 'CodeStarConnectionArn'},
+                    'FullRepositoryId': {'Ref': 'CodeStarFullRepositoryId'},
+                    'BranchName': 'master',
+                    'DetectChanges': True,
+                }
+            }],
+        }
 
     def _github_source(self, pipeline_version):
         # type: (str) -> Dict[str, Any]

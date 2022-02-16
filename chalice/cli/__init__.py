@@ -565,11 +565,13 @@ def package(ctx, single_file, stage, merge_template,
                     "This option must be provided when using a python "
                     "version besides 2.7."))
 @click.option('-s', '--source', default='codecommit',
-              type=click.Choice(['codecommit', 'github']),
+              type=click.Choice(['codecommit', 'github', 'codestar']),
               help=("Specify the input source.  The default value of "
                     "'codecommit' will create a CodeCommit repository "
                     "for you.  The 'github' value allows you to "
-                    "reference an existing GitHub repository."))
+                    "reference an existing GitHub repository."
+                    "The 'codestar' value allows you to reference "
+                    "bitbucket or any codestar connection."))
 @click.option('-b', '--buildspec-file',
               help=("Specify path for buildspec.yml file. "
                     "By default, the build steps are included in the "
