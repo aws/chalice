@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "pip",
+      "description": "Fix RuntimeError with pip v22.x (#1887)"
+    }
+  ]
+}

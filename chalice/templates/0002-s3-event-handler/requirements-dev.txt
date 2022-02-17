@@ -1,2 +1,2 @@
 chalice
-py.test
+pytest
