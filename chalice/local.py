@@ -462,7 +462,8 @@ class LocalGateway(object):
     def _generate_lambda_context(self):
         # type: () -> LambdaContext
         if self._config.lambda_timeout is None:
-            timeout = None
+            # AWS Lambda max timeout is 15 minutes
+            timeout = 900 * 1000
         else:
             timeout = self._config.lambda_timeout * 1000
         return LambdaContext(
