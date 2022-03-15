@@ -449,6 +449,9 @@ class LocalGatewayAuthorizer(object):
 
 class LocalGateway(object):
     """A class for faking the behavior of API Gateway."""
+
+    MAX_LAMBDA_EXECUTION_TIME = 900
+
     def __init__(self, app_object, config):
         # type: (Chalice, Config) -> None
         self._app_object = app_object
@@ -462,8 +465,7 @@ class LocalGateway(object):
     def _generate_lambda_context(self):
         # type: () -> LambdaContext
         if self._config.lambda_timeout is None:
-            # AWS Lambda max timeout is 15 minutes
-            timeout = 900 * 1000
+            timeout = self.MAX_LAMBDA_EXECUTION_TIME * 1000
         else:
             timeout = self._config.lambda_timeout * 1000
         return LambdaContext(

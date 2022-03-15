@@ -816,6 +816,23 @@ class TestLocalGateway(object):
         assert body['timeout'] <= 10000
         assert AWS_REQUEST_ID_PATTERN.match(body['request_id'])
 
+    def test_defaults_timeout_if_needed(self):
+        demo = app.Chalice('app-name')
+
+        @demo.route('/context')
+        def context_view():
+            context = demo.lambda_context
+            return {
+                'remaining': context.get_remaining_time_in_millis(),
+            }
+
+        disk_config = {}
+        config = Config(chalice_stage='api', config_from_disk=disk_config)
+        gateway = LocalGateway(demo, config)
+        response = gateway.handle_request('GET', '/context', {}, '')
+        body = json.loads(response['body'])
+        assert body['remaining'] <= gateway.MAX_LAMBDA_EXECUTION_TIME * 1000
+
     def test_can_validate_route_with_variables(self, demo_app_auth):
         gateway = LocalGateway(demo_app_auth, Config())
         response = gateway.handle_request(
