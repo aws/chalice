@@ -130,7 +130,7 @@ Gateway documentation`_.  First, we'll show the code and then walk through it:
         # This is just for demo purposes as shown in the API Gateway docs.
         # Normally you'd call an oauth provider, validate the
         # jwt token, etc.
-        # In this exampe, the token is treated as the status for demo
+        # In this example, the token is treated as the status for demo
         # purposes.
         if token == 'allow':
             return AuthResponse(routes=['/'], principal_id='user')
