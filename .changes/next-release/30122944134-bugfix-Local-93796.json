@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Local",
+  "description": "Set a default timeout when creating the local LambdaContext instance (#1896)"
+}
