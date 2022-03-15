@@ -1,8 +1,8 @@
 REST API Tutorial
 =================
 
-In this tutorial, we're going to create a REST API and explore what features
-Chalice provides that helps us write this REST APIs.
+In this tutorial, we create a REST API and explore
+Chalice features that help us write REST APIs.
 
 Installation and Configuration
 ------------------------------
@@ -67,7 +67,7 @@ parts of the URI:
 
 In the example above, we've now added a ``state_of_city`` view that allows
 a user to specify a city name.  The view function takes the city
-name and returns name of the state the city is in.  Notice that the
+name and returns the name of the state the city is in.  Notice that the
 ``@app.route`` decorator has a URL pattern of ``/cities/{city}``.  This
 means that the value of ``{city}`` is captured and passed to the view
 function.  You can also see that the ``state_of_city`` takes a single
@@ -262,8 +262,8 @@ HTTP method. For example:
     def myview_put():
         pass
 
-This setup will route all HTTP POST's to ``/myview`` to the ``myview_post()``
-view function and route all HTTP PUT's to ``/myview`` to the ``myview_put()``
+This setup routes HTTP POST requests to ``/myview`` to the ``myview_post()``
+view function and routes HTTP PUT requests to ``/myview`` to the ``myview_put()``
 view function. It is also important to note that the view functions
 **must** have unique names. For example, both view functions cannot be
 named ``myview()``.
