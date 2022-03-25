@@ -27,7 +27,7 @@ install_requires = [
     'six>=1.10.0,<2.0.0',
     'pip>=9,<22.1',
     'attrs>=19.3.0,<21.5.0',
-    'jmespath>=0.9.3,<1.0.0',
+    'jmespath>=0.9.3,<2.0.0',
     'pyyaml>=5.3.1,<7.0.0',
     'inquirer>=2.7.0,<3.0.0',
     'wheel',
