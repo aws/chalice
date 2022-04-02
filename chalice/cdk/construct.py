@@ -8,13 +8,19 @@ from aws_cdk import (
     cloudformation_include,
     aws_iam as iam,
     aws_lambda as lambda_,
-    core as cdk
 )
+
+try:
+    from aws_cdk.core import Construct
+    from aws_cdk import core as cdk
+except ImportError:
+    import aws_cdk as cdk
+    from constructs import Construct
 
 from chalice import api
 
 
-class Chalice(cdk.Construct):
+class Chalice(Construct):
     """Chalice construct for CDK.
 
     Packages the application into AWS SAM format and imports the resulting
@@ -24,7 +30,7 @@ class Chalice(cdk.Construct):
     # pylint: disable=redefined-builtin
     # The 'id' parameter name is CDK convention.
     def __init__(self,
-                 scope,                       # type: cdk.Construct
+                 scope,                       # type: Construct
                  id,                          # type: str
                  source_dir,                  # type: str
                  stage_config=None,           # type: Optional[Dict[str, Any]]
