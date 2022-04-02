@@ -53,6 +53,12 @@ To install the necessary dependencies run the following command:
 
 ::
 
+  $ python3 -m pip install "chalice[cdkv2]"
+
+**Note:** Although cdk version 2 is recommended, you can still use cdk version 1 the following way:
+
+::
+
   $ python3 -m pip install "chalice[cdk]"
 
 You're now ready to create your first Chalice and CDK application.
