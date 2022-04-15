@@ -10,9 +10,12 @@ from chalice.cli import newproj
 
 try:
     from aws_cdk import core as cdk
-except Exception:
-    pytestmark = pytest.mark.skip(
-        "aws_cdk package needed to run CDK tests.")
+except ImportError:
+    try:
+        import aws_cdk as cdk
+    except ImportError:
+        pytestmark = pytest.mark.skip(
+            "aws_cdk package needed to run CDK tests.")
 
 
 @pytest.fixture
