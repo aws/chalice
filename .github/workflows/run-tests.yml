@@ -28,7 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
+        cdk-version: [cdk, cdkv2]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -43,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt -r requirements-docs.txt
-          pip install -e .[cdk]
+          pip install -e .[${{ matrix.cdk-version }}]
       - name: Run CDK tests
         run: python -m pytest tests/functional/cdk
 #  Chalice works on windows, but there's some differences between
