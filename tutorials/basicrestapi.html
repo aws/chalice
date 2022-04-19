@@ -125,8 +125,8 @@
                     
   <section id="rest-api-tutorial">
 <h1>REST API Tutorial<a class="headerlink" href="#rest-api-tutorial" title="Permalink to this headline">¶</a></h1>
-<p>In this tutorial, we’re going to create a REST API and explore what features
-Chalice provides that helps us write this REST APIs.</p>
+<p>In this tutorial, we create a REST API and explore
+Chalice features that help us write REST APIs.</p>
 <section id="installation-and-configuration">
 <h2>Installation and Configuration<a class="headerlink" href="#installation-and-configuration" title="Permalink to this headline">¶</a></h2>
 <p>If you haven’t already setup and configured Chalice, see the
@@ -182,7 +182,7 @@ parts of the URI:</p>
 </div>
 <p>In the example above, we’ve now added a <code class="docutils literal notranslate"><span class="pre">state_of_city</span></code> view that allows
 a user to specify a city name.  The view function takes the city
-name and returns name of the state the city is in.  Notice that the
+name and returns the name of the state the city is in.  Notice that the
 <code class="docutils literal notranslate"><span class="pre">&#64;app.route</span></code> decorator has a URL pattern of <code class="docutils literal notranslate"><span class="pre">/cities/{city}</span></code>.  This
 means that the value of <code class="docutils literal notranslate"><span class="pre">{city}</span></code> is captured and passed to the view
 function.  You can also see that the <code class="docutils literal notranslate"><span class="pre">state_of_city</span></code> takes a single
@@ -353,8 +353,8 @@ HTTP method. For example:</p>
     <span class="k">pass</span>
 </pre></div>
 </div>
-<p>This setup will route all HTTP POST’s to <code class="docutils literal notranslate"><span class="pre">/myview</span></code> to the <code class="docutils literal notranslate"><span class="pre">myview_post()</span></code>
-view function and route all HTTP PUT’s to <code class="docutils literal notranslate"><span class="pre">/myview</span></code> to the <code class="docutils literal notranslate"><span class="pre">myview_put()</span></code>
+<p>This setup routes HTTP POST requests to <code class="docutils literal notranslate"><span class="pre">/myview</span></code> to the <code class="docutils literal notranslate"><span class="pre">myview_post()</span></code>
+view function and routes HTTP PUT requests to <code class="docutils literal notranslate"><span class="pre">/myview</span></code> to the <code class="docutils literal notranslate"><span class="pre">myview_put()</span></code>
 view function. It is also important to note that the view functions
 <strong>must</strong> have unique names. For example, both view functions cannot be
 named <code class="docutils literal notranslate"><span class="pre">myview()</span></code>.</p>

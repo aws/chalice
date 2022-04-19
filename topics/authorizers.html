@@ -224,7 +224,7 @@ Gateway documentation</a>.  First, we’ll show the code and then walk through i
     <span class="c1"># This is just for demo purposes as shown in the API Gateway docs.</span>
     <span class="c1"># Normally you&#39;d call an oauth provider, validate the</span>
     <span class="c1"># jwt token, etc.</span>
-    <span class="c1"># In this exampe, the token is treated as the status for demo</span>
+    <span class="c1"># In this example, the token is treated as the status for demo</span>
     <span class="c1"># purposes.</span>
     <span class="k">if</span> <span class="n">token</span> <span class="o">==</span> <span class="s1">&#39;allow&#39;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">AuthResponse</span><span class="p">(</span><span class="n">routes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;/&#39;</span><span class="p">],</span> <span class="n">principal_id</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">)</span>
