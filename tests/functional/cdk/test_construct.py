@@ -10,9 +10,11 @@ from chalice.cli import newproj
 
 try:
     from aws_cdk import core as cdk
+    CDK_VERSION = 1
 except ImportError:
     try:
         import aws_cdk as cdk
+        CDK_VERSION = 2
     except ImportError:
         pytestmark = pytest.mark.skip(
             "aws_cdk package needed to run CDK tests.")
@@ -21,6 +23,26 @@ except ImportError:
 @pytest.fixture
 def runner():
     return CliRunner()
+
+
+def verify_code_asset_exists_v1(uri_props):
+    bucket_ref = uri_props['Bucket']['Ref']
+    assert bucket_ref.startswith('AssetParameters')
+
+
+def verify_code_asset_exists_v2(uri_props):
+    bucket_ref = uri_props['Bucket']['Fn::Sub']
+    # Actual sub value will look something like this:
+    # 'cdk-abcdefghi-assets-${AWS::AccountId}-${AWS::Region}'},
+    assert bucket_ref.startswith('cdk-')
+
+
+@pytest.fixture
+def verify_code_asset_exists():
+    if CDK_VERSION == 1:
+        return verify_code_asset_exists_v1
+    elif CDK_VERSION == 2:
+        return verify_code_asset_exists_v2
 
 
 def load_chalice_construct(dirname, stack_name='testcdk'):
@@ -59,7 +81,7 @@ def test_cdk_construct_api(runner):
         assert hasattr(role, 'role_name')
 
 
-def test_can_package_as_cdk_app(runner):
+def test_can_package_as_cdk_app(runner, verify_code_asset_exists):
     # The CDK loading/synth can take a while so we're testing the
     # various APIs out in one test to cut down on test time.
     with runner.isolated_filesystem():
@@ -86,11 +108,10 @@ def test_can_package_as_cdk_app(runner):
         # CDK specific assets.
         functions = filter_resources(
             cfn_template, 'AWS::Serverless::Function')[0]
-        bucket_ref = functions[1]['Properties']['CodeUri']['Bucket']['Ref']
-        assert bucket_ref.startswith('AssetParameters')
+        verify_code_asset_exists(functions[1]['Properties']['CodeUri'])
 
 
-def test_can_package_managed_layer(runner):
+def test_can_package_managed_layer(runner, verify_code_asset_exists):
     with runner.isolated_filesystem():
         newproj.create_new_project_skeleton(
             'testcdklayers', project_type='cdk-ddb')
@@ -111,5 +132,4 @@ def test_can_package_managed_layer(runner):
         cfn_template = stack.template
         layers = filter_resources(
             cfn_template, 'AWS::Serverless::LayerVersion')[0]
-        bucket_ref = layers[1]['Properties']['ContentUri']['Bucket']['Ref']
-        assert bucket_ref.startswith('AssetParameters')
+        verify_code_asset_exists(layers[1]['Properties']['ContentUri'])
