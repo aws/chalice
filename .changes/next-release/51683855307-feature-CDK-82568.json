@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "CDK",
+  "description": "Add support for CDK v2 (#1742)"
+}

@@ -51,7 +51,8 @@ setup(
             'aws_cdk.aws-s3-assets>=1.85.0,<2.0',
             'aws_cdk.cloudformation-include>=1.85.0,<2.0',
             'aws_cdk.core>=1.85.0,<2.0',
-        ]
+        ],
+        'cdkv2': ["aws-cdk-lib>2.0,<3.0"]
     },
     license="Apache License 2.0",
     package_data={'chalice': [
