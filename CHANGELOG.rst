@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.27.0
+======
+
+* bugfix:Local:Set a default timeout when creating the local LambdaContext instance (#1896)
+* feature:CDK:Add support for CDK v2 (#1742)
+
+
 1.26.6
 ======
 

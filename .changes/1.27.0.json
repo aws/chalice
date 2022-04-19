@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Local",
+      "description": "Set a default timeout when creating the local LambdaContext instance (#1896)"
+    },
+    {
+      "type": "feature",
+      "category": "CDK",
+      "description": "Add support for CDK v2 (#1742)"
+    }
+  ]
+}
