@@ -858,17 +858,170 @@ class TerraformGenerator(TemplateGenerator):
             'role': '${aws_iam_role.%s.id}' % resource.resource_name,
         }
 
+    def _add_websocket_lambda_integration(
+            self, ws_app_id, websocket_handler, template):
+        # type: (str, str, Dict[str, Any]) -> None
+
+        resource_definition = {
+            'api_id': ws_app_id,
+            'connection_type': 'INTERNET',
+            'content_handling_strategy': 'CONVERT_TO_TEXT',
+            'integration_type': 'AWS_PROXY',
+            'integration_uri': self._arnref(
+                "arn:%(partition)s:apigateway:%(region)s"
+                ":lambda:path/2015-03-31/functions/arn"
+                ":%(partition)s:lambda:%(region)s"
+                ":%(account_id)s:function"
+                ":%(websocket_handler)s/invocations",
+                websocket_handler=websocket_handler
+            )
+        }
+        template['resource'].setdefault(
+            'aws_apigatewayv2_integration', {}
+        )['%s_api_integration' % websocket_handler] = resource_definition
+
+    def _add_websocket_lambda_invoke_permission(
+            self, websocket_api_id, websocket_handler, template):
+        # type: (str, str, Dict[str, Any]) -> None
+
+        resource_definition = {
+            "function_name": "${aws_lambda_function.%s.arn}" % websocket_handler,
+            "action": "lambda:InvokeFunction",
+            "principal": self._options.service_principal('apigateway'),
+            "source_arn": self._arnref(
+                "arn:%(partition)s:execute-api"
+                ":%(region)s:%(account_id)s"
+                ":%(websocket_api_id)s/*",
+                websocket_api_id=websocket_api_id
+            )
+        }
+        template['resource'].setdefault(
+            'aws_lambda_permission', {}
+        )['%s_invoke_permission' % websocket_handler] = resource_definition
+
+    def _add_websockets_route(self, websocket_api_id, route_key, template):
+        # type: (str, str, Dict[str, Any]) -> str
+        integration_target = {
+            '$connect': 'integrations/${aws_apigatewayv2_integration.websocket_connect_api_integration.id}',
+            '$disconnect': 'integrations/${aws_apigatewayv2_integration.websocket_disconnect_api_integration.id}',
+        }.get(route_key, 'integrations/${aws_apigatewayv2_integration.websocket_message_api_integration.id}')
+
+        route_resource_name = {
+            '$connect': 'websocket_connect_route',
+            '$disconnect': 'websocket_disconnect_route',
+            '$default': 'websocket_message_route',
+        }.get(route_key, 'message')
+
+        template['resource'].setdefault(
+            'aws_apigatewayv2_route', {}
+        )[route_resource_name] = {
+            "api_id": websocket_api_id,
+            "route_key": route_key,
+            "target": integration_target
+        }
+        return route_resource_name
+
+    def _add_websocket_domain_name(self, websocket_api_id, resource, template):
+        # type: (str, models.WebsocketAPI, Dict[str, Any]) -> None
+        if resource.domain_name is None:
+            return
+        domain_name = resource.domain_name
+
+        ws_domain_name_definition = {
+            "domain_name": domain_name.domain_name,
+            "domain_name_configuration": {
+                'certificate_arn': domain_name.certificate_arn,
+                'endpoint_type': 'REGIONAL',
+            },
+        }
+
+        if domain_name.tags:
+            ws_domain_name_definition['tags'] = domain_name.tags
+
+        template['resource'].setdefault(
+            'aws_apigatewayv2_domain_name', {}
+        )[domain_name.resource_name] = ws_domain_name_definition
+
+        template['resource'].setdefault(
+            'aws_apigatewayv2_api_mapping', {}
+        )[domain_name.resource_name + '_mapping'] = {
+            "api_id": websocket_api_id,
+            "domain_name": "${aws_apigatewayv2_domain_name.%s.id}" % domain_name.resource_name,
+            "stage": "${aws_apigatewayv2_stage.websocket_api_stage.id}",
+        }
+
+    def _inject_websocketapi_outputs(self, websocket_api_id, template):
+        # type: (str, Dict[str, Any]) -> None
+
+        aws_lambda_functions = template['resource']['aws_lambda_function']
+        stage_name = template['resource']['aws_apigatewayv2_stage']['websocket_api_stage']['name']
+        output = template['output']
+        output['websocket_api_id'] = {"value": websocket_api_id}
+
+        if 'websocket_connect' in aws_lambda_functions:
+            output['websocket_connect_handler_arn'] = {"value": "${aws_lambda_function.websocket_connect.arn}"}
+            output['websocket_connect_handler_name'] = {"value": "${aws_lambda_function.websocket_connect}"}
+        if 'websocket_message' in aws_lambda_functions:
+            output['websocket_message_handler_arn'] = {"value": "${aws_lambda_function.websocket_message.arn}"}
+            output['websocket_message_handler_name'] = {"value": "${aws_lambda_function.websocket_message}"}
+        if 'websocket_disconnect' in aws_lambda_functions:
+            output['websocket_disconnect_handler_arn'] = {"value": "${aws_lambda_function.websocket_disconnect.arn}"}
+            output['websocket_disconnect_handler_name'] = {"value": "${aws_lambda_function.websocket_disconnect}"}
+
+        output['websocket_connect_endpoint_url'] = {"value": (
+                    'wss://%(websocket_api_id)s.execute-api'
+                    # The api_gateway_stage is filled in when
+                    # the template is built.
+                    '.${data.aws_region.chalice.name}.amazonaws.com/%(stage_name)s/'
+                ) % {"stage_name": stage_name, "websocket_api_id": websocket_api_id}}
+
     def _generate_websocketapi(self, resource, template):
         # type: (models.WebsocketAPI, Dict[str, Any]) -> None
 
-        message = (
-            "Unable to package chalice apps that use experimental "
-            "Websocket decorators. Terraform AWS Provider "
-            "support for websocket is pending see "
-            "https://git.io/fj9X8 for details and progress. "
-            "You can deploy this app using `chalice deploy`."
-        )
-        raise NotImplementedError(message)
+        ws_definition = {
+            'name': resource.name,
+            'route_selection_expression': '$request.body.action',
+            'protocol_type': 'WEBSOCKET',
+        }
+
+        template['resource'].setdefault('aws_apigatewayv2_api', {})[
+            resource.resource_name] = ws_definition
+
+        websocket_api_id = "${aws_apigatewayv2_api.%s.id}" % resource.resource_name
+
+        websocket_handlers = [
+            'websocket_connect',
+            'websocket_message',
+            'websocket_disconnect',
+        ]
+
+        for handler in websocket_handlers:
+            if handler in template['resource']['aws_lambda_function']:
+                self._add_websocket_lambda_integration(websocket_api_id, handler, template)
+                self._add_websocket_lambda_invoke_permission(websocket_api_id, handler, template)
+
+        route_resource_names = []
+        for route_key in resource.routes:
+            route_resource_name = self._add_websockets_route(websocket_api_id, route_key, template)
+            route_resource_names.append(route_resource_name)
+
+        template['resource'].setdefault(
+            'aws_apigatewayv2_deployment', {}
+        )['websocket_api_deployment'] = {
+            "api_id": websocket_api_id,
+            "depends_on": ["aws_apigatewayv2_route.%s" % name for name in route_resource_names]
+        }
+
+        template['resource'].setdefault(
+            'aws_apigatewayv2_stage', {}
+        )['websocket_api_stage'] = {
+            "api_id": websocket_api_id,
+            "deployment_id": "${aws_apigatewayv2_deployment.websocket_api_deployment.id}",
+            "name": resource.api_gateway_stage
+        }
+
+        self._add_websocket_domain_name(websocket_api_id, resource, template)
+        self._inject_websocketapi_outputs(websocket_api_id, template)
 
     def _generate_s3bucketnotification(self, resource, template):
         # type: (models.S3BucketNotification, Dict[str, Any]) -> None
