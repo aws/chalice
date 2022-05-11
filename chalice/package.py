@@ -859,11 +859,11 @@ class TerraformGenerator(TemplateGenerator):
         }
 
     def _add_websocket_lambda_integration(
-            self, ws_app_id, websocket_handler, template):
+            self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
 
         resource_definition = {
-            'api_id': ws_app_id,
+            'api_id': websocket_api_id,
             'connection_type': 'INTERNET',
             'content_handling_strategy': 'CONVERT_TO_TEXT',
             'integration_type': 'AWS_PROXY',
@@ -872,7 +872,7 @@ class TerraformGenerator(TemplateGenerator):
                 ":lambda:path/2015-03-31/functions/arn"
                 ":%(partition)s:lambda:%(region)s"
                 ":%(account_id)s:function"
-                ":%(websocket_handler)s/invocations",
+                ":${aws_lambda_function.%(websocket_handler)s.function_name}/invocations",
                 websocket_handler=websocket_handler
             )
         }
@@ -952,23 +952,31 @@ class TerraformGenerator(TemplateGenerator):
 
     def _inject_websocketapi_outputs(self, websocket_api_id, template):
         # type: (str, Dict[str, Any]) -> None
-
+        # The 'Outputs' of the SAM template are considered
+        # part of the public API of chalice and therefore
+        # need to maintain backwards compatibility.  This
+        # method uses the same output key names as the old
+        # deployer.
+        # For now, we aren't adding any of the new resources
+        # to the Outputs section until we can figure out
+        # a consist naming scheme.  Ideally we don't use
+        # the autogen'd names that contain the md5 suffixes.
         aws_lambda_functions = template['resource']['aws_lambda_function']
         stage_name = template['resource']['aws_apigatewayv2_stage']['websocket_api_stage']['name']
         output = template['output']
         output['websocket_api_id'] = {"value": websocket_api_id}
 
         if 'websocket_connect' in aws_lambda_functions:
-            output['websocket_connect_handler_arn'] = {"value": "${aws_lambda_function.websocket_connect.arn}"}
-            output['websocket_connect_handler_name'] = {"value": "${aws_lambda_function.websocket_connect}"}
+            output['WebsocketConnectHandlerArn'] = {"value": "${aws_lambda_function.websocket_connect.arn}"}
+            output['WebsocketConnectHandlerName'] = {"value": "${aws_lambda_function.websocket_connect}"}
         if 'websocket_message' in aws_lambda_functions:
-            output['websocket_message_handler_arn'] = {"value": "${aws_lambda_function.websocket_message.arn}"}
-            output['websocket_message_handler_name'] = {"value": "${aws_lambda_function.websocket_message}"}
+            output['WebsocketMessageHandlerArn'] = {"value": "${aws_lambda_function.websocket_message.arn}"}
+            output['WebsocketMessageHandlerName'] = {"value": "${aws_lambda_function.websocket_message}"}
         if 'websocket_disconnect' in aws_lambda_functions:
-            output['websocket_disconnect_handler_arn'] = {"value": "${aws_lambda_function.websocket_disconnect.arn}"}
-            output['websocket_disconnect_handler_name'] = {"value": "${aws_lambda_function.websocket_disconnect}"}
+            output['WebsocketDisconnectHandlerArn'] = {"value": "${aws_lambda_function.websocket_disconnect.arn}"}
+            output['WebsocketDisconnectHandlerName'] = {"value": "${aws_lambda_function.websocket_disconnect}"}
 
-        output['websocket_connect_endpoint_url'] = {"value": (
+        output['WebsocketConnectEndpointURL'] = {"value": (
                     'wss://%(websocket_api_id)s.execute-api'
                     # The api_gateway_stage is filled in when
                     # the template is built.
