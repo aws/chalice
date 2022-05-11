@@ -952,15 +952,6 @@ class TerraformGenerator(TemplateGenerator):
 
     def _inject_websocketapi_outputs(self, websocket_api_id, template):
         # type: (str, Dict[str, Any]) -> None
-        # The 'Outputs' of the SAM template are considered
-        # part of the public API of chalice and therefore
-        # need to maintain backwards compatibility.  This
-        # method uses the same output key names as the old
-        # deployer.
-        # For now, we aren't adding any of the new resources
-        # to the Outputs section until we can figure out
-        # a consist naming scheme.  Ideally we don't use
-        # the autogen'd names that contain the md5 suffixes.
         aws_lambda_functions = template['resource']['aws_lambda_function']
         stage_name = template['resource']['aws_apigatewayv2_stage']['websocket_api_stage']['name']
         output = template['output']
