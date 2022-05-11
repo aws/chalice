@@ -861,7 +861,7 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websocket_lambda_integration(
             self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
-
+        websocket_handler_function_name = "${aws_lambda_function.%s.function_name}" % websocket_handler
         resource_definition = {
             'api_id': websocket_api_id,
             'connection_type': 'INTERNET',
@@ -872,8 +872,8 @@ class TerraformGenerator(TemplateGenerator):
                 ":lambda:path/2015-03-31/functions/arn"
                 ":%(partition)s:lambda:%(region)s"
                 ":%(account_id)s:function"
-                ":${aws_lambda_function.%(websocket_handler)s.function_name}/invocations",
-                websocket_handler=websocket_handler
+                ":%(websocket_handler_function_name)s/invocations",
+                websocket_handler_function_name=websocket_handler_function_name
             )
         }
         template['resource'].setdefault(
@@ -883,9 +883,9 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websocket_lambda_invoke_permission(
             self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
-
+        websocket_handler_function_name = "${aws_lambda_function.%s.function_name}" % websocket_handler
         resource_definition = {
-            "function_name": "${aws_lambda_function.%s.arn}" % websocket_handler,
+            "function_name": websocket_handler_function_name,
             "action": "lambda:InvokeFunction",
             "principal": self._options.service_principal('apigateway'),
             "source_arn": self._arnref(
