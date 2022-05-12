@@ -18,7 +18,7 @@ from chalice.deploy.swagger import (
 from chalice.utils import (
     OSUtils, UI, serialize_to_json, to_cfn_resource_name
 )
-from chalice.awsclient import TypedAWSClient # noqa
+from chalice.awsclient import TypedAWSClient  # noqa
 from chalice.config import Config  # noqa
 from chalice.deploy import models
 from chalice.deploy.appgraph import ApplicationGraphBuilder, DependencyBuilder
@@ -101,8 +101,8 @@ class PackageOptions(object):
 class ResourceBuilder(object):
     def __init__(self,
                  application_builder,  # type: ApplicationGraphBuilder
-                 deps_builder,         # type: DependencyBuilder
-                 build_stage,          # type: BuildStage
+                 deps_builder,  # type: DependencyBuilder
+                 build_stage,  # type: BuildStage
                  ):
         # type: (...) -> None
         self._application_builder = application_builder
@@ -122,7 +122,6 @@ class ResourceBuilder(object):
 
 
 class TemplateGenerator(object):
-
     template_file = None  # type: str
 
     def __init__(self, config, options):
@@ -861,7 +860,8 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websocket_lambda_integration(
             self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
-        websocket_handler_function_name = "${aws_lambda_function.%s.function_name}" % websocket_handler
+        websocket_handler_function_name = \
+            "${aws_lambda_function.%s.function_name}" % websocket_handler
         resource_definition = {
             'api_id': websocket_api_id,
             'connection_type': 'INTERNET',
@@ -883,7 +883,8 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websocket_lambda_invoke_permission(
             self, websocket_api_id, websocket_handler, template):
         # type: (str, str, Dict[str, Any]) -> None
-        websocket_handler_function_name = "${aws_lambda_function.%s.function_name}" % websocket_handler
+        websocket_handler_function_name = \
+            "${aws_lambda_function.%s.function_name}" % websocket_handler
         resource_definition = {
             "function_name": websocket_handler_function_name,
             "action": "lambda:InvokeFunction",
@@ -902,9 +903,13 @@ class TerraformGenerator(TemplateGenerator):
     def _add_websockets_route(self, websocket_api_id, route_key, template):
         # type: (str, str, Dict[str, Any]) -> str
         integration_target = {
-            '$connect': 'integrations/${aws_apigatewayv2_integration.websocket_connect_api_integration.id}',
-            '$disconnect': 'integrations/${aws_apigatewayv2_integration.websocket_disconnect_api_integration.id}',
-        }.get(route_key, 'integrations/${aws_apigatewayv2_integration.websocket_message_api_integration.id}')
+            '$connect': 'integrations/${aws_apigatewayv2_integration'
+                        '.websocket_connect_api_integration.id}',
+            '$disconnect': 'integrations/${aws_apigatewayv2_integration'
+                           '.websocket_disconnect_api_integration.id}',
+        }.get(route_key,
+              'integrations/${aws_apigatewayv2_integration'
+              '.websocket_message_api_integration.id}')
 
         route_resource_name = {
             '$connect': 'websocket_connect_route',
@@ -946,33 +951,49 @@ class TerraformGenerator(TemplateGenerator):
             'aws_apigatewayv2_api_mapping', {}
         )[domain_name.resource_name + '_mapping'] = {
             "api_id": websocket_api_id,
-            "domain_name": "${aws_apigatewayv2_domain_name.%s.id}" % domain_name.resource_name,
+            "domain_name": "${aws_apigatewayv2_domain_name.%s.id}" %
+                           domain_name.resource_name,
             "stage": "${aws_apigatewayv2_stage.websocket_api_stage.id}",
         }
 
     def _inject_websocketapi_outputs(self, websocket_api_id, template):
         # type: (str, Dict[str, Any]) -> None
         aws_lambda_functions = template['resource']['aws_lambda_function']
-        stage_name = template['resource']['aws_apigatewayv2_stage']['websocket_api_stage']['name']
+        stage_name = \
+            template['resource']['aws_apigatewayv2_stage'][
+                'websocket_api_stage'][
+                'name']
         output = template.setdefault('output', {})
         output['WebsocketAPIId'] = {"value": websocket_api_id}
 
         if 'websocket_connect' in aws_lambda_functions:
-            output['WebsocketConnectHandlerArn'] = {"value": "${aws_lambda_function.websocket_connect.arn}"}
-            output['WebsocketConnectHandlerName'] = {"value": "${aws_lambda_function.websocket_connect}"}
+            output['WebsocketConnectHandlerArn'] = {
+                "value": "${aws_lambda_function.websocket_connect.arn}"}
+            output['WebsocketConnectHandlerName'] = {
+                "value": "${aws_lambda_function.websocket_connect}"}
         if 'websocket_message' in aws_lambda_functions:
-            output['WebsocketMessageHandlerArn'] = {"value": "${aws_lambda_function.websocket_message.arn}"}
-            output['WebsocketMessageHandlerName'] = {"value": "${aws_lambda_function.websocket_message}"}
+            output['WebsocketMessageHandlerArn'] = {
+                "value": "${aws_lambda_function.websocket_message.arn}"}
+            output['WebsocketMessageHandlerName'] = {
+                "value": "${aws_lambda_function.websocket_message}"}
         if 'websocket_disconnect' in aws_lambda_functions:
-            output['WebsocketDisconnectHandlerArn'] = {"value": "${aws_lambda_function.websocket_disconnect.arn}"}
-            output['WebsocketDisconnectHandlerName'] = {"value": "${aws_lambda_function.websocket_disconnect}"}
+            output['WebsocketDisconnectHandlerArn'] = {
+                "value": "${aws_lambda_function.websocket_disconnect.arn}"}
+            output['WebsocketDisconnectHandlerName'] = {
+                "value": "${aws_lambda_function.websocket_disconnect}"}
 
-        output['WebsocketConnectEndpointURL'] = {"value": (
-                    'wss://%(websocket_api_id)s.execute-api'
-                    # The api_gateway_stage is filled in when
-                    # the template is built.
-                    '.${data.aws_region.chalice.name}.amazonaws.com/%(stage_name)s/'
-                ) % {"stage_name": stage_name, "websocket_api_id": websocket_api_id}}
+        output['WebsocketConnectEndpointURL'] = {
+            "value": (
+                'wss://%(websocket_api_id)s.execute-api'
+                # The api_gateway_stage is filled in when
+                # the template is built.
+                '.${data.aws_region.chalice.name}'
+                '.amazonaws.com/%(stage_name)s/'
+            ) % {
+                "stage_name": stage_name,
+                "websocket_api_id": websocket_api_id
+            }
+        }
 
     def _generate_websocketapi(self, resource, template):
         # type: (models.WebsocketAPI, Dict[str, Any]) -> None
@@ -986,7 +1007,8 @@ class TerraformGenerator(TemplateGenerator):
         template['resource'].setdefault('aws_apigatewayv2_api', {})[
             resource.resource_name] = ws_definition
 
-        websocket_api_id = "${aws_apigatewayv2_api.%s.id}" % resource.resource_name
+        websocket_api_id = "${aws_apigatewayv2_api.%s.id}" % \
+                           resource.resource_name
 
         websocket_handlers = [
             'websocket_connect',
@@ -996,26 +1018,32 @@ class TerraformGenerator(TemplateGenerator):
 
         for handler in websocket_handlers:
             if handler in template['resource']['aws_lambda_function']:
-                self._add_websocket_lambda_integration(websocket_api_id, handler, template)
-                self._add_websocket_lambda_invoke_permission(websocket_api_id, handler, template)
+                self._add_websocket_lambda_integration(websocket_api_id,
+                                                       handler, template)
+                self._add_websocket_lambda_invoke_permission(websocket_api_id,
+                                                             handler, template)
 
         route_resource_names = []
         for route_key in resource.routes:
-            route_resource_name = self._add_websockets_route(websocket_api_id, route_key, template)
+            route_resource_name = self._add_websockets_route(websocket_api_id,
+                                                             route_key,
+                                                             template)
             route_resource_names.append(route_resource_name)
 
         template['resource'].setdefault(
             'aws_apigatewayv2_deployment', {}
         )['websocket_api_deployment'] = {
             "api_id": websocket_api_id,
-            "depends_on": ["aws_apigatewayv2_route.%s" % name for name in route_resource_names]
+            "depends_on": ["aws_apigatewayv2_route.%s" % name for name in
+                           route_resource_names]
         }
 
         template['resource'].setdefault(
             'aws_apigatewayv2_stage', {}
         )['websocket_api_stage'] = {
             "api_id": websocket_api_id,
-            "deployment_id": "${aws_apigatewayv2_deployment.websocket_api_deployment.id}",
+            "deployment_id": ("${aws_apigatewayv2_deployment"
+                              ".websocket_api_deployment.id}"),
             "name": resource.api_gateway_stage
         }
 
@@ -1177,10 +1205,10 @@ class TerraformGenerator(TemplateGenerator):
         # type: (models.LambdaLayer, Dict[str, Any]) -> None
         template['resource'].setdefault(
             "aws_lambda_layer_version", {})[
-                resource.resource_name] = {
-                'layer_name': resource.layer_name,
-                'compatible_runtimes': [resource.runtime],
-                'filename': resource.deployment_package.filename,
+            resource.resource_name] = {
+            'layer_name': resource.layer_name,
+            'compatible_runtimes': [resource.runtime],
+            'filename': resource.deployment_package.filename,
         }
         self._chalice_layer = resource.resource_name
 
@@ -1309,7 +1337,8 @@ class TerraformGenerator(TemplateGenerator):
                 'principal': self._options.service_principal('apigateway'),
                 'source_arn': (
                     "${aws_api_gateway_rest_api.%s.execution_arn}" % (
-                        resource.resource_name) + "/*"
+                        resource.resource_name
+                    ) + "/*"
                 )
             }
         self._add_domain_name(resource, template)
