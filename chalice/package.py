@@ -954,8 +954,8 @@ class TerraformGenerator(TemplateGenerator):
         # type: (str, Dict[str, Any]) -> None
         aws_lambda_functions = template['resource']['aws_lambda_function']
         stage_name = template['resource']['aws_apigatewayv2_stage']['websocket_api_stage']['name']
-        output = template['output']
-        output['websocket_api_id'] = {"value": websocket_api_id}
+        output = template.setdefault('output', {})
+        output['WebsocketAPIId'] = {"value": websocket_api_id}
 
         if 'websocket_connect' in aws_lambda_functions:
             output['WebsocketConnectHandlerArn'] = {"value": "${aws_lambda_function.websocket_connect.arn}"}
