@@ -47,6 +47,24 @@ jobs:
           pip install -e .[${{ matrix.cdk-version }}]
       - name: Run CDK tests
         run: python -m pytest tests/functional/cdk
+  tests-ubuntu:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Set up Python ${{ matrix.python-version }}
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-dev.txt -r requirements-docs.txt
+          pip install -e .
+      - name: Run PRCheck
+        run: python -m pytest tests/unit tests/functional tests/integration
+
 #  Chalice works on windows, but there's some differences between
 #  the GitHub actions windows environment and our windows dev
 #  laptops that are causing certain tests to fail.  Once these
