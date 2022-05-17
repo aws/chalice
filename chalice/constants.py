@@ -283,5 +283,6 @@ POST_TO_WEBSOCKET_CONNECTION_POLICY = {
     "Resource": "arn:*:execute-api:*:*:*/@connections/*"
 }
 
+DEFAULT_LAMBDA_NAME_PREFIX_CONVENSION = "{app_name}-{chalice_stage}"
 DEFAULT_LAMBDA_FUNC_NAME_CONVENSION = "{app_name}-{chalice_stage}-{func_name}"
 DEFAULT_LAMBDA_LAYER_NAME_CONVENSION = "{app_name}-{chalice_stage}-{layer_name}"
