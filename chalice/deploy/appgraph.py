@@ -13,6 +13,7 @@ from chalice.constants import (
     DEFAULT_LAMBDA_LAYER_NAME_CONVENSION,
     DEFAULT_LAMBDA_ROLE_NAME_CONVENSION,
     DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENSION,
+    DEFAULT_EVENT_RULE_NAME_CONVENSION,
 )
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
@@ -284,8 +285,11 @@ class ApplicationGraphBuilder(object):
         )
 
         resource_name = event_source.name + '-event'
-        rule_name = '%s-%s-%s' % (config.app_name, config.chalice_stage,
-                                  resource_name)
+        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENSION.format(
+            app_name=config.app_name,
+            chalice_stage=config.chalice_stage,
+            resource_name=resource_name,
+        )
         cwe = models.CloudWatchEvent(
             resource_name=resource_name,
             rule_name=rule_name,
@@ -320,8 +324,12 @@ class ApplicationGraphBuilder(object):
             expression = event_source.schedule_expression.to_string()
         else:
             expression = event_source.schedule_expression
-        rule_name = '%s-%s-%s' % (config.app_name, config.chalice_stage,
-                                  resource_name)
+
+        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENSION.format(
+            app_name=config.app_name,
+            chalice_stage=config.chalice_stage,
+            resource_name=resource_name,
+        )
         scheduled_event = models.ScheduledEvent(
             resource_name=resource_name,
             rule_name=rule_name,
