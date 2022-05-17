@@ -7,7 +7,10 @@ from attr import asdict
 
 from chalice.config import Config  # noqa
 from chalice import app
-from chalice.constants import LAMBDA_TRUST_POLICY
+from chalice.constants import (
+    LAMBDA_TRUST_POLICY,
+    DEFAULT_LAMBDA_FUNC_NAME_CONVENSION,
+)
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
 
@@ -475,8 +478,11 @@ class ApplicationGraphBuilder(object):
                                role,          # type: models.IAMRole
                                ):
         # type: (...) -> models.LambdaFunction
-        function_name = '%s-%s-%s' % (
-            config.app_name, config.chalice_stage, name)
+        function_name = DEFAULT_LAMBDA_FUNC_NAME_CONVENSION.format(
+            app_name=config.app_name,
+            chalice_stage=config.chalice_stage,
+            func_name=name,
+        )
         security_group_ids, subnet_ids = self._get_vpc_params(name, config)
         lambda_layers = self._get_lambda_layers(config)
         function = models.LambdaFunction(
