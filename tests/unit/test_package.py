@@ -816,19 +816,23 @@ class TestTerraformTemplate(TemplateTestBase):
                 'value': '${aws_lambda_function.websocket_connect.arn}'
             },
             'WebsocketConnectHandlerName': {
-                'value': '${aws_lambda_function.websocket_connect}'
+                'value': (
+                    '${aws_lambda_function.websocket_connect.function_name}')
             },
             'WebsocketMessageHandlerArn': {
                 'value': '${aws_lambda_function.websocket_message.arn}'
             },
             'WebsocketMessageHandlerName': {
-                'value': '${aws_lambda_function.websocket_message}'
+                'value': (
+                    '${aws_lambda_function.websocket_message.function_name}')
             },
             'WebsocketDisconnectHandlerArn': {
                 'value': '${aws_lambda_function.websocket_disconnect.arn}'
             },
             'WebsocketDisconnectHandlerName': {
-                'value': '${aws_lambda_function.websocket_disconnect}'
+                'value': (
+                    '${aws_lambda_function.websocket_disconnect'
+                    '.function_name}')
             },
             'WebsocketConnectEndpointURL': {
                 'value': 'wss://${aws_apigatewayv2_api.websocket_api.id}'

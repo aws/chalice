@@ -970,17 +970,21 @@ class TerraformGenerator(TemplateGenerator):
             output['WebsocketConnectHandlerArn'] = {
                 "value": "${aws_lambda_function.websocket_connect.arn}"}
             output['WebsocketConnectHandlerName'] = {
-                "value": "${aws_lambda_function.websocket_connect}"}
+                "value": (
+                    "${aws_lambda_function.websocket_connect.function_name}")}
         if 'websocket_message' in aws_lambda_functions:
             output['WebsocketMessageHandlerArn'] = {
                 "value": "${aws_lambda_function.websocket_message.arn}"}
             output['WebsocketMessageHandlerName'] = {
-                "value": "${aws_lambda_function.websocket_message}"}
+                "value": (
+                    "${aws_lambda_function.websocket_message.function_name}")}
         if 'websocket_disconnect' in aws_lambda_functions:
             output['WebsocketDisconnectHandlerArn'] = {
                 "value": "${aws_lambda_function.websocket_disconnect.arn}"}
             output['WebsocketDisconnectHandlerName'] = {
-                "value": "${aws_lambda_function.websocket_disconnect}"}
+                "value": (
+                    "${aws_lambda_function.websocket_disconnect"
+                    ".function_name}")}
 
         output['WebsocketConnectEndpointURL'] = {
             "value": (
