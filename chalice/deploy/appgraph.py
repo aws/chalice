@@ -9,11 +9,11 @@ from chalice.config import Config  # noqa
 from chalice import app
 from chalice.constants import (
     LAMBDA_TRUST_POLICY,
-    DEFAULT_LAMBDA_FUNC_NAME_CONVENSION,
-    DEFAULT_LAMBDA_LAYER_NAME_CONVENSION,
-    DEFAULT_LAMBDA_ROLE_NAME_CONVENSION,
-    DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENSION,
-    DEFAULT_EVENT_RULE_NAME_CONVENSION,
+    DEFAULT_LAMBDA_FUNC_NAME_CONVENTION,
+    DEFAULT_LAMBDA_LAYER_NAME_CONVENTION,
+    DEFAULT_LAMBDA_ROLE_NAME_CONVENTION,
+    DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENTION,
+    DEFAULT_EVENT_RULE_NAME_CONVENTION,
 )
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
@@ -285,7 +285,7 @@ class ApplicationGraphBuilder(object):
         )
 
         resource_name = event_source.name + '-event'
-        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENSION.format(
+        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENTION.format(
             app_name=config.app_name,
             chalice_stage=config.chalice_stage,
             resource_name=resource_name,
@@ -325,7 +325,7 @@ class ApplicationGraphBuilder(object):
         else:
             expression = event_source.schedule_expression
 
-        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENSION.format(
+        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENTION.format(
             app_name=config.app_name,
             chalice_stage=config.chalice_stage,
             resource_name=resource_name,
@@ -390,7 +390,7 @@ class ApplicationGraphBuilder(object):
         if self._managed_layer is None:
             self._managed_layer = models.LambdaLayer(
                 resource_name='managed-layer',
-                layer_name=DEFAULT_LAMBDA_LAYER_NAME_CONVENSION.format(
+                layer_name=DEFAULT_LAMBDA_LAYER_NAME_CONVENTION.format(
                     app_name=config.app_name,
                     chalice_stage=config.chalice_stage,
                     layer_name='managed-layer',
@@ -435,7 +435,7 @@ class ApplicationGraphBuilder(object):
         policy = models.IAMPolicy(document=models.Placeholder.BUILD_STAGE)
         if not config.autogen_policy:
             resource_name = '%s_role' % function_name
-            role_name = DEFAULT_LAMBDA_ROLE_NAME_CONVENSION.format(
+            role_name = DEFAULT_LAMBDA_ROLE_NAME_CONVENTION.format(
                 app_name=config.app_name,
                 chalice_stage=stage_name,
                 func_name=function_name,
@@ -452,7 +452,7 @@ class ApplicationGraphBuilder(object):
                 filename=filename, document=models.Placeholder.BUILD_STAGE)
         else:
             resource_name = 'default-role'
-            role_name = DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENSION.format(
+            role_name = DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENTION.format(
                 app_name=config.app_name,
                 chalice_stage=stage_name,
             )
@@ -498,7 +498,7 @@ class ApplicationGraphBuilder(object):
                                role,          # type: models.IAMRole
                                ):
         # type: (...) -> models.LambdaFunction
-        function_name = DEFAULT_LAMBDA_FUNC_NAME_CONVENSION.format(
+        function_name = DEFAULT_LAMBDA_FUNC_NAME_CONVENTION.format(
             app_name=config.app_name,
             chalice_stage=config.chalice_stage,
             func_name=name,
