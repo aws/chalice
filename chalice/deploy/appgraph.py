@@ -12,6 +12,7 @@ from chalice.constants import (
     DEFAULT_LAMBDA_FUNC_NAME_CONVENSION,
     DEFAULT_LAMBDA_LAYER_NAME_CONVENSION,
     DEFAULT_LAMBDA_ROLE_NAME_CONVENSION,
+    DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENSION,
 )
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
@@ -443,7 +444,10 @@ class ApplicationGraphBuilder(object):
                 filename=filename, document=models.Placeholder.BUILD_STAGE)
         else:
             resource_name = 'default-role'
-            role_name = '%s-%s' % (config.app_name, stage_name)
+            role_name = DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENSION.format(
+                app_name=config.app_name,
+                chalice_stage=stage_name,
+            )
             policy = models.AutoGenIAMPolicy(
                 document=models.Placeholder.BUILD_STAGE,
                 traits=set([]),
