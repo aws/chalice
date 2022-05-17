@@ -11,6 +11,7 @@ from chalice.constants import (
     LAMBDA_TRUST_POLICY,
     DEFAULT_LAMBDA_FUNC_NAME_CONVENSION,
     DEFAULT_LAMBDA_LAYER_NAME_CONVENSION,
+    DEFAULT_LAMBDA_ROLE_NAME_CONVENSION,
 )
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
@@ -425,8 +426,11 @@ class ApplicationGraphBuilder(object):
         policy = models.IAMPolicy(document=models.Placeholder.BUILD_STAGE)
         if not config.autogen_policy:
             resource_name = '%s_role' % function_name
-            role_name = '%s-%s-%s' % (config.app_name, stage_name,
-                                      function_name)
+            role_name = DEFAULT_LAMBDA_ROLE_NAME_CONVENSION.format(
+                app_name=config.app_name,
+                chalice_stage=stage_name,
+                func_name=function_name,
+            )
             if config.iam_policy_file is not None:
                 filename = os.path.join(config.project_dir,
                                         '.chalice',
