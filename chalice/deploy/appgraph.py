@@ -10,6 +10,7 @@ from chalice import app
 from chalice.constants import (
     LAMBDA_TRUST_POLICY,
     DEFAULT_LAMBDA_FUNC_NAME_CONVENSION,
+    DEFAULT_LAMBDA_LAYER_NAME_CONVENSION,
 )
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
@@ -379,8 +380,11 @@ class ApplicationGraphBuilder(object):
         if self._managed_layer is None:
             self._managed_layer = models.LambdaLayer(
                 resource_name='managed-layer',
-                layer_name='%s-%s-%s' % (
-                    config.app_name, config.chalice_stage, 'managed-layer'),
+                layer_name=DEFAULT_LAMBDA_LAYER_NAME_CONVENSION.format(
+                    app_name=config.app_name,
+                    chalice_stage=config.chalice_stage,
+                    layer_name='managed-layer',
+                ),
                 runtime=config.lambda_python_version,
                 deployment_package=models.DeploymentPackage(
                     models.Placeholder.BUILD_STAGE)
