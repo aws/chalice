@@ -101,8 +101,8 @@ class PackageOptions(object):
 class ResourceBuilder(object):
     def __init__(self,
                  application_builder,  # type: ApplicationGraphBuilder
-                 deps_builder,  # type: DependencyBuilder
-                 build_stage,  # type: BuildStage
+                 deps_builder,         # type: DependencyBuilder
+                 build_stage,          # type: BuildStage
                  ):
         # type: (...) -> None
         self._application_builder = application_builder
@@ -970,17 +970,21 @@ class TerraformGenerator(TemplateGenerator):
             output['WebsocketConnectHandlerArn'] = {
                 "value": "${aws_lambda_function.websocket_connect.arn}"}
             output['WebsocketConnectHandlerName'] = {
-                "value": "${aws_lambda_function.websocket_connect}"}
+                "value": (
+                    "${aws_lambda_function.websocket_connect.function_name}")}
         if 'websocket_message' in aws_lambda_functions:
             output['WebsocketMessageHandlerArn'] = {
                 "value": "${aws_lambda_function.websocket_message.arn}"}
             output['WebsocketMessageHandlerName'] = {
-                "value": "${aws_lambda_function.websocket_message}"}
+                "value": (
+                    "${aws_lambda_function.websocket_message.function_name}")}
         if 'websocket_disconnect' in aws_lambda_functions:
             output['WebsocketDisconnectHandlerArn'] = {
                 "value": "${aws_lambda_function.websocket_disconnect.arn}"}
             output['WebsocketDisconnectHandlerName'] = {
-                "value": "${aws_lambda_function.websocket_disconnect}"}
+                "value": (
+                    "${aws_lambda_function.websocket_disconnect"
+                    ".function_name}")}
 
         output['WebsocketConnectEndpointURL'] = {
             "value": (
@@ -1205,10 +1209,10 @@ class TerraformGenerator(TemplateGenerator):
         # type: (models.LambdaLayer, Dict[str, Any]) -> None
         template['resource'].setdefault(
             "aws_lambda_layer_version", {})[
-            resource.resource_name] = {
-            'layer_name': resource.layer_name,
-            'compatible_runtimes': [resource.runtime],
-            'filename': resource.deployment_package.filename,
+                resource.resource_name] = {
+                    'layer_name': resource.layer_name,
+                    'compatible_runtimes': [resource.runtime],
+                    'filename': resource.deployment_package.filename,
         }
         self._chalice_layer = resource.resource_name
 
@@ -1337,8 +1341,7 @@ class TerraformGenerator(TemplateGenerator):
                 'principal': self._options.service_principal('apigateway'),
                 'source_arn': (
                     "${aws_api_gateway_rest_api.%s.execution_arn}" % (
-                        resource.resource_name
-                    ) + "/*"
+                        resource.resource_name) + "/*"
                 )
             }
         self._add_domain_name(resource, template)

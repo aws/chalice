@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Websockets",
+  "description": "Add support for WebSockets API Terraform packaging (#1670)"
+}

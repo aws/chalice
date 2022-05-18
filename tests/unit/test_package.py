@@ -816,19 +816,23 @@ class TestTerraformTemplate(TemplateTestBase):
                 'value': '${aws_lambda_function.websocket_connect.arn}'
             },
             'WebsocketConnectHandlerName': {
-                'value': '${aws_lambda_function.websocket_connect}'
+                'value': (
+                    '${aws_lambda_function.websocket_connect.function_name}')
             },
             'WebsocketMessageHandlerArn': {
                 'value': '${aws_lambda_function.websocket_message.arn}'
             },
             'WebsocketMessageHandlerName': {
-                'value': '${aws_lambda_function.websocket_message}'
+                'value': (
+                    '${aws_lambda_function.websocket_message.function_name}')
             },
             'WebsocketDisconnectHandlerArn': {
                 'value': '${aws_lambda_function.websocket_disconnect.arn}'
             },
             'WebsocketDisconnectHandlerName': {
-                'value': '${aws_lambda_function.websocket_disconnect}'
+                'value': (
+                    '${aws_lambda_function.websocket_disconnect'
+                    '.function_name}')
             },
             'WebsocketConnectEndpointURL': {
                 'value': 'wss://${aws_apigatewayv2_api.websocket_api.id}'
@@ -984,19 +988,19 @@ class TestTerraformTemplate(TemplateTestBase):
         )
         template = self.generate_template(config)
         assert template['resource']['aws_api_gateway_domain_name'][
-                   'api_gateway_custom_domain'] == {
-                   'domain_name': 'example.com',
-                   'certificate_arn': 'my_cert_arn',
-                   'security_policy': 'TLS_1_2',
-                   'endpoint_configuration': {'types': ['EDGE']},
-                   'tags': {'foo': 'bar'},
-               }
+            'api_gateway_custom_domain'] == {
+                'domain_name': 'example.com',
+                'certificate_arn': 'my_cert_arn',
+                'security_policy': 'TLS_1_2',
+                'endpoint_configuration': {'types': ['EDGE']},
+                'tags': {'foo': 'bar'},
+        }
         assert template['resource']['aws_api_gateway_base_path_mapping'][
-                   'api_gateway_custom_domain_mapping'] == {
-                   'api_id': '${aws_api_gateway_rest_api.rest_api.id}',
-                   'stage_name': 'api',
-                   'domain_name': 'example.com',
-               }
+            'api_gateway_custom_domain_mapping'] == {
+                'api_id': '${aws_api_gateway_rest_api.rest_api.id}',
+                'stage_name': 'api',
+                'domain_name': 'example.com',
+        }
         outputs = template['output']
         assert outputs['AliasDomainName']['value'] == (
             '${aws_api_gateway_domain_name.api_gateway_custom_domain'
@@ -1020,17 +1024,17 @@ class TestTerraformTemplate(TemplateTestBase):
         )
         template = self.generate_template(config)
         assert template['resource']['aws_api_gateway_domain_name'][
-                   'api_gateway_custom_domain'] == {
-                   'domain_name': 'example.com',
-                   'regional_certificate_arn': 'my_cert_arn',
-                   'endpoint_configuration': {'types': ['REGIONAL']},
-               }
+            'api_gateway_custom_domain'] == {
+                'domain_name': 'example.com',
+                'regional_certificate_arn': 'my_cert_arn',
+                'endpoint_configuration': {'types': ['REGIONAL']},
+        }
         assert template['resource']['aws_api_gateway_base_path_mapping'][
-                   'api_gateway_custom_domain_mapping'] == {
-                   'api_id': '${aws_api_gateway_rest_api.rest_api.id}',
-                   'stage_name': 'api',
-                   'domain_name': 'example.com',
-               }
+            'api_gateway_custom_domain_mapping'] == {
+                'api_id': '${aws_api_gateway_rest_api.rest_api.id}',
+                'stage_name': 'api',
+                'domain_name': 'example.com',
+        }
         outputs = template['output']
         assert outputs['AliasDomainName']['value'] == (
             '${aws_api_gateway_domain_name.api_gateway_custom_domain'
