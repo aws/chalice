@@ -14,7 +14,12 @@ import datetime
 from collections import defaultdict
 
 
-__version__ = '1.27.0'
+__version__: str = '1.27.0'
+
+from typing import List, Dict, Any, Optional, Sequence
+
+from chalice.app import Authorizer
+
 _PARAMS = re.compile(r'{\w+}')
 
 # Implementation note:  This file is intended to be a standalone file
@@ -104,7 +109,7 @@ class WebsocketDisconnectedError(ChaliceError):
 
 
 class ChaliceViewError(ChaliceError):
-    STATUS_CODE = 500
+    STATUS_CODE: int = 500
 
 
 class ChaliceUnhandledError(ChaliceError):
@@ -116,42 +121,42 @@ class ChaliceUnhandledError(ChaliceError):
 
 
 class BadRequestError(ChaliceViewError):
-    STATUS_CODE = 400
+    STATUS_CODE: int = 400
 
 
 class UnauthorizedError(ChaliceViewError):
-    STATUS_CODE = 401
+    STATUS_CODE: int = 401
 
 
 class ForbiddenError(ChaliceViewError):
-    STATUS_CODE = 403
+    STATUS_CODE: int = 403
 
 
 class NotFoundError(ChaliceViewError):
-    STATUS_CODE = 404
+    STATUS_CODE: int = 404
 
 
 class MethodNotAllowedError(ChaliceViewError):
-    STATUS_CODE = 405
+    STATUS_CODE: int = 405
 
 
 class RequestTimeoutError(ChaliceViewError):
-    STATUS_CODE = 408
+    STATUS_CODE: int = 408
 
 
 class ConflictError(ChaliceViewError):
-    STATUS_CODE = 409
+    STATUS_CODE: int = 409
 
 
 class UnprocessableEntityError(ChaliceViewError):
-    STATUS_CODE = 422
+    STATUS_CODE: int = 422
 
 
 class TooManyRequestsError(ChaliceViewError):
-    STATUS_CODE = 429
+    STATUS_CODE: int = 429
 
 
-ALL_ERRORS = [
+ALL_ERRORS: List[ChaliceViewError] = [
     ChaliceViewError,
     BadRequestError,
     NotFoundError,
@@ -227,19 +232,19 @@ class CaseInsensitiveMapping(Mapping):
 
 
 class Authorizer(object):
-    name = ''
-    scopes = []
+    name: str = ''
+    scopes: List[str] = []
 
-    def to_swagger(self):
+    def to_swagger(self) -> Dict[str, Any]:
         raise NotImplementedError("to_swagger")
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes: List[str]) -> Authorizer:
         raise NotImplementedError("with_scopes")
 
 
 class IAMAuthorizer(Authorizer):
 
-    _AUTH_TYPE = 'aws_iam'
+    _AUTH_TYPE: str = 'aws_iam'
 
     def __init__(self):
         self.name = 'sigv4'
@@ -259,10 +264,10 @@ class IAMAuthorizer(Authorizer):
 
 class CognitoUserPoolAuthorizer(Authorizer):
 
-    _AUTH_TYPE = 'cognito_user_pools'
+    _AUTH_TYPE: str = 'cognito_user_pools'
 
-    def __init__(self, name, provider_arns, header='Authorization',
-                 scopes=None):
+    def __init__(self, name: str, provider_arns: List[str], header: Optional[str]='Authorization',
+                 scopes: Optional[List]=None) -> None:
         self.name = name
         self._header = header
         if not isinstance(provider_arns, list):
@@ -297,8 +302,8 @@ class CustomAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'custom'
 
-    def __init__(self, name, authorizer_uri, ttl_seconds=300,
-                 header='Authorization', invoke_role_arn=None, scopes=None):
+    def __init__(self, name: str, authorizer_uri: str, ttl_seconds: int=300,
+                 header: str='Authorization', invoke_role_arn: Optional[str]=None, scopes: Optional[List[str]]=None) -> None:
         self.name = name
         self._header = header
         self._authorizer_uri = authorizer_uri
@@ -332,11 +337,11 @@ class CustomAuthorizer(Authorizer):
 class CORSConfig(object):
     """A cors configuration to attach to a route."""
 
-    _REQUIRED_HEADERS = ['Content-Type', 'X-Amz-Date', 'Authorization',
+    _REQUIRED_HEADERS: List[str] = ['Content-Type', 'X-Amz-Date', 'Authorization',
                          'X-Api-Key', 'X-Amz-Security-Token']
 
-    def __init__(self, allow_origin='*', allow_headers=None,
-                 expose_headers=None, max_age=None, allow_credentials=None):
+    def __init__(self, allow_origin: str='*', allow_headers: Optional[Sequence[str]]=None,
+                 expose_headers: Optional[Sequence[str]]=None, max_age: Optional[int]=None, allow_credentials: Optional[bool]=None):
         self.allow_origin = allow_origin
 
         if allow_headers is None:
@@ -353,10 +358,10 @@ class CORSConfig(object):
         self._allow_credentials = allow_credentials
 
     @property
-    def allow_headers(self):
+    def allow_headers(self) -> str:
         return ','.join(sorted(self._allow_headers))
 
-    def get_access_control_headers(self):
+    def get_access_control_headers(self) -> Dict[str, str]:
         headers = {
             'Access-Control-Allow-Origin': self.allow_origin,
             'Access-Control-Allow-Headers': self.allow_headers
@@ -376,7 +381,7 @@ class CORSConfig(object):
 
         return headers
 
-    def __eq__(self, other):
+    def __eq__(self, other: object):
         if isinstance(other, self.__class__):
             return self.get_access_control_headers() == \
                 other.get_access_control_headers()
@@ -388,13 +393,13 @@ class Request(object):
 
     _NON_SERIALIZED_ATTRS = ['lambda_context']
 
-    def __init__(self, event_dict, lambda_context=None):
+    def __init__(self, event_dict: Dict[str, Any], lambda_context: Optional[Any]=None):
         query_params = event_dict['multiValueQueryStringParameters']
-        self.query_params = None if query_params is None \
+        self.query_params: Optional[Dict[str, str]] = None if query_params is None \
             else MultiDict(query_params)
-        self.headers = CaseInsensitiveMapping(event_dict['headers'])
-        self.uri_params = event_dict['pathParameters']
-        self.method = event_dict['requestContext']['httpMethod']
+        self.headers: CaseInsensitiveMapping = CaseInsensitiveMapping(event_dict['headers'])
+        self.uri_params: Optional[Dict[str, str]] = event_dict['pathParameters']
+        self.method: str = event_dict['requestContext']['httpMethod']
         self._is_base64_encoded = event_dict.get('isBase64Encoded', False)
         self._body = event_dict['body']
         #: The parsed JSON from the body.  This value should
