@@ -1840,7 +1840,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
     _middleware_handlers: Optional[List[MiddlewareHandler]] = ...
 
     def __init__(self, route_table: Dict[str, Dict[str, RouteEntry]],
-                 api: APIGateway, log: logging.logger, debug: bool,
+                 api: APIGateway, log: logging.Logger, debug: bool,
                  middleware_handlers: Optional[List[MiddlewareHandler]] = None
                  ):
         self.routes = route_table
