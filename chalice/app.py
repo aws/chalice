@@ -24,7 +24,6 @@ _PARAMS = re.compile(r'{\w+}')
 _GET_RESPONSE = Callable[[Any], Any]
 _MIDDLEWARE_FUNC = Callable[[Any, _GET_RESPONSE], Any]
 _USER_HANDLER_FUNC = Callable[..., Any]
-_WRAPPED_HANDLER_FUNC = Callable[..., Any]
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -934,7 +933,7 @@ class _HandlerRegistration(object):
         self.middleware_handlers.append((func, event_type))
 
     def _do_register_handler(self, handler_type: str, name: str, user_handler: _USER_HANDLER_FUNC,
-                             wrapped_handler: _WRAPPED_HANDLER_FUNC, kwargs: Any, options: Dict[Any, Any]=None):
+                             wrapped_handler: Callable[..., Any], kwargs: Any, options: Dict[Any, Any]=None):
         url_prefix = None
         name_prefix = None
         module_name = 'app'
@@ -1095,7 +1094,7 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(event_source)
 
-    def _register_authorizer(self, name: str, handler_string: str, wrapped_handler: _WRAPPED_HANDLER_FUNC,
+    def _register_authorizer(self, name: str, handler_string: str, wrapped_handler: Callable[..., Any],
                              kwargs: Any, **unused):
         actual_kwargs = kwargs.copy()
         ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
