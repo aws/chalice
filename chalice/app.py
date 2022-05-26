@@ -23,9 +23,8 @@ if TYPE_CHECKING:
     from chalice.local import LambdaContext
 
 _PARAMS = re.compile(r'{\w+}')
-_GET_RESPONSE = Callable[[Any], Any]
-_MIDDLEWARE_FUNC = Callable[[Any, _GET_RESPONSE], Any]
-_USER_HANDLER_FUNC = Callable[..., Any]
+MiddlewareFuncType = Callable[[Any, Callable[[Any], Any]], Any]
+UserHandlerFuncType = Callable[..., Any]
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -885,7 +884,7 @@ class DecoratorAPI(object):
                                       name: Optional[str] = None,
                                       registration_kwargs: Any = None
                                       ) -> Callable[..., Any]:
-        def _register_handler(user_handler: _USER_HANDLER_FUNC):
+        def _register_handler(user_handler: UserHandlerFuncType):
             handler_name = name
             if handler_name is None:
                 handler_name = user_handler.__name__
@@ -901,7 +900,7 @@ class DecoratorAPI(object):
         return _register_handler
 
     def _wrap_handler(self, handler_type: str, handler_name: str,
-                      user_handler: _USER_HANDLER_FUNC):
+                      user_handler: UserHandlerFuncType):
         if handler_type in _EVENT_CLASSES:
             if handler_type == 'lambda_function':
                 # We have to wrap existing @app.lambda_function()
@@ -943,7 +942,7 @@ class DecoratorAPI(object):
                           user_handler, wrapped_handler, kwargs, options=None):
         raise NotImplementedError("_register_handler")
 
-    def register_middleware(self, func: _MIDDLEWARE_FUNC,
+    def register_middleware(self, func: MiddlewareFuncType,
                             event_type: str = 'all'):
         raise NotImplementedError("register_middleware")
 
@@ -960,11 +959,12 @@ class _HandlerRegistration(object):
         self.handler_map = {}
         self.middleware_handlers = []
 
-    def register_middleware(self, func: _MIDDLEWARE_FUNC, event_type='all'):
+    def register_middleware(self, func: MiddlewareFuncType,
+                            event_type='all'):
         self.middleware_handlers.append((func, event_type))
 
     def _do_register_handler(self, handler_type: str, name: str,
-                             user_handler: _USER_HANDLER_FUNC,
+                             user_handler: UserHandlerFuncType,
                              wrapped_handler: Callable[..., Any], kwargs: Any,
                              options: Dict[Any, Any] = None):
         url_prefix = None
@@ -1006,7 +1006,7 @@ class _HandlerRegistration(object):
         self.websocket_handlers[route_key] = handler
 
     def _register_on_ws_connect(self, name: str,
-                                user_handler: _USER_HANDLER_FUNC,
+                                user_handler: UserHandlerFuncType,
                                 handler_string: str,
                                 kwargs: Any, **unused):
         wrapper = WebsocketConnectConfig(
@@ -1017,7 +1017,7 @@ class _HandlerRegistration(object):
         self._attach_websocket_handler(wrapper)
 
     def _register_on_ws_message(self, name: str,
-                                user_handler: _USER_HANDLER_FUNC,
+                                user_handler: UserHandlerFuncType,
                                 handler_string: str,
                                 kwargs: Any, **unused):
         route_key = kwargs['route_key']
@@ -1031,7 +1031,7 @@ class _HandlerRegistration(object):
         self.websocket_handlers[route_key] = wrapper
 
     def _register_on_ws_disconnect(self, name: str,
-                                   user_handler: _USER_HANDLER_FUNC,
+                                   user_handler: UserHandlerFuncType,
                                    handler_string: str, kwargs: Any, **unused):
         wrapper = WebsocketDisconnectConfig(
             name=name,
@@ -1041,7 +1041,7 @@ class _HandlerRegistration(object):
         self._attach_websocket_handler(wrapper)
 
     def _register_lambda_function(self, name: str,
-                                  user_handler: _USER_HANDLER_FUNC,
+                                  user_handler: UserHandlerFuncType,
                                   handler_string: str, **unused):
         wrapper = LambdaFunction(
             func=user_handler, name=name,
@@ -1159,7 +1159,7 @@ class _HandlerRegistration(object):
         wrapped_handler.config = auth_config
         self.builtin_auth_handlers.append(auth_config)
 
-    def _register_route(self, name: str, user_handler: _USER_HANDLER_FUNC,
+    def _register_route(self, name: str, user_handler: UserHandlerFuncType,
                         kwargs: Any, **unused):
         actual_kwargs = kwargs['kwargs']
         path = kwargs['path']
@@ -1209,7 +1209,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
     websocket_api: WebsocketAPI = ...
     websocket_handlers: Dict[str, Any] = ...
     current_request: Request = ...
-    lambda_context: LambdaContext = ...
+    lambda_context: 'LambdaContext' = ...
     debug: bool = ...
     configure_logs: bool = ...
     log: logging.Logger = ...
@@ -1300,7 +1300,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
     # These are defined here on the Chalice class because we want all the
     # feature flag tracking to live in Chalice and not the DecoratorAPI.
     def _register_on_ws_connect(self, name: str,
-                                user_handler: _USER_HANDLER_FUNC,
+                                user_handler: UserHandlerFuncType,
                                 handler_string: str,
                                 kwargs: Any, **unused):
         self._features_used.add('WEBSOCKETS')
@@ -1308,7 +1308,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             name, user_handler, handler_string, kwargs, **unused)
 
     def _register_on_ws_message(self, name: str,
-                                user_handler: _USER_HANDLER_FUNC,
+                                user_handler: UserHandlerFuncType,
                                 handler_string: str,
                                 kwargs: Any, **unused):
         self._features_used.add('WEBSOCKETS')
@@ -1316,7 +1316,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
             name, user_handler, handler_string, kwargs, **unused)
 
     def _register_on_ws_disconnect(self, name: str,
-                                   user_handler: _USER_HANDLER_FUNC,
+                                   user_handler: UserHandlerFuncType,
                                    handler_string: str, kwargs: Any, **unused):
         self._features_used.add('WEBSOCKETS')
         super(Chalice, self)._register_on_ws_disconnect(
@@ -1706,7 +1706,7 @@ class WebsocketConnectConfig(BaseEventSourceConfig):
     CONNECT_ROUTE: str = '$connect'
 
     def __init__(self, name: str, handler_string: str,
-                 user_handler: _USER_HANDLER_FUNC):
+                 user_handler: UserHandlerFuncType):
         super(WebsocketConnectConfig, self).__init__(name, handler_string)
         self.route_key_handled = self.CONNECT_ROUTE
         self.handler_function = user_handler
@@ -1714,7 +1714,7 @@ class WebsocketConnectConfig(BaseEventSourceConfig):
 
 class WebsocketMessageConfig(BaseEventSourceConfig):
     def __init__(self, name: str, route_key_handled, handler_string: str,
-                 user_handler: _USER_HANDLER_FUNC):
+                 user_handler: UserHandlerFuncType):
         super(WebsocketMessageConfig, self).__init__(name, handler_string)
         self.route_key_handled = route_key_handled
         self.handler_function = user_handler
@@ -1724,7 +1724,7 @@ class WebsocketDisconnectConfig(BaseEventSourceConfig):
     DISCONNECT_ROUTE: str = '$disconnect'
 
     def __init__(self, name: str, handler_string: str,
-                 user_handler: _USER_HANDLER_FUNC):
+                 user_handler: UserHandlerFuncType):
         super(WebsocketDisconnectConfig, self).__init__(name, handler_string)
         self.route_key_handled = self.DISCONNECT_ROUTE
         self.handler_function = user_handler
@@ -1836,7 +1836,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
     debug: bool = ...
     log: logging.Logger = ...
     current_request: Optional[Request] = ...
-    lambda_context: Optional[LambdaContext] = ...
+    lambda_context: Optional['LambdaContext'] = ...
     _middleware_handlers: Optional[List[MiddlewareHandler]] = ...
 
     def __init__(self, route_table: Dict[str, Dict[str, RouteEntry]],
@@ -2265,7 +2265,7 @@ class Blueprint(DecoratorAPI):
         return self._current_app
 
     @property
-    def lambda_context(self) -> LambdaContext:
+    def lambda_context(self) -> 'LambdaContext':
         if self._current_app is None:
             raise RuntimeError(
                 "Can only access Blueprint.lambda_context if it's registered "
