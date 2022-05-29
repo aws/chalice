@@ -196,20 +196,22 @@ class TestEventsClient(BaseClient):
         # type: (Chalice) -> None
         self._app = app
 
-    def generate_sns_event(self, message, subject=''):
-        # type: (str, str) -> Dict[str, Any]
+    def generate_sns_event(self, message, subject='', message_attributes=None):
+        # type: (str, str, Dict[str, Any]) -> Dict[str, Any]
+        if message_attributes is None:
+            message_attributes = {
+                'AttributeKey': {
+                    'Type': 'String',
+                    'Value': 'AttributeValue'
+                }
+            }
         sns_event = {'Records': [{
             'EventSource': 'aws:sns',
             'EventSubscriptionArn': 'arn:subscription-arn',
             'EventVersion': '1.0',
             'Sns': {
                 'Message': message,
-                'MessageAttributes': {
-                    'AttributeKey': {
-                        'Type': 'String',
-                        'Value': 'AttributeValue'
-                    }
-                },
+                'MessageAttributes': message_attributes,
                 'MessageId': 'abcdefgh-51e4-5ae2-9964-b296c8d65d1a',
                 'Signature': 'signature',
                 'SignatureVersion': '1',
