@@ -1875,6 +1875,7 @@ class SNSEvent(BaseLambdaEvent):
         first_record = event_dict['Records'][0]
         self.message = first_record['Sns']['Message']
         self.subject = first_record['Sns']['Subject']
+        self.message_attributes = first_record['Sns']['MessageAttributes']
 
 
 class S3Event(BaseLambdaEvent):
