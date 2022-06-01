@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.27.1
+======
+
+* enhancement:Pip:Bump pip version range to latest version <22.2 (#1924)
+* enhancement:Websockets:Add support for WebSockets API Terraform packaging (#1670)
+
+
 1.27.0
 ======
 

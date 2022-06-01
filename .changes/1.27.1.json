@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Bump pip version range to latest version <22.2 (#1924)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Websockets",
+      "description": "Add support for WebSockets API Terraform packaging (#1670)"
+    }
+  ]
+}
