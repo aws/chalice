@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "event-source",
+  "description": "Add attribute for message attributes in SNSEvent and generated test events (#1934)"
+}
