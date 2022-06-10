@@ -26,6 +26,7 @@ try:
     from urllib.parse import unquote_plus
     from collections.abc import Mapping
     from collections.abc import MutableMapping
+    from http.cookies import SimpleCookie
 
     unquote_str = unquote_plus
 
@@ -36,6 +37,7 @@ except ImportError:
     from urllib import unquote_plus
     from collections import Mapping
     from collections import MutableMapping
+    from Cookie import SimpleCookie
 
     # This is borrowed from botocore/compat.py
     def unquote_str(value, encoding='utf-8'):
@@ -1290,7 +1292,8 @@ class ChaliceAuthorizer(object):
     def _transform_event(self, event):
         return AuthRequest(event['type'],
                            event['authorizationToken'],
-                           event['methodArn'])
+                           event['methodArn'],
+                           event.get('headers', {}))
 
     def with_scopes(self, scopes):
         authorizer_with_scopes = copy.deepcopy(self)
@@ -1299,10 +1302,19 @@ class ChaliceAuthorizer(object):
 
 
 class AuthRequest(object):
-    def __init__(self, auth_type, token, method_arn):
+    def __init__(self, auth_type, token, method_arn, headers=None):
         self.auth_type = auth_type
         self.token = token
         self.method_arn = method_arn
+        self.headers = headers or {}
+
+    @property
+    def cookies(self):
+        cookie_str = self.headers.get('cookie', '')
+        # Parsing is based on: https://stackoverflow.com/a/32281245/2447082
+        cookie = SimpleCookie()
+        cookie.load(cookie_str)
+        return {key: morsel.value for key, morsel in cookie.items()}
 
 
 class AuthResponse(object):
