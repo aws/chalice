@@ -107,7 +107,7 @@ def http_session():
         connect=10,
         # A backoff factor to apply between attempts after the second try.
         backoff_factor=2,
-        method_whitelist=['GET', 'POST', 'PUT'],
+        allowed_methods=['GET', 'POST', 'PUT'],
     )
     session.mount('http://', HTTPAdapter(max_retries=retry))
     return HTTPFetcher(session)
