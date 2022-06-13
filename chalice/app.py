@@ -1241,6 +1241,8 @@ class _HandlerRegistration(object):
 class Chalice(_HandlerRegistration, DecoratorAPI):
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
     authorizers: Dict[str, Dict[str, Any]]
+    lambda_context: 'LambdaContext'
+    current_request: Optional[Request]
 
     def __init__(self, app_name: str, debug: bool = False,
                  configure_logs: bool = True,
