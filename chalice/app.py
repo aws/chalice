@@ -14,8 +14,17 @@ import datetime
 from collections import defaultdict
 
 
-__version__ = '1.27.1'
+__version__: str = '1.27.1'
+
+from typing import List, Dict, Any, Optional, Sequence, Union, Callable, Set, \
+    Iterator, TYPE_CHECKING, Tuple
+
+if TYPE_CHECKING:
+    from chalice.local import LambdaContext
+
 _PARAMS = re.compile(r'{\w+}')
+MiddlewareFuncType = Callable[[Any, Callable[[Any], Any]], Any]
+UserHandlerFuncType = Callable[..., Any]
 
 # Implementation note:  This file is intended to be a standalone file
 # that gets copied into the lambda deployment package.  It has no dependencies
@@ -33,12 +42,12 @@ try:
     # for both.
     _ANY_STRING = (str, bytes)
 except ImportError:
-    from urllib import unquote_plus
+    from urllib import unquote_plus  # type: ignore
     from collections import Mapping
     from collections import MutableMapping
 
     # This is borrowed from botocore/compat.py
-    def unquote_str(value, encoding='utf-8'):
+    def unquote_str(value, encoding='utf-8'):  # type: ignore
         # In python2, unquote() gives us a string back that has the urldecoded
         # bits, but not the unicode parts.  We need to decode this manually.
         # unquote has special logic in which if it receives a unicode object it
@@ -49,10 +58,12 @@ except ImportError:
         return unquote_plus(byte_string).decode(encoding)
     # In python 2 there is a base class for the string types that we can check
     # for. It was removed in python 3 so it will cause a name error.
-    _ANY_STRING = (basestring, bytes)  # noqa pylint: disable=E0602
+    _ANY_STRING = (basestring, bytes)  # type: ignore # noqa pylint: disable=E0602
 
 
-def handle_extra_types(obj):
+def handle_extra_types(
+        obj: Union[decimal.Decimal, 'MultiDict']
+) -> Union[float, Dict]:
     # Lambda will automatically serialize decimals so we need
     # to support that as well.
     if isinstance(obj, decimal.Decimal):
@@ -65,15 +76,16 @@ def handle_extra_types(obj):
                     % obj.__class__.__name__)
 
 
-def error_response(message, error_code, http_status_code, headers=None):
+def error_response(message: str, error_code: str, http_status_code: int,
+                   headers: Optional[Dict[str, str]] = None) -> 'Response':
     body = {'Code': error_code, 'Message': message}
     response = Response(body=body, status_code=http_status_code,
                         headers=headers)
-
     return response
 
 
-def _matches_content_type(content_type, valid_content_types):
+def _matches_content_type(content_type: str,
+                          valid_content_types: List[str]) -> bool:
     # If '*/*' is in the Accept header or the valid types,
     # then all content_types match. Otherwise see of there are any common types
     content_type = content_type.lower()
@@ -83,7 +95,10 @@ def _matches_content_type(content_type, valid_content_types):
         _content_type_header_contains(content_type, valid_content_types)
 
 
-def _content_type_header_contains(content_type_header, valid_content_types):
+def _content_type_header_contains(
+        content_type_header: str,
+        valid_content_types: List[str]
+) -> bool:
     content_type_header_parts = [
         p.strip() for p in
         re.split('[,;]', content_type_header)
@@ -99,12 +114,12 @@ class ChaliceError(Exception):
 
 
 class WebsocketDisconnectedError(ChaliceError):
-    def __init__(self, connection_id):
-        self.connection_id = connection_id
+    def __init__(self, connection_id: str):
+        self.connection_id: str = connection_id
 
 
 class ChaliceViewError(ChaliceError):
-    STATUS_CODE = 500
+    STATUS_CODE: int = 500
 
 
 class ChaliceUnhandledError(ChaliceError):
@@ -116,39 +131,39 @@ class ChaliceUnhandledError(ChaliceError):
 
 
 class BadRequestError(ChaliceViewError):
-    STATUS_CODE = 400
+    STATUS_CODE: int = 400
 
 
 class UnauthorizedError(ChaliceViewError):
-    STATUS_CODE = 401
+    STATUS_CODE: int = 401
 
 
 class ForbiddenError(ChaliceViewError):
-    STATUS_CODE = 403
+    STATUS_CODE: int = 403
 
 
 class NotFoundError(ChaliceViewError):
-    STATUS_CODE = 404
+    STATUS_CODE: int = 404
 
 
 class MethodNotAllowedError(ChaliceViewError):
-    STATUS_CODE = 405
+    STATUS_CODE: int = 405
 
 
 class RequestTimeoutError(ChaliceViewError):
-    STATUS_CODE = 408
+    STATUS_CODE: int = 408
 
 
 class ConflictError(ChaliceViewError):
-    STATUS_CODE = 409
+    STATUS_CODE: int = 409
 
 
 class UnprocessableEntityError(ChaliceViewError):
-    STATUS_CODE = 422
+    STATUS_CODE: int = 422
 
 
 class TooManyRequestsError(ChaliceViewError):
-    STATUS_CODE = 429
+    STATUS_CODE: int = 429
 
 
 ALL_ERRORS = [
@@ -161,7 +176,8 @@ ALL_ERRORS = [
     RequestTimeoutError,
     ConflictError,
     UnprocessableEntityError,
-    TooManyRequestsError]
+    TooManyRequestsError,
+]
 
 
 class MultiDict(MutableMapping):  # pylint: disable=too-many-ancestors
@@ -172,80 +188,79 @@ class MultiDict(MutableMapping):  # pylint: disable=too-many-ancestors
     the same key.
     """
 
-    def __init__(self, mapping):
+    def __init__(self, mapping: Optional[Dict]):
         if mapping is None:
             mapping = {}
 
         self._dict = mapping
 
-    def __getitem__(self, k):
+    def __getitem__(self, k: Any) -> Any:
         try:
             return self._dict[k][-1]
         except IndexError:
             raise KeyError(k)
 
-    def __setitem__(self, k, v):
+    def __setitem__(self, k: Any, v: Any) -> None:
         self._dict[k] = [v]
 
-    def __delitem__(self, k):
+    def __delitem__(self, k: Any) -> None:
         del self._dict[k]
 
-    def getlist(self, k):
+    def getlist(self, k: Any) -> List:
         return list(self._dict[k])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._dict)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         return iter(self._dict)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'MultiDict(%s)' % self._dict
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
 
 class CaseInsensitiveMapping(Mapping):
     """Case insensitive and read-only mapping."""
 
-    def __init__(self, mapping):
+    def __init__(self, mapping: Union[Dict[str, Any], MultiDict]) -> None:
         mapping = mapping or {}
         self._dict = {k.lower(): v for k, v in mapping.items()}
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return self._dict[key.lower()]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         return iter(self._dict)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._dict)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'CaseInsensitiveMapping(%s)' % repr(self._dict)
 
 
 class Authorizer(object):
-    name = ''
-    scopes = []
+    name: str = ''
+    scopes: List[str] = []
 
-    def to_swagger(self):
+    def to_swagger(self) -> Dict[str, Any]:
         raise NotImplementedError("to_swagger")
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes: List[str]) -> 'Authorizer':
         raise NotImplementedError("with_scopes")
 
 
 class IAMAuthorizer(Authorizer):
+    _AUTH_TYPE: str = 'aws_iam'
 
-    _AUTH_TYPE = 'aws_iam'
+    def __init__(self) -> None:
+        self.name: str = 'sigv4'
+        self.scopes: List[str] = []
 
-    def __init__(self):
-        self.name = 'sigv4'
-        self.scopes = []
-
-    def to_swagger(self):
+    def to_swagger(self) -> Dict[str, str]:
         return {
             'in': 'header',
             'type': 'apiKey',
@@ -253,16 +268,17 @@ class IAMAuthorizer(Authorizer):
             'x-amazon-apigateway-authtype': 'awsSigv4',
         }
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes: List[str]) -> 'Authorizer':
         raise NotImplementedError("with_scopes")
 
 
 class CognitoUserPoolAuthorizer(Authorizer):
 
-    _AUTH_TYPE = 'cognito_user_pools'
+    _AUTH_TYPE: str = 'cognito_user_pools'
 
-    def __init__(self, name, provider_arns, header='Authorization',
-                 scopes=None):
+    def __init__(self, name: str, provider_arns: List[str],
+                 header: Optional[str] = 'Authorization',
+                 scopes: Optional[List] = None) -> None:
         self.name = name
         self._header = header
         if not isinstance(provider_arns, list):
@@ -275,7 +291,7 @@ class CognitoUserPoolAuthorizer(Authorizer):
         self._provider_arns = provider_arns
         self.scopes = scopes or []
 
-    def to_swagger(self):
+    def to_swagger(self) -> Dict[str, Any]:
         return {
             'in': 'header',
             'type': 'apiKey',
@@ -287,7 +303,7 @@ class CognitoUserPoolAuthorizer(Authorizer):
             }
         }
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes: List[str]) -> 'Authorizer':
         authorizer_with_scopes = copy.deepcopy(self)
         authorizer_with_scopes.scopes = scopes
         return authorizer_with_scopes
@@ -297,8 +313,10 @@ class CustomAuthorizer(Authorizer):
 
     _AUTH_TYPE = 'custom'
 
-    def __init__(self, name, authorizer_uri, ttl_seconds=300,
-                 header='Authorization', invoke_role_arn=None, scopes=None):
+    def __init__(self, name: str, authorizer_uri: str, ttl_seconds: int = 300,
+                 header: str = 'Authorization',
+                 invoke_role_arn: Optional[str] = None,
+                 scopes: Optional[List[str]] = None) -> None:
         self.name = name
         self._header = header
         self._authorizer_uri = authorizer_uri
@@ -306,8 +324,8 @@ class CustomAuthorizer(Authorizer):
         self._invoke_role_arn = invoke_role_arn
         self.scopes = scopes or []
 
-    def to_swagger(self):
-        swagger = {
+    def to_swagger(self) -> Dict[str, Any]:
+        swagger: Dict[str, Any] = {
             'in': 'header',
             'type': 'apiKey',
             'name': self._header,
@@ -323,7 +341,7 @@ class CustomAuthorizer(Authorizer):
                 'authorizerCredentials'] = self._invoke_role_arn
         return swagger
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes: List[str]) -> 'Authorizer':
         authorizer_with_scopes = copy.deepcopy(self)
         authorizer_with_scopes.scopes = scopes
         return authorizer_with_scopes
@@ -332,18 +350,23 @@ class CustomAuthorizer(Authorizer):
 class CORSConfig(object):
     """A cors configuration to attach to a route."""
 
-    _REQUIRED_HEADERS = ['Content-Type', 'X-Amz-Date', 'Authorization',
-                         'X-Api-Key', 'X-Amz-Security-Token']
+    _REQUIRED_HEADERS: List[str] = ['Content-Type', 'X-Amz-Date',
+                                    'Authorization', 'X-Api-Key',
+                                    'X-Amz-Security-Token']
 
-    def __init__(self, allow_origin='*', allow_headers=None,
-                 expose_headers=None, max_age=None, allow_credentials=None):
+    def __init__(self, allow_origin: str = '*',
+                 allow_headers: Optional[Sequence[str]] = None,
+                 expose_headers: Optional[Sequence[str]] = None,
+                 max_age: Optional[int] = None,
+                 allow_credentials: Optional[bool] = None):
         self.allow_origin = allow_origin
 
         if allow_headers is None:
-            allow_headers = set(self._REQUIRED_HEADERS)
+            self._allow_headers = set(self._REQUIRED_HEADERS)
         else:
-            allow_headers = set(allow_headers + self._REQUIRED_HEADERS)
-        self._allow_headers = allow_headers
+            self._allow_headers = set(
+                list(allow_headers) + self._REQUIRED_HEADERS
+            )
 
         if expose_headers is None:
             expose_headers = []
@@ -353,10 +376,10 @@ class CORSConfig(object):
         self._allow_credentials = allow_credentials
 
     @property
-    def allow_headers(self):
+    def allow_headers(self) -> str:
         return ','.join(sorted(self._allow_headers))
 
-    def get_access_control_headers(self):
+    def get_access_control_headers(self) -> Dict[str, str]:
         headers = {
             'Access-Control-Allow-Origin': self.allow_origin,
             'Access-Control-Allow-Headers': self.allow_headers
@@ -376,7 +399,7 @@ class CORSConfig(object):
 
         return headers
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, self.__class__):
             return self.get_access_control_headers() == \
                 other.get_access_control_headers()
@@ -385,37 +408,42 @@ class CORSConfig(object):
 
 class Request(object):
     """The current request from API gateway."""
+    _NON_SERIALIZED_ATTRS: List[str] = ['lambda_context']
+    body: Any
+    base64_body: str
 
-    _NON_SERIALIZED_ATTRS = ['lambda_context']
-
-    def __init__(self, event_dict, lambda_context=None):
+    def __init__(self, event_dict: Dict[str, Any],
+                 lambda_context: Optional[Any] = None) -> None:
         query_params = event_dict['multiValueQueryStringParameters']
-        self.query_params = None if query_params is None \
-            else MultiDict(query_params)
-        self.headers = CaseInsensitiveMapping(event_dict['headers'])
-        self.uri_params = event_dict['pathParameters']
-        self.method = event_dict['requestContext']['httpMethod']
+        self.query_params: Optional[MultiDict] = None \
+            if query_params is None else MultiDict(query_params)
+        self.headers: CaseInsensitiveMapping = \
+            CaseInsensitiveMapping(event_dict['headers'])
+        self.uri_params: Optional[Dict[str, str]] \
+            = event_dict['pathParameters']
+        self.method: str = event_dict['requestContext']['httpMethod']
         self._is_base64_encoded = event_dict.get('isBase64Encoded', False)
-        self._body = event_dict['body']
+        self._body: Any = event_dict['body']
         #: The parsed JSON from the body.  This value should
         #: only be set if the Content-Type header is application/json,
         #: which is the default content type value in chalice.
-        self._json_body = None
+        self._json_body: Optional[Any] = None
         self._raw_body = b''
-        self.context = event_dict['requestContext']
-        self.stage_vars = event_dict['stageVariables']
-        self.path = event_dict['requestContext']['resourcePath']
+        self.context: Dict[str, Any] = event_dict['requestContext']
+        self.stage_vars: Optional[Dict[str, str]] \
+            = event_dict['stageVariables']
+        self.path: str = event_dict['requestContext']['resourcePath']
         self.lambda_context = lambda_context
         self._event_dict = event_dict
 
-    def _base64decode(self, encoded):
+    def _base64decode(self, encoded: Union[bytes, str]) -> bytes:
         if not isinstance(encoded, bytes):
             encoded = encoded.encode('ascii')
         output = base64.b64decode(encoded)
         return output
 
     @property
-    def raw_body(self):
+    def raw_body(self) -> Union[str, bytes]:
         if not self._raw_body and self._body is not None:
             if self._is_base64_encoded:
                 self._raw_body = self._base64decode(self._body)
@@ -426,7 +454,7 @@ class Request(object):
         return self._raw_body
 
     @property
-    def json_body(self):
+    def json_body(self) -> Any:
         if self.headers.get('content-type', '').startswith('application/json'):
             if self._json_body is None:
                 try:
@@ -435,7 +463,7 @@ class Request(object):
                     raise BadRequestError('Error Parsing JSON')
             return self._json_body
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[Any, Any]:
         # Don't copy internal attributes.
         copied = {
             k: v for k, v in self.__dict__.items()
@@ -449,7 +477,7 @@ class Request(object):
             copied['query_params'] = dict(copied['query_params'])
         return copied
 
-    def to_original_event(self):
+    def to_original_event(self) -> Dict[str, Any]:
         # To bring consistency with the BaseLambdaEvents, every
         # input event should have access to the original event
         # dictionary as an escape hatch to the underlying data
@@ -460,14 +488,22 @@ class Request(object):
 
 
 class Response(object):
-    def __init__(self, body, headers=None, status_code=200):
-        self.body = body
+
+    def __init__(
+            self, body: Any,
+            headers: Optional[Dict[str, str]] = None,
+            status_code: int = 200
+    ):
+        self.body: Any = body
         if headers is None:
             headers = {}
-        self.headers = headers
+        self.headers: Dict[str, str] = headers
         self.status_code = status_code
 
-    def to_dict(self, binary_types=None):
+    def to_dict(
+            self,
+            binary_types: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         body = self.body
         if not isinstance(body, _ANY_STRING):
             body = json.dumps(body, separators=(',', ':'),
@@ -483,9 +519,11 @@ class Response(object):
             self._b64encode_body_if_needed(response, binary_types)
         return response
 
-    def _sort_headers(self, all_headers):
-        multi_headers = {}
-        single_headers = {}
+    def _sort_headers(
+            self, all_headers: Dict[str, str]
+    ) -> Tuple[Dict[str, Any], Dict[str, List]]:
+        multi_headers: Dict[str, List] = {}
+        single_headers: Dict[str, Any] = {}
         for name, value in all_headers.items():
             if isinstance(value, list):
                 multi_headers[name] = value
@@ -493,7 +531,11 @@ class Response(object):
                 single_headers[name] = value
         return single_headers, multi_headers
 
-    def _b64encode_body_if_needed(self, response_dict, binary_types):
+    def _b64encode_body_if_needed(
+            self,
+            response_dict: Dict[str, Any],
+            binary_types: List[str]
+    ) -> None:
         response_headers = CaseInsensitiveMapping(response_dict['headers'])
         content_type = response_headers.get('content-type', '')
         body = response_dict['body']
@@ -516,7 +558,7 @@ class Response(object):
             response_dict['isBase64Encoded'] = True
         response_dict['body'] = body
 
-    def _base64encode(self, data):
+    def _base64encode(self, data: bytes) -> str:
         if not isinstance(data, bytes):
             raise ValueError('Expected bytes type for body with binary '
                              'Content-Type. Got %s type body instead.'
@@ -527,18 +569,21 @@ class Response(object):
 
 class RouteEntry(object):
 
-    def __init__(self, view_function, view_name, path, method,
-                 api_key_required=None, content_types=None,
-                 cors=False, authorizer=None):
-        self.view_function = view_function
-        self.view_name = view_name
-        self.uri_pattern = path
-        self.method = method
-        self.api_key_required = api_key_required
+    def __init__(self, view_function: Callable[..., Any], view_name: str,
+                 path: str, method: str,
+                 api_key_required: Optional[bool] = None,
+                 content_types: Optional[List[str]] = None,
+                 cors: Optional[Union[bool, CORSConfig]] = False,
+                 authorizer: Optional[Authorizer] = None):
+        self.view_function: Callable[..., Any] = view_function
+        self.view_name: str = view_name
+        self.uri_pattern: str = path
+        self.method: str = method
+        self.api_key_required: Optional[bool] = api_key_required
         #: A list of names to extract from path:
         #: e.g, '/foo/{bar}/{baz}/qux -> ['bar', 'baz']
-        self.view_args = self._parse_view_args()
-        self.content_types = content_types
+        self.view_args: List[str] = self._parse_view_args()
+        self.content_types: List[str] = content_types or []
         # cors is passed as either a boolean or a CORSConfig object. If it is a
         # boolean it needs to be replaced with a real CORSConfig object to
         # pass the typechecker. None in this context will not inject any cors
@@ -548,10 +593,10 @@ class RouteEntry(object):
             cors = CORSConfig()
         elif cors is False:
             cors = None
-        self.cors = cors
-        self.authorizer = authorizer
+        self.cors: CORSConfig = cors  # type: ignore
+        self.authorizer: Optional[Authorizer] = authorizer
 
-    def _parse_view_args(self):
+    def _parse_view_args(self) -> List[str]:
         if '{' not in self.uri_pattern:
             return []
         # The [1:-1] slice is to remove the braces
@@ -559,7 +604,7 @@ class RouteEntry(object):
         results = [r[1:-1] for r in _PARAMS.findall(self.uri_pattern)]
         return results
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return self.__dict__ == other.__dict__
 
 
@@ -572,12 +617,12 @@ class APIGateway(object):
         'video/ogg', 'video/mpeg', 'video/webm',
     ]
 
-    def __init__(self):
-        self.binary_types = self.default_binary_types
-        self.cors = False
+    def __init__(self) -> None:
+        self.binary_types: List[str] = self.default_binary_types
+        self.cors: Union[bool, CORSConfig] = False
 
     @property
-    def default_binary_types(self):
+    def default_binary_types(self) -> List[str]:
         return list(self._DEFAULT_BINARY_TYPES)
 
 
@@ -585,15 +630,16 @@ class WebsocketAPI(object):
     _WEBSOCKET_ENDPOINT_TEMPLATE = 'https://{domain_name}/{stage}'
     _REGION_ENV_VARS = ['AWS_REGION', 'AWS_DEFAULT_REGION']
 
-    def __init__(self, env=None):
-        self.session = None
-        self._endpoint = None
+    def __init__(self, env: Optional[MutableMapping] = None) -> None:
+        self.session: Optional[Any] = None
+        self._endpoint: Optional[str] = None
         self._client = None
         if env is None:
-            env = os.environ
-        self._env = env
+            self._env: MutableMapping = os.environ
+        else:
+            self._env = env
 
-    def configure(self, domain_name, stage):
+    def configure(self, domain_name: str, stage: str) -> None:
         if self._endpoint is not None:
             return
         self._endpoint = self._WEBSOCKET_ENDPOINT_TEMPLATE.format(
@@ -601,7 +647,7 @@ class WebsocketAPI(object):
             stage=stage,
         )
 
-    def configure_from_api_id(self, api_id, stage):
+    def configure_from_api_id(self, api_id: str, stage: str) -> None:
         if self._endpoint is not None:
             return
         region_name = self._get_region()
@@ -619,7 +665,7 @@ class WebsocketAPI(object):
             api_id=api_id, region=region_name)
         self.configure(domain_name, stage)
 
-    def _get_region(self):
+    def _get_region(self) -> str:
         # Attempt to get the region so we can configure the
         # apigatewaymanagementapi client.  We'll first try
         # retrieving this value from env vars because these should
@@ -642,7 +688,7 @@ class WebsocketAPI(object):
             "session."
         )
 
-    def _get_client(self):
+    def _get_client(self) -> Any:
         if self.session is None:
             raise ValueError(
                 'Assign app.websocket_api.session to a boto3 session before '
@@ -660,7 +706,7 @@ class WebsocketAPI(object):
             )
         return self._client
 
-    def send(self, connection_id, message):
+    def send(self, connection_id: str, message: str) -> None:
         client = self._get_client()
         try:
             client.post_to_connection(
@@ -670,7 +716,7 @@ class WebsocketAPI(object):
         except client.exceptions.GoneException:
             raise WebsocketDisconnectedError(connection_id)
 
-    def close(self, connection_id):
+    def close(self, connection_id: str) -> None:
         client = self._get_client()
         try:
             client.delete_connection(
@@ -679,7 +725,7 @@ class WebsocketAPI(object):
         except client.exceptions.GoneException:
             raise WebsocketDisconnectedError(connection_id)
 
-    def info(self, connection_id):
+    def info(self, connection_id: str) -> Any:
         client = self._get_client()
         try:
             return client.get_connection(
@@ -690,14 +736,24 @@ class WebsocketAPI(object):
 
 
 class DecoratorAPI(object):
-    def middleware(self, event_type='all'):
-        def _middleware_wrapper(func):
+    websocket_api: Optional[WebsocketAPI] = None
+
+    def middleware(
+            self,
+            event_type: str = 'all'
+    ) -> Callable[[Callable[..., Any]], Any]:
+        def _middleware_wrapper(
+                func: Callable[..., Any]
+        ) -> Callable[..., Any]:
             self.register_middleware(func, event_type)
             return func
         return _middleware_wrapper
 
-    def authorizer(self, ttl_seconds=None, execution_role=None,
-                   name=None, header='Authorization'):
+    def authorizer(self, ttl_seconds: Optional[int] = None,
+                   execution_role: Optional[str] = None,
+                   name: Optional[str] = None,
+                   header: Optional[str] = 'Authorization'
+                   ) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='authorizer',
             name=name,
@@ -708,8 +764,9 @@ class DecoratorAPI(object):
             }
         )
 
-    def on_s3_event(self, bucket, events=None,
-                    prefix=None, suffix=None, name=None):
+    def on_s3_event(self, bucket: str, events: Optional[List[str]] = None,
+                    prefix: Optional[str] = None, suffix: Optional[str] = None,
+                    name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_s3_event',
             name=name,
@@ -719,16 +776,19 @@ class DecoratorAPI(object):
             }
         )
 
-    def on_sns_message(self, topic, name=None):
+    def on_sns_message(self, topic: str,
+                       name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_sns_message',
             name=name,
             registration_kwargs={'topic': topic}
         )
 
-    def on_sqs_message(self, queue=None, batch_size=1,
-                       name=None, queue_arn=None,
-                       maximum_batching_window_in_seconds=0):
+    def on_sqs_message(self, queue: Optional[str] = None, batch_size: int = 1,
+                       name: Optional[str] = None,
+                       queue_arn: Optional[str] = None,
+                       maximum_batching_window_in_seconds: int = 0
+                       ) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_sqs_message',
             name=name,
@@ -741,14 +801,16 @@ class DecoratorAPI(object):
             }
         )
 
-    def on_cw_event(self, event_pattern, name=None):
+    def on_cw_event(self, event_pattern: Dict[str, Any],
+                    name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_cw_event',
             name=name,
             registration_kwargs={'event_pattern': event_pattern}
         )
 
-    def schedule(self, expression, name=None, description=''):
+    def schedule(self, expression: str, name: Optional[str] = None,
+                 description: str = '') -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='schedule',
             name=name,
@@ -756,9 +818,11 @@ class DecoratorAPI(object):
                                  'description': description},
         )
 
-    def on_kinesis_record(self, stream, batch_size=100,
-                          starting_position='LATEST', name=None,
-                          maximum_batching_window_in_seconds=0):
+    def on_kinesis_record(self, stream: str, batch_size: int = 100,
+                          starting_position: str = 'LATEST',
+                          name: Optional[str] = None,
+                          maximum_batching_window_in_seconds: int = 0
+                          ) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_kinesis_record',
             name=name,
@@ -770,9 +834,13 @@ class DecoratorAPI(object):
                     maximum_batching_window_in_seconds},
         )
 
-    def on_dynamodb_record(self, stream_arn, batch_size=100,
-                           starting_position='LATEST', name=None,
-                           maximum_batching_window_in_seconds=0):
+    def on_dynamodb_record(
+            self, stream_arn: str,
+            batch_size: int = 100,
+            starting_position: str = 'LATEST',
+            name: Optional[str] = None,
+            maximum_batching_window_in_seconds: int = 0
+    ) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_dynamodb_record',
             name=name,
@@ -784,7 +852,7 @@ class DecoratorAPI(object):
                     maximum_batching_window_in_seconds},
         )
 
-    def route(self, path, **kwargs):
+    def route(self, path: str, **kwargs: Any) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='route',
             name=kwargs.pop('name', None),
@@ -794,34 +862,41 @@ class DecoratorAPI(object):
             registration_kwargs={'path': path, 'kwargs': kwargs},
         )
 
-    def lambda_function(self, name=None):
+    def lambda_function(self,
+                        name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='lambda_function', name=name)
 
-    def on_ws_connect(self, name=None):
+    def on_ws_connect(self,
+                      name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_ws_connect',
             name=name,
             registration_kwargs={'route_key': '$connect'},
         )
 
-    def on_ws_disconnect(self, name=None):
+    def on_ws_disconnect(self,
+                         name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_ws_disconnect',
             name=name,
             registration_kwargs={'route_key': '$disconnect'},
         )
 
-    def on_ws_message(self, name=None):
+    def on_ws_message(self, name: Optional[str] = None) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_ws_message',
             name=name,
             registration_kwargs={'route_key': '$default'},
         )
 
-    def _create_registration_function(self, handler_type, name=None,
-                                      registration_kwargs=None):
-        def _register_handler(user_handler):
+    def _create_registration_function(self, handler_type: str,
+                                      name: Optional[str] = None,
+                                      registration_kwargs: Any = None
+                                      ) -> Callable[..., Any]:
+        def _register_handler(
+                user_handler: UserHandlerFuncType
+        ) -> Callable[..., Any]:
             handler_name = name
             if handler_name is None:
                 handler_name = user_handler.__name__
@@ -836,7 +911,10 @@ class DecoratorAPI(object):
             return wrapped
         return _register_handler
 
-    def _wrap_handler(self, handler_type, handler_name, user_handler):
+    def _wrap_handler(self, handler_type: str,
+                      handler_name: str,
+                      user_handler: UserHandlerFuncType
+                      ) -> UserHandlerFuncType:
         if handler_type in _EVENT_CLASSES:
             if handler_type == 'lambda_function':
                 # We have to wrap existing @app.lambda_function()
@@ -858,10 +936,10 @@ class DecoratorAPI(object):
             'on_ws_message',
             'on_ws_disconnect',
         ]
-        if handler_type in websocket_event_classes:
+        if self.websocket_api and handler_type in websocket_event_classes:
             return WebsocketEventSourceHandler(
                 user_handler, WebsocketEvent,
-                self.websocket_api,  # pylint: disable=no-member
+                self.websocket_api,
                 middleware_handlers=self._get_middleware_handlers(
                     event_type='websocket')
             )
@@ -871,34 +949,41 @@ class DecoratorAPI(object):
             return ChaliceAuthorizer(handler_name, user_handler)
         return user_handler
 
-    def _get_middleware_handlers(self, event_type):
+    def _get_middleware_handlers(self, event_type: str) -> List:
         raise NotImplementedError("_get_middleware_handlers")
 
-    def _register_handler(self, handler_type, name,
-                          user_handler, wrapped_handler, kwargs, options=None):
+    def _register_handler(self, handler_type: str, name: str,
+                          user_handler: UserHandlerFuncType,
+                          wrapped_handler: Callable[..., Any],
+                          kwargs: Dict[str, Any],
+                          options: Dict[Any, Any] = None) -> None:
         raise NotImplementedError("_register_handler")
 
-    def register_middleware(self, func, event_type='all'):
+    def register_middleware(self, func: MiddlewareFuncType,
+                            event_type: str = 'all') -> None:
         raise NotImplementedError("register_middleware")
 
 
 class _HandlerRegistration(object):
 
-    def __init__(self):
-        self.routes = defaultdict(dict)
-        self.websocket_handlers = {}
-        self.builtin_auth_handlers = []
-        self.event_sources = []
-        self.pure_lambda_functions = []
-        self.api = APIGateway()
-        self.handler_map = {}
-        self.middleware_handlers = []
+    def __init__(self) -> None:
+        self.routes: Dict[str, Dict[str, RouteEntry]] = defaultdict(dict)
+        self.websocket_handlers: Dict[str, Any] = {}
+        self.builtin_auth_handlers: List['BuiltinAuthConfig'] = []
+        self.event_sources: List['BaseEventSourceConfig'] = []
+        self.pure_lambda_functions: List['LambdaFunction'] = []
+        self.api: APIGateway = APIGateway()
+        self.handler_map: Dict[str, Callable[..., Any]] = {}
+        self.middleware_handlers: List[Tuple[MiddlewareFuncType, str]] = []
 
-    def register_middleware(self, func, event_type='all'):
+    def register_middleware(self, func: MiddlewareFuncType,
+                            event_type: str = 'all') -> None:
         self.middleware_handlers.append((func, event_type))
 
-    def _do_register_handler(self, handler_type, name, user_handler,
-                             wrapped_handler, kwargs, options=None):
+    def _do_register_handler(self, handler_type: str, name: str,
+                             user_handler: UserHandlerFuncType,
+                             wrapped_handler: Callable[..., Any], kwargs: Any,
+                             options: Dict[Any, Any] = None) -> None:
         url_prefix = None
         name_prefix = None
         module_name = 'app'
@@ -923,7 +1008,11 @@ class _HandlerRegistration(object):
         )
         self.handler_map[name] = wrapped_handler
 
-    def _attach_websocket_handler(self, handler):
+    def _attach_websocket_handler(self, handler: Union[
+        'WebsocketConnectConfig',
+        'WebsocketMessageConfig',
+        'WebsocketDisconnectConfig'
+    ]) -> None:
         route_key = handler.route_key_handled
         decorator_name = {
             '$default': 'on_ws_message',
@@ -937,8 +1026,10 @@ class _HandlerRegistration(object):
             )
         self.websocket_handlers[route_key] = handler
 
-    def _register_on_ws_connect(self, name, user_handler, handler_string,
-                                kwargs, **unused):
+    def _register_on_ws_connect(self, name: str,
+                                user_handler: UserHandlerFuncType,
+                                handler_string: str,
+                                kwargs: Any, **unused: Dict[str, Any]) -> None:
         wrapper = WebsocketConnectConfig(
             name=name,
             handler_string=handler_string,
@@ -946,8 +1037,10 @@ class _HandlerRegistration(object):
         )
         self._attach_websocket_handler(wrapper)
 
-    def _register_on_ws_message(self, name, user_handler, handler_string,
-                                kwargs, **unused):
+    def _register_on_ws_message(self, name: str,
+                                user_handler: UserHandlerFuncType,
+                                handler_string: str,
+                                kwargs: Any, **unused: Dict[str, Any]) -> None:
         route_key = kwargs['route_key']
         wrapper = WebsocketMessageConfig(
             name=name,
@@ -958,8 +1051,10 @@ class _HandlerRegistration(object):
         self._attach_websocket_handler(wrapper)
         self.websocket_handlers[route_key] = wrapper
 
-    def _register_on_ws_disconnect(self, name, user_handler,
-                                   handler_string, kwargs, **unused):
+    def _register_on_ws_disconnect(self, name: str,
+                                   user_handler: UserHandlerFuncType,
+                                   handler_string: str, kwargs: Any,
+                                   **unused: Dict[str, Any]) -> None:
         wrapper = WebsocketDisconnectConfig(
             name=name,
             handler_string=handler_string,
@@ -967,15 +1062,20 @@ class _HandlerRegistration(object):
         )
         self._attach_websocket_handler(wrapper)
 
-    def _register_lambda_function(self, name, user_handler,
-                                  handler_string, **unused):
+    def _register_lambda_function(self, name: str,
+                                  user_handler: UserHandlerFuncType,
+                                  handler_string: str,
+                                  **unused: Dict[str, Any]) -> None:
         wrapper = LambdaFunction(
-            user_handler, name=name,
+            func=user_handler, name=name,
             handler_string=handler_string,
         )
         self.pure_lambda_functions.append(wrapper)
 
-    def _register_on_s3_event(self, name, handler_string, kwargs, **unused):
+    def _register_on_s3_event(self, name: str,
+                              handler_string: str,
+                              kwargs: Any, **unused: Dict[str, Any]
+                              ) -> None:
         events = kwargs['events']
         if events is None:
             events = ['s3:ObjectCreated:*']
@@ -989,7 +1089,11 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(s3_event)
 
-    def _register_on_sns_message(self, name, handler_string, kwargs, **unused):
+    def _register_on_sns_message(self, name: str,
+                                 handler_string: str,
+                                 kwargs: Any,
+                                 **unused: Dict[str, Any]
+                                 ) -> None:
         sns_config = SNSEventConfig(
             name=name,
             handler_string=handler_string,
@@ -997,7 +1101,11 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(sns_config)
 
-    def _register_on_sqs_message(self, name, handler_string, kwargs, **unused):
+    def _register_on_sqs_message(self, name: str,
+                                 handler_string: str,
+                                 kwargs: Any,
+                                 **unused: Dict[str, Any]
+                                 ) -> None:
         queue = kwargs.get('queue')
         queue_arn = kwargs.get('queue_arn')
         if not queue and not queue_arn:
@@ -1016,8 +1124,12 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(sqs_config)
 
-    def _register_on_kinesis_record(self, name, handler_string,
-                                    kwargs, **unused):
+    def _register_on_kinesis_record(self,
+                                    name: str,
+                                    handler_string: str,
+                                    kwargs: Any,
+                                    **unused: Dict[str, Any]
+                                    ) -> None:
         kinesis_config = KinesisEventConfig(
             name=name,
             handler_string=handler_string,
@@ -1029,8 +1141,10 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(kinesis_config)
 
-    def _register_on_dynamodb_record(self, name, handler_string,
-                                     kwargs, **unused):
+    def _register_on_dynamodb_record(self, name: str,
+                                     handler_string: str,
+                                     kwargs: Any,
+                                     **unused: Dict[str, Any]) -> None:
         ddb_config = DynamoDBEventConfig(
             name=name,
             handler_string=handler_string,
@@ -1042,7 +1156,8 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(ddb_config)
 
-    def _register_on_cw_event(self, name, handler_string, kwargs, **unused):
+    def _register_on_cw_event(self, name: str, handler_string: str,
+                              kwargs: Any, **unused: Dict[str, Any]) -> None:
         event_source = CloudWatchEventConfig(
             name=name,
             event_pattern=kwargs['event_pattern'],
@@ -1050,7 +1165,8 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(event_source)
 
-    def _register_schedule(self, name, handler_string, kwargs, **unused):
+    def _register_schedule(self, name: str, handler_string: str,
+                           kwargs: Any, **unused: Dict[str, Any]) -> None:
         event_source = ScheduledEventConfig(
             name=name,
             schedule_expression=kwargs['expression'],
@@ -1059,8 +1175,9 @@ class _HandlerRegistration(object):
         )
         self.event_sources.append(event_source)
 
-    def _register_authorizer(self, name, handler_string, wrapped_handler,
-                             kwargs, **unused):
+    def _register_authorizer(self, name: str, handler_string: str,
+                             wrapped_handler: 'ChaliceAuthorizer',
+                             kwargs: Any, **unused: Dict[str, Any]) -> None:
         actual_kwargs = kwargs.copy()
         ttl_seconds = actual_kwargs.pop('ttl_seconds', None)
         execution_role = actual_kwargs.pop('execution_role', None)
@@ -1079,7 +1196,8 @@ class _HandlerRegistration(object):
         wrapped_handler.config = auth_config
         self.builtin_auth_handlers.append(auth_config)
 
-    def _register_route(self, name, user_handler, kwargs, **unused):
+    def _register_route(self, name: str, user_handler: UserHandlerFuncType,
+                        kwargs: Any, **unused: Dict[str, Any]) -> None:
         actual_kwargs = kwargs['kwargs']
         path = kwargs['path']
         url_prefix = kwargs.pop('url_prefix', None)
@@ -1122,25 +1240,28 @@ class _HandlerRegistration(object):
 
 class Chalice(_HandlerRegistration, DecoratorAPI):
     FORMAT_STRING = '%(name)s - %(levelname)s - %(message)s'
+    authorizers: Dict[str, Dict[str, Any]]
+    lambda_context: 'LambdaContext'
+    current_request: Optional[Request]
 
-    def __init__(self, app_name, debug=False, configure_logs=True, env=None):
+    def __init__(self, app_name: str, debug: bool = False,
+                 configure_logs: bool = True,
+                 env: MutableMapping = None) -> None:
         super(Chalice, self).__init__()
-        self.app_name = app_name
-        self.websocket_api = WebsocketAPI()
-        self.current_request = None
-        self.lambda_context = None
-        self._debug = debug
-        self.configure_logs = configure_logs
-        self.log = logging.getLogger(self.app_name)
+        self.app_name: str = app_name
+        self.websocket_api: WebsocketAPI = WebsocketAPI()
+        self._debug: bool = debug
+        self.configure_logs: bool = configure_logs
+        self.log: logging.Logger = logging.getLogger(self.app_name)
         if env is None:
             env = os.environ
         self._initialize(env)
-        self.experimental_feature_flags = set()
+        self.experimental_feature_flags: Set[str] = set()
         # This is marked as internal but is intended to be used by
         # any code within Chalice.
-        self._features_used = set()
+        self._features_used: Set[str] = set()
 
-    def _initialize(self, env):
+    def _initialize(self, env: MutableMapping) -> None:
         if self.configure_logs:
             self._configure_logging()
         env['AWS_EXECUTION_ENV'] = '%s aws-chalice/%s' % (
@@ -1149,15 +1270,15 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         )
 
     @property
-    def debug(self):
+    def debug(self) -> bool:
         return self._debug
 
     @debug.setter
-    def debug(self, value):
+    def debug(self, value: bool) -> None:
         self._debug = value
         self._configure_log_level()
 
-    def _configure_logging(self):
+    def _configure_logging(self) -> None:
         if self._already_configured(self.log):
             return
         handler = logging.StreamHandler(sys.stdout)
@@ -1169,7 +1290,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         self._configure_log_level()
         self.log.addHandler(handler)
 
-    def _already_configured(self, log):
+    def _already_configured(self, log: logging.Logger) -> bool:
         if not log.handlers:
             return False
         for handler in log.handlers:
@@ -1178,43 +1299,53 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
                     return True
         return False
 
-    def _configure_log_level(self):
+    def _configure_log_level(self) -> None:
         if self._debug:
             level = logging.DEBUG
         else:
             level = logging.ERROR
         self.log.setLevel(level)
 
-    def register_blueprint(self, blueprint, name_prefix=None, url_prefix=None):
+    def register_blueprint(self, blueprint: 'Blueprint',
+                           name_prefix: Optional[str] = None,
+                           url_prefix: Optional[str] = None) -> None:
         blueprint.register(self, options={'name_prefix': name_prefix,
                                           'url_prefix': url_prefix})
 
-    def _register_handler(self, handler_type, name, user_handler,
-                          wrapped_handler, kwargs, options=None):
+    def _register_handler(self, handler_type: str, name: str,
+                          user_handler: UserHandlerFuncType,
+                          wrapped_handler: Callable[..., Any],
+                          kwargs: Any, options: Dict[Any, Any] = None) -> None:
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
     # These are defined here on the Chalice class because we want all the
     # feature flag tracking to live in Chalice and not the DecoratorAPI.
-    def _register_on_ws_connect(self, name, user_handler, handler_string,
-                                kwargs, **unused):
+    def _register_on_ws_connect(self, name: str,
+                                user_handler: UserHandlerFuncType,
+                                handler_string: str,
+                                kwargs: Any, **unused: Dict[str, Any]) -> None:
         self._features_used.add('WEBSOCKETS')
         super(Chalice, self)._register_on_ws_connect(
             name, user_handler, handler_string, kwargs, **unused)
 
-    def _register_on_ws_message(self, name, user_handler, handler_string,
-                                kwargs, **unused):
+    def _register_on_ws_message(self, name: str,
+                                user_handler: UserHandlerFuncType,
+                                handler_string: str,
+                                kwargs: Any, **unused: Dict[str, Any]) -> None:
         self._features_used.add('WEBSOCKETS')
         super(Chalice, self)._register_on_ws_message(
             name, user_handler, handler_string, kwargs, **unused)
 
-    def _register_on_ws_disconnect(self, name, user_handler,
-                                   handler_string, kwargs, **unused):
+    def _register_on_ws_disconnect(self, name: str,
+                                   user_handler: UserHandlerFuncType,
+                                   handler_string: str, kwargs: Any,
+                                   **unused: Dict[str, Any]) -> None:
         self._features_used.add('WEBSOCKETS')
         super(Chalice, self)._register_on_ws_disconnect(
             name, user_handler, handler_string, kwargs, **unused)
 
-    def _get_middleware_handlers(self, event_type):
+    def _get_middleware_handlers(self, event_type: str) -> Any:
         # We're returning a generator here because we want to defer the
         # collection of all middleware until as last as possible (when
         # then handler is actually invoked).  This lets us pick up any
@@ -1223,31 +1354,34 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         return (func for func, filter_type in self.middleware_handlers if
                 filter_type in [event_type, 'all'])
 
-    def __call__(self, event, context):
+    def __call__(self, event: Any, context: Any) -> Dict[str, Any]:
         # For legacy reasons, we can't move the Rest API handler entry
         # point away from this Chalice.__call__ method . However, we can
         # try to extract as much as logic as possible to a separate handler
         # class we can call.  That way it's still structured somewhat similar
         # to the other event handlers which makes it more manageable to
         # implement shared functionality (e.g. middleware).
-        self.lambda_context = context
+        self.lambda_context: 'LambdaContext' = context
         handler = RestAPIEventHandler(
             self.routes, self.api, self.log, self.debug,
             middleware_handlers=self._get_middleware_handlers('http'),
         )
-        self.current_request = handler.create_request_object(event, context)
+        self.current_request: \
+            Optional[Request] = handler.create_request_object(event, context)
         return handler(event, context)
 
 
 class BuiltinAuthConfig(object):
-    def __init__(self, name, handler_string, ttl_seconds=None,
-                 execution_role=None, header='Authorization'):
+    def __init__(self, name: str, handler_string: str,
+                 ttl_seconds: Optional[int] = None,
+                 execution_role: Optional[str] = None,
+                 header: str = 'Authorization'):
         # We'd also support all the misc config options you can set.
-        self.name = name
-        self.handler_string = handler_string
-        self.ttl_seconds = ttl_seconds
-        self.execution_role = execution_role
-        self.header = header
+        self.name: str = name
+        self.handler_string: str = handler_string
+        self.ttl_seconds: Optional[int] = ttl_seconds
+        self.execution_role: Optional[str] = execution_role
+        self.header: str = header
 
 
 # ChaliceAuthorizer is unique in that the runtime component (the thing
@@ -1272,61 +1406,69 @@ class BuiltinAuthConfig(object):
 # we would need more research to know for sure.  For now, this is a
 # special cased runtime class that knows about its config.
 class ChaliceAuthorizer(object):
-    def __init__(self, name, func, scopes=None):
-        self.name = name
-        self.func = func
-        self.scopes = scopes or []
+    def __init__(self, name: str, func: Callable[..., Any],
+                 scopes: Optional[List[str]] = None) -> None:
+        self.name: str = name
+        self.func: Callable[
+            ['AuthRequest'], Union['AuthResponse', Dict[str, Any]]
+        ] = func
+        self.scopes: List[str] = scopes or []
         # This is filled in during the @app.authorizer()
         # processing.
-        self.config = None
+        self.config: BuiltinAuthConfig = None  # type: ignore
 
-    def __call__(self, event, context):
+    def __call__(
+            self,
+            event: Dict[str, Any],
+            context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         auth_request = self._transform_event(event)
         result = self.func(auth_request)
         if isinstance(result, AuthResponse):
             return result.to_dict(auth_request)
         return result
 
-    def _transform_event(self, event):
+    def _transform_event(self, event: Dict[str, Any]) -> 'AuthRequest':
         return AuthRequest(event['type'],
                            event['authorizationToken'],
                            event['methodArn'])
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes: List[str]) -> 'ChaliceAuthorizer':
         authorizer_with_scopes = copy.deepcopy(self)
         authorizer_with_scopes.scopes = scopes
         return authorizer_with_scopes
 
 
 class AuthRequest(object):
-    def __init__(self, auth_type, token, method_arn):
-        self.auth_type = auth_type
-        self.token = token
-        self.method_arn = method_arn
+    def __init__(self, auth_type: str, token: str, method_arn: str) -> None:
+        self.auth_type: str = auth_type
+        self.token: str = token
+        self.method_arn: str = method_arn
 
 
 class AuthResponse(object):
-    ALL_HTTP_METHODS = ['DELETE', 'HEAD', 'OPTIONS',
-                        'PATCH', 'POST', 'PUT', 'GET']
+    ALL_HTTP_METHODS: List[str] = ['DELETE', 'HEAD', 'OPTIONS',
+                                   'PATCH', 'POST', 'PUT', 'GET']
 
-    def __init__(self, routes, principal_id, context=None):
-        self.routes = routes
-        self.principal_id = principal_id
+    def __init__(self, routes: List[Union[str, 'AuthRoute']],
+                 principal_id: str, context: Optional[Dict[str, str]] = None):
+        self.routes: List[Union[str, 'AuthRoute']] = routes
+        self.principal_id: str = principal_id
         # The request is used to generate full qualified ARNs
         # that we need for the resource portion of the returned
         # policy.
         if context is None:
             context = {}
-        self.context = context
+        self.context: Dict[str, str] = context
 
-    def to_dict(self, request):
+    def to_dict(self, request: AuthRequest) -> Dict[str, Any]:
         return {
             'context': self.context,
             'principalId': self.principal_id,
             'policyDocument': self._generate_policy(request),
         }
 
-    def _generate_policy(self, request):
+    def _generate_policy(self, request: AuthRequest) -> Dict[str, Any]:
         allowed_resources = self._generate_allowed_resources(request)
         return {
             'Version': '2012-10-17',
@@ -1339,7 +1481,7 @@ class AuthResponse(object):
             ]
         }
 
-    def _generate_allowed_resources(self, request):
+    def _generate_allowed_resources(self, request: AuthRequest) -> List[str]:
         allowed_resources = []
         for route in self.routes:
             if isinstance(route, AuthRoute):
@@ -1361,7 +1503,12 @@ class AuthResponse(object):
                     self._generate_arn(path, request, method))
         return allowed_resources
 
-    def _generate_arn(self, route, request, method='*'):
+    def _generate_arn(
+            self,
+            route: str,
+            request: AuthRequest,
+            method: str = '*'
+    ) -> str:
         incoming_arn = request.method_arn
         # An incoming_arn would look like this:
         # "arn:aws:execute-api:us-west-2:123:rest-api-id/stage/GET/needs/auth"
@@ -1390,55 +1537,63 @@ class AuthResponse(object):
 
 
 class AuthRoute(object):
-    def __init__(self, path, methods):
-        self.path = path
-        self.methods = methods
+    def __init__(self, path: str, methods: List[str]):
+        self.path: str = path
+        self.methods: List[str] = methods
 
 
 class LambdaFunction(object):
-    def __init__(self, func, name, handler_string):
-        self.func = func
-        self.name = name
-        self.handler_string = handler_string
+    def __init__(self, func: Callable[..., Any], name: str,
+                 handler_string: str):
+        self.func: Callable[..., Any] = func
+        self.name: str = name
+        self.handler_string: str = handler_string
 
-    def __call__(self, event, context):
+    def __call__(self, event: Dict[str, Any],
+                 context: Dict[str, Any]
+                 ) -> Callable[[Dict[str, Any], Dict[str, Any]], Any]:
         return self.func(event, context)
 
 
 class BaseEventSourceConfig(object):
-    def __init__(self, name, handler_string):
-        self.name = name
-        self.handler_string = handler_string
+    def __init__(self, name: str, handler_string: str) -> None:
+        self.name: str = name
+        self.handler_string: str = handler_string
 
 
 class ScheduledEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, schedule_expression, description):
+    def __init__(self, name: str, handler_string: str,
+                 schedule_expression: Union[str, 'ScheduleExpression'],
+                 description: str):
         super(ScheduledEventConfig, self).__init__(name, handler_string)
-        self.schedule_expression = schedule_expression
-        self.description = description
+        self.schedule_expression: \
+            Union[str, 'ScheduleExpression'] = schedule_expression
+        self.description: str = description
 
 
 class CloudWatchEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, event_pattern):
+
+    def __init__(self, name: str, handler_string: str,
+                 event_pattern: Dict[str, Any]):
         super(CloudWatchEventConfig, self).__init__(name, handler_string)
-        self.event_pattern = event_pattern
+        self.event_pattern: Dict[str, Any] = event_pattern
 
 
 class ScheduleExpression(object):
-    def to_string(self):
+    def to_string(self) -> str:
         raise NotImplementedError("to_string")
 
 
 class Rate(ScheduleExpression):
-    MINUTES = 'MINUTES'
-    HOURS = 'HOURS'
-    DAYS = 'DAYS'
+    MINUTES: str = 'MINUTES'
+    HOURS: str = 'HOURS'
+    DAYS: str = 'DAYS'
 
-    def __init__(self, value, unit):
-        self.value = value
-        self.unit = unit
+    def __init__(self, value: int, unit: str) -> None:
+        self.value: int = value
+        self.unit: str = unit
 
-    def to_string(self):
+    def to_string(self) -> str:
         unit = self.unit.lower()
         if self.value == 1:
             # Remove the 's' from the end if it's singular.
@@ -1448,15 +1603,17 @@ class Rate(ScheduleExpression):
 
 
 class Cron(ScheduleExpression):
-    def __init__(self, minutes, hours, day_of_month, month, day_of_week, year):
-        self.minutes = minutes
-        self.hours = hours
-        self.day_of_month = day_of_month
-        self.month = month
-        self.day_of_week = day_of_week
-        self.year = year
+    def __init__(self, minutes: Union[str, int], hours: Union[str, int],
+                 day_of_month: Union[str, int], month: Union[str, int],
+                 day_of_week: Union[str, int], year: Union[str, int]):
+        self.minutes: Union[str, int] = minutes
+        self.hours: Union[str, int] = hours
+        self.day_of_month: Union[str, int] = day_of_month
+        self.month: Union[str, int] = month
+        self.day_of_week: Union[str, int] = day_of_week
+        self.year: Union[str, int] = year
 
-    def to_string(self):
+    def to_string(self) -> str:
         return 'cron(%s %s %s %s %s %s)' % (
             self.minutes,
             self.hours,
@@ -1468,85 +1625,95 @@ class Cron(ScheduleExpression):
 
 
 class S3EventConfig(BaseEventSourceConfig):
-    def __init__(self, name, bucket, events, prefix, suffix, handler_string):
+    def __init__(self, name: str, bucket: str, events: List[str], prefix: str,
+                 suffix: str, handler_string: str):
         super(S3EventConfig, self).__init__(name, handler_string)
-        self.bucket = bucket
-        self.events = events
-        self.prefix = prefix
-        self.suffix = suffix
+        self.bucket: str = bucket
+        self.events: List[str] = events
+        self.prefix: str = prefix
+        self.suffix: str = suffix
 
 
 class SNSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, topic):
+
+    def __init__(self, name: str, handler_string: str, topic: str):
         super(SNSEventConfig, self).__init__(name, handler_string)
-        self.topic = topic
+        self.topic: str = topic
 
 
 class SQSEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, queue, queue_arn, batch_size,
-                 maximum_batching_window_in_seconds):
+    def __init__(self, name: str, handler_string: str, queue: Optional[str],
+                 queue_arn: Optional[str], batch_size: int,
+                 maximum_batching_window_in_seconds: int):
         super(SQSEventConfig, self).__init__(name, handler_string)
-        self.queue = queue
-        self.queue_arn = queue_arn
-        self.batch_size = batch_size
-        self.maximum_batching_window_in_seconds = \
+        self.queue: Optional[str] = queue
+        self.queue_arn: Optional[str] = queue_arn
+        self.batch_size: int = batch_size
+        self.maximum_batching_window_in_seconds: int = \
             maximum_batching_window_in_seconds
 
 
 class KinesisEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, stream,
-                 batch_size, starting_position,
-                 maximum_batching_window_in_seconds):
+    def __init__(self, name: str, handler_string: str, stream: str,
+                 batch_size: int, starting_position: str,
+                 maximum_batching_window_in_seconds: int) -> None:
         super(KinesisEventConfig, self).__init__(name, handler_string)
-        self.stream = stream
-        self.batch_size = batch_size
-        self.starting_position = starting_position
-        self.maximum_batching_window_in_seconds = \
+        self.stream: str = stream
+        self.batch_size: int = batch_size
+        self.starting_position: str = starting_position
+        self.maximum_batching_window_in_seconds: int = \
             maximum_batching_window_in_seconds
 
 
 class DynamoDBEventConfig(BaseEventSourceConfig):
-    def __init__(self, name, handler_string, stream_arn,
-                 batch_size, starting_position,
-                 maximum_batching_window_in_seconds):
+    def __init__(self, name: str, handler_string: str, stream_arn: str,
+                 batch_size: int, starting_position: str,
+                 maximum_batching_window_in_seconds: int) -> None:
         super(DynamoDBEventConfig, self).__init__(name, handler_string)
-        self.stream_arn = stream_arn
-        self.batch_size = batch_size
-        self.starting_position = starting_position
-        self.maximum_batching_window_in_seconds = \
+        self.stream_arn: str = stream_arn
+        self.batch_size: int = batch_size
+        self.starting_position: str = starting_position
+        self.maximum_batching_window_in_seconds: int = \
             maximum_batching_window_in_seconds
 
 
 class WebsocketConnectConfig(BaseEventSourceConfig):
-    CONNECT_ROUTE = '$connect'
+    CONNECT_ROUTE: str = '$connect'
 
-    def __init__(self, name, handler_string, user_handler):
+    def __init__(self, name: str, handler_string: str,
+                 user_handler: UserHandlerFuncType):
         super(WebsocketConnectConfig, self).__init__(name, handler_string)
         self.route_key_handled = self.CONNECT_ROUTE
         self.handler_function = user_handler
 
 
 class WebsocketMessageConfig(BaseEventSourceConfig):
-    def __init__(self, name, route_key_handled, handler_string, user_handler):
+    def __init__(self, name: str, route_key_handled: str, handler_string: str,
+                 user_handler: UserHandlerFuncType) -> None:
         super(WebsocketMessageConfig, self).__init__(name, handler_string)
-        self.route_key_handled = route_key_handled
-        self.handler_function = user_handler
+        self.route_key_handled: str = route_key_handled
+        self.handler_function: Callable[..., Any] = user_handler
 
 
 class WebsocketDisconnectConfig(BaseEventSourceConfig):
-    DISCONNECT_ROUTE = '$disconnect'
+    DISCONNECT_ROUTE: str = '$disconnect'
 
-    def __init__(self, name, handler_string, user_handler):
+    def __init__(self, name: str, handler_string: str,
+                 user_handler: UserHandlerFuncType):
         super(WebsocketDisconnectConfig, self).__init__(name, handler_string)
         self.route_key_handled = self.DISCONNECT_ROUTE
         self.handler_function = user_handler
 
 
 class PureLambdaWrapper(object):
-    def __init__(self, original_func):
+    def __init__(self,
+                 original_func: Callable[
+                     [Dict[str, Any], Optional[Dict[str, Any]]], Any
+                 ]
+                 ):
         self._original_func = original_func
 
-    def __call__(self, event):
+    def __call__(self, event: 'BaseLambdaEvent') -> Any:
         # The @app.lambda_function() expects an event dict
         # and a context argument so this class will is used to adapt
         # from the Chalice single-arg style function (which is used
@@ -1555,19 +1722,22 @@ class PureLambdaWrapper(object):
 
 
 class MiddlewareHandler(object):
-    def __init__(self, handler, next_handler):
-        self.handler = handler
-        self.next_handler = next_handler
+    def __init__(self, handler: Callable[..., Any],
+                 next_handler: Callable[..., Any]) -> None:
+        self.handler: Callable[..., Any] = handler
+        self.next_handler: Callable[..., Any] = next_handler
 
-    def __call__(self, request):
+    def __call__(self, request: Any) -> Any:
         return self.handler(request, self.next_handler)
 
 
 class BaseLambdaHandler(object):
-    def __call__(self, event, context):
+    def __call__(self, event: Any, context: Any) -> Any:
         pass
 
-    def _build_middleware_handlers(self, handlers, original_handler):
+    def _build_middleware_handlers(self, handlers: List[Callable[..., Any]],
+                                   original_handler: Callable[..., Any]
+                                   ) -> Callable[..., Any]:
         current = original_handler
         for handler in reversed(list(handlers)):
             current = MiddlewareHandler(handler=handler, next_handler=current)
@@ -1576,23 +1746,27 @@ class BaseLambdaHandler(object):
 
 class EventSourceHandler(BaseLambdaHandler):
 
-    def __init__(self, func, event_class, middleware_handlers=None):
-        self.func = func
-        self.event_class = event_class
+    def __init__(
+            self, func: Callable[..., Any], event_class: Any,
+            middleware_handlers: List[Callable[..., Any]] = None
+    ) -> None:
+        self.func: Callable[..., Any] = func
+        self.event_class: Any = event_class
         if middleware_handlers is None:
             middleware_handlers = []
-        self._middleware_handlers = middleware_handlers
-        self.handler = None
+        self._middleware_handlers: \
+            List[Callable[..., Any]] = middleware_handlers
+        self.handler: Optional[Callable[..., Any]] = None
 
     @property
-    def middleware_handlers(self):
+    def middleware_handlers(self) -> List[Callable[..., Any]]:
         return self._middleware_handlers
 
     @middleware_handlers.setter
-    def middleware_handlers(self, value):
+    def middleware_handlers(self, value: List[Callable[..., Any]]) -> None:
         self._middleware_handlers = value
 
-    def __call__(self, event, context):
+    def __call__(self, event: Any, context: Any) -> Any:
         event_obj = self.event_class(event, context)
         if self.handler is None:
             # Defer creating handlers so we have all middleware configured.
@@ -1604,17 +1778,21 @@ class EventSourceHandler(BaseLambdaHandler):
 class WebsocketEventSourceHandler(EventSourceHandler):
     WEBSOCKET_API_RESPONSE = {'statusCode': 200}
 
-    def __init__(self, func, event_class, websocket_api,
-                 middleware_handlers=None):
-        self.func = func
-        self.event_class = event_class
-        self.websocket_api = websocket_api
+    def __init__(self, func: Callable[..., Any],
+                 event_class: Any, websocket_api: WebsocketAPI,
+                 middleware_handlers: Optional[List[Callable[..., Any]]] = None
+                 ) -> None:
+        self.func: Callable[..., Any] = func
+        self.event_class: Any = event_class
+        self.websocket_api: WebsocketAPI = websocket_api
         if middleware_handlers is None:
             middleware_handlers = []
-        self._middleware_handlers = middleware_handlers
+        self._middleware_handlers: \
+            List[Callable[..., Any]] = middleware_handlers
         self.handler = None
 
-    def __call__(self, event, context):
+    def __call__(self, event: Dict[str, Any],
+                 context: Dict[str, Any]) -> Dict[str, Any]:
         self.websocket_api.configure_from_api_id(
             event['requestContext']['apiId'],
             event['requestContext']['stage'],
@@ -1632,24 +1810,30 @@ class WebsocketEventSourceHandler(EventSourceHandler):
 
 
 class RestAPIEventHandler(BaseLambdaHandler):
-    def __init__(self, route_table, api, log, debug, middleware_handlers=None):
-        self.routes = route_table
-        self.api = api
-        self.log = log
-        self.debug = debug
-        self.current_request = None
-        self.lambda_context = None
+    def __init__(self, route_table: Dict[str, Dict[str, RouteEntry]],
+                 api: APIGateway, log: logging.Logger, debug: bool,
+                 middleware_handlers: Optional[List[Callable[..., Any]]] = None
+                 ) -> None:
+        self.routes: Dict[str, Dict[str, RouteEntry]] = route_table
+        self.api: APIGateway = api
+        self.log: logging.Logger = log
+        self.debug: bool = debug
+        self.current_request: Optional[Request] = None
+        self.lambda_context: Optional['LambdaContext'] = None
         if middleware_handlers is None:
             middleware_handlers = []
-        self._middleware_handlers = middleware_handlers
+        self._middleware_handlers: \
+            List[Callable[..., Any]] = middleware_handlers
 
-    def _global_error_handler(self, event, get_response):
+    def _global_error_handler(self, event: Any,
+                              get_response: Callable[..., Any]) -> Response:
         try:
             return get_response(event)
         except Exception:
             return self._unhandled_exception_to_response()
 
-    def create_request_object(self, event, context):
+    def create_request_object(self, event: Any,
+                              context: Any) -> Optional[Request]:
         # For legacy reasons, there's some initial validation that takes
         # place before we convert the input event to a python object.
         # We don't do this in event handlers we added later, so we *should*
@@ -1659,9 +1843,10 @@ class RestAPIEventHandler(BaseLambdaHandler):
         if resource_path is not None:
             self.current_request = Request(event, context)
             return self.current_request
+        return None
 
-    def __call__(self, event, context):
-        def wrapped_event(request):
+    def __call__(self, event: Any, context: Any) -> Any:
+        def wrapped_event(request: Request) -> Response:
             return self._main_rest_api_handler(event, context)
 
         final_handler = self._build_middleware_handlers(
@@ -1671,7 +1856,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         response = final_handler(self.current_request)
         return response.to_dict(self.api.binary_types)
 
-    def _main_rest_api_handler(self, event, context):
+    def _main_rest_api_handler(self, event: Any, context: Any) -> Response:
         resource_path = event.get('requestContext', {}).get('resourcePath')
         if resource_path is None:
             return error_response(error_code='InternalServerError',
@@ -1698,7 +1883,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         # We're doing the header validation after creating the request
         # so can leverage the case insensitive dict that the Request class
         # uses for headers.
-        if route_entry.content_types:
+        if self.current_request and route_entry.content_types:
             content_type = self.current_request.headers.get(
                 'content-type', 'application/json')
             if not _matches_content_type(content_type,
@@ -1715,7 +1900,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
             self._add_cors_headers(response, cors_headers)
 
         response_headers = CaseInsensitiveMapping(response.headers)
-        if not self._validate_binary_response(
+        if self.current_request and not self._validate_binary_response(
                 self.current_request.headers, response_headers):
             content_type = response_headers.get('content-type', '')
             return error_response(
@@ -1730,7 +1915,10 @@ class RestAPIEventHandler(BaseLambdaHandler):
             )
         return response
 
-    def _validate_binary_response(self, request_headers, response_headers):
+    def _validate_binary_response(self,
+                                  request_headers: CaseInsensitiveMapping,
+                                  response_headers: CaseInsensitiveMapping
+                                  ) -> bool:
         # Validates that a response is valid given the request. If the response
         # content-type specifies a binary type, there must be an accept header
         # that is a binary type as well.
@@ -1747,7 +1935,8 @@ class RestAPIEventHandler(BaseLambdaHandler):
             return False
         return True
 
-    def _get_view_function_response(self, view_function, function_args):
+    def _get_view_function_response(self, view_function: Callable[..., Any],
+                                    function_args: Dict[str, Any]) -> Response:
         try:
             response = view_function(**function_args)
             if not isinstance(response, Response):
@@ -1767,7 +1956,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
             response = self._unhandled_exception_to_response()
         return response
 
-    def _unhandled_exception_to_response(self):
+    def _unhandled_exception_to_response(self) -> Response:
         headers = {}
         path = getattr(self.current_request, 'path', 'unknown')
         self.log.error("Caught exception for path %s", path, exc_info=True)
@@ -1776,7 +1965,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
             # we'll let the original exception propagate so
             # they get more information about what went wrong.
             stack_trace = ''.join(traceback.format_exc())
-            body = stack_trace
+            body: Any = stack_trace
             headers['Content-Type'] = 'text/plain'
         else:
             body = {'Code': 'InternalServerError',
@@ -1784,19 +1973,20 @@ class RestAPIEventHandler(BaseLambdaHandler):
         response = Response(body=body, headers=headers, status_code=500)
         return response
 
-    def _validate_response(self, response):
+    def _validate_response(self, response: Response) -> None:
         for header, value in response.headers.items():
             if '\n' in value:
                 raise ChaliceError("Bad value for header '%s': %r" %
                                    (header, value))
 
-    def _cors_enabled_for_route(self, route_entry):
+    def _cors_enabled_for_route(self, route_entry: RouteEntry) -> bool:
         return route_entry.cors is not None
 
-    def _get_cors_headers(self, cors):
+    def _get_cors_headers(self, cors: CORSConfig) -> Dict[str, Any]:
         return cors.get_access_control_headers()
 
-    def _add_cors_headers(self, response, cors_headers):
+    def _add_cors_headers(self, response: Response,
+                          cors_headers: Dict[str, str]) -> None:
         for name, value in cors_headers.items():
             if name not in response.headers:
                 response.headers[name] = value
@@ -1807,15 +1997,16 @@ class RestAPIEventHandler(BaseLambdaHandler):
 # part of Chalice's public API and must be backwards compatible.
 
 class BaseLambdaEvent(object):
-    def __init__(self, event_dict, context):
-        self._event_dict = event_dict
-        self.context = context
+    def __init__(self, event_dict: Dict[str, Any],
+                 context: Optional[Dict[str, Any]]) -> None:
+        self._event_dict: Dict[str, Any] = event_dict
+        self.context: Optional[Dict[str, Any]] = context
         self._extract_attributes(event_dict)
 
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         raise NotImplementedError("_extract_attributes")
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return self._event_dict
 
 
@@ -1824,44 +2015,44 @@ class BaseLambdaEvent(object):
 # This could be a Chalice 2.0 thing where we make all the decorators
 # have a consistent interface that takes a single event arg.
 class LambdaFunctionEvent(BaseLambdaEvent):
-    def __init__(self, event_dict, context):
-        self.event = event_dict
-        self.context = context
+    def __init__(self, event_dict: Dict[str, Any], context: Any) -> None:
+        self.event: Dict[str, Any] = event_dict
+        self.context: Optional[Dict[str, Any]] = context
 
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         pass
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return self.event
 
 
 class CloudWatchEvent(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
-        self.version = event_dict['version']
-        self.account = event_dict['account']
-        self.region = event_dict['region']
-        self.detail = event_dict['detail']
-        self.detail_type = event_dict['detail-type']
-        self.source = event_dict['source']
-        self.time = event_dict['time']
-        self.event_id = event_dict['id']
-        self.resources = event_dict['resources']
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
+        self.version: str = event_dict['version']
+        self.account: str = event_dict['account']
+        self.region: str = event_dict['region']
+        self.detail: Dict[str, Any] = event_dict['detail']
+        self.detail_type: str = event_dict['detail-type']
+        self.source: str = event_dict['source']
+        self.time: str = event_dict['time']
+        self.event_id: str = event_dict['id']
+        self.resources: List[str] = event_dict['resources']
 
 
 class WebsocketEvent(BaseLambdaEvent):
-    def __init__(self, event_dict, context):
+    def __init__(self, event_dict: Dict[str, Any], context: Any):
         super(WebsocketEvent, self).__init__(event_dict, context)
-        self._json_body = None
+        self._json_body: Optional[Dict[str, Any]] = None
 
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         request_context = event_dict['requestContext']
-        self.domain_name = request_context['domainName']
-        self.stage = request_context['stage']
-        self.connection_id = request_context['connectionId']
-        self.body = event_dict.get('body')
+        self.domain_name: str = request_context['domainName']
+        self.stage: str = request_context['stage']
+        self.connection_id: str = request_context['connectionId']
+        self.body: str = str(event_dict.get('body'))
 
     @property
-    def json_body(self):
+    def json_body(self) -> Dict[str, Any]:
         if self._json_body is None:
             try:
                 self._json_body = json.loads(self.body)
@@ -1871,86 +2062,90 @@ class WebsocketEvent(BaseLambdaEvent):
 
 
 class SNSEvent(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         first_record = event_dict['Records'][0]
-        self.message = first_record['Sns']['Message']
-        self.subject = first_record['Sns']['Subject']
-        self.message_attributes = first_record['Sns']['MessageAttributes']
+        self.message: str = first_record['Sns']['Message']
+        self.subject: str = first_record['Sns']['Subject']
+        self.message_attributes: Dict[str, Any] = \
+            first_record['Sns']['MessageAttributes']
 
 
 class S3Event(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         s3 = event_dict['Records'][0]['s3']
-        self.bucket = s3['bucket']['name']
-        self.key = unquote_str(s3['object']['key'])
+        self.bucket: str = s3['bucket']['name']
+        self.key: str = unquote_str(s3['object']['key'])
 
 
 class SQSEvent(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         # We don't extract anything off the top level
         # event.
         pass
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator['SQSRecord']:
         for record in self._event_dict['Records']:
             yield SQSRecord(record, self.context)
 
 
 class SQSRecord(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
-        self.body = event_dict['body']
-        self.receipt_handle = event_dict['receiptHandle']
+
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
+        self.body: str = event_dict['body']
+        self.receipt_handle: str = event_dict['receiptHandle']
 
 
 class KinesisEvent(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         pass
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator['KinesisRecord']:
         for record in self._event_dict['Records']:
             yield KinesisRecord(record, self.context)
 
 
 class KinesisRecord(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         kinesis = event_dict['kinesis']
         encoded_payload = kinesis['data']
-        self.data = base64.b64decode(encoded_payload)
-        self.sequence_number = kinesis['sequenceNumber']
-        self.partition_key = kinesis['partitionKey']
-        self.schema_version = kinesis['kinesisSchemaVersion']
-        self.timestamp = datetime.datetime.utcfromtimestamp(
+        self.data: bytes = base64.b64decode(encoded_payload)
+        self.sequence_number: str = kinesis['sequenceNumber']
+        self.partition_key: str = kinesis['partitionKey']
+        self.schema_version: str = kinesis['kinesisSchemaVersion']
+        self.timestamp: datetime.datetime = datetime.datetime.utcfromtimestamp(
             kinesis['approximateArrivalTimestamp'])
 
 
 class DynamoDBEvent(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         pass
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator['DynamoDBRecord']:
         for record in self._event_dict['Records']:
             yield DynamoDBRecord(record, self.context)
 
 
 class DynamoDBRecord(BaseLambdaEvent):
-    def _extract_attributes(self, event_dict):
+
+    def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         dynamodb = event_dict['dynamodb']
-        self.timestamp = datetime.datetime.utcfromtimestamp(
+        self.timestamp: datetime.datetime = datetime.datetime.utcfromtimestamp(
             dynamodb['ApproximateCreationDateTime'])
-        self.keys = dynamodb.get('Keys')
-        self.new_image = dynamodb.get('NewImage')
-        self.old_image = dynamodb.get('OldImage')
-        self.sequence_number = dynamodb['SequenceNumber']
-        self.size_bytes = dynamodb['SizeBytes']
-        self.stream_view_type = dynamodb['StreamViewType']
+        self.keys: Any = dynamodb.get('Keys')
+        self.new_image: Any = dynamodb.get('NewImage')
+        self.old_image: Any = dynamodb.get('OldImage')
+        self.sequence_number: str = dynamodb['SequenceNumber']
+        self.size_bytes: int = dynamodb['SizeBytes']
+        self.stream_view_type: str = dynamodb['StreamViewType']
         # These are from the top level keys in a record.
-        self.aws_region = event_dict['awsRegion']
-        self.event_id = event_dict['eventID']
-        self.event_name = event_dict['eventName']
-        self.event_source_arn = event_dict['eventSourceARN']
+        self.aws_region: str = event_dict['awsRegion']
+        self.event_id: str = event_dict['eventID']
+        self.event_name: str = event_dict['eventName']
+        self.event_source_arn: str = event_dict['eventSourceARN']
 
     @property
-    def table_name(self):
+    def table_name(self) -> str:
         # Converts:
         # "arn:aws:dynamodb:us-west-2:12345:table/MyTable/"
         # "stream/2020-09-28T16:49:14.209"
@@ -1968,14 +2163,15 @@ class DynamoDBRecord(BaseLambdaEvent):
 
 
 class Blueprint(DecoratorAPI):
-    def __init__(self, import_name):
+    def __init__(self, import_name: str) -> None:
         self._import_name = import_name
-        self._deferred_registrations = []
-        self._current_app = None
+        self._deferred_registrations: \
+            List[Callable[[Chalice, Dict[str, Any]], None]] = []
+        self._current_app: Optional[Chalice] = None
         self._lambda_context = None
 
     @property
-    def log(self):
+    def log(self) -> logging.Logger:
         if self._current_app is None:
             raise RuntimeError(
                 "Can only access Blueprint.log if it's registered to an app."
@@ -1983,8 +2179,9 @@ class Blueprint(DecoratorAPI):
         return self._current_app.log
 
     @property
-    def current_request(self):
-        if self._current_app is None:
+    def current_request(self) -> Request:
+        if self._current_app is None or \
+                self._current_app.current_request is None:
             raise RuntimeError(
                 "Can only access Blueprint.current_request if it's registered "
                 "to an app."
@@ -1992,7 +2189,7 @@ class Blueprint(DecoratorAPI):
         return self._current_app.current_request
 
     @property
-    def current_app(self):
+    def current_app(self) -> Chalice:
         if self._current_app is None:
             raise RuntimeError(
                 "Can only access Blueprint.current_app if it's registered "
@@ -2001,7 +2198,7 @@ class Blueprint(DecoratorAPI):
         return self._current_app
 
     @property
-    def lambda_context(self):
+    def lambda_context(self) -> 'LambdaContext':
         if self._current_app is None:
             raise RuntimeError(
                 "Can only access Blueprint.lambda_context if it's registered "
@@ -2009,7 +2206,7 @@ class Blueprint(DecoratorAPI):
             )
         return self._current_app.lambda_context
 
-    def register(self, app, options):
+    def register(self, app: Chalice, options: Dict[str, Any]) -> None:
         self._current_app = app
         all_options = options.copy()
         all_options['module_name'] = self._import_name
@@ -2026,7 +2223,8 @@ class Blueprint(DecoratorAPI):
     # call them, they're available for blueprints to use in order to avoid
     # boilerplate code.
 
-    def register_middleware(self, func, event_type='all'):
+    def register_middleware(self, func: Callable,
+                            event_type: str = 'all') -> None:
         self._deferred_registrations.append(
             # pylint: disable=protected-access
             lambda app, options: app.register_middleware(
@@ -2034,13 +2232,18 @@ class Blueprint(DecoratorAPI):
             )
         )
 
-    def _register_handler(self, handler_type, name, user_handler,
-                          wrapped_handler, kwargs, options=None):
+    def _register_handler(self, handler_type: str, name: str,
+                          user_handler: UserHandlerFuncType,
+                          wrapped_handler: Any, kwargs: Dict[str, Any],
+                          options: Optional[Dict[Any, Any]] = None
+                          ) -> None:
         # If we go through the public API (app.route, app.schedule, etc) then
         # we have to duplicate either the methods or the params in this
         # class.  We're using _register_handler as a tradeoff for cutting
         # down on the duplication.
-        def _register_blueprint_handler(app, options):
+        def _register_blueprint_handler(app: Chalice,
+                                        options: Dict[Any, Any]
+                                        ) -> None:
             if handler_type in _EVENT_CLASSES:
                 # pylint: disable=protected-access
                 wrapped_handler.middleware_handlers = \
@@ -2053,7 +2256,7 @@ class Blueprint(DecoratorAPI):
             )
         self._deferred_registrations.append(_register_blueprint_handler)
 
-    def _get_middleware_handlers(self, event_type):
+    def _get_middleware_handlers(self, event_type: str) -> List:
         # This will get filled in later during the registration process.
         return []
 
@@ -2075,18 +2278,18 @@ class Blueprint(DecoratorAPI):
 #
 #
 class ConvertToMiddleware(object):
-    def __init__(self, lambda_wrapper):
+    def __init__(self, lambda_wrapper: Callable[..., Any]) -> None:
         self._wrapper = lambda_wrapper
 
-    def __call__(self, event, get_response):
+    def __call__(self, event: Any, get_response: Callable[..., Any]) -> Any:
         original_event, context = self._extract_original_param(event)
 
         @functools.wraps(self._wrapper)
-        def wrapped(original_event, context):
+        def wrapped(original_event: Any, context: Any) -> Any:
             return get_response(event)
         return self._wrapper(wrapped)(original_event, context)
 
-    def _extract_original_param(self, event):
+    def _extract_original_param(self, event: Any) -> Tuple[Any, Optional[Any]]:
         if isinstance(event, Request):
             return event.to_original_event(), event.lambda_context
         return event.to_dict(), event.context
