@@ -228,14 +228,27 @@ def test_can_invoke_event_handler():
     @app.on_sns_message(topic='mytopic')
     def foo(event):
         return {'message': event.message,
-                'subject': event.subject}
+                'subject': event.subject,
+                'message_attributes': event.message_attributes}
 
     with Client(app) as client:
         event = client.events.generate_sns_event(message='my message',
-                                                 subject='hello')
+                                                 subject='hello',
+                                                 message_attributes={
+                                                     "my_attr": {
+                                                         'Type': 'String',
+                                                         'Value': 'some_attr'
+                                                     }
+                                                 })
         response = client.lambda_.invoke('foo', event)
         assert response.payload == {'message': 'my message',
-                                    'subject': 'hello'}
+                                    'subject': 'hello',
+                                    'message_attributes': {
+                                        "my_attr": {
+                                            'Type': 'String',
+                                            'Value': 'some_attr'
+                                        }
+                                    }}
 
 
 def test_can_generate_s3_event():

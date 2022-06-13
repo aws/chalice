@@ -14,7 +14,7 @@ import datetime
 from collections import defaultdict
 
 
-__version__: str = '1.27.0'
+__version__: str = '1.27.1'
 
 from typing import List, Dict, Any, Optional, Sequence, Union, Callable, Set, \
     Iterator, TYPE_CHECKING, Tuple
@@ -2063,8 +2063,9 @@ class SNSEvent(BaseLambdaEvent):
 
     def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         first_record = event_dict['Records'][0]
-        self.message: str = first_record['Sns']['Message']
-        self.subject: str = first_record['Sns']['Subject']
+        self.message = first_record['Sns']['Message']
+        self.subject = first_record['Sns']['Subject']
+        self.message_attributes = first_record['Sns']['MessageAttributes']
 
 
 class S3Event(BaseLambdaEvent):
