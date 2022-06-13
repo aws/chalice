@@ -497,7 +497,7 @@ class Response(object):
         self.body: Any = body
         if headers is None:
             headers = {}
-        self.headers: MultiDict = MultiDict(headers)
+        self.headers: Dict[str, str] = headers
         self.status_code = status_code
 
     def to_dict(
@@ -520,10 +520,10 @@ class Response(object):
         return response
 
     def _sort_headers(
-            self, all_headers: MultiDict
+            self, all_headers: Dict[str, str]
     ) -> Tuple[Dict[str, Any], Dict[str, List]]:
-        multi_headers = {}
-        single_headers = {}
+        multi_headers: Dict[str, List] = {}
+        single_headers: Dict[str, Any] = {}
         for name, value in all_headers.items():
             if isinstance(value, list):
                 multi_headers[name] = value
