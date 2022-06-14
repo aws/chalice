@@ -2065,9 +2065,10 @@ class SNSEvent(BaseLambdaEvent):
 
     def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         first_record = event_dict['Records'][0]
-        self.message = first_record['Sns']['Message']
-        self.subject = first_record['Sns']['Subject']
-        self.message_attributes = first_record['Sns']['MessageAttributes']
+        self.message: str = first_record['Sns']['Message']
+        self.subject: str = first_record['Sns']['Subject']
+        self.message_attributes: Dict[str, Any] = \
+            first_record['Sns']['MessageAttributes']
 
 
 class S3Event(BaseLambdaEvent):
