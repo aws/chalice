@@ -141,7 +141,7 @@ to the websocket API labeled: ``- Websocket API URL:``. The
 ``websocket-client`` package installs a command line tool called ``wsdump.py``
 which can be used to test websocket echo server::
 
-  $ wsdump.py wss://{websocket_api_id}.execute-api.region.amazonaws.com/api/
+  $ wsdump wss://{websocket_api_id}.execute-api.region.amazonaws.com/api/
   Press Ctrl+C to quit
   > foo
   < foo
