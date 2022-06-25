@@ -4,7 +4,7 @@ import base64
 import contextlib
 from types import TracebackType
 
-from typing import Optional, Type, Generator, Dict, Any, List  # noqa
+from typing import Optional, Type, Generator, Dict, Any, List, Tuple  # noqa
 
 from chalice import Chalice  # noqa
 from chalice.config import Config
@@ -321,6 +321,29 @@ class TestEventsClient(BaseClient):
                 "arn:aws:kinesis:us-east-2:123:stream/%s" % stream_name
             )
         } for body in message_bodies]
+        return {'Records': records}
+
+    def generate_dynamodb_event(self, images):
+        # type: (List[Tuple[Dict, Dict]]) -> Dict[str, Any]
+        records = [{
+            "dynamodb": {
+                "ApproximateCreationDateTime": 1545084650.987,
+                "Keys": list(new_image.keys()),
+                "NewImage": new_image,
+                "OldImage": old_image,
+                "SequenceNumber": "12345",
+                "SizeBytes": 12345,
+                "StreamViewType": "NEW_AND_OLD_IMAGES",
+            },
+            "awsRegion": "us-west-2",
+            "eventID": "da037887f71a88a1f6f4cfd149709d5a",
+            "eventName": "INSERT",
+            "eventSource": "aws:dynamodb",
+            "eventSourceARN": (
+                "arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/"
+                "2015-05-11T21:21:33.291"
+            )
+        } for new_image, old_image in images]
         return {'Records': records}
 
 

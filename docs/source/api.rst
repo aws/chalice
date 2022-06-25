@@ -1800,6 +1800,10 @@ Testing
 
       Generates a Kinesis event.
 
+   .. method:: generate_dynamodb_event(images)
+
+      Generates a DynamoDB Stream event.
+
 
 .. class:: HTTPResponse()
 

@@ -313,6 +313,29 @@ def test_can_generate_kinesis_event():
         assert response.payload == [b'foo', b'bar', b'baz']
 
 
+def test_can_generate_dynamodb_event():
+    app = Chalice('dynamodb')
+
+    @app.on_dynamodb_record(
+        stream_arn=('arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/'
+                    '2015-05-11T21:21:33.291')
+    )
+    def foo(event):
+        return [(record.new_image, record.old_image) for record in event]
+
+    old_image = {'PK': {'S': 'foo'}, 'SK': {'S': 'bar'}}
+    new_image = {'PK': {'S': 'hello'}, 'SK': {'S': 'world'}}
+
+    with Client(app) as client:
+        event = client.events.generate_dynamodb_event(
+            images=[(old_image, new_image)]
+        )
+        response = client.lambda_.invoke('foo', event)
+        assert len(response.payload) == 1
+        assert response.payload[0][0] == old_image
+        assert response.payload[0][1] == new_image
+
+
 def test_can_mix_pure_lambda_and_event_handlers():
     app = Chalice('lambda-only')
 
