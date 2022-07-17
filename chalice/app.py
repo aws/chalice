@@ -419,8 +419,7 @@ class Request(object):
             if query_params is None else MultiDict(query_params)
         self.headers: CaseInsensitiveMapping = \
             CaseInsensitiveMapping(event_dict['headers'])
-        self.uri_params: Optional[Dict[str, str]] \
-            = event_dict['pathParameters']
+        self.uri_params: Dict[str, str] = event_dict['pathParameters'] or {}
         self.method: str = event_dict['requestContext']['httpMethod']
         self._is_base64_encoded = event_dict.get('isBase64Encoded', False)
         self._body: Any = event_dict['body']
@@ -1857,12 +1856,17 @@ class RestAPIEventHandler(BaseLambdaHandler):
         return response.to_dict(self.api.binary_types)
 
     def _main_rest_api_handler(self, event: Any, context: Any) -> Response:
-        resource_path = event.get('requestContext', {}).get('resourcePath')
-        if resource_path is None:
-            return error_response(error_code='InternalServerError',
-                                  message='Unknown request.',
-                                  http_status_code=500)
-        http_method = event['requestContext']['httpMethod']
+        current_request: Optional[Request] = self.current_request
+        if current_request:
+            resource_path = current_request.path
+            http_method = current_request.method
+        else:
+            resource_path = event.get('requestContext', {}).get('resourcePath')
+            if resource_path is None:
+                return error_response(error_code='InternalServerError',
+                                      message='Unknown request.',
+                                      http_status_code=500)
+            http_method = event['requestContext']['httpMethod']
         if http_method not in self.routes[resource_path]:
             allowed_methods = ', '.join(self.routes[resource_path].keys())
             return error_response(
@@ -1872,8 +1876,12 @@ class RestAPIEventHandler(BaseLambdaHandler):
                 headers={'Allow': allowed_methods})
         route_entry = self.routes[resource_path][http_method]
         view_function = route_entry.view_function
-        function_args = {name: event['pathParameters'][name]
-                         for name in route_entry.view_args}
+        if current_request:
+            function_args = {name: current_request.uri_params[name]
+                             for name in route_entry.view_args}
+        else:
+            function_args = {name: event['pathParameters'][name]
+                             for name in route_entry.view_args}
         self.lambda_context = context
         # We're getting the CORS headers before validation to be able to
         # output desired headers with
@@ -1883,8 +1891,8 @@ class RestAPIEventHandler(BaseLambdaHandler):
         # We're doing the header validation after creating the request
         # so can leverage the case insensitive dict that the Request class
         # uses for headers.
-        if self.current_request and route_entry.content_types:
-            content_type = self.current_request.headers.get(
+        if current_request and route_entry.content_types:
+            content_type = current_request.headers.get(
                 'content-type', 'application/json')
             if not _matches_content_type(content_type,
                                          route_entry.content_types):
@@ -1900,8 +1908,8 @@ class RestAPIEventHandler(BaseLambdaHandler):
             self._add_cors_headers(response, cors_headers)
 
         response_headers = CaseInsensitiveMapping(response.headers)
-        if self.current_request and not self._validate_binary_response(
-                self.current_request.headers, response_headers):
+        if current_request and not self._validate_binary_response(
+                current_request.headers, response_headers):
             content_type = response_headers.get('content-type', '')
             return error_response(
                 error_code='BadRequest',
