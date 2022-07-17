@@ -2224,14 +2224,14 @@ class Blueprint(DecoratorAPI):
     def _register_handler(self, handler_type: str, name: str,
                           user_handler: UserHandlerFuncType,
                           wrapped_handler: Any, kwargs: Dict[str, Any],
-                          unused: Optional[Dict[Any, Any]] = None
+                          options: Optional[Dict[Any, Any]] = None
                           ) -> None:
         # If we go through the public API (app.route, app.schedule, etc) then
         # we have to duplicate either the methods or the params in this
         # class.  We're using _register_handler as a tradeoff for cutting
         # down on the duplication.
         def _register_blueprint_handler(app: Chalice,
-                                        options: Dict[Any, Any]
+                                        register_options: Dict[Any, Any]
                                         ) -> None:
             if handler_type in _EVENT_CLASSES:
                 # noinspection PyProtectedMember
@@ -2243,7 +2243,7 @@ class Blueprint(DecoratorAPI):
             # pylint: disable=protected-access
             app._register_handler(
                 handler_type, name, user_handler, wrapped_handler,
-                kwargs, options
+                kwargs, register_options
             )
         self._deferred_registrations.append(_register_blueprint_handler)
 
