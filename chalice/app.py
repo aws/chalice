@@ -2009,7 +2009,7 @@ class BaseLambdaEvent(object):
 # have a consistent interface that takes a single event arg.
 class LambdaFunctionEvent(BaseLambdaEvent):
     def __init__(self, event_dict: Dict[str, Any], context: Any) -> None:
-        super(BaseLambdaEvent, self).__init__(event_dict, context)
+        super(LambdaFunctionEvent, self).__init__(event_dict, context)
         self.event: Dict[str, Any] = event_dict
 
     def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
