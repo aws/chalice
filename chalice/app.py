@@ -47,7 +47,7 @@ except ImportError:
     from collections import MutableMapping
 
     # This is borrowed from botocore/compat.py
-    def unquote_str(value, encoding='utf-8'):  # type: ignore
+    def unquote_str(value: str, encoding='utf-8') -> str:
         # In python2, unquote() gives us a string back that has the urldecoded
         # bits, but not the unicode parts.  We need to decode this manually.
         # unquote has special logic in which if it receives a unicode object it
@@ -55,7 +55,7 @@ except ImportError:
         # encode the string with the passed in encoding before trying to
         # unquote it.
         byte_string = value.encode(encoding)
-        return unquote_plus(byte_string).decode(encoding)
+        return unquote_plus(byte_string).decode(encoding)  # type: ignore
     # In python 2 there is a base class for the string types that we can check
     # for. It was removed in python 3 so it will cause a name error.
     _ANY_STRING = (basestring, bytes)  # type: ignore # noqa pylint: disable=E0602
@@ -984,8 +984,6 @@ class _HandlerRegistration(object):
                              user_handler: UserHandlerFuncType,
                              wrapped_handler: Callable[..., Any], kwargs: Any,
                              options: Dict[Any, Any] = None) -> None:
-        url_prefix = None
-        name_prefix = None
         module_name = 'app'
         if options is not None:
             name_prefix = options.get('name_prefix')
@@ -1782,14 +1780,9 @@ class WebsocketEventSourceHandler(EventSourceHandler):
                  event_class: Any, websocket_api: WebsocketAPI,
                  middleware_handlers: Optional[List[Callable[..., Any]]] = None
                  ) -> None:
-        self.func: Callable[..., Any] = func
-        self.event_class: Any = event_class
+        super(WebsocketEventSourceHandler, self).__init__(func, event_class,
+                                                          middleware_handlers)
         self.websocket_api: WebsocketAPI = websocket_api
-        if middleware_handlers is None:
-            middleware_handlers = []
-        self._middleware_handlers: \
-            List[Callable[..., Any]] = middleware_handlers
-        self.handler = None
 
     def __call__(self, event: Dict[str, Any],
                  context: Dict[str, Any]) -> Dict[str, Any]:
@@ -1846,7 +1839,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         return None
 
     def __call__(self, event: Any, context: Any) -> Any:
-        def wrapped_event(request: Request) -> Response:
+        def wrapped_event(unused: Request) -> Response:
             return self._main_rest_api_handler(event, context)
 
         final_handler = self._build_middleware_handlers(
@@ -2016,14 +2009,11 @@ class BaseLambdaEvent(object):
 # have a consistent interface that takes a single event arg.
 class LambdaFunctionEvent(BaseLambdaEvent):
     def __init__(self, event_dict: Dict[str, Any], context: Any) -> None:
+        super(BaseLambdaEvent, self).__init__(event_dict, context)
         self.event: Dict[str, Any] = event_dict
-        self.context: Optional[Dict[str, Any]] = context
 
     def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         pass
-
-    def to_dict(self) -> Dict[str, Any]:
-        return self.event
 
 
 class CloudWatchEvent(BaseLambdaEvent):
@@ -2226,7 +2216,6 @@ class Blueprint(DecoratorAPI):
     def register_middleware(self, func: Callable,
                             event_type: str = 'all') -> None:
         self._deferred_registrations.append(
-            # pylint: disable=protected-access
             lambda app, options: app.register_middleware(
                 func, event_type
             )
@@ -2235,7 +2224,7 @@ class Blueprint(DecoratorAPI):
     def _register_handler(self, handler_type: str, name: str,
                           user_handler: UserHandlerFuncType,
                           wrapped_handler: Any, kwargs: Dict[str, Any],
-                          options: Optional[Dict[Any, Any]] = None
+                          unused: Optional[Dict[Any, Any]] = None
                           ) -> None:
         # If we go through the public API (app.route, app.schedule, etc) then
         # we have to duplicate either the methods or the params in this
@@ -2245,10 +2234,12 @@ class Blueprint(DecoratorAPI):
                                         options: Dict[Any, Any]
                                         ) -> None:
             if handler_type in _EVENT_CLASSES:
+                # noinspection PyProtectedMember
                 # pylint: disable=protected-access
                 wrapped_handler.middleware_handlers = \
                     app._get_middleware_handlers(
                         _MIDDLEWARE_MAPPING[handler_type])
+            # noinspection PyProtectedMember
             # pylint: disable=protected-access
             app._register_handler(
                 handler_type, name, user_handler, wrapped_handler,
@@ -2285,7 +2276,7 @@ class ConvertToMiddleware(object):
         original_event, context = self._extract_original_param(event)
 
         @functools.wraps(self._wrapper)
-        def wrapped(original_event: Any, context: Any) -> Any:
+        def wrapped(unused: Any, unused_: Any) -> Any:
             return get_response(event)
         return self._wrapper(wrapped)(original_event, context)
 
