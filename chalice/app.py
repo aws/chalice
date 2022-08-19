@@ -1817,7 +1817,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         return None
 
     def __call__(self, event: Any, context: Any) -> Any:
-        def wrapped_event(unused: Request) -> Response:
+        def wrapped_event(request: Request) -> Response:
             return self._main_rest_api_handler(event, context)
 
         final_handler = self._build_middleware_handlers(
@@ -1987,11 +1987,14 @@ class BaseLambdaEvent(object):
 # have a consistent interface that takes a single event arg.
 class LambdaFunctionEvent(BaseLambdaEvent):
     def __init__(self, event_dict: Dict[str, Any], context: Any) -> None:
-        super(LambdaFunctionEvent, self).__init__(event_dict, context)
         self.event: Dict[str, Any] = event_dict
+        self.context: Optional[Dict[str, Any]] = context
 
     def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         pass
+
+    def to_dict(self) -> Dict[str, Any]:
+        return self.event
 
 
 class CloudWatchEvent(BaseLambdaEvent):
@@ -2209,19 +2212,17 @@ class Blueprint(DecoratorAPI):
         # class.  We're using _register_handler as a tradeoff for cutting
         # down on the duplication.
         def _register_blueprint_handler(app: Chalice,
-                                        register_options: Dict[Any, Any]
+                                        options: Dict[Any, Any]
                                         ) -> None:
             if handler_type in _EVENT_CLASSES:
-                # noinspection PyProtectedMember
                 # pylint: disable=protected-access
                 wrapped_handler.middleware_handlers = \
                     app._get_middleware_handlers(
                         _MIDDLEWARE_MAPPING[handler_type])
-            # noinspection PyProtectedMember
             # pylint: disable=protected-access
             app._register_handler(
                 handler_type, name, user_handler, wrapped_handler,
-                kwargs, register_options
+                kwargs, options
             )
         self._deferred_registrations.append(_register_blueprint_handler)
 
@@ -2254,7 +2255,7 @@ class ConvertToMiddleware(object):
         original_event, context = self._extract_original_param(event)
 
         @functools.wraps(self._wrapper)
-        def wrapped(unused: Any, unused_: Any) -> Any:
+        def wrapped(original_event: Any, context: Any) -> Any:
             return get_response(event)
         return self._wrapper(wrapped)(original_event, context)
 
