@@ -26,7 +26,7 @@ install_requires = [
     'mypy-extensions==0.4.3',
     'six>=1.10.0,<2.0.0',
     'pip>=9,<22.3',
-    'attrs>=19.3.0,<21.5.0',
+    'attrs>=19.3.0,<22.2.0',
     'jmespath>=0.9.3,<2.0.0',
     'pyyaml>=5.3.1,<7.0.0',
     'inquirer>=2.7.0,<3.0.0',
