@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Terraform",
+  "description": "Update aws provider constraint to allow versions 4.x (#1951)"
+}
