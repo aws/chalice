@@ -13,6 +13,14 @@ import functools
 import datetime
 from collections import defaultdict
 
+# Implementation note:  This file is intended to be a standalone file
+# that gets copied into the lambda deployment package.  It has no dependencies
+# on other parts of chalice, so it can stay small and lightweight, with minimal
+# startup overhead.
+from urllib.parse import unquote_plus
+from collections.abc import Mapping
+from collections.abc import MutableMapping
+
 
 __version__: str = '1.27.1'
 
@@ -26,39 +34,9 @@ _PARAMS = re.compile(r'{\w+}')
 MiddlewareFuncType = Callable[[Any, Callable[[Any], Any]], Any]
 UserHandlerFuncType = Callable[..., Any]
 
-# Implementation note:  This file is intended to be a standalone file
-# that gets copied into the lambda deployment package.  It has no dependencies
-# on other parts of chalice so it can stay small and lightweight, with minimal
-# startup overhead.  This also means we need to handle py2/py3 compat issues
-# directly in this file instead of copying over compat.py
-try:
-    from urllib.parse import unquote_plus
-    from collections.abc import Mapping
-    from collections.abc import MutableMapping
-
-    unquote_str = unquote_plus
-
-    # In python 3 string and bytes are different so we explicitly check
-    # for both.
-    _ANY_STRING = (str, bytes)
-except ImportError:
-    from urllib import unquote_plus  # type: ignore
-    from collections import Mapping
-    from collections import MutableMapping
-
-    # This is borrowed from botocore/compat.py
-    def unquote_str(value, encoding='utf-8'):  # type: ignore
-        # In python2, unquote() gives us a string back that has the urldecoded
-        # bits, but not the unicode parts.  We need to decode this manually.
-        # unquote has special logic in which if it receives a unicode object it
-        # will decode it to latin1.  This is hard coded.  To avoid this, we'll
-        # encode the string with the passed in encoding before trying to
-        # unquote it.
-        byte_string = value.encode(encoding)
-        return unquote_plus(byte_string).decode(encoding)
-    # In python 2 there is a base class for the string types that we can check
-    # for. It was removed in python 3 so it will cause a name error.
-    _ANY_STRING = (basestring, bytes)  # type: ignore # noqa pylint: disable=E0602
+# In python 3 string and bytes are different so we explicitly check
+# for both.
+_ANY_STRING = (str, bytes)
 
 
 def handle_extra_types(
@@ -984,8 +962,6 @@ class _HandlerRegistration(object):
                              user_handler: UserHandlerFuncType,
                              wrapped_handler: Callable[..., Any], kwargs: Any,
                              options: Dict[Any, Any] = None) -> None:
-        url_prefix = None
-        name_prefix = None
         module_name = 'app'
         if options is not None:
             name_prefix = options.get('name_prefix')
@@ -1782,14 +1758,9 @@ class WebsocketEventSourceHandler(EventSourceHandler):
                  event_class: Any, websocket_api: WebsocketAPI,
                  middleware_handlers: Optional[List[Callable[..., Any]]] = None
                  ) -> None:
-        self.func: Callable[..., Any] = func
-        self.event_class: Any = event_class
+        super(WebsocketEventSourceHandler, self).__init__(func, event_class,
+                                                          middleware_handlers)
         self.websocket_api: WebsocketAPI = websocket_api
-        if middleware_handlers is None:
-            middleware_handlers = []
-        self._middleware_handlers: \
-            List[Callable[..., Any]] = middleware_handlers
-        self.handler = None
 
     def __call__(self, event: Dict[str, Any],
                  context: Dict[str, Any]) -> Dict[str, Any]:
@@ -2075,7 +2046,7 @@ class S3Event(BaseLambdaEvent):
     def _extract_attributes(self, event_dict: Dict[str, Any]) -> None:
         s3 = event_dict['Records'][0]['s3']
         self.bucket: str = s3['bucket']['name']
-        self.key: str = unquote_str(s3['object']['key'])
+        self.key: str = unquote_plus(s3['object']['key'])
 
 
 class SQSEvent(BaseLambdaEvent):
@@ -2226,7 +2197,6 @@ class Blueprint(DecoratorAPI):
     def register_middleware(self, func: Callable,
                             event_type: str = 'all') -> None:
         self._deferred_registrations.append(
-            # pylint: disable=protected-access
             lambda app, options: app.register_middleware(
                 func, event_type
             )
