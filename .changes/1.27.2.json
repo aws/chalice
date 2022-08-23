@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Terraform",
+      "description": "Update aws provider constraint to allow versions 4.x (#1951)"
+    },
+    {
+      "type": "enhancement",
+      "category": "event-source",
+      "description": "Add attribute for message attributes in SNSEvent and generated test events (#1934)"
+    }
+  ]
+}

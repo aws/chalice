@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.27.2
+======
+
+* enhancement:Terraform:Update aws provider constraint to allow versions 4.x (#1951)
+* enhancement:event-source:Add attribute for message attributes in SNSEvent and generated test events (#1934)
+
+
 1.27.1
 ======
 
