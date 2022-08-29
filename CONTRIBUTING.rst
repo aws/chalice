@@ -94,6 +94,12 @@ If you'd like to just build the docs, install ``requirements-docs.txt``::
     $ pip install -r requirements-docs.txt
 
 
+Also you can use Docker for local development::
+
+    $ docker build -t chalice .
+    $ docker run -v `PWD`:/chalice -it --rm chalice bash
+
+
 Running Tests
 -------------
 
