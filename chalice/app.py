@@ -787,7 +787,8 @@ class DecoratorAPI(object):
             registration_kwargs={'event_pattern': event_pattern}
         )
 
-    def schedule(self, expression: str, name: Optional[str] = None,
+    def schedule(self, expression: Union[str, 'ScheduleExpression'],
+                 name: Optional[str] = None,
                  description: str = '') -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='schedule',
