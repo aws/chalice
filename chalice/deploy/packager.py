@@ -389,7 +389,7 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
         # i.e remove that LambdaLayer model from the app.
         with self._osutils.open_zip(package_filename,
                                     'r', self._osutils.ZIP_DEFLATED) as z:
-            total_size = sum([f.file_size for f in z.infolist()])
+            total_size = sum(f.file_size for f in z.infolist())
             # We have to check the total archive size, Lambda will still error
             # out if you have a zip file with all empty files.  It's not enough
             # to check if the zipfile is empty.

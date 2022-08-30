@@ -36,8 +36,8 @@ class TLSVersion(enum.Enum):
         return None
 
 
-Type = TypeVar('Type')
-DV = Union[Placeholder, Type]
+T = TypeVar('T')
+DV = Union[Placeholder, T]
 StrMap = Dict[str, str]
 
 

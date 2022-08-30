@@ -756,7 +756,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 {'CertificateArn': domain_name.certificate_arn,
                  'EndpointType': 'REGIONAL'},
             ]
-        }
+        }  # type: Dict[str, Any]
         if domain_name.tags:
             properties['Tags'] = domain_name.tags
         template['Resources'][cfn_name] = {
@@ -1655,11 +1655,10 @@ class YAMLTemplateSerializer(TemplateSerializer):
         # type: (yaml.SafeLoader, Node) -> Any
         if node.tag[1:] == 'GetAtt' and isinstance(node.value,
                                                    six.string_types):
-            value = node.value.split('.', 1)
+            return node.value.split('.', 1)
         elif isinstance(node, ScalarNode):
-            value = loader.construct_scalar(node)
+            return loader.construct_scalar(node)
         elif isinstance(node, SequenceNode):
-            value = loader.construct_sequence(node)
+            return loader.construct_sequence(node)
         else:
-            value = loader.construct_mapping(node)
-        return value
+            return loader.construct_mapping(node)

@@ -26,7 +26,6 @@ echo
 echo
 python3 -m pip install -e .
 python3 -m pip install -r requirements-dev.txt
-python3 -m pip install -r requirements-docs.txt
 
 
 # Don't allow docs to be deployed if there's any errors.

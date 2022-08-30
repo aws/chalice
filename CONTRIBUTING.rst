@@ -89,11 +89,6 @@ adding new features, install ``requirements-dev.txt``::
     $ pip install -r requirements-dev.txt
 
 
-If you'd like to just build the docs, install ``requirements-docs.txt``::
-
-    $ pip install -r requirements-docs.txt
-
-
 Running Tests
 -------------
 

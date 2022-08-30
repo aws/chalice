@@ -30,14 +30,6 @@ unsafe-load-any-extension=no
 # run arbitrary code
 extension-pkg-whitelist=
 
-# Allow optimization of some AST trees. This will activate a peephole AST
-# optimizer, which will apply various small optimizations. For instance, it can
-# be used to obtain the result of joining multiple strings with the addition
-# operator. Joining a lot of strings can lead to a maximum recursion error in
-# Pylint and this flag can prevent that. It has one side effect, the resulting
-# AST will be different than the one from reality.
-optimize-ast=no
-
 
 [MESSAGES CONTROL]
 
@@ -59,7 +51,7 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=R0201,W0613,I0021,I0020,C0111,W1618,W1619,R0902,R0903,W0231,W0611,R0913,W0703,C0330,R0204,I0011,R0904,R0205,R1705,R1710,W0403,C0415,R1725,W0707,R1732,W1512,C0209,W1514
+disable=W0613,I0021,I0020,C0111,R0902,R0903,W0231,W0611,R0913,W0703,I0011,R0904,R0205,R1705,R1710,C0415,R1725,W0707,R1732,W1512,C0209,W1514
 
 
 [REPORTS]
@@ -68,11 +60,6 @@ disable=R0201,W0613,I0021,I0020,C0111,W1618,W1619,R0902,R0903,W0231,W0611,R0913,
 # (visual studio) and html. You can also give a reporter class, eg
 # mypackage.mymodule.MyReporterClass.
 output-format=text
-
-# Put messages in a separate file for each module / package specified on the
-# command line instead of printing them on stdout. Reports (if any) will be
-# written in a file name "pylint_global.[txt|html]".
-files-output=no
 
 # Tells whether to display a full report or only the messages
 reports=no
@@ -91,9 +78,6 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 
 [BASIC]
 
-# List of builtins function names that should not be used, separated by a comma
-bad-functions=apply,reduce
-
 # Good variable names which should always be accepted, separated by a comma
 good-names=e,i,j,k,n,ex,Run,_
 
@@ -110,64 +94,34 @@ include-naming-hint=no
 # Regular expression matching correct function names
 function-rgx=[a-z_][a-z0-9_]{2,50}$
 
-# Naming hint for function names
-function-name-hint=[a-z_][a-z0-9_]{2,30}$
-
 # Regular expression matching correct variable names
 variable-rgx=[a-z_][a-z0-9_]{0,50}$
-
-# Naming hint for variable names
-variable-name-hint=[a-z_][a-z0-9_]{2,40}$
 
 # Regular expression matching correct constant names
 const-rgx=(([a-zA-Z_][a-zA-Z0-9_]*)|(__.*__))$
 
-# Naming hint for constant names
-const-name-hint=(([A-Z_][A-Z0-9_]*)|(__.*__))$
-
 # Regular expression matching correct attribute names
 attr-rgx=[a-z_][a-z0-9_]{1,50}$
-
-# Naming hint for attribute names
-attr-name-hint=[a-z_][a-z0-9_]{2,40}$
 
 # Regular expression matching correct argument names
 argument-rgx=[a-z_][a-z0-9_]{0,50}$
 
-# Naming hint for argument names
-argument-name-hint=[a-z_][a-z0-9_]{2,40}$
-
 # Regular expression matching correct class attribute names
 class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,40}|(__.*__))$
-
-# Naming hint for class attribute names
-class-attribute-name-hint=([A-Za-z_][A-Za-z0-9_]{2,40}|(__.*__))$
 
 # Regular expression matching correct inline iteration names
 inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
 
-# Naming hint for inline iteration names
-inlinevar-name-hint=[A-Za-z_][A-Za-z0-9_]*$
-
 # Regular expression matching correct class names
 class-rgx=[A-Z_][a-zA-Z0-9]+$
 
-# Naming hint for class names
-class-name-hint=[A-Z_][a-zA-Z0-9]+$
-
 # Regular expression matching correct module names
 module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
-
-# Naming hint for module names
-module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
 
 # Regular expression matching correct method names
 # Allow for the ast visitor method names of visit_CamelCase.
 # Allow for do_HTTPMETHOD used in chalice local.
 method-rgx=([a-z_][a-z0-9_]{2,50}|visit_[a-zA-Z]+|do_[A-Z]+)$
-
-# Naming hint for method names
-method-name-hint=[a-z_][a-z0-9_]{2,40}$
 
 # Regular expression which should only match function or class names that do
 # not require a docstring.
@@ -189,9 +143,6 @@ ignore-long-lines=^\s*(# )?<?https?://\S+>?$
 # Allow the body of an if to be on the same line as the test if there is no
 # else.
 single-line-if-stmt=no
-
-# List of optional constructs for which whitespace checking is disabled
-no-space-check=trailing-comma,dict-separator
 
 # Maximum number of lines in a module
 max-module-lines=1000
