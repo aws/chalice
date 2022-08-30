@@ -7,6 +7,7 @@ from typing import ( # noqa
     Union,
     Sequence,
     cast,
+    NoReturn,
 )
 
 from chalice.config import Config, DeployedResources  # noqa
@@ -370,10 +371,10 @@ class ResourceSweeper(object):
             'message': msg
         }
 
-    def _default_delete(self, resource_values):
-        # type: (Dict[str, Any]) -> None
+    def _default_delete(self, *resource_values):
+        # type: (Any) -> NoReturn
         err_msg = "Sweeper encountered an unknown resource: %s" % \
-                  resource_values
+                  str(resource_values)
         raise RuntimeError(err_msg)
 
     def _update_plan(self, instructions, message=None, insert=False):

@@ -4,18 +4,19 @@ pylint<3.0.0
 websocket-client<2.0.0
 hypothesis
 coverage
-doc8
+doc8<1.0.0
 pydocstyle
 flake8
 pytest-cov
 requests
-# Sphinx doesn't support 0.18.x yet.
-docutils<0.18.0
-# There are some py3 specific changes we'll need
-# to make before we can upgrade mypy, so we're holding
-# off on upgrading this for now.
-mypy==0.812
-mypy-extensions
+Sphinx==4.3.2
+docutils
+mypy
+typing-extensions
 wheel
 pygments
 mock
+types-six
+types-python-dateutil
+types-PyYAML
+attrs<21.5.0

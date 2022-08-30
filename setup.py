@@ -23,7 +23,7 @@ install_requires = [
     'click>=7,<9.0',
     'botocore>=1.14.0,<2.0.0',
     'typing==3.6.4;python_version<"3.7"',
-    'mypy-extensions==0.4.3',
+    'typing-extensions>=4.0.0,<5.0.0',
     'six>=1.10.0,<2.0.0',
     'pip>=9,<22.3',
     'attrs>=19.3.0,<21.5.0',

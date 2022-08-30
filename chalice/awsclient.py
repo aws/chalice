@@ -35,7 +35,7 @@ from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError
 from botocore.vendored.requests.exceptions import ReadTimeout as \
     RequestsReadTimeout
-from mypy_extensions import TypedDict
+from typing_extensions import TypedDict
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
