@@ -97,7 +97,8 @@ def get_files_to_change():
     # * Tuple[str, str] - regex to search, replacement string
     # * Callable[[str, str], str] - function to handle custom logic
     files_with_version_numbers = {
-        'chalice/app.py': ("__version__ = '.*'", "__version__ = '{version}'"),
+        'chalice/app.py': (
+            "__version__: str = '.*'", "__version__: str = '{version}'"),
         'CHANGELOG.rst': update_changelog,
         'docs/source/conf.py': update_doc_conf,
         'setup.py': ("version='(.*)'", "version='{version}'"),

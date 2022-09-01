@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "Versioning",
+  "description": "Fix version string updates used in the release process (#1971)"
+}
