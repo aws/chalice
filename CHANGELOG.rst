@@ -2,6 +2,12 @@
 CHANGELOG
 =========
 
+1.27.3
+======
+
+* bugfix:Versioning:Fix version string updates used in the release process (#1971)
+
+
 1.27.2
 ======
 

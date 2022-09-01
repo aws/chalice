@@ -1,0 +1,10 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "bugfix",
+      "category": "Versioning",
+      "description": "Fix version string updates used in the release process (#1971)"
+    }
+  ]
+}
