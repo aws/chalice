@@ -315,6 +315,10 @@ class LocalGatewayAuthorizer(object):
         authorizer = route_entry.authorizer
         if not authorizer:
             return lambda_event, lambda_context
+
+        auth_header = authorizer.config.header.lower()\
+            if authorizer.config else "authorization"
+
         # If authorizer is Cognito then try to parse the JWT and simulate an
         # APIGateway validated request
         if isinstance(authorizer, CognitoUserPoolAuthorizer):
@@ -356,8 +360,10 @@ class LocalGatewayAuthorizer(object):
             )
             return lambda_event, lambda_context
         arn = self._arn_builder.build_arn(method, raw_path)
-        auth_event = self._prepare_authorizer_event(arn, lambda_event,
-                                                    lambda_context)
+        auth_event = self._prepare_authorizer_event(arn,
+                                                    lambda_event,
+                                                    lambda_context,
+                                                    auth_header)
         auth_result = authorizer(auth_event, lambda_context)
         if auth_result is None:
             raise InvalidAuthorizerError(
@@ -417,14 +423,15 @@ class LocalGatewayAuthorizer(object):
         lambda_event['requestContext']['authorizer'] = auth_context
         return lambda_event
 
-    def _prepare_authorizer_event(self, arn, lambda_event, lambda_context):
-        # type: (str, EventType, LambdaContext) -> EventType
+    def _prepare_authorizer_event(self, arn, lambda_event, lambda_context,
+                                  auth_header='authorization'):
+        # type: (str, EventType, LambdaContext, str) -> EventType
         """Translate event for an authorizer input."""
         authorizer_event = lambda_event.copy()
         authorizer_event['type'] = 'TOKEN'
         try:
             authorizer_event['authorizationToken'] = authorizer_event.get(
-                'headers', {})['authorization']
+                'headers', {})[auth_header]
         except KeyError:
             raise NotAuthorizedError(
                 {'x-amzn-RequestId': lambda_context.aws_request_id,
