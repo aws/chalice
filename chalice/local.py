@@ -9,6 +9,7 @@ import threading
 import time
 import uuid
 import base64
+import json
 import functools
 import warnings
 from collections import namedtuple
@@ -175,6 +176,22 @@ class LambdaEventConverter(object):
         # type: (Dict[str,Any]) -> bool
         return headers.get('content-type', '') in self._binary_types
 
+    def _get_local_context(self, headers):
+        # type: (Dict[str,Any]) -> Any
+        local_context = headers.pop('local-request-context', "")
+        if not local_context:
+            return None
+        try:
+            local_context = json.loads(local_context)
+            local_context.pop('httpMethod', None)
+            local_context.pop('resourcePath', None)
+            return local_context
+        except ValueError:
+            raise InvaldLocalConextHeader(
+                {'x-amzn-ErrorType': 'InvaldLocalConextHeader'},
+                (b'{"Message": '
+                 b'"Invalid json format for local-request-context header"}'))
+
     def create_lambda_event(self, method, path, headers, body=None):
         # type: (str, str, Dict[str, str], bytes) -> EventType
         view_route = self._route_matcher.match_route(path)
@@ -191,6 +208,9 @@ class LambdaEventConverter(object):
             'pathParameters': view_route.captured,
             'stageVariables': {},
         }
+        local_context = self._get_local_context(headers)
+        if local_context:
+            event['requestContext'].update(local_context)
         if view_route.query_params:
             event['multiValueQueryStringParameters'] = view_route.query_params
         else:
@@ -224,6 +244,10 @@ class ForbiddenError(LocalGatewayException):
 
 class NotAuthorizedError(LocalGatewayException):
     CODE = 401
+
+
+class InvaldLocalConextHeader(LocalGatewayException):
+    CODE = 400
 
 
 class LambdaContext(object):

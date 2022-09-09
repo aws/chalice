@@ -19,6 +19,7 @@ from chalice.local import LocalGateway
 from chalice.local import LocalGatewayAuthorizer
 from chalice.local import NotAuthorizedError
 from chalice.local import ForbiddenError
+from chalice.local import InvaldLocalConextHeader
 from chalice.local import InvalidAuthorizerError
 from chalice.local import LocalDevServer
 
@@ -644,6 +645,39 @@ def test_can_create_lambda_event():
         'body': None,
         'stageVariables': {},
     }
+
+
+def test_lambda_event_contains_local_request_context():
+    converter = local.LambdaEventConverter(
+        local.RouteMatcher(['/foo/bar']))
+    event = converter.create_lambda_event(
+        method='GET',
+        path='/foo/bar',
+        headers={
+            'content-type': 'application/json',
+            'local-request-context':
+                '{"identity":{"cognitoIdentityId":"test"}}'
+        }
+    )
+
+    cognito_identity_id = event.get('requestContext').\
+        get('identity', {}).get('cognitoIdentityId')
+    assert cognito_identity_id == 'test'
+
+
+def test_lambda_event_deny_error_local_request_context():
+    converter = local.LambdaEventConverter(
+        local.RouteMatcher(['/foo/bar']))
+    with pytest.raises(InvaldLocalConextHeader):
+        converter.create_lambda_event(
+            method='GET',
+            path='/foo/bar',
+            headers={
+                'content-type': 'application/json',
+                'local-request-context':
+                    '{"identity":{"cognitoIdentityId":**wrongformat**"test"}}'
+            }
+        )
 
 
 def test_parse_query_string():
