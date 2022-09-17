@@ -16,6 +16,10 @@ class FunctionNotFoundError(Exception):
     pass
 
 
+class InvalidDynamoStreamViewType(Exception):
+    pass
+
+
 class Client(object):
     def __init__(self, app, stage_name='dev', project_dir='.'):
         # type: (Chalice, str, str) -> None
@@ -323,27 +327,42 @@ class TestEventsClient(BaseClient):
         } for body in message_bodies]
         return {'Records': records}
 
-    def generate_dynamodb_event(self, images):
-        # type: (List[Tuple[Dict, Dict]]) -> Dict[str, Any]
-        records = [{
-            "dynamodb": {
-                "ApproximateCreationDateTime": 1545084650.987,
-                "Keys": list(new_image.keys()),
-                "NewImage": new_image,
-                "OldImage": old_image,
-                "SequenceNumber": "12345",
-                "SizeBytes": 12345,
-                "StreamViewType": "NEW_AND_OLD_IMAGES",
-            },
-            "awsRegion": "us-west-2",
-            "eventID": "da037887f71a88a1f6f4cfd149709d5a",
-            "eventName": "INSERT",
-            "eventSource": "aws:dynamodb",
-            "eventSourceARN": (
-                "arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/"
-                "2015-05-11T21:21:33.291"
-            )
-        } for new_image, old_image in images]
+    def generate_dynamodb_event(self, images, view_type="NEW_AND_OLD_IMAGES"):
+        # type: (List[Tuple[Dict, Dict]], str) -> Dict[str, Any]
+        # KEYS_ONLY/NEW_IMAGE/OLD_IMAGE / NEW_AND_OLD_IMAGES
+        def construct_record(old_image, new_image):
+            record = {
+                "dynamodb": {
+                    "ApproximateCreationDateTime": 1545084650.987,
+                    "SequenceNumber": "12345",
+                    "SizeBytes": 12345,
+                    "StreamViewType": view_type,
+                },
+                "awsRegion": "us-west-2",
+                "eventID": "da037887f71a88a1f6f4cfd149709d5a",
+                "eventName": "INSERT",
+                "eventSource": "aws:dynamodb",
+                "eventSourceARN": (
+                    "arn:aws:dynamodb:us-west-2:12345:table/MyTable/stream/"
+                    "2015-05-11T21:21:33.291"
+                )
+            }
+
+            if view_type == "KEYS_ONLY":
+                record["dynamodb"]["Keys"] = list(new_image.keys())
+            elif view_type == "NEW_IMAGE":
+                record["dynamodb"]["NewImage"] = new_image
+            elif view_type == "OLD_IMAGE":
+                record["dynamodb"]["OldImage"] = old_image
+            elif view_type == "NEW_AND_OLD_IMAGES":
+                record["dynamodb"]["NewImage"] = new_image
+                record["dynamodb"]["OldImage"] = old_image
+            else:
+                raise InvalidDynamoStreamViewType(view_type)
+
+            return record
+
+        records = [construct_record(old_image, new_image) for old_image, new_image in images]
         return {'Records': records}
 
 
