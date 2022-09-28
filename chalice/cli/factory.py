@@ -175,6 +175,7 @@ class CLIFactory(object):
                         user_provided_params=user_provided_params,
                         config_from_disk=config_from_disk,
                         default_params=default_params)
+        os.environ.update(config.environment_variables)
         user_provided_params['chalice_app'] = functools.partial(
             self.load_chalice_app, config.environment_variables)
         return config
