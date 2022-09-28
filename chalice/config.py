@@ -7,6 +7,7 @@ from chalice import __version__ as current_chalice_version
 from chalice.app import Chalice  # noqa
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import DEFAULT_HANDLER_NAME
+from chalice.constants import DEFAULT_LAMBDA_NAME_PREFIX_CONVENTION
 
 
 StrMap = Dict[str, Any]
@@ -431,7 +432,10 @@ class Config(object):
     def _upgrade_deployed_values(self, chalice_stage_name, data):
         # type: (str, Any) -> DeployedResources
         deployed = data[chalice_stage_name]
-        prefix = '%s-%s-' % (self.app_name, chalice_stage_name)
+        prefix = DEFAULT_LAMBDA_NAME_PREFIX_CONVENTION.format(
+            app_name=self.app_name,
+            chalice_stage=chalice_stage_name,
+        )
         resources = []  # type: List[Dict[str, Any]]
         self._upgrade_lambda_functions(resources, deployed, prefix)
         self._upgrade_rest_api(resources, deployed)

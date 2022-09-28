@@ -7,7 +7,14 @@ from attr import asdict
 
 from chalice.config import Config  # noqa
 from chalice import app
-from chalice.constants import LAMBDA_TRUST_POLICY
+from chalice.constants import (
+    LAMBDA_TRUST_POLICY,
+    DEFAULT_LAMBDA_FUNC_NAME_CONVENTION,
+    DEFAULT_LAMBDA_LAYER_NAME_CONVENTION,
+    DEFAULT_LAMBDA_ROLE_NAME_CONVENTION,
+    DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENTION,
+    DEFAULT_EVENT_RULE_NAME_CONVENTION,
+)
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
 
@@ -278,8 +285,11 @@ class ApplicationGraphBuilder(object):
         )
 
         resource_name = event_source.name + '-event'
-        rule_name = '%s-%s-%s' % (config.app_name, config.chalice_stage,
-                                  resource_name)
+        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENTION.format(
+            app_name=config.app_name,
+            chalice_stage=config.chalice_stage,
+            resource_name=resource_name,
+        )
         cwe = models.CloudWatchEvent(
             resource_name=resource_name,
             rule_name=rule_name,
@@ -314,8 +324,12 @@ class ApplicationGraphBuilder(object):
             expression = event_source.schedule_expression.to_string()
         else:
             expression = event_source.schedule_expression
-        rule_name = '%s-%s-%s' % (config.app_name, config.chalice_stage,
-                                  resource_name)
+
+        rule_name = DEFAULT_EVENT_RULE_NAME_CONVENTION.format(
+            app_name=config.app_name,
+            chalice_stage=config.chalice_stage,
+            resource_name=resource_name,
+        )
         scheduled_event = models.ScheduledEvent(
             resource_name=resource_name,
             rule_name=rule_name,
@@ -376,8 +390,11 @@ class ApplicationGraphBuilder(object):
         if self._managed_layer is None:
             self._managed_layer = models.LambdaLayer(
                 resource_name='managed-layer',
-                layer_name='%s-%s-%s' % (
-                    config.app_name, config.chalice_stage, 'managed-layer'),
+                layer_name=DEFAULT_LAMBDA_LAYER_NAME_CONVENTION.format(
+                    app_name=config.app_name,
+                    chalice_stage=config.chalice_stage,
+                    layer_name='managed-layer',
+                ),
                 runtime=config.lambda_python_version,
                 deployment_package=models.DeploymentPackage(
                     models.Placeholder.BUILD_STAGE)
@@ -418,8 +435,11 @@ class ApplicationGraphBuilder(object):
         policy = models.IAMPolicy(document=models.Placeholder.BUILD_STAGE)
         if not config.autogen_policy:
             resource_name = '%s_role' % function_name
-            role_name = '%s-%s-%s' % (config.app_name, stage_name,
-                                      function_name)
+            role_name = DEFAULT_LAMBDA_ROLE_NAME_CONVENTION.format(
+                app_name=config.app_name,
+                chalice_stage=stage_name,
+                func_name=function_name,
+            )
             if config.iam_policy_file is not None:
                 filename = os.path.join(config.project_dir,
                                         '.chalice',
@@ -432,7 +452,10 @@ class ApplicationGraphBuilder(object):
                 filename=filename, document=models.Placeholder.BUILD_STAGE)
         else:
             resource_name = 'default-role'
-            role_name = '%s-%s' % (config.app_name, stage_name)
+            role_name = DEFAULT_LAMBDA_DEFAULT_ROLE_NAME_CONVENTION.format(
+                app_name=config.app_name,
+                chalice_stage=stage_name,
+            )
             policy = models.AutoGenIAMPolicy(
                 document=models.Placeholder.BUILD_STAGE,
                 traits=set([]),
@@ -475,8 +498,11 @@ class ApplicationGraphBuilder(object):
                                role,          # type: models.IAMRole
                                ):
         # type: (...) -> models.LambdaFunction
-        function_name = '%s-%s-%s' % (
-            config.app_name, config.chalice_stage, name)
+        function_name = DEFAULT_LAMBDA_FUNC_NAME_CONVENTION.format(
+            app_name=config.app_name,
+            chalice_stage=config.chalice_stage,
+            func_name=name,
+        )
         security_group_ids, subnet_ids = self._get_vpc_params(name, config)
         lambda_layers = self._get_lambda_layers(config)
         function = models.LambdaFunction(
