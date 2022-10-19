@@ -842,9 +842,11 @@ class DecoratorAPI(object):
         )
 
     def lambda_function(self,
-                        name: Optional[str] = None) -> Callable[..., Any]:
+                        name: Optional[str] = None,
+                        insights: Optional[bool] = False) -> Callable[..., Any]:
         return self._create_registration_function(
-            handler_type='lambda_function', name=name)
+            handler_type='lambda_function', name=name,
+            registration_kwargs={'insights': insights})
 
     def on_ws_connect(self,
                       name: Optional[str] = None) -> Callable[..., Any]:
@@ -1043,9 +1045,11 @@ class _HandlerRegistration(object):
                                   user_handler: UserHandlerFuncType,
                                   handler_string: str,
                                   **unused: Dict[str, Any]) -> None:
+        kwargs = unused.get('kwargs', {})
         wrapper = LambdaFunction(
             func=user_handler, name=name,
             handler_string=handler_string,
+            insights=kwargs.get('insights', False)
         )
         self.pure_lambda_functions.append(wrapper)
 
@@ -1521,10 +1525,11 @@ class AuthRoute(object):
 
 class LambdaFunction(object):
     def __init__(self, func: Callable[..., Any], name: str,
-                 handler_string: str):
+                 handler_string: str, insights: bool):
         self.func: Callable[..., Any] = func
         self.name: str = name
         self.handler_string: str = handler_string
+        self.insights: bool = insights
 
     def __call__(self, event: Dict[str, Any],
                  context: Dict[str, Any]

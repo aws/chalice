@@ -1050,6 +1050,31 @@ class TypedAWSClient(object):
             raise e
         return role_arn
 
+    def attach_role_policy(self, role_name, policy_arn):
+        # type: (str, str) -> None
+        self._client('iam').attach_role_policy(
+            RoleName=role_name,
+            PolicyArn=policy_arn)
+
+    def detach_role_policy(self, role_name, policy_arn):
+        # type: (str, str) -> None
+        self._client('iam').detach_role_policy(
+            RoleName=role_name,
+            PolicyArn=policy_arn)
+
+    def is_role_policy_attached(self, role_name, policy_arn):
+        # type: (str, str) -> bool
+        client = self._client('iam')
+        try:
+            attached_policies = client.list_attached_role_policies(RoleName=role_name)['AttachedPolicies']
+        except client.exceptions.NoSuchEntityException:
+            raise ResourceDoesNotExistError("No role found for: %s" % role_name)
+
+        for policy in attached_policies:
+            if policy['PolicyArn'] == policy_arn:
+                return True
+        return False
+
     def delete_role(self, name):
         # type: (str) -> None
         """Delete a role by first deleting all inline policies."""

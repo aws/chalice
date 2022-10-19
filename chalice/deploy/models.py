@@ -176,6 +176,15 @@ class ManagedIAMRole(IAMRole, ManagedModel):
 
 
 @attrs
+class IAMRolePolicyAttachment(IAMRole, ManagedModel):
+    # resource_type = 'iam_role_policy_attachment'
+    resource_type = 'iam_role'
+    role_name = attrib()       # type: str
+    # trust_policy = attrib()  # type: Dict[str, Any]
+    policy_arn = attrib()      # type: str
+
+
+@attrs
 class LambdaLayer(ManagedModel):
     resource_type = 'lambda_layer'
     layer_name = attrib()             # type: str
@@ -208,6 +217,8 @@ class LambdaFunction(ManagedModel):
     layers = attrib()                 # type: List[str]
     managed_layer = attrib(
         default=None)                 # type: Opt[LambdaLayer]
+    role_policy_attachment = attrib(
+        default=None)                 # type: IAMRolePolicyAttachment
 
     def dependencies(self):
         # type: () -> List[Model]
@@ -215,6 +226,8 @@ class LambdaFunction(ManagedModel):
         if self.managed_layer is not None:
             resources.append(self.managed_layer)
         resources.extend([self.role, self.deployment_package])
+        if self.role_policy_attachment:
+            resources.append(self.role_policy_attachment)
         return resources
 
 
