@@ -271,7 +271,7 @@ def _create_deployer(session,       # type: Session
     client = TypedAWSClient(session)
     osutils = OSUtils()
     return Deployer(
-        application_builder=ApplicationGraphBuilder(client),
+        application_builder=ApplicationGraphBuilder(client.region_name),
         deps_builder=DependencyBuilder(),
         build_stage=create_build_stage(
             osutils, UI(), TemplatedSwaggerGenerator(), config

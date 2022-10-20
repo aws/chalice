@@ -20,10 +20,12 @@ class ChaliceBuildError(Exception):
 
 
 class ApplicationGraphBuilder(object):
-    def __init__(self, client):
-        # type: () -> None
-        self._client = client
+    def __init__(self, region_name=''):
+        # type: (str) -> None
+        self._region_name = region_name
         self._known_roles = {}  # type: Dict[str, models.IAMRole]
+        self._known_role_policy_attach = \
+            {}  # type: Dict[str, models.IAMRolePolicyAttachment]
         self._managed_layer = None  # type: Optional[models.LambdaLayer]
 
     def build(self, config, stage_name):
@@ -37,11 +39,12 @@ class ApplicationGraphBuilder(object):
                 stage_name=stage_name)
             # create lambda insight
             if function.insights:
-                resource.role_policy_attachment = self._get_role_policy_attachment(
-                    config=config,
-                    stage_name=stage_name,
-                    function_name=function.name)
-                layer_arn = LAYER_VERSIONS.get(self._client.region_name)
+                resource.role_policy_attachment = \
+                    self._get_role_policy_attachment(
+                        config=config,
+                        stage_name=stage_name,
+                        function_name=function.name)
+                layer_arn = LAYER_VERSIONS.get(self._region_name)
                 if layer_arn:
                     if resource.layers:
                         resource.layers.append(layer_arn)
@@ -460,18 +463,21 @@ class ApplicationGraphBuilder(object):
 
     def _get_role_policy_attachment(self, config, stage_name, function_name):
         # type: (Config, str, str) -> models.IAMRolePolicyAttachment
-        role = self._create_role_policy_attachment(config, stage_name, function_name)
+        role = self._create_role_policy_attachment(config,
+                                                   stage_name,
+                                                   function_name)
         role_identifier = self._get_role_identifier(role)
-        if role_identifier in self._known_roles:
+        if role_identifier in self._known_role_policy_attach:
             # If we've already create a models.IAMRole with the same
             # identifier, we'll use the existing object instead of
             # creating a new one.
-            return self._known_roles[role_identifier]
-        self._known_roles[role_identifier] = role
+            return self._known_role_policy_attach[role_identifier]
+        self._known_role_policy_attach[role_identifier] = role
         return role
 
-    def _create_role_policy_attachment(self, config, stage_name, function_name):
-
+    def _create_role_policy_attachment(self, config, stage_name,
+                                       function_name):
+        # type: (Config, str, str) -> models.IAMRolePolicyAttachment
         if not config.autogen_policy:
             resource_name = '%s_execution_role' % function_name
             role_name = '%s-%s-%s' % (config.app_name, stage_name,
@@ -479,7 +485,8 @@ class ApplicationGraphBuilder(object):
         else:
             resource_name = 'default_execution_role'
             role_name = '%s-%s' % (config.app_name, stage_name)
-        policy_arn = 'arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy'
+        policy_arn = "arn:aws:iam::aws:policy/"\
+                     "CloudWatchLambdaInsightsExecutionRolePolicy"
 
         return models.IAMRolePolicyAttachment(
             resource_name=resource_name,

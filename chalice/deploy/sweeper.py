@@ -270,7 +270,8 @@ class ResourceSweeper(object):
                     },
                 ),
             ),
-            'message': 'Detaching IAM role policy attachment: %s\n' % resource_values['role_name']
+            'message': 'Detaching IAM role policy attachment: %s\n' %
+                       resource_values['role_name']
         }
 
     def _delete_cloudwatch_event(self, resource_values):

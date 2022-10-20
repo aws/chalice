@@ -843,7 +843,8 @@ class DecoratorAPI(object):
 
     def lambda_function(self,
                         name: Optional[str] = None,
-                        insights: Optional[bool] = False) -> Callable[..., Any]:
+                        insights: Optional[bool] = False
+                        ) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='lambda_function', name=name,
             registration_kwargs={'insights': insights})

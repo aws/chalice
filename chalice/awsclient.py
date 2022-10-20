@@ -1066,9 +1066,11 @@ class TypedAWSClient(object):
         # type: (str, str) -> bool
         client = self._client('iam')
         try:
-            attached_policies = client.list_attached_role_policies(RoleName=role_name)['AttachedPolicies']
+            attached_policies = client.list_attached_role_policies(
+                RoleName=role_name)['AttachedPolicies']
         except client.exceptions.NoSuchEntityException:
-            raise ResourceDoesNotExistError("No role found for: %s" % role_name)
+            raise ResourceDoesNotExistError(
+                "No role found for: %s" % role_name)
 
         for policy in attached_policies:
             if policy['PolicyArn'] == policy_arn:
