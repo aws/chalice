@@ -258,6 +258,22 @@ class ResourceSweeper(object):
             'message': 'Deleting IAM role: %s\n' % resource_values['role_name']
         }
 
+    def _delete_iam_role_policy_attachment(self, resource_values):
+        # type: (Dict[str, Any]) -> ResourceValueType
+        return {
+            'instructions': (
+                models.APICall(
+                    method_name='detach_role_policy',
+                    params={
+                        'role_name': resource_values['role_name'],
+                        'policy_arn': resource_values['policy_arn'],
+                    },
+                ),
+            ),
+            'message': 'Detaching IAM role policy attachment: %s\n' %
+                       resource_values['role_name']
+        }
+
     def _delete_cloudwatch_event(self, resource_values):
         # type: (Dict[str, Any]) -> ResourceValueType
         return {
@@ -426,6 +442,8 @@ class ResourceSweeper(object):
                 resource_type = 'domain_api_mappings'
                 handler_args.append(name)
                 insert = True
+            if name.endswith('_execution_role'):
+                resource_type = 'iam_role_policy_attachment'
 
             method_name = '_delete_%s' % resource_type
             handler = getattr(self, method_name, self._default_delete)

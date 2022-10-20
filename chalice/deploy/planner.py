@@ -25,6 +25,11 @@ class RemoteState(object):
         self._cache = {}  # type: Dict[CacheTuples, bool]
         self._deployed_resources = deployed_resources
 
+    @property
+    def client(self):
+        # type: () -> TypedAWSClient
+        return self._client
+
     def _cache_key(self, resource):
         # type: (models.ManagedModel) -> CacheTuples
         if isinstance(resource, models.APIMapping):
@@ -46,6 +51,14 @@ class RemoteState(object):
     def _dynamically_lookup_values(self, resource):
         # type: (models.ManagedModel) -> Dict[str, str]
         if isinstance(resource, models.ManagedIAMRole):
+            arn = self._client.get_role_arn_for_name(resource.role_name)
+            return {
+                "role_name": resource.role_name,
+                "role_arn": arn,
+                "name": resource.resource_name,
+                "resource_type": "iam_role",
+            }
+        elif isinstance(resource, models.IAMRolePolicyAttachment):
             arn = self._client.get_role_arn_for_name(resource.role_name)
             return {
                 "role_name": resource.role_name,
@@ -148,6 +161,15 @@ class RemoteState(object):
         try:
             self._client.get_role_arn_for_name(resource.role_name)
             return True
+        except ResourceDoesNotExistError:
+            return False
+
+    def _resource_exists_iamrolepolicyattachment(self, resource):
+        # type: (models.IAMRolePolicyAttachment) -> bool
+        try:
+            resp = self._client.is_role_policy_attached(resource.role_name,
+                                                        resource.policy_arn)
+            return resp
         except ResourceDoesNotExistError:
             return False
 
@@ -617,6 +639,74 @@ class PlanStage(object):
                 resource_name=resource.resource_name,
                 name='role_name',
                 value=resource.role_name,
+            )
+        ]
+
+    def _plan_iamrolepolicyattachment(self, resource):
+        # type: (models.IAMRolePolicyAttachment) -> Sequence[InstructionMsg]
+        role_exists = self._remote_state.resource_exists(resource)
+        varname = '%s_execution_role_arn' % resource.role_name
+        if not role_exists:
+            try:
+                role_arn = self._remote_state.client.get_role_arn_for_name(
+                    resource.role_name)
+            except ResourceDoesNotExistError:
+                role_arn = None
+
+            return [
+                (models.APICall(
+                    method_name='attach_role_policy',
+                    params={'role_name': resource.role_name,
+                            'policy_arn': resource.policy_arn},
+                    output_var=varname,
+                ), "Creating IAM role policy attachment: %s\n" %
+                   resource.role_name),
+                models.RecordResourceValue(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='role_arn',
+                    value=role_arn,
+                ) if role_arn else models.RecordResourceVariable(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='role_arn',
+                    variable_name=varname,
+                ),
+                models.RecordResourceValue(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='role_name',
+                    value=resource.role_name,
+                ),
+                models.RecordResourceValue(
+                    resource_type='iam_role',
+                    resource_name=resource.resource_name,
+                    name='policy_arn',
+                    value=resource.policy_arn,
+                )
+            ]
+
+        role_arn = self._remote_state.resource_deployed_values(
+            resource)['role_arn']
+        return [
+            models.StoreValue(name=varname, value=role_arn),
+            models.RecordResourceVariable(
+                resource_type='iam_role',
+                resource_name=resource.resource_name,
+                name='role_arn',
+                variable_name=varname,
+            ),
+            models.RecordResourceValue(
+                resource_type='iam_role',
+                resource_name=resource.resource_name,
+                name='role_name',
+                value=resource.role_name,
+            ),
+            models.RecordResourceValue(
+                resource_type='iam_role',
+                resource_name=resource.resource_name,
+                name='policy_arn',
+                value=resource.policy_arn,
             )
         ]
 

@@ -10,6 +10,7 @@ from chalice import app
 from chalice.constants import LAMBDA_TRUST_POLICY
 from chalice.deploy import models
 from chalice.utils import UI  # noqa
+from chalice.layer_versions import LAYER_VERSIONS
 
 StrMapAny = Dict[str, Any]
 
@@ -19,9 +20,12 @@ class ChaliceBuildError(Exception):
 
 
 class ApplicationGraphBuilder(object):
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, region_name=''):
+        # type: (str) -> None
+        self._region_name = region_name
         self._known_roles = {}  # type: Dict[str, models.IAMRole]
+        self._known_role_policy_attach = \
+            {}  # type: Dict[str, models.IAMRolePolicyAttachment]
         self._managed_layer = None  # type: Optional[models.LambdaLayer]
 
     def build(self, config, stage_name):
@@ -33,6 +37,19 @@ class ApplicationGraphBuilder(object):
                 config=config, deployment=deployment,
                 name=function.name, handler_name=function.handler_string,
                 stage_name=stage_name)
+            # create lambda insight
+            if function.insights:
+                resource.role_policy_attachment = \
+                    self._get_role_policy_attachment(
+                        config=config,
+                        stage_name=stage_name,
+                        function_name=function.name)
+                layer_arn = LAYER_VERSIONS.get(self._region_name)
+                if layer_arn:
+                    if resource.layers:
+                        resource.layers.append(layer_arn)
+                    else:
+                        resource.layers = [layer_arn]
             resources.append(resource)
         event_resources = self._create_lambda_event_resources(
             config, deployment, stage_name)
@@ -442,6 +459,39 @@ class ApplicationGraphBuilder(object):
             role_name=role_name,
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=policy,
+        )
+
+    def _get_role_policy_attachment(self, config, stage_name, function_name):
+        # type: (Config, str, str) -> models.IAMRolePolicyAttachment
+        role = self._create_role_policy_attachment(config,
+                                                   stage_name,
+                                                   function_name)
+        role_identifier = self._get_role_identifier(role)
+        if role_identifier in self._known_role_policy_attach:
+            # If we've already create a models.IAMRole with the same
+            # identifier, we'll use the existing object instead of
+            # creating a new one.
+            return self._known_role_policy_attach[role_identifier]
+        self._known_role_policy_attach[role_identifier] = role
+        return role
+
+    def _create_role_policy_attachment(self, config, stage_name,
+                                       function_name):
+        # type: (Config, str, str) -> models.IAMRolePolicyAttachment
+        if not config.autogen_policy:
+            resource_name = '%s_execution_role' % function_name
+            role_name = '%s-%s-%s' % (config.app_name, stage_name,
+                                      function_name)
+        else:
+            resource_name = 'default_execution_role'
+            role_name = '%s-%s' % (config.app_name, stage_name)
+        policy_arn = "arn:aws:iam::aws:policy/"\
+                     "CloudWatchLambdaInsightsExecutionRolePolicy"
+
+        return models.IAMRolePolicyAttachment(
+            resource_name=resource_name,
+            role_name=role_name,
+            policy_arn=policy_arn
         )
 
     def _get_vpc_params(self, function_name, config):
