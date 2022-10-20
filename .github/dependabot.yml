@@ -1,5 +1,10 @@
 version: 2
 updates:
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "13:00"
 - package-ecosystem: pip
   directory: "/."
   schedule:
