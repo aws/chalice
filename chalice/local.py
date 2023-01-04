@@ -47,6 +47,7 @@ HeaderType = Dict[str, Any]
 ResponseType = Dict[str, Any]
 HandlerCls = Callable[..., 'ChaliceRequestHandler']
 ServerCls = Callable[..., 'HTTPServer']
+CatchAllParamMatcher = re.compile(r'\{(\w+)\+\}')
 
 
 class Clock(object):
@@ -147,8 +148,19 @@ class RouteMatcher(object):
         captured = {}
         for route_url in self.route_urls:
             url_parts = route_url.split('/')
-            if len(parts) == len(url_parts):
-                for i, j in zip(parts, url_parts):
+            parts_copy = parts.copy()
+
+            # Capture the special greedy (catch-all) ie. "proxy+" path variable
+            catch_all = CatchAllParamMatcher.match(url_parts[-1])
+            if catch_all is not None:
+                i = len(url_parts) - 1
+                if len(parts) > i:
+                    captured[catch_all.group(1)] = '/'.join(parts[i:])
+                    url_parts = url_parts[:-1]
+                    parts_copy = parts_copy[:i]
+
+            if len(parts_copy) == len(url_parts):
+                for i, j in zip(parts_copy, url_parts):
                     if j.startswith('{') and j.endswith('}'):
                         captured[j[1:-1]] = i
                         continue

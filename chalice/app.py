@@ -30,7 +30,9 @@ from typing import List, Dict, Any, Optional, Sequence, Union, Callable, Set, \
 if TYPE_CHECKING:
     from chalice.local import LambdaContext
 
-_PARAMS = re.compile(r'{\w+}')
+# the optional + at the end is for supporting the special greedy parameter in
+# API Gateway (ie. "{proxy+}")
+_PARAMS = re.compile(r'{(\w+)\+?}')
 MiddlewareFuncType = Callable[[Any, Callable[[Any], Any]], Any]
 UserHandlerFuncType = Callable[..., Any]
 
@@ -577,9 +579,7 @@ class RouteEntry(object):
     def _parse_view_args(self) -> List[str]:
         if '{' not in self.uri_pattern:
             return []
-        # The [1:-1] slice is to remove the braces
-        # e.g {foobar} -> foobar
-        results = [r[1:-1] for r in _PARAMS.findall(self.uri_pattern)]
+        results = _PARAMS.findall(self.uri_pattern)
         return results
 
     def __eq__(self, other: object) -> bool:
