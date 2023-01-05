@@ -151,12 +151,12 @@ class RouteMatcher(object):
 
             # Handle a greedy catch-all path variable (ie. "proxy+")
             if url_parts[-1].endswith('+}'):
-                i = len(url_parts) - 1
-                if len(parts) > i:
+                pos = len(url_parts) - 1
+                if len(parts) > pos:
                     catch_all_param = url_parts[-1][1:-2]
-                    captured[catch_all_param] = '/'.join(parts[i:])
+                    captured[catch_all_param] = '/'.join(parts[pos:])
                     url_parts = url_parts[:-1]
-                    parts_copy = parts_copy[:i]
+                    parts_copy = parts_copy[:pos]
 
             if len(parts_copy) == len(url_parts):
                 for i, j in zip(parts_copy, url_parts):
