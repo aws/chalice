@@ -162,7 +162,8 @@ class Config(object):
 
     @property
     def log_retention_in_days(self) -> int:
-        return self._chain_lookup('log_retention_in_days')
+        return self._chain_lookup('log_retention_in_days',
+                                  varies_per_chalice_stage=True)
 
     @property
     def layers(self) -> List:
