@@ -53,7 +53,8 @@ class ApplicationGraphBuilder(object):
                           log_group_name     # type: str
                           ):
         # type: (...) -> models.LogGroup
-        return models.LogGroup(resource_name=log_group_name, retention_in_days=config.log_retention_in_days)
+        return models.LogGroup(resource_name=log_group_name,
+                               retention_in_days=config.log_retention_in_days)
 
     def _create_custom_domain_name(
             self,
@@ -375,7 +376,9 @@ class ApplicationGraphBuilder(object):
             deployment, role
         )
         if config.log_retention_in_days:
-            resource.log_group = self._create_log_group(config, '/aws/lambda/%s-%s-%s' % (config.app_name, stage_name, name))
+            resource.log_group = self._create_log_group(
+                config,
+                '/aws/lambda/%s-%s-%s' % (config.app_name, stage_name, name))
         return resource
 
     def _get_managed_lambda_layer(self, config):

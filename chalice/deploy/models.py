@@ -210,7 +210,6 @@ class LambdaFunction(ManagedModel):
         default=None)                 # type: Opt[LambdaLayer]
     log_group = attrib(default=None)  # type: LogGroup
 
-
     def dependencies(self):
         # type: () -> List[Model]
         resources = []  # type: List[Model]

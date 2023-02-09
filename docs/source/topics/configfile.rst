@@ -314,6 +314,16 @@ only the following chalice deployed resources are tagged: Lambda functions.
 A boolean that turns on AWS XRay's Active tracing configuration.
 This will turn on XRay for both Lambda functions and API Gateway stages.
 
+
+``log_retention_in_days``
+~~~~~~~~
+
+An integer value that indicates the retention time to be applied to lambda
+function log groups. Only certain values are valid, see the `AWS CloudWatch
+Logs docs
+<https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html#API_PutRetentionPolicy_RequestParameters>`__
+
+
 .. _lambda-config:
 
 Lambda Specific Configuration

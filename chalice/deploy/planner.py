@@ -142,7 +142,7 @@ class RemoteState(object):
     def _resource_exists_loggroup(self, resource):
         # type: (models.LogGroup) -> bool
         return self._client.log_group_exists(resource.resource_name)
-    
+
     def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
