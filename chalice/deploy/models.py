@@ -208,12 +208,16 @@ class LambdaFunction(ManagedModel):
     layers = attrib()                 # type: List[str]
     managed_layer = attrib(
         default=None)                 # type: Opt[LambdaLayer]
+    log_group = attrib(default=None)  # type: LogGroup
+
 
     def dependencies(self):
         # type: () -> List[Model]
         resources = []  # type: List[Model]
         if self.managed_layer is not None:
             resources.append(self.managed_layer)
+        if self.log_group is not None:
+            resources.append(self.log_group)
         resources.extend([self.role, self.deployment_package])
         return resources
 
@@ -243,6 +247,12 @@ class ScheduledEvent(CloudWatchEventBase):
     resource_type = 'scheduled_event'
     schedule_expression = attrib()  # type: str
     rule_description = attrib(default=None)     # type: str
+
+
+@attrs
+class LogGroup(ManagedModel):
+    resource_type = 'log_group'
+    retention_in_days = attrib()    # type: int
 
 
 @attrs

@@ -1110,6 +1110,27 @@ class TypedAWSClient(object):
             self.delete_role_policy(name, policy_name)
         client.delete_role(RoleName=name)
 
+    def log_group_exists(self, name: str) -> bool:
+        """Check if an CloudWatch LOG GROUP exists."""
+        client = self._client('logs')
+        result = client.describe_log_groups(
+            logGroupNamePrefix=name
+        )
+        if len(result['logGroups']) == 0:
+            return False
+        return True
+
+    def create_log_group(self, name: str) -> None:
+        self._client('logs').create_log_group(
+            logGroupName=name
+        )
+
+    def put_retention_policy(self, name: str, retention_in_days: int) -> None:
+        self._client('logs').put_retention_policy(
+            logGroupName=name,
+            retentionInDays=retention_in_days
+        )
+
     def get_rest_api_id(self, name: str) -> Optional[str]:
         """Get rest api id associated with an API name.
 
