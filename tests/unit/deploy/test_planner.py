@@ -3180,3 +3180,39 @@ class TestKeyVariable(object):
 
         key_var_2 = KeyDataVariable('name', 'key')
         assert key_var == key_var_2
+
+
+class TestPlanLogGroup(BasePlannerTests):
+    def test_can_create_log_group(self):
+        self.remote_state.declare_no_resources_exists()
+        resource = models.LogGroup(
+            resource_name='default-log-group',
+            retention_in_days=14,
+        )
+        plan = self.determine_plan(resource)
+        assert plan == [
+            models.APICall(
+                method_name='create_log_group',
+                params={'name': 'default-log-group'}
+            ),
+            models.APICall(
+                method_name='put_retention_policy',
+                params={'name': 'default-log-group',
+                        'retention_in_days': 14},
+            ),
+        ]
+
+    def test_can_update_log_group(self):
+        resource = models.LogGroup(
+            resource_name='default-log-group',
+            retention_in_days=14,
+        )
+        self.remote_state.declare_resource_exists(resource)
+        plan = self.determine_plan(resource)
+        assert plan == [
+            models.APICall(
+                method_name='put_retention_policy',
+                params={'name': 'default-log-group',
+                        'retention_in_days': 14},
+            ),
+        ]

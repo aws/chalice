@@ -316,7 +316,7 @@ This will turn on XRay for both Lambda functions and API Gateway stages.
 
 
 ``log_retention_in_days``
-~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An integer value that indicates the retention time to be applied to lambda
 function log groups. Only certain values are valid, see the `AWS CloudWatch
