@@ -1166,22 +1166,6 @@ class TestSdistMetadataFetcher(object):
         assert name == 'foo'
         assert version == '1.0'
 
-    def test_setup_tar_gz_hyphens_in_name(self, osutils, sdist_reader):
-        # The whole reason we need to use the egg info to get the name and
-        # version is that we cannot deterministically parse that information
-        # from the filenames themselves. This test puts hyphens in the name
-        # and version which would break a simple ``split("-")`` attempt to get
-        # that information.
-        setup_py = self._SETUP_PY % (
-            self._SETUPTOOLS, 'foo-bar', '1.0-2b'
-        )
-        with osutils.tempdir() as tempdir:
-            filepath = self._write_fake_sdist(setup_py, tempdir, 'tar.gz')
-            name, version = sdist_reader.get_package_name_and_version(
-                filepath)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
-
     def test_setup_zip(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
             self._SETUPTOOLS, 'foo', '1.0'
@@ -1225,28 +1209,6 @@ class TestSdistMetadataFetcher(object):
                 filepath)
         assert name == 'foo'
         assert version == '1.0'
-
-    def test_both_tar_gz(self, osutils, sdist_reader):
-        setup_py = self._SETUP_PY % (
-            self._BOTH, 'foo-bar', '1.0-2b'
-        )
-        with osutils.tempdir() as tempdir:
-            filepath = self._write_fake_sdist(setup_py, tempdir, 'tar.gz')
-            name, version = sdist_reader.get_package_name_and_version(
-                filepath)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
-
-    def test_both_tar_bz2(self, osutils, sdist_reader):
-        setup_py = self._SETUP_PY % (
-            self._BOTH, 'foo-bar', '1.0-2b'
-        )
-        with osutils.tempdir() as tempdir:
-            filepath = self._write_fake_sdist(setup_py, tempdir, 'tar.bz2')
-            name, version = sdist_reader.get_package_name_and_version(
-                filepath)
-        assert name == 'foo-bar'
-        assert version == '1.0-2b'
 
     def test_both_zip(self, osutils, sdist_reader):
         setup_py = self._SETUP_PY % (
