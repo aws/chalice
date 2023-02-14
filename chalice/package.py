@@ -822,6 +822,7 @@ class TerraformGenerator(TemplateGenerator):
 
         for resource in resources:
             self.dispatch(resource, template)
+        self._inject_terraform_provider(template)
         return template
 
     def _fref(self, lambda_function, attr='arn'):
@@ -1405,6 +1406,16 @@ class TerraformGenerator(TemplateGenerator):
     def _generate_domainname(self, resource, template):
         # type: (models.DomainName, Dict[str, Any]) -> None
         pass
+
+    def _inject_terraform_provider(self, template):
+        # type: (Dict[str, Any]) -> None
+        if self._config.terraform_assume_role is None:
+            return
+        provider = template.setdefault("provider", {})
+        aws_provider = provider.setdefault("aws", {})
+        aws_provider['assume_role'] = {
+            'role_arn': self._config.terraform_assume_role
+        }
 
 
 class AppPackager(object):
