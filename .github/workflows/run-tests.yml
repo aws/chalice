@@ -20,8 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install -r requirements-dev.txt
-          pip install --upgrade --upgrade-strategy eager -e .
+          pip install -r requirements-dev.txt --upgrade --upgrade-strategy eager -e .
       - name: Run PRCheck
         run: make prcheck
   cdktests:
