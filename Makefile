@@ -56,3 +56,6 @@ doccheck:
 	$(MAKE) -C docs html
 
 prcheck: check pylint coverage doccheck typecheck
+
+install-dev-deps:
+	pip install -r requirements-dev.txt --upgrade --upgrade-strategy eager -e .

@@ -1,7 +1,13 @@
 name: Run PR Checks
 on:
   push:
+    branches:
+      - master
+      - "feature/**"
   pull_request:
+    branches:
+      - master
+      - "feature/**"
 jobs:
   prcheck:
     runs-on: ${{ matrix.os }}
@@ -20,7 +26,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install -r requirements-dev.txt --upgrade --upgrade-strategy eager -e .
+          make install-dev-deps
       - name: Run PRCheck
         run: make prcheck
   testsonly:
