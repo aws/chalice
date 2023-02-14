@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import json
 import base64
@@ -17,23 +18,24 @@ class FunctionNotFoundError(Exception):
 
 
 class Client(object):
-    def __init__(self, app, stage_name='dev', project_dir='.'):
-        # type: (Chalice, str, str) -> None
+    def __init__(self,
+                 app: Chalice,
+                 stage_name: str = 'dev',
+                 project_dir: str = '.') -> None:
         self._app = app
         self._project_dir = project_dir
         self._stage_name = stage_name
-        self._http_client = None  # type: Optional[TestHTTPClient]
-        self._events_client = None  # type: Optional[TestEventsClient]
-        self._lambda_client = None  # type: Optional[TestLambdaClient]
-        self._chalice_config_obj = None  # type: Optional[Config]
+        self._http_client: Optional[TestHTTPClient] = None
+        self._events_client: Optional[TestEventsClient] = None
+        self._lambda_client: Optional[TestLambdaClient] = None
+        self._chalice_config_obj: Optional[Config] = None
         # We have to be careful about not passing in the CLIFactory
         # because this is a public interface we're exposing and we don't
         # want the CLIFactory to be part of that.
         self._cli_factory = CLIFactory(project_dir)
 
     @property
-    def _chalice_config(self):
-        # type: () -> Config
+    def _chalice_config(self) -> Config:
         if self._chalice_config_obj is None:
             try:
                 self._chalice_config_obj = self._cli_factory.create_config_obj(
@@ -46,37 +48,32 @@ class Client(object):
         return self._chalice_config_obj
 
     @property
-    def http(self):
-        # type: () -> TestHTTPClient
+    def http(self) -> TestHTTPClient:
         if self._http_client is None:
             self._http_client = TestHTTPClient(self._app, self._chalice_config)
         return self._http_client
 
     @property
-    def lambda_(self):
-        # type: () -> TestLambdaClient
+    def lambda_(self) -> TestLambdaClient:
         if self._lambda_client is None:
             self._lambda_client = TestLambdaClient(
                 self._app, self._chalice_config)
         return self._lambda_client
 
     @property
-    def events(self):
-        # type: () -> TestEventsClient
+    def events(self) -> TestEventsClient:
         if self._events_client is None:
             self._events_client = TestEventsClient(self._app)
         return self._events_client
 
-    def __enter__(self):
-        # type: () -> Client
+    def __enter__(self) -> Client:
         return self
 
     def __exit__(self,
-                 exception_type,   # type: Optional[Type[BaseException]]
-                 exception_value,  # type: Optional[BaseException]
-                 traceback,        # type: Optional[TracebackType]
-                 ):
-        # type: (...) -> None
+                 exception_type: Optional[Type[BaseException]],
+                 exception_value: Optional[BaseException],
+                 traceback: Optional[TracebackType],
+                 ) -> None:
         pass
 
 
@@ -100,14 +97,16 @@ class BaseClient(object):
 
 
 class TestHTTPClient(BaseClient):
-    def __init__(self, app, config):
-        # type: (Chalice, Config) -> None
+    def __init__(self, app: Chalice, config: Config) -> None:
         self._app = app
         self._config = config
         self._local_gateway = LocalGateway(app, self._config)
 
-    def request(self, method, path, headers=None, body=b''):
-        # type: (str, str, Optional[Dict[str, str]], bytes) -> HTTPResponse
+    def request(self,
+                method: str,
+                path: str,
+                headers: Optional[Dict[str, str]] = None,
+                body: bytes = b'') -> HTTPResponse:
         if headers is None:
             headers = {}
         scoped = self._config.scope(self._config.chalice_stage, 'api_handler')
@@ -121,61 +120,53 @@ class TestHTTPClient(BaseClient):
                 return self._error_response(e)
         return HTTPResponse.create_from_dict(response)
 
-    def _error_response(self, e):
-        # type: (LocalGatewayException) -> HTTPResponse
+    def _error_response(self, e: LocalGatewayException) -> HTTPResponse:
         return HTTPResponse(
             headers=e.headers,
             body=e.body if e.body else b'',
             status_code=e.CODE
         )
 
-    def get(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def get(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('GET', path, **kwargs)
 
-    def post(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def post(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('POST', path, **kwargs)
 
-    def put(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def put(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('PUT', path, **kwargs)
 
-    def patch(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def patch(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('PATCH', path, **kwargs)
 
-    def options(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def options(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('OPTIONS', path, **kwargs)
 
-    def delete(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def delete(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('DELETE', path, **kwargs)
 
-    def head(self, path, **kwargs):
-        # type: (str, **Any) -> HTTPResponse
+    def head(self, path: str, **kwargs: Any) -> HTTPResponse:
         return self.request('HEAD', path, **kwargs)
 
 
 class HTTPResponse(object):
-    def __init__(self, body, headers, status_code):
-        # type: (bytes, Dict[str, str], int) -> None
+    def __init__(self,
+                 body: bytes,
+                 headers: Dict[str, str],
+                 status_code: int) -> None:
         self.body = body
         self.headers = headers
         self.status_code = status_code
 
     @property
-    def json_body(self):
-        # type: () -> Any
+    def json_body(self) -> Any:
         try:
             return json.loads(self.body)
         except ValueError:
             return None
 
     @classmethod
-    def create_from_dict(cls, response_dict):
-        # type: (Dict[str, Any]) -> HTTPResponse
+    def create_from_dict(cls, response_dict: Dict[str, Any]) -> HTTPResponse:
         # Takes the response dict we have to send back to lambda
         # and exposes it as a python object.
         if response_dict.get('isBase64Encoded', False):
@@ -192,12 +183,14 @@ class HTTPResponse(object):
 
 
 class TestEventsClient(BaseClient):
-    def __init__(self, app):
-        # type: (Chalice) -> None
+    def __init__(self, app: Chalice) -> None:
         self._app = app
 
-    def generate_sns_event(self, message, subject='', message_attributes=None):
-        # type: (str, str, Dict[str, Any]) -> Dict[str, Any]
+    def generate_sns_event(self,
+                           message: str,
+                           subject: str = '',
+                           message_attributes: Optional[Dict[str, Any]] = None
+                           ) -> Dict[str, Any]:
         if message_attributes is None:
             message_attributes = {
                 'AttributeKey': {
@@ -226,8 +219,11 @@ class TestEventsClient(BaseClient):
         }]}
         return sns_event
 
-    def generate_s3_event(self, bucket, key, event_name='ObjectCreated:Put'):
-        # type: (str, str, str) -> Dict[str, Any]
+    def generate_s3_event(self,
+                          bucket: str,
+                          key: str,
+                          event_name: str = 'ObjectCreated:Put'
+                          ) -> Dict[str, Any]:
         s3_event = {
             'Records': [
                 {'awsRegion': 'us-west-2',
@@ -263,8 +259,9 @@ class TestEventsClient(BaseClient):
         }
         return s3_event
 
-    def generate_sqs_event(self, message_bodies, queue_name='queue-name'):
-        # type: (List[str], str) -> Dict[str, Any]
+    def generate_sqs_event(self,
+                           message_bodies: List[str],
+                           queue_name: str = 'queue-name') -> Dict[str, Any]:
         records = [{
             'attributes': {
                 'ApproximateFirstReceiveTimestamp': '1530576251596',
@@ -284,9 +281,12 @@ class TestEventsClient(BaseClient):
         sqs_event = {'Records': records}
         return sqs_event
 
-    def generate_cw_event(self, source, detail_type,
-                          detail, resources, region='us-west-2'):
-        # type: (str, str, Dict[str, Any], List[str], str) -> Dict[str, Any]
+    def generate_cw_event(self,
+                          source: str,
+                          detail_type: str,
+                          detail: Dict[str, Any],
+                          resources: List[str], region: str = 'us-west-2'
+                          ) -> Dict[str, Any]:
         event = {
             "version": 0,
             "id": "7bf73129-1428-4cd3-a780-95db273d1602",
@@ -300,9 +300,9 @@ class TestEventsClient(BaseClient):
         }
         return event
 
-    def generate_kinesis_event(self, message_bodies,
-                               stream_name='stream-name'):
-        # type: (List[bytes], str) -> Dict[str, Any]
+    def generate_kinesis_event(self, message_bodies: List[bytes],
+                               stream_name: str = 'stream-name'
+                               ) -> Dict[str, Any]:
         records = [{
             "kinesis": {
                 "kinesisSchemaVersion": "1.0",
@@ -325,13 +325,13 @@ class TestEventsClient(BaseClient):
 
 
 class TestLambdaClient(BaseClient):
-    def __init__(self, app, config):
-        # type: (Chalice, Config) -> None
+    def __init__(self, app: Chalice, config: Config) -> None:
         self._app = app
         self._config = config
 
-    def invoke(self, function_name, payload=None):
-        # type: (str, Any) -> InvokeResponse
+    def invoke(self,
+               function_name: str,
+               payload: Optional[Any] = None) -> InvokeResponse:
         if payload is None:
             payload = {}
         scoped = self._config.scope(self._config.chalice_stage, function_name)
@@ -346,6 +346,5 @@ class TestLambdaClient(BaseClient):
 
 
 class InvokeResponse(object):
-    def __init__(self, payload):
-        # type: (Any) -> None
+    def __init__(self, payload: Any) -> None:
         self.payload = payload
