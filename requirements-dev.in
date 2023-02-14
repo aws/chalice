@@ -1,22 +1,14 @@
-pytest
-boto3<2.0.0
+-r requirements-test.in
 pylint<3.0.0
-websocket-client<2.0.0
-hypothesis
-coverage
 doc8<1.0.0
 pydocstyle
 flake8
-pytest-cov
-requests
 Sphinx==4.3.2
 docutils
 mypy
 typing-extensions
 wheel
 pygments
-mock
 types-six
 types-python-dateutil
 types-PyYAML
-attrs<21.5.0
