@@ -1,7 +1,13 @@
 name: Run PR Checks
 on:
   push:
+    branches:
+      - master
+      - "feature/**"
   pull_request:
+    branches:
+      - master
+      - "feature/**"
 jobs:
   prcheck:
     runs-on: ${{ matrix.os }}
