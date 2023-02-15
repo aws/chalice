@@ -6,7 +6,6 @@
 #
 attrs==21.4.0
     # via
-    #   -r requirements-test.in
     #   hypothesis
     #   pytest
 boto3==1.26.70

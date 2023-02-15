@@ -1,4 +1,4 @@
-from attr import evolve
+from dataclasses import replace
 
 from chalice.deploy import models
 
@@ -28,8 +28,8 @@ def test_can_default_to_no_auths_in_rest_api(lambda_function):
 
 
 def test_can_add_authorizers_to_dependencies(lambda_function):
-    auth1 = evolve(lambda_function, resource_name='auth1')
-    auth2 = evolve(lambda_function, resource_name='auth2')
+    auth1 = replace(lambda_function, resource_name='auth1')
+    auth2 = replace(lambda_function, resource_name='auth2')
     rest_api = models.RestAPI(
         resource_name='rest_api',
         swagger_doc={'swagger': '2.0'},

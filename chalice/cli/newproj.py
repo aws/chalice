@@ -32,10 +32,10 @@ import os
 import re
 import json
 import fnmatch
+from dataclasses import dataclass
 from typing import Optional, Dict, Any, Iterator, Tuple, Match, List  # noqa
 
 import inquirer
-from attr import attrs, attrib
 
 from chalice.constants import WELCOME_PROMPT
 from chalice.utils import OSUtils
@@ -72,15 +72,14 @@ def create_new_project_skeleton(project_name, project_type='legacy'):
     )
 
 
-@attrs
-class ProjectTemplate(object):
-    dirname = attrib()    # type: str
-    metadata = attrib()   # type: Dict[str, Any]
-    key = attrib()        # type: str
+@dataclass
+class ProjectTemplate:
+    dirname: str
+    metadata: Dict[str, Any]
+    key: str
 
     @property
-    def description(self):
-        # type: () -> str
+    def description(self) -> str:
         # Pylint doesn't understand the attrs types.
         # pylint: disable=no-member
         return self.metadata.get('description', self.key)

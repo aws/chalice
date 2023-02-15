@@ -1,9 +1,9 @@
 import json
 import os
+from dataclasses import asdict
 
 from typing import cast
 from typing import Dict, List, Tuple, Any, Set, Optional, Text, Union  # noqa
-from attr import asdict
 
 from chalice.config import Config  # noqa
 from chalice import app
@@ -724,6 +724,8 @@ class GraphPrettyPrint(object):
     def _get_filtered_params(self, model):
         # type: (models.Model) -> StrMapAny
         dependencies = model.dependencies()
-        filtered = asdict(
-            model, filter=lambda _, v: v not in dependencies and v)
+        filtered = {
+            k: v for k, v in asdict(model).items()
+            if v not in dependencies
+        }
         return filtered
