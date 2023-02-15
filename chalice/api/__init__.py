@@ -5,13 +5,16 @@ in their own integrations with Chalice, but this will need time for the APIs
 to mature so for the time being this is an internal-only API.
 """
 import os
-from typing import Dict, Any
+from typing import Optional, Dict, Any
 from chalice.cli.factory import CLIFactory
 
 
-def package_app(project_dir, output_dir, stage, chalice_config=None,
-                package_format='cloudformation', template_format='json'):
-    # type: (str, str, str, Dict[str, Any], str, str) -> None
+def package_app(project_dir: str,
+                output_dir: str,
+                stage: str,
+                chalice_config: Optional[Dict[str, Any]] = None,
+                package_format: str = 'cloudformation',
+                template_format: str = 'json') -> None:
     factory = CLIFactory(project_dir, environ=os.environ)
     if chalice_config is None:
         chalice_config = {}

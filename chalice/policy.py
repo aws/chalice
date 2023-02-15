@@ -10,7 +10,7 @@ import os
 import json
 import uuid
 
-from typing import Any, List, Dict, Set  # noqa
+from typing import Optional, Any, List, Dict, Set  # noqa
 import botocore.session
 
 from chalice.constants import (
@@ -22,8 +22,7 @@ APIPolicyT = Dict[str, Dict[str, str]]
 CustomPolicyT = Dict[str, Dict[str, List[str]]]
 
 
-def policy_from_source_code(source_code):
-    # type: (str) -> Dict[str, Any]
+def policy_from_source_code(source_code: str) -> Dict[str, Any]:
     from chalice.analyzer import get_client_calls_for_app
     client_calls = get_client_calls_for_app(source_code)
     builder = PolicyBuilder()
@@ -31,18 +30,15 @@ def policy_from_source_code(source_code):
     return policy
 
 
-def load_api_policy_actions():
-    # type: () -> APIPolicyT
+def load_api_policy_actions() -> APIPolicyT:
     return _load_json_file('policies.json')
 
 
-def load_custom_policy_actions():
-    # type: () -> CustomPolicyT
+def load_custom_policy_actions() -> CustomPolicyT:
     return _load_json_file('policies-extra.json')
 
 
-def _load_json_file(relative_filename):
-    # type: (str) -> Dict[str, Any]
+def _load_json_file(relative_filename: str) -> Dict[str, Any]:
     policy_json = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         relative_filename)
@@ -50,8 +46,8 @@ def _load_json_file(relative_filename):
         return json.loads(f.read())
 
 
-def diff_policies(old, new):
-    # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Set[str]]
+def diff_policies(old: Dict[str, Any],
+                  new: Dict[str, Any]) -> Dict[str, Set[str]]:
     diff = {}
     old_actions = _create_simple_format(old)
     new_actions = _create_simple_format(new)
@@ -64,23 +60,20 @@ def diff_policies(old, new):
     return diff
 
 
-def _create_simple_format(policy):
-    # type: (Dict[str, Any]) -> Set[str]
+def _create_simple_format(policy: Dict[str, Any]) -> Set[str]:
     # This won't be sufficient is the analyzer is ever able
     # to work out which resources you're accessing.
-    actions = set()  # type: Set[str]
+    actions: Set[str] = set()
     for statement in policy['Statement']:
         actions.update(statement['Action'])
     return actions
 
 
 class AppPolicyGenerator(object):
-    def __init__(self, osutils):
-        # type: (OSUtils) -> None
+    def __init__(self, osutils: OSUtils) -> None:
         self._osutils = osutils
 
-    def generate_policy(self, config):
-        # type: (Config) -> Dict[str, Any]
+    def generate_policy(self, config: Config) -> Dict[str, Any]:
         """Auto generate policy for an application."""
         # Admittedly, this is pretty bare bones logic for the time
         # being.  All it really does it work out, given a Config instance,
@@ -102,9 +95,11 @@ class AppPolicyGenerator(object):
 class PolicyBuilder(object):
     VERSION = '2012-10-17'
 
-    def __init__(self, session=None, api_policy_actions=None,
-                 custom_policy_actions=None):
-        # type: (Any, APIPolicyT, CustomPolicyT) -> None
+    def __init__(self,
+                 session: Optional[Any] = None,
+                 api_policy_actions: Optional[APIPolicyT] = None,
+                 custom_policy_actions: Optional[CustomPolicyT] = None
+                 ) -> None:
         if session is None:
             session = botocore.session.get_session()
         # The difference between api_policy_actions and custom_policy_actions
@@ -122,8 +117,9 @@ class PolicyBuilder(object):
         self._api_policy_actions = api_policy_actions
         self._custom_policy_actions = custom_policy_actions
 
-    def build_policy_from_api_calls(self, client_calls):
-        # type: (Dict[str, Set[str]]) -> Dict[str, Any]
+    def build_policy_from_api_calls(self,
+                                    client_calls: Dict[str, Set[str]]
+                                    ) -> Dict[str, Any]:
         statements = self._build_statements_from_client_calls(client_calls)
         policy = {
             'Version': self.VERSION,
@@ -131,8 +127,9 @@ class PolicyBuilder(object):
         }
         return policy
 
-    def _build_statements_from_client_calls(self, client_calls):
-        # type: (Dict[str, Set[str]]) -> List[Dict[str, Any]]
+    def _build_statements_from_client_calls(self,
+                                            client_calls: Dict[str, Set[str]]
+                                            ) -> List[Dict[str, Any]]:
         statements = []
         # client_calls = service_name -> set([method_calls])
         for service in sorted(client_calls):
@@ -153,8 +150,10 @@ class PolicyBuilder(object):
                 })
         return statements
 
-    def _get_actions_from_api_calls(self, service, client_calls):
-        # type: (str, Dict[str, Set[str]]) -> List[str]
+    def _get_actions_from_api_calls(self,
+                                    service: str,
+                                    client_calls: Dict[str, Set[str]]
+                                    ) -> List[str]:
         if service not in self._api_policy_actions:
             print("Unsupported service for auto policy generation: %s"
                   % service)
@@ -173,8 +172,10 @@ class PolicyBuilder(object):
         actions.sort()
         return actions
 
-    def _get_actions_from_high_level_calls(self, service, client_calls):
-        # type: (str, Dict[str, Set[str]]) -> List[str]
+    def _get_actions_from_high_level_calls(self,
+                                           service: str,
+                                           client_calls: Dict[str, Set[str]]
+                                           ) -> List[str]:
         # This gets any actions associated with high level abstractions
         # e.g s3.download_file(), s3.upload_file(), etc.
         if service not in self._custom_policy_actions:
@@ -184,7 +185,7 @@ class PolicyBuilder(object):
             return []
         service_actions = self._custom_policy_actions[service]
         method_calls = client_calls[service]
-        actions = set()  # type: Set[str]
+        actions: Set[str] = set()
         for method_name in method_calls:
             if method_name in service_actions:
                 actions.update(service_actions[method_name])

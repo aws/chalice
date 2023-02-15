@@ -11,7 +11,7 @@ from typing import cast
 
 import yaml
 from yaml.scanner import ScannerError
-from yaml.nodes import Node, ScalarNode, SequenceNode
+from yaml.nodes import Node, ScalarNode, SequenceNode, MappingNode
 
 from chalice.deploy.swagger import (
     CFNSwaggerGenerator, TerraformSwaggerGenerator)
@@ -1594,11 +1594,11 @@ class TemplateSerializer(object):
 
     def load_template(self, file_contents, filename=''):
         # type: (str, str) -> Dict[str, Any]
-        pass
+        raise NotImplementedError("load_template")
 
     def serialize_template(self, contents):
         # type: (Dict[str, Any]) -> str
-        pass
+        raise NotImplementedError("serialize_template")
 
 
 class JSONTemplateSerializer(TemplateSerializer):
@@ -1660,5 +1660,6 @@ class YAMLTemplateSerializer(TemplateSerializer):
             return loader.construct_scalar(node)
         elif isinstance(node, SequenceNode):
             return loader.construct_sequence(node)
-        else:
+        elif isinstance(node, MappingNode):
             return loader.construct_mapping(node)
+        raise ValueError("Unknown YAML node: %s" % node)

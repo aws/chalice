@@ -145,7 +145,7 @@ class BaseLogEventGenerator(object):
 
     def iter_log_events(self, log_group_name, options):
         # type: (str, LogRetrieveOptions) -> Iterator[CWLogEvent]
-        pass
+        raise NotImplementedError("iter_log_events")
 
 
 class LogEventGenerator(BaseLogEventGenerator):
