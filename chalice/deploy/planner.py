@@ -831,18 +831,18 @@ class PlanStage(object):
             return instructions + [
                 models.APICall(
                     method_name='put_retention_policy',
-                    params={'name': resource.resource_name,
+                    params={'name': resource.log_group_name,
                             'retention_in_days': resource.retention_in_days}
                 )
             ]
         return instructions + [
             models.APICall(
                 method_name='create_log_group',
-                params={'name': resource.resource_name}
+                params={'name': resource.log_group_name}
             ),
             models.APICall(
                 method_name='put_retention_policy',
-                params={'name': resource.resource_name,
+                params={'name': resource.log_group_name,
                         'retention_in_days': resource.retention_in_days}
             )
         ]

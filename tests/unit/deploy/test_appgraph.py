@@ -169,7 +169,8 @@ class TestApplicationGraphBuilder(object):
             managed_layer=None,
             xray=None,
             log_group=models.LogGroup(
-                resource_name='/aws/lambda/%s-%s-%s' %
+                resource_name='myfunction-log-group',
+                log_group_name='/aws/lambda/%s-%s-%s' %
                               (config.app_name, 'dev', 'myfunction'),
                 retention_in_days=14)
         )

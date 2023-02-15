@@ -3187,17 +3187,18 @@ class TestPlanLogGroup(BasePlannerTests):
         self.remote_state.declare_no_resources_exists()
         resource = models.LogGroup(
             resource_name='default-log-group',
+            log_group_name='/aws/lambda/func-name',
             retention_in_days=14,
         )
         plan = self.determine_plan(resource)
         assert plan == [
             models.APICall(
                 method_name='create_log_group',
-                params={'name': 'default-log-group'}
+                params={'name': '/aws/lambda/func-name'}
             ),
             models.APICall(
                 method_name='put_retention_policy',
-                params={'name': 'default-log-group',
+                params={'name': '/aws/lambda/func-name',
                         'retention_in_days': 14},
             ),
         ]
@@ -3205,6 +3206,7 @@ class TestPlanLogGroup(BasePlannerTests):
     def test_can_update_log_group(self):
         resource = models.LogGroup(
             resource_name='default-log-group',
+            log_group_name='/aws/lambda/func-name',
             retention_in_days=14,
         )
         self.remote_state.declare_resource_exists(resource)
@@ -3212,7 +3214,7 @@ class TestPlanLogGroup(BasePlannerTests):
         assert plan == [
             models.APICall(
                 method_name='put_retention_policy',
-                params={'name': 'default-log-group',
+                params={'name': '/aws/lambda/func-name',
                         'retention_in_days': 14},
             ),
         ]

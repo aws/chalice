@@ -251,6 +251,7 @@ class ScheduledEvent(CloudWatchEventBase):
 @attrs
 class LogGroup(ManagedModel):
     resource_type = 'log_group'
+    log_group_name = attrib()       # type: str
     retention_in_days = attrib()    # type: int
 
 
