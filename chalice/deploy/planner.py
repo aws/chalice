@@ -838,12 +838,18 @@ class PlanStage(object):
         return instructions + [
             models.APICall(
                 method_name='create_log_group',
-                params={'name': resource.log_group_name}
+                params={'log_group_name': resource.log_group_name}
             ),
             models.APICall(
                 method_name='put_retention_policy',
                 params={'name': resource.log_group_name,
                         'retention_in_days': resource.retention_in_days}
+            ),
+            models.RecordResourceValue(
+                resource_type='log_group',
+                resource_name=resource.resource_name,
+                name='log_group_name',
+                value=resource.log_group_name,
             )
         ]
 

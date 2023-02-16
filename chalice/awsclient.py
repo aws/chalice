@@ -1120,9 +1120,14 @@ class TypedAWSClient(object):
             return False
         return True
 
-    def create_log_group(self, name: str) -> None:
+    def create_log_group(self, log_group_name: str) -> None:
         self._client('logs').create_log_group(
-            logGroupName=name
+            logGroupName=log_group_name,
+        )
+
+    def delete_log_group(self, log_group_name: str) -> None:
+        self._client('logs').delete_log_group(
+            logGroupName=log_group_name,
         )
 
     def put_retention_policy(self, name: str, retention_in_days: int) -> None:
