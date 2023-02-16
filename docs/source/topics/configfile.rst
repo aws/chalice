@@ -393,6 +393,7 @@ that can be applied per function:
 * ``security_group_ids``
 * ``subnet_ids``
 * ``tags``
+* ``log_retention_in_days``
 
 
 See the :ref:`stage-config` section above for a description

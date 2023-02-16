@@ -377,12 +377,12 @@ class ApplicationGraphBuilder(object):
             new_config, name, handler_name,
             deployment, role
         )
-        if config.log_retention_in_days:
+        if new_config.log_retention_in_days:
             log_resource_name = '%s-log-group' % name
             log_group_name = '/aws/lambda/%s-%s-%s' % (
-                config.app_name, stage_name, name)
+                new_config.app_name, stage_name, name)
             resource.log_group = self._create_log_group(
-                config, log_resource_name, log_group_name)
+                new_config, log_resource_name, log_group_name)
         return resource
 
     def _get_managed_lambda_layer(self, config):
