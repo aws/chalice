@@ -799,7 +799,7 @@ class TerraformGenerator(TemplateGenerator):
             'resource': {},
             'locals': {},
             'terraform': {
-                'required_version': '>= 0.12.26, < 1.2.0',
+                'required_version': '>= 0.12.26, < 1.4.0',
                 'required_providers': {
                     'aws': {'version': '>= 2, < 5'},
                     'null': {'version': '>= 2, < 4'}
