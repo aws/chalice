@@ -2633,7 +2633,7 @@ class TestUnreferencedResourcePlanner(BasePlannerTests):
         config = FakeConfig(deployed)
         self.execute(plan, config)
         assert len(plan) == 1
-        assert plan[0].method_name == 'delete_log_group'
+        assert plan[0].method_name == 'delete_retention_policy'
         assert plan[0].params == {'log_group_name': '/aws/lambda/mygroup'}
 
     def test_supports_multiple_unreferenced_and_unchanged(self):
@@ -3237,4 +3237,9 @@ class TestPlanLogGroup(BasePlannerTests):
                 params={'name': '/aws/lambda/func-name',
                         'retention_in_days': 14},
             ),
+            models.RecordResourceValue(
+                resource_type='log_group',
+                resource_name='default-log-group',
+                name='log_group_name',
+                value='/aws/lambda/func-name'),
         ]

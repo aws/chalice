@@ -1125,6 +1125,11 @@ class TypedAWSClient(object):
             logGroupName=log_group_name,
         )
 
+    def delete_retention_policy(self, log_group_name: str) -> None:
+        self._client('logs').delete_retention_policy(
+            logGroupName=log_group_name,
+        )
+
     def delete_log_group(self, log_group_name: str) -> None:
         self._client('logs').delete_log_group(
             logGroupName=log_group_name,

@@ -237,11 +237,11 @@ class ResourceSweeper(object):
                           ):
         # type: (...) -> ResourceValueType
         log_group_name = resource_values['log_group_name']
-        msg = 'Deleting log group: %s\n' % log_group_name
+        msg = 'Deleting retention policy for log group: %s\n' % log_group_name
         return {
             'instructions': (
                 models.APICall(
-                    method_name='delete_log_group',
+                    method_name='delete_retention_policy',
                     params={'log_group_name': log_group_name}
                 ),
             ),

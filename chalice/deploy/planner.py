@@ -141,7 +141,7 @@ class RemoteState(object):
 
     def _resource_exists_loggroup(self, resource):
         # type: (models.LogGroup) -> bool
-        return self._client.log_group_exists(resource.resource_name)
+        return self._client.log_group_exists(resource.log_group_name)
 
     def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
@@ -833,6 +833,12 @@ class PlanStage(object):
                     method_name='put_retention_policy',
                     params={'name': resource.log_group_name,
                             'retention_in_days': resource.retention_in_days}
+                ),
+                models.RecordResourceValue(
+                    resource_type='log_group',
+                    resource_name=resource.resource_name,
+                    name='log_group_name',
+                    value=resource.log_group_name,
                 )
             ]
         return instructions + [
