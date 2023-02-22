@@ -281,6 +281,21 @@ class SAMTemplateGenerator(TemplateGenerator):
             }  # type: Dict[str, Any]
             lambdafunction_definition['Properties'].update(layers_config)
 
+        if resource.log_group is not None:
+            num_days = resource.log_group.retention_in_days
+            log_name = self._register_cfn_resource_name(
+                resource.log_group.resource_name)
+            log_def = {
+                'Type': 'AWS::Logs::LogGroup',
+                'Properties': {
+                    'LogGroupName': {
+                        'Fn::Sub': '/aws/lambda/${%s}' % cfn_name
+                    },
+                    'RetentionInDays': num_days
+                }
+            }
+            resources[log_name] = log_def
+
         resources[cfn_name] = lambdafunction_definition
         self._add_iam_role(resource, resources[cfn_name])
 
@@ -298,6 +313,11 @@ class SAMTemplateGenerator(TemplateGenerator):
             # subclass of IAMRole.
             role = cast(models.PreCreatedIAMRole, role)
             cfn_resource['Properties']['Role'] = role.role_arn
+
+    def _generate_loggroup(self, resource, template):
+        # type: (models.LogGroup, Dict[str, Any]) -> None
+        # Handled in LambdaFunction generation
+        pass
 
     def _generate_restapi(self, resource, template):
         # type: (models.RestAPI, Dict[str, Any]) -> None
@@ -1263,8 +1283,21 @@ class TerraformGenerator(TemplateGenerator):
             role = cast(models.PreCreatedIAMRole, resource.role)
             func_definition['role'] = role.role_arn
 
+        if resource.log_group is not None:
+            log_group = resource.log_group
+            num_days = log_group.retention_in_days
+            template['resource'].setdefault('aws_cloudwatch_log_group', {})[
+                log_group.resource_name] = {
+                    'name': log_group.resource_name,
+                    'retention_in_days': num_days,
+            }
         template['resource'].setdefault('aws_lambda_function', {})[
             resource.resource_name] = func_definition
+
+    def _generate_log_group(self, resource, remplate):
+        # type: (models.LogGroup, Dict[str, Any]) -> None
+        # Handled in LambdaFunction generation
+        pass
 
     def _generate_restapi(self, resource, template):
         # type: (models.RestAPI, Dict[str, Any]) -> None

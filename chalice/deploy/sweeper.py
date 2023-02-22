@@ -232,6 +232,22 @@ class ResourceSweeper(object):
             'message': msg
         }
 
+    def _delete_log_group(self,
+                          resource_values  # type: Dict[str, Any]
+                          ):
+        # type: (...) -> ResourceValueType
+        log_group_name = resource_values['log_group_name']
+        msg = 'Deleting retention policy for log group: %s\n' % log_group_name
+        return {
+            'instructions': (
+                models.APICall(
+                    method_name='delete_retention_policy',
+                    params={'log_group_name': log_group_name}
+                ),
+            ),
+            'message': msg
+        }
+
     def _delete_lambda_layer(self, resource_values):
         # type: (Dict[str, str]) -> ResourceValueType
         apicall = models.APICall(

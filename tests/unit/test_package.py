@@ -449,6 +449,20 @@ class TestTerraformTemplate(TemplateTestBase):
         tf_resource = self.get_function(template)
         assert tf_resource['reserved_concurrent_executions'] == 5
 
+    def test_adds_log_group_resource_when_configured(self, sample_app):
+        function = self.lambda_function()
+        name = function.resource_name + '-log-group'
+        function.log_group = models.LogGroup(
+            resource_name=name,
+            log_group_name='/aws/lambda/%s' % function.function_name,
+            retention_in_days=7)
+        template = self.template_gen.generate([function])
+        log_resource = template['resource']['aws_cloudwatch_log_group'][name]
+        assert log_resource == {
+            'name': name,
+            'retention_in_days': 7,
+        }
+
     def test_can_add_tracing_config(self, sample_app):
         function = self.lambda_function()
         function.xray = True
@@ -1201,6 +1215,22 @@ class TestSAMTemplate(TemplateTestBase):
         template = self.template_gen.generate([function])
         cfn_resource = list(template['Resources'].values())[0]
         assert cfn_resource['Properties']['ReservedConcurrentExecutions'] == 5
+
+    def test_adds_log_group_resource_when_configured(self, sample_app):
+        function = self.lambda_function()
+        function.log_group = models.LogGroup(
+            resource_name=function.resource_name + '-log-group',
+            log_group_name='/aws/lambda/%s' % function.function_name,
+            retention_in_days=7)
+        template = self.template_gen.generate([function])
+        log_resource = template['Resources']['FooLogGroup']
+        assert log_resource == {
+            'Type': 'AWS::Logs::LogGroup',
+            'Properties': {
+                'LogGroupName': {'Fn::Sub': '/aws/lambda/${Foo}'},
+                'RetentionInDays': 7
+            }
+        }
 
     def test_adds_layers_when_provided(self, sample_app):
         function = self.lambda_function()
