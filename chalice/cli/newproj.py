@@ -43,9 +43,7 @@ from chalice.app import __version__ as chalice_version
 
 
 TEMPLATES_DIR = os.path.join(
-    os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))),
-    'templates'
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates'
 )
 VAR_REF_REGEX = r'{{(.*?)}}'
 IGNORE_FILES = ['metadata.json', '*.pyc']
@@ -55,8 +53,9 @@ class BadTemplateError(Exception):
     pass
 
 
-def create_new_project_skeleton(project_name, project_type='legacy'):
-    # type: (str, Optional[str]) -> None
+def create_new_project_skeleton(
+    project_name: str, project_type: Optional[str] = 'legacy'
+) -> None:
     osutils = OSUtils()
     all_projects = list_available_projects(TEMPLATES_DIR, osutils)
     project = [p for p in all_projects if p.key == project_type][0]
@@ -86,28 +85,36 @@ class ProjectTemplate:
 
 
 class ProjectCreator(object):
-    def __init__(self, osutils=None):
-        # type: (Optional[OSUtils]) -> None
+    def __init__(self, osutils: Optional[OSUtils] = None) -> None:
         if osutils is None:
             osutils = OSUtils()
         self._osutils = osutils
 
-    def create_new_project(self, source_dir, destination_dir, template_kwargs):
-        # type: (str, str, Dict[str, Any]) -> None
-        for full_src_path, full_dst_path in self._iter_files(source_dir,
-                                                             destination_dir):
+    def create_new_project(
+        self,
+        source_dir: str,
+        destination_dir: str,
+        template_kwargs: Dict[str, Any],
+    ) -> None:
+        for full_src_path, full_dst_path in self._iter_files(
+            source_dir, destination_dir
+        ):
             dest_dir = self._osutils.dirname(full_dst_path)
             if not self._osutils.directory_exists(dest_dir):
                 self._osutils.makedirs(dest_dir)
-            contents = self._osutils.get_file_contents(full_src_path,
-                                                       binary=False)
+            contents = self._osutils.get_file_contents(
+                full_src_path, binary=False
+            )
             templated_contents = get_templated_content(
-                contents, template_kwargs)
+                contents, template_kwargs
+            )
             self._osutils.set_file_contents(
-                full_dst_path, templated_contents, binary=False)
+                full_dst_path, templated_contents, binary=False
+            )
 
-    def _iter_files(self, source_dir, destination_dir):
-        # type: (str, str) -> Iterator[Tuple[str, str]]
+    def _iter_files(
+        self, source_dir: str, destination_dir: str
+    ) -> Iterator[Tuple[str, str]]:
         for rootdir, _, filenames in self._osutils.walk(source_dir):
             for filename in filenames:
                 if self._should_ignore(filename):
@@ -116,37 +123,38 @@ class ProjectCreator(object):
                 # The starting index needs `+ 1` to account for the
                 # trailing `/` char (e.g. foo/bar -> foo/bar/).
                 full_dst_path = os.path.join(
-                    destination_dir, full_src_path[len(source_dir) + 1:])
+                    destination_dir, full_src_path[len(source_dir) + 1:]
+                )
                 yield full_src_path, full_dst_path
 
-    def _should_ignore(self, filename):
-        # type: (str) -> bool
+    def _should_ignore(self, filename: str) -> bool:
         for ignore in IGNORE_FILES:
             if fnmatch.fnmatch(filename, ignore):
                 return True
         return False
 
 
-def get_templated_content(contents, template_kwargs):
-    # type: (str, Dict[str, Any]) -> str
-    def lookup_var(match):
-        # type: (Match) -> str
+def get_templated_content(
+    contents: str, template_kwargs: Dict[str, Any]
+) -> str:
+    def lookup_var(match: Match) -> str:
         var_name = match.group(1)
         try:
             return template_kwargs[var_name]
         except KeyError:
             raise BadTemplateError(
                 "Bad template, referenced template var that does not "
-                "exist: '%s', for template contents:\n%s" % (var_name,
-                                                             contents)
+                "exist: '%s', for template contents:\n%s"
+                % (var_name, contents)
             )
 
     new_contents = re.sub(VAR_REF_REGEX, lookup_var, contents)
     return new_contents
 
 
-def list_available_projects(templates_dir, osutils):
-    # type: (str, OSUtils) -> List[ProjectTemplate]
+def list_available_projects(
+    templates_dir: str, osutils: OSUtils
+) -> List[ProjectTemplate]:
     projects = []
     for dirname in sorted(osutils.get_directory_contents(templates_dir)):
         filename = osutils.joinpath(templates_dir, dirname, 'metadata.json')
@@ -156,14 +164,16 @@ def list_available_projects(templates_dir, osutils):
     return projects
 
 
-def getting_started_prompt():
-    # type: () -> Dict[str, Any]
+def getting_started_prompt() -> Dict[str, Any]:
     print(WELCOME_PROMPT)
     projects = list_available_projects(TEMPLATES_DIR, OSUtils())
     questions = [
         inquirer.Text('project_name', message='Enter the project name'),
-        inquirer.List('project_type', message='Select your project type',
-                      choices=[(p.description, p.key) for p in projects])
+        inquirer.List(
+            'project_type',
+            message='Select your project type',
+            choices=[(p.description, p.key) for p in projects],
+        ),
     ]
     answers = inquirer.prompt(questions)
     return answers

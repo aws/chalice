@@ -29,8 +29,7 @@ class TLSVersion(enum.Enum):
     TLS_1_2 = 'TLS_1_2'
 
     @classmethod
-    def create(cls, str_version):
-        # type: (str) -> Opt[TLSVersion]
+    def create(cls, str_version: str) -> Opt[TLSVersion]:
         for version in cls:
             if version.value == str_version:
                 return version
@@ -112,8 +111,7 @@ class BuiltinFunction(Instruction):
 
 
 class Model(object):
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return []
 
 
@@ -170,8 +168,7 @@ class ManagedIAMRole(IAMRole, ManagedModel):
     trust_policy: Dict[str, Any]
     policy: IAMPolicy
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.policy]
 
 
@@ -183,8 +180,7 @@ class LambdaLayer(ManagedModel):
     deployment_package: DeploymentPackage
     is_empty: bool = False
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.deployment_package]
 
 
@@ -223,8 +219,7 @@ class LambdaFunction(ManagedModel):
 class FunctionEventSubscriber(ManagedModel):
     lambda_function: LambdaFunction
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.lambda_function]
 
 
