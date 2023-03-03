@@ -139,6 +139,10 @@ class RemoteState(object):
         return bool(self._client.get_layer_version(
             deployed_values['layer_version_arn']))
 
+    def _resource_exists_loggroup(self, resource):
+        # type: (models.LogGroup) -> bool
+        return self._client.log_group_exists(resource.log_group_name)
+
     def _resource_exists_lambdafunction(self, resource):
         # type: (models.LambdaFunction) -> bool
         return self._client.lambda_function_exists(resource.function_name)
@@ -819,6 +823,41 @@ class PlanStage(object):
                 'lambda_arn': Variable(function_arn.name),
             }
         )
+
+    def _plan_loggroup(self, resource):
+        # type: (models.LogGroup) -> Sequence[InstructionMsg]
+        instructions = []  # type: List[InstructionMsg]
+        if self._remote_state.resource_exists(resource):
+            return instructions + [
+                models.APICall(
+                    method_name='put_retention_policy',
+                    params={'name': resource.log_group_name,
+                            'retention_in_days': resource.retention_in_days}
+                ),
+                models.RecordResourceValue(
+                    resource_type='log_group',
+                    resource_name=resource.resource_name,
+                    name='log_group_name',
+                    value=resource.log_group_name,
+                )
+            ]
+        return instructions + [
+            models.APICall(
+                method_name='create_log_group',
+                params={'log_group_name': resource.log_group_name}
+            ),
+            models.APICall(
+                method_name='put_retention_policy',
+                params={'name': resource.log_group_name,
+                        'retention_in_days': resource.retention_in_days}
+            ),
+            models.RecordResourceValue(
+                resource_type='log_group',
+                resource_name=resource.resource_name,
+                name='log_group_name',
+                value=resource.log_group_name,
+            )
+        ]
 
     def _plan_dynamodbeventsource(self, resource):
         # type: (models.DynamoDBEventSource) -> Sequence[InstructionMsg]

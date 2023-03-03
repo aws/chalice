@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import sys
 import json
@@ -74,14 +75,13 @@ class Config(object):
     """
 
     def __init__(self,
-                 chalice_stage=DEFAULT_STAGE_NAME,      # type: str
-                 function_name=DEFAULT_HANDLER_NAME,    # type: str
-                 user_provided_params=None,             # type: StrMap
-                 config_from_disk=None,                 # type: StrMap
-                 default_params=None,                   # type: StrMap
-                 layers=None,                           # type: List[str]
-                 ):
-        # type: (...) -> None
+                 chalice_stage: str = DEFAULT_STAGE_NAME,
+                 function_name: str = DEFAULT_HANDLER_NAME,
+                 user_provided_params: Optional[StrMap] = None,
+                 config_from_disk: Optional[StrMap] = None,
+                 default_params: Optional[StrMap] = None,
+                 layers: Optional[List[str]] = None,
+                 ) -> None:
         #: Params that a user provided explicitly,
         #: typically via the command line.
         self.chalice_stage = chalice_stage
@@ -100,31 +100,26 @@ class Config(object):
         self._layers = layers
 
     @classmethod
-    def create(cls, chalice_stage=DEFAULT_STAGE_NAME,
-               function_name=DEFAULT_HANDLER_NAME,
-               **kwargs):
-        # type: (str, str, **Any) -> Config
+    def create(cls, chalice_stage: str = DEFAULT_STAGE_NAME,
+               function_name: str = DEFAULT_HANDLER_NAME,
+               **kwargs: Any) -> Config:
         return cls(chalice_stage=chalice_stage,
                    user_provided_params=kwargs.copy())
 
     @property
-    def profile(self):
-        # type: () -> str
+    def profile(self) -> str:
         return self._chain_lookup('profile')
 
     @property
-    def app_name(self):
-        # type: () -> str
+    def app_name(self) -> str:
         return self._chain_lookup('app_name')
 
     @property
-    def project_dir(self):
-        # type: () -> str
+    def project_dir(self) -> str:
         return self._chain_lookup('project_dir')
 
     @property
-    def chalice_app(self):
-        # type: () -> Chalice
+    def chalice_app(self) -> Chalice:
         v = self._chain_lookup('chalice_app')
         # There's two value we support.  If the value
         # is a chalice app, we return it as is.
@@ -144,13 +139,11 @@ class Config(object):
         return app
 
     @property
-    def config_from_disk(self):
-        # type: () -> StrMap
+    def config_from_disk(self) -> StrMap:
         return self._config_from_disk
 
     @property
-    def lambda_python_version(self):
-        # type: () -> str
+    def lambda_python_version(self) -> str:
         # We may open this up to configuration later, but for now,
         # we attempt to match your python version to the closest version
         # supported by lambda.
@@ -168,27 +161,29 @@ class Config(object):
         return 'python3.9'
 
     @property
-    def layers(self):
-        # type: () -> List
+    def log_retention_in_days(self) -> int:
+        return self._chain_lookup('log_retention_in_days',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
+    def layers(self) -> List:
         return self._chain_lookup('layers',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def api_gateway_custom_domain(self):
-        # type: () -> StrMap
+    def api_gateway_custom_domain(self) -> StrMap:
         return self._chain_lookup('api_gateway_custom_domain',
                                   varies_per_chalice_stage=True)
 
     @property
-    def websocket_api_custom_domain(self):
-        # type: () -> StrMap
+    def websocket_api_custom_domain(self) -> StrMap:
         return self._chain_lookup('websocket_api_custom_domain',
                                   varies_per_chalice_stage=True)
 
-    def _chain_lookup(self, name, varies_per_chalice_stage=False,
-                      varies_per_function=False):
-        # type: (str, bool, bool) -> Any
+    def _chain_lookup(self, name: str, varies_per_chalice_stage: bool = False,
+                      varies_per_function: bool = False) -> Any:
         search_dicts = [self._user_provided_params]
         if varies_per_chalice_stage:
             search_dicts.append(
@@ -211,8 +206,7 @@ class Config(object):
             if isinstance(cfg_dict, dict) and cfg_dict.get(name) is not None:
                 return cfg_dict[name]
 
-    def _chain_merge(self, name):
-        # type: (str) -> Dict[str, Any]
+    def _chain_merge(self, name: str) -> Dict[str, Any]:
         # Merge values for all search dicts instead of returning on first
         # found.
         search_dicts = [
@@ -234,67 +228,57 @@ class Config(object):
         return final
 
     @property
-    def config_file_version(self):
-        # type: () -> str
+    def config_file_version(self) -> str:
         return self._config_from_disk.get('version', '1.0')
 
     # These are all config values that can vary per
     # chalice stage.
 
     @property
-    def api_gateway_stage(self):
-        # type: () -> str
+    def api_gateway_stage(self) -> str:
         return self._chain_lookup('api_gateway_stage',
                                   varies_per_chalice_stage=True)
 
     @property
-    def api_gateway_endpoint_type(self):
-        # type: () -> str
+    def api_gateway_endpoint_type(self) -> str:
         return self._chain_lookup('api_gateway_endpoint_type',
                                   varies_per_chalice_stage=True)
 
     @property
-    def api_gateway_endpoint_vpce(self):
-        # type: () -> Union[str, List[str]]
+    def api_gateway_endpoint_vpce(self) -> Union[str, List[str]]:
         return self._chain_lookup('api_gateway_endpoint_vpce',
                                   varies_per_chalice_stage=True)
 
     @property
-    def api_gateway_policy_file(self):
-        # type: () -> str
+    def api_gateway_policy_file(self) -> str:
         return self._chain_lookup('api_gateway_policy_file',
                                   varies_per_chalice_stage=True)
 
     @property
-    def minimum_compression_size(self):
-        # type: () -> int
+    def minimum_compression_size(self) -> int:
         return self._chain_lookup('minimum_compression_size',
                                   varies_per_chalice_stage=True)
 
     @property
-    def iam_policy_file(self):
-        # type: () -> str
+    def iam_policy_file(self) -> str:
         return self._chain_lookup('iam_policy_file',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def lambda_memory_size(self):
-        # type: () -> int
+    def lambda_memory_size(self) -> int:
         return self._chain_lookup('lambda_memory_size',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def lambda_timeout(self):
-        # type: () -> int
+    def lambda_timeout(self) -> int:
         return self._chain_lookup('lambda_timeout',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def automatic_layer(self):
-        # type: () -> bool
+    def automatic_layer(self) -> bool:
         v = self._chain_lookup('automatic_layer',
                                varies_per_chalice_stage=True,
                                varies_per_function=False)
@@ -303,15 +287,13 @@ class Config(object):
         return v
 
     @property
-    def iam_role_arn(self):
-        # type: () -> str
+    def iam_role_arn(self) -> str:
         return self._chain_lookup('iam_role_arn',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def manage_iam_role(self):
-        # type: () -> bool
+    def manage_iam_role(self) -> bool:
         result = self._chain_lookup('manage_iam_role',
                                     varies_per_chalice_stage=True,
                                     varies_per_function=True)
@@ -325,55 +307,47 @@ class Config(object):
         return result
 
     @property
-    def autogen_policy(self):
-        # type: () -> bool
+    def autogen_policy(self) -> bool:
         return self._chain_lookup('autogen_policy',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def xray_enabled(self):
-        # type: () -> bool
+    def xray_enabled(self) -> bool:
         return self._chain_lookup('xray',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def environment_variables(self):
-        # type: () -> Dict[str, str]
+    def environment_variables(self) -> Dict[str, str]:
         return self._chain_merge('environment_variables')
 
     @property
-    def tags(self):
-        # type: () -> Dict[str, str]
+    def tags(self) -> Dict[str, str]:
         tags = self._chain_merge('tags')
         tags['aws-chalice'] = 'version=%s:stage=%s:app=%s' % (
             current_chalice_version, self.chalice_stage, self.app_name)
         return tags
 
     @property
-    def security_group_ids(self):
-        # type: () -> List[str]
+    def security_group_ids(self) -> List[str]:
         return self._chain_lookup('security_group_ids',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def subnet_ids(self):
-        # type: () -> List[str]
+    def subnet_ids(self) -> List[str]:
         return self._chain_lookup('subnet_ids',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
     @property
-    def reserved_concurrency(self):
-        # type: () -> int
+    def reserved_concurrency(self) -> int:
         return self._chain_lookup('reserved_concurrency',
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
-    def scope(self, chalice_stage, function_name):
-        # type: (str, str) -> Config
+    def scope(self, chalice_stage: str, function_name: str) -> Config:
         # Used to create a new config object that's scoped to a different
         # stage and/or function.  This creates a completely separate copy.
         # This is preferred over mutating the existing config obj.
@@ -388,8 +362,7 @@ class Config(object):
         )
         return clone
 
-    def deployed_resources(self, chalice_stage_name):
-        # type: (str) -> DeployedResources
+    def deployed_resources(self, chalice_stage_name: str) -> DeployedResources:
         """Return resources associated with a given stage.
 
         If a deployment to a given stage has never happened,
@@ -410,8 +383,8 @@ class Config(object):
             return DeployedResources(data)
         return self._try_old_deployer_values(chalice_stage_name)
 
-    def _try_old_deployer_values(self, chalice_stage_name):
-        # type: (str) -> DeployedResources
+    def _try_old_deployer_values(self,
+                                 chalice_stage_name: str) -> DeployedResources:
         # They are upgrading from v1.0 to v2.0 of the deployed.json
         # schema.  Attempt to auto convert for them.
         old_deployed_file = os.path.join(self.project_dir, '.chalice',
@@ -421,25 +394,26 @@ class Config(object):
             return DeployedResources.empty()
         return self._upgrade_deployed_values(chalice_stage_name, data)
 
-    def _load_json_file(self, deployed_file):
-        # type: (str) -> Any
+    def _load_json_file(self, deployed_file: str) -> Any:
         if not os.path.isfile(deployed_file):
             return None
         with open(deployed_file, 'r') as f:
             return json.load(f)
 
-    def _upgrade_deployed_values(self, chalice_stage_name, data):
-        # type: (str, Any) -> DeployedResources
+    def _upgrade_deployed_values(self, chalice_stage_name: str,
+                                 data: Any) -> DeployedResources:
         deployed = data[chalice_stage_name]
         prefix = '%s-%s-' % (self.app_name, chalice_stage_name)
-        resources = []  # type: List[Dict[str, Any]]
+        resources: List[Dict[str, Any]] = []
         self._upgrade_lambda_functions(resources, deployed, prefix)
         self._upgrade_rest_api(resources, deployed)
         return DeployedResources(
             {'resources': resources, 'schema_version': '2.0'})
 
-    def _upgrade_lambda_functions(self, resources, deployed, prefix):
-        # type: (List[Dict[str, Any]], Dict[str, Any], str) -> None
+    def _upgrade_lambda_functions(self,
+                                  resources: List[Dict[str, Any]],
+                                  deployed: Dict[str, Any],
+                                  prefix: str) -> None:
         lambda_functions = deployed.get('lambda_functions', {})
         # In chalice 0.10.0, the lambda_functions had the format
         # {"function-name": "lambda_arn"} as opposed to
@@ -466,8 +440,9 @@ class Config(object):
             }
             resources.append(current)
 
-    def _upgrade_rest_api(self, resources, deployed):
-        # type: (List[Dict[str, Any]], Dict[str, Any]) -> None
+    def _upgrade_rest_api(self,
+                          resources: List[Dict[str, Any]],
+                          deployed: Dict[str, Any]) -> None:
         resources.extend([
             {'name': 'api_handler',
              'resource_type': 'lambda_function',
@@ -479,8 +454,7 @@ class Config(object):
 
 
 class DeployedResources(object):
-    def __init__(self, deployed_values):
-        # type: (Dict[str, Any]) -> None
+    def __init__(self, deployed_values: Dict[str, Any]) -> None:
         self._deployed_values = deployed_values['resources']
         self._deployed_values_by_name = {
             resource['name']: resource
@@ -488,12 +462,10 @@ class DeployedResources(object):
         }
 
     @classmethod
-    def empty(cls):
-        # type: () -> DeployedResources
+    def empty(cls) -> DeployedResources:
         return cls({'resources': [], 'schema_version': '2.0'})
 
-    def resource_values(self, name):
-        # type: (str) -> Dict[str, Any]
+    def resource_values(self, name: str) -> Dict[str, Any]:
         if 'api_mapping' in name:
             name = name.split('.')[0]
 
@@ -502,6 +474,5 @@ class DeployedResources(object):
         except KeyError:
             raise ValueError("Resource does not exist: %s" % name)
 
-    def resource_names(self):
-        # type: () -> List[str]
+    def resource_names(self) -> List[str]:
         return [r['name'] for r in self._deployed_values]

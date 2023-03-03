@@ -1894,7 +1894,7 @@ For more details on using the AWS CDK with Chalice, see :doc:`tutorials/cdk`.
 
    .. method:: get_function(resource_name)
 
-      Returns an ``IRole`` for an underlying SAM template resource.
+      Returns an ``IFunction`` for an underlying SAM template resource.
 
       :param str resource_name: The logical ID of the resource in the SAM template.
       :rtype: aws_cdk.aws_lambda.IFunction

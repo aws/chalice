@@ -4,6 +4,7 @@ This is intended only for local development purposes.
 
 """
 from __future__ import print_function
+from __future__ import annotations
 import re
 import threading
 import time
@@ -50,13 +51,13 @@ ServerCls = Callable[..., 'HTTPServer']
 
 
 class Clock(object):
-    def time(self):
-        # type: () -> float
+    def time(self) -> float:
         return time.time()
 
 
-def create_local_server(app_obj, config, host, port):
-    # type: (Chalice, Config, str, int) -> LocalDevServer
+def create_local_server(app_obj: Chalice,
+                        config: Config,
+                        host: str, port: int) -> LocalDevServer:
     CustomLocalChalice.__bases__ = (LocalChalice, app_obj.__class__)
     app_obj.__class__ = CustomLocalChalice
     return LocalDevServer(app_obj, config, host, port)
@@ -70,8 +71,7 @@ class LocalARNBuilder(object):
     LOCAL_API_ID = 'ymy8tbxw7b'
     LOCAL_STAGE = 'api'
 
-    def build_arn(self, method, path):
-        # type: (str, str) -> str
+    def build_arn(self, method: str, path: str) -> str:
         # In API Gateway the method and URI are separated by a / so typically
         # the uri portion omits the leading /. In the case where the entire
         # url is just '/' API Gateway adds a / to the end so that the arn end
@@ -90,12 +90,10 @@ class LocalARNBuilder(object):
 
 
 class ARNMatcher(object):
-    def __init__(self, target_arn):
-        # type: (str) -> None
+    def __init__(self, target_arn: str) -> None:
         self._arn = target_arn
 
-    def _resource_match(self, resource):
-        # type: (str) -> bool
+    def _resource_match(self, resource: str) -> bool:
         # Arn matching supports two special case characetrs that are not
         # escapable. * represents a glob which translates to a non-greedy
         # match of any number of characters. ? which is any single character.
@@ -106,8 +104,7 @@ class ARNMatcher(object):
         resource_regex = '^%s$' % resource_regex
         return re.match(resource_regex, self._arn) is not None
 
-    def does_any_resource_match(self, resources):
-        # type: (List[str]) -> bool
+    def does_any_resource_match(self, resources: List[str]) -> bool:
         for resource in resources:
             if self._resource_match(resource):
                 return True
@@ -115,16 +112,14 @@ class ARNMatcher(object):
 
 
 class RouteMatcher(object):
-    def __init__(self, route_urls):
-        # type: (List[str]) -> None
+    def __init__(self, route_urls: List[str]) -> None:
         # Sorting the route_urls ensures we always check
         # the concrete routes for a prefix before the
         # variable/capture parts of the route, e.g
         # '/foo/bar' before '/foo/{capture}'
         self.route_urls = sorted(route_urls)
 
-    def match_route(self, url):
-        # type: (str) -> MatchResult
+    def match_route(self, url: str) -> MatchResult:
         """Match the url against known routes.
 
         This method takes a concrete route "/foo/bar", and
@@ -164,19 +159,21 @@ class LambdaEventConverter(object):
     LOCAL_SOURCE_IP = '127.0.0.1'
 
     """Convert an HTTP request to an event dict used by lambda."""
-    def __init__(self, route_matcher, binary_types=None):
-        # type: (RouteMatcher, List[str]) -> None
+    def __init__(self, route_matcher: RouteMatcher,
+                 binary_types: Optional[List[str]] = None) -> None:
         self._route_matcher = route_matcher
         if binary_types is None:
             binary_types = []
         self._binary_types = binary_types
 
-    def _is_binary(self, headers):
-        # type: (Dict[str,Any]) -> bool
+    def _is_binary(self, headers: Dict[str, Any]) -> bool:
         return headers.get('content-type', '') in self._binary_types
 
-    def create_lambda_event(self, method, path, headers, body=None):
-        # type: (str, str, Dict[str, str], bytes) -> EventType
+    def create_lambda_event(self,
+                            method: str,
+                            path: str,
+                            headers: Dict[str, str],
+                            body: Optional[bytes] = None) -> EventType:
         view_route = self._route_matcher.match_route(path)
         event = {
             'requestContext': {
@@ -208,8 +205,9 @@ class LambdaEventConverter(object):
 class LocalGatewayException(Exception):
     CODE = 0
 
-    def __init__(self, headers, body=None):
-        # type: (HeaderType, Optional[bytes]) -> None
+    def __init__(self,
+                 headers: HeaderType,
+                 body: Optional[bytes] = None) -> None:
         self.headers = headers
         self.body = body
 
@@ -227,9 +225,9 @@ class NotAuthorizedError(LocalGatewayException):
 
 
 class LambdaContext(object):
-    def __init__(self, function_name, memory_size,
-                 max_runtime_ms=3000, time_source=None):
-        # type: (str, int, int, Optional[Clock]) -> None
+    def __init__(self, function_name: str, memory_size: int,
+                 max_runtime_ms: int = 3000,
+                 time_source: Optional[Clock] = None) -> None:
         if time_source is None:
             time_source = Clock()
         self._time_source = time_source
@@ -286,12 +284,10 @@ class LambdaContext(object):
         self.identity = None
         self.client_context = None
 
-    def _current_time_millis(self):
-        # type: () -> float
+    def _current_time_millis(self) -> float:
         return self._time_source.time() * 1000
 
-    def get_remaining_time_in_millis(self):
-        # type: () -> float
+    def get_remaining_time_in_millis(self) -> float:
         runtime = self._current_time_millis() - self._start_time
         return self._max_runtime - runtime
 
@@ -301,13 +297,14 @@ LocalAuthPair = Tuple[EventType, LambdaContext]
 
 class LocalGatewayAuthorizer(object):
     """A class for running user defined authorizers in local mode."""
-    def __init__(self, app_object):
-        # type: (Chalice) -> None
+    def __init__(self, app_object: Chalice) -> None:
         self._app_object = app_object
         self._arn_builder = LocalARNBuilder()
 
-    def authorize(self, raw_path, lambda_event, lambda_context):
-        # type: (str, EventType, LambdaContext) -> LocalAuthPair
+    def authorize(self,
+                  raw_path: str,
+                  lambda_event: EventType,
+                  lambda_context: LambdaContext) -> LocalAuthPair:
         method = lambda_event['requestContext']['httpMethod']
         route_entry = self._route_for_event(lambda_event)
         if not route_entry:
@@ -382,8 +379,9 @@ class LocalGatewayAuthorizer(object):
                  b'"User is not authorized to access this resource"}'))
         return lambda_event, lambda_context
 
-    def _check_can_invoke_view_function(self, arn, auth_result):
-        # type: (str, ResponseType) -> bool
+    def _check_can_invoke_view_function(self,
+                                        arn: str,
+                                        auth_result: ResponseType) -> bool:
         policy = auth_result.get('policyDocument', {})
         statements = policy.get('Statement', [])
         allow_resource_statements = []
@@ -397,8 +395,8 @@ class LocalGatewayAuthorizer(object):
         arn_matcher = ARNMatcher(arn)
         return arn_matcher.does_any_resource_match(allow_resource_statements)
 
-    def _route_for_event(self, lambda_event):
-        # type: (EventType) -> Optional[RouteEntry]
+    def _route_for_event(self,
+                         lambda_event: EventType) -> Optional[RouteEntry]:
         # Authorizer had to be made into an Any type since mypy couldn't
         # detect that app.ChaliceAuthorizer was callable.
         resource_path = lambda_event.get(
@@ -414,8 +412,8 @@ class LocalGatewayAuthorizer(object):
             return None
         return route_entry
 
-    def _update_lambda_event(self, lambda_event, auth_result):
-        # type: (EventType, ResponseType) -> EventType
+    def _update_lambda_event(self, lambda_event: EventType,
+                             auth_result: ResponseType) -> EventType:
         auth_context = auth_result['context']
         auth_context.update({
             'principalId': auth_result['principalId']
@@ -423,9 +421,10 @@ class LocalGatewayAuthorizer(object):
         lambda_event['requestContext']['authorizer'] = auth_context
         return lambda_event
 
-    def _prepare_authorizer_event(self, arn, lambda_event, lambda_context,
-                                  auth_header='authorization'):
-        # type: (str, EventType, LambdaContext, str) -> EventType
+    def _prepare_authorizer_event(self, arn: str,
+                                  lambda_event: EventType,
+                                  lambda_context: LambdaContext,
+                                  auth_header: str = 'authorization') -> EventType:
         """Translate event for an authorizer input."""
         authorizer_event = lambda_event.copy()
         authorizer_event['type'] = 'TOKEN'
@@ -440,14 +439,12 @@ class LocalGatewayAuthorizer(object):
         authorizer_event['methodArn'] = arn
         return authorizer_event
 
-    def _decode_jwt_payload(self, jwt):
-        # type: (str) -> Dict
+    def _decode_jwt_payload(self, jwt: str) -> Dict:
         payload_segment = jwt.split(".", 2)[1]
         payload = base64.urlsafe_b64decode(self._base64_pad(payload_segment))
         return json.loads(payload)
 
-    def _base64_pad(self, value):
-        # type: (str) -> str
+    def _base64_pad(self, value: str) -> str:
         rem = len(value) % 4
         if rem > 0:
             value += "=" * (4 - rem)
@@ -459,8 +456,7 @@ class LocalGateway(object):
 
     MAX_LAMBDA_EXECUTION_TIME = 900
 
-    def __init__(self, app_object, config):
-        # type: (Chalice, Config) -> None
+    def __init__(self, app_object: Chalice, config: Config) -> None:
         self._app_object = app_object
         self._config = config
         self.event_converter = LambdaEventConverter(
@@ -469,8 +465,7 @@ class LocalGateway(object):
         )
         self._authorizer = LocalGatewayAuthorizer(app_object)
 
-    def _generate_lambda_context(self):
-        # type: () -> LambdaContext
+    def _generate_lambda_context(self) -> LambdaContext:
         if self._config.lambda_timeout is None:
             timeout = self.MAX_LAMBDA_EXECUTION_TIME * 1000
         else:
@@ -481,21 +476,27 @@ class LocalGateway(object):
             max_runtime_ms=timeout
         )
 
-    def _generate_lambda_event(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[bytes]) -> EventType
+    def _generate_lambda_event(self,
+                               method: str,
+                               path: str,
+                               headers: HeaderType,
+                               body: Optional[bytes]) -> EventType:
         lambda_event = self.event_converter.create_lambda_event(
             method=method, path=path, headers=headers,
             body=body,
         )
         return lambda_event
 
-    def _has_user_defined_options_method(self, lambda_event):
-        # type: (EventType) -> bool
+    def _has_user_defined_options_method(self,
+                                         lambda_event: EventType) -> bool:
         route_key = lambda_event['requestContext']['resourcePath']
         return 'OPTIONS' in self._app_object.routes[route_key]
 
-    def handle_request(self, method, path, headers, body):
-        # type: (str, str, HeaderType, Optional[bytes]) -> ResponseType
+    def handle_request(self,
+                       method: str,
+                       path: str,
+                       headers: HeaderType,
+                       body: Optional[bytes]) -> ResponseType:
         lambda_context = self._generate_lambda_context()
         try:
             lambda_event = self._generate_lambda_event(
@@ -552,8 +553,7 @@ class LocalGateway(object):
         response = self._app_object(lambda_event, lambda_context)
         return response
 
-    def _autogen_options_headers(self, lambda_event):
-        # type:(EventType) -> HeaderType
+    def _autogen_options_headers(self, lambda_event: EventType) -> HeaderType:
         route_key = lambda_event['requestContext']['resourcePath']
         route_dict = self._app_object.routes[route_key]
         route_methods = [method for method in route_dict.keys()
@@ -589,14 +589,17 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
     """A class for mapping raw HTTP events to and from LocalGateway."""
     protocol_version = 'HTTP/1.1'
 
-    def __init__(self, request, client_address, server, app_object, config):
-        # type: (bytes, Tuple[str, int], HTTPServer, Chalice, Config) -> None
+    def __init__(self,
+                 request: bytes,
+                 client_address: Tuple[str, int],
+                 server: HTTPServer,
+                 app_object: Chalice,
+                 config: Config) -> None:
         self.local_gateway = LocalGateway(app_object, config)
         BaseHTTPRequestHandler.__init__(
             self, request, client_address, server)  # type: ignore
 
-    def _parse_payload(self):
-        # type: () -> Tuple[HeaderType, Optional[bytes]]
+    def _parse_payload(self) -> Tuple[HeaderType, Optional[bytes]]:
         body = None
         content_length = int(self.headers.get('content-length', '0'))
         if content_length > 0:
@@ -604,8 +607,7 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         converted_headers = dict(self.headers)
         return converted_headers, body
 
-    def _generic_handle(self):
-        # type: () -> None
+    def _generic_handle(self) -> None:
         headers, body = self._parse_payload()
         try:
             response = self.local_gateway.handle_request(
@@ -623,29 +625,31 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         except LocalGatewayException as e:
             self._send_error_response(e)
 
-    def _handle_binary(self, response):
-        # type: (Dict[str,Any]) -> Dict[str,Any]
+    def _handle_binary(self, response: Dict[str, Any]) -> Dict[str, Any]:
         if response.get('isBase64Encoded'):
             body = base64.b64decode(response['body'])
             response['body'] = body
         return response
 
-    def _send_error_response(self, error):
-        # type: (LocalGatewayException) -> None
+    def _send_error_response(self, error: LocalGatewayException) -> None:
         code = error.CODE
         headers = error.headers
         body = error.body
         self._send_http_response(code, headers, body)
 
-    def _send_http_response(self, code, headers, body):
-        # type: (int, HeaderType, Optional[Union[str,bytes]]) -> None
+    def _send_http_response(self,
+                            code: int,
+                            headers: HeaderType,
+                            body: Optional[Union[str, bytes]]) -> None:
         if body is None:
             self._send_http_response_no_body(code, headers)
         else:
             self._send_http_response_with_body(code, headers, body)
 
-    def _send_http_response_with_body(self, code, headers, body):
-        # type: (int, HeaderType, Union[str,bytes]) -> None
+    def _send_http_response_with_body(self,
+                                      code: int,
+                                      headers: HeaderType,
+                                      body: Union[str, bytes]) -> None:
         self.send_response(code)
         if not isinstance(body, bytes):
             body = body.encode('utf-8')
@@ -656,17 +660,17 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         self._send_headers(headers)
         self.wfile.write(body)
 
-    do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = do_PATCH = do_OPTIONS = \
-        _generic_handle
+    do_GET = do_PUT = do_POST = do_HEAD = do_DELETE = \
+        do_PATCH = do_OPTIONS = _generic_handle
 
-    def _send_http_response_no_body(self, code, headers):
-        # type: (int, HeaderType) -> None
+    def _send_http_response_no_body(self,
+                                    code: int,
+                                    headers: HeaderType) -> None:
         headers['Content-Length'] = '0'
         self.send_response(code)
         self._send_headers(headers)
 
-    def _send_headers(self, headers):
-        # type: (HeaderType) -> None
+    def _send_headers(self, headers: HeaderType) -> None:
         for header_name, header_value in headers.items():
             if isinstance(header_value, list):
                 for value in header_value:
@@ -690,10 +694,11 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 class LocalDevServer(object):
-    def __init__(self, app_object, config, host, port,
-                 handler_cls=ChaliceRequestHandler,
-                 server_cls=ThreadedHTTPServer):
-        # type: (Chalice, Config, str, int, HandlerCls, ServerCls) -> None
+    def __init__(self,
+                 app_object: Chalice,
+                 config: Config, host: str, port: int,
+                 handler_cls: HandlerCls = ChaliceRequestHandler,
+                 server_cls: ServerCls = ThreadedHTTPServer) -> None:
         self.app_object = app_object
         self.host = host
         self.port = port
@@ -701,17 +706,14 @@ class LocalDevServer(object):
             handler_cls, app_object=app_object, config=config)
         self.server = server_cls((host, port), self._wrapped_handler)
 
-    def handle_single_request(self):
-        # type: () -> None
+    def handle_single_request(self) -> None:
         self.server.handle_request()
 
-    def serve_forever(self):
-        # type: () -> None
+    def serve_forever(self) -> None:
         print("Serving on http://%s:%s" % (self.host, self.port))
         self.server.serve_forever()
 
-    def shutdown(self):
-        # type: () -> None
+    def shutdown(self) -> None:
         # This must be called from another thread of else it
         # will deadlock.
         self.server.shutdown()
@@ -725,20 +727,17 @@ class HTTPServerThread(threading.Thread):
     not part of the normal threading.Thread interface.
 
     """
-    def __init__(self, server_factory):
-        # type: (Callable[[], LocalDevServer]) -> None
+    def __init__(self, server_factory: Callable[[], LocalDevServer]) -> None:
         threading.Thread.__init__(self)
         self._server_factory = server_factory
-        self._server = None  # type: Optional[LocalDevServer]
+        self._server: Optional[LocalDevServer] = None
         self.daemon = True
 
-    def run(self):
-        # type: () -> None
+    def run(self) -> None:
         self._server = self._server_factory()
         self._server.serve_forever()
 
-    def shutdown(self):
-        # type: () -> None
+    def shutdown(self) -> None:
         if self._server is not None:
             self._server.shutdown()
 
@@ -753,13 +752,11 @@ class LocalChalice(Chalice):
     # See: https://github.com/python/mypy/issues/4125
 
     @property  # type: ignore
-    def current_request(self):  # type: ignore
-        # type: () -> Request
+    def current_request(self) -> Request:  # type: ignore
         return self._THREAD_LOCAL.current_request
 
     @current_request.setter
-    def current_request(self, value):  # type: ignore
-        # type: (Request) -> None
+    def current_request(self, value: Request) -> None:  # type: ignore
         self._THREAD_LOCAL.current_request = value
 
 

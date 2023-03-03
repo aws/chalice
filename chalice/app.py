@@ -872,7 +872,7 @@ class DecoratorAPI(object):
 
     def _create_registration_function(self, handler_type: str,
                                       name: Optional[str] = None,
-                                      registration_kwargs: Any = None
+                                      registration_kwargs: Optional[Any] = None
                                       ) -> Callable[..., Any]:
         def _register_handler(
                 user_handler: UserHandlerFuncType
@@ -936,7 +936,7 @@ class DecoratorAPI(object):
                           user_handler: UserHandlerFuncType,
                           wrapped_handler: Callable[..., Any],
                           kwargs: Dict[str, Any],
-                          options: Dict[Any, Any] = None) -> None:
+                          options: Optional[Dict[Any, Any]] = None) -> None:
         raise NotImplementedError("_register_handler")
 
     def register_middleware(self, func: MiddlewareFuncType,
@@ -963,7 +963,7 @@ class _HandlerRegistration(object):
     def _do_register_handler(self, handler_type: str, name: str,
                              user_handler: UserHandlerFuncType,
                              wrapped_handler: Callable[..., Any], kwargs: Any,
-                             options: Dict[Any, Any] = None) -> None:
+                             options: Optional[Dict[Any, Any]] = None) -> None:
         module_name = 'app'
         if options is not None:
             name_prefix = options.get('name_prefix')
@@ -1224,7 +1224,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
 
     def __init__(self, app_name: str, debug: bool = False,
                  configure_logs: bool = True,
-                 env: MutableMapping = None) -> None:
+                 env: Optional[MutableMapping] = None) -> None:
         super(Chalice, self).__init__()
         self.app_name: str = app_name
         self.websocket_api: WebsocketAPI = WebsocketAPI()
@@ -1293,7 +1293,8 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
     def _register_handler(self, handler_type: str, name: str,
                           user_handler: UserHandlerFuncType,
                           wrapped_handler: Callable[..., Any],
-                          kwargs: Any, options: Dict[Any, Any] = None) -> None:
+                          kwargs: Any, options: Optional[Dict[Any, Any]] = None
+                          ) -> None:
         self._do_register_handler(handler_type, name, user_handler,
                                   wrapped_handler, kwargs, options)
 
@@ -1726,7 +1727,7 @@ class EventSourceHandler(BaseLambdaHandler):
 
     def __init__(
             self, func: Callable[..., Any], event_class: Any,
-            middleware_handlers: List[Callable[..., Any]] = None
+            middleware_handlers: Optional[List[Callable[..., Any]]] = None
     ) -> None:
         self.func: Callable[..., Any] = func
         self.event_class: Any = event_class

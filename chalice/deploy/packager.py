@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines
+from __future__ import annotations
 import sys
 import hashlib
 import inspect
@@ -39,17 +40,18 @@ class InvalidSourceDistributionNameError(Exception):
 
 class MissingDependencyError(Exception):
     """Raised when some dependencies could not be packaged for any reason."""
-    def __init__(self, missing):
-        # type: (Set[Package]) -> None
+
+    def __init__(self, missing: Set[Package]) -> None:
         self.missing = missing
 
 
 class NoSuchPackageError(Exception):
     """Raised when a package name or version could not be found."""
-    def __init__(self, package_name):
-        # type: (str) -> None
+
+    def __init__(self, package_name: str) -> None:
         super(NoSuchPackageError, self).__init__(
-            'Could not satisfy the requirement: %s' % package_name)
+            'Could not satisfy the requirement: %s' % package_name
+        )
 
 
 class PackageDownloadError(Exception):
@@ -62,10 +64,11 @@ class EmptyPackageError(Exception):
 
 class UnsupportedPackageError(Exception):
     """Unable to parse package metadata."""
-    def __init__(self, package_name):
-        # type: (str) -> None
+
+    def __init__(self, package_name: str) -> None:
         super(UnsupportedPackageError, self).__init__(
-            'Unable to retrieve name/version for package: %s' % package_name)
+            'Unable to retrieve name/version for package: %s' % package_name
+        )
 
 
 class BaseLambdaDeploymentPackager(object):
@@ -77,31 +80,34 @@ class BaseLambdaDeploymentPackager(object):
         'python3.6': 'cp36m',
         'python3.7': 'cp37m',
         'python3.8': 'cp38',
-        'python3.9': 'cp39'
+        'python3.9': 'cp39',
     }
 
-    def __init__(self, osutils, dependency_builder, ui):
-        # type: (OSUtils, DependencyBuilder, UI) -> None
+    def __init__(
+        self, osutils: OSUtils, dependency_builder: DependencyBuilder, ui: UI
+    ) -> None:
         self._osutils = osutils
         self._dependency_builder = dependency_builder
         self._ui = ui
 
-    def create_deployment_package(self, project_dir, python_version):
-        # type: (str, str) -> str
+    def create_deployment_package(
+        self, project_dir: str, python_version: str
+    ) -> str:
         raise NotImplementedError("create_deployment_package")
 
-    def _get_requirements_filename(self, project_dir):
-        # type: (str) -> str
+    def _get_requirements_filename(self, project_dir: str) -> str:
         # Gets the path to a requirements.txt file out of a project dir path
         return self._osutils.joinpath(project_dir, 'requirements.txt')
 
-    def _add_vendor_files(self, zipped, dirname, prefix=''):
-        # type: (ZipFile, str, str) -> None
+    def _add_vendor_files(
+        self, zipped: ZipFile, dirname: str, prefix: str = ''
+    ) -> None:
         if not self._osutils.directory_exists(dirname):
             return
         prefix_len = len(dirname) + 1
-        for root, _, filenames in self._osutils.walk(dirname,
-                                                     followlinks=True):
+        for root, _, filenames in self._osutils.walk(
+            dirname, followlinks=True
+        ):
             for filename in filenames:
                 full_path = self._osutils.joinpath(root, filename)
                 zip_path = full_path[prefix_len:]
@@ -109,8 +115,9 @@ class BaseLambdaDeploymentPackager(object):
                     zip_path = self._osutils.joinpath(prefix, zip_path)
                 zipped.write(full_path, zip_path)
 
-    def deployment_package_filename(self, project_dir, python_version):
-        # type: (str, str) -> str
+    def deployment_package_filename(
+        self, project_dir: str, python_version: str
+    ) -> str:
         # Computes the name of the deployment package zipfile
         # based on a hash of the requirements file.
         # This is done so that we only "pip install -r requirements.txt"
@@ -121,22 +128,24 @@ class BaseLambdaDeploymentPackager(object):
         # re-downloaded since they will not be compatible.
         return self._deployment_package_filename(project_dir, python_version)
 
-    def _deployment_package_filename(self, project_dir, python_version,
-                                     prefix=''):
-        # type: (str, str, str) -> str
+    def _deployment_package_filename(
+        self, project_dir: str, python_version: str, prefix: str = ''
+    ) -> str:
         requirements_filename = self._get_requirements_filename(project_dir)
         hash_contents = self._hash_project_dir(
             requirements_filename,
             self._osutils.joinpath(project_dir, self._VENDOR_DIR),
-            project_dir
+            project_dir,
         )
         filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
         deployment_package_filename = self._osutils.joinpath(
-            project_dir, '.chalice', 'deployments', filename)
+            project_dir, '.chalice', 'deployments', filename
+        )
         return deployment_package_filename
 
-    def _add_py_deps(self, zip_fileobj, deps_dir, prefix=''):
-        # type: (ZipFile, str, str) -> None
+    def _add_py_deps(
+        self, zip_fileobj: ZipFile, deps_dir: str, prefix: str = ''
+    ) -> None:
         prefix_len = len(deps_dir) + 1
         for root, dirnames, filenames in self._osutils.walk(deps_dir):
             if root == deps_dir and 'chalice' in dirnames:
@@ -150,13 +159,13 @@ class BaseLambdaDeploymentPackager(object):
                     zip_path = self._osutils.joinpath(prefix, zip_path)
                 zip_fileobj.write(full_path, zip_path)
 
-    def _add_app_files(self, zip_fileobj, project_dir):
-        # type: (ZipFile, str) -> None
+    def _add_app_files(self, zip_fileobj: ZipFile, project_dir: str) -> None:
         for full_path, zip_path in self._iter_app_filenames(project_dir):
             zip_fileobj.write(full_path, zip_path)
 
-    def _iter_app_filenames(self, project_dir):
-        # type: (str) -> Iterator[Tuple[str, str]]
+    def _iter_app_filenames(
+        self, project_dir: str
+    ) -> Iterator[Tuple[str, str]]:
         chalice_router = inspect.getfile(app)
         if chalice_router.endswith('.pyc'):
             chalice_router = chalice_router[:-1]
@@ -170,14 +179,18 @@ class BaseLambdaDeploymentPackager(object):
         for filename in self._iter_chalice_lib_if_needed(project_dir):
             yield filename
 
-    def _hash_project_dir(self, requirements_filename, vendor_dir,
-                          project_dir):
-        # type: (str, str, str) -> str
+    def _hash_project_dir(
+        self, requirements_filename: str, vendor_dir: str, project_dir: str
+    ) -> str:
         if not self._osutils.file_exists(requirements_filename):
             contents = b''
         else:
-            contents = cast(bytes, self._osutils.get_file_contents(
-                requirements_filename, binary=True))
+            contents = cast(
+                bytes,
+                self._osutils.get_file_contents(
+                    requirements_filename, binary=True
+                ),
+            )
         h = hashlib.md5(contents)
         for filename, _ in self._iter_app_filenames(project_dir):
             with self._osutils.open(filename, 'rb') as f:
@@ -188,10 +201,10 @@ class BaseLambdaDeploymentPackager(object):
             self._hash_vendor_dir(vendor_dir, h)
         return h.hexdigest()
 
-    def _hash_vendor_dir(self, vendor_dir, md5):
-        # type: (str, Any) -> None
-        for rootdir, _, filenames in self._osutils.walk(vendor_dir,
-                                                        followlinks=True):
+    def _hash_vendor_dir(self, vendor_dir: str, md5: Any) -> None:
+        for rootdir, _, filenames in self._osutils.walk(
+            vendor_dir, followlinks=True
+        ):
             for filename in filenames:
                 fullpath = self._osutils.joinpath(rootdir, filename)
                 with self._osutils.open(fullpath, 'rb') as f:
@@ -208,8 +221,9 @@ class BaseLambdaDeploymentPackager(object):
                     for chunk in iter(reader, b''):
                         md5.update(chunk)
 
-    def inject_latest_app(self, deployment_package_filename, project_dir):
-        # type: (str, str) -> None
+    def inject_latest_app(
+        self, deployment_package_filename: str, project_dir: str
+    ) -> None:
         """Inject latest version of chalice app into a zip package.
 
         This method takes a pre-created deployment package and injects
@@ -233,8 +247,9 @@ class BaseLambdaDeploymentPackager(object):
         tmpzip = deployment_package_filename + '.tmp.zip'
 
         with self._osutils.open_zip(deployment_package_filename, 'r') as inzip:
-            with self._osutils.open_zip(tmpzip, 'w',
-                                        self._osutils.ZIP_DEFLATED) as outzip:
+            with self._osutils.open_zip(
+                tmpzip, 'w', self._osutils.ZIP_DEFLATED
+            ) as outzip:
                 for el in inzip.infolist():
                     if self._needs_latest_version(el.filename):
                         continue
@@ -245,94 +260,109 @@ class BaseLambdaDeploymentPackager(object):
                 self._add_app_files(outzip, project_dir)
         self._osutils.move(tmpzip, deployment_package_filename)
 
-    def _needs_latest_version(self, filename):
-        # type: (str) -> bool
+    def _needs_latest_version(self, filename: str) -> bool:
         return filename == 'app.py' or filename.startswith(
-            ('chalicelib/', 'chalice/'))
+            ('chalicelib/', 'chalice/')
+        )
 
-    def _iter_chalice_lib_if_needed(self, project_dir):
-        # type: (str) -> Iterator[Tuple[str, str]]
+    def _iter_chalice_lib_if_needed(
+        self, project_dir: str
+    ) -> Iterator[Tuple[str, str]]:
         libdir = self._osutils.joinpath(project_dir, self._CHALICE_LIB_DIR)
         if self._osutils.directory_exists(libdir):
             for rootdir, _, filenames in self._osutils.walk(libdir):
                 for filename in filenames:
                     fullpath = self._osutils.joinpath(rootdir, filename)
                     zip_path = self._osutils.joinpath(
-                        self._CHALICE_LIB_DIR,
-                        fullpath[len(libdir) + 1:])
+                        self._CHALICE_LIB_DIR, fullpath[len(libdir) + 1:]
+                    )
                     yield (fullpath, zip_path)
 
-    def _create_output_dir_if_needed(self, package_filename):
-        # type: (str) -> None
+    def _create_output_dir_if_needed(self, package_filename: str) -> None:
         dirname = self._osutils.dirname(
-            self._osutils.abspath(package_filename))
+            self._osutils.abspath(package_filename)
+        )
         if not self._osutils.directory_exists(dirname):
             self._osutils.makedirs(dirname)
 
-    def _build_python_dependencies(self, python_version, requirements_filepath,
-                                   site_packages_dir):
-        # type: (str, str, str) -> None
+    def _build_python_dependencies(
+        self,
+        python_version: str,
+        requirements_filepath: str,
+        site_packages_dir: str,
+    ) -> None:
         try:
             abi = self._RUNTIME_TO_ABI[python_version]
             self._dependency_builder.build_site_packages(
-                abi, requirements_filepath, site_packages_dir)
+                abi, requirements_filepath, site_packages_dir
+            )
         except MissingDependencyError as e:
             missing_packages = '\n'.join([p.identifier for p in e.missing])
             self._ui.write(MISSING_DEPENDENCIES_TEMPLATE % missing_packages)
 
 
 class LambdaDeploymentPackager(BaseLambdaDeploymentPackager):
-    def create_deployment_package(self, project_dir, python_version):
-        # type: (str, str) -> str
+    def create_deployment_package(
+        self, project_dir: str, python_version: str
+    ) -> str:
         msg = "Creating deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
         package_filename = self.deployment_package_filename(
-            project_dir, python_version)
+            project_dir, python_version
+        )
         if self._osutils.file_exists(package_filename):
             self._ui.write("Reusing existing deployment package.\n")
             return package_filename
         self._create_output_dir_if_needed(package_filename)
         with self._osutils.tempdir() as tmpdir:
             requirements_filepath = self._get_requirements_filename(
-                project_dir)
-            self._build_python_dependencies(python_version,
-                                            requirements_filepath,
-                                            site_packages_dir=tmpdir)
-            with self._osutils.open_zip(package_filename, 'w',
-                                        self._osutils.ZIP_DEFLATED) as z:
+                project_dir
+            )
+            self._build_python_dependencies(
+                python_version, requirements_filepath, site_packages_dir=tmpdir
+            )
+            with self._osutils.open_zip(
+                package_filename, 'w', self._osutils.ZIP_DEFLATED
+            ) as z:
                 self._add_py_deps(z, deps_dir=tmpdir)
                 self._add_app_files(z, project_dir)
-                self._add_vendor_files(z, self._osutils.joinpath(
-                    project_dir, self._VENDOR_DIR))
+                self._add_vendor_files(
+                    z, self._osutils.joinpath(project_dir, self._VENDOR_DIR)
+                )
         return package_filename
 
 
 class AppOnlyDeploymentPackager(BaseLambdaDeploymentPackager):
-    def create_deployment_package(self, project_dir, python_version):
-        # type: (str, str) -> str
+    def create_deployment_package(
+        self, project_dir: str, python_version: str
+    ) -> str:
         msg = "Creating app deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
-        package_filename = self.deployment_package_filename(project_dir,
-                                                            python_version)
+        package_filename = self.deployment_package_filename(
+            project_dir, python_version
+        )
         if self._osutils.file_exists(package_filename):
             self._ui.write("  Reusing existing app deployment package.\n")
             return package_filename
         self._create_output_dir_if_needed(package_filename)
-        with self._osutils.open_zip(package_filename, 'w',
-                                    self._osutils.ZIP_DEFLATED) as z:
+        with self._osutils.open_zip(
+            package_filename, 'w', self._osutils.ZIP_DEFLATED
+        ) as z:
             self._add_app_files(z, project_dir)
         return package_filename
 
-    def deployment_package_filename(self, project_dir, python_version):
-        # type: (str, str) -> str
-        return self._deployment_package_filename(project_dir, python_version,
-                                                 prefix='appcode-')
+    def deployment_package_filename(
+        self, project_dir: str, python_version: str
+    ) -> str:
+        return self._deployment_package_filename(
+            project_dir, python_version, prefix='appcode-'
+        )
 
-    def _deployment_package_filename(self, project_dir, python_version,
-                                     prefix=''):
-        # type: (str, str, str) -> str
+    def _deployment_package_filename(
+        self, project_dir: str, python_version: str, prefix: str = ''
+    ) -> str:
         h = hashlib.md5(b'')
         for filename, _ in self._iter_app_filenames(project_dir):
             with self._osutils.open(filename, 'rb') as f:
@@ -342,7 +372,8 @@ class AppOnlyDeploymentPackager(BaseLambdaDeploymentPackager):
         digest = h.hexdigest()
         filename = '%s%s-%s.zip' % (prefix, digest, python_version)
         deployment_package_filename = self._osutils.joinpath(
-            project_dir, '.chalice', 'deployments', filename)
+            project_dir, '.chalice', 'deployments', filename
+        )
         return deployment_package_filename
 
 
@@ -353,42 +384,50 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
     # in order for our python dependencies to work we need.
     _PREFIX = 'python/lib/%s/site-packages'
 
-    def create_deployment_package(self, project_dir, python_version):
-        # type: (str, str) -> str
+    def create_deployment_package(
+        self, project_dir: str, python_version: str
+    ) -> str:
         msg = "Creating shared layer deployment package."
         self._ui.write("%s\n" % msg)
         logger.debug(msg)
         package_filename = self.deployment_package_filename(
-            project_dir, python_version)
+            project_dir, python_version
+        )
         self._create_output_dir_if_needed(package_filename)
         if self._osutils.file_exists(package_filename):
             self._ui.write(
-                "  Reusing existing shared layer deployment package.\n")
+                "  Reusing existing shared layer deployment package.\n"
+            )
             return package_filename
         with self._osutils.tempdir() as tmpdir:
             requirements_filepath = self._get_requirements_filename(
-                project_dir)
-            self._build_python_dependencies(python_version,
-                                            requirements_filepath,
-                                            site_packages_dir=tmpdir)
-            with self._osutils.open_zip(package_filename, 'w',
-                                        self._osutils.ZIP_DEFLATED) as z:
+                project_dir
+            )
+            self._build_python_dependencies(
+                python_version, requirements_filepath, site_packages_dir=tmpdir
+            )
+            with self._osutils.open_zip(
+                package_filename, 'w', self._osutils.ZIP_DEFLATED
+            ) as z:
                 prefix = self._PREFIX % python_version
                 self._add_py_deps(z, deps_dir=tmpdir, prefix=prefix)
-                self._add_vendor_files(z, self._osutils.joinpath(
-                    project_dir, self._VENDOR_DIR), prefix=prefix)
+                self._add_vendor_files(
+                    z,
+                    self._osutils.joinpath(project_dir, self._VENDOR_DIR),
+                    prefix=prefix,
+                )
         self._check_valid_package(package_filename)
         return package_filename
 
-    def _check_valid_package(self, package_filename):
-        # type: (str) -> None
+    def _check_valid_package(self, package_filename: str) -> None:
         # Lambda does not allow empty deployment packages, so if there are no
         # requirements.txt deps or anything in vendor/, we need to let the
         # call know that we couldn't generate a useful deployment package
         # for them.  The caller will then need make the appropriate adjustments
         # i.e remove that LambdaLayer model from the app.
-        with self._osutils.open_zip(package_filename,
-                                    'r', self._osutils.ZIP_DEFLATED) as z:
+        with self._osutils.open_zip(
+            package_filename, 'r', self._osutils.ZIP_DEFLATED
+        ) as z:
             total_size = sum(f.file_size for f in z.infolist())
             # We have to check the total archive size, Lambda will still error
             # out if you have a zip file with all empty files.  It's not enough
@@ -400,20 +439,26 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
                 self._osutils.remove_file(package_filename)
                 raise EmptyPackageError(package_filename)
 
-    def deployment_package_filename(self, project_dir, python_version):
-        # type: (str, str) -> str
-        return self._deployment_package_filename(project_dir, python_version,
-                                                 prefix='managed-layer-')
+    def deployment_package_filename(
+        self, project_dir: str, python_version: str
+    ) -> str:
+        return self._deployment_package_filename(
+            project_dir, python_version, prefix='managed-layer-'
+        )
 
-    def _deployment_package_filename(self, project_dir, python_version,
-                                     prefix=''):
-        # type: (str, str, str) -> str
+    def _deployment_package_filename(
+        self, project_dir: str, python_version: str, prefix: str = ''
+    ) -> str:
         requirements_filename = self._get_requirements_filename(project_dir)
         if not self._osutils.file_exists(requirements_filename):
             contents = b''
         else:
-            contents = cast(bytes, self._osutils.get_file_contents(
-                requirements_filename, binary=True))
+            contents = cast(
+                bytes,
+                self._osutils.get_file_contents(
+                    requirements_filename, binary=True
+                ),
+            )
         h = hashlib.md5(contents)
         vendor_dir = self._osutils.joinpath(project_dir, self._VENDOR_DIR)
         if self._osutils.directory_exists(vendor_dir):
@@ -421,7 +466,8 @@ class LayerDeploymentPackager(BaseLambdaDeploymentPackager):
         hash_contents = h.hexdigest()
         filename = '%s%s-%s.zip' % (prefix, hash_contents, python_version)
         deployment_package_filename = self._osutils.joinpath(
-            project_dir, '.chalice', 'deployments', filename)
+            project_dir, '.chalice', 'deployments', filename
+        )
         return deployment_package_filename
 
 
@@ -437,6 +483,7 @@ class DependencyBuilder(object):
     into a site-packages directory, to be included in the bundle by the
     packager.
     """
+
     _ADDITIONAL_COMPATIBLE_PLATFORM = {'any', 'linux_x86_64'}
     _MANYLINUX_LEGACY_MAP = {
         'manylinux1_x86_64': 'manylinux_2_5_x86_64',
@@ -462,15 +509,17 @@ class DependencyBuilder(object):
         'pyrsistent',
     }
 
-    def __init__(self, osutils, pip_runner=None):
-        # type: (OSUtils, Optional[PipRunner]) -> None
+    def __init__(
+        self, osutils: OSUtils, pip_runner: Optional[PipRunner] = None
+    ) -> None:
         self._osutils = osutils
         if pip_runner is None:
             pip_runner = PipRunner(SubprocessPip(osutils))
         self._pip = pip_runner
 
-    def _is_compatible_wheel_filename(self, expected_abi, filename):
-        # type: (str, str) -> bool
+    def _is_compatible_wheel_filename(
+        self, expected_abi: str, filename: str
+    ) -> bool:
         wheel = filename[:-4]
         all_compatibility_tags = self._iter_all_compatibility_tags(wheel)
         for implementation, abi, platform in all_compatibility_tags:
@@ -493,8 +542,9 @@ class DependencyBuilder(object):
                 return True
         return False
 
-    def _is_compatible_platform_tag(self, expected_abi, platform):
-        # type: (str, str) -> bool
+    def _is_compatible_platform_tag(
+        self, expected_abi: str, platform: str
+    ) -> bool:
         # From PEP 600, the new manylinux tag is
         # manylinux_${GLIBCMAJOR}_${GLIBCMINOR}_${ARCH}
         # e.g. manylinux_2_17_x86_64.
@@ -514,17 +564,23 @@ class DependencyBuilder(object):
                 return False
             tag_major, tag_minor = [int(x) for x in m.groups()[:2]]
             runtime_major, runtime_minor = self._RUNTIME_GLIBC.get(
-                expected_abi, self._DEFAULT_GLIBC)
+                expected_abi, self._DEFAULT_GLIBC
+            )
             if (tag_major, tag_minor) <= (runtime_major, runtime_minor):
                 logger.debug(
                     "Tag glibc (%s, %s) is compatible with "
                     "runtime glibc (%s, %s)",
-                    tag_major, tag_minor, runtime_major, runtime_minor)
+                    tag_major,
+                    tag_minor,
+                    runtime_major,
+                    runtime_minor,
+                )
                 return True
         return False
 
-    def _iter_all_compatibility_tags(self, wheel):
-        # type: (str) -> Iterator[Tuple[str, str, str]]
+    def _iter_all_compatibility_tags(
+        self, wheel: str
+    ) -> Iterator[Tuple[str, str, str]]:
         # From PEP 425, section "Compressed Tag Sets"
         #
         # "To allow for compact filenames of bdists that work with more than
@@ -541,8 +597,7 @@ class DependencyBuilder(object):
                 for platform in platform_tag.split('.'):
                     yield (implementation, abi, platform)
 
-    def _has_at_least_one_package(self, filename):
-        # type: (str) -> bool
+    def _has_at_least_one_package(self, filename: str) -> bool:
         if not self._osutils.file_exists(filename):
             return False
         with open(filename, 'r') as f:
@@ -556,53 +611,67 @@ class DependencyBuilder(object):
                     return True
         return False
 
-    def _download_all_dependencies(self, requirements_filename, directory):
-        # type: (str, str) -> Set[Package]
+    def _download_all_dependencies(
+        self, requirements_filename: str, directory: str
+    ) -> Set[Package]:
         # Download dependencies prefering wheel files but falling back to
         # raw source dependences to get the transitive closure over
         # the dependency graph. Return the set of all package objects
         # which will serve as the master list of dependencies needed to deploy
         # successfully.
         self._pip.download_all_dependencies(requirements_filename, directory)
-        deps = {Package(directory, filename) for filename
-                in self._osutils.get_directory_contents(directory)}
+        deps = {
+            Package(directory, filename)
+            for filename in self._osutils.get_directory_contents(directory)
+        }
         logger.debug("Full dependency closure: %s", deps)
         return deps
 
-    def _download_binary_wheels(self, abi, packages, directory):
-        # type: (str, Set[Package], str) -> None
+    def _download_binary_wheels(
+        self, abi: str, packages: Set[Package], directory: str
+    ) -> None:
         # Try to get binary wheels for each package that isn't compatible.
         logger.debug("Downloading manylinux wheels: %s", packages)
         self._pip.download_manylinux_wheels(
-            abi, [pkg.identifier for pkg in packages], directory)
+            abi, [pkg.identifier for pkg in packages], directory
+        )
 
-    def _download_sdists(self, packages, directory):
-        # type: (Set[Package], str) -> None
+    def _download_sdists(self, packages: Set[Package], directory: str) -> None:
         logger.debug("Downloading missing sdists: %s", packages)
         self._pip.download_sdists(
-            [pkg.identifier for pkg in packages], directory)
+            [pkg.identifier for pkg in packages], directory
+        )
 
-    def _find_sdists(self, directory):
-        # type: (str) -> Set[Package]
-        packages = [Package(directory, filename) for filename
-                    in self._osutils.get_directory_contents(directory)]
-        sdists = {package for package in packages
-                  if package.dist_type == 'sdist'}
+    def _find_sdists(self, directory: str) -> Set[Package]:
+        packages = [
+            Package(directory, filename)
+            for filename in self._osutils.get_directory_contents(directory)
+        ]
+        sdists = {
+            package for package in packages if package.dist_type == 'sdist'
+        }
         return sdists
 
-    def _build_sdists(self, sdists, directory, compile_c=True):
-        # type: (Set[Package], str, bool) -> None
-        logger.debug("Build missing wheels from sdists "
-                     "(C compiling %s): %s", compile_c, sdists)
+    def _build_sdists(
+        self, sdists: Set[Package], directory: str, compile_c: bool = True
+    ) -> None:
+        logger.debug(
+            "Build missing wheels from sdists (C compiling %s): %s",
+            compile_c,
+            sdists,
+        )
         for sdist in sdists:
             path_to_sdist = self._osutils.joinpath(directory, sdist.filename)
             self._pip.build_wheel(path_to_sdist, directory, compile_c)
 
-    def _categorize_wheel_files(self, abi, directory):
-        # type: (str, str) -> Tuple[Set[Package], Set[Package]]
-        final_wheels = [Package(directory, filename) for filename
-                        in self._osutils.get_directory_contents(directory)
-                        if filename.endswith('.whl')]
+    def _categorize_wheel_files(
+        self, abi: str, directory: str
+    ) -> Tuple[Set[Package], Set[Package]]:
+        final_wheels = [
+            Package(directory, filename)
+            for filename in self._osutils.get_directory_contents(directory)
+            if filename.endswith('.whl')
+        ]
 
         compatible_wheels, incompatible_wheels = set(), set()
         for wheel in final_wheels:
@@ -612,8 +681,7 @@ class DependencyBuilder(object):
                 incompatible_wheels.add(wheel)
         return compatible_wheels, incompatible_wheels
 
-    def _categorize_deps(self, abi, deps):
-        # type: (str, Set[Package]) -> Any
+    def _categorize_deps(self, abi: str, deps: Set[Package]) -> Any:
         compatible_wheels = set()
         incompatible_wheels = set()
         sdists = set()
@@ -627,14 +695,16 @@ class DependencyBuilder(object):
                     incompatible_wheels.add(package)
         return sdists, compatible_wheels, incompatible_wheels
 
-    def _download_dependencies(self, abi, directory, requirements_filename):
-        # type: (str, str, str) -> Tuple[Set[Package], Set[Package]]
+    def _download_dependencies(
+        self, abi: str, directory: str, requirements_filename: str
+    ) -> Tuple[Set[Package], Set[Package]]:
         # Download all dependencies we can, letting pip choose what to
         # download.
         # deps should represent the best effort we can make to gather all the
         # dependencies.
         deps = self._download_all_dependencies(
-            requirements_filename, directory)
+            requirements_filename, directory
+        )
         # Sort the downloaded packages into three categories:
         # - sdists (Pip could not get a wheel so it gave us an sdist)
         # - lambda compatible wheel files
@@ -647,10 +717,13 @@ class DependencyBuilder(object):
         # wheel file may not be compatible with lambda. Pure python wheels
         # still will be compatible because they have no platform dependencies.
         sdists, compatible_wheels, incompatible_wheels = self._categorize_deps(
-            abi, deps)
+            abi, deps
+        )
         logger.debug("Compatible wheels for Lambda: %s", compatible_wheels)
-        logger.debug("Initial incompatible wheels for Lambda: %s",
-                     incompatible_wheels | sdists)
+        logger.debug(
+            "Initial incompatible wheels for Lambda: %s",
+            incompatible_wheels | sdists,
+        )
 
         # Next we need to go through the downloaded packages and pick out any
         # dependencies that do not have a compatible wheel file downloaded.
@@ -669,7 +742,8 @@ class DependencyBuilder(object):
         # incompatible wheel file and no sdist. So we need to get any missing
         # sdists before we can build them.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory)
+            abi, directory
+        )
         # The self._download_binary_wheels() can now introduce duplicate
         # entries.  For example, if we download a macOS whl at first but
         # then we're able to download a manylinux1 wheel, we'll now have
@@ -681,7 +755,7 @@ class DependencyBuilder(object):
         sdists = self._find_sdists(directory)
         logger.debug(
             "compatible wheels after second download pass: %s",
-            compatible_wheels
+            compatible_wheels,
         )
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=True)
@@ -695,10 +769,11 @@ class DependencyBuilder(object):
         # building the package and trying to sever its ability to find a C
         # compiler.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory)
+            abi, directory
+        )
         logger.debug(
             "compatible after building wheels (C compiling): %s",
-            compatible_wheels
+            compatible_wheels,
         )
         missing_wheels = sdists - compatible_wheels
         self._build_sdists(missing_wheels, directory, compile_c=False)
@@ -708,10 +783,11 @@ class DependencyBuilder(object):
         # can do about any missing wheel files. We tried downloading a
         # compatible version directly and building from source.
         compatible_wheels, incompatible_wheels = self._categorize_wheel_files(
-            abi, directory)
+            abi, directory
+        )
         logger.debug(
             "compatible after building wheels (no C compiling): %s",
-            compatible_wheels
+            compatible_wheels,
         )
 
         # Now there is still the case left over where the setup.py has been
@@ -720,18 +796,19 @@ class DependencyBuilder(object):
         # manually curated whitelist of packages that will work, despite
         # claiming otherwise.
         compatible_wheels, incompatible_wheels = self._apply_wheel_whitelist(
-            compatible_wheels, incompatible_wheels)
+            compatible_wheels, incompatible_wheels
+        )
         missing_wheels = deps - compatible_wheels
         logger.debug("Final compatible: %s", compatible_wheels)
         logger.debug("Final incompatible: %s", incompatible_wheels)
         logger.debug("Final missing wheels: %s", missing_wheels)
         return compatible_wheels, missing_wheels
 
-    def _apply_wheel_whitelist(self,
-                               compatible_wheels,   # type: Set[Package]
-                               incompatible_wheels  # type: Set[Package]
-                               ):
-        # type: (...) -> Tuple[Set[Package], Set[Package]]
+    def _apply_wheel_whitelist(
+        self,
+        compatible_wheels: Set[Package],
+        incompatible_wheels: Set[Package],
+    ) -> Tuple[Set[Package], Set[Package]]:
         compatible_wheels = set(compatible_wheels)
         actual_incompatible_wheels = set()
         for missing_package in incompatible_wheels:
@@ -741,8 +818,7 @@ class DependencyBuilder(object):
                 actual_incompatible_wheels.add(missing_package)
         return compatible_wheels, actual_incompatible_wheels
 
-    def _install_purelib_and_platlib(self, wheel, root):
-        # type: (Package, str) -> None
+    def _install_purelib_and_platlib(self, wheel: Package, root: str) -> None:
         # Take a wheel package and the directory it was just unpacked into and
         # unpackage the purelib/platlib directories if they are present into
         # the parent directory. On some systems purelib and platlib need to
@@ -765,8 +841,9 @@ class DependencyBuilder(object):
                 # so we delete it to conserve space in the package.
                 self._osutils.rmtree(source)
 
-    def _install_wheels(self, src_dir, dst_dir, wheels):
-        # type: (str, str, Set[Package]) -> None
+    def _install_wheels(
+        self, src_dir: str, dst_dir: str, wheels: Set[Package]
+    ) -> None:
         if self._osutils.directory_exists(dst_dir):
             self._osutils.rmtree(dst_dir)
         self._osutils.makedirs(dst_dir)
@@ -775,13 +852,14 @@ class DependencyBuilder(object):
             self._osutils.extract_zipfile(zipfile_path, dst_dir)
             self._install_purelib_and_platlib(wheel, dst_dir)
 
-    def build_site_packages(self, abi, requirements_filepath,
-                            target_directory):
-        # type: (str, str, str) -> None
+    def build_site_packages(
+        self, abi: str, requirements_filepath: str, target_directory: str
+    ) -> None:
         if self._has_at_least_one_package(requirements_filepath):
             with self._osutils.tempdir() as tempdir:
                 wheels, packages_without_wheels = self._download_dependencies(
-                    abi, tempdir, requirements_filepath)
+                    abi, tempdir, requirements_filepath
+                )
                 self._install_wheels(tempdir, target_directory, wheels)
             if packages_without_wheels:
                 raise MissingDependencyError(packages_without_wheels)
@@ -789,8 +867,10 @@ class DependencyBuilder(object):
 
 class Package(object):
     """A class to represent a package downloaded but not yet installed."""
-    def __init__(self, directory, filename, osutils=None):
-        # type: (str, str, Optional[OSUtils]) -> None
+
+    def __init__(
+        self, directory: str, filename: str, osutils: Optional[OSUtils] = None
+    ) -> None:
         self.dist_type = 'wheel' if filename.endswith('.whl') else 'sdist'
         self._directory = directory
         self.filename = filename
@@ -800,18 +880,15 @@ class Package(object):
         self._name, self._version = self._calculate_name_and_version()
 
     @property
-    def name(self):
-        # type: () -> str
+    def name(self) -> str:
         return self._name
 
     @property
-    def data_dir(self):
-        # type: () -> str
+    def data_dir(self) -> str:
         # The directory format is {distribution}-{version}.data
         return '%s-%s.data' % (self._name, self._version)
 
-    def matches_data_dir(self, dirname):
-        # type: (str) -> bool
+    def matches_data_dir(self, dirname: str) -> bool:
         """Check if a directory name matches the data_dir of a package.
 
         This will normalize the directory name and perform a case-insensitive
@@ -825,30 +902,24 @@ class Package(object):
         return self.data_dir == comparison_data_dir
 
     @property
-    def identifier(self):
-        # type: () -> str
+    def identifier(self) -> str:
         return '%s==%s' % (self._name, self._version)
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         return '%s(%s)' % (self.identifier, self.dist_type)
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         return str(self)
 
-    def __eq__(self, other):
-        # type: (Any) -> bool
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Package):
             return False
         return self.identifier == other.identifier
 
-    def __hash__(self):
-        # type: () -> int
+    def __hash__(self) -> int:
         return hash(self.identifier)
 
-    def _calculate_name_and_version(self):
-        # type: () -> Tuple[str, str]
+    def _calculate_name_and_version(self) -> Tuple[str, str]:
         if self.dist_type == 'wheel':
             # From the wheel spec (PEP 427)
             # {distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-
@@ -858,18 +929,19 @@ class Package(object):
             info_fetcher = SDistMetadataFetcher(osutils=self._osutils)
             sdist_path = self._osutils.joinpath(self._directory, self.filename)
             name, version = info_fetcher.get_package_name_and_version(
-                sdist_path)
+                sdist_path
+            )
         normalized_name = self._normalize_name(name)
         return normalized_name, version
 
-    def _normalize_name(self, name):
-        # type: (str) -> str
+    def _normalize_name(self, name: str) -> str:
         # Taken directly from PEP 503
         return re.sub(r"[-_.]+", "-", name).lower()
 
 
 class SDistMetadataFetcher(object):
     """This is the "correct" way to get name and version from an sdist."""
+
     # https://git.io/vQkwV
     _SETUPTOOLS_SHIM = (
         "import setuptools, tokenize;__file__=%r;"
@@ -879,14 +951,12 @@ class SDistMetadataFetcher(object):
         "exec(compile(code, __file__, 'exec'))"
     )
 
-    def __init__(self, osutils=None):
-        # type: (Optional[OSUtils]) -> None
+    def __init__(self, osutils: Optional[OSUtils] = None) -> None:
         if osutils is None:
             osutils = OSUtils()
         self._osutils = osutils
 
-    def _parse_pkg_info_file(self, filepath):
-        # type: (str) -> Message
+    def _parse_pkg_info_file(self, filepath: str) -> Message:
         # The PKG-INFO generated by the egg-info command is in an email feed
         # format, so we use an email feedparser here to extract the metadata
         # from the PKG-INFO file.
@@ -895,38 +965,54 @@ class SDistMetadataFetcher(object):
         parser.feed(data)
         return parser.close()
 
-    def _get_pkg_info_filepath(self, package_dir):
-        # type: (str) -> str
+    def _get_pkg_info_filepath(self, package_dir: str) -> str:
         setup_py = self._osutils.joinpath(package_dir, 'setup.py')
         script = self._SETUPTOOLS_SHIM % setup_py
 
-        cmd = [sys.executable, '-c', script, '--no-user-cfg', 'egg_info',
-               '--egg-base', 'egg-info']
+        cmd = [
+            sys.executable,
+            '-c',
+            script,
+            '--no-user-cfg',
+            'egg_info',
+            '--egg-base',
+            'egg-info',
+        ]
         egg_info_dir = self._osutils.joinpath(package_dir, 'egg-info')
         self._osutils.makedirs(egg_info_dir)
-        p = subprocess.Popen(cmd, cwd=package_dir,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(
+            cmd,
+            cwd=package_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         _, stderr = p.communicate()
         if p.returncode != 0:
-            logger.debug("Non zero rc (%s) from the setup.py egg_info "
-                         "command: %s", p.returncode, stderr)
+            logger.debug(
+                "Non zero rc (%s) from the setup.py egg_info command: %s",
+                p.returncode,
+                stderr,
+            )
         info_contents = self._osutils.get_directory_contents(egg_info_dir)
         if info_contents:
             pkg_info_path = self._osutils.joinpath(
-                egg_info_dir, info_contents[0], 'PKG-INFO')
+                egg_info_dir, info_contents[0], 'PKG-INFO'
+            )
         else:
             # This might be a pep 517 package in which case this PKG-INFO file
             # should be available right in the top level directory of the sdist
             # in the case where the egg_info command fails.
-            logger.debug("Using fallback location for PKG-INFO file in "
-                         "package directory: %s", package_dir)
+            logger.debug(
+                "Using fallback location for PKG-INFO file in "
+                "package directory: %s",
+                package_dir,
+            )
             pkg_info_path = self._osutils.joinpath(package_dir, 'PKG-INFO')
         if not self._osutils.file_exists(pkg_info_path):
             raise UnsupportedPackageError(self._osutils.basename(package_dir))
         return pkg_info_path
 
-    def _unpack_sdist_into_dir(self, sdist_path, unpack_dir):
-        # type: (str, str) -> str
+    def _unpack_sdist_into_dir(self, sdist_path: str, unpack_dir: str) -> str:
         if sdist_path.endswith('.zip'):
             self._osutils.extract_zipfile(sdist_path, unpack_dir)
         elif sdist_path.endswith(('.tar.gz', '.tar.bz2')):
@@ -937,8 +1023,7 @@ class SDistMetadataFetcher(object):
         contents = self._osutils.get_directory_contents(unpack_dir)
         return self._osutils.joinpath(unpack_dir, contents[0])
 
-    def get_package_name_and_version(self, sdist_path):
-        # type: (str) -> Tuple[str, str]
+    def get_package_name_and_version(self, sdist_path: str) -> Tuple[str, str]:
         with self._osutils.tempdir() as tempdir:
             package_dir = self._unpack_sdist_into_dir(sdist_path, tempdir)
             pkg_info_filepath = self._get_pkg_info_filepath(package_dir)
@@ -950,8 +1035,10 @@ class SDistMetadataFetcher(object):
 
 class SubprocessPip(object):
     """Wrapper around calling pip through a subprocess."""
-    def __init__(self, osutils=None, import_string=None):
-        # type: (Optional[OSUtils], OptStr) -> None
+
+    def __init__(
+        self, osutils: Optional[OSUtils] = None, import_string: OptStr = None
+    ) -> None:
         if osutils is None:
             osutils = OSUtils()
         self._osutils = osutils
@@ -959,26 +1046,29 @@ class SubprocessPip(object):
             import_string = pip_import_string()
         self._import_string = import_string
 
-    def main(self,
-             args,           # type: List[str]
-             env_vars=None,  # type: EnvVars
-             shim=None       # type: OptStr
-             ):
-        # type: (...) -> Tuple[int, bytes, bytes]
+    def main(
+        self,
+        args: List[str],
+        env_vars: Optional[EnvVars] = None,
+        shim: OptStr = None,
+    ) -> Tuple[int, bytes, bytes]:
         if env_vars is None:
             env_vars = self._osutils.environ()
         if shim is None:
             shim = ''
         python_exe = sys.executable
-        run_pip = (
-            'import sys; %s; sys.exit(main(%s))'
-        ) % (self._import_string, args)
+        run_pip = ('import sys; %s; sys.exit(main(%s))') % (
+            self._import_string,
+            args,
+        )
         exec_string = '%s%s' % (shim, run_pip)
         invoke_pip = [python_exe, '-c', exec_string]
-        p = self._osutils.popen(invoke_pip,
-                                stdout=self._osutils.pipe,
-                                stderr=self._osutils.pipe,
-                                env=env_vars)
+        p = self._osutils.popen(
+            invoke_pip,
+            stdout=self._osutils.pipe,
+            stderr=self._osutils.pipe,
+            env=env_vars,
+        )
         out, err = p.communicate()
         rc = p.returncode
         return rc, out, err
@@ -987,33 +1077,36 @@ class SubprocessPip(object):
 class PipRunner(object):
     """Wrapper around pip calls used by chalice."""
 
-    _LINK_IS_DIR_PATTERN = ("Processing (.+?)\n"
-                            "  Link is a directory,"
-                            " ignoring download_dir")
+    _LINK_IS_DIR_PATTERN = (
+        "Processing (.+?)\n  Link is a directory, ignoring download_dir"
+    )
 
-    def __init__(self, pip, osutils=None):
-        # type: (SubprocessPip, Optional[OSUtils]) -> None
+    def __init__(
+        self, pip: SubprocessPip, osutils: Optional[OSUtils] = None
+    ) -> None:
         if osutils is None:
             osutils = OSUtils()
         self._wrapped_pip = pip
         self._osutils = osutils
 
-    def _execute(self,
-                 command,        # type: str
-                 args,           # type: List[str]
-                 env_vars=None,  # type: EnvVars
-                 shim=None       # type: OptStr
-                 ):
-        # type: (...) -> Tuple[int, bytes, bytes]
+    def _execute(
+        self,
+        command: str,
+        args: List[str],
+        env_vars: Optional[EnvVars] = None,
+        shim: OptStr = None,
+    ) -> Tuple[int, bytes, bytes]:
         """Execute a pip command with the given arguments."""
         main_args = [command] + args
         logger.debug("calling pip %s", ' '.join(main_args))
-        rc, out, err = self._wrapped_pip.main(main_args, env_vars=env_vars,
-                                              shim=shim)
+        rc, out, err = self._wrapped_pip.main(
+            main_args, env_vars=env_vars, shim=shim
+        )
         return rc, out, err
 
-    def build_wheel(self, wheel, directory, compile_c=True):
-        # type: (str, str, bool) -> None
+    def build_wheel(
+        self, wheel: str, directory: str, compile_c: bool = True
+    ) -> None:
         """Build an sdist into a wheel file."""
         arguments = ['--no-deps', '--wheel-dir', directory, wheel]
         env_vars = self._osutils.environ()
@@ -1024,11 +1117,11 @@ class PipRunner(object):
         # Ignore rc and stderr from this command since building the wheels
         # may fail and we will find out when we categorize the files that were
         # generated.
-        self._execute('wheel', arguments,
-                      env_vars=env_vars, shim=shim)
+        self._execute('wheel', arguments, env_vars=env_vars, shim=shim)
 
-    def download_all_dependencies(self, requirements_filename, directory):
-        # type: (str, str) -> None
+    def download_all_dependencies(
+        self, requirements_filename: str, directory: str
+    ) -> None:
         """Download all dependencies as sdist or wheel."""
         arguments = ['-r', requirements_filename, '--dest', directory]
         rc, out, err = self._execute('download', arguments)
@@ -1042,8 +1135,11 @@ class PipRunner(object):
             if err is None:
                 err = b'Unknown error'
             error = err.decode()
-            match = re.search(r"Could not find a version that satisfies the "
-                              r"requirement ([^\s]+)", error)
+            match = re.search(
+                r"Could not find a version that satisfies the "
+                r"requirement ([^\s]+)",
+                error,
+            )
             if match:
                 package_name = match.group(1)
                 raise NoSuchPackageError(str(package_name))
@@ -1062,8 +1158,9 @@ class PipRunner(object):
             # complain at deployment time.
             self.build_wheel(wheel_package_path, directory)
 
-    def download_manylinux_wheels(self, abi, packages, directory):
-        # type: (str, List[str], str) -> None
+    def download_manylinux_wheels(
+        self, abi: str, packages: List[str], directory: str
+    ) -> None:
         """Download wheel files for manylinux for all the given packages."""
         # If any one of these dependencies fails pip will bail out. Since we
         # are only interested in all the ones we can download, we need to feed
@@ -1074,14 +1171,28 @@ class PipRunner(object):
         # cpython implementation. The compatible abi depends on the python
         # version and is checked later.
         for package in packages:
-            arguments = ['--only-binary=:all:', '--no-deps', '--platform',
-                         'manylinux2014_x86_64', '--implementation', 'cp',
-                         '--abi', abi, '--dest', directory, package]
+            arguments = [
+                '--only-binary=:all:',
+                '--no-deps',
+                '--platform',
+                'manylinux2014_x86_64',
+                '--implementation',
+                'cp',
+                '--abi',
+                abi,
+                '--dest',
+                directory,
+                package,
+            ]
             self._execute('download', arguments)
 
-    def download_sdists(self, packages, directory):
-        # type: (List[str], str) -> None
+    def download_sdists(self, packages: List[str], directory: str) -> None:
         for package in packages:
-            arguments = ["--no-binary=:all:", "--no-deps", "--dest",
-                         directory, package]
+            arguments = [
+                "--no-binary=:all:",
+                "--no-deps",
+                "--dest",
+                directory,
+                package,
+            ]
             self._execute('download', arguments)

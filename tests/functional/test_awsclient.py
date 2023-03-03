@@ -3876,3 +3876,36 @@ def test_can_update_lambda_event_source(stubbed_session):
         maximum_batching_window_in_seconds=60
     )
     stubbed_session.verify_stubs()
+
+
+def test_can_create_log_group(stubbed_session):
+    logs_stub = stubbed_session.stub('logs')
+    logs_stub.create_log_group(
+        logGroupName='mygroup'
+    ).returns({})
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.create_log_group(log_group_name='mygroup')
+    stubbed_session.verify_stubs()
+
+
+def test_can_delete_log_group(stubbed_session):
+    logs_stub = stubbed_session.stub('logs')
+    logs_stub.delete_log_group(
+        logGroupName='mygroup'
+    ).returns({})
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.delete_log_group(log_group_name='mygroup')
+    stubbed_session.verify_stubs()
+
+
+def test_can_delete_retention_policy(stubbed_session):
+    logs_stub = stubbed_session.stub('logs')
+    logs_stub.delete_retention_policy(
+        logGroupName='mygroup'
+    ).returns({})
+    stubbed_session.activate_stubs()
+    client = TypedAWSClient(stubbed_session)
+    client.delete_retention_policy(log_group_name='mygroup')
+    stubbed_session.verify_stubs()
