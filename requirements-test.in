@@ -6,4 +6,3 @@ websocket-client<2.0.0
 pytest-cov
 requests
 mock
-attrs<21.5.0
