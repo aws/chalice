@@ -8,7 +8,7 @@ alabaster==0.7.12
     # via sphinx
 astroid==2.12.5
     # via pylint
-attrs==21.4.0
+attrs==22.2.0
     # via
     #   hypothesis
     #   pytest
@@ -48,6 +48,12 @@ idna==3.3
     # via requests
 imagesize==1.4.1
     # via sphinx
+importlib-metadata==4.2.0
+    # via
+    #   flake8
+    #   pluggy
+    #   pytest
+    #   stevedore
 iniconfig==1.1.1
     # via pytest
 isort==5.10.1
@@ -149,6 +155,10 @@ tomli==2.0.1
     #   pytest
 tomlkit==0.11.4
     # via pylint
+typed-ast==1.5.4
+    # via
+    #   astroid
+    #   mypy
 types-python-dateutil==2.8.19.6
     # via -r requirements-dev.in
 types-pyyaml==6.0.12.6
@@ -159,6 +169,7 @@ typing-extensions==4.4.0
     # via
     #   -r requirements-dev.in
     #   astroid
+    #   importlib-metadata
     #   mypy
     #   pylint
 urllib3==1.26.12
@@ -171,6 +182,8 @@ wheel==0.37.1
     # via -r requirements-dev.in
 wrapt==1.14.1
     # via astroid
+zipp==3.15.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

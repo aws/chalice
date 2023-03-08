@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements-test.txt --resolver=backtracking requirements-test.in
 #
-attrs==21.4.0
+attrs==22.2.0
     # via
     #   hypothesis
     #   pytest
