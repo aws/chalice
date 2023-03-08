@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Terraform",
+  "description": "Update required terraform veresoin to support 1.3 (#2014)"
+}
