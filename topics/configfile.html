@@ -382,6 +382,23 @@ only the following chalice deployed resources are tagged: Lambda functions.</p>
 <p>A boolean that turns on AWS XRay’s Active tracing configuration.
 This will turn on XRay for both Lambda functions and API Gateway stages.</p>
 </section>
+<section id="log-retention-in-days">
+<h3><code class="docutils literal notranslate"><span class="pre">log_retention_in_days</span></code><a class="headerlink" href="#log-retention-in-days" title="Permalink to this headline">¶</a></h3>
+<p>An integer value that indicates the retention time to be applied to lambda
+function log groups. Only certain values are valid, see the <a class="reference external" href="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html#API_PutRetentionPolicy_RequestParameters">AWS CloudWatch
+Logs docs</a></p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you using the <cite>chalice package</cite> command to generate a CloudFormation template,
+a Log Group resource will be added to your template with the configured
+<code class="docutils literal notranslate"><span class="pre">log_retention_in_days</span></code>.  This will cause your deployment to fail
+if this Log Group resource already exists (i.e. if the associated
+Lambda function has previously been invoked which results in Lambda
+automatically created a Log Group for the function).  In order to use
+this configuration option, it should be part of the initial deployment
+of the Lambda function.</p>
+</div>
+</section>
 </section>
 <section id="lambda-specific-configuration">
 <span id="lambda-config"></span><h2>Lambda Specific Configuration<a class="headerlink" href="#lambda-specific-configuration" title="Permalink to this headline">¶</a></h2>
@@ -437,6 +454,7 @@ that can be applied per function:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">subnet_ids</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tags</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">log_retention_in_days</span></code></p></li>
 </ul>
 <p>See the <a class="reference internal" href="#stage-config"><span class="std std-ref">Stage Specific Configuration</span></a> section above for a description
 of these config options.</p>
@@ -727,6 +745,7 @@ value <code class="docutils literal notranslate"><span class="pre">mytable</span
 <li><a class="reference internal" href="#security-group-ids"><code class="docutils literal notranslate"><span class="pre">security_group_ids</span></code></a></li>
 <li><a class="reference internal" href="#tags"><code class="docutils literal notranslate"><span class="pre">tags</span></code></a></li>
 <li><a class="reference internal" href="#xray"><code class="docutils literal notranslate"><span class="pre">xray</span></code></a></li>
+<li><a class="reference internal" href="#log-retention-in-days"><code class="docutils literal notranslate"><span class="pre">log_retention_in_days</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#lambda-specific-configuration">Lambda Specific Configuration</a></li>
