@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+1.28.0
+======
+
+* enhancement:Terraform:Update required terraform veresoin to support 1.3 (#2014)
+* enhancement:Pip:Bump pip version range to latest version <22.3 (#2016)
+* feature:Config:Add support for `log_retention_in_days` (#943)
+
+
 1.27.3
 ======
 
