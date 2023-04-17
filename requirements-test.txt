@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements-test.txt --resolver=backtracking requirements-test.in
 #
-attrs==21.4.0
+attrs==23.1.0
     # via
     #   hypothesis
     #   pytest
@@ -32,6 +32,7 @@ idna==3.4
     # via requests
 importlib-metadata==6.0.0
     # via
+    #   attrs
     #   pluggy
     #   pytest
 iniconfig==2.0.0
