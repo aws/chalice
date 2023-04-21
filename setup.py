@@ -44,7 +44,7 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=install_requires,
     extras_require={
-        'event-file-poller': ['watchdog==0.9.0'],
+        'event-file-poller': ['watchdog==2.3.1'],
         'cdk': [
             'aws_cdk.aws_iam>=1.85.0,<2.0',
             'aws_cdk.aws-s3-assets>=1.85.0,<2.0',
@@ -74,5 +74,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
 )
