@@ -16,10 +16,95 @@ from chalice.cli.newproj import create_new_project_skeleton
 from chalice.deploy.packager import NoSuchPackageError
 
 
+PY_VERSION = sys.version_info[:2]
+VERSION_CUTOFF = (3, 9)
+# We're being cautious here, but we want to fix the package versions we
+# try to install on older versions of python.
+# If the python version being tested is less than the VERSION_CUTOFF of 3.9,
+# then we'll install the `legacy_version` in the packages below.  This is to
+# ensure we don't regress on being able to package older package versions on
+# older versions on python. Any python version above the VERSION_CUTOFF will
+# install the `version` identifier.  That way newer versions of python won't
+# need to update this list as long as a package can still be installed on
+# 3.10 or higher.
+PACKAGES_TO_TEST = {
+    'pandas': {
+        'version': '1.5.3',
+        'legacy_version': '1.1.5',
+        'contents': [
+            'pandas/_libs/__init__.py',
+            'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so'
+        ],
+    },
+    'SQLAlchemy': {
+        'version': '1.4.47',
+        'legacy_version': '1.3.20',
+        'contents': [
+            'sqlalchemy/__init__.py',
+            'sqlalchemy/cresultproxy.cpython-*-x86_64-linux-gnu.so'
+        ],
+    },
+    'numpy': {
+        'version': '1.21.6',
+        'legacy_version': '1.19.4',
+        'contents': [
+            'numpy/__init__.py',
+            'numpy/core/_struct_ufunc_tests.cpython-*-x86_64-linux-gnu.so'
+        ],
+    },
+    'cryptography': {
+        'version': '3.3.1',
+        'legacy_version': '3.3.1',
+        'contents': [
+            'cryptography/__init__.py',
+            'cryptography/hazmat/bindings/_openssl.abi3.so'
+        ],
+    },
+    'Jinja2': {
+        'version': '2.11.2',
+        'legacy_version': '2.11.2',
+        'contents': ['jinja2/__init__.py'],
+    },
+    'Mako': {
+        'version': '1.1.3',
+        'legacy_version': '1.1.3',
+        'contents': ['mako/__init__.py'],
+    },
+    'MarkupSafe': {
+        'version': '1.1.1',
+        'legacy_version': '1.1.1',
+        'contents': ['markupsafe/__init__.py'],
+    },
+    'scipy': {
+        'version': '1.7.3',
+        'legacy_version': '1.5.4',
+        'contents': [
+            'scipy/__init__.py',
+            'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so'
+        ],
+    },
+    'cffi': {
+        'version': '1.15.1',
+        'legacy_version': '1.14.5',
+        'contents': ['_cffi_backend.cpython-*-x86_64-linux-gnu.so'],
+    },
+    'pygit2': {
+        'version': '1.10.1',
+        'legacy_version': '1.5.0',
+        'contents': ['pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so'],
+    },
+    'pyrsistent': {
+        'version': '0.17.3',
+        'legacy_version': '0.17.3',
+        'contents': ['pyrsistent/__init__.py'],
+    },
+}
+
+
 @contextmanager
 def cd(path):
+    original_dir = os.getcwd()
     try:
-        original_dir = os.getcwd()
         os.chdir(path)
         yield
     finally:
@@ -43,41 +128,26 @@ def _get_random_package_name():
     return 'foobar-%s' % str(uuid.uuid4())[:8]
 
 
+def _get_package_install_test_cases():
+    testcases = []
+    if PY_VERSION <= VERSION_CUTOFF:
+        version_key = 'legacy_version'
+    else:
+        version_key = 'version'
+    for package, config in PACKAGES_TO_TEST.items():
+        package_version = f'{package}=={config[version_key]}'
+        testcases.append(
+            (package_version, config['contents'])
+        )
+    return testcases
+
+
 # This test can take a while, but you can set this env var to make sure that
 # the commonly used python packages can be packaged successfully.
 @pytest.mark.skipif(not os.environ.get('CHALICE_TEST_EXTENDED_PACKAGING'),
                     reason='Set CHALICE_TEST_EXTENDED_PACKAGING for extended '
                            'packaging tests.')
-@pytest.mark.skipif(sys.version_info[0] == 2,
-                    reason='Extended packaging tests only run on py3.')
-@pytest.mark.parametrize(
-    'package,contents', [
-        ('pandas==1.1.5', [
-            'pandas/_libs/__init__.py',
-            'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so']),
-        ('SQLAlchemy==1.3.20', [
-            'sqlalchemy/__init__.py',
-            'sqlalchemy/cresultproxy.cpython-*-x86_64-linux-gnu.so']),
-        ('numpy==1.19.4', [
-            'numpy/__init__.py',
-            'numpy/core/_struct_ufunc_tests.cpython-*-x86_64-linux-gnu.so']),
-        ('cryptography==3.3.1', [
-            'cryptography/__init__.py',
-            'cryptography/hazmat/bindings/_openssl.abi3.so']),
-        ('Jinja2==2.11.2', ['jinja2/__init__.py']),
-        ('Mako==1.1.3', ['mako/__init__.py']),
-        ('MarkupSafe==1.1.1', ['markupsafe/__init__.py']),
-        ('scipy==1.5.4', [
-            'scipy/__init__.py',
-            'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so']),
-        ('cffi==1.14.5', [
-            '_cffi_backend.cpython-*-x86_64-linux-gnu.so']),
-        ('pygit2==1.5.0', [
-            'pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so']),
-        ('pyrsistent==0.17.3', [
-            'pyrsistent/__init__.py']),
-    ]
-)
+@pytest.mark.parametrize('package,contents', _get_package_install_test_cases())
 def test_package_install_smoke_tests(package, contents, runner, app_skeleton):
     assert_can_package_dependency(runner, app_skeleton, package, contents)
 
@@ -144,10 +214,11 @@ class TestPackage(object):
     @pytest.mark.skipif(sys.version_info[0] == 2,
                         reason='pandas==1.1.5 is only suported on py3.')
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
+        version = '1.5.3' if sys.version_info[1] >= 10 else '1.1.5'
         assert_can_package_dependency(
             runner,
             app_skeleton,
-            'pandas==1.1.5',
+            'pandas==' + version,
             contents=[
                 'pandas/_libs/__init__.py',
             ],
