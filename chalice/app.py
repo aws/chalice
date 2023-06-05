@@ -22,7 +22,7 @@ from collections.abc import Mapping
 from collections.abc import MutableMapping
 
 
-__version__: str = '1.28.0'
+__version__: str = '1.29.0'
 
 from typing import List, Dict, Any, Optional, Sequence, Union, Callable, Set, \
     Iterator, TYPE_CHECKING, Tuple

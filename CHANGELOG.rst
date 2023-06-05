@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.29.0
+======
+
+* feature:Python:Add support for Python 3.10 (#2037)
+* enhancement:Pip:Bump pip version range to latest version <23.2 (#2034)
+
+
 1.28.0
 ======
 
