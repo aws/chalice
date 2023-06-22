@@ -55,12 +55,7 @@ To install the necessary dependencies run the following command:
 
   $ python3 -m pip install "chalice[cdkv2]"
 
-**Note:** Although cdk version 2 is recommended, you can still use cdk
-version 1 the following way:
-
-::
-
-  $ python3 -m pip install "chalice[cdk]"
+**Note:** Please use CDK version 2, according to `Working with the AWS CDK in Python Doc <https://docs.aws.amazon.com/cdk/v2/guide/work-with-cdk-python.html>`__, support for CDK version 1 ended entirely on June 1, 2023.
 
 You're now ready to create your first Chalice and CDK application.
 
