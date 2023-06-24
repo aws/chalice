@@ -1,7 +1,9 @@
 import copy
 import inspect
+import textwrap
+import yaml
 
-from typing import Any, List, Dict, Optional, Union  # noqa
+from typing import Any, List, Dict, Optional, Tuple, Union  # noqa
 
 from chalice.app import Chalice, RouteEntry, Authorizer, CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer
@@ -37,11 +39,23 @@ class SwaggerGenerator(object):
         # type: (Chalice, Optional[RestAPI]) -> Dict[str, Any]
         api = copy.deepcopy(self._BASE_TEMPLATE)
         api['info']['title'] = app.app_name
+        self._add_shared_definitions_and_parameters(app, api)
         self._add_binary_types(api, app)
         self._add_route_paths(api, app)
         self._add_resource_policy(api, rest_api)
         self._add_vpc_endpoint(api, rest_api)
         return api
+
+    def _add_shared_definitions_and_parameters(self, app, api):
+        # type: (Chalice, Dict[str, Any]) -> None
+        if hasattr(app, 'to_swagger'):
+            swagger_additions = getattr(app, 'to_swagger')()
+            swagger_additions = yaml.load(textwrap.dedent(swagger_additions),
+                                          Loader=yaml.FullLoader)
+            if 'definitions' in swagger_additions:
+                api['definitions'].update(swagger_additions['definitions'])
+            if 'parameters' in swagger_additions:
+                api['parameters'] = swagger_additions['parameters']
 
     def _add_resource_policy(self, api, rest_api):
         # type: (Dict[str, Any], Optional[RestAPI]) -> None
@@ -68,7 +82,7 @@ class SwaggerGenerator(object):
             cors_config = None
             methods_with_cors = []
             for http_method, view in methods.items():
-                current = self._generate_route_method(view)
+                current = self._generate_route_method(api, view)
                 if 'security' in current:
                     self._add_to_security_definition(
                         current['security'], api, view)
@@ -81,8 +95,10 @@ class SwaggerGenerator(object):
             # CORS configuration. So if any entry has CORS enabled, use that
             # entry's CORS configuration for the preflight setup.
             if cors_config is not None:
-                self._add_preflight_request(
-                    cors_config, methods_with_cors, swagger_for_path)
+                self._add_preflight_request(cors_config,
+                                            methods_with_cors,
+                                            swagger_for_path,
+                                            list(methods.values())[0])
 
     def _generate_security_from_auth_obj(self, api_config, authorizer):
         # type: (Dict[str, Any], Authorizer) -> None
@@ -136,21 +152,28 @@ class SwaggerGenerator(object):
                 api_config.setdefault(
                     'securityDefinitions', {})[name] = swagger_snippet
 
-    def _generate_route_method(self, view):
-        # type: (RouteEntry) -> Dict[str, Any]
+    def _generate_route_method(self, api, view):
+        # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
         current = {
             'consumes': view.content_types,
             'produces': ['application/json'],
-            'responses': self._generate_precanned_responses(),
+            'responses': self._get_annotated_responses(api, view),
             'x-amazon-apigateway-integration': self._generate_apig_integ(
                 view),
         }  # type: Dict[str, Any]
         docstring = inspect.getdoc(view.view_function)
+        swagger_additions = None
         if docstring:
             doc_lines = docstring.splitlines()
             current['summary'] = doc_lines[0]
             if len(doc_lines) > 1:
-                current['description'] = '\n'.join(doc_lines[1:]).strip('\n')
+                if '---' in doc_lines:
+                    desc, swagger = self._get_desc_and_swagger(doc_lines)
+                    current['description'] = desc
+                    swagger_additions = swagger
+                else:
+                    description = '\n'.join(doc_lines[1:]).strip('\n')
+                    current['description'] = description
         if view.api_key_required:
             # When this happens we also have to add the relevant portions
             # to the security definitions.  We have to someone indicate
@@ -162,7 +185,47 @@ class SwaggerGenerator(object):
                 {view.authorizer.name: view.authorizer.scopes})
         if view.view_args:
             self._add_view_args(current, view.view_args)
+        if swagger_additions is not None:
+            if 'parameters' in swagger_additions and 'parameters' in current:
+                current_params = current['parameters']
+                swagger_params = swagger_additions['parameters']
+                combo = current_params + swagger_params
+                current['parameters'] = combo
+                del swagger_additions['parameters']
+            current.update(swagger_additions)
         return current
+
+    def _get_desc_and_swagger(self, doc_lines):
+        # type: (List[str]) -> Tuple[str, Dict[str, Any]]
+        divider_line_num = doc_lines.index('---')
+        description = '\n'.join(doc_lines[1:divider_line_num])
+        description = description.strip('\n')
+        swagger_lines = doc_lines[divider_line_num + 1:]
+        swagger = '\n'.join(swagger_lines)
+        swagger_additions = yaml.load(swagger,
+                                      Loader=yaml.FullLoader)
+        return description, swagger_additions
+
+    def _get_annotated_responses(self, api, view):
+        # type: (Dict[str, Any], RouteEntry) -> Dict[str, Any]
+        annotations = getattr(view.view_function, '__annotations__', {})
+        if 'return' in annotations:
+            return_type = annotations['return']
+            if hasattr(return_type, 'to_swagger'):
+                model_name = return_type.__name__
+                definition = return_type.to_swagger()
+                if model_name not in api['definitions']:
+                    api['definitions'][model_name] = definition
+                ref_string = '#/definitions/' + model_name
+                return {
+                    '200': {
+                        'description': '200 response',
+                        'schema': {
+                            '$ref': ref_string
+                        }
+                    }
+                }
+        return self._generate_precanned_responses()
 
     def _generate_precanned_responses(self):
         # type: () -> Dict[str, Any]
@@ -204,13 +267,23 @@ class SwaggerGenerator(object):
 
     def _add_view_args(self, single_method, view_args):
         # type: (Dict[str, Any], List[str]) -> None
-        single_method['parameters'] = [
-            {'name': name, 'in': 'path', 'required': True, 'type': 'string'}
-            for name in view_args
-        ]
+        if view_args:
+            single_method['parameters'] = [
+                {
+                    'name': name,
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string'
+                }
+                for name in view_args
+            ]
 
-    def _add_preflight_request(self, cors, methods, swagger_for_path):
-        # type: (CORSConfig, List[str], Dict[str, Any]) -> None
+    def _add_preflight_request(self,
+                               cors,
+                               methods,
+                               swagger_for_path,
+                               single_view):
+        # type: (CORSConfig, List[str], Dict[str, Any], RouteEntry) -> None
         methods = methods + ['OPTIONS']
         allowed_methods = ','.join(methods)
 
@@ -220,12 +293,22 @@ class SwaggerGenerator(object):
         response_params.update(cors.get_access_control_headers())
 
         headers = {k: {'type': 'string'} for k, _ in response_params.items()}
-        response_params = {'method.response.header.%s' % k: "'%s'" % v for k, v
-                           in response_params.items()}
+        response_params = {'method.response.header.%s' % k: "'%s'" % v
+                           for k, v in response_params.items()}
 
+        params = [
+            {
+                'name': name,
+                'in': 'path',
+                'required': True,
+                'type': 'string'
+            }
+            for name in single_view.view_args
+        ]
         options_request = {
             "consumes": ["application/json"],
             "produces": ["application/json"],
+            "parameters": params,
             "responses": {
                 "200": {
                     "description": "200 response",
@@ -248,6 +331,10 @@ class SwaggerGenerator(object):
                 "contentHandling": "CONVERT_TO_TEXT"
             }
         }
+
+        if not params:
+            del options_request['parameters']
+
         swagger_for_path['options'] = options_request
 
 
