@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from chalice.local import LambdaContext
 
 _PARAMS = re.compile(r'{\w+}')
+ErrorHandlerFuncType = Callable[[Exception], Any]
 MiddlewareFuncType = Callable[[Any, Callable[[Any], Any]], Any]
 UserHandlerFuncType = Callable[..., Any]
 
@@ -727,6 +728,17 @@ class DecoratorAPI(object):
             return func
         return _middleware_wrapper
 
+    def error(
+            self,
+            exception: Exception
+    ) -> Callable[[ErrorHandlerFuncType], Any]:
+        def _error_wrapper(
+                func: Callable[[Exception], Response]
+        ) -> Callable[[Exception], Response]:
+            self.register_error(exception, func)
+            return func
+        return _error_wrapper
+
     def authorizer(self, ttl_seconds: Optional[int] = None,
                    execution_role: Optional[str] = None,
                    name: Optional[str] = None,
@@ -938,6 +950,10 @@ class DecoratorAPI(object):
                           options: Optional[Dict[Any, Any]] = None) -> None:
         raise NotImplementedError("_register_handler")
 
+    def register_error(self, exception: Exception,
+                       func: MiddlewareFuncType) -> None:
+        raise NotImplementedError("register_error")
+
     def register_middleware(self, func: MiddlewareFuncType,
                             event_type: str = 'all') -> None:
         raise NotImplementedError("register_middleware")
@@ -954,10 +970,19 @@ class _HandlerRegistration(object):
         self.api: APIGateway = APIGateway()
         self.handler_map: Dict[str, Callable[..., Any]] = {}
         self.middleware_handlers: List[Tuple[MiddlewareFuncType, str]] = []
+        self.error_handlers: List[Tuple[ErrorHandlerFuncType, str]] = []
 
     def register_middleware(self, func: MiddlewareFuncType,
                             event_type: str = 'all') -> None:
         self.middleware_handlers.append((func, event_type))
+
+    def register_error(self, exception: Exception, func: Callable) -> None:
+        if not issubclass(exception, Exception):
+            raise ValueError(
+                f"{exception.__name__} is not a subclass of Exception."
+                "Error handlers can only be registered for Exception classes."
+            )
+        self.error_handlers.append((func, exception.__name__))
 
     def _do_register_handler(self, handler_type: str, name: str,
                              user_handler: UserHandlerFuncType,
@@ -2201,6 +2226,13 @@ class Blueprint(DecoratorAPI):
         self._deferred_registrations.append(
             lambda app, options: app.register_middleware(
                 func, event_type
+            )
+        )
+
+    def register_error(self, exception: Exception, func: Callable) -> None:
+        self._deferred_registrations.append(
+            lambda app, options: app.register_error(
+                exception, func
             )
         )
 
