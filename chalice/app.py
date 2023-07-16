@@ -1368,6 +1368,7 @@ class Chalice(_HandlerRegistration, DecoratorAPI):
         handler = RestAPIEventHandler(
             self.routes, self.api, self.log, self.debug,
             middleware_handlers=self._get_middleware_handlers('http'),
+            error_handlers=self.error_handlers
         )
         self.current_request: \
             Optional[Request] = handler.create_request_object(event, context)
@@ -1810,7 +1811,10 @@ class WebsocketEventSourceHandler(EventSourceHandler):
 class RestAPIEventHandler(BaseLambdaHandler):
     def __init__(self, route_table: Dict[str, Dict[str, RouteEntry]],
                  api: APIGateway, log: logging.Logger, debug: bool,
-                 middleware_handlers: Optional[List[Callable[..., Any]]] = None
+                 middleware_handlers: Optional[
+                     List[Callable[..., Any]]] = None,
+                 error_handlers: Optional[
+                     List[Tuple[ErrorHandlerFuncType, str]]] = None
                  ) -> None:
         self.routes: Dict[str, Dict[str, RouteEntry]] = route_table
         self.api: APIGateway = api
@@ -1822,6 +1826,9 @@ class RestAPIEventHandler(BaseLambdaHandler):
             middleware_handlers = []
         self._middleware_handlers: \
             List[Callable[..., Any]] = middleware_handlers
+        if error_handlers is None:
+            error_handlers = []
+        self._error_handlers = error_handlers
 
     def _global_error_handler(self, event: Any,
                               get_response: Callable[..., Any]) -> Response:
@@ -1947,12 +1954,27 @@ class RestAPIEventHandler(BaseLambdaHandler):
         except ChaliceViewError as e:
             # Any chalice view error should propagate.  These
             # get mapped to various HTTP status codes in API Gateway.
-            response = Response(body={'Code': e.__class__.__name__,
-                                      'Message': str(e)},
-                                status_code=e.STATUS_CODE)
-        except Exception:
-            response = self._unhandled_exception_to_response()
+            response = self._get_error_handler_response(e) or \
+                Response(body={'Code': e.__class__.__name__,
+                               'Message': str(e)},
+                         status_code=e.STATUS_CODE)
+        except Exception as e:
+            response = self._get_error_handler_response(e) or \
+                self._unhandled_exception_to_response()
         return response
+
+    def _get_error_handler_response(self, e: Exception) -> Response or None:
+        # Loops through the registered error handlers and returns the first
+        # `Response` result from handlers. If no handlers are matched or no
+        # matched handlers returned a `Response`, returns None to allow for
+        # chalice to handle the error.
+        raised = e.__class__.__name__
+        handlers = (func for func, exc_type in self._error_handlers if
+                    exc_type == raised)
+        for func in handlers:
+            response = func(e)
+            if isinstance(response, Response):
+                return response
 
     def _unhandled_exception_to_response(self) -> Response:
         headers = {}
