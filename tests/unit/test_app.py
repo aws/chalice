@@ -3919,5 +3919,5 @@ class TestErrorHandler:
         def custom_error_handler(e: Exception) -> Response:
             return
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             demo.register_error(NotAnException, custom_error_handler)

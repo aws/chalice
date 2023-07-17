@@ -979,7 +979,7 @@ class _HandlerRegistration(object):
     def register_error(self, exception: Any,
                        func: ErrorHandlerFuncType) -> None:
         if not issubclass(exception, Exception):
-            raise ValueError(
+            raise TypeError(
                 f"{exception.__name__} is not a subclass of Exception."
                 "Error handlers can only be registered for Exception classes."
             )
