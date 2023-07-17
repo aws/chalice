@@ -733,8 +733,8 @@ class DecoratorAPI(object):
             exception: Exception
     ) -> Callable[[ErrorHandlerFuncType], Any]:
         def _error_wrapper(
-                func: Callable[[Exception], Response]
-        ) -> Callable[[Exception], Response]:
+                func: ErrorHandlerFuncType
+        ) -> ErrorHandlerFuncType:
             self.register_error(exception, func)
             return func
         return _error_wrapper
@@ -951,7 +951,7 @@ class DecoratorAPI(object):
         raise NotImplementedError("_register_handler")
 
     def register_error(self, exception: Exception,
-                       func: MiddlewareFuncType) -> None:
+                       func: ErrorHandlerFuncType) -> None:
         raise NotImplementedError("register_error")
 
     def register_middleware(self, func: MiddlewareFuncType,
@@ -976,7 +976,7 @@ class _HandlerRegistration(object):
                             event_type: str = 'all') -> None:
         self.middleware_handlers.append((func, event_type))
 
-    def register_error(self, exception: Exception, func: Callable) -> None:
+    def register_error(self, exception: Any, func: ErrorHandlerFuncType) -> None:
         if not issubclass(exception, Exception):
             raise ValueError(
                 f"{exception.__name__} is not a subclass of Exception."
@@ -1963,7 +1963,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
                 self._unhandled_exception_to_response()
         return response
 
-    def _get_error_handler_response(self, e: Exception) -> Response or None:
+    def _get_error_handler_response(self, e: Exception) -> Any:
         # Loops through the registered error handlers and returns the first
         # `Response` result from handlers. If no handlers are matched or no
         # matched handlers returned a `Response`, returns None to allow for
@@ -1975,6 +1975,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
             response = func(e)
             if isinstance(response, Response):
                 return response
+        return
 
     def _unhandled_exception_to_response(self) -> Response:
         headers = {}
