@@ -19,6 +19,7 @@ from chalice import NotFoundError
 from chalice.test import Client
 from chalice.app import (
     APIGateway,
+    ChaliceViewError,
     Request,
     Response,
     handle_extra_types,
@@ -149,6 +150,10 @@ class FakeSession(object):
     def client(self, name, endpoint_url=None):
         self.calls.append((name, endpoint_url))
         return self._client
+
+
+class CustomError(Exception):
+    pass
 
 
 @pytest.fixture
@@ -3745,3 +3750,175 @@ class TestMiddleware:
             {'name': 'wrapped', 'event': {'input-event': True}},
             {'name': 'myfunction', 'event': {'input-event': True}},
         ]
+
+
+class TestErrorHandler:
+    def test_error_handler_decorator(self):
+        demo = app.Chalice('app-name')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        @demo.error(CustomError)
+        def custom_error_handler(e: Exception) -> Response:
+            return expected_response
+
+        @demo.route('/')
+        def index():
+            raise CustomError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_register(self):
+        demo = app.Chalice('app-name')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        def custom_error_handler(e: Exception) -> Response:
+            return expected_response
+
+        demo.register_error(CustomError, custom_error_handler)
+
+        @demo.route('/')
+        def index():
+            raise CustomError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_in_blueprint(self):
+        demo = app.Chalice('app-name')
+        bp = app.Blueprint('bp')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        @bp.error(CustomError)
+        def custom_error_handler(e: Exception) -> Response:
+            return expected_response
+
+        demo.register_blueprint(bp)
+
+        @demo.route('/')
+        def index():
+            raise CustomError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_from_blueprint(self):
+        demo = app.Chalice('app-name')
+        bp = app.Blueprint('bp')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        @demo.error(CustomError)
+        def custom_error_handler(e: Exception) -> Response:
+            return expected_response
+
+        @bp.route('/')
+        def index():
+            raise CustomError()
+
+        demo.register_blueprint(bp)
+
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_invalid_response_type(self):
+        demo = app.Chalice('app-name')
+
+        @demo.error(CustomError)
+        def custom_error_handler(e: Exception) -> Response:
+            return "Not a Response"
+
+        @demo.route('/')
+        def index():
+            raise CustomError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.status_code == ChaliceViewError.STATUS_CODE
+
+    def test_error_handler_multiple_handlers_returns_first(self):
+        demo = app.Chalice('app-name')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        @demo.error(CustomError)
+        def custom_error_handler(e: Exception) -> Response:
+            return expected_response
+
+        @demo.error(CustomError)
+        def custom_error_handler_2(e: Exception) -> Response:
+            return Response(body="Not Expecting", status_code=200)
+
+        @demo.route('/')
+        def index():
+            raise CustomError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_multiple_handlers_returns_second(self):
+        demo = app.Chalice('app-name')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        @demo.error(CustomError)
+        def custom_error_handler(e: Exception) -> Response:
+            return "Not a valid Response"
+
+        @demo.error(CustomError)
+        def custom_error_handler_2(e: Exception) -> Response:
+            return expected_response
+
+        @demo.route('/')
+        def index():
+            raise CustomError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_overides_chalice_view_error(self):
+        demo = app.Chalice('app-name')
+        expected_response = Response(body='In error Handler', status_code=400)
+
+        @demo.error(ChaliceViewError)
+        def custom_error_handler(e: Exception) -> Response:
+            return expected_response
+
+        @demo.route('/')
+        def index():
+            raise ChaliceViewError()
+
+        with Client(demo) as c:
+            response = c.http.get("/")
+
+            assert response.body.decode() == expected_response.body
+            assert response.status_code == expected_response.status_code
+
+    def test_error_handler_invalid_registration(self):
+        demo = app.Chalice('app-name')
+
+        class NotAnException:
+            pass
+
+        def custom_error_handler(e: Exception) -> Response:
+            return
+
+        with pytest.raises(ValueError):
+            demo.register_error(NotAnException, custom_error_handler)
