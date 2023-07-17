@@ -3826,7 +3826,6 @@ class TestErrorHandler:
 
         demo.register_blueprint(bp)
 
-
         with Client(demo) as c:
             response = c.http.get("/")
 

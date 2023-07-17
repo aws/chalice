@@ -976,7 +976,8 @@ class _HandlerRegistration(object):
                             event_type: str = 'all') -> None:
         self.middleware_handlers.append((func, event_type))
 
-    def register_error(self, exception: Any, func: ErrorHandlerFuncType) -> None:
+    def register_error(self, exception: Any,
+                       func: ErrorHandlerFuncType) -> None:
         if not issubclass(exception, Exception):
             raise ValueError(
                 f"{exception.__name__} is not a subclass of Exception."
