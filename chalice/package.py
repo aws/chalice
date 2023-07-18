@@ -334,6 +334,9 @@ class SAMTemplateGenerator(TemplateGenerator):
             properties = resources['RestAPI']['Properties']
             properties['MinimumCompressionSize'] = \
                 int(resource.minimum_compression)
+        if self._config.xray_enabled:
+            properties = resources['RestAPI']['Properties']
+            properties['TracingEnabled'] = True
 
         handler_cfn_name = to_cfn_resource_name(
             resource.lambda_function.resource_name)
