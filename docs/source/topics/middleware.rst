@@ -96,6 +96,8 @@ If an exception is raised in a Lambda handler and no middleware catches the
 exception, the exception will be returned back to the client that invoked
 the Lambda function.
 
+.. _middleware-error-handling-rest:
+
 Rest APIs
 ~~~~~~~~~
 
@@ -271,15 +273,15 @@ Integrating with AWS Lambda Powertools
 --------------------------------------
 
 `AWS Lambda Powertools
-<https://awslabs.github.io/aws-lambda-powertools-python/latest/>`__ is a suite of
+<https://docs.powertools.aws.dev/lambda/python/latest/>`__ is a suite of
 utilities for AWS Lambda functions that makes tracing with AWS X-Ray,
 structured logging and creating custom metrics asynchronously easier.
 
 You can use Chalice middleware to easily integrate Lambda Powertools with
 your Chalice apps.  In this example, we'll use the
 `Logger
-<https://awslabs.github.io/aws-lambda-powertools-python/latest/core/logger/>`__
-and `Tracer <https://awslabs.github.io/aws-lambda-powertools-python/latest/core/tracer/>`__
+<https://docs.powertools.aws.dev/lambda/python/latest/core/logger/>`__
+and `Tracer <https://docs.powertools.aws.dev/lambda/python/latest/core/tracer/>`__
 and convert them to Chalice middleware so they will be automatically applied
 to all Lambda functions in our application.
 
