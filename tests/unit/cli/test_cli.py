@@ -1,4 +1,7 @@
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import pytest
 import re
 

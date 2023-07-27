@@ -4,7 +4,10 @@ from chalice import CORSConfig
 from chalice.app import CustomAuthorizer, CognitoUserPoolAuthorizer
 from chalice.app import IAMAuthorizer, Chalice
 from chalice.deploy.models import RestAPI, IAMPolicy
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 from pytest import fixture
 
 

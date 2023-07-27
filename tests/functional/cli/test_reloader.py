@@ -1,5 +1,8 @@
 import pytest
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import threading
 import os
 import unittest

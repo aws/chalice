@@ -1,7 +1,10 @@
 import threading
 from subprocess import Popen
 
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import pytest
 
 try:

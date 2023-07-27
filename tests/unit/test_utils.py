@@ -1,6 +1,9 @@
 import os
 import re
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import sys
 
 import click

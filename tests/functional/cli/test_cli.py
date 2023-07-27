@@ -6,7 +6,10 @@ import re
 
 import pytest
 from click.testing import CliRunner
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 from botocore.exceptions import ClientError
 
 from chalice import cli

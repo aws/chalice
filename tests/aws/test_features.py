@@ -4,7 +4,10 @@ import time
 import shutil
 import uuid
 
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import botocore.session
 import pytest
 import requests

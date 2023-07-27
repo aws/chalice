@@ -3,7 +3,10 @@ import datetime
 import time
 
 import pytest
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError

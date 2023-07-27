@@ -5,7 +5,10 @@ import io
 from collections import defaultdict, namedtuple
 
 import pytest
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 
 from chalice.awsclient import TypedAWSClient
 from chalice.config import Config
