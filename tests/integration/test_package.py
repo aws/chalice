@@ -45,7 +45,7 @@ PACKAGES_TO_TEST = {
         ],
     },
     'numpy': {
-        'version': '1.21.6',
+        'version': '1.23.3',
         'legacy_version': '1.19.4',
         'contents': [
             'numpy/__init__.py',
@@ -76,7 +76,7 @@ PACKAGES_TO_TEST = {
         'contents': ['markupsafe/__init__.py'],
     },
     'scipy': {
-        'version': '1.7.3',
+        'version': '1.10.1',
         'legacy_version': '1.5.4',
         'contents': [
             'scipy/__init__.py',
