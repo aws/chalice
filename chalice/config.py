@@ -160,7 +160,9 @@ class Config(object):
             return 'python3.8'
         elif (major, minor) <= (3, 9):
             return 'python3.9'
-        return 'python3.10'
+        elif (major, minor) <= (3, 10):
+            return 'python3.10'
+        return 'python3.11'
 
     @property
     def log_retention_in_days(self) -> int:
