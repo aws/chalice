@@ -151,17 +151,12 @@ class Config(object):
         if major == 2:
             return 'python2.7'
         # Python 3 for backwards compatibility needs to select python3.6
-        # for python versions 3.0-3.6. 3.7 and higher will use python3.7.
+        # for python versions 3.0-3.6. 3.7-3.10 will use their version.
+        # 3.11 and higher will use 3.11
         elif (major, minor) <= (3, 6):
             return 'python3.6'
-        elif (major, minor) <= (3, 7):
-            return 'python3.7'
-        elif (major, minor) <= (3, 8):
-            return 'python3.8'
-        elif (major, minor) <= (3, 9):
-            return 'python3.9'
         elif (major, minor) <= (3, 10):
-            return 'python3.10'
+            return 'python%s.%s' % (major, minor)
         return 'python3.11'
 
     @property
