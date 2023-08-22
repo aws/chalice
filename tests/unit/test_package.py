@@ -616,10 +616,14 @@ class TestTerraformTemplate(TemplateTestBase):
                                app_name='myfoo',
                                api_gateway_stage='dev')
         template = self.generate_template(config)
-        assert template['data']['null_data_source']['chalice']['inputs'] == {
-            'app': 'myfoo',
-            'stage': 'dev'
-        }
+        assert 'chalice_app' in template['locals']
+        assert 'chalice_stage' in template['locals']
+        assert 'chalice_api_swagger' in template['locals']
+        assert template['locals']['chalice_app'] == 'myfoo'
+        assert template['locals']['chalice_stage'] == 'dev'
+        assert template['locals']['chalice_api_swagger'] == (
+            '{"info": {"title": "some-app"}, "x-amazon-apigateway-binary-media-types": []}'
+        )
 
     def test_can_package_s3_event_handler_sans_filters(self, sample_app):
         @sample_app.on_s3_event(bucket='foo')

@@ -817,26 +817,20 @@ class TerraformGenerator(TemplateGenerator):
         # type: (List[models.Model]) -> Dict[str, Any]
         template = {
             'resource': {},
-            'locals': {},
+            'locals': {
+                'chalice_app': self._config.app_name,
+                'chalice_stage': self._config.chalice_stage
+            },
             'terraform': {
                 'required_version': '>= 0.12.26, < 1.4.0',
                 'required_providers': {
                     'aws': {'version': '>= 2, < 5'},
-                    'null': {'version': '>= 2, < 4'}
                 }
             },
             'data': {
                 'aws_caller_identity': {'chalice': {}},
                 'aws_partition': {'chalice': {}},
                 'aws_region': {'chalice': {}},
-                'null_data_source': {
-                    'chalice': {
-                        'inputs': {
-                            'app': self._config.app_name,
-                            'stage': self._config.chalice_stage
-                        }
-                    }
-                }
             }
         }
 
