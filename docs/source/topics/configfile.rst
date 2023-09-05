@@ -395,6 +395,7 @@ that can be applied per function:
 * ``iam_role_arn``
 * ``lambda_memory_size``
 * ``lambda_timeout``
+* ``lambda_ephemeral_storage``
 * ``layers``
 * ``manage_iam_role``
 * ``reserved_concurrency``
@@ -605,6 +606,30 @@ The ``prod`` stage will have these environment variables set::
     "SHARED_CONFIG": "foo",
     "TABLE_NAME": "prod-table",
     "OTHER_CONFIG": "prod-value",
+  }
+
+
+.. _ephemeral-storage-examples:
+
+Ephemeral Storage
+~~~~~~~~~~~~~~~~~
+
+In the following example, the ephemeral storage for the
+"foo" function will be set to 1024 MB. In the dev stage
+that value will be overridden and set to 2048 MB::
+
+  {
+    "version": "2.0",
+    "app_name": "app",
+    "lambda_functions": {
+      "foo": {
+        "lambda_ephemeral_storage": 1024
+    }
+    "dev": {
+      "lambda_functions": {
+        "foo": {
+          "lambda_ephemeral_storage": 2048
+      }
   }
 
 
