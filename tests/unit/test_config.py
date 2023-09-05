@@ -205,6 +205,7 @@ def test_can_create_scope_obj_with_new_function():
                 'environment_variables': {'env': 'stage'},
                 'lambda_timeout': 1,
                 'lambda_memory_size': 1,
+                'lambda_ephemeral_storage': 1,
                 'tags': {'tag': 'stage'},
                 'lambda_functions': {
                     'api_handler': {
@@ -222,6 +223,7 @@ def test_can_create_scope_obj_with_new_function():
                         'environment_variables': {'env': 'function'},
                         'lambda_timeout': 2,
                         'lambda_memory_size': 2,
+                        'lambda_ephemeral_storage': 2,
                         'tags': {'tag': 'function'},
                     }
                 }
@@ -238,6 +240,7 @@ def test_can_create_scope_obj_with_new_function():
     assert new_config.environment_variables == {'env': 'function'}
     assert new_config.lambda_timeout == 2
     assert new_config.lambda_memory_size == 2
+    assert new_config.lambda_ephemeral_storage == 2
     assert new_config.tags['tag'] == 'function'
 
 
@@ -452,6 +455,42 @@ class TestConfigureLambdaMemorySize(object):
         }
         c = Config('dev', config_from_disk=config_from_disk)
         assert c.lambda_memory_size == 256
+
+
+class TestConfigureLambdaEphemeralStorage(object):
+    def test_not_set(self):
+        c = Config('dev', config_from_disk={})
+        assert c.lambda_ephemeral_storage is None
+
+    def test_set_lambda_ephemeral_storage_global(self):
+        config_from_disk = {
+            'lambda_ephemeral_storage': 1024
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_ephemeral_storage == 1024
+
+    def test_set_lambda_ephemeral_storage_stage(self):
+        config_from_disk = {
+            'stages': {
+                'dev': {
+                    'lambda_ephemeral_storage': 1024
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_ephemeral_storage == 1024
+
+    def test_set_lambda_ephemeral_storage_override(self):
+        config_from_disk = {
+            'lambda_ephemeral_storage': 512,
+            'stages': {
+                'dev': {
+                    'lambda_ephemeral_storage': 1024
+                }
+            }
+        }
+        c = Config('dev', config_from_disk=config_from_disk)
+        assert c.lambda_ephemeral_storage == 1024
 
 
 class TestConfigureLambdaTimeout(object):

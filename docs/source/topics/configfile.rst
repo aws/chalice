@@ -143,6 +143,14 @@ your function. The default ``lambda_memory_size`` value is ``128``. The value
 must be a multiple of 64 MB.
 
 
+``lambda_ephemeral_storage``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An integer representing the amount of ephemeral storage, in MB, your Lambda
+function is given. The default ``lambda_ephemeral_storage`` value is ``512``.
+The maximum value is ``10240``.
+
+
 ``lambda_timeout``
 ~~~~~~~~~~~~~~~~~~
 

@@ -246,6 +246,7 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Tracing': resource.xray and 'Active' or 'PassThrough',
                 'Timeout': resource.timeout,
                 'MemorySize': resource.memory_size,
+                'EphemeralStorage': {'Size': resource.ephemeral_storage},
             },
         }  # type: Dict[str, Any]
 
@@ -1243,6 +1244,7 @@ class TerraformGenerator(TemplateGenerator):
             'runtime': resource.runtime,
             'handler': resource.handler,
             'memory_size': resource.memory_size,
+            'ephemeral_storage': resource.ephemeral_storage,
             'tags': resource.tags,
             'timeout': resource.timeout,
             'source_code_hash': '${filebase64sha256("%s")}' % (

@@ -196,6 +196,7 @@ class LambdaFunction(ManagedModel):
     tags: StrMap
     timeout: int
     memory_size: int
+    ephemeral_storage: int
     role: IAMRole
     security_group_ids: List[str]
     subnet_ids: List[str]
