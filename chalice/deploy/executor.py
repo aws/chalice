@@ -1,8 +1,8 @@
 import re
 import pprint
+from dataclasses import asdict
 
 import jmespath
-from attr import asdict
 from typing import Dict, List, Any  # noqa
 
 from chalice.deploy import models # noqa

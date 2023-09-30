@@ -1,7 +1,7 @@
 import mock
 
-import attr
 import pytest
+from dataclasses import replace, dataclass
 from typing import Tuple
 
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
@@ -555,7 +555,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
             deployment_package=models.DeploymentPackage(
                 filename='foo')
         )
-        copy_of_layer = attr.evolve(layer)
+        copy_of_layer = replace(layer)
         self.remote_state.declare_resource_exists(
             copy_of_layer,
             layer_version_arn='arn:bar:4'
@@ -675,7 +675,7 @@ class TestPlanLambdaFunction(BasePlannerTests):
 
     def test_can_update_lambda_function_code(self):
         function = create_function_resource('function_name')
-        copy_of_function = attr.evolve(function)
+        copy_of_function = replace(function)
         self.remote_state.declare_resource_exists(copy_of_function)
         # Now let's change the memory size and ensure we
         # get an update.
@@ -721,9 +721,9 @@ class TestPlanLambdaFunction(BasePlannerTests):
             'function_name',
             managed_layer=create_managed_layer(),
         )
-        copy_of_function = attr.evolve(function)
+        copy_of_function = replace(function)
         self.remote_state.declare_resource_exists(copy_of_function)
-        copy_of_layer = attr.evolve(function.managed_layer)
+        copy_of_layer = replace(function.managed_layer)
         self.remote_state.declare_resource_exists(
             copy_of_layer,
             layer_version_arn='arn:bar:4'
@@ -2413,7 +2413,7 @@ class TestRemoteState(object):
 
     def test_unknown_model_type_raises_error(self):
 
-        @attr.attrs
+        @dataclass
         class Foo(models.ManagedModel):
             resource_type = 'foo'
 

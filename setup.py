@@ -25,8 +25,7 @@ install_requires = [
     'typing==3.6.4;python_version<"3.7"',
     'typing-extensions>=4.0.0,<5.0.0',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<23.1',
-    'attrs>=19.3.0,<21.5.0',
+    'pip>=9,<23.2',
     'jmespath>=0.9.3,<2.0.0',
     'pyyaml>=5.3.1,<7.0.0',
     'inquirer>=2.7.0,<3.0.0',
@@ -36,7 +35,7 @@ install_requires = [
 
 setup(
     name='chalice',
-    version='1.27.3',
+    version='1.29.0',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
@@ -45,7 +44,7 @@ setup(
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=install_requires,
     extras_require={
-        'event-file-poller': ['watchdog==0.9.0'],
+        'event-file-poller': ['watchdog==2.3.1'],
         'cdk': [
             'aws_cdk.aws_iam>=1.85.0,<2.0',
             'aws_cdk.aws-s3-assets>=1.85.0,<2.0',
@@ -75,5 +74,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
 )

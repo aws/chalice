@@ -1,6 +1,8 @@
+from __future__ import annotations
 import os
-
+from dataclasses import dataclass
 import socket
+
 import botocore.session
 
 import pytest
@@ -19,8 +21,6 @@ from chalice.policy import AppPolicyGenerator
 from chalice.deploy.deployer import ChaliceDeploymentError
 from chalice.utils import UI
 import unittest
-
-from attr import attrs, attrib
 
 from chalice.awsclient import TypedAWSClient
 from chalice.utils import OSUtils, serialize_to_json
@@ -241,10 +241,10 @@ class TestChaliceDeploymentError(object):
         )
 
 
-@attrs
+@dataclass
 class FooResource(models.Model):
-    name = attrib()
-    leaf = attrib()
+    name: str
+    leaf: LeafResource
 
     def dependencies(self):
         if not isinstance(self.leaf, list):
@@ -252,9 +252,9 @@ class FooResource(models.Model):
         return self.leaf
 
 
-@attrs
+@dataclass
 class LeafResource(models.Model):
-    name = attrib()
+    name: str
 
 
 @fixture

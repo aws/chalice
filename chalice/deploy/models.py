@@ -1,8 +1,9 @@
 # pylint: disable=line-too-long
+from __future__ import annotations
+from dataclasses import dataclass, field
 import enum
 from typing import List, Dict, Optional as Opt, Any, TypeVar, Union, Set  # noqa
 from typing import cast
-from attr import attrs, attrib, Factory
 
 
 class Placeholder(enum.Enum):
@@ -28,8 +29,7 @@ class TLSVersion(enum.Enum):
     TLS_1_2 = 'TLS_1_2'
 
     @classmethod
-    def create(cls, str_version):
-        # type: (str) -> Opt[TLSVersion]
+    def create(cls, str_version: str) -> Opt[TLSVersion]:
         for version in cls:
             if version.value == str_version:
                 return version
@@ -41,178 +41,172 @@ DV = Union[Placeholder, T]
 StrMap = Dict[str, str]
 
 
-@attrs
-class Plan(object):
-    instructions = attrib(default=Factory(list))  # type: List[Instruction]
-    messages = attrib(default=Factory(dict))      # type: Dict[int, str]
+@dataclass
+class Plan:
+    instructions: List[Instruction] = field(default_factory=list)
+    messages: Dict[int, str] = field(default_factory=dict)
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class APICall(Instruction):
-    method_name = attrib()             # type: str
-    params = attrib()                  # type: Dict[str, Any]
-    output_var = attrib(default=None)  # type: Opt[str]
+    method_name: str
+    params: Dict[str, Any]
+    output_var: Opt[str] = None
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class StoreValue(Instruction):
-    name = attrib()   # type: str
-    value = attrib()  # type: Any
+    name: str
+    value: Any
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class StoreMultipleValue(Instruction):
-    name = attrib()   # type: str
-    value = attrib(default=Factory(list))  # type: List[Any]
+    name: str
+    value: List[Any] = field(default_factory=list)
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class CopyVariable(Instruction):
-    from_var = attrib()  # type: str
-    to_var = attrib()    # type: str
+    from_var: str
+    to_var: str
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class CopyVariableFromDict(Instruction):
-    from_var = attrib()  # type: str
-    key = attrib()       # type: str
-    to_var = attrib()    # type: str
+    from_var: str
+    key: str
+    to_var: str
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class RecordResource(Instruction):
-    resource_type = attrib()  # type: str
-    resource_name = attrib()  # type: str
-    name = attrib()           # type: str
+    resource_type: str
+    resource_name: str
+    name: str
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class RecordResourceVariable(RecordResource):
-    variable_name = attrib()  # type: str
+    variable_name: str
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class RecordResourceValue(RecordResource):
-    value = attrib()  # type: Any
+    value: Any
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class JPSearch(Instruction):
-    expression = attrib()  # type: Any
-    input_var = attrib()   # type: Any
-    output_var = attrib()  # type: Any
+    expression: Any
+    input_var: Any
+    output_var: Any
 
 
-@attrs(frozen=True)
+@dataclass(frozen=True)
 class BuiltinFunction(Instruction):
-    function_name = attrib()  # type: str
-    args = attrib()           # type: List[Any]
-    output_var = attrib()     # type: str
+    function_name: str
+    args: List[Any]
+    output_var: str
 
 
 class Model(object):
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return []
 
 
-@attrs
+@dataclass
 class ManagedModel(Model):
-    resource_name = attrib()  # type: str
+    resource_name: str
     # Subclasses must fill in this attribute.
-    resource_type = ''        # type: str
+    resource_type = ''
 
 
-@attrs
+@dataclass
 class Application(Model):
-    stage = attrib()      # type: str
-    resources = attrib()  # type: List[Model]
+    stage: str
+    resources: List[Model]
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return self.resources
 
 
-@attrs
+@dataclass
 class DeploymentPackage(Model):
-    filename = attrib()  # type: DV[str]
+    filename: DV[str]
 
 
-@attrs
+@dataclass
 class IAMPolicy(Model):
-    document = attrib()  # type: DV[Dict[str, Any]]
+    document: DV[Dict[str, Any]]
 
 
-@attrs
+@dataclass
 class FileBasedIAMPolicy(IAMPolicy):
-    filename = attrib()  # type: str
+    filename: str
 
 
-@attrs
+@dataclass
 class AutoGenIAMPolicy(IAMPolicy):
-    traits = attrib(default=Factory(set))  # type: Set[RoleTraits]
+    traits: Set[RoleTraits] = field(default_factory=set)
 
 
-@attrs
+@dataclass
 class IAMRole(Model):
     pass
 
 
-@attrs
+@dataclass
 class PreCreatedIAMRole(IAMRole):
-    role_arn = attrib()  # type: str
+    role_arn: str
 
 
-@attrs
+@dataclass
 class ManagedIAMRole(IAMRole, ManagedModel):
     resource_type = 'iam_role'
-    role_name = attrib()     # type: str
-    trust_policy = attrib()  # type: Dict[str, Any]
-    policy = attrib()        # type: IAMPolicy
+    role_name: str
+    trust_policy: Dict[str, Any]
+    policy: IAMPolicy
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.policy]
 
 
-@attrs
+@dataclass
 class LambdaLayer(ManagedModel):
     resource_type = 'lambda_layer'
-    layer_name = attrib()             # type: str
-    runtime = attrib()                # type: str
-    deployment_package = attrib()     # type: DeploymentPackage
-    is_empty = attrib(default=False)  # type: bool
+    layer_name: str
+    runtime: str
+    deployment_package: DeploymentPackage
+    is_empty: bool = False
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.deployment_package]
 
 
-@attrs
+@dataclass
 class LambdaFunction(ManagedModel):
     resource_type = 'lambda_function'
-    function_name = attrib()          # type: str
-    deployment_package = attrib()     # type: DeploymentPackage
-    environment_variables = attrib()  # type: StrMap
-    xray = attrib()                   # type: bool
-    runtime = attrib()                # type: str
-    handler = attrib()                # type: str
-    tags = attrib()                   # type: StrMap
-    timeout = attrib()                # type: int
-    memory_size = attrib()            # type: int
-    role = attrib()                   # type: IAMRole
-    security_group_ids = attrib()     # type: List[str]
-    subnet_ids = attrib()             # type: List[str]
-    reserved_concurrency = attrib()   # type: int
+    function_name: str
+    deployment_package: DeploymentPackage
+    environment_variables: StrMap
+    xray: bool
+    runtime: str
+    handler: str
+    tags: StrMap
+    timeout: int
+    memory_size: int
+    role: IAMRole
+    security_group_ids: List[str]
+    subnet_ids: List[str]
+    reserved_concurrency: int
     # These are customer created layers.
-    layers = attrib()                 # type: List[str]
-    managed_layer = attrib(
-        default=None)                 # type: Opt[LambdaLayer]
-    log_group = attrib(default=None)  # type: LogGroup
+    layers: List[str]
+    managed_layer: Opt[LambdaLayer] = None
+    log_group: Opt[LogGroup] = None
 
-    def dependencies(self):
-        # type: () -> List[Model]
-        resources = []  # type: List[Model]
+    def dependencies(self) -> List[Model]:
+        resources: List[Model] = []
         if self.managed_layer is not None:
             resources.append(self.managed_layer)
         if self.log_group is not None:
@@ -221,99 +215,95 @@ class LambdaFunction(ManagedModel):
         return resources
 
 
-@attrs
+@dataclass
 class FunctionEventSubscriber(ManagedModel):
-    lambda_function = attrib()  # type: LambdaFunction
+    lambda_function: LambdaFunction
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.lambda_function]
 
 
-@attrs
+@dataclass
 class CloudWatchEventBase(FunctionEventSubscriber):
-    rule_name = attrib()        # type: str
+    rule_name: str
 
 
-@attrs
+@dataclass
 class CloudWatchEvent(CloudWatchEventBase):
     resource_type = 'cloudwatch_event'
-    event_pattern = attrib()    # type: str
+    event_pattern: str
 
 
-@attrs
+@dataclass
 class ScheduledEvent(CloudWatchEventBase):
     resource_type = 'scheduled_event'
-    schedule_expression = attrib()  # type: str
-    rule_description = attrib(default=None)     # type: str
+    schedule_expression: str
+    rule_description: Opt[str] = None
 
 
-@attrs
+@dataclass
 class LogGroup(ManagedModel):
     resource_type = 'log_group'
-    log_group_name = attrib()       # type: str
-    retention_in_days = attrib()    # type: int
+    log_group_name: str
+    retention_in_days: int
 
 
-@attrs
+@dataclass
 class APIMapping(ManagedModel):
     resource_type = 'api_mapping'
-    mount_path = attrib()          # type: str
-    api_gateway_stage = attrib()   # type: str
+    mount_path: str
+    api_gateway_stage: str
 
 
-@attrs
+@dataclass
 class DomainName(ManagedModel):
     resource_type = 'domain_name'
-    domain_name = attrib()              # type: str
-    protocol = attrib()                 # type: APIType
-    api_mapping = attrib()              # type: APIMapping
-    certificate_arn = attrib()          # type: str
-    tags = attrib(default=None)         # type: Opt[Dict[str, Any]]
-    tls_version = attrib(default=None)  # type: Opt[TLSVersion]
+    domain_name: str
+    protocol: APIType
+    api_mapping: APIMapping
+    certificate_arn: str
+    tags: Opt[Dict[str, Any]] = None
+    tls_version: Opt[TLSVersion] = None
 
-    def dependencies(self):
-        # type: () -> List[Model]
+    def dependencies(self) -> List[Model]:
         return [self.api_mapping]
 
 
-@attrs
+@dataclass
 class RestAPI(ManagedModel):
     resource_type = 'rest_api'
-    swagger_doc = attrib()                       # type: DV[Dict[str, Any]]
-    minimum_compression = attrib()               # type: str
-    api_gateway_stage = attrib()                 # type: str
-    endpoint_type = attrib()                     # type: str
-    lambda_function = attrib()                   # type: LambdaFunction
-    xray = attrib(default=False)                 # type: bool
-    policy = attrib(default=None)                # type: Opt[IAMPolicy]
-    authorizers = attrib(default=Factory(list))  # type: List[LambdaFunction]
-    domain_name = attrib(default=None)           # type: Opt[DomainName]
-    vpce_ids = attrib(default=None)              # type: Opt[List[str]]
+    swagger_doc: DV[Dict[str, Any]]
+    minimum_compression: str
+    api_gateway_stage: str
+    endpoint_type: str
+    lambda_function: LambdaFunction
+    xray: bool = False
+    policy: Opt[IAMPolicy] = None
+    authorizers: List[LambdaFunction] = field(default_factory=list)
+    domain_name: Opt[DomainName] = None
+    vpce_ids: Opt[List[str]] = None
 
-    def dependencies(self):
-        # type: () -> List[Model]
-        resources = []  # type: List[Model]
+    def dependencies(self) -> List[Model]:
+        resources: List[Model] = []
         resources.extend([self.lambda_function] + self.authorizers)
         if self.domain_name is not None:
             resources.append(self.domain_name)
         return cast(List[Model], resources)
 
 
-@attrs
+@dataclass
 class WebsocketAPI(ManagedModel):
     resource_type = 'websocket_api'
-    name = attrib()                     # type: str
-    api_gateway_stage = attrib()        # type: str
-    routes = attrib()                   # type: List[str]
-    connect_function = attrib()         # type: Opt[LambdaFunction]
-    message_function = attrib()         # type: Opt[LambdaFunction]
-    disconnect_function = attrib()      # type: Opt[LambdaFunction]
-    domain_name = attrib(default=None)  # type: Opt[DomainName]
+    name: str
+    api_gateway_stage: str
+    routes: List[str]
+    connect_function: Opt[LambdaFunction]
+    message_function: Opt[LambdaFunction]
+    disconnect_function: Opt[LambdaFunction]
+    domain_name: Opt[DomainName] = None
 
-    def dependencies(self):
-        # type: () -> List[Model]
-        resources = []  # type: List[Model]
+    def dependencies(self) -> List[Model]:
+        resources: List[Model] = []
         if self.domain_name is not None:
             resources.append(self.domain_name)
         if self.connect_function is not None:
@@ -325,54 +315,53 @@ class WebsocketAPI(ManagedModel):
         return resources
 
 
-@attrs
+@dataclass
 class S3BucketNotification(FunctionEventSubscriber):
     resource_type = 's3_event'
-    bucket = attrib()           # type: str
-    events = attrib()           # type: List[str]
-    prefix = attrib()           # type: Opt[str]
-    suffix = attrib()           # type: Opt[str]
+    bucket: str
+    events: List[str]
+    prefix: Opt[str]
+    suffix: Opt[str]
 
 
-@attrs
+@dataclass
 class SNSLambdaSubscription(FunctionEventSubscriber):
     resource_type = 'sns_event'
-    topic = attrib()            # type: str
+    topic: str
 
 
-@attrs
+@dataclass
 class QueueARN(object):
-    arn = attrib()  # type: str
+    arn: str
 
     @property
-    def queue_name(self):
-        # type: () -> str
+    def queue_name(self) -> str:
         # Pylint 2.x validates this correctly, but for py27, we have to
-        # use Pylint 1.x which doesn't support attrs.
+        # use Pylint 1.x which doesn't support dataclass.
         return self.arn.rpartition(':')[2]  # pylint: disable=no-member
 
 
-@attrs
+@dataclass
 class SQSEventSource(FunctionEventSubscriber):
     resource_type = 'sqs_event'
-    queue = attrib()                               # type: Union[str, QueueARN]
-    batch_size = attrib()                          # type: int
-    maximum_batching_window_in_seconds = attrib()  # type: int
+    queue: Union[str, QueueARN]
+    batch_size: int
+    maximum_batching_window_in_seconds: int
 
 
-@attrs
+@dataclass
 class KinesisEventSource(FunctionEventSubscriber):
     resource_type = 'kinesis_event'
-    stream = attrib()                               # type: str
-    batch_size = attrib()                           # type: int
-    starting_position = attrib()                    # type: str
-    maximum_batching_window_in_seconds = attrib()   # type: int
+    stream: str
+    batch_size: int
+    starting_position: str
+    maximum_batching_window_in_seconds: int
 
 
-@attrs
+@dataclass
 class DynamoDBEventSource(FunctionEventSubscriber):
     resource_type = 'dynamodb_event'
-    stream_arn = attrib()                           # type: str
-    batch_size = attrib()                           # type: int
-    starting_position = attrib()                    # type: str
-    maximum_batching_window_in_seconds = attrib()   # type: int
+    stream_arn: str
+    batch_size: int
+    starting_position: str
+    maximum_batching_window_in_seconds: int

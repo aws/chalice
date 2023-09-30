@@ -10,7 +10,6 @@ astroid==2.12.5
     # via pylint
 attrs==21.4.0
     # via
-    #   -r requirements-test.in
     #   hypothesis
     #   pytest
 babel==2.10.3
