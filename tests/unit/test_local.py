@@ -727,7 +727,7 @@ def test_can_create_lambda_event_for_post_with_formencoded_body():
 def test_can_provide_port_to_local_server(sample_app):
     dev_server = local.create_local_server(sample_app, None, '127.0.0.1',
                                            port=23456)
-    assert dev_server.server.server_port == 23456
+    assert dev_server.http_server.server_port == 23456
 
 
 def test_can_provide_host_to_local_server(sample_app):
@@ -1191,8 +1191,8 @@ class TestLocalDevServer(object):
     def test_can_delegate_to_server(self, sample_app):
         http_server = mock.Mock(spec=HTTPServer)
         dev_server = LocalDevServer(
-            sample_app, Config(), '0.0.0.0', 8000,
-            server_cls=lambda *args: http_server,
+            sample_app, Config(), '0.0.0.0', 8000, '0.0.0.0', 8001,
+            http_server_cls=lambda *args: http_server,
         )
 
         dev_server.handle_single_request()
@@ -1208,15 +1208,15 @@ class TestLocalDevServer(object):
             provided_args[:] = list(args)
 
         LocalDevServer(
-            sample_app, Config(), '0.0.0.0', 8000,
-            server_cls=args_recorder,
+            sample_app, Config(), '0.0.0.0', 8000, '0.0.0.0', 8001,
+            http_server_cls=args_recorder,
         )
 
         assert provided_args[0] == ('0.0.0.0', 8000)
 
     def test_does_use_daemon_threads(self, sample_app):
         server = LocalDevServer(
-            sample_app, Config(), '0.0.0.0', 8000
+            sample_app, Config(), '0.0.0.0', 8000, '0.0.0.0', 8001,
         )
 
-        assert server.server.daemon_threads
+        assert server.http_server.daemon_threads

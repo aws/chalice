@@ -102,6 +102,8 @@ def _configure_cli_env_vars():
 @cli.command()
 @click.option('--host', default='127.0.0.1')
 @click.option('--port', default=8000, type=click.INT)
+@click.option('--ws-host')
+@click.option('--ws-port', type=click.INT)
 @click.option('--stage', default=DEFAULT_STAGE_NAME,
               help='Name of the Chalice stage for the local server to use.')
 @click.option('--autoreload/--no-autoreload',
@@ -109,14 +111,18 @@ def _configure_cli_env_vars():
               help='Automatically restart server when code changes.')
 @click.pass_context
 def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
-          autoreload=True):
-    # type: (click.Context, str, int, str, bool) -> None
+          autoreload=True, ws_host=None, ws_port=None):
+    # type: (click.Context, str, int, str, bool, Optional[str], Optional[port]) -> None
     factory = ctx.obj['factory']  # type: CLIFactory
     from chalice.cli import reloader
     # We don't create the server here because that will bind the
     # socket and we only want to do this in the worker process.
+    if ws_host is None:
+        ws_host = host
+    if ws_port is None:
+        ws_port = port + 1
     server_factory = functools.partial(
-        create_local_server, factory, host, port, stage)
+        create_local_server, factory, host, port, stage, ws_host, ws_port)
     # When running `chalice local`, a stdout logger is configured
     # so you'll see the same stdout logging as you would when
     # running in lambda.  This is configuring the root logger.
@@ -133,11 +139,11 @@ def local(ctx, host='127.0.0.1', port=8000, stage=DEFAULT_STAGE_NAME,
         # recommended way to do this is to use sys.exit() directly,
         # see: https://github.com/pallets/click/issues/747
         sys.exit(rc)
-    run_local_server(factory, host, port, stage)
+    run_local_server(factory, host, port, stage, ws_host, ws_port)
 
 
-def create_local_server(factory, host, port, stage):
-    # type: (CLIFactory, str, int, str) -> LocalDevServer
+def create_local_server(factory, host, port, stage, ws_host, ws_port):
+    # type: (CLIFactory, str, int, str, str, int) -> LocalDevServer
     config = factory.create_config_obj(
         chalice_stage_name=stage
     )
@@ -146,13 +152,14 @@ def create_local_server(factory, host, port, stage):
     # there is no point in testing locally.
     routes = config.chalice_app.routes
     validate_routes(routes)
-    server = factory.create_local_server(app_obj, config, host, port)
+    server = factory.create_local_server(
+        app_obj, config, host, port, ws_host, ws_port)
     return server
 
 
-def run_local_server(factory, host, port, stage):
-    # type: (CLIFactory, str, int, str) -> None
-    server = create_local_server(factory, host, port, stage)
+def run_local_server(factory, host, port, stage, ws_host, ws_port):
+    # type: (CLIFactory, str, int, str, str, int) -> None
+    server = create_local_server(factory, host, port, stage, ws_host, ws_port)
     server.serve_forever()
 
 

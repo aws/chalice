@@ -6,6 +6,7 @@ This is intended only for local development purposes.
 from __future__ import print_function
 from __future__ import annotations
 import re
+import socket
 import threading
 import time
 import uuid
@@ -18,6 +19,8 @@ import json
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.socketserver import ThreadingMixIn
+import websockets.sync.server
+import websockets.exceptions
 from typing import (
     List,
     Any,
@@ -46,8 +49,10 @@ EventType = Dict[str, Any]
 ContextType = Dict[str, Any]
 HeaderType = Dict[str, Any]
 ResponseType = Dict[str, Any]
-HandlerCls = Callable[..., 'ChaliceRequestHandler']
-ServerCls = Callable[..., 'HTTPServer']
+HttpHandlerCls = Callable[..., 'ChaliceRequestHandler']
+HttpServerCls = Callable[..., 'HTTPServer']
+WsHandlerCls = Callable[..., 'ChaliceWsHandler']
+WsServerCls = Callable[..., 'websockets.sync.server.WebSocketServer']
 
 
 class Clock(object):
@@ -57,10 +62,11 @@ class Clock(object):
 
 def create_local_server(app_obj: Chalice,
                         config: Config,
-                        host: str, port: int) -> LocalDevServer:
+                        host: str, port: int,
+                        ws_host: str, ws_port: int) -> LocalDevServer:
     CustomLocalChalice.__bases__ = (LocalChalice, app_obj.__class__)
     app_obj.__class__ = CustomLocalChalice
-    return LocalDevServer(app_obj, config, host, port)
+    return LocalDevServer(app_obj, config, host, port, ws_host, ws_port)
 
 
 class LocalARNBuilder(object):
@@ -673,6 +679,21 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
+class ChaliceWsHandler:
+    def __init__(self, app_object: Chalice, config: Config):
+        self.app_obj = app_object
+        self.config = config
+
+    def __call__(self,
+                 websocket: websockets.sync.server.ServerConnection):
+        print("open")
+        try:
+            for message in websocket:
+                print(message)
+        except websockets.exceptions.ConnectionClosed:
+            print("closed")
+
+
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Threading mixin to better support browsers.
 
@@ -689,27 +710,46 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class LocalDevServer(object):
     def __init__(self,
                  app_object: Chalice,
-                 config: Config, host: str, port: int,
-                 handler_cls: HandlerCls = ChaliceRequestHandler,
-                 server_cls: ServerCls = ThreadedHTTPServer) -> None:
+                 config: Config,
+                 host: str, port: int,
+                 ws_host: str, ws_port: int,
+                 http_handler_cls: HttpHandlerCls = ChaliceRequestHandler,
+                 http_server_cls: HttpServerCls = ThreadedHTTPServer,
+                 ws_handler_cls: WsHandlerCls = ChaliceWsHandler,
+                 ws_server_cls: WsServerCls =
+                 websockets.sync.server.serve,) -> None:
         self.app_object = app_object
         self.host = host
         self.port = port
-        self._wrapped_handler = functools.partial(
-            handler_cls, app_object=app_object, config=config)
-        self.server = server_cls((host, port), self._wrapped_handler)
+        self.ws_host = ws_host
+        self.ws_port = ws_port
+        self._wrapped_http_handler = functools.partial(
+            http_handler_cls, app_object=app_object, config=config)
+        self.http_server = http_server_cls(
+            (host, port), self._wrapped_http_handler)
+        self._ws_handler = ws_handler_cls(app_object, config)
+        self.ws_server = ws_server_cls(self._ws_handler, ws_host, ws_port)
 
     def handle_single_request(self) -> None:
-        self.server.handle_request()
+        self.http_server.handle_request()
 
     def serve_forever(self) -> None:
-        print("Serving on http://%s:%s" % (self.host, self.port))
-        self.server.serve_forever()
+        print("Serving on http://%s:%s and ws://%s:%s" %
+              (self.host, self.port, self.ws_host, self.ws_port))
+        threads = [
+            threading.Thread(target=self.http_server.serve_forever),
+            threading.Thread(target=self.ws_server.serve_forever),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
 
     def shutdown(self) -> None:
         # This must be called from another thread of else it
         # will deadlock.
-        self.server.shutdown()
+        self.http_server.shutdown()
+        self.ws_server.shutdown()
 
 
 class HTTPServerThread(threading.Thread):
