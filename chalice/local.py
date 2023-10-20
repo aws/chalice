@@ -964,16 +964,20 @@ class LocalDevServer(object):
         self.http_server.handle_request()
 
     def serve_forever(self) -> None:
-        print("Serving on http://%s:%s and ws://%s:%s" %
-              (self.host, self.port, self.ws_host, self.ws_port))
-        threads = [
-            threading.Thread(target=self.http_server.serve_forever),
-            threading.Thread(target=self.ws_server.serve_forever),
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        if 'WEBSOCKETS' in self.app_object._features_used:
+            print("Serving on http://%s:%s and ws://%s:%s" %
+                  (self.host, self.port, self.ws_host, self.ws_port))
+            threads = [
+                threading.Thread(target=self.http_server.serve_forever),
+                threading.Thread(target=self.ws_server.serve_forever),
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        else:
+            print("Serving on http://%s:%s" % (self.host, self.port))
+            self.http_server.serve_forever()
 
     def shutdown(self) -> None:
         # This must be called from another thread of else it
