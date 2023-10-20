@@ -5,8 +5,9 @@ This is intended only for local development purposes.
 """
 from __future__ import print_function
 from __future__ import annotations
+import time
+import datetime
 import re
-import socket
 import threading
 import time
 import uuid
@@ -19,8 +20,6 @@ import json
 from six.moves.BaseHTTPServer import HTTPServer
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.socketserver import ThreadingMixIn
-import websockets.sync.server
-import websockets.exceptions
 from typing import (
     List,
     Any,
@@ -31,12 +30,28 @@ from typing import (
     Union,
 )  # noqa
 
+from websockets.sync.server import (
+    WebSocketServer,
+    serve as CreateWebsocketServer,
+    ServerConnection as WebsocketConnection
+)
+from websockets.http11 import (
+    Request as WebsocketRequest,
+    Response as WebsocketResponse
+)
+from websockets.datastructures import Headers as WebsocketHeaders
+from websockets.exceptions import (
+    ConnectionClosed as WebsocketConnectionClosed
+)
+
 from chalice.app import Chalice  # noqa
 from chalice.app import CORSConfig  # noqa
 from chalice.app import ChaliceAuthorizer  # noqa
 from chalice.app import CognitoUserPoolAuthorizer  # noqa
 from chalice.app import RouteEntry  # noqa
 from chalice.app import Request  # noqa
+from chalice.app import Response  # noqa
+from chalice.app import WebsocketEvent  # noqa
 from chalice.app import AuthResponse  # noqa
 from chalice.app import BuiltinAuthConfig  # noqa
 from chalice.config import Config  # noqa
@@ -52,7 +67,7 @@ ResponseType = Dict[str, Any]
 HttpHandlerCls = Callable[..., 'ChaliceRequestHandler']
 HttpServerCls = Callable[..., 'HTTPServer']
 WsHandlerCls = Callable[..., 'ChaliceWsHandler']
-WsServerCls = Callable[..., 'websockets.sync.server.WebSocketServer']
+WsServerCls = Callable[..., 'WebSocketServer']
 
 
 class Clock(object):
@@ -679,19 +694,233 @@ class ChaliceRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
+class WebsocketClientConnection:
+    def __init__(self, connection: WebsocketConnection) -> None:
+        self.connection = connection
+        self._connected_at = datetime.datetime.utcnow()
+        self._last_active_at = self._connected_at
+
+    def _touch(self) -> None:
+        self._last_active_at = datetime.datetime.utcnow()
+
+    def recv(self) -> str | bytes:
+        message = self.connection.recv()
+        self._touch()
+        return message
+
+    def send(self, message: str | bytes) -> None:
+        self.connection.send(message)
+        self._touch()
+
+    def close(self) -> None:
+        self.connection.close()
+        self._touch()
+
+    def info(self) -> Dict[str, Any]:
+        try:
+            source_ip = self.connection.remote_address[0]
+        except Exception:
+            source_ip = ''
+        if self.connection.request is not None:
+            try:
+                user_agent = next(iter(
+                    self.connection.request.headers.get_all('User-Agent')))
+            except StopIteration:
+                user_agent = ''
+        else:
+            user_agent = ''
+        return {
+            'ConnectedAt': self._connected_at,
+            'Identity': {
+                'SourceIp': source_ip,
+                'UserAgent': user_agent,
+            },
+            'LastActiveAt': self._last_active_at,
+        }
+
+
+class WebsocketClientExceptions:
+    GoneException = Exception
+
+
+class WebsocketClient:
+    exceptions = WebsocketClientExceptions()
+
+    def __init__(self) -> None:
+        self._connections: Dict[str, WebsocketClientConnection] = {}
+
+    def _get(self, connection_id) -> WebsocketClientConnection:
+        try:
+            return self._connections[connection_id]
+        except KeyError:
+            raise self.exceptions.GoneException('Connection not found')
+
+    def _del(self, connection_id: str):
+        try:
+            del self._connections[connection_id]
+        except KeyError:
+            raise self.exceptions.GoneException('Connection not found')
+
+    def get_connection_id(self, connection: WebsocketConnection) -> str:
+        return base64.b64encode(connection.id.bytes).decode('ascii')
+
+    def add_connection(self, connection: WebsocketConnection):
+        self._connections[self.get_connection_id(connection)] = (
+            WebsocketClientConnection(connection)
+        )
+
+    def receive_message(self, ConnectionId: str) -> str | bytes:
+        return self._get(ConnectionId).recv()
+
+    def post_to_connection(self, ConnectionId: str, Data: str) -> None:
+        try:
+            self._get(ConnectionId).send(Data)
+        except WebsocketConnectionClosed:
+            self._del(ConnectionId)
+            raise self.exceptions.GoneException('Connection closed')
+
+    def delete_connection(self, ConnectionId: str) -> None:
+        self._get(ConnectionId).close()
+        self._del(ConnectionId)
+
+    def get_connection(self, ConnectionId: str) -> Dict[str, Any]:
+        return self._get(ConnectionId).info()
+
+
 class ChaliceWsHandler:
-    def __init__(self, app_object: Chalice, config: Config):
+    MAX_LAMBDA_EXECUTION_TIME = 900
+
+    def __init__(self, app_object: Chalice, config: Config, domain_name: str):
+        app_object.websocket_api.configure(domain_name, config.chalice_stage)
+        app_object.websocket_api._client = WebsocketClient()
         self.app_obj = app_object
         self.config = config
+        self.domain_name = domain_name
 
-    def __call__(self,
-                 websocket: websockets.sync.server.ServerConnection):
-        print("open")
+    @property
+    def _websocket_client(self) -> WebsocketClient:
+        if isinstance(self.app_obj.websocket_api._client, WebsocketClient):
+            return self.app_obj.websocket_api._client
+        else:
+            raise TypeError("Websocket client is not a WebsocketClient")
+
+    def _get_headers(self, websocket: WebsocketConnection) -> Dict[str, Any]:
+        if websocket.request is None:
+            return {"headers": {}, "multiValueHeaders": {}}
+        headers = dict(websocket.request.headers.raw_items())
+        multi_value_headers = {
+            key: websocket.request.headers.get_all(key)
+            for key in headers.keys()
+        }
+        return {"headers": headers, "multiValueHeaders": multi_value_headers}
+
+    def _get_request_context(self,
+                             websocket: WebsocketConnection) -> Dict[str, Any]:
+        connection_id = self._websocket_client.get_connection_id(websocket)
+        connection_info = self._websocket_client.get_connection(connection_id)
+        return {
+            "connectionId": connection_id,
+            "domainName": self.domain_name,
+            "stage": self.config.chalice_stage,
+            "messageDirection": "IN",
+            "identity": {
+                "sourceIp": connection_info["Identity"]["SourceIp"],
+            },
+            "extendedRequestId": connection_id,
+            "requestTime": connection_info["ConnectedAt"].isoformat(),
+            "connectedAt":
+                int(time.mktime(connection_info["ConnectedAt"].timetuple())),
+            "requestTimeEpoch":
+                int(time.mktime(connection_info["ConnectedAt"].timetuple())),
+            "apiId": "local",
+
+        }
+
+    def _get_base_event(self,
+                        websocket: WebsocketConnection,
+                        include_headers: bool = False) -> Dict[str, Any]:
+        if include_headers:
+            event = self._get_headers(websocket)
+        else:
+            event = {}
+        event["requestContext"] = self._get_request_context(websocket)
+        event["isBase64Encoded"] = False
+        return event
+
+    def _generate_lambda_context(self) -> LambdaContext:
+        if self.config.lambda_timeout is None:
+            timeout = self.MAX_LAMBDA_EXECUTION_TIME * 1000
+        else:
+            timeout = self.config.lambda_timeout * 1000
+        return LambdaContext(
+            function_name=self.config.function_name,
+            memory_size=self.config.lambda_memory_size,
+            max_runtime_ms=timeout
+        )
+
+    def _handle_event(self, event: Dict[str, Any]) -> Any:
+        handler = self.app_obj.websocket_handlers[
+            event["requestContext"]["routeKey"]
+        ]
+        return handler.handler_function(WebsocketEvent(
+            event, self._generate_lambda_context()))
+
+    def __call__(self, websocket: WebsocketConnection):
+        connection_id = self._websocket_client.get_connection_id(websocket)
         try:
-            for message in websocket:
-                print(message)
-        except websockets.exceptions.ConnectionClosed:
-            print("closed")
+            while True:
+                message = self._websocket_client.receive_message(connection_id)
+                event = self._get_base_event(websocket)
+                event["requestContext"]["routeKey"] = "$default"
+                event["requestContext"]["eventType"] = "MESSAGE"
+                event["requestContext"]["messageId"] = (
+                    base64.b64encode(uuid.uuid4().bytes).decode('ascii')
+                )
+                if isinstance(message, str):
+                    event["body"] = message
+                else:
+                    event["body"] = base64.b64encode(message).decode('ascii')
+                    event["isBase64Encoded"] = True
+                self._handle_event(event)
+        except WebsocketConnectionClosed as err:
+            event = self._get_base_event(websocket, True)
+            event["requestContext"]["routeKey"] = "$disconnect"
+            event["requestContext"]["eventType"] = "DISCONNECT"
+            close = err.rcvd or err.sent
+            if close:
+                event["requestContext"]["disconnectStatusCode"] = close.code
+                event["requestContext"]["disconnectReason"] = close.reason
+            self._handle_event(event)
+
+    def process_request(self,
+                        websocket: WebsocketConnection,
+                        _: WebsocketRequest
+                        ) -> Optional[WebsocketResponse]:
+        self._websocket_client.add_connection(websocket)
+
+        event = self._get_base_event(websocket, True)
+        event["requestContext"]["routeKey"] = "$connect"
+        event["requestContext"]["eventType"] = "CONNECT"
+
+        response = self._handle_event(event)
+
+        if response is None:
+            return None
+
+        if isinstance(response, Response):
+            response = response.to_dict()
+
+        body = response.get("body", None)
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+
+        return WebsocketResponse(
+            status_code=response.get('statusCode', 101),
+            reason_phrase=response.get(
+                'statusDescription', 'Switching Protocols'),
+            headers=WebsocketHeaders(**response.get('headers', {})),
+            body=body,
+        )
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -716,8 +945,7 @@ class LocalDevServer(object):
                  http_handler_cls: HttpHandlerCls = ChaliceRequestHandler,
                  http_server_cls: HttpServerCls = ThreadedHTTPServer,
                  ws_handler_cls: WsHandlerCls = ChaliceWsHandler,
-                 ws_server_cls: WsServerCls =
-                 websockets.sync.server.serve,) -> None:
+                 ws_server_cls: WsServerCls = CreateWebsocketServer,) -> None:
         self.app_object = app_object
         self.host = host
         self.port = port
@@ -727,8 +955,10 @@ class LocalDevServer(object):
             http_handler_cls, app_object=app_object, config=config)
         self.http_server = http_server_cls(
             (host, port), self._wrapped_http_handler)
-        self._ws_handler = ws_handler_cls(app_object, config)
-        self.ws_server = ws_server_cls(self._ws_handler, ws_host, ws_port)
+        self._ws_handler = ws_handler_cls(app_object, config, ws_host)
+        self.ws_server = ws_server_cls(
+            self._ws_handler, ws_host, ws_port,
+            process_request=self._ws_handler.process_request)
 
     def handle_single_request(self) -> None:
         self.http_server.handle_request()
