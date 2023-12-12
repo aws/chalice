@@ -358,13 +358,13 @@ a key in our Lambda response.</p>
 </section>
 <section id="integrating-with-aws-lambda-powertools">
 <span id="powertools-example"></span><h3>Integrating with AWS Lambda Powertools<a class="headerlink" href="#integrating-with-aws-lambda-powertools" title="Permalink to this headline">¶</a></h3>
-<p><a class="reference external" href="https://awslabs.github.io/aws-lambda-powertools-python/latest/">AWS Lambda Powertools</a> is a suite of
+<p><a class="reference external" href="https://docs.powertools.aws.dev/lambda/python/latest/">AWS Lambda Powertools</a> is a suite of
 utilities for AWS Lambda functions that makes tracing with AWS X-Ray,
 structured logging and creating custom metrics asynchronously easier.</p>
 <p>You can use Chalice middleware to easily integrate Lambda Powertools with
 your Chalice apps.  In this example, we’ll use the
-<a class="reference external" href="https://awslabs.github.io/aws-lambda-powertools-python/latest/core/logger/">Logger</a>
-and <a class="reference external" href="https://awslabs.github.io/aws-lambda-powertools-python/latest/core/tracer/">Tracer</a>
+<a class="reference external" href="https://docs.powertools.aws.dev/lambda/python/latest/core/logger/">Logger</a>
+and <a class="reference external" href="https://docs.powertools.aws.dev/lambda/python/latest/core/tracer/">Tracer</a>
 and convert them to Chalice middleware so they will be automatically applied
 to all Lambda functions in our application.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chalice</span> <span class="kn">import</span> <span class="n">Chalice</span>
