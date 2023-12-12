@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "Pip",
+  "description": "Update version dependency on pip (#2080)"
+}
