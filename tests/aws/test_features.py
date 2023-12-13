@@ -3,8 +3,8 @@ import os
 import time
 import shutil
 import uuid
+from unittest import mock
 
-import mock
 import botocore.session
 import pytest
 import requests

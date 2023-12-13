@@ -1,7 +1,7 @@
 import threading
 from subprocess import Popen
+from unittest import mock
 
-import mock
 import pytest
 
 try:

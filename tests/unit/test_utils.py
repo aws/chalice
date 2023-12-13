@@ -1,6 +1,6 @@
 import os
 import re
-import mock
+from unittest import mock
 import sys
 
 import click
