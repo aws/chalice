@@ -1,8 +1,5 @@
 import pytest
-try:
-    from unittest import mock
-except:
-    import mock
+from unittest import mock
 
 from chalice.app import Chalice
 from chalice.config import Config

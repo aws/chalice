@@ -3,13 +3,10 @@ import zipfile
 import os
 import sys
 import re
+from unittest import mock
 
 import pytest
 from click.testing import CliRunner
-try:
-    from unittest import mock
-except:
-    import mock
 from botocore.exceptions import ClientError
 
 from chalice import cli

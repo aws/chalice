@@ -3,11 +3,8 @@ import os
 import time
 import shutil
 import uuid
+from unittest import mock
 
-try:
-    from unittest import mock
-except:
-    import mock
 import botocore.session
 import pytest
 import requests

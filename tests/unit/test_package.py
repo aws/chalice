@@ -1,9 +1,6 @@
 import os
 import json
-try:
-    from unittest import mock
-except:
-    import mock
+from unittest import mock
 
 import pytest
 from chalice.config import Config

@@ -1,10 +1,7 @@
 import os
 import zipfile
 import json
-try:
-    from unittest import mock
-except:
-    import mock
+from unittest import mock
 import hashlib
 
 from pytest import fixture

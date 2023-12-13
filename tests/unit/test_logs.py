@@ -1,8 +1,5 @@
 import time
-try:
-    from unittest import mock
-except:
-    import mock
+from unittest import mock
 from datetime import datetime, timedelta
 
 from chalice import logs

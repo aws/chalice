@@ -6,10 +6,7 @@ import socket
 import botocore.session
 
 import pytest
-try:
-    from unittest import mock
-except:
-    import mock
+from unittest import mock
 from botocore.stub import Stubber
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError

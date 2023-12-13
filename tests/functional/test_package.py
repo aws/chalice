@@ -2,13 +2,10 @@ import os
 import zipfile
 import tarfile
 import io
+from unittest import mock
 from collections import defaultdict, namedtuple
 
 import pytest
-try:
-    from unittest import mock
-except:
-    import mock
 
 from chalice.awsclient import TypedAWSClient
 from chalice.config import Config
