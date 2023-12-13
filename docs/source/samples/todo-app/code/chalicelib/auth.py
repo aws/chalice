@@ -12,7 +12,7 @@ def get_jwt_token(username, password, record, secret):
         record['hash'],
         password.encode('utf-8'),
         record['salt'].value,
-        record['rounds']
+        int(record['rounds'])
     )
     expected = record['hashed'].value
     if hmac.compare_digest(actual, expected):
@@ -25,7 +25,7 @@ def get_jwt_token(username, password, record, secret):
             'jti': unique_id,
             # NOTE: We can also add 'exp' if we want tokens to expire.
         }
-        return jwt.encode(payload, secret, algorithm='HS256').decode('utf-8')
+        return jwt.encode(payload, secret, algorithm='HS256')
     raise UnauthorizedError('Invalid password')
 
 
