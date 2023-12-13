@@ -584,7 +584,7 @@ for this user as shown in the code below:</p>
 <span class="linenos">12</span>        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;hash&#39;</span><span class="p">],</span>
 <span class="linenos">13</span>        <span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">),</span>
 <span class="linenos">14</span>        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;salt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
-<span class="linenos">15</span>        <span class="n">record</span><span class="p">[</span><span class="s1">&#39;rounds&#39;</span><span class="p">]</span>
+<span class="linenos">15</span>        <span class="nb">int</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;rounds&#39;</span><span class="p">])</span>
 <span class="linenos">16</span>    <span class="p">)</span>
 <span class="linenos">17</span>    <span class="n">expected</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">&#39;hashed&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
 <span class="linenos">18</span>    <span class="k">if</span> <span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">):</span>
@@ -597,7 +597,7 @@ for this user as shown in the code below:</p>
 <span class="linenos">25</span>            <span class="s1">&#39;jti&#39;</span><span class="p">:</span> <span class="n">unique_id</span><span class="p">,</span>
 <span class="linenos">26</span>            <span class="c1"># NOTE: We can also add &#39;exp&#39; if we want tokens to expire.</span>
 <span class="linenos">27</span>        <span class="p">}</span>
-<span class="linenos">28</span>        <span class="k">return</span> <span class="n">jwt</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;HS256&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="linenos">28</span>        <span class="k">return</span> <span class="n">jwt</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;HS256&#39;</span><span class="p">)</span>
 <span class="linenos">29</span>    <span class="k">raise</span> <span class="n">UnauthorizedError</span><span class="p">(</span><span class="s1">&#39;Invalid password&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
