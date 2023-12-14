@@ -1,0 +1,15 @@
+{
+  "schema-version": "1.0",
+  "changes": [
+    {
+      "type": "feature",
+      "category": "Python",
+      "description": "Add support for Python 3.11 (#2053)"
+    },
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Update version dependency on pip (#2080)"
+    }
+  ]
+}
