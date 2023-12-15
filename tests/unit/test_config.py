@@ -379,8 +379,10 @@ def test_can_load_python_version():
         expected_runtime = 'python3.9'
     elif minor <= 10:
         expected_runtime = 'python3.10'
-    else:
+    elif minor <= 11:
         expected_runtime = 'python3.11'
+    else:
+        expected_runtime = 'python3.12'
     assert c.lambda_python_version == expected_runtime
 
 

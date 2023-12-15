@@ -1,6 +1,6 @@
 import re
 import pprint
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 
 import jmespath
 from typing import Dict, List, Any  # noqa
@@ -249,6 +249,11 @@ class DisplayOnlyExecutor(BaseExecutor):
         # type: (models.Instruction, Dict[str, Any]) -> None
         instruction_name = self._upper_snake_case(
             instruction.__class__.__name__)
+        # Need this to make typing happy . We're certain that we're always
+        # dealing with a dataclass, but the base type `Instruction` has
+        # no dataclass pieces.  There's probably a better way to represent
+        # this type hierarchy.
+        assert is_dataclass(instruction) and not isinstance(instruction, type)
         for key, value in asdict(instruction).items():
             if isinstance(value, dict):
                 value = self._format_dict(value, spillover_values)
