@@ -22,7 +22,7 @@ from collections.abc import Mapping
 from collections.abc import MutableMapping
 
 
-__version__: str = '1.29.0'
+__version__: str = '1.30.0'
 
 from typing import List, Dict, Any, Optional, Sequence, Union, Callable, Set, \
     Iterator, TYPE_CHECKING, Tuple
@@ -34,6 +34,7 @@ _PARAMS = re.compile(r'{\w+}')
 ErrorHandlerFuncType = Callable[[Exception], Any]
 MiddlewareFuncType = Callable[[Any, Callable[[Any], Any]], Any]
 UserHandlerFuncType = Callable[..., Any]
+HeadersType = Dict[str, Union[str, List[str]]]
 
 # In python 3 string and bytes are different so we explicitly check
 # for both.
@@ -55,8 +56,10 @@ def handle_extra_types(
                     % obj.__class__.__name__)
 
 
-def error_response(message: str, error_code: str, http_status_code: int,
-                   headers: Optional[Dict[str, str]] = None) -> 'Response':
+def error_response(
+    message: str, error_code: str, http_status_code: int,
+    headers: Optional[HeadersType] = None
+) -> 'Response':
     body = {'Code': error_code, 'Message': message}
     response = Response(body=body, status_code=http_status_code,
                         headers=headers)
@@ -470,13 +473,13 @@ class Response(object):
 
     def __init__(
             self, body: Any,
-            headers: Optional[Dict[str, str]] = None,
+            headers: Optional[HeadersType] = None,
             status_code: int = 200
     ):
         self.body: Any = body
         if headers is None:
             headers = {}
-        self.headers: Dict[str, str] = headers
+        self.headers: HeadersType = headers
         self.status_code = status_code
 
     def to_dict(
@@ -499,7 +502,7 @@ class Response(object):
         return response
 
     def _sort_headers(
-            self, all_headers: Dict[str, str]
+            self, all_headers: HeadersType
     ) -> Tuple[Dict[str, Any], Dict[str, List]]:
         multi_headers: Dict[str, List] = {}
         single_headers: Dict[str, Any] = {}
@@ -1979,7 +1982,7 @@ class RestAPIEventHandler(BaseLambdaHandler):
         return
 
     def _unhandled_exception_to_response(self) -> Response:
-        headers = {}
+        headers: HeadersType = {}
         path = getattr(self.current_request, 'path', 'unknown')
         self.log.error("Caught exception for path %s", path, exc_info=True)
         if self.debug:

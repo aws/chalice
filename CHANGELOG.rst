@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.30.0
+======
+
+* feature:Python:Add support for Python 3.11 (#2053)
+* enhancement:Pip:Update version dependency on pip (#2080)
+
+
 1.29.0
 ======
 
