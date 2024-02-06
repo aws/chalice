@@ -1,5 +1,5 @@
 import pytest
-import mock
+from unittest import mock
 import threading
 import os
 import unittest

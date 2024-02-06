@@ -1,8 +1,9 @@
 import re
 import json
 import decimal
+from unittest import mock
+
 import pytest
-import mock
 from pytest import fixture
 from six import BytesIO
 from six.moves.BaseHTTPServer import HTTPServer

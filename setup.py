@@ -25,7 +25,7 @@ install_requires = [
     'typing==3.6.4;python_version<"3.7"',
     'typing-extensions>=4.0.0,<5.0.0',
     'six>=1.10.0,<2.0.0',
-    'pip>=9,<23.2',
+    'pip>=9,<23.4',
     'jmespath>=0.9.3,<2.0.0',
     'pyyaml>=5.3.1,<7.0.0',
     'inquirer>=2.7.0,<3.0.0',
@@ -35,7 +35,7 @@ install_requires = [
 
 setup(
     name='chalice',
-    version='1.29.0',
+    version='1.30.0',
     description="Microframework",
     long_description=README,
     author="James Saryerwinnie",
@@ -75,5 +75,6 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
 )

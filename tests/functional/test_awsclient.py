@@ -1,9 +1,9 @@
 import json
 import datetime
 import time
+from unittest import mock
 
 import pytest
-import mock
 import botocore.exceptions
 from botocore.vendored.requests import ConnectionError as \
     RequestsConnectionError

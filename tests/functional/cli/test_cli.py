@@ -3,10 +3,10 @@ import zipfile
 import os
 import sys
 import re
+from unittest import mock
 
 import pytest
 from click.testing import CliRunner
-import mock
 from botocore.exceptions import ClientError
 
 from chalice import cli
@@ -417,6 +417,8 @@ def test_error_when_no_deployed_record(runner, mock_cli_factory):
                     reason="Cannot generate pipeline for python3.9.")
 @pytest.mark.skipif(sys.version_info[:2] == (3, 10),
                     reason="Cannot generate pipeline for python3.10.")
+@pytest.mark.skipif(sys.version_info[:2] == (3, 11),
+                    reason="Cannot generate pipeline for python3.11.")
 def test_can_generate_pipeline_for_all(runner):
     with runner.isolated_filesystem():
         newproj.create_new_project_skeleton('testproject')

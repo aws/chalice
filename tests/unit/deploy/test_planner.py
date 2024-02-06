@@ -1,8 +1,8 @@
-import mock
-
-import pytest
+from unittest import mock
 from dataclasses import replace, dataclass
 from typing import Tuple
+
+import pytest
 
 from chalice.awsclient import TypedAWSClient, ResourceDoesNotExistError
 from chalice.deploy import models
