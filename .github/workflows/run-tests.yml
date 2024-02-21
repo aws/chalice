@@ -29,31 +29,11 @@ jobs:
           make install-dev-deps
       - name: Run PRCheck
         run: make prcheck
-  testsonly:
-    runs-on: ${{ matrix.os }}
-    env:
-      HYPOTHESIS_PROFILE: ci
-      CHALICE_TEST_EXTENDED_PACKAGING: true
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: [3.7]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        name: Set up Python ${{ matrix.python-version }}
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          pip install -r requirements-test.txt --upgrade --upgrade-strategy eager -e .
-      - name: Run Tests
-        run: make coverage
   cdktests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, '3.10', 3.11]
+        python-version: [3.8, 3.9, '3.10', 3.11]
         cdk-version: [cdk, cdkv2]
     steps:
       - uses: actions/checkout@v2
