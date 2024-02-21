@@ -5,7 +5,7 @@
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook="import sys, os; sys.path.append(os.path.join('tests', 'plugins'))"
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
@@ -16,7 +16,7 @@ persistent=yes
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=
+load-plugins=codelinter,testlinter
 
 # Use multiple processes to speed up Pylint.
 jobs=1

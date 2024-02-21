@@ -1,7 +1,6 @@
 # These are linting checks used in the chalice codebase itself.
 # These are used to enforce specific coding standards and constraints.
 from pylint.checkers import BaseChecker
-from pylint.interfaces import IAstroidChecker
 from astroid.exceptions import InferenceError
 import astroid
 
@@ -13,7 +12,6 @@ def register(linter):
 class ConditionalImports(BaseChecker):
     # This is used to ensure that any imports that rely on conditional
     # dependencies must be wrapped in a try/except ImportError.
-    __implements__ = (IAstroidChecker,)
     name = 'must-catch-import-error'
     msgs = {
         'C9997': ('Importing this module must catch ImportError.',
@@ -41,7 +39,7 @@ class ConditionalImports(BaseChecker):
                     return
 
     def _is_in_try_except_import_error(self, node):
-        if not isinstance(node.parent, astroid.TryExcept):
+        if not isinstance(node.parent, astroid.Try):
             return False
         caught_exceptions = [
             handler.type.name for handler in node.parent.handlers]

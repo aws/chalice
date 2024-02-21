@@ -15,8 +15,8 @@ from datetime import datetime
 from chalice import utils
 
 
-class TestUI(object):
-    def setup(self):
+class TestUI:
+    def setup_method(self):
         self.out = StringIO()
         self.err = StringIO()
         self.ui = utils.UI(self.out, self.err)
@@ -134,8 +134,8 @@ def test_to_cfn_resource_name_properties(name):
         assert re.search('[^A-Za-z0-9]', result) is None
 
 
-class TestTimestampUtils(object):
-    def setup(self):
+class TestTimestampUtils:
+    def setup_method(self):
         self.mock_now = mock.Mock(spec=datetime.utcnow)
         self.set_now()
         self.timestamp_convert = utils.TimestampConverter(self.mock_now)
