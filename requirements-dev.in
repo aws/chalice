@@ -1,12 +1,11 @@
 -r requirements-test.in
-pylint<3.0.0
+pylint<4.0.0
 doc8<1.0.0
 pydocstyle
 flake8
 Sphinx==4.3.2
 docutils
 mypy
-typing-extensions
 wheel
 pygments
 types-six

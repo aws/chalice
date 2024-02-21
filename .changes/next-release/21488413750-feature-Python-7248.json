@@ -1,0 +1,5 @@
+{
+  "type": "feature",
+  "category": "Python",
+  "description": "Add support for Python 3.12 (#2086)"
+}

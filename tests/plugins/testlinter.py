@@ -1,5 +1,4 @@
 from pylint.checkers import BaseChecker
-from pylint.interfaces import IAstroidChecker
 from astroid.exceptions import InferenceError
 
 
@@ -9,14 +8,13 @@ def register(linter):
 
 
 class PatchChecker(BaseChecker):
-    __implements__ = (IAstroidChecker,)
     name = 'patching-banned'
     msgs = {
         'C9999': ('Use of mock.patch is not allowed',
                   'patch-call',
                   'Use of mock.patch not allowed')
     }
-    patch_pytype = 'mock.mock._patch'
+    patch_pytype = 'unittest.mock._patch'
 
     def visit_call(self, node):
         try:
@@ -30,14 +28,14 @@ class PatchChecker(BaseChecker):
 
 
 class MocksUseSpecArg(BaseChecker):
-    __implements__ = (IAstroidChecker,)
+
     name = 'mocks-use-spec'
     msgs = {
         'C9998': ('mock.Mock() must provide "spec=" argument',
                   'mock-missing-spec',
                   'mock.Mock() must provide "spec=" argument')
     }
-    mock_pytype = 'mock.mock.Mock'
+    mock_pytype = 'unittest.mock.Mock'
     required_kwarg = 'spec'
 
     def visit_call(self, node):

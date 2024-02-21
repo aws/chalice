@@ -211,10 +211,8 @@ class TestPackage(object):
             ],
         )
 
-    @pytest.mark.skipif(sys.version_info[0] == 2,
-                        reason='pandas==1.1.5 is only suported on py3.')
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        version = '1.5.3' if sys.version_info[1] >= 10 else '1.1.5'
+        version = '2.2.0' if sys.version_info[1] >= 10 else '1.1.5'
         assert_can_package_dependency(
             runner,
             app_skeleton,

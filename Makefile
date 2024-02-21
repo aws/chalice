@@ -17,9 +17,9 @@ check:
 
 pylint:
 	###### PYLINT ######
-	pylint --rcfile .pylintrc chalice --load-plugins tests.codelinter
+	pylint --rcfile .pylintrc chalice
 	# Run our custom linter on test code.
-	pylint --load-plugins tests.testlinter --disable=I,E,W,R,C,F --enable C9999,C9998 tests/
+	pylint --disable=I,E,W,R,C,F --enable C9999,C9998 tests/
 
 test:
 	py.test -v $(TESTS)

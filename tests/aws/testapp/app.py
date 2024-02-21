@@ -7,8 +7,10 @@ except ImportError:
 
 
 import boto3.session
-from chalice import Chalice, BadRequestError, NotFoundError, Response,\
-    CORSConfig, UnauthorizedError, AuthResponse, AuthRoute
+from chalice import (
+    Chalice, BadRequestError, NotFoundError, Response,
+    CORSConfig, UnauthorizedError, AuthResponse, AuthRoute,
+)
 
 
 # This is a test app that is used by integration tests.
