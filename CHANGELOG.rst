@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+1.31.0
+======
+
+* feature:Python:Add support for Python 3.12 (#2086)
+* enhancement:Python:Drop support for Python 3.7 (#2095)
+
+
 1.30.0
 ======
 
