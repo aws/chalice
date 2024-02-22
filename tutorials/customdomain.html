@@ -329,20 +329,20 @@ our Chalice application with our custom domain.  To do so we need to add
 configuration option and specify our ACM certificate ARN as well as the our
 custom domain name.  You’re <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file should look like
 this:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;app_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;customdomain&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;api_gateway_endpoint_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;REGIONAL&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;api_gateway_custom_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;domain_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api.chalice-demo-app.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:acm:us-west-2:0123456789:certificate/578efbda-6bc7-4ae2-9964-6e6c3f58008b&quot;</span><span class="w"></span>
-<span class="w">      </span><span class="p">},</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="w">  </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;app_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;customdomain&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;api_gateway_endpoint_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;REGIONAL&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;api_gateway_custom_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;domain_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api.chalice-demo-app.com&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;certificate_arn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:acm:us-west-2:0123456789:certificate/578efbda-6bc7-4ae2-9964-6e6c3f58008b&quot;</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>We we rerun the <code class="docutils literal notranslate"><span class="pre">chalice</span> <span class="pre">deploy</span></code> command you’ll notice there’s a new

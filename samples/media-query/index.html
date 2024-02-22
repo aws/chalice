@@ -497,23 +497,23 @@ automatically created these resources and updated the Chalice config file
 (<code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code>) with these values.  If you look at the
 contents of your <code class="docutils literal notranslate"><span class="pre">.chalice/config.json</span></code> file, it should look something
 like this:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;app_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;autogen_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;MEDIA_TABLE_NAME&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query-MediaTable-10QEPR0O8DOT4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;MEDIA_BUCKET_NAME&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query-mediabucket-fb8oddjbslv1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;VIDEO_TOPIC_NAME&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query-VideoTopic-KU38EEHIIUV1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;VIDEO_ROLE_ARN&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:iam::123456789123:role/media-query-VideoRole-1GKK0CA30VCAD&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;VIDEO_TOPIC_ARN&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:sns:us-west-2:123456789123:media-query-VideoTopic-KU38EEHIIUV1&quot;</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="w">  </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;app_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;stages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;api_gateway_stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;api&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;autogen_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;environment_variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;MEDIA_TABLE_NAME&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query-MediaTable-10QEPR0O8DOT4&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;MEDIA_BUCKET_NAME&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query-mediabucket-fb8oddjbslv1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;VIDEO_TOPIC_NAME&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media-query-VideoTopic-KU38EEHIIUV1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;VIDEO_ROLE_ARN&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:iam::123456789123:role/media-query-VideoRole-1GKK0CA30VCAD&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;VIDEO_TOPIC_ARN&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:sns:us-west-2:123456789123:media-query-VideoTopic-KU38EEHIIUV1&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Next, the <code class="docutils literal notranslate"><span class="pre">&#64;app.on_sns_message</span></code> is used to connect an SNS topic to our

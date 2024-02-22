@@ -482,15 +482,15 @@ like this:</p>
 <p>Then to specify configuration values for the underlying
 lambda function, which <code class="docutils literal notranslate"><span class="pre">index()</span></code> and <code class="docutils literal notranslate"><span class="pre">other_handler()</span></code> share,
 you would specify:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="nt">&quot;lambda_functions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">     </span><span class="nt">&quot;api_handler&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">       </span><span class="nt">&quot;subnet_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sn-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;sn-2&quot;</span><span class="p">],</span><span class="w"></span>
-<span class="w">       </span><span class="nt">&quot;security_group_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sg-10&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;sg-11&quot;</span><span class="p">],</span><span class="w"></span>
-<span class="w">       </span><span class="nt">&quot;layers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;layer-arn-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;layer-arn-2&quot;</span><span class="p">],</span><span class="w"></span>
-<span class="w">     </span><span class="p">}</span><span class="w"></span>
-<span class="w">   </span><span class="p">}</span><span class="w"></span>
-<span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">   </span><span class="nt">&quot;lambda_functions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">     </span><span class="nt">&quot;api_handler&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">       </span><span class="nt">&quot;subnet_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sn-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;sn-2&quot;</span><span class="p">],</span>
+<span class="w">       </span><span class="nt">&quot;security_group_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sg-10&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;sg-11&quot;</span><span class="p">],</span>
+<span class="w">       </span><span class="nt">&quot;layers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;layer-arn-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;layer-arn-2&quot;</span><span class="p">],</span>
+<span class="w">     </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 </section>

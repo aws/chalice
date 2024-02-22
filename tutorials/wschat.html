@@ -168,158 +168,158 @@ allow all the DynamoDB operations our application will need.</p>
 <p>Below is the JSON file that contains all of our custom Cloudformation.</p>
 <div class="literal-block-wrapper docutils container" id="id1">
 <div class="code-block-caption"><span class="caption-text">resources.json</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="nt">&quot;Resources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;ChaliceChatTable&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AWS::DynamoDB::Table&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;AttributeDefinitions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">          </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S&quot;</span><span class="w"></span>
-<span class="w">          </span><span class="p">},</span><span class="w"></span>
-<span class="w">          </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S&quot;</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;KeySchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">          </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HASH&quot;</span><span class="w"></span>
-<span class="w">          </span><span class="p">},</span><span class="w"></span>
-<span class="w">          </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RANGE&quot;</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;GlobalSecondaryIndexes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">          </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;IndexName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ReverseLookup&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;KeySchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">              </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HASH&quot;</span><span class="w"></span>
-<span class="w">              </span><span class="p">},</span><span class="w"></span>
-<span class="w">              </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RANGE&quot;</span><span class="w"></span>
-<span class="w">              </span><span class="p">}</span><span class="w"></span>
-<span class="w">            </span><span class="p">],</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;Projection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;ProjectionType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ALL&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;TableName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChat&quot;</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;WebsocketConnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;WebsocketMessage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;WebsocketDisconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;DefaultRole&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AWS::IAM::Role&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;AssumeRolePolicyDocument&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;Version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;Statement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Sid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Principal&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;Service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lambda.amazonaws.com&quot;</span><span class="w"></span>
-<span class="w">              </span><span class="p">},</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sts:AssumeRole&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;Policies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">          </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;PolicyName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DefaultRolePolicy&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;PolicyDocument&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">              </span><span class="nt">&quot;Statement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                </span><span class="p">{</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;logs:CreateLogGroup&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;logs:CreateLogStream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;logs:PutLogEvents&quot;</span><span class="w"></span>
-<span class="w">                  </span><span class="p">],</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:logs:*:*:*&quot;</span><span class="w"></span>
-<span class="w">                </span><span class="p">},</span><span class="w"></span>
-<span class="w">                </span><span class="p">{</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;execute-api:ManageConnections&quot;</span><span class="w"></span>
-<span class="w">                  </span><span class="p">],</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:execute-api:*:*:*/@connections/*&quot;</span><span class="w"></span>
-<span class="w">                </span><span class="p">},</span><span class="w"></span>
-<span class="w">                </span><span class="p">{</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;dynamodb:DeleteItem&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;dynamodb:PutItem&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;dynamodb:GetItem&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;dynamodb:UpdateItem&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;dynamodb:Query&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                    </span><span class="s2">&quot;dynamodb:Scan&quot;</span><span class="w"></span>
-<span class="w">                  </span><span class="p">],</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                    </span><span class="p">{</span><span class="w"></span>
-<span class="w">                      </span><span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}&quot;</span><span class="w"></span>
-<span class="w">                    </span><span class="p">},</span><span class="w"></span>
-<span class="w">                    </span><span class="p">{</span><span class="w"></span>
-<span class="w">                      </span><span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup&quot;</span><span class="w"></span>
-<span class="w">                    </span><span class="p">}</span><span class="w"></span>
-<span class="w">                  </span><span class="p">]</span><span class="w"></span>
-<span class="w">                </span><span class="p">}</span><span class="w"></span>
-<span class="w">              </span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="w">  </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;Resources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;ChaliceChatTable&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;Type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AWS::DynamoDB::Table&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;AttributeDefinitions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S&quot;</span>
+<span class="w">          </span><span class="p">},</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;AttributeType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S&quot;</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;KeySchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HASH&quot;</span>
+<span class="w">          </span><span class="p">},</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RANGE&quot;</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;GlobalSecondaryIndexes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;IndexName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ReverseLookup&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;KeySchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">              </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SK&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HASH&quot;</span>
+<span class="w">              </span><span class="p">},</span>
+<span class="w">              </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;AttributeName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PK&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;KeyType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RANGE&quot;</span>
+<span class="w">              </span><span class="p">}</span>
+<span class="w">            </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;Projection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;ProjectionType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ALL&quot;</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;ProvisionedThroughput&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;ReadCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;WriteCapacityUnits&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;TableName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChat&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;WebsocketConnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;WebsocketMessage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;WebsocketDisconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;Environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;Variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;TABLE&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;Ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ChaliceChatTable&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;DefaultRole&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;Type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AWS::IAM::Role&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;Properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;AssumeRolePolicyDocument&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;Version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;Statement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;Sid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;Principal&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;Service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lambda.amazonaws.com&quot;</span>
+<span class="w">              </span><span class="p">},</span>
+<span class="w">              </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sts:AssumeRole&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">]</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;Policies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;PolicyName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DefaultRolePolicy&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;PolicyDocument&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="nt">&quot;Version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2012-10-17&quot;</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;Statement&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="s2">&quot;logs:CreateLogGroup&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;logs:CreateLogStream&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;logs:PutLogEvents&quot;</span>
+<span class="w">                  </span><span class="p">],</span>
+<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:logs:*:*:*&quot;</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="s2">&quot;execute-api:ManageConnections&quot;</span>
+<span class="w">                  </span><span class="p">],</span>
+<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:execute-api:*:*:*/@connections/*&quot;</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                  </span><span class="nt">&quot;Effect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Allow&quot;</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;Action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:DeleteItem&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:PutItem&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:GetItem&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:UpdateItem&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:Query&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;dynamodb:Scan&quot;</span>
+<span class="w">                  </span><span class="p">],</span>
+<span class="w">                  </span><span class="nt">&quot;Resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                      </span><span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}&quot;</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                      </span><span class="nt">&quot;Fn::Sub&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChaliceChatTable}/index/ReverseLookup&quot;</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                  </span><span class="p">]</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">              </span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">          </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -399,9 +399,9 @@ following file.</p>
 
 
 <span class="k">class</span> <span class="nc">Storage</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;An abstraction to interact with the DynamoDB Table.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An abstraction to interact with the DynamoDB Table.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize Storage object</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Storage object</span>
 
 <span class="sd">        :param table: A boto3 dynamodb Table resource object.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -409,7 +409,7 @@ following file.</p>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_env</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create table from the environment.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create table from the environment.</span>
 
 <span class="sd">        The environment variable TABLE is present for a deployed application</span>
 <span class="sd">        since it is set in all of the Lambda functions by a CloudFormation</span>
@@ -423,7 +423,7 @@ following file.</p>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">create_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a new connection object in the dtabase.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new connection object in the dtabase.</span>
 
 <span class="sd">        When a new connection is created, we create a stub for</span>
 <span class="sd">        it in the table. The stub uses a primary key of the</span>
@@ -443,7 +443,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">set_username</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">old_name</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the username.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the username.</span>
 
 <span class="sd">        The SK entry that goes with this connection id that starts</span>
 <span class="sd">        with username_ is taken to be the username. The previous</span>
@@ -473,7 +473,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">list_rooms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get a list of all rooms that exist.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a list of all rooms that exist.</span>
 
 <span class="sd">        Scan through the table looking for SKs that start with room_</span>
 <span class="sd">        which indicates a room that a user is in. Collect a unique set</span>
@@ -485,7 +485,7 @@ following file.</p>
         <span class="k">return</span> <span class="n">rooms</span>
 
     <span class="k">def</span> <span class="nf">set_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">room</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set the room a user is currently in.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the room a user is currently in.</span>
 
 <span class="sd">        The room a user is in is in the form of an SK that starts with</span>
 <span class="sd">        room_ prefix.</span>
@@ -502,7 +502,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">remove_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">room</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a user from a room.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a user from a room.</span>
 
 <span class="sd">        The room a user is in is in the form of an SK that starts with</span>
 <span class="sd">        room_ prefix. To leave a room we need to delete this entry.</span>
@@ -519,7 +519,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">get_connection_ids_by_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">room</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Find all connection ids that go to a room.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find all connection ids that go to a room.</span>
 
 <span class="sd">        This is needed whenever we broadcast to a room. We collect all</span>
 <span class="sd">        their connection ids so we can send messages to them. We use a</span>
@@ -539,7 +539,7 @@ following file.</p>
         <span class="k">return</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;PK&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;Items&#39;</span><span class="p">]]</span>
 
     <span class="k">def</span> <span class="nf">delete_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Delete a connection.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a connection.</span>
 
 <span class="sd">        Called when a connection is disconnected and all its entries need</span>
 <span class="sd">        to be deleted.</span>
@@ -565,7 +565,7 @@ following file.</p>
             <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">get_record_by_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get all the properties associated with a connection.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the properties associated with a connection.</span>
 
 <span class="sd">        Each connection_id creates a partition in the table with multiple</span>
 <span class="sd">        SK entries. Each SK entry is in the format {property}_{value}.</span>
@@ -588,9 +588,9 @@ following file.</p>
 
 
 <span class="k">class</span> <span class="nc">Sender</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Class to send messages over websockets.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to send messages over websockets.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">storage</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize a sender object.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a sender object.</span>
 
 <span class="sd">        :param app: A Chalice application object.</span>
 
@@ -600,7 +600,7 @@ following file.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span> <span class="o">=</span> <span class="n">storage</span>
 
     <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Send a message over a websocket.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Send a message over a websocket.</span>
 
 <span class="sd">        :param connection_id: API Gateway Connection ID to send a</span>
 <span class="sd">            message to.</span>
@@ -616,7 +616,7 @@ following file.</p>
             <span class="bp">self</span><span class="o">.</span><span class="n">_storage</span><span class="o">.</span><span class="n">delete_connection</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">connection_id</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">broadcast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_ids</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;&quot;Send a message to multiple connections.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;&quot;Send a message to multiple connections.</span>
 
 <span class="sd">        :param connection_id: A list of API Gateway Connection IDs to</span>
 <span class="sd">            send the message to.</span>
@@ -628,12 +628,12 @@ following file.</p>
 
 
 <span class="k">class</span> <span class="nc">Handler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Handler object that handles messages received from a websocket.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler object that handles messages received from a websocket.</span>
 
 <span class="sd">    This class implements the bulk of our app behavior.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize a Handler object.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a Handler object.</span>
 
 <span class="sd">        :param storage: Storage object to interact with database.</span>
 
@@ -653,7 +653,7 @@ following file.</p>
         <span class="p">}</span>
 
     <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Entry point for our application.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Entry point for our application.</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -673,7 +673,7 @@ following file.</p>
             <span class="bp">self</span><span class="o">.</span><span class="n">_handle_message</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_handle_login_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle a login message.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle a login message.</span>
 
 <span class="sd">        The message is the username to give the user. Re-write the</span>
 <span class="sd">        database entry for this user to reset their username from &#39;&#39;</span>
@@ -687,7 +687,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_handle_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;&quot;Handle a message from a connected and logged in user.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;&quot;Handle a message from a connected and logged in user.</span>
 
 <span class="sd">        If the message starts with a / it&#39;s a command. Otherwise its a</span>
 <span class="sd">        text message to send to all rooms in the room.</span>
@@ -704,7 +704,7 @@ following file.</p>
             <span class="bp">self</span><span class="o">.</span><span class="n">_handle_text</span><span class="p">(</span><span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_handle_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle a command message.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle a command message.</span>
 
 <span class="sd">        Check the command name and look it up in our command table.</span>
 <span class="sd">        If there is an entry, we call that method and pass along</span>
@@ -728,7 +728,7 @@ following file.</p>
                 <span class="n">connection_id</span><span class="p">,</span> <span class="s1">&#39;Unknown command: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">command_name</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_handle_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Handle a raw text message.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle a raw text message.</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -752,7 +752,7 @@ following file.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">connection_ids</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_message</span><span class="p">,</span> <span class="n">_record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Send the help message.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Send the help message.</span>
 
 <span class="sd">        Build a help message and send back to the same connection.</span>
 
@@ -784,7 +784,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_nick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Change or check nickname (username).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Change or check nickname (username).</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -818,7 +818,7 @@ following file.</p>
                 <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> is now known as </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span> <span class="n">nick</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Join a chat room.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Join a chat room.</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -844,7 +844,7 @@ following file.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sender</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">room_connections</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_room</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Report the name of the current room.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Report the name of the current room.</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -862,7 +862,7 @@ following file.</p>
             <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Quit from a room.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Quit from a room.</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -885,7 +885,7 @@ following file.</p>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_id</span><span class="p">,</span> <span class="n">_args</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Show a context dependent listing.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Show a context dependent listing.</span>
 
 <span class="sd">        :param connection_id: Connection id that the message came from.</span>
 
@@ -959,88 +959,88 @@ using <code class="docutils literal notranslate"><span class="pre">wsdump.py</sp
 message sent to the server is used as the client’s username.</p>
 <div class="literal-block-wrapper docutils container" id="id4">
 <div class="code-block-caption"><span class="caption-text">client-1</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ wsdump.py wss://<span class="o">{</span>id<span class="o">}</span>.execute-api.<span class="o">{</span>region<span class="o">}</span>.amazonaws.com/api/
-Press Ctrl+C to quit
-&gt; John
-&lt; Using nickname: John
-Type /help <span class="k">for</span> list of commands.
-&gt; /help
-&lt; Commands available:
-    /help
-          Display this message.
-    /join <span class="o">{</span>chat_room_name<span class="o">}</span>
-          Join a chatroom named <span class="o">{</span>chat_room_name<span class="o">}</span>.
-    /nick <span class="o">{</span>nickname<span class="o">}</span>
-          Change your name to <span class="o">{</span>nickname<span class="o">}</span>. If no <span class="o">{</span>nickname<span class="o">}</span>
-          is provided <span class="k">then</span> your current name will be printed
-    /room
-          Print out the name of the room you are currently
-          <span class="k">in</span>.
-    /ls
-          If you are <span class="k">in</span> a room, list all users also <span class="k">in</span> the
-          room. Otherwise, list all rooms.
-    /quit
-          Leave current room.
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>wsdump.py<span class="w"> </span>wss://<span class="o">{</span>id<span class="o">}</span>.execute-api.<span class="o">{</span>region<span class="o">}</span>.amazonaws.com/api/
+Press<span class="w"> </span>Ctrl+C<span class="w"> </span>to<span class="w"> </span>quit
+&gt;<span class="w"> </span>John
+&lt;<span class="w"> </span>Using<span class="w"> </span>nickname:<span class="w"> </span>John
+Type<span class="w"> </span>/help<span class="w"> </span><span class="k">for</span><span class="w"> </span>list<span class="w"> </span>of<span class="w"> </span>commands.
+&gt;<span class="w"> </span>/help
+&lt;<span class="w"> </span>Commands<span class="w"> </span>available:
+<span class="w">    </span>/help
+<span class="w">          </span>Display<span class="w"> </span>this<span class="w"> </span>message.
+<span class="w">    </span>/join<span class="w"> </span><span class="o">{</span>chat_room_name<span class="o">}</span>
+<span class="w">          </span>Join<span class="w"> </span>a<span class="w"> </span>chatroom<span class="w"> </span>named<span class="w"> </span><span class="o">{</span>chat_room_name<span class="o">}</span>.
+<span class="w">    </span>/nick<span class="w"> </span><span class="o">{</span>nickname<span class="o">}</span>
+<span class="w">          </span>Change<span class="w"> </span>your<span class="w"> </span>name<span class="w"> </span>to<span class="w"> </span><span class="o">{</span>nickname<span class="o">}</span>.<span class="w"> </span>If<span class="w"> </span>no<span class="w"> </span><span class="o">{</span>nickname<span class="o">}</span>
+<span class="w">          </span>is<span class="w"> </span>provided<span class="w"> </span><span class="k">then</span><span class="w"> </span>your<span class="w"> </span>current<span class="w"> </span>name<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>printed
+<span class="w">    </span>/room
+<span class="w">          </span>Print<span class="w"> </span>out<span class="w"> </span>the<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>room<span class="w"> </span>you<span class="w"> </span>are<span class="w"> </span>currently
+<span class="w">          </span><span class="k">in</span>.
+<span class="w">    </span>/ls
+<span class="w">          </span>If<span class="w"> </span>you<span class="w"> </span>are<span class="w"> </span><span class="k">in</span><span class="w"> </span>a<span class="w"> </span>room,<span class="w"> </span>list<span class="w"> </span>all<span class="w"> </span>users<span class="w"> </span>also<span class="w"> </span><span class="k">in</span><span class="w"> </span>the
+<span class="w">          </span>room.<span class="w"> </span>Otherwise,<span class="w"> </span>list<span class="w"> </span>all<span class="w"> </span>rooms.
+<span class="w">    </span>/quit
+<span class="w">          </span>Leave<span class="w"> </span>current<span class="w"> </span>room.
 
-If you are <span class="k">in</span> a room, raw text messages that <span class="k">do</span> not start
-with a / will be sent to everyone <span class="k">else</span> <span class="k">in</span> the room.
-&gt; /join chalice
-&lt; Joined chat room <span class="s2">&quot;chalice&quot;</span>
-&lt; Jenny joined room.
-&gt; Hi
-&lt; John: Hi
-&lt; Jenny is now known as JennyJones.
-&gt; /quit
-&lt; Left chat room <span class="s2">&quot;chalice&quot;</span>
-&gt; /ls
-&lt; chalice
-&gt; Ctrl-D
+If<span class="w"> </span>you<span class="w"> </span>are<span class="w"> </span><span class="k">in</span><span class="w"> </span>a<span class="w"> </span>room,<span class="w"> </span>raw<span class="w"> </span>text<span class="w"> </span>messages<span class="w"> </span>that<span class="w"> </span><span class="k">do</span><span class="w"> </span>not<span class="w"> </span>start
+with<span class="w"> </span>a<span class="w"> </span>/<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>sent<span class="w"> </span>to<span class="w"> </span>everyone<span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>room.
+&gt;<span class="w"> </span>/join<span class="w"> </span>chalice
+&lt;<span class="w"> </span>Joined<span class="w"> </span>chat<span class="w"> </span>room<span class="w"> </span><span class="s2">&quot;chalice&quot;</span>
+&lt;<span class="w"> </span>Jenny<span class="w"> </span>joined<span class="w"> </span>room.
+&gt;<span class="w"> </span>Hi
+&lt;<span class="w"> </span>John:<span class="w"> </span>Hi
+&lt;<span class="w"> </span>Jenny<span class="w"> </span>is<span class="w"> </span>now<span class="w"> </span>known<span class="w"> </span>as<span class="w"> </span>JennyJones.
+&gt;<span class="w"> </span>/quit
+&lt;<span class="w"> </span>Left<span class="w"> </span>chat<span class="w"> </span>room<span class="w"> </span><span class="s2">&quot;chalice&quot;</span>
+&gt;<span class="w"> </span>/ls
+&lt;<span class="w"> </span>chalice
+&gt;<span class="w"> </span>Ctrl-D
 </pre></div>
 </div>
 </div>
 <div class="literal-block-wrapper docutils container" id="id5">
 <div class="code-block-caption"><span class="caption-text">client-2</span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ wsdump.py wss://<span class="o">{</span>id<span class="o">}</span>.execute-api.<span class="o">{</span>region<span class="o">}</span>.amazonaws.com/api/
-Press Ctrl+C to quit
-&gt; Jenny
-&lt; Using nickname: Jenny
-Type /help <span class="k">for</span> list of commands.
-&gt; /help
-&lt; Commands available:
-    /help
-          Display this message.
-    /join <span class="o">{</span>chat_room_name<span class="o">}</span>
-          Join a chatroom named <span class="o">{</span>chat_room_name<span class="o">}</span>.
-    /nick <span class="o">{</span>nickname<span class="o">}</span>
-          Change your name to <span class="o">{</span>nickname<span class="o">}</span>. If no <span class="o">{</span>nickname<span class="o">}</span>
-          is provided <span class="k">then</span> your current name will be printed
-    /room
-          Print out the name of the room you are currently
-          <span class="k">in</span>.
-    /ls
-          If you are <span class="k">in</span> a room, list all users also <span class="k">in</span> the
-          room. Otherwise, list all rooms.
-    /quit
-          Leave current room.
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>wsdump.py<span class="w"> </span>wss://<span class="o">{</span>id<span class="o">}</span>.execute-api.<span class="o">{</span>region<span class="o">}</span>.amazonaws.com/api/
+Press<span class="w"> </span>Ctrl+C<span class="w"> </span>to<span class="w"> </span>quit
+&gt;<span class="w"> </span>Jenny
+&lt;<span class="w"> </span>Using<span class="w"> </span>nickname:<span class="w"> </span>Jenny
+Type<span class="w"> </span>/help<span class="w"> </span><span class="k">for</span><span class="w"> </span>list<span class="w"> </span>of<span class="w"> </span>commands.
+&gt;<span class="w"> </span>/help
+&lt;<span class="w"> </span>Commands<span class="w"> </span>available:
+<span class="w">    </span>/help
+<span class="w">          </span>Display<span class="w"> </span>this<span class="w"> </span>message.
+<span class="w">    </span>/join<span class="w"> </span><span class="o">{</span>chat_room_name<span class="o">}</span>
+<span class="w">          </span>Join<span class="w"> </span>a<span class="w"> </span>chatroom<span class="w"> </span>named<span class="w"> </span><span class="o">{</span>chat_room_name<span class="o">}</span>.
+<span class="w">    </span>/nick<span class="w"> </span><span class="o">{</span>nickname<span class="o">}</span>
+<span class="w">          </span>Change<span class="w"> </span>your<span class="w"> </span>name<span class="w"> </span>to<span class="w"> </span><span class="o">{</span>nickname<span class="o">}</span>.<span class="w"> </span>If<span class="w"> </span>no<span class="w"> </span><span class="o">{</span>nickname<span class="o">}</span>
+<span class="w">          </span>is<span class="w"> </span>provided<span class="w"> </span><span class="k">then</span><span class="w"> </span>your<span class="w"> </span>current<span class="w"> </span>name<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>printed
+<span class="w">    </span>/room
+<span class="w">          </span>Print<span class="w"> </span>out<span class="w"> </span>the<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>room<span class="w"> </span>you<span class="w"> </span>are<span class="w"> </span>currently
+<span class="w">          </span><span class="k">in</span>.
+<span class="w">    </span>/ls
+<span class="w">          </span>If<span class="w"> </span>you<span class="w"> </span>are<span class="w"> </span><span class="k">in</span><span class="w"> </span>a<span class="w"> </span>room,<span class="w"> </span>list<span class="w"> </span>all<span class="w"> </span>users<span class="w"> </span>also<span class="w"> </span><span class="k">in</span><span class="w"> </span>the
+<span class="w">          </span>room.<span class="w"> </span>Otherwise,<span class="w"> </span>list<span class="w"> </span>all<span class="w"> </span>rooms.
+<span class="w">    </span>/quit
+<span class="w">          </span>Leave<span class="w"> </span>current<span class="w"> </span>room.
 
-If you are <span class="k">in</span> a room, raw text messages that <span class="k">do</span> not start
-with a / will be sent to everyone <span class="k">else</span> <span class="k">in</span> the room.
-&gt; /join chalice
-&lt; Joined chat room <span class="s2">&quot;chalice&quot;</span>
-&gt; /ls
-&lt; John
+If<span class="w"> </span>you<span class="w"> </span>are<span class="w"> </span><span class="k">in</span><span class="w"> </span>a<span class="w"> </span>room,<span class="w"> </span>raw<span class="w"> </span>text<span class="w"> </span>messages<span class="w"> </span>that<span class="w"> </span><span class="k">do</span><span class="w"> </span>not<span class="w"> </span>start
+with<span class="w"> </span>a<span class="w"> </span>/<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>sent<span class="w"> </span>to<span class="w"> </span>everyone<span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>room.
+&gt;<span class="w"> </span>/join<span class="w"> </span>chalice
+&lt;<span class="w"> </span>Joined<span class="w"> </span>chat<span class="w"> </span>room<span class="w"> </span><span class="s2">&quot;chalice&quot;</span>
+&gt;<span class="w"> </span>/ls
+&lt;<span class="w"> </span>John
 Jenny
-&lt; John: Hi
-&gt; /nick JennyJones
-&lt; Nickname is: JennyJones
-&lt; John left room.
-&gt; /ls
-&lt; JennyJones
-&gt; /room
-&lt; chalice
-&gt; /nick
-&lt; Current nickname: JennyJones
-&gt; Ctrl-D
+&lt;<span class="w"> </span>John:<span class="w"> </span>Hi
+&gt;<span class="w"> </span>/nick<span class="w"> </span>JennyJones
+&lt;<span class="w"> </span>Nickname<span class="w"> </span>is:<span class="w"> </span>JennyJones
+&lt;<span class="w"> </span>John<span class="w"> </span>left<span class="w"> </span>room.
+&gt;<span class="w"> </span>/ls
+&lt;<span class="w"> </span>JennyJones
+&gt;<span class="w"> </span>/room
+&lt;<span class="w"> </span>chalice
+&gt;<span class="w"> </span>/nick
+&lt;<span class="w"> </span>Current<span class="w"> </span>nickname:<span class="w"> </span>JennyJones
+&gt;<span class="w"> </span>Ctrl-D
 </pre></div>
 </div>
 </div>
