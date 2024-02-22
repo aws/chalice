@@ -17,7 +17,7 @@ from chalice.deploy.packager import NoSuchPackageError
 
 
 PY_VERSION = sys.version_info[:2]
-VERSION_CUTOFF = (3, 9)
+VERSION_CUTOFF = (3, 11)
 # We're being cautious here, but we want to fix the package versions we
 # try to install on older versions of python.
 # If the python version being tested is less than the VERSION_CUTOFF of 3.9,
@@ -29,72 +29,72 @@ VERSION_CUTOFF = (3, 9)
 # 3.10 or higher.
 PACKAGES_TO_TEST = {
     'pandas': {
-        'version': '1.5.3',
-        'legacy_version': '1.1.5',
+        'version': '2.2.0',
+        'legacy_version': '1.5.3',
         'contents': [
-            'pandas/_libs/__init__.py',
-            'pandas/io/sas/_sas.cpython-*-x86_64-linux-gnu.so'
+            'pandas/*__init__.py',
+            'pandas/*cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'SQLAlchemy': {
-        'version': '1.4.47',
-        'legacy_version': '1.3.20',
+        'version': '2.0.27',
+        'legacy_version': '1.4.47',
         'contents': [
             'sqlalchemy/__init__.py',
-            'sqlalchemy/cresultproxy.cpython-*-x86_64-linux-gnu.so'
+            'sqlalchemy/*cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'numpy': {
-        'version': '1.23.3',
-        'legacy_version': '1.19.4',
+        'version': '1.26.4',
+        'legacy_version': '1.23.3',
         'contents': [
             'numpy/__init__.py',
-            'numpy/core/_struct_ufunc_tests.cpython-*-x86_64-linux-gnu.so'
+            'numpy/*cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'cryptography': {
-        'version': '3.3.1',
+        'version': '42.0.4',
         'legacy_version': '3.3.1',
         'contents': [
             'cryptography/__init__.py',
-            'cryptography/hazmat/bindings/_openssl.abi3.so'
+            'cryptography/*.so'
         ],
     },
     'Jinja2': {
-        'version': '2.11.2',
+        'version': '3.1.3',
         'legacy_version': '2.11.2',
         'contents': ['jinja2/__init__.py'],
     },
     'Mako': {
-        'version': '1.1.3',
+        'version': '1.3.2',
         'legacy_version': '1.1.3',
         'contents': ['mako/__init__.py'],
     },
     'MarkupSafe': {
-        'version': '1.1.1',
+        'version': '2.1.5',
         'legacy_version': '1.1.1',
         'contents': ['markupsafe/__init__.py'],
     },
     'scipy': {
-        'version': '1.10.1',
-        'legacy_version': '1.5.4',
+        'version': '1.12.0',
+        'legacy_version': '1.10.1',
         'contents': [
             'scipy/__init__.py',
             'scipy/cluster/_hierarchy.cpython-*-x86_64-linux-gnu.so'
         ],
     },
     'cffi': {
-        'version': '1.15.1',
-        'legacy_version': '1.14.5',
+        'version': '1.16.0',
+        'legacy_version': '1.15.1',
         'contents': ['_cffi_backend.cpython-*-x86_64-linux-gnu.so'],
     },
     'pygit2': {
-        'version': '1.10.1',
-        'legacy_version': '1.5.0',
+        'version': '1.14.1',
+        'legacy_version': '1.10.1',
         'contents': ['pygit2/_pygit2.cpython-*-x86_64-linux-gnu.so'],
     },
     'pyrsistent': {
-        'version': '0.17.3',
+        'version': '0.20.0',
         'legacy_version': '0.17.3',
         'contents': ['pyrsistent/__init__.py'],
     },
