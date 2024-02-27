@@ -336,9 +336,12 @@ class CLIFactory(object):
             return json.loads(f.read())
 
     def create_local_server(
-        self, app_obj: Chalice, config: Config, host: str, port: int
+        self, app_obj: Chalice, config: Config,
+        host: str, port: int,
+        ws_host: str, ws_port: int
     ) -> local.LocalDevServer:
-        return local.create_local_server(app_obj, config, host, port)
+        return local.create_local_server(
+            app_obj, config, host, port, ws_host, ws_port)
 
     def create_package_options(self) -> PackageOptions:
         """Create the package options that are required to target regions."""

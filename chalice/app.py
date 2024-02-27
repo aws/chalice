@@ -614,7 +614,7 @@ class WebsocketAPI(object):
     def __init__(self, env: Optional[MutableMapping] = None) -> None:
         self.session: Optional[Any] = None
         self._endpoint: Optional[str] = None
-        self._client = None
+        self._client: Optional[Any] = None
         if env is None:
             self._env: MutableMapping = os.environ
         else:
