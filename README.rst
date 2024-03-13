@@ -215,7 +215,7 @@ directory and run ``chalice deploy``::
 
 You now have an API up and running using API Gateway and Lambda::
 
-    $ curl https://qxea58oupc.execute-api.us-west-2.amazonaws.com/api/
+    $ curl https://abcd.execute-api.us-west-2.amazonaws.com/api/
     {"hello": "world"}
 
 Try making a change to the returned dictionary from the ``index()``
@@ -249,8 +249,8 @@ it created when running the ``chalice deploy`` command.
 ::
 
     $ chalice delete
-    Deleting Rest API: abcd4kwyl4
-    Deleting function aws:arn:lambda:region:123456789:helloworld-dev
+    Deleting Rest API: abcd
+    Deleting function arn:aws:lambda:us-west-2:12345:function:helloworld-dev
     Deleting IAM Role helloworld-dev
 
 
