@@ -1826,6 +1826,7 @@ class TypedAWSClient(object):
         batch_size: int,
         starting_position: Optional[str] = None,
         maximum_batching_window_in_seconds: Optional[int] = 0,
+        maximum_concurrency: Optional[int] = None,
     ) -> None:
         lambda_client = self._client('lambda')
         batch_window = maximum_batching_window_in_seconds
@@ -1835,6 +1836,10 @@ class TypedAWSClient(object):
             'BatchSize': batch_size,
             'MaximumBatchingWindowInSeconds': batch_window,
         }
+        if maximum_concurrency:
+            kwargs['ScalingConfig'] = {
+                'MaximumConcurrency': maximum_concurrency
+            }
         if starting_position is not None:
             kwargs['StartingPosition'] = starting_position
         return self._call_client_method_with_retries(
@@ -1848,6 +1853,7 @@ class TypedAWSClient(object):
         event_uuid: str,
         batch_size: int,
         maximum_batching_window_in_seconds: Optional[int] = 0,
+        maximum_concurrency: Optional[int] = None,
     ) -> None:
         lambda_client = self._client('lambda')
         batch_window = maximum_batching_window_in_seconds
@@ -1856,6 +1862,10 @@ class TypedAWSClient(object):
             'BatchSize': batch_size,
             'MaximumBatchingWindowInSeconds': batch_window,
         }
+        if maximum_concurrency:
+            kwargs['ScalingConfig'] = {
+                'MaximumConcurrency': maximum_concurrency
+            }
         self._call_client_method_with_retries(
             lambda_client.update_event_source_mapping,
             kwargs,

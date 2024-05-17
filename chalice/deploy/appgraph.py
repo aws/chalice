@@ -664,6 +664,7 @@ class ApplicationGraphBuilder(object):
             batch_size=sqs_config.batch_size,
             lambda_function=lambda_function,
             maximum_batching_window_in_seconds=batch_window,
+            maximum_concurrency=sqs_config.maximum_concurrency
         )
         return sqs_event_source
 

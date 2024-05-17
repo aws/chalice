@@ -659,15 +659,20 @@ class SAMTemplateGenerator(TemplateGenerator):
                 'Fn::Sub': ('arn:${AWS::Partition}:sqs:${AWS::Region}'
                             ':${AWS::AccountId}:%s' % resource.queue)
             }
+        properties = {
+            'Queue': queue,
+            'BatchSize': resource.batch_size,
+            'MaximumBatchingWindowInSeconds':
+                resource.maximum_batching_window_in_seconds
+        }
+        if resource.maximum_concurrency:
+            properties["ScalingConfig"] = {
+                "MaximumConcurrency": resource.maximum_concurrency
+            }
         function_cfn['Properties']['Events'] = {
             sqs_cfn_name: {
                 'Type': 'SQS',
-                'Properties': {
-                    'Queue': queue,
-                    'BatchSize': resource.batch_size,
-                    'MaximumBatchingWindowInSeconds':
-                        resource.maximum_batching_window_in_seconds,
-                }
+                'Properties': properties
             }
         }
 
@@ -1123,14 +1128,20 @@ class TerraformGenerator(TemplateGenerator):
                 ":%(account_id)s:%(queue)s",
                 queue=resource.queue
             )
-        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
-            resource.resource_name] = {
+
+        aws_lambda_event_source_mapping = {
             'event_source_arn': event_source_arn,
             'batch_size': resource.batch_size,
             'maximum_batching_window_in_seconds':
                 resource.maximum_batching_window_in_seconds,
-            'function_name': self._fref(resource.lambda_function)
+            'function_name': self._fref(resource.lambda_function),
         }
+        if resource.maximum_concurrency:
+            aws_lambda_event_source_mapping["scaling_config"] = {
+                "maximum_concurrency": resource.maximum_concurrency
+            }
+        template['resource'].setdefault('aws_lambda_event_source_mapping', {})[
+            resource.resource_name] = aws_lambda_event_source_mapping
 
     def _generate_kinesiseventsource(self, resource, template):
         # type: (models.KinesisEventSource, Dict[str, Any]) -> None

@@ -768,7 +768,8 @@ class DecoratorAPI(object):
     def on_sqs_message(self, queue: Optional[str] = None, batch_size: int = 1,
                        name: Optional[str] = None,
                        queue_arn: Optional[str] = None,
-                       maximum_batching_window_in_seconds: int = 0
+                       maximum_batching_window_in_seconds: int = 0,
+                       maximum_concurrency: Optional[int] = None,
                        ) -> Callable[..., Any]:
         return self._create_registration_function(
             handler_type='on_sqs_message',
@@ -778,7 +779,8 @@ class DecoratorAPI(object):
                 'queue_arn': queue_arn,
                 'batch_size': batch_size,
                 'maximum_batching_window_in_seconds':
-                    maximum_batching_window_in_seconds
+                    maximum_batching_window_in_seconds,
+                'maximum_concurrency': maximum_concurrency,
             }
         )
 
@@ -1101,6 +1103,8 @@ class _HandlerRegistration(object):
             batch_size=kwargs['batch_size'],
             maximum_batching_window_in_seconds=kwargs[
                 'maximum_batching_window_in_seconds'],
+            maximum_concurrency=kwargs[
+                'maximum_concurrency'],
         )
         self.event_sources.append(sqs_config)
 
@@ -1625,13 +1629,15 @@ class SNSEventConfig(BaseEventSourceConfig):
 class SQSEventConfig(BaseEventSourceConfig):
     def __init__(self, name: str, handler_string: str, queue: Optional[str],
                  queue_arn: Optional[str], batch_size: int,
-                 maximum_batching_window_in_seconds: int):
+                 maximum_batching_window_in_seconds: int,
+                 maximum_concurrency: Optional[int]):
         super(SQSEventConfig, self).__init__(name, handler_string)
         self.queue: Optional[str] = queue
         self.queue_arn: Optional[str] = queue_arn
         self.batch_size: int = batch_size
         self.maximum_batching_window_in_seconds: int = \
             maximum_batching_window_in_seconds
+        self.maximum_concurrency: Optional[int] = maximum_concurrency
 
 
 class KinesisEventConfig(BaseEventSourceConfig):

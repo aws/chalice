@@ -348,6 +348,7 @@ class SQSEventSource(FunctionEventSubscriber):
     queue: Union[str, QueueARN]
     batch_size: int
     maximum_batching_window_in_seconds: int
+    maximum_concurrency: Opt[int] = None
 
 
 @dataclass

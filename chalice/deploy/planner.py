@@ -731,10 +731,13 @@ class PlanStage(object):
             return instruction_for_queue_arn + [
                 models.APICall(
                     method_name='update_lambda_event_source',
-                    params={'event_uuid': uuid,
-                            'batch_size': resource.batch_size,
-                            'maximum_batching_window_in_seconds':
-                                resource.maximum_batching_window_in_seconds}
+                    params={
+                        'event_uuid': uuid,
+                        'batch_size': resource.batch_size,
+                        'maximum_batching_window_in_seconds':
+                            resource.maximum_batching_window_in_seconds,
+                        'maximum_concurrency': resource.maximum_concurrency
+                    }
                 )
             ] + self._batch_record_resource(
                 'sqs_event', resource.resource_name, {
@@ -751,6 +754,7 @@ class PlanStage(object):
                         'batch_size': resource.batch_size,
                         'maximum_batching_window_in_seconds':
                             resource.maximum_batching_window_in_seconds,
+                        'maximum_concurrency': resource.maximum_concurrency,
                         'function_name': function_arn},
                 output_var=uuid_varname,
             ), 'Subscribing %s to SQS queue %s\n'
