@@ -164,6 +164,9 @@ def assert_can_package_dependency(
         obj={'project_dir': app_skeleton,
              'debug': False,
              'factory': cli_factory})
+    if result.exit_code != 0:
+        raise AssertionError(
+            f"Non-zero RC when packaging {package}") from result.exception
     assert result.exit_code == 0
     assert result.output.strip() == 'Creating deployment package.'
     package_path = os.path.join(app_skeleton, 'pkg', 'deployment.zip')
@@ -212,7 +215,7 @@ class TestPackage(object):
         )
 
     def test_can_package_pandas(self, runner, app_skeleton, no_local_config):
-        version = '2.2.0' if sys.version_info[1] >= 10 else '1.1.5'
+        version = '2.2.0' if sys.version_info[1] >= 10 else '2.0.3'
         assert_can_package_dependency(
             runner,
             app_skeleton,
