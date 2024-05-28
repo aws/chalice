@@ -54,7 +54,7 @@ PACKAGES_TO_TEST = {
     },
     'cryptography': {
         'version': '42.0.4',
-        'legacy_version': '3.3.1',
+        'legacy_version': '39.0.0',
         'contents': [
             'cryptography/__init__.py',
             'cryptography/*.so'
