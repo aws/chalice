@@ -235,7 +235,59 @@ class OSUtils(object):
 
     def extract_tarfile(self, tarfile_path: str, unpack_dir: str) -> None:
         with tarfile.open(tarfile_path, 'r:*') as tar:
+            # In Python 3.12+, there's a `filter` arg where passing a
+            # 'data' value will handle this behavior for us.  To support older
+            # versions of Python we handle this ourselves.  We can't hook
+            # into `extractall` directly so the idea is that we do a separate
+            # validation pass first to ensure there's no files that try
+            # to extract outside of the provided `unpack_dir`.  This is roughly
+            # based off of what's done in the `data_filter()` in Python 3.12.
+            self._validate_safe_extract(tar, unpack_dir)
             tar.extractall(unpack_dir)
+
+    def _validate_safe_extract(
+        self,
+        tar: tarfile.TarFile,
+        unpack_dir: str
+    ) -> None:
+        for member in tar:
+            self._validate_single_tar_member(member, unpack_dir)
+
+    def _validate_single_tar_member(
+        self,
+        member: tarfile.TarInfo,
+        unpack_dir: str
+    ) -> None:
+        name = member.name
+        dest_path = os.path.realpath(unpack_dir)
+        if name.startswith(('/', os.sep)):
+            name = member.path.lstrip('/' + os.sep)
+        if os.path.isabs(name):
+            raise RuntimeError(f"Absolute path in tarfile not allowed: {name}")
+        target_path = os.path.realpath(os.path.join(dest_path, name))
+        # Check we don't escape the destination dir, e.g `../../foo`
+        if os.path.commonpath([target_path, dest_path]) != dest_path:
+            raise RuntimeError(
+                f"Tar member outside destination dir: {target_path}")
+        # If we're dealing with a member that's some type of link, ensure
+        # it doesn't point to anything outside of the destination dir.
+        if member.islnk() or member.issym():
+            if os.path.abspath(member.linkname):
+                raise RuntimeError(f"Symlink to abspath: {member.linkname}")
+            if member.issym():
+                target_path = os.path.join(
+                    dest_path,
+                    os.path.dirname(name),
+                    member.linkname,
+                )
+            else:
+                target_path = os.path.join(
+                    dest_path,
+                    member.linkname)
+            target_path = os.path.realpath(target_path)
+            if os.path.commonpath([target_path, dest_path]) != dest_path:
+                raise RuntimeError(
+                    f"Symlink outside of dest dir: {target_path}")
 
     def directory_exists(self, path: str) -> bool:
         return os.path.isdir(path)
