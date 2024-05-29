@@ -3,7 +3,7 @@
   "changes": [
     {
       "category": "CLI",
-      "description": "Add ``chalice invoke`` command\n(`#900 <https://github.com/aws/chalice/issues/900>`__)",
+      "description": "Add ``chalice invoke`` command (#900)",
       "type": "feature"
     }
   ]

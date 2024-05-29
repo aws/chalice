@@ -1,5 +1,5 @@
 include CONTRIBUTING.rst
-include CHANGELOG.rst
+include CHANGELOG.md
 include LICENSE
 include NOTICE
 include README.rst

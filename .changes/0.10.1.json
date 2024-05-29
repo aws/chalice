@@ -3,12 +3,12 @@
   "changes": [
     {
       "category": "deployment",
-      "description": "Fix deployment issue for projects deployed with versions\nprior to 0.10.0\n(`#387 <https://github.com/awslabs/chalice/issues/387>`__)",
+      "description": "Fix deployment issue for projects deployed with versions\nprior to 0.10.0 (#387)",
       "type": "bugfix"
     },
     {
       "category": "policy",
-      "description": "Fix crash in analyzer when encountering genexprs and listcomps\n(`#263 <https://github.com/awslabs/chalice/issues/263>`__)",
+      "description": "Fix crash in analyzer when encountering genexprs and listcomps (#263)",
       "type": "bugfix"
     }
   ]

@@ -3,7 +3,7 @@
   "changes": [
     {
       "category": "packaging",
-      "description": "Fix package command not correctly setting environment variables\n(`#795 <https://github.com/aws/chalice/issues/795>`__)",
+      "description": "Fix package command not correctly setting environment variables (#795)",
       "type": "bugfix"
     }
   ]

@@ -4,22 +4,22 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Fix unicode responses being quoted in python 2.7\n(`#262 <https://github.com/awslabs/chalice/issues/262>`__)",
+      "description": "Fix unicode responses being quoted in python 2.7 (#262)",
       "type": "bugfix"
     },
     {
       "category": "event-source",
-      "description": "Add support for scheduled events\n(`#390 <https://github.com/awslabs/chalice/issues/390>`__)",
+      "description": "Add support for scheduled events (#390)",
       "type": "feature"
     },
     {
       "category": "event-source",
-      "description": "Add support for pure lambda functions\n(`#390 <https://github.com/awslabs/chalice/issues/400>`__)",
+      "description": "Add support for pure lambda functions (#390)",
       "type": "feature"
     },
     {
       "category": "packaging",
-      "description": "Add support for wheel packaging.\n(`#249 <https://github.com/awslabs/chalice/issues/249>`__)",
+      "description": "Add support for wheel packaging. (#249)",
       "type": "feature"
     }
   ]

@@ -3,22 +3,22 @@
   "changes": [
     {
       "category": "config",
-      "description": "Add support for Lambdas in a VPC\n(`#413 <https://github.com/aws/chalice/issues/413>`__,\n`#837 <https://github.com/aws/chalice/pull/837>`__,\n`#673 <https://github.com/aws/chalice/pull/673>`__)",
+      "description": "Add support for Lambdas in a VPC (#413, #837, #673)",
       "type": "feature"
     },
     {
       "category": "packaging",
-      "description": "Add support for packaging local directories\n(`#653 <https://github.com/aws/chalice/pull/653>`__)",
+      "description": "Add support for packaging local directories (#653)",
       "type": "feature"
     },
     {
       "category": "local",
-      "description": "Add support for automatically reloading the local\ndev server when files are modified\n(`#316 <https://github.com/aws/chalice/issues/316>`__,\n`#846 <https://github.com/aws/chalice/pull/846>`__,\n`#706 <https://github.com/aws/chalice/pull/706>`__)",
+      "description": "Add support for automatically reloading the local\ndev server when files are modified (#316, #846, #706)",
       "type": "enhancement"
     },
     {
       "category": "logging",
-      "description": "Add support for viewing cloudwatch logs of all\nlambda functions\n(`#841 <https://github.com/aws/chalice/issues/841>`__,\n`#849 <https://github.com/aws/chalice/pull/849>`__)",
+      "description": "Add support for viewing cloudwatch logs of all\nlambda functions (#841, #849)",
       "type": "enhancement"
     }
   ]

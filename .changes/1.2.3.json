@@ -3,12 +3,12 @@
   "changes": [
     {
       "category": "dependency",
-      "description": "Add support for pip 10\n(`#808 <https://github.com/aws/chalice/issues/808>`__)",
+      "description": "Add support for pip 10 (#808)",
       "type": "enhancement"
     },
     {
       "category": "policy",
-      "description": "Update ``policies.json`` file\n(`#817 <https://github.com/aws/chalice/issues/817>`__)",
+      "description": "Update ``policies.json`` file (#817)",
       "type": "enhancement"
     }
   ]
