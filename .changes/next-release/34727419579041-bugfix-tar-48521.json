@@ -1,5 +1,0 @@
-{
-  "type": "bugfix",
-  "category": "tar",
-  "description": "Validate tar extraction does not escape destination dir (#1990)"
-}
