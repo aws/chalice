@@ -114,7 +114,7 @@ set up, you can find the documentation on how to do that
 You can retrieve the CodeCommit clone URL by searching for the
 ``SourceRepoURL`` in the CloudFormation stack output::
 
-    $ aws cloudformation describe-stacks --stack-name mysack \
+    $ aws cloudformation describe-stacks --stack-name mystack \
        --query "Stacks[0].Outputs[?OutputKey=='SourceRepoURL'] | [0].OutputValue"
 
 

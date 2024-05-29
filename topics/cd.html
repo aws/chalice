@@ -225,7 +225,7 @@ set up, you can find the documentation on how to do that
 .</p>
 <p>You can retrieve the CodeCommit clone URL by searching for the
 <code class="docutils literal notranslate"><span class="pre">SourceRepoURL</span></code> in the CloudFormation stack output:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation describe-stacks --stack-name mysack \
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ aws cloudformation describe-stacks --stack-name mystack \
    --query &quot;Stacks[0].Outputs[?OutputKey==&#39;SourceRepoURL&#39;] | [0].OutputValue&quot;
 </pre></div>
 </div>
