@@ -3,27 +3,27 @@
   "changes": [
     {
       "category": "packaging",
-      "description": "Fix issue with some packages with `-` or `.` in their distribution name\n(`#555 <https://github.com/aws/chalice/pull/555>`__)",
+      "description": "Fix issue with some packages with `-` or `.` in their distribution name (#555)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Fix issue where chalice local returned a 403 for successful OPTIONS requests\n(`#554 <https://github.com/aws/chalice/pull/554>`__)",
+      "description": "Fix issue where chalice local returned a 403 for successful OPTIONS requests (#554)",
       "type": "bugfix"
     },
     {
       "category": "local",
-      "description": "Fix issue with chalice local mode causing http clients to hang on responses\nwith no body\n(`#525 <https://github.com/aws/chalice/issues/525>`__)",
+      "description": "Fix issue with chalice local mode causing http clients to hang on responses\nwith no body (#525)",
       "type": "bugfix"
     },
     {
       "category": "local",
-      "description": "Add ``--stage`` parameter to ``chalice local``\n(`#545 <https://github.com/aws/chalice/issues/545>`__)",
+      "description": "Add ``--stage`` parameter to ``chalice local`` (#545)",
       "type": "enhancement"
     },
     {
       "category": "policy",
-      "description": "Fix issue with analyzer that followed recursive functions infinitely\n(`#531 <https://github.com/aws/chalice/issues/531>`__)",
+      "description": "Fix issue with analyzer that followed recursive functions infinitely (#531)",
       "type": "bugfix"
     }
   ]

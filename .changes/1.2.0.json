@@ -4,47 +4,47 @@
   "changes": [
     {
       "category": "rest-api",
-      "description": "Print out full stack trace when an error occurs\n(`#711 <https://github.com/aws/chalice/issues/711>`__)",
+      "description": "Print out full stack trace when an error occurs (#711)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Add ``image/jpeg`` as a default binary content type\n(`#707 <https://github.com/aws/chalice/pull/707>`__)",
+      "description": "Add ``image/jpeg`` as a default binary content type (#707)",
       "type": "enhancement"
     },
     {
       "category": "event-source",
-      "description": "Add support for AWS Lambda only projects\n(`#162 <https://github.com/aws/chalice/issues/162>`__,\n`#640 <https://github.com/aws/chalice/issues/640>`__)",
+      "description": "Add support for AWS Lambda only projects (#162, #640)",
       "type": "feature"
     },
     {
       "category": "policy",
-      "description": "Fix inconsistent IAM role generation with pure lambdas\n(`#685 <https://github.com/aws/chalice/issues/685>`__)",
+      "description": "Fix inconsistent IAM role generation with pure lambdas (#685)",
       "type": "bugfix"
     },
     {
       "category": "deployment",
-      "description": "Rewrite Chalice deployer to more easily support additional AWS resources\n(`#604 <https://github.com/aws/chalice/issues/604>`__)",
+      "description": "Rewrite Chalice deployer to more easily support additional AWS resources (#604)",
       "type": "enhancement"
     },
     {
       "category": "packaging",
-      "description": "Update the ``chalice package`` command to support\npure lambda functions and scheduled events.\n(`#772 <https://github.com/aws/chalice/issues/772>`__)",
+      "description": "Update the ``chalice package`` command to support\npure lambda functions and scheduled events. (#772)",
       "type": "feature"
     },
     {
       "category": "packaging",
-      "description": "Fix packager edge case normalizing sdist names\n(`#778 <https://github.com/aws/chalice/issues/778>`__)",
+      "description": "Fix packager edge case normalizing sdist names (#778)",
       "type": "bugfix"
     },
     {
       "category": "packaging",
-      "description": "Fix SQLAlchemy packaging\n(`#778 <https://github.com/aws/chalice/issues/778>`__)",
+      "description": "Fix SQLAlchemy packaging (#778)",
       "type": "bugfix"
     },
     {
       "category": "packaging",
-      "description": "Fix packaging abi3, wheels this fixes cryptography 2.2.x packaging\n(`#764 <https://github.com/aws/chalice/issues/764>`__)",
+      "description": "Fix packaging abi3, wheels this fixes cryptography 2.2.x packaging (#764)",
       "type": "bugfix"
     }
   ]

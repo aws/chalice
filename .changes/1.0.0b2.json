@@ -4,32 +4,32 @@
   "changes": [
     {
       "category": "local",
-      "description": "Set env vars from config in ``chalice local``\n(`#396 <https://github.com/awslabs/chalice/issues/396>`__)",
+      "description": "Set env vars from config in ``chalice local`` (#396)",
       "type": "enhancement"
     },
     {
       "category": "packaging",
-      "description": "Fix edge case when building packages with optional c extensions\n(`#421 <https://github.com/awslabs/chalice/pull/421>`__)",
+      "description": "Fix edge case when building packages with optional c extensions (#421)",
       "type": "bugfix"
     },
     {
       "category": "policy",
-      "description": "Remove legacy ``policy.json`` file support. Policy files must\nuse the stage name, e.g. ``policy-dev.json``\n(`#430 <https://github.com/awslabs/chalice/pull/540>`__)",
+      "description": "Remove legacy ``policy.json`` file support. Policy files must\nuse the stage name, e.g. ``policy-dev.json`` (#430)",
       "type": "enhancement"
     },
     {
       "category": "deployment",
-      "description": "Fix issue where IAM role policies were updated twice on redeploys\n(`#428 <https://github.com/awslabs/chalice/pull/428>`__)",
+      "description": "Fix issue where IAM role policies were updated twice on redeploys (#428)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Validate route path is not an empty string\n(`#432 <https://github.com/awslabs/chalice/pull/432>`__)",
+      "description": "Validate route path is not an empty string (#432)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Change route code to invoke view function with kwargs instead of\npositional args\n(`#429 <https://github.com/awslabs/chalice/issues/429>`__)",
+      "description": "Change route code to invoke view function with kwargs instead of\npositional args (#429)",
       "type": "enhancement"
     }
   ]

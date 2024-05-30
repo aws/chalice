@@ -1,0 +1,11 @@
+# CHANGELOG
+
+{% for release, changes in releases %}
+## {{ release }}
+{% if changes.summary %}
+{{ changes.summary -}}
+{% endif %}
+{% for change in changes.changes %}
+* {{ change.type }}:{{ change.category }}:{{ change.description -}}
+{% endfor %}
+{% endfor %}

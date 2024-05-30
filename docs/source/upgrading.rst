@@ -4,7 +4,7 @@ Upgrade Notes
 This document provides additional documentation
 on upgrading your version of chalice.  If you're just
 interested in the high level changes, see the
-`CHANGELOG.rst <https://github.com/aws/chalice/blob/master/CHANGELOG.rst>`__)
+`CHANGELOG.md <https://github.com/aws/chalice/blob/master/CHANGELOG.md>`__)
 file.
 
 .. _v1-2-0:

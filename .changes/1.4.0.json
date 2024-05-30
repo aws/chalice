@@ -3,27 +3,27 @@
   "changes": [
     {
       "category": "CI-CD",
-      "description": "Add support for generating python 3.6 pipelines\n(`#858 <https://github.com/aws/chalice/pull/858>`__)",
+      "description": "Add support for generating python 3.6 pipelines (#858)",
       "type": "enhancement"
     },
     {
       "category": "event-source",
-      "description": "Add support for connecting lambda functions to S3 events\n(`#855 <https://github.com/aws/chalice/issues/855>`__)",
+      "description": "Add support for connecting lambda functions to S3 events (#855)",
       "type": "feature"
     },
     {
       "category": "event-source",
-      "description": "Add support for connecting lambda functions to SNS message\n(`#488 <https://github.com/aws/chalice/issues/488>`__)",
+      "description": "Add support for connecting lambda functions to SNS message (#488)",
       "type": "feature"
     },
     {
       "category": "local",
-      "description": "Make ``watchdog`` an optional dependency and add a built in\n``stat()`` based file poller\n(`#867 <https://github.com/aws/chalice/issues/867>`__)",
+      "description": "Make ``watchdog`` an optional dependency and add a built in\n``stat()`` based file poller (#867)",
       "type": "enhancement"
     },
     {
       "category": "event-source",
-      "description": "Add support for connecting lambda functions to an SQS queue\n(`#884 <https://github.com/aws/chalice/issues/884>`__)",
+      "description": "Add support for connecting lambda functions to an SQS queue (#884)",
       "type": "feature"
     }
   ]

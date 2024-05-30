@@ -3,57 +3,57 @@
   "changes": [
     {
       "category": "dependencies",
-      "description": "Update PIP to support up to 19.1.x\n(`#1104 <https://github.com/aws/chalice/issues/1104>`__)",
+      "description": "Update PIP to support up to 19.1.x (#1104)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Fix handling of more complex Accept headers for binary\ncontent types\n(`#1078 <https://github.com/aws/chalice/issues/1078>`__)",
+      "description": "Fix handling of more complex Accept headers for binary\ncontent types (#1078)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Raise TypeError when trying to serialize an unserializable\ntype\n(`#1100 <https://github.com/aws/chalice/issues/1100>`__)",
+      "description": "Raise TypeError when trying to serialize an unserializable\ntype (#1100)",
       "type": "enhancement"
     },
     {
       "category": "policy",
-      "description": "Update ``policies.json`` file\n(`#1110 <https://github.com/aws/chalice/issues/1110>`__)",
+      "description": "Update ``policies.json`` file (#1110)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Support repeating values in the query string\n(`#1131 <https://github.com/aws/chalice/issues/1131>`__)",
+      "description": "Support repeating values in the query string (#1131)",
       "type": "feature"
     },
     {
       "category": "packaging",
-      "description": "Add layer support to chalice package\n(`#1130 <https://github.com/aws/chalice/issues/1130>`__)",
+      "description": "Add layer support to chalice package (#1130)",
       "type": "feature"
     },
     {
       "category": "rest-api",
-      "description": "Fix bug with route ``name`` kwarg raising a ``TypeError``\n(`#1112 <https://github.com/aws/chalice/issues/1112>`__)",
+      "description": "Fix bug with route ``name`` kwarg raising a ``TypeError`` (#1112)",
       "type": "bugfix"
     },
     {
       "category": "logging",
-      "description": "Change exceptions to always be logged at the ERROR level\n(`#969 <https://github.com/aws/chalice/issues/969>`__)",
+      "description": "Change exceptions to always be logged at the ERROR level (#969)",
       "type": "enhancement"
     },
     {
       "category": "CLI",
-      "description": "Fix bug handling exceptions during ``chalice invoke`` on\nPython 3.7\n(`#1139 <https://github.com/aws/chalice/issues/1139>`__)",
+      "description": "Fix bug handling exceptions during ``chalice invoke`` on\nPython 3.7 (#1139)",
       "type": "bugfix"
     },
     {
       "category": "rest-api",
-      "description": "Add support for API Gateway compression\n(`#672 <https://github.com/aws/chalice/issues/672>`__)",
+      "description": "Add support for API Gateway compression (#672)",
       "type": "bugfix"
     },
     {
       "category": "packaging",
-      "description": "Add support for both relative and absolute paths for\n``--package-dir``\n(`#940 <https://github.com/aws/chalice/issues/940>`__)",
+      "description": "Add support for both relative and absolute paths for\n``--package-dir`` (#940)",
       "type": "enhancement"
     }
   ]

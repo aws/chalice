@@ -3,27 +3,27 @@
   "changes": [
     {
       "category": "CLI",
-      "description": "Add ``chalice package`` command.  This will\ncreate a SAM template and Lambda deployment package that\ncan be subsequently deployed by AWS CloudFormation.\n(`#258 <https://github.com/awslabs/chalice/pull/258>`__)",
+      "description": "Add ``chalice package`` command.  This will\ncreate a SAM template and Lambda deployment package that\ncan be subsequently deployed by AWS CloudFormation. (#258)",
       "type": "feature"
     },
     {
       "category": "CLI",
-      "description": "Add a ``--stage-name`` argument for creating chalice stages.\nA chalice stage is a completely separate set of AWS resources.\nAs a result, most configuration values can also be specified\nper chalice stage.\n(`#264 <https://github.com/awslabs/chalice/pull/264>`__,\n`#270 <https://github.com/awslabs/chalice/pull/270>`__)",
+      "description": "Add a ``--stage-name`` argument for creating chalice stages.\nA chalice stage is a completely separate set of AWS resources.\nAs a result, most configuration values can also be specified\nper chalice stage. (#264, #270)",
       "type": "feature"
     },
     {
       "category": "policy",
-      "description": "Add support for ``iam_role_file``, which allows you to\nspecify the file location of an IAM policy to use for your app\n(`#272 <https://github.com/awslabs/chalice/pull/272>`__)",
+      "description": "Add support for ``iam_role_file``, which allows you to\nspecify the file location of an IAM policy to use for your app (#272)",
       "type": "feature"
     },
     {
       "category": "config",
-      "description": "Add support for setting environment variables in your app\n(`#273 <https://github.com/awslabs/chalice/pull/273>`__)",
+      "description": "Add support for setting environment variables in your app (#273)",
       "type": "feature"
     },
     {
       "category": "CI-CD",
-      "description": "Add a ``generate-pipeline`` command\n(`#277 <https://github.com/awslabs/chalice/pull/277>`__)",
+      "description": "Add a ``generate-pipeline`` command (#277)",
       "type": "feature"
     }
   ]

@@ -3,37 +3,37 @@
   "changes": [
     {
       "category": "dependencies",
-      "description": "Add support for pip 18.2\n(`#991 <https://github.com/aws/chalice/pull/991>`__)",
+      "description": "Add support for pip 18.2 (#991)",
       "type": "enhancement"
     },
     {
       "category": "logging",
-      "description": "Add more detailed debug logs to the packager.\n(`#934 <https://github.com/aws/chalice/pull/934>`__)",
+      "description": "Add more detailed debug logs to the packager. (#934)",
       "type": "enhancement"
     },
     {
       "category": "python",
-      "description": "Add support for python3.7\n(`#992 <https://github.com/aws/chalice/pull/992>`__)",
+      "description": "Add support for python3.7 (#992)",
       "type": "feature"
     },
     {
       "category": "rest-api",
-      "description": "Support bytes for the application/json binary type\n(`#988 <https://github.com/aws/chalice/issues/988>`__)",
+      "description": "Support bytes for the application/json binary type (#988)",
       "type": "feature"
     },
     {
       "category": "rest-api",
-      "description": "Use more compact JSON representation by default for dicts\n(`#958 <https://github.com/aws/chalice/pull/958>`__)",
+      "description": "Use more compact JSON representation by default for dicts (#958)",
       "type": "enhancement"
     },
     {
       "category": "logging",
-      "description": "Log internal exceptions as errors\n(`#254 <https://github.com/aws/chalice/issues/254>`__)",
+      "description": "Log internal exceptions as errors (#254)",
       "type": "enhancement"
     },
     {
       "category": "rest-api",
-      "description": "Generate swagger documentation from docstrings\n(`#574 <https://github.com/aws/chalice/issues/574>`__)",
+      "description": "Generate swagger documentation from docstrings (#574)",
       "type": "feature"
     }
   ]
