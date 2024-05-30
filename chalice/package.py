@@ -11,7 +11,8 @@ from typing import cast
 
 import yaml
 from yaml.scanner import ScannerError
-from yaml.nodes import Node, ScalarNode, SequenceNode, MappingNode
+from yaml.nodes import Node  # noqa
+from yaml.nodes import ScalarNode, SequenceNode, MappingNode
 
 from chalice.deploy.swagger import (
     CFNSwaggerGenerator, TerraformSwaggerGenerator)

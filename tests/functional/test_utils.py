@@ -2,6 +2,7 @@ import zipfile
 import json
 import os
 import io
+import tarfile
 
 import pytest
 
@@ -106,6 +107,31 @@ def test_remove_stage_from_deployed_values_no_file(tmpdir):
 
     # Make sure it doesn't create the file if it didn't already exist
     assert not os.path.isfile(filename)
+
+
+def test_error_raised_on_tar_out_of_extract_dir(tmp_path, osutils):
+    filepath = tmp_path / 'badfile'
+    filepath.write_text('single file')
+    badtarpath = tmp_path / 'badtar.tar.gz'
+    extractdir = tmp_path / 'nest1' / 'nest2' / 'nest3'
+    with tarfile.open(badtarpath, 'w:gz') as tar:
+        tar.add(filepath, arcname='../../escaped-dir.txt')
+    with pytest.raises(RuntimeError):
+        osutils.extract_tarfile(str(badtarpath), extractdir)
+
+
+def test_error_raise_tar_symlink_out_of_extract_dir(tmp_path, osutils):
+    dir_with_symlink = tmp_path / 'nest1' / 'nest2'
+    dir_with_symlink.mkdir(parents=True, exist_ok=True)
+    outside_file = tmp_path / 'outside.txt'
+    outside_file.write_text('outside of dir')
+    symlink_file = dir_with_symlink / 'myfile.txt'
+    os.symlink(outside_file, symlink_file)
+    tarpath = dir_with_symlink / 'badtar.tar.gz'
+    with tarfile.open(tarpath, 'w:gz') as tar:
+        tar.add(symlink_file)
+    with pytest.raises(RuntimeError):
+        osutils.extract_tarfile(str(tarpath), dir_with_symlink)
 
 
 class TestOSUtils(object):

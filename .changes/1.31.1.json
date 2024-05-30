@@ -1,0 +1,15 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "pip",
+      "description": "Update pip version to allow 24.0 (#2092)"
+    },
+    {
+      "type": "bugfix",
+      "category": "tar",
+      "description": "Validate tar extraction does not escape destination dir (#1990)"
+    }
+  ]
+}

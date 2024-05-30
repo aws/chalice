@@ -110,6 +110,7 @@ class BuiltinFunction(Instruction):
     output_var: str
 
 
+@dataclass
 class Model(object):
     def dependencies(self) -> List[Model]:
         return []

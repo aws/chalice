@@ -111,7 +111,8 @@ Quickstart
 In this tutorial, you'll use the ``chalice`` command line utility
 to create and deploy a basic REST API.  This quickstart uses Python 3.7,
 but AWS Chalice supports all versions of python supported by AWS Lambda,
-which includes python3.6, python3.7, python3.8, python3.9, python3.10, python3.11.
+which includes Python 3.7 through python 3.12.
+
 You can find the latest versions of python on the
 `Python download page <https://www.python.org/downloads/>`_.
 
