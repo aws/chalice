@@ -1781,7 +1781,8 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 ),
                 'batch_size': 10,
                 'maximum_batching_window_in_seconds': 60,
-                'function_name': Variable("function_name_lambda_arn")
+                'function_name': Variable("function_name_lambda_arn"),
+                'maximum_concurrency': None
             },
             output_var='function_name-sqs-event-source_uuid'
         )
@@ -1819,7 +1820,8 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 ),
                 'batch_size': 10,
                 'maximum_batching_window_in_seconds': 0,
-                'function_name': Variable("function_name_lambda_arn")
+                'function_name': Variable("function_name_lambda_arn"),
+                'maximum_concurrency': None,
             },
             output_var='function_name-sqs-event-source_uuid'
         )
@@ -1863,6 +1865,7 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 'event_uuid': 'my-uuid',
                 'batch_size': 10,
                 'maximum_batching_window_in_seconds': 0,
+                'maximum_concurrency': None,
             },
         )
         self.assert_recorded_values(
@@ -1925,6 +1928,80 @@ class TestPlanSQSSubscription(BasePlannerTests):
                 'event_uuid': 'my-uuid',
                 'batch_size': 10,
                 'maximum_batching_window_in_seconds': 0,
+                'maximum_concurrency': None,
+            },
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': 'arn:sqs:myqueue',
+                'event_uuid': 'my-uuid',
+                'queue': 'myqueue',
+                'lambda_arn': 'arn:lambda'
+            }
+        )
+
+    def test_sqs_event_supports_maximum_concurrency(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue=models.QueueARN(arn='arn:us-west-2:myqueue'),
+            batch_size=10,
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0,
+            maximum_concurrency=2
+        )
+        plan = self.determine_plan(sqs_event_source)
+        assert plan[1] == models.APICall(
+            method_name='create_lambda_event_source',
+            params={
+                'event_source_arn': Variable(
+                    "function_name-sqs-event-source_queue_arn"
+                ),
+                'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
+                'function_name': Variable("function_name_lambda_arn"),
+                'maximum_concurrency': 2,
+            },
+            output_var='function_name-sqs-event-source_uuid'
+        )
+        self.assert_recorded_values(
+            plan, 'sqs_event', 'function_name-sqs-event-source', {
+                'queue_arn': Variable(
+                    'function_name-sqs-event-source_queue_arn'),
+                'event_uuid': Variable(
+                    'function_name-sqs-event-source_uuid'),
+                'queue': 'myqueue',
+                'lambda_arn': Variable(
+                    'function_name_lambda_arn')
+            }
+        )
+
+    def test_sqs_event_source_exists_updates_maximum_concurrency(self):
+        function = create_function_resource('function_name')
+        sqs_event_source = models.SQSEventSource(
+            resource_name='function_name-sqs-event-source',
+            queue='myqueue',
+            batch_size=10,
+            lambda_function=function,
+            maximum_batching_window_in_seconds=0,
+            maximum_concurrency=2
+        )
+        self.remote_state.declare_resource_exists(
+            sqs_event_source,
+            queue='myqueue',
+            queue_arn='arn:sqs:myqueue',
+            resource_type='sqs_event',
+            lambda_arn='arn:lambda',
+            event_uuid='my-uuid',
+        )
+        plan = self.determine_plan(sqs_event_source)
+        assert plan[5] == models.APICall(
+            method_name='update_lambda_event_source',
+            params={
+                'event_uuid': 'my-uuid',
+                'batch_size': 10,
+                'maximum_batching_window_in_seconds': 0,
+                'maximum_concurrency': 2,
             },
         )
         self.assert_recorded_values(

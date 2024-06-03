@@ -282,7 +282,7 @@ Chalice
         entire lambda function name.  This parameter is optional.  If it is
         not provided, the name of the python function will be used.
 
-   .. method:: on_sqs_message(queue, batch_size=1, name=None, queue_arn=None, maximum_batching_window_in_seconds=0)
+   .. method:: on_sqs_message(queue, batch_size=1, name=None, queue_arn=None, maximum_batching_window_in_seconds=0, maximum_concurrency=None)
 
       Create a lambda function and configure it to be automatically invoked
       whenever a message is published to the specified SQS queue.
@@ -336,6 +336,9 @@ Chalice
 
       :param maximum_batching_window_in_seconds: The maximum amount of time,
         in seconds, to gather records before invoking the function.
+
+      :param maximum_concurrency: The maximum number of concurrent functions
+        that the event source can invoke.
 
    .. method:: on_kinesis_record(stream, batch_size=100, starting_position='LATEST', name=None, maximum_batching_window_in_seconds=0)
 

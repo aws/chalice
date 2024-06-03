@@ -1,0 +1,5 @@
+{
+  "type": "enhancement",
+  "category": "SQS",
+  "description": "Add configuration option for MaximumConcurrency for SQS event source (#2104)"
+}
