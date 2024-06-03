@@ -430,7 +430,7 @@ not provided, the name of the python function will be used.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="Chalice.on_sqs_message">
-<span class="sig-name descname"><span class="pre">on_sqs_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queue_arn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_batching_window_in_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.on_sqs_message" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">on_sqs_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queue_arn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_batching_window_in_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maximum_concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Chalice.on_sqs_message" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a lambda function and configure it to be automatically invoked
 whenever a message is published to the specified SQS queue.</p>
 <p>The lambda function must accept a single parameter which
@@ -477,6 +477,8 @@ This is useful if you already know the exact ARN or when integrating
 with the AWS CDK to create your SQS queue.</p></li>
 <li><p><strong>maximum_batching_window_in_seconds</strong> – The maximum amount of time,
 in seconds, to gather records before invoking the function.</p></li>
+<li><p><strong>maximum_concurrency</strong> – The maximum number of concurrent functions
+that the event source can invoke.</p></li>
 </ul>
 </dd>
 </dl>
