@@ -1,0 +1,10 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "SQS",
+      "description": "Add configuration option for MaximumConcurrency for SQS event source (#2104)"
+    }
+  ]
+}

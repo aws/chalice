@@ -1,6 +1,11 @@
 # CHANGELOG
 
 
+## 1.31.2
+
+
+* enhancement:SQS:Add configuration option for MaximumConcurrency for SQS event source (#2104)
+
 ## 1.31.1
 
 
@@ -28,7 +33,7 @@
 ## 1.28.0
 
 
-* enhancement:Terraform:Update required terraform veresoin to support 1.3 (#2014)
+* enhancement:Terraform:Update required terraform version to support 1.3 (#2014)
 * enhancement:Pip:Bump pip version range to latest version <22.3 (#2016)
 * feature:Config:Add support for `log_retention_in_days` (#943)
 
@@ -69,7 +74,7 @@
 ## 1.26.4
 
 
-* bugfix:Terraform:Use updated keywords for providing provider version contraints (#1717)
+* bugfix:Terraform:Use updated keywords for providing provider version constraints (#1717)
 
 ## 1.26.3
 
