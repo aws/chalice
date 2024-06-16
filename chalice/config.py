@@ -268,6 +268,12 @@ class Config(object):
                                   varies_per_function=True)
 
     @property
+    def lambda_ephemeral_storage(self) -> int:
+        return self._chain_lookup('lambda_ephemeral_storage',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
+    @property
     def lambda_timeout(self) -> int:
         return self._chain_lookup('lambda_timeout',
                                   varies_per_chalice_stage=True,
