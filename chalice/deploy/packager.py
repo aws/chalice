@@ -732,8 +732,10 @@ class DependencyBuilder(object):
         # dependencies that do not have a compatible wheel file downloaded.
         # For these packages we need to explicitly try to download a
         # compatible wheel file.
-        missing_wheels = sdists.union(incompatible_wheels)
-        self._download_binary_wheels(abi, missing_wheels, directory)
+        # Just try to download incompatible wheels here, as
+        # sdist-only packages (including VCS packages) should have been
+        # downloaded in the previous step.
+        self._download_binary_wheels(abi, incompatible_wheels, directory)
 
         # Re-count the wheel files after the second download pass. Anything
         # that has an sdist but not a valid wheel file is still not going to
