@@ -1803,6 +1803,10 @@ Testing
 
       Generates a Kinesis event.
 
+   .. method:: generate_dynamodb_event(images, view_type='NEW_AND_OLD_IMAGES')
+
+      Generates a DynamoDB Stream event.
+
 
 .. class:: HTTPResponse()
 
