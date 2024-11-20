@@ -176,8 +176,7 @@ class BaseLambdaDeploymentPackager(object):
             chalice_init = chalice_init[:-1]
         yield (chalice_init, 'chalice/__init__.py')
         yield (self._osutils.joinpath(project_dir, 'app.py'), 'app.py')
-        for filename in self._iter_chalice_lib_if_needed(project_dir):
-            yield filename
+        yield from self._iter_chalice_lib_if_needed(project_dir)
 
     def _hash_project_dir(
         self, requirements_filename: str, vendor_dir: str, project_dir: str
