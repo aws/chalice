@@ -27,7 +27,7 @@ install_requires = [
     'pip>=9,<24.1',
     'jmespath>=0.9.3,<2.0.0',
     'pyyaml>=5.3.1,<7.0.0',
-    'inquirer>=2.7.0,<3.0.0',
+    'inquirer>=3.0.0,<4.0.0',
     'wheel',
     'setuptools'
 ]

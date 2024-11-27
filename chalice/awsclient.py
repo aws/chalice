@@ -1421,8 +1421,7 @@ class TypedAWSClient(object):
             logGroupName=log_group_name, interleaved=True
         )
         try:
-            for log_message in self._iter_log_messages(pages):
-                yield log_message
+            yield from self._iter_log_messages(pages)
         except logs.exceptions.ResourceNotFoundException:
             # If the lambda function exists but has not been invoked yet,
             # it's possible that the log group does not exist and we'll get
