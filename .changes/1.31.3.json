@@ -1,0 +1,15 @@
+{
+  "schema-version": "0.2",
+  "changes": [
+    {
+      "type": "enhancement",
+      "category": "Pip",
+      "description": "Update pip to the latest version (<24.4)"
+    },
+    {
+      "type": "enhancement",
+      "category": "CLI",
+      "description": "Remove distutils warning when packaging/deploying apps (#2123)"
+    }
+  ]
+}

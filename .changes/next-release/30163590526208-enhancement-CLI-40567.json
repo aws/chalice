@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "CLI",
-  "description": "Remove distutils warning when packaging/deploying apps (#2123)"
-}

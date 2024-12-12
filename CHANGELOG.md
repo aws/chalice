@@ -1,6 +1,12 @@
 # CHANGELOG
 
 
+## 1.31.3
+
+
+* enhancement:Pip:Update pip to the latest version (<24.4)
+* enhancement:CLI:Remove distutils warning when packaging/deploying apps (#2123)
+
 ## 1.31.2
 
 
