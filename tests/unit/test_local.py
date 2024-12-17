@@ -1028,7 +1028,7 @@ class TestLocalBuiltinAuthorizers(object):
         authorizer = LocalGatewayAuthorizer(demo_app_auth)
         path = '/cognito'
         event = create_event(path, 'GET', {})
-        event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLnVzLWVhc3QtMS5hbWF6b25hd3MuY29tL3VzLWVhc3QtMV9leGFtcGxlIiwiY29nbml0bzp1c2VybmFtZSI6ImphbmVkb2UiLCJleHAiOjE1ODQ3MjM2MTYsImdpdmVuX25hbWUiOiJKYW5lIiwiaWF0IjoxNTAwMDA5NDAwLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJqdGkiOiJkN2UxMTMzYS0xZTNhLTQyMzEtYWU3Yi0yOGQ4NWVlMGIxNGQifQ.p35Yj9KJD5RbfPWGL08IJHgson8BhdGLPQqUOiF0-KM"  # noqa
+        event["headers"]["authorization"] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJ4eHh4eHh4eHh4eHhleGFtcGxlIiwiYXV0aF90aW1lIjoxNTAwMDA5NDAwLCJ1c2VybmFtZSI6ImphbmVkb2UiLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZXhwIjoxNTg0NzIzNjE2LCJnaXZlbl9uYW1lIjoiSmFuZSIsImlhdCI6MTUwMDAwOTQwMCwiaXNzIjoiaHR0cHM6Ly9jb2duaXRvLWlkcC51cy1lYXN0LTEuYW1hem9uYXdzLmNvbS91cy1lYXN0LTFfZXhhbXBsZSIsImp0aSI6ImQ3ZTExMzNhLTFlM2EtNDIzMS1hZTdiLTI4ZDg1ZWUwYjE0ZCIsInN1YiI6ImFhYWFhYWFhLWJiYmItY2NjYy1kZGRkLWVlZWVlZWVlZWVlZSIsInRva2VuX3VzZSI6ImlkIn0.RwqwPMdSpMocqPE-9XR4nKSN8Or3Qz8XBmnD1Br_8PORhStBj6e4EumoBYt7YAW5_PW_koWAXf-w4HwznV3VDGbxoVoDxlql2IBLzyAKHG1y42x0bHCfUraabJi0eDNJU7koH4rhJcWWueBsm7e39MOiqa53vb1osKQ7i9SNZLoLqzweVFypLbUOga8-49J4VgdXgv8ytPuynV4yDpf_xo-znJ-ZMqJ5KMo5zJSj3VOxb0p2n-uFE8ssgiwcCh6tLMOjwd9lhXw-bCyhqtqheSUY7oEr6frMOme0EUaiGTI0-XDdezo0KX_C1WpZvc3LrLv5hfzFgUSPKnjVCzO98A"  # noqa
         context = LambdaContext(*lambda_context_args)
         event, context = authorizer.authorize(path, event, context)
         principal_id = event['requestContext']['authorizer']['principalId']
@@ -1051,7 +1051,7 @@ class TestLocalBuiltinAuthorizers(object):
         warning = recorded_warnings[0]
         assert issubclass(warning.category, UserWarning)
         assert ('CognitoUserPoolAuthorizer for machine-to-machine '
-                'communicaiton is not supported in local mode. All requests '
+                'communication is not supported in local mode. All requests '
                 'made against a route will be authorized to allow local '
                 'testing.') in str(warning.message)
 
