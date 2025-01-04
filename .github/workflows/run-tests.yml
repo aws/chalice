@@ -3,10 +3,13 @@ on:
   push:
     branches:
       - master
+      - v2
+      - "v2-*"
       - "feature/**"
   pull_request:
     branches:
       - master
+      - v2
       - "feature/**"
 jobs:
   prcheck:
