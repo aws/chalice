@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
       - name: Run PRCheck
-        run: make prcheck
+        run: uv run make prcheck
   cdktests:
     runs-on: ubuntu-latest
     strategy:
