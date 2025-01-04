@@ -4,22 +4,13 @@
 TESTS=tests/unit tests/functional tests/integration
 
 check:
-	###### FLAKE8 #####
-	# No unused imports, no undefined vars,
-	flake8 --ignore=E731,W503,W504 --exclude chalice/__init__.py,chalice/compat.py,chalice/vendored/botocore/regions.py --max-complexity 10 chalice/
-	flake8 --ignore=E731,W503,W504,F401 --max-complexity 10 chalice/compat.py
-	flake8 tests/unit/ tests/functional/ tests/integration tests/aws
+	ruff check
+	pylint --rcfile .pylintrc -E chalice
 	#
 	# Proper docstring conventions according to pep257
 	#
 	#
 	pydocstyle --add-ignore=D100,D101,D102,D103,D104,D105,D107,D204,D301 --match='(?!(test_|regions)).*\.py' chalice/
-
-pylint:
-	###### PYLINT ######
-	pylint --rcfile .pylintrc chalice
-	# Run our custom linter on test code.
-	pylint --disable=I,E,W,R,C,F --enable C9999,C9998 tests/
 
 test:
 	py.test -v $(TESTS)
@@ -55,7 +46,7 @@ doccheck:
 	# so any sphinx-build warnings will fail the build.
 	$(MAKE) -C docs html
 
-prcheck: check pylint coverage doccheck typecheck
+prcheck: check coverage doccheck typecheck
 
 install-dev-deps:
 	pip install -r requirements-dev.txt --upgrade --upgrade-strategy eager -e .
