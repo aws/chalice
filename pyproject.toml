@@ -1,0 +1,78 @@
+[project]
+name = "chalice"
+version = "1.31.3"
+description = "A framework for writing serverless applications"
+readme = "README.rst"
+authors = [
+    {name = "James Saryerwinnie", email = "js@jamesls.com"},
+]
+license = {text = "Apache License 2.0"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["chalice"]
+requires-python = ">=3.12"
+dependencies = [
+    "click>=7,<9.0",
+    "botocore>=1.14.0,<2.0.0",
+    "six>=1.10.0,<2.0.0",
+    "pip>=9,<24.4",
+    "jmespath>=0.9.3,<2.0.0",
+    "pyyaml>=5.3.1,<7.0.0",
+    "inquirer>=3.0.0,<4.0.0",
+    "wheel",
+    "setuptools",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+event-file-poller = ["watchdog==2.3.1"]
+cdkv2 = ["aws-cdk-lib>2.0,<3.0"]
+
+[project.urls]
+Homepage = "https://aws.github.io/chalice/"
+
+[tool.uv]
+dev-dependencies = [
+    "pylint<4.0.0",
+    "doc8<1.0.0",
+    "pydocstyle",
+    "flake8",
+    "Sphinx==4.3.2",
+    "docutils",
+    "mypy",
+    "wheel",
+    "pygments",
+    "types-six",
+    "types-python-dateutil",
+    "types-PyYAML",
+    "pytest",
+    "boto3<2.0.0",
+    "hypothesis",
+    "coverage",
+    "websocket-client<2.0.0",
+    "pytest-cov",
+    "requests",
+]
+
+[project.scripts]
+chalice = "chalice.cli:main"
+
+[tool.mypy]
+packages = ["chalice"]
+
+[[tool.mypy.overrides]]
+module = "chalice.vendored.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "chalice.templates.*"
+ignore_errors = true
