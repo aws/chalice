@@ -50,10 +50,7 @@ from botocore.vendored.requests import (
 from botocore.vendored.requests.exceptions import (
     ReadTimeout as RequestsReadTimeout,
 )
-try:
-    from typing import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict
+from typing import TypedDict
 
 from chalice.constants import DEFAULT_STAGE_NAME
 from chalice.constants import MAX_LAMBDA_DEPLOYMENT_SIZE
