@@ -196,6 +196,7 @@ dependencies = [
     { name = "pip" },
     { name = "pyyaml" },
     { name = "setuptools" },
+    { name = "sphinx" },
     { name = "wheel" },
 ]
 
@@ -241,6 +242,7 @@ requires-dist = [
     { name = "pip", specifier = ">=9,<24.4" },
     { name = "pyyaml", specifier = ">=5.3.1,<7.0.0" },
     { name = "setuptools" },
+    { name = "sphinx", specifier = ">=4.3.2" },
     { name = "watchdog", marker = "extra == 'event-file-poller'", specifier = "==2.3.1" },
     { name = "wheel" },
 ]
@@ -261,7 +263,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "requests" },
     { name = "ruff" },
-    { name = "sphinx", specifier = "==4.3.2" },
+    { name = "sphinx", specifier = ">=5.0.0,<6.0.0" },
     { name = "types-python-dateutil" },
     { name = "types-pyyaml" },
     { name = "types-six" },
@@ -938,7 +940,7 @@ wheels = [
 
 [[package]]
 name = "sphinx"
-version = "4.3.2"
+version = "5.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alabaster" },
@@ -950,7 +952,6 @@ dependencies = [
     { name = "packaging" },
     { name = "pygments" },
     { name = "requests" },
-    { name = "setuptools" },
     { name = "snowballstemmer" },
     { name = "sphinxcontrib-applehelp" },
     { name = "sphinxcontrib-devhelp" },
@@ -959,9 +960,9 @@ dependencies = [
     { name = "sphinxcontrib-qthelp" },
     { name = "sphinxcontrib-serializinghtml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5f/70/83589844bd82a5de3a748757fb39b2440435716e6a295827b13967dfa97f/Sphinx-4.3.2.tar.gz", hash = "sha256:0a8836751a68306b3fe97ecbe44db786f8479c3bf4b80e3a7f5c838657b4698c", size = 6657148 }
+sdist = { url = "https://files.pythonhosted.org/packages/af/b2/02a43597980903483fe5eb081ee8e0ba2bb62ea43a70499484343795f3bf/Sphinx-5.3.0.tar.gz", hash = "sha256:51026de0a9ff9fc13c05d74913ad66047e104f56a129ff73e174eb5c3ee794b5", size = 6811365 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/30/30/065cac95f6b55edf93756b5478a416b4d727480e901e94c2575e9ea38d99/Sphinx-4.3.2-py3-none-any.whl", hash = "sha256:6a11ea5dd0bdb197f9c2abc2e0ce73e01340464feaece525e64036546d24c851", size = 3083795 },
+    { url = "https://files.pythonhosted.org/packages/67/a7/01dd6fd9653c056258d65032aa09a615b5d7b07dd840845a9f41a8860fbc/sphinx-5.3.0-py3-none-any.whl", hash = "sha256:060ca5c9f7ba57a08a1219e547b269fadf125ae25b06b9fa7f66768efb652d6d", size = 3183160 },
 ]
 
 [[package]]

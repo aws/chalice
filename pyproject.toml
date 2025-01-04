@@ -26,6 +26,7 @@ dependencies = [
     "inquirer>=3.0.0,<4.0.0",
     "wheel",
     "setuptools",
+    "sphinx>=4.3.2",
 ]
 
 [build-system]
@@ -46,7 +47,7 @@ dev-dependencies = [
     "doc8<1.0.0",
     "pydocstyle",
     "flake8",
-    "Sphinx==4.3.2",
+    "Sphinx>=5.0.0,<6.0.0",
     "docutils",
     "mypy",
     "wheel",
