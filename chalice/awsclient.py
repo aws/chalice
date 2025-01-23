@@ -173,8 +173,8 @@ class TypedAWSClient(object):
 
         This allows the an endpoint to be discerned based on an ARN.  This
         is a convenience method due to the need to parse multiple ARNs
-        throughout the project. If the service and region combination
-        is not found the None will be returned.
+        throughout the project. If the service and region
+        combination is not found the None will be returned.
         """
         arn_split = arn.split(':')
         return self.resolve_endpoint(arn_split[2], arn_split[3])
@@ -403,6 +403,7 @@ class TypedAWSClient(object):
         security_group_ids: OptStrList = None,
         subnet_ids: OptStrList = None,
         layers: OptStrList = None,
+        architecture: OptStr = None,
     ) -> str:
         # pylint: disable=too-many-locals
         kwargs: Dict[str, Any] = {
@@ -429,6 +430,8 @@ class TypedAWSClient(object):
             )
         if layers is not None:
             kwargs['Layers'] = layers
+        if architecture is not None:
+            kwargs['Architectures'] = [architecture]
         arn, state = self._create_lambda_function(kwargs)
         # Avoid the GetFunctionConfiguration call unless
         # we're not immediately active.
@@ -909,6 +912,7 @@ class TypedAWSClient(object):
         subnet_ids: OptStrList = None,
         security_group_ids: OptStrList = None,
         layers: OptStrList = None,
+        architecture: OptStr = None,
     ) -> Dict[str, Any]:
         """Update a Lambda function's code and configuration.
 
@@ -930,6 +934,7 @@ class TypedAWSClient(object):
             security_group_ids=security_group_ids,
             function_name=function_name,
             layers=layers,
+            architecture=architecture,
         )
         if tags is not None:
             self._update_function_tags(return_value['FunctionArn'], tags)
@@ -982,6 +987,7 @@ class TypedAWSClient(object):
         function_name: str,
         layers: OptStrList,
         xray: Optional[bool],
+        architecture: OptStr,
     ) -> None:
         kwargs: Dict[str, Any] = {}
         if environment_variables is not None:
@@ -1002,6 +1008,8 @@ class TypedAWSClient(object):
             )
         if layers is not None:
             kwargs['Layers'] = layers
+        if architecture is not None:
+            kwargs['Architectures'] = [architecture]
         if kwargs:
             self._do_update_function_config(function_name, kwargs)
 

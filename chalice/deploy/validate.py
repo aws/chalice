@@ -50,6 +50,7 @@ def validate_configuration(config):
     validate_resource_policy(config)
     validate_sqs_configuration(config.chalice_app)
     validate_environment_variables_type(config)
+    validate_lambda_architecture(config)
 
 
 def validate_resource_policy(config):
@@ -277,3 +278,12 @@ def _validate_environment_variables(environment_variables):
             raise ValueError("Environment variable values must be strings, "
                              "got 'type' %s for key '%s'" % (
                                  type(value).__name__, key))
+
+
+def validate_lambda_architecture(config):
+    # type: (Config) -> None
+    valid_architectures = ['x86_64', 'arm64']
+    if config.lambda_architecture and config.lambda_architecture not in valid_architectures:
+        raise ValueError(
+            "Invalid lambda architecture '%s'. Valid options are: %s" % (
+                config.lambda_architecture, ", ".join(valid_architectures)))

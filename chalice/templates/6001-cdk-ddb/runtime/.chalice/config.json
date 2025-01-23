@@ -4,6 +4,7 @@
   "stages": {
     "dev": {
       "api_gateway_stage": "api",
+      "lambda_architecture": "x86_64",
       "lambda_functions": {
         "api_handler": {
           "environment_variables": {

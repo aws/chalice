@@ -4,7 +4,8 @@
       "api_gateway_stage": "api",
       "environment_variables": {
         "APP_NAME": "replaceme"
-      }
+      },
+      "lambda_architecture": "x86_64"
     }
   },
   "version": "2.0",

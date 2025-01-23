@@ -343,6 +343,12 @@ class Config(object):
                                   varies_per_chalice_stage=True,
                                   varies_per_function=True)
 
+    @property
+    def lambda_architecture(self) -> str:
+        return self._chain_lookup('lambda_architecture',
+                                  varies_per_chalice_stage=True,
+                                  varies_per_function=True)
+
     def scope(self, chalice_stage: str, function_name: str) -> Config:
         # Used to create a new config object that's scoped to a different
         # stage and/or function.  This creates a completely separate copy.
