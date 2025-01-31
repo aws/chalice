@@ -335,8 +335,8 @@ Our REST API for our Todo items requires that you send an appropriate
 ``Authorization`` header when making HTTP requests.  You can retrieve
 a auth token by making a request to the ``/login`` route with your
 user name and password.  The underlying mechanism used to handle
-our auth functionality is through issuing a `JWT <https://jwt.io/>`__
-when you login.
+our auth functionality is through issuing a
+`JWT <https://datatracker.ietf.org/doc/html/rfc7519>`__ when you login.
 
 Users Table
 ~~~~~~~~~~~
