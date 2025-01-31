@@ -529,8 +529,8 @@ authentication can be implemented in a Chalice app.</p>
 <code class="docutils literal notranslate"><span class="pre">Authorization</span></code> header when making HTTP requests.  You can retrieve
 a auth token by making a request to the <code class="docutils literal notranslate"><span class="pre">/login</span></code> route with your
 user name and password.  The underlying mechanism used to handle
-our auth functionality is through issuing a <a class="reference external" href="https://jwt.io/">JWT</a>
-when you login.</p>
+our auth functionality is through issuing a
+<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc7519">JWT</a> when you login.</p>
 <section id="users-table">
 <h4>Users Table<a class="headerlink" href="#users-table" title="Permalink to this headline">¶</a></h4>
 <p>In order to login, we need a way to store and retrieve user information.  This
