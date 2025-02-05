@@ -1,5 +1,0 @@
-{
-  "type": "enhancement",
-  "category": "Pip",
-  "description": "Update pip to the latest version (<25.1)"
-}

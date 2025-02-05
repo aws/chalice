@@ -1,6 +1,11 @@
 # CHANGELOG
 
 
+## 1.31.4
+
+
+* enhancement:Pip:Update pip to the latest version (<25.1)
+
 ## 1.31.3
 
 
