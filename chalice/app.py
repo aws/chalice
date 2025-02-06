@@ -1436,7 +1436,8 @@ class AuthResponse(object):
                                    'PATCH', 'POST', 'PUT', 'GET']
 
     def __init__(self, routes: List[Union[str, 'AuthRoute']],
-                 principal_id: str, context: Optional[Dict[str, str]] = None):
+                 principal_id: str, context: Optional[Dict[str, str]] = None,
+                 usage_identifier_key: Optional[str] = None):
         self.routes: List[Union[str, 'AuthRoute']] = routes
         self.principal_id: str = principal_id
         # The request is used to generate full qualified ARNs
@@ -1445,13 +1446,17 @@ class AuthResponse(object):
         if context is None:
             context = {}
         self.context: Dict[str, str] = context
+        self.usage_identifier_key: Optional[str] = usage_identifier_key
 
     def to_dict(self, request: AuthRequest) -> Dict[str, Any]:
-        return {
+        response = {
             'context': self.context,
             'principalId': self.principal_id,
             'policyDocument': self._generate_policy(request),
         }
+        if self.usage_identifier_key:
+            response['usageIdentifierKey'] = self.usage_identifier_key
+        return response
 
     def _generate_policy(self, request: AuthRequest) -> Dict[str, Any]:
         allowed_resources = self._generate_allowed_resources(request)
