@@ -29,7 +29,9 @@ install_requires = [
     'pyyaml>=5.3.1,<7.0.0',
     'inquirer>=3.0.0,<4.0.0',
     'wheel',
-    'setuptools'
+    'setuptools',
+    'legacy-cgi==2.6.2',
+
 ]
 
 setup(
