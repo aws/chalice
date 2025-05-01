@@ -41,7 +41,7 @@ echo "Copy docs to local checkout"
 rm -rf "${CHECKOUT_DIR}"
 git clone https://github.com/aws/chalice.git --branch gh-pages \
 	--single-branch ${CHECKOUT_DIR}
-cp -r build/html/* ${CHECKOUT_DIR}/
+rsync -av --delete --exclude '.git' build/html/ ${CHECKOUT_DIR}/
 # Add a .nojekyll file so make sure we don't ignore _static
 # paths.
 touch ${CHECKOUT_DIR}/.nojekyll
