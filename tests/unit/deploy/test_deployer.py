@@ -277,6 +277,7 @@ def create_function_resource(name):
         tags={},
         timeout=60,
         memory_size=128,
+        ephemeral_storage=512,
         deployment_package=models.DeploymentPackage(
             models.Placeholder.BUILD_STAGE
         ),
@@ -561,6 +562,7 @@ class TestDefaultsInjector(object):
         injector = InjectDefaults(
             lambda_timeout=100,
             lambda_memory_size=512,
+            lambda_ephemeral_storage=1024,
         )
         function = models.LambdaFunction(
             # The timeout/memory_size are set to
@@ -568,6 +570,7 @@ class TestDefaultsInjector(object):
             # in the with the default values above.
             timeout=None,
             memory_size=None,
+            ephemeral_storage=None,
             resource_name='foo',
             function_name='app-dev-foo',
             environment_variables={},
@@ -586,6 +589,7 @@ class TestDefaultsInjector(object):
         injector.handle(config, function)
         assert function.timeout == 100
         assert function.memory_size == 512
+        assert function.ephemeral_storage == 1024
 
     def test_no_injection_when_values_are_set(self):
         injector = InjectDefaults(
@@ -594,10 +598,11 @@ class TestDefaultsInjector(object):
         )
         function = models.LambdaFunction(
             # The timeout/memory_size are set to
-            # None, so the injector should fill them
+            # 1, so the injector shouldn't fill them
             # in the with the default values above.
             timeout=1,
             memory_size=1,
+            ephemeral_storage=1,
             resource_name='foo',
             function_name='app-stage-foo',
             environment_variables={},
@@ -616,6 +621,7 @@ class TestDefaultsInjector(object):
         injector.handle(config, function)
         assert function.timeout == 1
         assert function.memory_size == 1
+        assert function.ephemeral_storage == 1
 
     def test_default_tls_version_on_domain_name(self):
         injector = InjectDefaults(tls_version='TLS_1_2')
