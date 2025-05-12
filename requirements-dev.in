@@ -11,3 +11,4 @@ pygments
 types-six
 types-python-dateutil
 types-PyYAML
+standard-imghdr
