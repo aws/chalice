@@ -148,12 +148,12 @@ class Config(object):
         # we attempt to match your python version to the closest version
         # supported by lambda.
         major, minor = sys.version_info[0], sys.version_info[1]
-        if (major, minor) < (3, 8):
-            return 'python3.8'
+        if (major, minor) < (3, 9):
+            return 'python3.9'
         elif (major, minor) <= (3, 11):
             # Otherwise we use your current version of python if Lambda
             # supports it.
-            return 'python%s.%s' % (major, minor)
+            return f'python{major}.{minor}'
         return 'python3.12'
 
     @property

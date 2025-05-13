@@ -368,7 +368,7 @@ def test_can_raise_bad_request(smoke_test_app):
     response = smoke_test_app.get_response('/badrequest')
     assert response.status_code == 400
     assert response.json()['Code'] == 'BadRequestError'
-    assert response.json()['Message'] == 'BadRequestError: Bad request.'
+    assert response.json()['Message'] == 'Bad request.'
 
 
 def test_can_raise_not_found(smoke_test_app):
