@@ -90,9 +90,9 @@ class PipelineParameters(object):
                  chalice_version_range=None, pipeline_version='v1'):
         # type: (str, str, Optional[str], str, Optional[str], str) -> None
         self.app_name = app_name
-        # lambda_python_version is what matches lambda, e.g. 'python3.7'.
+        # lambda_python_version is what matches lambda, e.g. 'python3.9'.
         self.lambda_python_version = lambda_python_version
-        # py_major_minor is just the version string, e.g. '3.7'
+        # py_major_minor is just the version string, e.g. '3.9'
         self.py_major_minor = self._extract_version(lambda_python_version)
         self.codebuild_image = codebuild_image
         self.code_source = code_source
@@ -162,7 +162,7 @@ class CreatePipelineTemplateV2(BasePipelineTemplate):
         major, minor = [
             int(v) for v in python_version.split('.')
         ]
-        if (major, minor) < (3, 7):
+        if (major, minor) < (3, 9):
             raise InvalidCodeBuildPythonVersion(
                 python_version,
                 'This CodeBuild image does not support python version: %s' % (
