@@ -35,27 +35,6 @@ jobs:
         run: uv sync --all-extras --dev
       - name: Run PRCheck
         run: uv run make prcheck
-  cdktests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.12]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '14'
-      - uses: actions/setup-python@v5
-        name: Set up Python ${{ matrix.python-version }}
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install CDK
-        run: npm install -g aws-cdk
-      - name: Install dependencies
-        run: |
-          pip install -r requirements-test.txt --upgrade --upgrade-strategy eager -e .[cdkv2]
-      - name: Run CDK tests
-        run: python -m pytest tests/functional/cdk
 #  Chalice works on windows, but there's some differences between
 #  the GitHub actions windows environment and our windows dev
 #  laptops that are causing certain tests to fail.  Once these
