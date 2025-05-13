@@ -1,14 +1,6 @@
-import socket
-import six
 import os
 
 from typing import Dict, Any  # noqa
-from urllib.parse import urlparse, parse_qs
-
-from six import StringIO
-
-
-STRING_TYPES = six.string_types
 
 
 def pip_import_string():

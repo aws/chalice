@@ -8,7 +8,6 @@ from chalice.config import Config  # noqa
 from chalice.constants import EXPERIMENTAL_ERROR_MSG
 from chalice.constants import MIN_COMPRESSION_SIZE
 from chalice.constants import MAX_COMPRESSION_SIZE
-from chalice.compat import STRING_TYPES
 
 
 class ExperimentalFeatureError(Exception):
@@ -273,7 +272,7 @@ def validate_environment_variables_type(config):
 def _validate_environment_variables(environment_variables):
     # type: (Dict[str, Any]) -> None
     for key, value in environment_variables.items():
-        if not isinstance(value, STRING_TYPES):
+        if not isinstance(value, str):
             raise ValueError("Environment variable values must be strings, "
                              "got 'type' %s for key '%s'" % (
                                  type(value).__name__, key))

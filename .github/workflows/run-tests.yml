@@ -3,10 +3,13 @@ on:
   push:
     branches:
       - master
+      - v2
+      - "v2-*"
       - "feature/**"
   pull_request:
     branches:
       - master
+      - v2
       - "feature/**"
 jobs:
   prcheck:
@@ -17,39 +20,21 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9, '3.10', 3.11, 3.12]
+        python-version: [3.12]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         name: Set up Python ${{ matrix.python-version }}
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install a specific version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.4.20"
       - name: Install dependencies
-        run: |
-          make install-dev-deps
+        run: uv sync --all-extras --dev
       - name: Run PRCheck
-        run: make prcheck
-  cdktests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8, 3.9, '3.10', 3.11, 3.12]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-      - uses: actions/setup-python@v2
-        name: Set up Python ${{ matrix.python-version }}
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install CDK
-        run: npm install -g aws-cdk
-      - name: Install dependencies
-        run: |
-          pip install -r requirements-test.txt --upgrade --upgrade-strategy eager -e .[cdkv2]
-      - name: Run CDK tests
-        run: python -m pytest tests/functional/cdk
+        run: uv run make prcheck
 #  Chalice works on windows, but there's some differences between
 #  the GitHub actions windows environment and our windows dev
 #  laptops that are causing certain tests to fail.  Once these

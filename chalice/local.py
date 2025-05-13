@@ -3,7 +3,6 @@
 This is intended only for local development purposes.
 
 """
-from __future__ import print_function
 from __future__ import annotations
 import re
 import threading
@@ -15,9 +14,9 @@ import warnings
 from collections import namedtuple
 import json
 
-from six.moves.BaseHTTPServer import HTTPServer
-from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
-from six.moves.socketserver import ThreadingMixIn
+from http.server import HTTPServer
+from http.server import BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 from typing import (
     List,
     Any,
@@ -38,7 +37,7 @@ from chalice.app import AuthResponse  # noqa
 from chalice.app import BuiltinAuthConfig  # noqa
 from chalice.config import Config  # noqa
 
-from chalice.compat import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs
 
 
 MatchResult = namedtuple('MatchResult', ['route', 'captured', 'query_params'])

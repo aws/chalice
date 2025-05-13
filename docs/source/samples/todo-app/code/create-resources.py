@@ -78,7 +78,7 @@ def create_auth_key_if_needed(stage):
     try:
         ssm.get_parameter(Name=AUTH_KEY_PARAM_NAME)
     except ssm.exceptions.ParameterNotFound:
-        print(f"Generating auth key.")
+        print("Generating auth key.")
         kms = boto3.client('kms')
         random_bytes = kms.generate_random(NumberOfBytes=32)['Plaintext']
         encoded_random_bytes = base64.b64encode(random_bytes).decode()
