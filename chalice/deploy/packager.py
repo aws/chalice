@@ -76,7 +76,6 @@ class BaseLambdaDeploymentPackager(object):
     _VENDOR_DIR = 'vendor'
 
     _RUNTIME_TO_ABI = {
-        'python3.8': 'cp38',
         'python3.9': 'cp39',
         'python3.10': 'cp310',
         'python3.11': 'cp311',
